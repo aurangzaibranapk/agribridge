@@ -9,6 +9,7 @@ import { HelpButton } from "@/components/help/help-button";
 import { UiModeToggle } from "@/components/guided/ui-mode-toggle";
 import { getUiMode } from "@/lib/access/ui-mode";
 import { t, type Lang } from "@/lib/i18n/translations";
+import { PushNotificationToggle } from "@/components/layout/push-notification-toggle";
 
 /**
  * Sidebar ke baghair upar wali patti.
@@ -93,6 +94,7 @@ export async function CompactNav({
 
       <div className="flex items-center gap-1 sm:gap-3">
         <UiModeToggle mode={await getUiMode()} />
+        <PushNotificationToggle />
         <HelpButton compact />
         <LanguageSwitch current={lang} className="hidden sm:inline-flex" />
         <ThemeToggle />

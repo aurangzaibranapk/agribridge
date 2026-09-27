@@ -29,7 +29,7 @@ export async function saveTaxonomyItem(table: string, _prev: ActionState, formDa
     if (logoUrl) payload.logo_url = String(logoUrl);
   }
 
-  const { error } = await supabase.from(table).insert(payload);
+  const { error } = await (supabase as any).from(table).insert(payload);
   if (error) return { error: error.message };
 
   revalidatePath(`/admin/${table}`);

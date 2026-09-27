@@ -53,7 +53,7 @@ export async function convertInquiryToInvestor(_prev: ActionState, formData: For
 
   // Create the first deal + its opening ledger entry - fn_apply_investment_ledger_entry
   // (Migration 002b) auto-computes balance_after and bumps investors.total_invested.
-  const { data: deal, error: dealError } = await supabase
+  const { data: deal, error: dealError } = await (supabase as any)
     .from("investment_deals")
     .insert({
       investor_id: investor.id,

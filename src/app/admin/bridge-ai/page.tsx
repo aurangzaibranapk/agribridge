@@ -1,11 +1,12 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Send, Sparkles, Camera, X } from "lucide-react";
+import { Send, Sparkles, Camera, X, Mic, MicOff, BarChart2 } from "lucide-react";
 import { CoachMessage } from "@/components/guided/coach-message";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import Link from "next/link";
 
 interface Message {
   role: "user" | "assistant";
@@ -14,11 +15,14 @@ interface Message {
 }
 
 const EXAMPLE_QUESTIONS = [
-  "Ab mujhe kya karna hai?",
-  "Supplier ka bill aaya hai, kahan se shuru karoon?",
-  "Aaj business ka kya haal hai?",
-  "Kaunse products low stock mein hain?",
-  "Total receivables aur payables kitne hain?",
+  "Aaj ka business status batao",
+  "Is hafte ki staff performance dikhao",
+  "Kaunse products slow-moving hain",
+  "Agle 15 din mein kya khatam hoga",
+  "Recovery list batao — kaun kitna dena hai",
+  "Pending approvals kya hain",
+  "Mahabali ka stock aur order list banao",
+  "Supplier ko kitna dena hai",
 ];
 
 export default function BridgeAiPage() {
@@ -31,9 +35,34 @@ export default function BridgeAiPage() {
   const [actionsEnabled, setActionsEnabled] = useState(false);
   const [togglingActions, setTogglingActions] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  // Screenshot help (C): tasveer ke sath sawal.
   const fileRef = useRef<HTMLInputElement>(null);
   const [image, setImage] = useState<{ mimeType: string; data: string; preview: string } | null>(null);
+  // Voice input
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  function toggleVoice() {
+    const SpeechRecognition = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+    const rec = new SpeechRecognition();
+    rec.lang = "ur-PK";
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.onresult = (e: any) => {
+      const transcript = e.results[0]?.[0]?.transcript ?? "";
+      if (transcript) setInput((prev) => prev + (prev ? " " : "") + transcript);
+    };
+    rec.onend = () => setListening(false);
+    rec.onerror = () => setListening(false);
+    rec.start();
+    recognitionRef.current = rec;
+    setListening(true);
+  }
+
   function pickImage(file: File | null) {
     if (!file) return;
     const reader = new FileReader();
@@ -109,7 +138,14 @@ export default function BridgeAiPage() {
     <div>
       <div className="flex items-start justify-between gap-4">
         <PageHeader title={t("ba_title", lang)} description="Apne business ke baare mein sawal poochein - live data se jawab milega" />
-        <div className="mt-1 flex shrink-0 items-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 dark:border-surface-800 dark:bg-surface-900">
+        <div className="mt-1 flex shrink-0 flex-wrap items-center gap-2">
+          <Link
+            href="/admin/bridge-ai/daily-briefing"
+            className="flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-xs font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-950/30 dark:text-brand-300"
+          >
+            <BarChart2 className="h-3.5 w-3.5" /> Daily Briefing
+          </Link>
+          <div className="flex shrink-0 items-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 dark:border-surface-800 dark:bg-surface-900">
           <span className="text-xs font-medium text-surface-600 dark:text-surface-400">{t("at_ai_proposals", lang)}</span>
           <button
             type="button"
@@ -129,6 +165,7 @@ export default function BridgeAiPage() {
           <span className={`text-xs font-semibold ${actionsEnabled ? "text-brand-600" : "text-surface-400"}`}>
             {actionsEnabled ? "ON" : "OFF"}
           </span>
+        </div>
         </div>
       </div>
 
@@ -180,6 +217,9 @@ export default function BridgeAiPage() {
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => pickImage(e.target.files?.[0] ?? null)} />
           <button type="button" onClick={() => fileRef.current?.click()} className="flex h-10 w-10 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:border-brand-400 dark:border-surface-700" title="Screenshot">
             <Camera className="h-4 w-4" />
+          </button>
+          <button type="button" onClick={toggleVoice} className={`flex h-10 w-10 items-center justify-center rounded-lg border transition-colors ${listening ? "border-red-400 bg-red-50 text-red-600 dark:bg-red-950/30" : "border-surface-200 text-surface-600 hover:border-brand-400 dark:border-surface-700"}`} title={listening ? "Sunna band karo" : "Awaz se sawal poochein"}>
+            {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </button>
           <input
             value={input}

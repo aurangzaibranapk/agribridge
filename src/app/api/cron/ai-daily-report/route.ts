@@ -30,8 +30,7 @@ export async function GET(request: Request) {
   let suggestionsCreated = 0;
 
   for (const branch of branches ?? []) {
-    // Sales in the last 30 days for this branch.
-    const { data: sales } = await supabase.from("pos_sales").select("id, created_at").eq("branch_id", branch.id).gte("created_at", thirtyDaysAgoStr);
+    const { data: sales } = await supabase.from("pos_sales").select("id, created_at, total_amount").eq("branch_id", branch.id).gte("created_at", thirtyDaysAgoStr);
     const saleIds = (sales ?? []).map((s) => s.id);
 
     let saleItems: any[] = [];
@@ -51,9 +50,9 @@ export async function GET(request: Request) {
       salesByProduct.set(item.product_id, existing);
     }
 
-    const totalSaleValue = (sales ?? []).length; // count of transactions, kept simple
+    const transactionCount = (sales ?? []).length;
+    const totalSaleValue = (sales ?? []).reduce((sum, sale) => sum + Number(sale.total_amount ?? 0), 0);
 
-    // Current stock for this branch's warehouse.
     const { data: warehouse } = await supabase.from("warehouses").select("id").eq("branch_id", branch.id).eq("code", "MAIN").maybeSingle();
     let stockMap = new Map<string, number>();
     if (warehouse) {
@@ -61,10 +60,9 @@ export async function GET(request: Request) {
       stockMap = new Map((inventoryRows ?? []).map((r) => [r.product_id, Number(r.quantity_on_hand)]));
     }
 
-    // Identify fast movers running low, and slow movers sitting unsold.
     const fastMoversLow: { productId: string; name: string; suggestedQty: number; avgDaily: number; stock: number }[] = [];
     for (const [productId, data] of salesByProduct.entries()) {
-      if (data.qty < 5) continue; // ignore very low-volume noise
+      if (data.qty < 5) continue;
       const avgDaily = data.qty / 30;
       const stock = stockMap.get(productId) ?? 0;
       const daysLeft = avgDaily > 0 ? stock / avgDaily : Infinity;
@@ -83,8 +81,6 @@ export async function GET(request: Request) {
       }
     }
 
-    // Skip products that already have a pending or very recent (7 days)
-    // suggestion, so we don't spam duplicates.
     const { data: recentSuggestions } = await supabase
       .from("ai_purchase_suggestions")
       .select("product_id, status, created_at")
@@ -105,15 +101,14 @@ export async function GET(request: Request) {
     }
 
     branchReports.push(
-      `Branch: ${branch.name} | Transactions: ${totalSaleValue} | Fast-moving low-stock items: ${fastMoversLow.map((f) => f.name).join(", ") || "none"} | Slow-moving items count: ${slowMovers.length}`
+      `Branch: ${branch.name} | Sale amount: Rs ${Math.round(totalSaleValue).toLocaleString()} | Transactions: ${transactionCount} | Fast-moving low-stock items: ${fastMoversLow.map((f) => f.name).join(", ") || "none"} | Slow-moving items count: ${slowMovers.length}`
     );
 
-    // Branch-facing message: appreciation + what needs attention.
     let branchMessage: string | null = null;
-    const branchPrompt = `Tum AgriBridge ka business assistant ho. Roman Urdu mein, dostana aur professional tone mein, is shop ke liye ek chhota daily message likho (max 4 sentences). Agar sales achi hain to shabash do aur hosla barhao. Agar koi fast-moving product ka stock khatam ho raha hai to bata do. Data: Total transactions pichle 30 din: ${totalSaleValue}. Fast-moving low-stock products: ${fastMoversLow.map((f) => f.name).join(", ") || "koi nahi"}. Slow-moving products count: ${slowMovers.length}. ${customInstructions ? "Extra instructions: " + customInstructions : ""}`;
+    const branchPrompt = `Tum AgriBridge ka business assistant ho. Roman Urdu mein, dostana aur professional tone mein, is shop ke liye ek chhota daily message likho (max 4 sentences). Agar sales achi hain to shabash do aur hosla barhao. Agar koi fast-moving product ka stock khatam ho raha hai to bata do. Data: Pichlay 30 din ki total sale Rs ${Math.round(totalSaleValue).toLocaleString()} aur transactions ${transactionCount}. Fast-moving low-stock products: ${fastMoversLow.map((f) => f.name).join(", ") || "koi nahi"}. Slow-moving products count: ${slowMovers.length}. ${customInstructions ? "Extra instructions: " + customInstructions : ""}`;
     branchMessage = await generateGeminiText(branchPrompt);
     if (!branchMessage) {
-      branchMessage = `Aaj ka summary: ${totalSaleValue} transactions huye. ${fastMoversLow.length > 0 ? `${fastMoversLow.length} products ka stock kam hai.` : "Stock theek hai."}`;
+      branchMessage = `Pichlay 30 din ki sale Rs ${Math.round(totalSaleValue).toLocaleString()} rahi aur ${transactionCount} transactions huye. ${fastMoversLow.length > 0 ? `${fastMoversLow.length} products ka stock kam hai.` : "Stock theek hai."}`;
     }
 
     const { data: branchStaff } = await supabase.from("profiles").select("id").eq("branch_id", branch.id).eq("is_active", true);
@@ -129,7 +124,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // Consolidated report for Admin/Manager.
   const adminPrompt = `Tum AgriBridge ka business assistant ho. Roman Urdu mein, Admin/Manager ke liye ek concise daily summary likho (max 6 sentences), har branch ka performance overview aur jo important cheezein dhyan dene layak hain unko highlight karo. Data:\n${branchReports.join("\n")}\n${customInstructions ? "Extra instructions: " + customInstructions : ""}`;
   let adminMessage = await generateGeminiText(adminPrompt);
   if (!adminMessage) {

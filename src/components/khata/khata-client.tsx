@@ -86,7 +86,7 @@ export function KhataClient({
     const { error } = await supabase.rpc("record_khata_payment", {
       p_customer_id: selected.customer_id,
       p_amount: parsed,
-      p_note: note || null,
+      p_note: note || undefined,
     });
     setSubmitting(false);
 

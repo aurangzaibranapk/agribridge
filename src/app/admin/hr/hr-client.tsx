@@ -196,42 +196,7 @@ export function HRClient({
       )}
 
       {tab === "salary" && (
-        <div>
-          <button onClick={() => setShowSalaryForm(true)} className="mb-3 flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
-            <Plus className="h-4 w-4" /> {t("hr_record_salary", lang)}
-          </button>
-          <div className="overflow-x-auto rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                  <th className="px-3 py-2 font-medium text-surface-500">{t("hr_staff", lang)}</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">{t("hr_month_year", lang)}</th>
-                  <th className="px-3 py-2 text-right font-medium text-surface-500">{t("hr_net_salary", lang)}</th>
-                  <th className="px-3 py-2 font-medium text-surface-500">{t("hr_status", lang)}</th>
-                  <th className="px-3 py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {salaries.map((s) => (
-                  <tr key={s.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
-                    <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{s.staff_name}</td>
-                    <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{s.pay_month}/{s.pay_year}</td>
-                    <td className="px-3 py-2 text-right text-surface-800 dark:text-surface-200">Rs {s.net_salary.toLocaleString()}</td>
-                    <td className="px-3 py-2">
-                      <Badge tone={s.status === "paid" ? "green" : "amber"}>{t(s.status === "paid" ? "hr_paid" : "hr_pending", lang)}</Badge>
-                    </td>
-                    <td className="px-3 py-2">
-                      {s.status !== "paid" && <MarkPaidButton paymentId={s.id} accounts={accounts} />}
-                    </td>
-                  </tr>
-                ))}
-                {salaries.length === 0 && (
-                  <tr><td colSpan={5} className="px-3 py-8 text-center text-surface-400">{t("hr_no_record", lang)}</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <SalaryTab salaries={salaries} accounts={accounts} staff={staff} lang={lang} onNew={() => setShowSalaryForm(true)} />
       )}
 
       {showInvite && <InviteStaffModal branches={branches} onClose={() => setShowInvite(false)} />}
@@ -392,43 +357,53 @@ function SalaryFormModal({ staff, onClose }: { staff: Staff[]; onClose: () => vo
   if (state.success) setTimeout(() => window.location.reload(), 800);
 
   const now = new Date();
-
-  // Hazri ke adad form par PEHLE dikhte hain, rok ke baad nahi. Rok
-  // (recordSalaryPayment mein) tab lagti hai jab banda form bhar chuka
-  // hota hai -- us waqt tak wo adad zehen mein tay kar chuka hota hai.
   const [who, setWho] = useState("");
   const [mm, setMm] = useState(now.getMonth() + 1);
   const [yy, setYy] = useState(now.getFullYear());
   const [att, setAtt] = useState<Awaited<ReturnType<typeof fetchAttendanceMonth>> | undefined>(undefined);
 
+  // Live salary fields for net preview
+  const [basic, setBasic] = useState("");
+  const [bonus, setBonus] = useState("");
+  const [deductions, setDeductions] = useState("");
+  const [advance, setAdvance] = useState("");
+  const [overtime, setOvertime] = useState("");
+
+  // Auto-fill basic salary when employee selected
+  function handleWho(id: string) {
+    setWho(id);
+    const s = staff.find((x) => x.id === id);
+    if (s?.details?.basic_salary) setBasic(String(s.details.basic_salary));
+  }
+
+  const netSalary =
+    (Number(basic) || 0) +
+    (Number(bonus) || 0) +
+    (Number(overtime) || 0) -
+    (Number(deductions) || 0) -
+    (Number(advance) || 0);
+
   useEffect(() => {
-    if (!who) {
-      setAtt(undefined);
-      return;
-    }
+    if (!who) { setAtt(undefined); return; }
     let alive = true;
     setAtt(undefined);
-    fetchAttendanceMonth(who, yy, mm).then((r) => {
-      if (alive) setAtt(r);
-    });
-    return () => {
-      alive = false;
-    };
+    fetchAttendanceMonth(who, yy, mm).then((r) => { if (alive) setAtt(r); });
+    return () => { alive = false; };
   }, [who, mm, yy]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
+      <div className="w-full max-w-md rounded-card bg-white p-5 shadow-xl dark:bg-surface-900 overflow-y-auto max-h-[90vh]">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("hr_record_salary", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
-          <Select name="profile_id" required value={who} onChange={(e) => setWho(e.target.value)}>
+          <Select name="profile_id" required value={who} onChange={(e) => handleWho(e.target.value)}>
             <option value="">{t("hr_pick_staff", lang)}</option>
             {staff.map((s) => (
-              <option key={s.id} value={s.id}>{s.full_name}</option>
+              <option key={s.id} value={s.id}>{s.full_name}{s.details?.basic_salary ? ` — Rs ${s.details.basic_salary.toLocaleString()}` : ""}</option>
             ))}
           </Select>
           <div className="flex gap-2">
@@ -436,9 +411,6 @@ function SalaryFormModal({ staff, onClose }: { staff: Staff[]; onClose: () => vo
             <Input type="number" name="pay_year" value={yy} onChange={(e) => setYy(Number(e.target.value))} required placeholder={t("hr_year", lang)} />
           </div>
 
-          {/* att === undefined: abhi poochha ja raha hai.
-              att === null:      poochha gaya, JAWAB NAHI MILA.
-              Doosri soorat mein sifar likhna jhoot hota. */}
           {who && (
             <div className="rounded-lg border border-surface-200 p-2 text-xs dark:border-surface-700">
               {att === undefined ? (
@@ -465,20 +437,139 @@ function SalaryFormModal({ staff, onClose }: { staff: Staff[]; onClose: () => vo
               )}
             </div>
           )}
-          <Input type="number" step="0.01" name="basic_salary" required placeholder={t("hr_basic_salary_req", lang)} />
-          <Input type="number" step="0.01" name="bonus" placeholder={t("hr_bonus", lang)} />
-          <Input type="number" step="0.01" name="deductions" placeholder={t("hr_deductions", lang)} />
-          <Input type="number" step="0.01" name="advance_deduction" placeholder={t("hr_advance_deduction", lang)} />
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-surface-600 dark:text-surface-400">{t("hr_basic_salary_req", lang)}</label>
+              <Input type="number" step="0.01" name="basic_salary" required value={basic} onChange={(e) => setBasic(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-surface-600 dark:text-surface-400">{t("hr_bonus", lang)}</label>
+              <Input type="number" step="0.01" name="bonus" value={bonus} onChange={(e) => setBonus(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-surface-600 dark:text-surface-400">Overtime (Rs)</label>
+              <Input type="number" step="0.01" name="overtime" value={overtime} onChange={(e) => setOvertime(e.target.value)} placeholder="0" />
+              <p className="mt-0.5 text-[10px] text-surface-400">Extra kaam ke ghante × Rs 100</p>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-surface-600 dark:text-surface-400">{t("hr_deductions", lang)}</label>
+              <Input type="number" step="0.01" name="deductions" value={deductions} onChange={(e) => setDeductions(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-surface-600 dark:text-surface-400">{t("hr_advance_deduction", lang)}</label>
+              <Input type="number" step="0.01" name="advance_deduction" value={advance} onChange={(e) => setAdvance(e.target.value)} placeholder="0" />
+            </div>
+            <div className="rounded-lg border border-brand-200 bg-brand-50/50 p-2 dark:border-brand-800 dark:bg-brand-950/20">
+              <p className="text-[10px] uppercase text-surface-400">Net tankhwah</p>
+              <p className={`text-lg font-bold tabular-nums ${netSalary < 0 ? "text-red-600" : "text-brand-700 dark:text-brand-300"}`}>
+                Rs {netSalary.toLocaleString()}
+              </p>
+            </div>
+          </div>
+
           <Textarea name="notes" rows={2} placeholder={t("at_notes_opt", lang)} />
-          {/* Ye nishan jaan boojh kar khali hai. Hazri adhoori ho to
-              action pehle rok deta hai; ye khana us soorat mein soch kar
-              aage baRhne ka raasta hai, aadat ka nahi. */}
           <label className="flex items-start gap-2 text-xs text-surface-600 dark:text-surface-300">
             <input type="checkbox" name="ack_unfinalized" value="yes" className="mt-0.5" />
             <span>Hazri adhoori hai, phir bhi tankhwah banayein</span>
           </label>
           <SubmitButton label={t("hr_record", lang)} />
         </form>
+      </div>
+    </div>
+  );
+}
+
+function SalaryTab({
+  salaries,
+  accounts,
+  staff,
+  lang,
+  onNew,
+}: {
+  salaries: Salary[];
+  accounts: { id: string; name: string }[];
+  staff: Staff[];
+  lang: import("@/lib/i18n/translations").Lang;
+  onNew: () => void;
+}) {
+  const now = new Date();
+  const [filterMm, setFilterMm] = useState(now.getMonth() + 1);
+  const [filterYy, setFilterYy] = useState(now.getFullYear());
+
+  const filtered = salaries.filter((s) => s.pay_month === filterMm && s.pay_year === filterYy);
+  const totalNet = filtered.reduce((sum, s) => sum + s.net_salary, 0);
+  const totalPaid = filtered.filter((s) => s.status === "paid").reduce((sum, s) => sum + s.net_salary, 0);
+
+  void staff; // staff passed for future use (e.g. bulk salary)
+
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <button onClick={onNew} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
+          <Plus className="h-4 w-4" /> Tankhwah banayein
+        </button>
+        <div className="flex items-center gap-1.5">
+          <select
+            value={filterMm}
+            onChange={(e) => setFilterMm(Number(e.target.value))}
+            className="rounded border border-surface-200 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-900"
+          >
+            {MONTHS.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
+          </select>
+          <input
+            type="number"
+            value={filterYy}
+            onChange={(e) => setFilterYy(Number(e.target.value))}
+            className="w-20 rounded border border-surface-200 px-2 py-1.5 text-sm dark:border-surface-700 dark:bg-surface-900"
+          />
+        </div>
+        {filtered.length > 0 && (
+          <div className="ms-auto flex gap-4 text-sm">
+            <span className="text-surface-500">Kul: <strong className="text-surface-900 dark:text-white">Rs {totalNet.toLocaleString()}</strong></span>
+            <span className="text-surface-500">Di gayi: <strong className="text-emerald-700 dark:text-emerald-400">Rs {totalPaid.toLocaleString()}</strong></span>
+            <span className="text-surface-500">Baqi: <strong className="text-amber-700 dark:text-amber-400">Rs {(totalNet - totalPaid).toLocaleString()}</strong></span>
+          </div>
+        )}
+      </div>
+      <div className="overflow-x-auto rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
+              <th className="px-3 py-2 font-medium text-surface-500">Staff</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">Basic</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">Bonus/OT</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">Katauti</th>
+              <th className="px-3 py-2 text-right font-medium text-surface-500">Net</th>
+              <th className="px-3 py-2 font-medium text-surface-500">Halat</th>
+              <th className="px-3 py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((s) => (
+              <tr key={s.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
+                <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{s.staff_name}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-surface-700 dark:text-surface-300">Rs {s.basic_salary.toLocaleString()}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-emerald-700 dark:text-emerald-400">{s.bonus > 0 ? `+${s.bonus.toLocaleString()}` : "—"}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-red-600 dark:text-red-400">{(s.deductions + s.advance_deduction) > 0 ? `-${(s.deductions + s.advance_deduction).toLocaleString()}` : "—"}</td>
+                <td className="px-3 py-2 text-right font-semibold tabular-nums text-surface-900 dark:text-white">Rs {s.net_salary.toLocaleString()}</td>
+                <td className="px-3 py-2">
+                  <Badge tone={s.status === "paid" ? "green" : "amber"}>{s.status === "paid" ? "Di gayi" : "Baqi"}</Badge>
+                </td>
+                <td className="px-3 py-2">
+                  {s.status !== "paid" && <MarkPaidButton paymentId={s.id} accounts={accounts} />}
+                </td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr><td colSpan={7} className="px-3 py-8 text-center text-surface-400">
+                Is mahine ({MONTHS[filterMm-1]} {filterYy}) koi tankhwah nahi — upar button se banayein.
+              </td></tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

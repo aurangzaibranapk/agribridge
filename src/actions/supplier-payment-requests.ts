@@ -12,11 +12,12 @@ export interface ActionState {
 
 const HQ_APPROVER_ROLES = ["super_admin", "admin", "owner"];
 
-async function generateRequestNumber(): Promise<string> {
+async function generateRequestNumber(): Promise<{ number: string } | { error: string }> {
   const serviceClient = createServiceClient();
-  const { data, error } = await serviceClient.rpc("fn_next_spr_number");
-  if (error || !data) throw new Error(error?.message ?? "SPR counter fail");
-  return data as string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (serviceClient as any).rpc("fn_next_spr_number");
+  if (error || !data) return { error: error?.message ?? "SPR counter fail" };
+  return { number: data as string };
 }
 
 export async function requestSupplierPayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -53,7 +54,9 @@ export async function requestSupplierPayment(_prev: ActionState, formData: FormD
     }
   }
 
-  const requestNumber = await generateRequestNumber();
+  const reqNum = await generateRequestNumber();
+  if ("error" in reqNum) return { error: reqNum.error };
+  const requestNumber = reqNum.number;
 
   const { error } = await supabase.from("supplier_payment_requests").insert({
     request_number: requestNumber,

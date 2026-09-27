@@ -11,8 +11,8 @@ import { Droplet, Wallet, DollarSign, X, AlertTriangle } from "lucide-react";
 
 interface Farmer {
   id: string;
-  full_name: string;
-  farmer_code: string;
+  full_name: string | null;
+  farmer_code: string | null;
 }
 
 interface Branch {

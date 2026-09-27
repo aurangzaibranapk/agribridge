@@ -303,7 +303,8 @@ export async function carrierConfirm(_prev: ActionState, formData: FormData): Pr
 
   const { error } = await service
     .from("cash_handovers")
-    .update({ carrier_confirmed_at: new Date().toISOString(), carrier_confirmed_by: user.id })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update({ carrier_confirmed_at: new Date().toISOString(), carrier_confirmed_by: user.id } as any)
     .eq("id", handoverId);
 
   if (error) return { error: error.message };

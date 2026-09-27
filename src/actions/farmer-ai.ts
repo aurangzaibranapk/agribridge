@@ -61,7 +61,7 @@ export async function approveFarmerAiRequest(_prev: ActionState, formData: FormD
       notes: `Voice AI se: ${request.description}`,
     });
   } else if (request.intent_type === "request_fertilizer") {
-    await supabase.from("service_requests").insert({
+    await (supabase as any).from("service_requests").insert({
       farmer_id: farmer.id,
       service_type: "fertilizer",
       description: request.description,

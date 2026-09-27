@@ -91,24 +91,25 @@ export async function payAndPost(
     return { error: `Adaigi likh di gayi, magar ledger tak nahi pahunchi: ${posted.error}` };
   }
 
-  // Cash Book ka rukh bhi (19 September ka finance review): adaigi jis
-  // khate se gayi, Cash Book mein bhi likhi jaye -- 19 Sep ko sheet se
-  // Rs 69,827 ki adaigi sirf ledger tak gayi aur Finance ka "Cash in
-  // Hand" utna aage reh gaya tha. Khata ya wallet yahan aata hi nahi;
-  // accountId na ho to cash (1000).
-  await cashBookLikhein([
-    {
-      accountId: args.accountId ?? null,
-      glCode: args.accountId ? null : "1000",
-      amount: args.amount,
-      rukh: "gaya",
-      category: "supplier_payment",
-      notes: args.notes?.trim() || "Supplier ko adaigi",
-      tareekh: args.paymentDate,
-      createdBy: args.createdBy,
-      entryId: posted.id,
-    },
-  ]);
+  // Cash Book ka rukh bhi: adaigi jis khate se gayi, Cash Book mein bhi
+  // likhi jaye. accountId yahan pehunch ta hai to wahi; nahi to skip --
+  // Cash (1000) galat default tha aur 26-000493 / 26-000503 wali ghalti
+  // usi se aati thi.
+  if (args.accountId) {
+    await cashBookLikhein([
+      {
+        accountId: args.accountId,
+        glCode: null,
+        amount: args.amount,
+        rukh: "gaya",
+        category: "supplier_payment",
+        notes: args.notes?.trim() || "Supplier ko adaigi",
+        tareekh: args.paymentDate,
+        createdBy: args.createdBy,
+        entryId: posted.id,
+      },
+    ]);
+  }
 
   return { paymentId: row.id };
 }

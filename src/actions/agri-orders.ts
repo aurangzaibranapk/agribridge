@@ -8,7 +8,7 @@ import { logAudit } from "@/lib/audit";
 import { getCurrentSeller } from "@/lib/current-seller";
 import { getOrderPermissions } from "@/lib/order-permissions";
 import { getBranchCreditCheck, creditLimitMessage, isAdvanceOrder } from "@/lib/order-payment-gate";
-import { notifyRole, notifyRoles, notifyBranch } from "@/lib/notifications";
+import { notifyRole, notifyRoles, notifyBranch, notifyUser } from "@/lib/notifications";
 
 const HQ_ROLES = ["super_admin", "admin", "owner"];
 
@@ -323,6 +323,12 @@ export async function createBranchAgriOrder(_prev: ActionState, formData: FormDa
     description: `${seller.name} ne order banaya - Rs ${grandTotal.toLocaleString()}`,
   });
   await notifyNewOrder(order.id, orderNumber, seller.name);
+  await notifyUser(
+    seller.userId,
+    "Order Submit Ho Gaya",
+    `${orderNumber} submit ho gaya — HQ verify karega.`,
+    `/admin/agri-orders/${order.id}`
+  );
 
   revalidatePath("/admin/agri-orders");
   revalidatePath("/admin/pos/ordering");

@@ -72,8 +72,8 @@ export default async function FarmerDashboardPage() {
     ? await supabase.from("crop_history").select("id, crop_name, sowing_date, expected_harvest_date, farms(name)").in("farm_id", farmIds)
     : { data: [] };
 
-  const machineryReminders = getMachineryReminders(crops ?? []);
-  const wateringReminders = getWateringReminders(crops ?? []);
+  const machineryReminders = getMachineryReminders((crops ?? []) as any);
+  const wateringReminders = getWateringReminders((crops ?? []) as any);
 
   const { data: harvests } = farmIds.length
     ? await supabase
@@ -349,7 +349,7 @@ export default async function FarmerDashboardPage() {
               </div>
               <div className="flex items-center gap-2 text-sm text-surface-600">
                 <Phone className="h-4 w-4 text-surface-400" />
-                {farmer.mobile ?? farmer.phone_number ?? t("mobile_not_set", lang)}
+                {farmer.phone_number ?? t("mobile_not_set", lang)}
               </div>
             </div>
           </div>

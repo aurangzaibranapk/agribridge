@@ -18,7 +18,7 @@ export default async function AdminGrainProcurementPage() {
     { data: rawEntries },
     { data: rawPayments },
   ] = await Promise.all([
-    supabase.from("farmers").select("id, full_name, farmer_code").eq("is_deleted", false).order("full_name"),
+    supabase.from("farmers").select("id, full_name, farmer_code, phone_number, cnic").eq("is_deleted", false).order("full_name"),
     supabase.from("grain_parties").select("id, party_name, contact_person, phone").eq("is_active", true).order("party_name"),
     supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
     supabase.from("grain_cut_presets").select("id, grain_type, label, cut_percentage").eq("is_active", true).order("grain_type"),
@@ -104,10 +104,10 @@ export default async function AdminGrainProcurementPage() {
   });
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-[1500px]">
       <PageHeader title={t("gr_title", lang)} description={t("gr_subtitle", lang)} />
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("at_total_bought_kg", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{totalPurchasedKg.toLocaleString()} kg</p>

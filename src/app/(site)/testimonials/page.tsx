@@ -26,7 +26,7 @@ export default async function TestimonialsPage() {
               <Quote className="h-5 w-5 text-brand-300" />
               <div className="mt-2 flex gap-0.5">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className={`h-3.5 w-3.5 ${i < t.rating ? "fill-wheat-500 text-wheat-500" : "text-surface-200"}`} />
+                  <Star key={i} className={`h-3.5 w-3.5 ${i < (t.rating ?? 0) ? "fill-wheat-500 text-wheat-500" : "text-surface-200"}`} />
                 ))}
               </div>
               <p className="mt-3 text-sm text-surface-700 dark:text-surface-300">&ldquo;{t.quote}&rdquo;</p>

@@ -21,5 +21,5 @@ export default async function FarmerAiAssistantPage() {
     .order("created_at", { ascending: false })
     .limit(30);
 
-  return <AiAssistantClient farmerName={farmer.full_name} pendingRequests={pendingRequests ?? []} />;
+  return <AiAssistantClient farmerName={farmer.full_name ?? ""} pendingRequests={pendingRequests ?? []} />;
 }

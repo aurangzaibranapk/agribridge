@@ -100,7 +100,7 @@ export const grainDict = {
   gr_cut_pc_ph: { en: "Cut % (say 2 or 10)", rm: "Kaat % (jaise 2 ya 10)", ur: "کاٹ % (جیسے 2 یا 10)" },
   gr_how_many_kg: { en: "How many kg", rm: "Kitne kg", ur: "کتنے کلو" },
   gr_net_weight: { en: "Net weight (payable)", rm: "Saaf Wazan (jis ka paisa banta hai)", ur: "صاف وزن (جس کا پیسہ بنتا ہے)" },
-  gr_rate_per_kg_req: { en: "Rate per kg (Rs.) *", rm: "Rate fi kg (Rs.) *", ur: "ریٹ فی کلو (روپے) *" },
+  gr_rate_per_kg_req: { en: "Rate per Maund (Rs.) *", rm: "Rate fi Maund (Rs.) *", ur: "ریٹ فی من (روپے) *" },
   gr_moisture: { en: "Moisture %", rm: "Namee %", ur: "نمی %" },
   gr_quality_grade: { en: "Quality grade", rm: "Quality ka Darja", ur: "کوالٹی کا درجہ" },
   gr_grade_eg: { en: "e.g. A, B, Premium", rm: "jaise A, B, Premium", ur: "جیسے A، B، پریمیم" },

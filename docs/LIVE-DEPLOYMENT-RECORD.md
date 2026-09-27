@@ -3809,3 +3809,155 @@ dena.
 3. Migration 440, 441, 442, 443 (is tarteeb mein)
 4. Post-migration verify: products.units_per_carton column maujood; agri_orders.order_to_warehouse_id maujood; supplier_product_aliases table maujood
 5. Naya build upload
+
+---
+
+## 25 September — Salary Planner + Stock Count improvements
+
+**Commits (feature/supplier-bill-final-v2):**
+- `6b5eec5`: Migration 463 (cycle_count_settings RLS), Stock Value fix, Force-close stock count, StockCountNudge
+- `157c9d7`: Salary Planner page + Migration 464
+
+### Testing par baqi migrations
+
+**Migration 463** (`cycle_count_settings` RLS) — Boss ne Testing par confirm kar liya ("Success. No rows returned"). **Live par abhi baqi hai.**
+
+**Migration 464** (Salary Planner: features + role_features + feature_help) — **Testing par chalna baqi hai, phir Live par.**
+
+### Live par dene ki tarteeb (Boss ke aane par)
+
+1. Backup tasdeeq (file size chat mein)
+2. Pre-migration ginti:
+   - `select count(*) from cycle_count_settings` (jo bhi ginti ho)
+3. Migration 463 (cycle_count_settings RLS)
+4. Post-verify: same ginti (rows nahi miti)
+5. Migration 464 (Salary Planner feature registration)
+6. Post-verify: `select key from features where key like 'reports.salary%'` → 1 row
+7. Naya build upload aur smoke test: `/admin/reports/salary-planner` khulta ho
+
+### Salary Planner kya karta hai
+
+`/admin/reports/salary-planner` — system ka data khud uthata hai:
+- `pos_sales`: har dukan ki sale, gross munafa
+- `company_expense_requests` (rent+utility_bill+maintenance+other, status=approved): kharche
+- `profiles` (is_active=true, non-admin): staff ginti per branch
+- Net munafa = gross munafa − kharche
+- Interactive slider (5–80%): net munafe ka kitna % salary dena chahiye
+- Per-admi estimate: salary budget ÷ staff count
+- Roles: owner, super_admin, admin, finance, manager
+
+---
+
+## 25 September — POS Fixes (467, 468) + Code Fixes
+
+**Commits (feature/supplier-bill-final-v2):**
+- `454d8be`: `aggregateShiftCash` — return `refund_method=original` par `cash_refund` se ghatao (shift close expected cash ka masla)
+- `204b595`: Supplier Bill selected line par product code badge
+- `5392e33`: Purchases Report — `inventory.unit_cost` ki jagah `products.purchase_price` (stock value Rs 0 fix)
+- `6610cb3`: POS Return — Gahak naam: server action se service client (RLS bypass)
+- `921d499`: Migration 468 — `create_pos_sale` branch path mein `customers.current_balance` update
+
+### Kiya kya kya (25 September)
+
+1. **Product code Supplier Bill par** — selected line par code badge nahi tha, sirf dropdown mein tha. Fix commit `204b595`.
+2. **Purchases Report Rs 0** — `inventory.unit_cost` column maujood hi nahi, sab zero aa raha tha. Fix: `products.purchase_price` use kiya. Commit `5392e33`.
+3. **Gahak naam POS Return mein** — browser client RLS ke peeche customers table nahi dekh sakta tha. Server action banaya `fetchPosCustomerNames` service client se. Commit `6610cb3`.
+4. **Mooli + Mooli Surf merge** — Live par seedha merge kiya (`stock_movements` mein audit trail). No migration.
+5. **Migration 467** — `fn_pos_return_lines`: khata (split) wapsi mein `cash_refund` sahi ginta hai. Testing par ✓ aur Live par bhi ✓ (backup 24 Sep 2026 20:33:40 UTC se).
+6. **Migration 468** — `create_pos_sale` branch path: `customers.current_balance` bhi barhayen. Testing par ✓ (OID 37130).
+
+### Testing aur Live status
+
+| Migration | Testing | Live |
+|---|---|---|
+| 467 (pos return cash_refund fix) | ✓ | ✓ |
+| 468 (customers.current_balance) | ✓ | **BAQI** |
+
+### Live par dene ki tarteeb (Boss ke aane par)
+
+1. Backup tasdeeq (file size chat mein)
+2. Pre-migration ginti: `select count(*) from customers where current_balance != 0` (jo bhi ginti ho)
+3. Migration 468 (create_pos_sale customers.current_balance)
+4. Post-verify: same ginti (ya zyada — naye customers nahi bane the)
+5. Naya build upload + smoke test:
+   - POS Return list mein gahak ka naam aaye
+   - Supplier Bill par product code nazar aaye
+   - Purchases Report mein Stock Value sahi aaye (sifar nahi)
+   - Shift Band Karein mein Expected Cash se return ghat jaye
+
+### Build deploy commands (Boss ke system par)
+
+```
+git pull origin feature/supplier-bill-final-v2 && npm run build > build.log 2>&1; tail -5 build.log
+```
+```
+ls -l .next/BUILD_ID && rm -f deploy.tar.gz && tar --exclude='.next/cache' -czf deploy.tar.gz .next && ls -lh deploy.tar.gz
+```
+
+---
+
+## 26 September — Unattributed Cash Write-off + AI Business Command Center (Migration 482)
+
+**Commits (feature/supplier-bill-final-v2):**
+- `c0e26f5`: Migration `20260926_unattributed_cash_writeoff.sql` — 25 orphan journal_entries HQ assign + loss entry TXN-26-000493 (Dr 9999 Rs 30,211.69, Cr 1000)
+- `47cd675`: Migration `482_ai_staff_sales_rewards_and_intelligence.sql` + `ai-command-center.tsx` + `business-intelligence.ts`
+- `cb31ce8`: `modern-master-dashboard.tsx` + `ai-daily-report/route.ts` updated
+- `9ffb774`: `page.tsx` — v_ai_sales_category / v_ai_staff_sales_daily queries + categorySales/staffSales props
+- `da0b257`: `bridge-tools.ts` — 3 naye AI tools; `LIVE-DEPLOYMENT-RECORD.md` restored
+
+### Kiya kya (26 September)
+
+1. **Rs 30,212 unattributed cash khatam** — 25 journal_entries jinpar `branch_id IS NULL` thi, sab Company HQ (`e58a3bd3`) par assign. Net cash Rs 30,211.69 loss journal entry TXN-26-000493 mein write-off. Migration Testing (no-op) aur Live dono par chal chuki.
+2. **AI Business Command Center** — Master Dashboard par widget: Live ERP se AI sawaal poochein. Quick asks: business status, category sale, top staff, stock advice.
+3. **Migration 482** — `staff_sales_reward_rules` + `staff_sales_rewards` tables + triggers (reward on POS INSERT, reversal on void/return) + 3 views (`v_ai_sales_category`, `v_ai_staff_sales_daily`, `v_ai_staff_sales_monthly`). Migration 452 se rename kiya (conflict: humara 452_shop_summary_report.sql pehle se tha).
+4. **Category Sales chart** + **Top Staff table** — 30-day data, `v_ai_sales_category` se.
+5. **bridge-tools.ts** — 3 naye tools imported from `business-intelligence.ts`: `get_category_sales`, `get_staff_sales_performance`, `get_business_intelligence_report`.
+
+### Testing aur Live status
+
+| Migration | Testing | Live |
+|---|---|---|
+| `20260926_unattributed_cash_writeoff` | ✓ (no-op) | ✓ (applied) |
+| 468 (customers.current_balance) | ✓ | **BAQI** |
+| 482 (AI staff rewards + views) | **BAQI** | **BAQI** |
+
+### Live par dene ki tarteeb (Boss ke aane par)
+
+**P0 rule: pehle backup, phir migrations, phir build.**
+
+1. **Backup tasdeeq** (file size chat mein — schema + data ≈ full)
+2. Pre-migration ginti:
+   ```sql
+   select count(*) from journal_entries where branch_id is null;
+   -- expect: 0 (migration chal chuki)
+   select count(*) from staff_sales_rewards;
+   -- expect: table exist nahi (migration 482 se banegi)
+   ```
+3. **Migration 468** — Testing par ✓, Live par baqi:
+   ```
+   psql "$LIVEURL" -v ON_ERROR_STOP=1 -1 -f "supabase/migrations/468_pos_sale_customer_balance.sql"
+   ```
+4. **Migration 482** — Pehle Testing:
+   ```
+   psql "$TESTINGURL" -v ON_ERROR_STOP=1 -1 -f "supabase/migrations/482_ai_staff_sales_rewards_and_intelligence.sql"
+   ```
+   Verify: `select count(*) from staff_sales_reward_rules;` — 2 rows
+   Phir Live:
+   ```
+   psql "$LIVEURL" -v ON_ERROR_STOP=1 -1 -f "supabase/migrations/482_ai_staff_sales_rewards_and_intelligence.sql"
+   ```
+5. Post-verify: `select count(*) from staff_sales_reward_rules;` — 2 rows on Live
+6. Naya build upload + smoke test:
+   - Master Dashboard par "AI Business Command Center" widget nazar aaye
+   - Category Sales chart (30-day data)
+   - Top Staff table
+   - "Poochhein" button se AI ka jawab aaye
+
+### Build deploy commands
+
+```
+git pull origin feature/supplier-bill-final-v2 && npm run build > build.log 2>&1; tail -5 build.log
+```
+```
+ls -l .next/BUILD_ID && rm -f deploy.tar.gz && tar --exclude='.next/cache' -czf deploy.tar.gz .next && ls -lh deploy.tar.gz
+```

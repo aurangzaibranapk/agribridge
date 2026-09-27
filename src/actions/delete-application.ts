@@ -42,7 +42,7 @@ export async function deleteApplication(_prev: ActionState, formData: FormData):
   if (application.vacancy_id && application.created_profile_id) {
     const { data: vacancy } = await supabase.from("job_vacancies").select("seats_filled").eq("id", application.vacancy_id).single();
     if (vacancy && (vacancy.seats_filled ?? 0) > 0) {
-      await supabase.from("job_vacancies").update({ seats_filled: vacancy.seats_filled - 1 }).eq("id", application.vacancy_id);
+      await supabase.from("job_vacancies").update({ seats_filled: (vacancy.seats_filled ?? 0) - 1 }).eq("id", application.vacancy_id);
     }
   }
 

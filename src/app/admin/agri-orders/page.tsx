@@ -44,7 +44,8 @@ const INACTIVE_STATUSES = ["completed", "cancelled", "rejected"];
 export default async function AgriOrdersPage({ searchParams }: { searchParams: { show?: string } }) {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
-  const showAll = searchParams?.show === "all";
+  // "active" explicitly chahiye to ?show=active, warna sab dikhao.
+  const showAll = searchParams?.show !== "active";
 
   let q = supabase
     .from("agri_orders")
@@ -123,11 +124,11 @@ export default async function AgriOrdersPage({ searchParams }: { searchParams: {
         </p>
         <div className="flex gap-2">
           <Link
-            href="/admin/agri-orders"
+            href="/admin/agri-orders?show=active"
             className={`rounded-lg px-3 py-1.5 text-xs font-medium ${!showAll ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-600 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300"}`}
           >Active</Link>
           <Link
-            href="/admin/agri-orders?show=all"
+            href="/admin/agri-orders"
             className={`rounded-lg px-3 py-1.5 text-xs font-medium ${showAll ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-600 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300"}`}
           >Sab Dekhen</Link>
         </div>

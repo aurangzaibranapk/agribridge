@@ -123,7 +123,7 @@ export async function processFarmerAiMessage(
   const chat = ai.chats.create({
     model: "gemini-3.6-flash",
     config: {
-      tools: [{ functionDeclarations: FARMER_AI_TOOLS }],
+      tools: [{ functionDeclarations: FARMER_AI_TOOLS as any }],
       systemInstruction: SYSTEM_INSTRUCTION,
     },
   });
@@ -151,7 +151,7 @@ export async function processFarmerAiMessage(
       else if (call.name === "request_fertilizer") humanDescription = `Fertilizer/Pesticide: ${args.description}`;
       else if (call.name === "sell_produce") humanDescription = `Produce bechna: ${args.crop_name} - ${args.quantity} ${args.unit ?? "maund"}`;
 
-      const { data: draft, error } = await supabase
+      const { data: draft, error } = await (supabase as any)
         .from("farmer_ai_requests")
         .insert({ farmer_id: farmerId, intent_type: call.name, description: humanDescription, details: args, status: "pending" })
         .select("id")

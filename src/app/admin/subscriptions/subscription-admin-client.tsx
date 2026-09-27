@@ -20,7 +20,7 @@ interface Subscription {
   farmerName: string;
   farmerCode: string;
 }
-interface Farmer { id: string; full_name: string; farmer_code: string; }
+interface Farmer { id: string; full_name: string | null; farmer_code: string | null; }
 interface Announcement { id: string; title: string; is_active: boolean; cta_type: string; created_at: string; }
 interface Stats {
   totalRevenue: number;

@@ -123,7 +123,7 @@ export async function staffProposeProduct(_prev: ActionState, formData: FormData
 
   const { data: org } = await supabase.from("organizations").select("id").limit(1).single();
 
-  const { error } = await supabase.from("products").insert({
+  const { error } = await (supabase as any).from("products").insert({
     organization_id: org?.id ?? null,
     category_id: categoryId,
     name,
@@ -209,7 +209,7 @@ export async function proposeProductEdit(
   } = await supabase.auth.getUser();
   if (!user) return { error: "Login zaroori hai." };
 
-  const { error } = await supabase.from("product_edit_requests").insert({
+  const { error } = await (supabase as any).from("product_edit_requests").insert({
     product_id: productId,
     proposed_by: user.id,
     changes,

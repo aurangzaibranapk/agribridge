@@ -29,6 +29,26 @@ export default async function CorrectionsPage() {
     .order("attendance_date", { ascending: false })
     .limit(20);
 
+  // Is mahine kitni darkhwastain de chuki hain (limit 5)
+  const today = new Date().toISOString().split("T")[0];
+  const monthStart = today.slice(0, 7) + "-01";
+  const { count: usedThisMonth } = await supabase
+    .from("attendance_corrections")
+    .select("id", { count: "exact", head: true })
+    .eq("profile_id", user.id)
+    .gte("created_at", monthStart);
+
+  // Pichle 60 din ki attendance records — select karne ke liye
+  const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 3600 * 1000).toISOString().split("T")[0];
+  const { data: attRows } = await supabase
+    .from("attendance_records")
+    .select("attendance_date, status, check_in, check_out")
+    .eq("profile_id", user.id)
+    .gte("attendance_date", sixtyDaysAgo)
+    .lte("attendance_date", today)
+    .order("attendance_date", { ascending: false })
+    .limit(60);
+
   // Team ki darkhwastein (pending/sent_back, doosron ki)
   const { data: open } = await supabase
     .from("attendance_corrections")
@@ -51,6 +71,13 @@ export default async function CorrectionsPage() {
       <PageHeader title="Hazri theek karwayein" description="Apni ghalat hazri ki darkhwast dein — manager ya admin manzoor karega" />
       <CorrectionsClient
         lang={lang}
+        usedThisMonth={usedThisMonth ?? 0}
+        attendanceDates={(attRows ?? []).map((r) => ({
+          date: r.attendance_date as string,
+          status: (r.status as string) ?? "missing",
+          checkIn: (r.check_in as string | null) ?? null,
+          checkOut: (r.check_out as string | null) ?? null,
+        }))}
         myRows={(apniRows ?? []).map((r) => ({
           id: r.id,
           date: r.attendance_date as string,

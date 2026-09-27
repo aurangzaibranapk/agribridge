@@ -98,6 +98,7 @@ export function SimpleOrderForm({
     });
 
   const grandTotal = activeItems.reduce((sum, i) => sum + i.order_qty * i.unit_price, 0);
+  const totalBottles = activeItems.reduce((sum, i) => sum + i.order_qty, 0);
 
   if (state.success && state.orderId) {
     return (
@@ -176,6 +177,10 @@ export function SimpleOrderForm({
         <div className="flex items-center justify-between text-sm">
           <span className="text-surface-500">{t("so_total_items", lang)}</span>
           <span className="font-medium text-surface-900 dark:text-white">{activeItems.length}</span>
+        </div>
+        <div className="mt-1 flex items-center justify-between text-sm">
+          <span className="text-surface-500">Total Bottles</span>
+          <span className="font-medium text-brand-600 dark:text-brand-400">{totalBottles} bottle</span>
         </div>
         <div className="mt-1 flex items-center justify-between border-t border-surface-100 pt-2 text-base font-semibold dark:border-surface-800">
           <span className="text-surface-900 dark:text-white">{t("c_grand_total", lang)}</span>

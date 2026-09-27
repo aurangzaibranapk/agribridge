@@ -199,9 +199,9 @@ export async function POST(request: NextRequest) {
         await sendWhatsAppMessage(fromPhone, "Voice note download nahi ho saki, dobara bhejein.");
         return NextResponse.json({ ok: true });
       }
-      result = await processFarmerAiMessage(serviceClient, farmer.id, { audioBase64: media.base64, audioMimeType: media.mimeType, isProfileComplete });
+      result = await processFarmerAiMessage(serviceClient, farmer.id, { audioBase64: media.base64, audioMimeType: media.mimeType });
     } else if (message.type === "text") {
-      result = await processFarmerAiMessage(serviceClient, farmer.id, { text: message.text.body, isProfileComplete });
+      result = await processFarmerAiMessage(serviceClient, farmer.id, { text: message.text.body });
     } else {
       await sendWhatsAppMessage(fromPhone, "Abhi sirf Text ya Voice message samajh sakte hain.");
       return NextResponse.json({ ok: true });

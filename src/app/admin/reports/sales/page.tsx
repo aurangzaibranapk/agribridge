@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
@@ -25,6 +26,7 @@ import {
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { RecentSalesTable } from "./recent-sales-table";
+import { StatementExportBar } from "./statement-export-bar";
 
 export const dynamic = "force-dynamic";
 
@@ -33,16 +35,29 @@ function rs(n: number) {
   return `Rs. ${Math.round(n).toLocaleString()}`;
 }
 
+const PAYMENT_LABELS: Record<string, string> = {
+  cash: "Cash",
+  khata: "Khata (Udhaar)",
+  waseela_card: "Wasela Card",
+  easypaisa: "EasyPaisa",
+  jazzcash: "JazzCash",
+  qr: "QR Code",
+  card: "Card",
+  bank_transfer: "Bank Transfer",
+};
+
 export default async function SalesReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; branch?: string; shop?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ range?: string; branch?: string; shop?: string; from?: string; to?: string; payment?: string }>;
 }) {
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "month";
+  const paymentFilter = params.payment || "";
   const lang = getLanguageFromCookies("rm");
   const { start, end } = getDateRange(range, params.from, params.to);
   const supabase = createClient();
+  const service = createServiceClient();
 
   /**
    * Ye safha kis ka hai.
@@ -90,6 +105,17 @@ export default async function SalesReportPage({
   });
   const shopsForBranch = branchId ? (dukanein ?? []).filter((d) => d.branch_id === branchId) : [];
 
+  // Agar payment filter laga ho to pehle un sale_ids ko nikalein jo us
+  // tareeqe se ada ki gayi hain, phir pos_sales ko in IDs par band karein.
+  let filteredSaleIds: string[] | null = null;
+  if (paymentFilter) {
+    const { data: pmRows } = await supabase
+      .from("pos_sale_payment_details")
+      .select("sale_id")
+      .eq("payment_method", paymentFilter);
+    filteredSaleIds = (pmRows ?? []).map((r: any) => r.sale_id).filter(Boolean);
+  }
+
   let salesQuery = supabase
     .from("pos_sales")
     .select(
@@ -101,8 +127,12 @@ export default async function SalesReportPage({
   if (meriDukan) salesQuery = salesQuery.eq("shop_id", meriDukan);
   else if (shopId) salesQuery = salesQuery.eq("shop_id", shopId);
   else if (branchId) salesQuery = salesQuery.eq("branch_id", branchId);
+  if (filteredSaleIds !== null) {
+    if (filteredSaleIds.length === 0) salesQuery = salesQuery.eq("id", "no-match");
+    else salesQuery = salesQuery.in("id", filteredSaleIds);
+  }
 
-  const { data: sales } = await salesQuery.limit(200);
+  const { data: sales } = await salesQuery.limit(500);
 
   const cashierIds = [...new Set((sales ?? []).map((s) => s.created_by).filter(Boolean))];
   const { data: cashiers } = cashierIds.length
@@ -121,9 +151,9 @@ export default async function SalesReportPage({
   const crmIds = [...new Set((sales ?? []).map((s: any) => s.crm_customer_id).filter(Boolean))];
   const dealerCustIds = [...new Set((sales ?? []).map((s: any) => s.customer_id).filter(Boolean))];
   const [{ data: crmCusts }, { data: dealerCusts }] = await Promise.all([
-    crmIds.length ? supabase.from("customers").select("id, name").in("id", crmIds) : Promise.resolve({ data: [] as any[] }),
+    crmIds.length ? service.from("customers").select("id, name").in("id", crmIds) : Promise.resolve({ data: [] as any[] }),
     dealerCustIds.length
-      ? supabase.from("dealer_customers").select("id, name").in("id", dealerCustIds)
+      ? service.from("dealer_customers").select("id, name").in("id", dealerCustIds)
       : Promise.resolve({ data: [] as any[] }),
   ]);
   const crmCustName = new Map((crmCusts ?? []).map((c: any) => [c.id, c.name]));
@@ -188,9 +218,13 @@ export default async function SalesReportPage({
   }
 
   const khaateWaliSale = new Map<string, number>();
+  const tareeqeWariSale = new Map<string, number>();
   for (const a of (adaigiyan ?? []) as { payment_method: string; amount: number }[]) {
     const raqam = Number(a.amount ?? 0);
     if (raqam <= 0) continue;
+    // Payment method se seedha breakdown (Cash, Khata, Wasela Card etc.)
+    const tareeqaNaam = PAYMENT_LABELS[a.payment_method] ?? a.payment_method;
+    tareeqeWariSale.set(tareeqaNaam, (tareeqeWariSale.get(tareeqaNaam) ?? 0) + raqam);
     // Khata (udhaar) kisi asal khate mein paisa laata hi nahi -- credit
     // hai, cash/bank nahi. Yahan gin lena "khata (khata darj nahi)"
     // jaisa ghalat-fehmi paida karne wala label deta tha (malik, 16
@@ -205,6 +239,7 @@ export default async function SalesReportPage({
     khaateWaliSale.set(naam, (khaateWaliSale.get(naam) ?? 0) + raqam);
   }
   const khaateKiFehrist = [...khaateWaliSale.entries()].sort((a, b) => b[1] - a[1]);
+  const tareeqeKiFehrist = [...tareeqeWariSale.entries()].sort((a, b) => b[1] - a[1]);
 
   // Udhaar (khata) -- bikri ka wo hissa jo abhi aaya hi nahi.
   const udhaarDiya = (sales ?? []).reduce((sum, s: any) => sum + Number(s.khata_amount ?? 0), 0);
@@ -383,7 +418,7 @@ export default async function SalesReportPage({
   const totalCount = (sales ?? []).length;
   const avgSale = totalCount > 0 ? totalSales / totalCount : 0;
 
-  const rows = (sales ?? []).slice(0, 50).map((s: any) => {
+  const allRows = (sales ?? []).map((s: any) => {
     const branch = Array.isArray(s.branches) ? s.branches[0] : s.branches;
     const dealer = Array.isArray(s.dealers) ? s.dealers[0] : s.dealers;
     return {
@@ -394,11 +429,23 @@ export default async function SalesReportPage({
       paymentMode: s.payment_mode,
       amount: Number(s.total_amount ?? 0),
       customer: (s.crm_customer_id ? crmCustName.get(s.crm_customer_id) : null) ?? (s.customer_id ? dealerCustName.get(s.customer_id) : null) ?? null,
+      has_customer: !!(s.crm_customer_id || s.customer_id),
     };
   });
+  const rows = allRows.slice(0, 50);
+
+  const dateLabel = `${start.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })} — ${end.toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" })}`;
 
   return (
     <div>
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          nav, header, aside, [data-sidebar], [role="navigation"] { display: none !important; }
+          body { font-size: 12px; }
+          .rounded-card { border: 1px solid #e5e7eb !important; box-shadow: none !important; }
+        }
+      `}</style>
       <PageHeader
         title={t("rs_title", lang)}
         description={
@@ -415,6 +462,56 @@ export default async function SalesReportPage({
           <ShopFilter shops={shopsForBranch.map((d) => ({ id: d.id, name: d.name }))} current={shopId} />
         )}
       </div>
+
+      {/* Payment Method Filter */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-surface-500">Payment:</span>
+        {[
+          { key: "", label: "Sab" },
+          { key: "cash", label: "Cash" },
+          { key: "waseela_card", label: "Wasela Card" },
+          { key: "easypaisa", label: "EasyPaisa" },
+          { key: "jazzcash", label: "JazzCash" },
+          { key: "khata", label: "Khata" },
+          { key: "qr", label: "QR" },
+          { key: "bank_transfer", label: "Bank Transfer" },
+        ].map((opt) => {
+          const href = `?range=${range}${params.from ? `&from=${params.from}` : ""}${params.to ? `&to=${params.to}` : ""}${branchId ? `&branch=${branchId}` : ""}${shopId ? `&shop=${shopId}` : ""}${opt.key ? `&payment=${opt.key}` : ""}`;
+          const active = paymentFilter === opt.key;
+          return (
+            <a
+              key={opt.key}
+              href={href}
+              className={`rounded-lg px-3 py-1 text-xs font-semibold transition-colors ${
+                active
+                  ? "bg-brand-600 text-white shadow-sm"
+                  : "border border-surface-200 bg-white text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-300"
+              }`}
+            >
+              {opt.label}
+            </a>
+          );
+        })}
+      </div>
+
+      {/* Filtered payment statement total + export */}
+      {paymentFilter && (
+        <>
+          <div className="mt-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 dark:border-brand-900/50 dark:bg-brand-950/20">
+            <p className="text-xs text-brand-700 dark:text-brand-400">
+              <span className="font-semibold">{PAYMENT_LABELS[paymentFilter] ?? paymentFilter}</span> statement —{" "}
+              {totalCount} transactions, kul: <span className="font-bold">{rs(totalSales)}</span>
+            </p>
+          </div>
+          <StatementExportBar
+            paymentLabel={PAYMENT_LABELS[paymentFilter] ?? paymentFilter}
+            dateLabel={dateLabel}
+            totalAmount={totalSales}
+            totalCount={totalCount}
+            rows={allRows}
+          />
+        </>
+      )}
 
       {!sabKuchWala && !meriDukan && (
         <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-surface-800 dark:bg-surface-900 dark:text-amber-300">
@@ -494,6 +591,34 @@ export default async function SalesReportPage({
         <StatCard label="Daily kharche" value={rs(kulKharche)} icon={ArrowDownCircle} tone="red" />
         <StatCard label={t("rs_transactions", lang)} value={String(totalCount)} icon={ClipboardList} tone="blue" />
       </div>
+
+      {/* Payment method se bikri ka breakdown */}
+      {tareeqeKiFehrist.length > 0 && (
+        <div className="mt-4 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
+          <h2 className="mb-1 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+            Payment tareeqe se bikri
+          </h2>
+          <p className="mb-4 text-xs text-surface-400">
+            Har tareeqe se kitni actual raqam aayi — Cash, Khata, Wasela Card, EasyPaisa waghaira.
+          </p>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-1 sm:grid-cols-3 lg:grid-cols-4">
+            {tareeqeKiFehrist.map(([naam, raqam]) => (
+              <div key={naam} className="flex items-center justify-between gap-2 border-b border-surface-50 py-2 last:border-0 dark:border-surface-800">
+                <span className="text-sm text-surface-700 dark:text-surface-300">{naam}</span>
+                <span className="text-sm font-semibold tabular-nums text-surface-900 dark:text-surface-100">
+                  {rs(raqam)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center justify-between border-t border-surface-100 pt-3 dark:border-surface-800">
+            <span className="text-xs font-semibold uppercase tracking-wide text-surface-500">Kul</span>
+            <span className="text-base font-bold tabular-nums text-surface-900 dark:text-surface-100">
+              {rs(tareeqeKiFehrist.reduce((s, [, r]) => s + r, 0))}
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Kis khaate mein kitna aaya */}

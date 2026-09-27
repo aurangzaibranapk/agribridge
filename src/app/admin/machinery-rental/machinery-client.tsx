@@ -46,7 +46,7 @@ interface Machine {
   driver_phone: string | null;
   rate_amount: number;
 }
-interface Farmer { id: string; full_name: string; farmer_code: string; booking_link_token?: string; }
+interface Farmer { id: string; full_name: string | null; farmer_code: string | null; booking_link_token?: string | null; }
 interface Booking {
   id: string;
   booking_number: string;
@@ -199,7 +199,7 @@ export function MachineryClient({
 
       {showNewVendor && <NewVendorModal onClose={() => setShowNewVendor(false)} />}
       {showNewMachine && <NewMachineModal vendors={vendors} onClose={() => setShowNewMachine(false)} />}
-      {showShareLink && <ShareLinkModal farmers={farmers} onClose={() => setShowShareLink(false)} />}
+      {showShareLink && <ShareLinkModal farmers={farmers as any} onClose={() => setShowShareLink(false)} />}
     </div>
   );
 }

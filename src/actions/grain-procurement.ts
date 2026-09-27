@@ -77,8 +77,9 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
 
   const cutKg = grossWeight * (cutPercentage / 100);
   const netWeight = grossWeight - cutKg;
-  const totalAmount = netWeight * rate;
-  const chungiAmount = chungiType === "grain" ? chungiKg * rate : chungiAmountInput;
+  // rate field mein per-maund rate aata hai -- kg mein convert: rate/40
+  const totalAmount = (netWeight / 40) * rate;
+  const chungiAmount = chungiType === "grain" ? (chungiKg / 40) * rate : chungiAmountInput;
   if (chungiAmount < 0) return { error: "Chungi amount sahi likhein." };
   if (chungiAmount > totalAmount) return { error: "Chungi amount total value se zyada nahi ho sakta." };
   const payableToSeller = totalAmount - chungiAmount;
@@ -111,7 +112,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: entry, error } = await supabase
+  const { data: entry, error } = await (supabase as any)
     .from("grain_procurement_entries")
     .insert({
       farmer_id: farmerId,

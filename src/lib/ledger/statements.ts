@@ -79,18 +79,30 @@ interface LineRow {
  */
 async function lines(from: string | null, to: string, branchId?: string | null) {
   const service = createServiceClient();
+  const PAGE = 1000;
+  let offset = 0;
+  const all: LineRow[] = [];
 
-  let q = service
-    .from("journal_lines")
-    .select("account_code, debit, credit, journal_entries!inner(entry_date, branch_id)")
-    .lte("journal_entries.entry_date", to);
+  while (true) {
+    let q = service
+      .from("journal_lines")
+      .select("account_code, debit, credit, journal_entries!inner(entry_date, branch_id)")
+      .lte("journal_entries.entry_date", to)
+      .range(offset, offset + PAGE - 1);
 
-  if (from) q = q.gte("journal_entries.entry_date", from);
-  if (branchId) q = q.eq("journal_entries.branch_id", branchId);
+    if (from) q = q.gte("journal_entries.entry_date", from);
+    if (branchId) q = q.eq("journal_entries.branch_id", branchId);
 
-  const { data, error } = await q;
-  if (error) return { rows: null as LineRow[] | null, error: error.message };
-  return { rows: (data ?? []) as unknown as LineRow[], error: null as string | null };
+    const { data, error } = await q;
+    if (error) return { rows: null as LineRow[] | null, error: error.message };
+
+    const page = (data ?? []) as unknown as LineRow[];
+    all.push(...page);
+    if (page.length < PAGE) break;
+    offset += PAGE;
+  }
+
+  return { rows: all, error: null as string | null };
 }
 
 async function accounts(): Promise<{ list: GlAccount[]; error: string | null }> {

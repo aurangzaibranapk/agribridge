@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
 export interface ActionState {
   error?: string;
@@ -20,16 +21,17 @@ export async function updateAiInstructions(_prev: ActionState, formData: FormDat
   const HQ_ROLES = ["super_admin", "admin", "owner"];
   if (!HQ_ROLES.includes(profile?.role ?? "")) return { error: "Sirf Admin/Owner instructions change kar sakte hain." };
 
-  const { data: existing } = await supabase.from("ai_report_instructions").select("id").limit(1).maybeSingle();
+  const service = createServiceClient();
+  const { data: existing } = await service.from("ai_report_instructions").select("id").limit(1).maybeSingle();
 
   if (existing) {
-    const { error } = await supabase
+    const { error } = await service
       .from("ai_report_instructions")
       .update({ instructions, updated_by: user.id, updated_at: new Date().toISOString() })
       .eq("id", existing.id);
     if (error) return { error: error.message };
   } else {
-    const { error } = await supabase.from("ai_report_instructions").insert({ instructions, updated_by: user.id });
+    const { error } = await service.from("ai_report_instructions").insert({ instructions, updated_by: user.id });
     if (error) return { error: error.message };
   }
 

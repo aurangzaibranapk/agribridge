@@ -316,6 +316,53 @@ export async function updateProductNamePackSize(
   return {};
 }
 
+export async function deleteCatalogProduct(productId: string): Promise<{ error?: string }> {
+  const supabase = createClient();
+  const { userId, isUnrestricted } = await getPermissionContext(supabase);
+  if (!isUnrestricted) return { error: "Sirf Admin/Owner product delete kar sakta hai." };
+
+  const { data: inv } = await supabase
+    .from("inventory")
+    .select("quantity_on_hand")
+    .eq("product_id", productId);
+
+  const totalStock = (inv ?? []).reduce((s, r) => s + (Number(r.quantity_on_hand) || 0), 0);
+  if (totalStock > 0) return { error: "Stock abhi bhi hai — pehle stock transfer karein." };
+
+  const { error } = await supabase.from("products").update({ is_deleted: true }).eq("id", productId);
+  if (error) return { error: error.message };
+
+  await supabase.from("activity_logs").insert({ user_id: userId, action: "delete", entity_name: "Product", entity_id: productId });
+
+  revalidatePath("/admin/products");
+  revalidatePath("/admin/products/catalog-export");
+  return {};
+}
+
+export async function mergeDuplicateProduct(sourceId: string, targetId: string): Promise<{ error?: string }> {
+  const supabase = createClient();
+  const { userId, isUnrestricted } = await getPermissionContext(supabase);
+  if (!isUnrestricted) return { error: "Sirf Admin/Owner product merge kar sakta hai." };
+
+  const { error } = await supabase.rpc("fn_merge_duplicate_product", {
+    p_source_id: sourceId,
+    p_target_id: targetId,
+  });
+  if (error) return { error: error.message };
+
+  await supabase.from("activity_logs").insert({
+    user_id: userId,
+    action: "merge",
+    entity_name: "Product",
+    entity_id: sourceId,
+    details: { merged_into: targetId },
+  });
+
+  revalidatePath("/admin/products");
+  revalidatePath("/admin/products/catalog-export");
+  return {};
+}
+
 export async function deleteProduct(_prev: FormState, formData: FormData): Promise<FormState> {
   const supabase = createClient();
   const id = String(formData.get("id") ?? "");

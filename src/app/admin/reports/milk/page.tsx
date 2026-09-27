@@ -83,7 +83,7 @@ export default async function MilkReportPage({
             >
               <option value="">{t("mr_all_farmers", lang)}</option>
               {allFarmers.map((f) => (
-                <option key={f.id} value={f.id}>{f.name}</option>
+                <option key={f.id} value={f.id ?? ""}>{f.name}</option>
               ))}
             </select>
             <button type="submit" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("c_filter", lang)}</button>

@@ -2,6 +2,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { postJournal } from "@/lib/ledger/post";
+import { ACC } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -146,6 +148,21 @@ export async function verifyLossRecord(_prev: ActionState, formData: FormData): 
       .update({ status: "approved", approved_by: user.id, approved_at: new Date().toISOString() })
       .eq("id", lossId);
     if (error) return { error: error.message };
+
+    // Nuqsan ka maal company se nikal gaya: Dr Stock Loss (6110), Cr Stock (1200).
+    const lossValue = Number(loss.loss_value ?? 0);
+    if (lossValue > 0) {
+      await postJournal({
+        description: `Stock loss ${loss.loss_number}: ${loss.loss_type} — ${loss.reason}`,
+        sourceModule: "stock_loss",
+        sourceId: lossId,
+        createdBy: user.id,
+        lines: [
+          { account: ACC.stockLoss, debit: lossValue },
+          { account: ACC.stockGoods, credit: lossValue },
+        ],
+      });
+    }
   } else {
     if (!reducedRate || reducedRate < 0) return { error: "Kam rate sahi likhein." };
     if (reducedRate >= Number(loss.unit_cost)) return { error: "Reduced rate original cost se kam honi chahiye." };

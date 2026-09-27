@@ -69,7 +69,7 @@ export default async function SlipPage({ params }: { params: { id: string } }) {
         carrierConfirmedAt: h.carrier_confirmed_at ?? null,
         carrierConfirmedByName: h.carrier_confirmed_by ? (byId.get(h.carrier_confirmed_by)?.full_name ?? null) : null,
       }}
-      isRecipient={isRecipient}
+      isRecipient={isRecipient || isAdmin}
       isCarrier={isCarrier}
       viewerName={me?.full_name ?? ""}
     />

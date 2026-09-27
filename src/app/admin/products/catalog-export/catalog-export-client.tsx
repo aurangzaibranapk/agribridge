@@ -1,9 +1,9 @@
 "use client";
 import { useState, useMemo, useTransition, useRef, useEffect } from "react";
-import { Printer, Download, Mail, MessageCircle, FileText, Pencil, Check, X, ChevronDown } from "lucide-react";
+import { Printer, Download, Mail, MessageCircle, FileText, Pencil, Check, X, ChevronDown, Trash2, GitMerge } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
-import { updateProductNamePackSize } from "@/actions/products";
+import { updateProductNamePackSize, deleteCatalogProduct, mergeDuplicateProduct } from "@/actions/products";
 
 interface Company {
   id: string;
@@ -24,6 +24,7 @@ interface Product {
   mrp_price: number | null;
   unit: string | null;
   barcode: string | null;
+  product_code: string | null;
   manufacture_date: string | null;
   expiry_date: string | null;
   stock_qty: number | null;
@@ -115,14 +116,21 @@ export function CatalogExportClient({ products: initialProducts, categories, com
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const lang = useLang();
-  const [selectedFields, setSelectedFields] = useState<string[]>(["category", "selling_price"]);
+  const [selectedFields, setSelectedFields] = useState<string[]>(["category", "stock_qty", "stock_value_purchase", "selling_price"]);
   const [search, setSearch] = useState("");
+  const [codeFrom, setCodeFrom] = useState("");
+  const [codeTo, setCodeTo] = useState("");
   const [includeCountColumns, setIncludeCountColumns] = useState(false);
   // Ginti sheet ab kaghaz tak mehdood nahi -- yahin screen par bhi
   // "Actual Stock" likha ja sakta hai, aur Farq khud ban jata hai.
   // Malik (11 September): "next bhi yahan stock likhna hai, farq wahan
   // box hona chahiye."
   const [actualStock, setActualStock] = useState<Record<string, string>>({});
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [mergeSourceId, setMergeSourceId] = useState<string | null>(null);
+  const [mergeTargetId, setMergeTargetId] = useState<string>("");
+  const [mergeError, setMergeError] = useState("");
+  const [actionPending, setActionPending] = useState(false);
 
   const shopWarehouseIds = useMemo(
     () => shopFilter ? new Set(warehouses.filter((w) => w.shop_id === shopFilter).map((w) => w.id)) : null,
@@ -147,7 +155,17 @@ export function CatalogExportClient({ products: initialProducts, categories, com
     if (categoryFilters.length > 0) list = list.filter((p) => p.category != null && categoryFilters.includes(p.category));
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter((p) => p.name.toLowerCase().includes(q));
+      list = list.filter((p) => p.name.toLowerCase().includes(q) || (p.product_code ?? "").toLowerCase().includes(q));
+    }
+    if (codeFrom || codeTo) {
+      const from = codeFrom ? parseInt(codeFrom, 10) : 0;
+      const to = codeTo ? parseInt(codeTo, 10) : 9999;
+      list = list.filter((p) => {
+        const m = p.product_code?.match(/(\d+)$/);
+        if (!m) return false;
+        const n = parseInt(m[1], 10);
+        return n >= from && n <= to;
+      });
     }
     if (warehouseFilter) {
       list = list.filter((p) => p.warehouse_ids.includes(warehouseFilter));
@@ -164,7 +182,7 @@ export function CatalogExportClient({ products: initialProducts, categories, com
       });
     }
     return list;
-  }, [products, shopGroupFilter, categoryFilters, search, warehouseFilter, shopWarehouseIds, dateField, dateFrom, dateTo]);
+  }, [products, shopGroupFilter, categoryFilters, search, codeFrom, codeTo, warehouseFilter, shopWarehouseIds, dateField, dateFrom, dateTo]);
 
   const stockValueTotals = useMemo(() => ({
     purchase: filtered.reduce((s, p) => s + (p.stock_value_purchase ?? 0), 0),
@@ -193,6 +211,33 @@ export function CatalogExportClient({ products: initialProducts, categories, com
   function cancelEdit() {
     setEditingId(null);
     setEditError("");
+  }
+
+  async function handleDeleteConfirm(productId: string) {
+    setActionPending(true);
+    const result = await deleteCatalogProduct(productId);
+    setActionPending(false);
+    if (result.error) {
+      alert(result.error);
+    } else {
+      setProducts((prev) => prev.filter((p) => p.id !== productId));
+      setDeleteConfirmId(null);
+    }
+  }
+
+  async function handleMerge() {
+    if (!mergeSourceId || !mergeTargetId) return;
+    setActionPending(true);
+    const result = await mergeDuplicateProduct(mergeSourceId, mergeTargetId);
+    setActionPending(false);
+    if (result.error) {
+      setMergeError(result.error);
+    } else {
+      setProducts((prev) => prev.filter((p) => p.id !== mergeSourceId));
+      setMergeSourceId(null);
+      setMergeTargetId("");
+      setMergeError("");
+    }
   }
 
   function saveEdit() {
@@ -412,7 +457,7 @@ export function CatalogExportClient({ products: initialProducts, categories, com
   }
 
   return (
-    <div>
+    <>
       {/* Print par table ke columns barh sakte hain (11 fields tak, +2
           ginti sheet ke liye) -- portrait A4 mein sab nahi aata, dayeen
           taraf ke khane katte hue chhap jate. Landscape + chhota font
@@ -504,7 +549,10 @@ export function CatalogExportClient({ products: initialProducts, categories, com
         </select>
         <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="rounded-lg border border-surface-200 p-2 text-sm" title="Date se" />
         <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="rounded-lg border border-surface-200 p-2 text-sm" title="Date tak" />
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("pd_search_short", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search naam ya code (e.g. BEV-001)" className="rounded-lg border border-surface-200 p-2 text-sm w-52" />
+        <span className="text-xs text-surface-500">Code range:</span>
+        <input type="number" min={1} value={codeFrom} onChange={(e) => setCodeFrom(e.target.value)} placeholder="Se (e.g. 10)" className="rounded-lg border border-surface-200 p-2 text-sm w-24" title="Code number se" />
+        <input type="number" min={1} value={codeTo} onChange={(e) => setCodeTo(e.target.value)} placeholder="Tak (e.g. 20)" className="rounded-lg border border-surface-200 p-2 text-sm w-24" title="Code number tak" />
         <div className="ml-auto flex gap-2">
           <button onClick={handlePrint} title="Print" className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Printer className="h-4 w-4" /></button>
           <button onClick={handleDownload} title="CSV Download" className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Download className="h-4 w-4" /></button>
@@ -534,11 +582,11 @@ export function CatalogExportClient({ products: initialProducts, categories, com
         </label>
       </div>
 
-      {((selectedFields.includes("stock_value_purchase") || selectedFields.includes("purchase_price")) ||
+      {((selectedFields.includes("stock_value_purchase") || selectedFields.includes("purchase_price") || selectedFields.includes("stock_qty")) ||
         (selectedFields.includes("stock_value_selling") || selectedFields.includes("selling_price")) ||
         (selectedFields.includes("stock_value_wholesale") || selectedFields.includes("wholesale_price"))) && (
         <div className="mb-4 flex flex-wrap gap-3">
-          {(selectedFields.includes("stock_value_purchase") || selectedFields.includes("purchase_price")) && (
+          {(selectedFields.includes("stock_value_purchase") || selectedFields.includes("purchase_price") || selectedFields.includes("stock_qty")) && (
             <div className="rounded-card border border-amber-200 bg-amber-50 p-3 shadow-card dark:border-amber-800 dark:bg-amber-950/30">
               <p className="text-xs font-medium text-amber-600 dark:text-amber-400">Total Stock Value (Trade Rate)</p>
               <p className="mt-0.5 font-display text-xl font-bold text-amber-800 tabular-nums dark:text-amber-300">Rs {stockValueTotals.purchase.toLocaleString()}</p>
@@ -585,6 +633,7 @@ export function CatalogExportClient({ products: initialProducts, categories, com
           <thead>
             <tr className="text-left [&>th]:sticky [&>th]:top-0 [&>th]:z-10 [&>th]:bg-white dark:[&>th]:bg-surface-900 [&>th]:border-b [&>th]:border-surface-300 dark:[&>th]:border-surface-700">
               <th className="px-3 py-2 font-medium text-surface-500">{t("cx_sr_no", lang)}</th>
+              <th className="px-3 py-2 font-medium text-surface-500">Code</th>
               <th className="px-3 py-2 font-medium text-surface-500">{t("c_product", lang)}</th>
               {FIELD_OPTIONS.filter((f) => selectedFields.includes(f.key)).map((f) => (
                 <th key={f.key} className="px-3 py-2 font-medium text-surface-500">{f.label}</th>
@@ -612,6 +661,7 @@ export function CatalogExportClient({ products: initialProducts, categories, com
                 >
 
                   <td className="px-3 py-2 text-surface-500">{i + 1}</td>
+                  <td className="px-3 py-2 font-mono text-xs font-semibold text-brand-700 dark:text-brand-400">{p.product_code ?? "—"}</td>
                   <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">
                     {editingId === p.id ? (
                       <input
@@ -761,12 +811,17 @@ export function CatalogExportClient({ products: initialProducts, categories, com
                         ><X className="h-4 w-4" /></button>
                         {editError && <span className="ml-1 text-xs text-rose-600">{editError}</span>}
                       </span>
+                    ) : deleteConfirmId === p.id ? (
+                      <span className="flex items-center gap-1">
+                        <button onClick={() => handleDeleteConfirm(p.id)} disabled={actionPending} title="Haan, delete karo" className="rounded p-1 text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:hover:bg-rose-950/30"><Check className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => setDeleteConfirmId(null)} disabled={actionPending} title="Nahi" className="rounded p-1 text-surface-400 hover:bg-surface-50 dark:hover:bg-surface-800"><X className="h-3.5 w-3.5" /></button>
+                      </span>
                     ) : (
-                      <button
-                        onClick={() => startEdit(p)}
-                        title="Edit name / pack size"
-                        className="rounded p-1 text-surface-400 hover:bg-surface-50 hover:text-surface-700 dark:hover:bg-surface-800"
-                      ><Pencil className="h-3.5 w-3.5" /></button>
+                      <span className="flex items-center gap-0.5">
+                        <button onClick={() => startEdit(p)} title="Edit" className="rounded p-1 text-surface-400 hover:bg-surface-50 hover:text-surface-700 dark:hover:bg-surface-800"><Pencil className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => setDeleteConfirmId(p.id)} title="Delete" className="rounded p-1 text-surface-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30"><Trash2 className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => { setMergeSourceId(p.id); setMergeTargetId(""); setMergeError(""); }} title="Stock transfer / merge" className="rounded p-1 text-surface-400 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/30"><GitMerge className="h-3.5 w-3.5" /></button>
+                      </span>
                     )}
                   </td>
                 </tr>
@@ -778,6 +833,37 @@ export function CatalogExportClient({ products: initialProducts, categories, com
           </tbody>
         </table>
       </div>
-    </div>
+
+    {/* Merge / Stock Transfer Modal */}
+    {mergeSourceId && (() => {
+      const src = products.find((p) => p.id === mergeSourceId);
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={(e) => { if (e.target === e.currentTarget) { setMergeSourceId(null); setMergeError(""); } }}>
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-surface-900">
+            <h2 className="mb-1 text-base font-semibold text-surface-900 dark:text-surface-100">Stock Transfer / Merge</h2>
+            <p className="mb-4 text-sm text-surface-500 dark:text-surface-400">
+              <span className="font-medium text-surface-700 dark:text-surface-300">{src?.name}</span> ka stock kisi doosre product mein transfer ho jayega, phir ye product delete ho jayega.
+            </p>
+            <label className="mb-1 block text-xs font-medium text-surface-600 dark:text-surface-400">Target Product chunein</label>
+            <select
+              value={mergeTargetId}
+              onChange={(e) => setMergeTargetId(e.target.value)}
+              className="mb-4 w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-600 dark:bg-surface-800 dark:text-surface-100"
+            >
+              <option value="">— product chunein —</option>
+              {products.filter((p) => p.id !== mergeSourceId).map((p) => (
+                <option key={p.id} value={p.id}>{p.name}{p.pack_size ? ` (${p.pack_size})` : ""}{p.product_code ? ` [${p.product_code}]` : ""}</option>
+              ))}
+            </select>
+            {mergeError && <p className="mb-3 text-sm text-rose-600">{mergeError}</p>}
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => { setMergeSourceId(null); setMergeError(""); }} disabled={actionPending} className="rounded-lg border border-surface-300 px-4 py-2 text-sm text-surface-600 hover:bg-surface-50 disabled:opacity-50 dark:border-surface-600 dark:text-surface-400 dark:hover:bg-surface-800">Raho jane do</button>
+              <button onClick={handleMerge} disabled={!mergeTargetId || actionPending} className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50">{actionPending ? "Ho raha hai…" : "Transfer karo"}</button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
+  </>
   );
 }

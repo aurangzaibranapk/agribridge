@@ -27,7 +27,7 @@ export default async function CatalogExportPage() {
   const [{ data: rawProducts }, { data: allCategories }, { data: inventoryRows }, { data: warehouses }, { data: shops }, { data: saleItems }, { data: companiesRaw }] = await Promise.all([
     supabase
       .from("products")
-      .select("id, name, category_id, company_id, pack_size, purchase_price, selling_price, wholesale_price, mrp_price, unit, barcode, manufacture_date, expiry_date, categories(name), companies(name)")
+      .select("id, name, category_id, company_id, pack_size, purchase_price, selling_price, wholesale_price, mrp_price, unit, barcode, product_code, manufacture_date, expiry_date, categories(name), companies(name)")
       .eq("is_deleted", false)
       .order("name"),
     supabase.from("categories").select("id, name, parent_category_id"),
@@ -82,6 +82,7 @@ export default async function CatalogExportPage() {
       mrp_price: p.mrp_price ? Number(p.mrp_price) : null,
       unit: p.unit,
       barcode: p.barcode,
+      product_code: (p.product_code as string | null) ?? null,
       manufacture_date: p.manufacture_date,
       expiry_date: p.expiry_date,
       stock_qty: stockByProduct.get(p.id) ?? 0,

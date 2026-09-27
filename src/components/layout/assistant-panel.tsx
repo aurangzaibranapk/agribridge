@@ -143,11 +143,36 @@ export function AssistantPanel() {
     return () => document.removeEventListener("agribridge:open-assistant", open);
   }, []);
 
+  // Realtime subscription -- naya paighaam aate hi turant aaye, bina
+  // refresh ke. Polling backup ke tor par reh jaata hai agar realtime
+  // connection fail ho (shared hosting par kabhi kabhi hota hai).
   useEffect(() => {
     if (!userId) return;
-    const gap = open ? 5000 : 30000;
-    const id = setInterval(() => loadMessages(userId), gap);
-    return () => clearInterval(id);
+    let active = true;
+
+    const channel = supabase
+      .channel(`staff-msg-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "staff_messages",
+          filter: `recipient_id=eq.${userId}`,
+        },
+        () => { if (active) void loadMessages(userId); }
+      )
+      .subscribe();
+
+    // Fallback polling: panel khula ho to 10s, band ho to 45s
+    const gap = open ? 10000 : 45000;
+    const timer = setInterval(() => { if (active) void loadMessages(userId); }, gap);
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+      void supabase.removeChannel(channel);
+    };
   }, [userId, open]);
 
   useEffect(() => {

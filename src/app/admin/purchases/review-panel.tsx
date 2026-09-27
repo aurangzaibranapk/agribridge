@@ -23,6 +23,7 @@ export interface PurchaseReviewItem {
   pack_size: string | null;
   quantity: number;
   unit_cost: number;
+  units_per_pack?: number | null;
 }
 
 const STATUS_KEY: Record<string, TranslationKey> = {
@@ -63,6 +64,8 @@ export function ReviewPanel({
   items,
   canApprove,
   canVerify = false,
+  discountAmount,
+  taxAmount,
 }: {
   purchaseId: string;
   purchaseNumber: string;
@@ -72,6 +75,8 @@ export function ReviewPanel({
   canApprove: boolean;
   /** Branch Manager: sirf apni branch ki tasdeeq -- final manzoori nahi. */
   canVerify?: boolean;
+  discountAmount?: number | null;
+  taxAmount?: number | null;
 }) {
   const lang = useLang();
   const [open, setOpen] = useState(false);
@@ -123,15 +128,30 @@ export function ReviewPanel({
                 approve/reject tha -- jo cheez manzoor ki ja rahi thi wo
                 yahan kabhi dikhi hi nahi. */}
             <p className="mb-1.5 text-xs font-medium text-surface-600 dark:text-surface-400">{t("pu_rv_items_title", lang)}</p>
-            <div className="mb-4 space-y-1.5">
+            <div className="mb-2 space-y-1.5">
               {items.length === 0 ? (
                 <p className="text-xs text-surface-400">{t("pu_rv_items_empty", lang)}</p>
               ) : (
                 items.map((it) => (
-                  <ItemRow key={it.id} purchaseId={purchaseId} item={it} editable={canApprove && !done} />
+                  <ItemRow key={it.id} purchaseId={purchaseId} item={it} editable={canApprove} />
                 ))
               )}
             </div>
+            {items.length > 0 && (() => {
+              const subtotal = items.reduce((s, it) => s + it.quantity * it.unit_cost, 0);
+              const disc = discountAmount ?? 0;
+              const taxAmt = taxAmount ?? 0;
+              const grandTotal = subtotal - disc + taxAmt;
+              return (
+                <div className="mb-4 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2.5 text-xs dark:border-surface-700 dark:bg-surface-800">
+                  <div className="flex justify-between text-surface-500"><span>Subtotal</span><span className="tabular-nums font-medium text-surface-700 dark:text-surface-300">Rs {subtotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div>
+                  {disc > 0 && <div className="flex justify-between text-emerald-700 dark:text-emerald-400"><span>Discount (Bach)</span><span className="tabular-nums">− Rs {disc.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div>}
+                  {taxAmt > 0 && <div className="flex justify-between text-surface-500"><span>Tax</span><span className="tabular-nums">+ Rs {taxAmt.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div>}
+                  <div className="mt-1.5 flex justify-between border-t border-surface-200 pt-1.5 font-semibold text-surface-800 dark:border-surface-600 dark:text-surface-100"><span>Total</span><span className="tabular-nums">Rs {grandTotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div>
+                </div>
+              );
+            })()}
+
 
             {/* Baat ka silsila */}
             <div className="mb-4 max-h-64 space-y-2 overflow-y-auto rounded-lg border border-surface-200 p-3 dark:border-surface-800">
@@ -238,43 +258,63 @@ function ItemRow({ purchaseId, item, editable }: { purchaseId: string; item: Pur
   const [unitCost, setUnitCost] = useState(String(item.unit_cost));
   const changed = Number(quantity) !== item.quantity || Number(unitCost) !== item.unit_cost;
 
+  const upp = item.units_per_pack && item.units_per_pack > 1 ? item.units_per_pack : null;
+  const bottleRate = upp ? item.unit_cost / upp : null;
+
   if (!editable) {
     return (
-      <div className="flex items-center justify-between rounded-lg border border-surface-200 px-2.5 py-1.5 text-xs dark:border-surface-700">
-        <span className="text-surface-700 dark:text-surface-300">
-          {item.name}{item.pack_size ? ` (${item.pack_size})` : ""}
-        </span>
-        <span className="tabular-nums text-surface-500">
-          {item.quantity} × Rs {item.unit_cost.toLocaleString()} = Rs {(item.quantity * item.unit_cost).toLocaleString()}
-        </span>
+      <div className="rounded-lg border border-surface-200 px-2.5 py-1.5 text-xs dark:border-surface-700">
+        <div className="flex items-center justify-between">
+          <span className="text-surface-700 dark:text-surface-300">
+            {item.name}{item.pack_size ? ` (${item.pack_size})` : ""}
+          </span>
+          <span className="tabular-nums text-surface-500">
+            {item.quantity} × Rs {item.unit_cost.toLocaleString()} = Rs {(item.quantity * item.unit_cost).toLocaleString()}
+          </span>
+        </div>
+        {bottleRate && (
+          <div className="mt-0.5 text-right text-[10px] text-brand-700 dark:text-brand-400">
+            Bottle rate: Rs {bottleRate.toLocaleString("en-PK", { maximumFractionDigits: 2 })} / bottle
+          </div>
+        )}
       </div>
     );
   }
 
+  const currentCost = Number(unitCost);
+  const currentBottleRate = upp && currentCost ? currentCost / upp : null;
+
   return (
-    <form action={action} className="flex flex-wrap items-center gap-1.5 rounded-lg border border-surface-200 px-2.5 py-1.5 text-xs dark:border-surface-700">
-      <input type="hidden" name="purchase_id" value={purchaseId} />
-      <input type="hidden" name="item_id" value={item.id} />
-      <span className="min-w-0 flex-1 truncate text-surface-700 dark:text-surface-300">
-        {item.name}{item.pack_size ? ` (${item.pack_size})` : ""}
-      </span>
-      <Input
-        name="quantity"
-        inputMode="decimal"
-        value={quantity}
-        onChange={(e) => setQuantity(e.target.value)}
-        className="h-7 w-16 text-right text-xs"
-      />
-      <span className="text-surface-400">×</span>
-      <Input
-        name="unit_cost"
-        inputMode="decimal"
-        value={unitCost}
-        onChange={(e) => setUnitCost(e.target.value)}
-        className="h-7 w-20 text-right text-xs"
-      />
-      {changed && <ItemUpdateButton label={t("pu_rv_update", lang)} />}
-      {state.error && <span className="w-full text-[11px] text-red-600 dark:text-red-400">{state.error}</span>}
+    <form action={action} className="rounded-lg border border-surface-200 px-2.5 py-1.5 text-xs dark:border-surface-700">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <input type="hidden" name="purchase_id" value={purchaseId} />
+        <input type="hidden" name="item_id" value={item.id} />
+        <span className="min-w-0 flex-1 truncate text-surface-700 dark:text-surface-300">
+          {item.name}{item.pack_size ? ` (${item.pack_size})` : ""}
+        </span>
+        <Input
+          name="quantity"
+          inputMode="decimal"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+          className="h-7 w-16 text-right text-xs"
+        />
+        <span className="text-surface-400">×</span>
+        <Input
+          name="unit_cost"
+          inputMode="decimal"
+          value={unitCost}
+          onChange={(e) => setUnitCost(e.target.value)}
+          className="h-7 w-20 text-right text-xs"
+        />
+        {changed && <ItemUpdateButton label={t("pu_rv_update", lang)} />}
+        {state.error && <span className="w-full text-[11px] text-red-600 dark:text-red-400">{state.error}</span>}
+      </div>
+      {currentBottleRate && (
+        <div className="mt-0.5 text-right text-[10px] text-brand-700 dark:text-brand-400">
+          Bottle rate: Rs {currentBottleRate.toLocaleString("en-PK", { maximumFractionDigits: 2 })} / bottle
+        </div>
+      )}
     </form>
   );
 }

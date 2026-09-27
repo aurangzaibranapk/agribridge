@@ -68,24 +68,26 @@ export async function getOrderPermissions(
   const hqGate = !isOwnerBranch;
   const seesEverything = isHQ || isManager || isOwnerBranch || isSourceBranch;
 
+  // Admin/owner/super_admin — branch setting se qata nazar, sab kuch
+  // kar sakte hain. Baqi staff ke liye hqGate aur role-based pabandi.
   return {
     role,
     isOwnerBranch,
     isSourceBranch,
-    canSalesVerify: hqGate && (isHQ || role === "sales_staff"),
-    canFinanceVerify: hqGate && (isHQ || role === "finance"),
-    canVerifyPayment: hqGate && (isHQ || role === "finance"),
-    canApprove: hqGate && (isHQ || role === "manager"),
-    canCreateDispatch: isSourceBranch || (hqGate && (isHQ || role === "warehouse")),
-    canVerifyGrnDiscrepancy: hqGate && (isHQ || role === "warehouse" || role === "finance"),
-    canSubmitPayment: isOwnerBranch,
-    canConfirmDelivery: isOwnerBranch,
-    canCreateGrn: isOwnerBranch,
-    canSubmitComplaint: isOwnerBranch,
-    canReject: hqGate && (isHQ || role === "manager" || role === "sales_staff" || role === "finance"),
-    canSeePayments: seesEverything || role === "finance",
-    canSeeDispatch: seesEverything || role === "warehouse",
-    canSeeGrn: seesEverything || role === "warehouse" || role === "finance",
-    canSeeComplaints: seesEverything || role === "sales_staff",
+    canSalesVerify: isHQ || (hqGate && role === "sales_staff"),
+    canFinanceVerify: isHQ || (hqGate && role === "finance"),
+    canVerifyPayment: isHQ || (hqGate && role === "finance"),
+    canApprove: isHQ || (hqGate && role === "manager"),
+    canCreateDispatch: isHQ || isSourceBranch || (hqGate && role === "warehouse"),
+    canVerifyGrnDiscrepancy: isHQ || (hqGate && (role === "warehouse" || role === "finance")),
+    canSubmitPayment: isHQ || isOwnerBranch,
+    canConfirmDelivery: isHQ || isOwnerBranch,
+    canCreateGrn: isHQ || isOwnerBranch,
+    canSubmitComplaint: isHQ || isOwnerBranch,
+    canReject: isHQ || (hqGate && (role === "manager" || role === "sales_staff" || role === "finance")),
+    canSeePayments: isHQ || seesEverything || role === "finance",
+    canSeeDispatch: isHQ || seesEverything || role === "warehouse",
+    canSeeGrn: isHQ || seesEverything || role === "warehouse" || role === "finance",
+    canSeeComplaints: isHQ || seesEverything || role === "sales_staff",
   };
 }

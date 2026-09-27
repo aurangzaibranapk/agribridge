@@ -1,6 +1,6 @@
 ﻿import {
   LayoutDashboard, FileText, Quote, Image as ImageIcon, HelpCircle,
-  Smartphone, Mail, Handshake, Sliders, Menu as MenuIcon, FileCode, UserCog, History, Package, Wheat, FolderOpen, Tag, Layers, Building2, ShoppingCart, Wallet, BarChart3, Truck, ClipboardList, Boxes, Droplet, Store, ArrowLeftRight, Users, PackageSearch, LineChart, PiggyBank, Sprout, Bug, Leaf, Beef, ShoppingBasket, Landmark, Contact, Globe, ShoppingBag, HandCoins, CircleDollarSign, CreditCard, FileCheck, Calculator, Bell, List, MapPin, Briefcase, ShieldCheck, AlertTriangle, Bike, Zap, Wrench, Receipt, ClipboardCheck, PackagePlus, WalletCards, LayoutGrid, MailPlus, Home, ClipboardType, FileBarChart, ReceiptText, Scale, FileSpreadsheet, Sparkles, IdCard, Bot, SlidersHorizontal, MessageCircle, Trash2, Undo2, Inbox, ListChecks, PackageCheck,
+  Smartphone, Mail, Handshake, Sliders, Menu as MenuIcon, FileCode, UserCog, History, Package, Wheat, FolderOpen, Tag, Layers, Building2, ShoppingCart, Wallet, BarChart3, Truck, ClipboardList, Boxes, Droplet, Store, ArrowLeftRight, Users, PackageSearch, LineChart, PiggyBank, Sprout, Bug, Leaf, Beef, ShoppingBasket, Landmark, Contact, Globe, ShoppingBag, HandCoins, CircleDollarSign, CreditCard, FileCheck, Calculator, Bell, List, MapPin, Briefcase, ShieldCheck, AlertTriangle, Bike, Zap, Wrench, Receipt, ClipboardCheck, PackagePlus, WalletCards, LayoutGrid, MailPlus, Home, ClipboardType, FileBarChart, ReceiptText, Scale, FileSpreadsheet, Sparkles, IdCard, Bot, SlidersHorizontal, MessageCircle, Trash2, Undo2, Inbox, ListChecks, PackageCheck, RefreshCw,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -66,7 +66,9 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/products", label: "Cheezein", icon: Package },
       { href: "/admin/products/setup", label: "Product Setup", icon: ListChecks },
       { href: "/admin/products/masters", label: "Product ki Bunyadi Fehrist", icon: Layers },
+      { href: "/admin/product-cycles", label: "Product Cycles (Shops)", icon: RefreshCw },
       { href: "/admin/inventory", label: "Stock", icon: Boxes },
+      { href: "/admin/stock-statement", label: "Stock Statement", icon: FileBarChart },
       { href: "/admin/stock-ledger", label: "Stock ka Khata", icon: List },
       { href: "/admin/stock-transfers", label: "Maal Bhejein (Transfer)", icon: ArrowLeftRight },
       { href: "/admin/agri-returns", label: "Wapsi ka Maal", icon: Undo2 },
@@ -150,6 +152,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/reports/sales", label: "Sale Report", icon: ShoppingCart },
       { href: "/admin/reports/purchases", label: "Kharid Report", icon: ClipboardList },
       { href: "/admin/reports/inventory", label: "Stock Reports", icon: Boxes },
+      { href: "/admin/reports/stock-value", label: "Stock Value Report", icon: LineChart },
       { href: "/admin/reports/finance", label: "Finance Report", icon: Landmark },
       { href: "/admin/reports/credit", label: "Udhaar Report", icon: CreditCard },
       { href: "/admin/reports/procurement", label: "Anaj Kharid Report", icon: Wheat },
@@ -175,6 +178,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
     label: "Administration",
     items: [
+      { href: "/admin/erp-directory", label: "ERP ka Naqsha", icon: LayoutGrid },
       { href: "/admin/messages", label: "Paighaam", icon: MessageCircle },
       { href: "/admin/bridge-ai", label: "Abram", icon: Sparkles },
       { href: "/admin/bridge-ai/activity-log", label: "Abram Activity Log", icon: History },

@@ -290,7 +290,7 @@ export default async function LoadBillPage({
             provider: providerName.get(t.provider_id as string) ?? "—",
           }))}
           ledgerToday={ledgerToday}
-          bankTransfers={(aajKeBankTransfers ?? []).map((t) => ({
+          bankTransfers={(aajKeBankTransfers ?? []).map((t: any) => ({
             id: t.id as string,
             number: t.txn_number as string,
             sourceAccountId: t.source_finance_account_id as string,
@@ -312,16 +312,16 @@ export default async function LoadBillPage({
               ? (accounts ?? []).reduce((sum, account) => sum + (floats.get(account.id as string) ?? 0), 0)
               : null,
             cashReceived: !me.branch_id || loadTransactionsResult.error || bankTransfersResult.error ? null :
-              (aajKiQatarein ?? []).filter((row) => row.payment_method === "cash" && row.status !== "wapas")
-                .reduce((sum, row) => sum + Number(row.principal ?? 0) + Number(row.service_charge ?? 0), 0)
-              + (aajKeBankTransfers ?? []).filter((row) => row.receiving_method === "cash" && row.status !== "wapas")
-                .reduce((sum, row) => sum + Number(row.principal ?? 0) + Number(row.service_charge ?? 0), 0),
+              (aajKiQatarein ?? []).filter((row: any) => row.payment_method === "cash" && row.status !== "wapas")
+                .reduce((sum: number, row: any) => sum + Number(row.principal ?? 0) + Number(row.service_charge ?? 0), 0)
+              + (aajKeBankTransfers ?? []).filter((row: any) => row.receiving_method === "cash" && row.status !== "wapas")
+                .reduce((sum: number, row: any) => sum + Number(row.principal ?? 0) + Number(row.service_charge ?? 0), 0),
             volume: !me.branch_id || loadTransactionsResult.error ? null : (aajKiQatarein ?? []).filter((row) => row.status !== "wapas")
               .reduce((sum, row) => sum + Number(row.principal ?? 0), 0),
             recovery: recoveryToday,
             pendingProof: !me.branch_id || loadTransactionsResult.error || bankTransfersResult.error ? null :
-              (aajKiQatarein ?? []).filter((row) => row.status === "saboot_baqi").length
-              + (aajKeBankTransfers ?? []).filter((row) => row.status === "saboot_baqi").length,
+              (aajKiQatarein ?? []).filter((row: any) => row.status === "saboot_baqi").length
+              + (aajKeBankTransfers ?? []).filter((row: any) => row.status === "saboot_baqi").length,
           }}
           canReverse={FLOAT_ROLES.includes(me.role)}
         />

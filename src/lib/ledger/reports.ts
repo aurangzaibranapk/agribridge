@@ -47,20 +47,33 @@ async function rawLines(
   sourceModules?: string[] | null
 ): Promise<{ rows: RawLine[]; error: null } | { rows: null; error: string }> {
   const service = createServiceClient();
-  let q = service
-    .from("journal_lines")
-    .select(
-      "entry_id, account_code, debit, credit, memo, party_type, party_id, journal_entries!inner(entry_date, branch_id, description, entry_number, source_module)"
-    )
-    .lte("journal_entries.entry_date", to);
-  if (from) q = q.gte("journal_entries.entry_date", from);
-  if (branchId) q = q.eq("journal_entries.branch_id", branchId);
-  if (sourceModules && sourceModules.length > 0) q = q.in("journal_entries.source_module", sourceModules);
+  const PAGE = 1000;
+  let offset = 0;
+  const all: RawLine[] = [];
 
-  const { data, error } = await q;
-  // Khali fehrist NAHI lautayi jati -- wo "kuch hua hi nahi" kehti hai.
-  if (error) return { rows: null, error: error.message };
-  return { rows: (data ?? []) as unknown as RawLine[], error: null };
+  while (true) {
+    let q = service
+      .from("journal_lines")
+      .select(
+        "entry_id, account_code, debit, credit, memo, party_type, party_id, journal_entries!inner(entry_date, branch_id, description, entry_number, source_module)"
+      )
+      .lte("journal_entries.entry_date", to)
+      .range(offset, offset + PAGE - 1);
+    if (from) q = q.gte("journal_entries.entry_date", from);
+    if (branchId) q = q.eq("journal_entries.branch_id", branchId);
+    if (sourceModules && sourceModules.length > 0) q = q.in("journal_entries.source_module", sourceModules);
+
+    const { data, error } = await q;
+    // Khali fehrist NAHI lautayi jati -- wo "kuch hua hi nahi" kehti hai.
+    if (error) return { rows: null, error: error.message };
+
+    const page = (data ?? []) as unknown as RawLine[];
+    all.push(...page);
+    if (page.length < PAGE) break;
+    offset += PAGE;
+  }
+
+  return { rows: all, error: null };
 }
 
 async function accountNames(): Promise<Map<string, { name: string; type: string }>> {

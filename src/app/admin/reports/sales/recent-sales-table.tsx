@@ -16,6 +16,7 @@ interface Row {
   paymentMode: string;
   amount: number;
   customer: string | null;
+  has_customer?: boolean;
 }
 
 /**
@@ -57,7 +58,7 @@ export function RecentSalesTable({ rows, lang }: { rows: Row[]; lang: Lang }) {
               >
                 <td className="py-2 pr-3 text-surface-500">{new Date(r.date).toLocaleString()}</td>
                 <td className="py-2 pr-3 text-surface-700 dark:text-surface-300">{r.location}</td>
-                <td className="py-2 pr-3 text-surface-700 dark:text-surface-300">{r.customer ?? "Walk-in"}</td>
+                <td className="py-2 pr-3 text-surface-700 dark:text-surface-300">{r.customer ?? (r.has_customer ? "Gahak" : "Walk-in")}</td>
                 <td className="py-2 pr-3 text-surface-700 dark:text-surface-300">{r.cashier}</td>
                 <td className="py-2 pr-3 capitalize text-surface-600 dark:text-surface-400">{r.paymentMode.replace("_", " ")}</td>
                 <td className="py-2 pr-3 font-medium text-surface-900 dark:text-surface-100">{rs(r.amount)}</td>

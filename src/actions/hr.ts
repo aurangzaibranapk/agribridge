@@ -65,6 +65,7 @@ export async function recordSalaryPayment(_prev: ActionState, formData: FormData
   const payYear = Number(formData.get("pay_year") ?? 0);
   const basicSalary = Number(formData.get("basic_salary") ?? 0);
   const bonus = Number(formData.get("bonus") ?? 0);
+  const overtime = Number(formData.get("overtime") ?? 0);
   const deductions = Number(formData.get("deductions") ?? 0);
   const advanceDeduction = Number(formData.get("advance_deduction") ?? 0);
 
@@ -104,7 +105,7 @@ export async function recordSalaryPayment(_prev: ActionState, formData: FormData
     };
   }
 
-  const netSalary = basicSalary + bonus - deductions - advanceDeduction;
+  const netSalary = basicSalary + bonus + overtime - deductions - advanceDeduction;
 
   const { error } = await supabase.from("salary_payments").upsert(
     {
@@ -112,7 +113,7 @@ export async function recordSalaryPayment(_prev: ActionState, formData: FormData
       pay_month: payMonth,
       pay_year: payYear,
       basic_salary: basicSalary,
-      bonus,
+      bonus: bonus + overtime,
       deductions,
       advance_deduction: advanceDeduction,
       net_salary: netSalary,
@@ -200,6 +201,14 @@ export async function markSalaryPaid(_prev: ActionState, formData: FormData): Pr
     .eq("id", paymentId);
   if (error) return { error: error.message };
 
+  // Staff ko khud batao ke tankhwah di gayi
+  await notifyUser(
+    row.profile_id,
+    `Tankhwah di gayi — ${row.pay_month}/${row.pay_year}`,
+    `Aap ki Rs ${net.toLocaleString()} tankhwah ${row.pay_month}/${row.pay_year} ke liye di gayi.`,
+    "/admin/my-hr"
+  );
+
   revalidatePath("/admin/hr");
   revalidatePath("/admin/finance");
   return { success: true };
@@ -257,6 +266,7 @@ export async function selfCheckIn(_prev: ActionState, formData: FormData): Promi
   );
 
   revalidatePath("/admin/my-attendance");
+  revalidatePath("/admin/my-hr");
   return { success: true };
 }
 
@@ -336,6 +346,7 @@ export async function selfCheckOut(_prev: ActionState, formData: FormData): Prom
   );
 
   revalidatePath("/admin/my-attendance");
+  revalidatePath("/admin/my-hr");
   revalidatePath("/admin/staff-khata");
   return { success: true };
 }
@@ -366,14 +377,19 @@ export async function inviteStaffMember(_prev: ActionState, formData: FormData):
   if (createError) return { error: createError.message };
   if (!authUser.user) return { error: "Account create nahi ho saka." };
 
-  const { error: profileError } = await serviceClient.from("profiles").upsert({
-    id: authUser.user.id,
-    full_name: fullName,
-    role,
-    branch_id: branchId,
-    organization_id: org?.id ?? null,
-    is_active: true,
-  });
+  // profiles.upsert mein 'id' accepted nahi karta TypeScript mein
+  // (generated types mein id insertable nahi hai). Auth trigger ne profile
+  // already bana diya hoga — sirf baaki columns update karo.
+  const { error: profileError } = await serviceClient
+    .from("profiles")
+    .update({
+      full_name: fullName,
+      role: role as "sales_staff" | "manager" | "admin" | "hr" | "finance" | "warehouse",
+      branch_id: branchId ?? undefined,
+      organization_id: org?.id ?? undefined,
+      is_active: true,
+    })
+    .eq("id", authUser.user.id);
   if (profileError) return { error: profileError.message };
 
   if (designation || basicSalary) {

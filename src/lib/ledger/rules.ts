@@ -121,6 +121,9 @@ export const ACC = {
   // Customer ka bill le liya, provider tak abhi nahi pahuncha. Wo paisa
   // hamare paas hai magar hamara nahi.
   billsCollected: "2060",
+  // Wasela Pakistan ne credit par stock diya; gahak Wasela Card se adaigi
+  // karta hai to paisa un ke paas jata hai aur hamara dena kam hota hai.
+  waselaPayable: "2062",
   ownerCapital: "3000",
   ownerDrawings: "3100",
   openingEquity: "3200",
@@ -893,12 +896,16 @@ export async function postSupplierPayment(args: {
   paymentId: string;
   supplierId: string;
   amount: number;
-  /** finance_accounts ki id -- kis khate se nikla. */
+  /** finance_accounts ki id -- kis khate se nikla. Yeh ZAROORI hai --
+   * accountId nahi to Cash (1000) galat Cr hota tha. */
   accountId?: string | null;
   description: string;
   ctx: EventContext;
 }): Promise<PostResult> {
-  const gl = args.accountId ? await glForFinanceAccount(args.accountId) : ACC.cash;
+  if (!args.accountId) {
+    return { error: "Supplier payment ke liye finance account zaroori hai — please koi khata chunein (bank, cash, Wasela, waghera)." };
+  }
+  const gl = await glForFinanceAccount(args.accountId);
   return postJournal({
     description: args.description,
     sourceModule: "supplier_payment",
