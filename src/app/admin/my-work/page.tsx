@@ -10,7 +10,6 @@ import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attentio
 import { NeedsAttention } from "@/components/guided/needs-attention";
 import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadRecentActivity } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
-import { InPageWorkspace } from "@/components/guided/in-page-workspace";
 import { TrainingBanner } from "@/components/guided/training-banner";
 import { departmentForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -165,7 +164,6 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
     ...(fourthKpi ? [fourthKpi] : []),
   ];
 
-  // Desk shortcuts sirf maujooda access permissions se filter hote hain.
   const canRoute = (path: string) => allowed === null || routeAllowed(allowed, path);
   const now = new Date();
   const nowDate = new Intl.DateTimeFormat(lang === "ur" ? "ur-PK" : "en-GB", {
@@ -178,22 +176,8 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   const hour = new Date().getHours();
   const greetKey = hour < 12 ? "mw_hello_morning" : hour < 17 ? "mw_hello_afternoon" : "mw_hello_evening";
 
-  const deskLinks = [
-    { href: "/admin/pos", label: "POS Sale" },
-    { href: "/admin/agri-orders/new", label: "Create Order" },
-    { href: "/admin/load-bill", label: "Log Payment · Load & Bill" },
-    { href: "/admin/kharche", label: "Paisa & Khata" },
-    { href: "/admin/stock-count", label: "Stock Check" },
-    { href: "/admin/farmers", label: "Farmers" },
-    { href: "/admin/cash-handover", label: "Cash Handover" },
-  ].filter(link => canRoute(link.href));
-
-  // Shop staff can have a shop assignment and desk access without having
-  // the POS route itself (for example Load & Bill + Paisa & Khata only).
-  // Requiring /admin/pos here sent those users to the legacy dashboard and
-  // hid their shop-scoped Ledger. Keep each shortcut permission-filtered.
-  if (me.shop_id && deskLinks.length > 0) {
-    return <DeskWorkspace className="desk-my-work">
+  return (
+    <DeskWorkspace className="desk-my-work">
       <header className="staff-desk-header">
         <section className="staff-desk-identity" aria-label="Logged-in staff member">
           <span className="staff-desk-eyebrow">Welcome Back</span>
@@ -217,23 +201,21 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
           </div>
         </section>
 
-        <section className="staff-desk-location" aria-label="Active shop and branch">
+        <section className="staff-desk-location" aria-label="Active work area">
           <span className="staff-desk-shop-icon"><Icons.Store aria-hidden="true" /></span>
           <div>
-            <span className="staff-desk-eyebrow">Active POS</span>
-            <strong>{shopName || "Assigned Shop"}</strong>
+            <span className="staff-desk-eyebrow">Work Area</span>
+            <strong>{shopName || dept?.label || "Assigned Work Area"}</strong>
             <p>{branchName || "Assigned Branch"}</p>
           </div>
         </section>
       </header>
       <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language={lang} />
-      <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} />
-    </DeskWorkspace>;
-  }
+      {me.shop_id && canRoute("/admin/pos") && (
+        <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} />
+      )}
+      <div className="mx-auto w-full max-w-[1100px]">
 
-  return (
-    <InPageWorkspace>
-    <div className="mx-auto w-full max-w-[1100px]">
       {/* Malik (7 September): safhe ka oopri hissa bahut jagah khata tha --
           greeting, date/time aur score teen alag boxon mein. Ab ek hi
           patti: naam+role+branch baayen, tareekh/waqt/score daayen, ek
@@ -396,7 +378,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         </div>
       </div>
     </div>
-    </InPageWorkspace>
+    </DeskWorkspace>
   );
 }
 
