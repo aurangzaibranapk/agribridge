@@ -10,7 +10,6 @@ import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attentio
 import { NeedsAttention } from "@/components/guided/needs-attention";
 import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadRecentActivity } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
-import { InPageWorkspace } from "@/components/guided/in-page-workspace";
 import { TrainingBanner } from "@/components/guided/training-banner";
 import { departmentForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
