@@ -1,17 +1,17 @@
 "use client";
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { createGrainEntry, recordGrainPayment, createGrainParty, type ActionState } from "@/actions/grain-procurement";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
-import { X, Plus, FileText, AlertTriangle, Trash2, Search, ChevronDown } from "lucide-react";
+import { X, Plus, FileText, AlertTriangle, Trash2 } from "lucide-react";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
 
-interface Farmer { id: string; full_name: string | null; farmer_code: string | null; phone_number?: string | null; cnic?: string | null; }
+interface Farmer { id: string; full_name: string; farmer_code: string; }
 interface Party { id: string; party_name: string; contact_person: string | null; phone: string | null; }
 interface Warehouse { id: string; name: string; }
 interface CutPreset { id: string; grain_type: string; label: string; cut_percentage: number; }
@@ -94,8 +94,8 @@ export function GrainClient({
   const [showNewParty, setShowNewParty] = useState(false);
 
   return (
-    <div>
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div className="mx-auto w-full max-w-[1280px]">
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {byGrainType.map((g) => (
           <div key={g.grain_type} className="rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
             <p className="text-xs font-medium text-surface-500">{t(GRAIN_LABELS[g.grain_type] ?? "gr_grain", lang)}</p>
@@ -105,7 +105,7 @@ export function GrainClient({
         ))}
       </div>
 
-      <div className="mb-4 flex gap-2 border-b border-surface-200 dark:border-surface-800">
+      <div className="mb-5 flex flex-wrap gap-2 border-b border-surface-200 dark:border-surface-800">
         <TabButton active={tab === "entry"} onClick={() => setTab("entry")}>{t("gr_new_entry", lang)}</TabButton>
         <TabButton active={tab === "balances"} onClick={() => setTab("balances")}>{t("gr_balances", lang)}</TabButton>
         <TabButton active={tab === "entries"} onClick={() => setTab("entries")}>{t("gr_full_history", lang)}</TabButton>
@@ -115,12 +115,12 @@ export function GrainClient({
         <div className="space-y-4">
           <button onClick={() => setShowNewParty(true)} className="flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:underline">
             <Plus className="h-3.5 w-3.5" />{t("gd_new_party", lang)}</button>
-          <NewEntryForm farmers={farmers} parties={parties} warehouses={warehouses} cutPresets={cutPresets} financeAccounts={financeAccounts} balances={balances} />
+          <NewEntryForm farmers={farmers} parties={parties} warehouses={warehouses} cutPresets={cutPresets} financeAccounts={financeAccounts} />
         </div>
       )}
 
       {tab === "balances" && (
-        <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
+        <div className="overflow-x-auto rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
@@ -162,7 +162,7 @@ export function GrainClient({
       )}
 
       {tab === "entries" && (
-        <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
+        <div className="overflow-x-auto rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
@@ -209,98 +209,6 @@ export function GrainClient({
   );
 }
 
-function SearchableSelect({
-  name,
-  options,
-  placeholder,
-  required,
-  onSelect,
-}: {
-  name: string;
-  options: { value: string; label: string; sub?: string }[];
-  placeholder?: string;
-  required?: boolean;
-  onSelect?: (value: string) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [selectedValue, setSelectedValue] = useState("");
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const filtered = useMemo(() => {
-    const q = query.toLowerCase().trim();
-    if (!q) return options;
-    return options.filter(
-      (o) => o.label.toLowerCase().includes(q) || (o.sub ?? "").toLowerCase().includes(q)
-    );
-  }, [query, options]);
-
-  const selectedLabel = options.find((o) => o.value === selectedValue)?.label ?? "";
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  return (
-    <div ref={containerRef} className="relative">
-      <input type="hidden" name={name} value={selectedValue} />
-      {required && <input type="text" className="sr-only" required={!selectedValue} readOnly value={selectedValue} tabIndex={-1} />}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm text-surface-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200"
-      >
-        <span className={selectedValue ? "" : "text-surface-400"}>{selectedLabel || placeholder || "- chunein -"}</span>
-        <ChevronDown className="h-4 w-4 shrink-0 text-surface-400" />
-      </button>
-
-      {open && (
-        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-surface-200 bg-white shadow-xl dark:border-surface-700 dark:bg-surface-900">
-          <div className="flex items-center gap-2 border-b border-surface-100 px-3 py-2 dark:border-surface-800">
-            <Search className="h-3.5 w-3.5 shrink-0 text-surface-400" />
-            <input
-              autoFocus
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Naam se dhoondein..."
-              className="flex-1 bg-transparent text-sm text-surface-800 outline-none placeholder:text-surface-400 dark:text-surface-200"
-            />
-            {query && (
-              <button type="button" onClick={() => setQuery("")} className="text-surface-400 hover:text-surface-700">
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-          <ul className="max-h-52 overflow-y-auto py-1">
-            {filtered.length === 0 && (
-              <li className="px-4 py-3 text-center text-xs text-surface-400">Koi nahi mila</li>
-            )}
-            {filtered.map((o) => (
-              <li key={o.value}>
-                <button
-                  type="button"
-                  onClick={() => { setSelectedValue(o.value); setQuery(""); setOpen(false); onSelect?.(o.value); }}
-                  className={`flex w-full flex-col px-4 py-2 text-left hover:bg-brand-50 dark:hover:bg-brand-900/30 ${selectedValue === o.value ? "bg-brand-50 dark:bg-brand-900/30" : ""}`}
-                >
-                  <span className="text-sm font-medium text-surface-800 dark:text-surface-200">{o.label}</span>
-                  {o.sub && <span className="text-xs text-surface-400">{o.sub}</span>}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
@@ -318,19 +226,16 @@ function NewEntryForm({
   warehouses,
   cutPresets,
   financeAccounts,
-  balances,
 }: {
   farmers: Farmer[];
   parties: Party[];
   warehouses: Warehouse[];
   cutPresets: CutPreset[];
   financeAccounts: FinanceAccount[];
-  balances: Balance[];
 }) {
   const lang = useLang();
   const [state, formAction] = useFormState(createGrainEntry, initialState);
   const [sellerType, setSellerType] = useState<"farmer" | "party">("farmer");
-  const [selectedSellerId, setSelectedSellerId] = useState("");
   const [grainType, setGrainType] = useState("wheat");
   const [grossWeight, setGrossWeight] = useState("");
   const [grossMaund, setGrossMaund] = useState("");
@@ -358,7 +263,6 @@ function NewEntryForm({
   const [chungiType, setChungiType] = useState<"cash" | "grain">("cash");
   const [chungiCash, setChungiCash] = useState("0");
   const [chungiKg, setChungiKg] = useState("0");
-  const [chungiPaidBy, setChungiPaidBy] = useState<"party" | "self">("party");
 
   const [makePayment, setMakePayment] = useState<"" | "yes" | "no">("");
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -375,7 +279,7 @@ function NewEntryForm({
   const rateNum = parseFloat(rate) || 0;
   const total = netWeight * rateNum;
   const chungiAmount = chungiType === "grain" ? (parseFloat(chungiKg) || 0) * rateNum : parseFloat(chungiCash) || 0;
-  const payableToSeller = chungiPaidBy === "party" ? total - chungiAmount : total;
+  const payableToSeller = total - chungiAmount;
 
   const expensesJson = JSON.stringify(
     expenseRows
@@ -398,20 +302,36 @@ function NewEntryForm({
   }
 
   return (
-    <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-      <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("gr_new_grain_entry", lang)}</h2>
+    <div className="mx-auto w-full max-w-[1040px] rounded-2xl border border-surface-200 bg-white p-4 shadow-card sm:p-6 dark:border-surface-800 dark:bg-surface-900">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3 border-b border-surface-100 pb-4 dark:border-surface-800">
+        <div>
+          <h2 className="font-display text-xl font-semibold text-surface-900 dark:text-white">{t("gr_new_grain_entry", lang)}</h2>
+          <p className="mt-1 text-sm text-surface-500">Enter supplier, weight, deductions and payment in a clear order.</p>
+        </div>
+        <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-950/30 dark:text-brand-300">Step 1 · Entry</span>
+      </div>
       {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
       {state.success && (
-        <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-          Entry record ho gayi, stock add ho gaya.{" "}
-          {state.paymentId ? (
-            <Link href={`/admin/grain-procurement/payment-slip/${state.paymentId}`} className="underline">{t("gr_view_payment_slip", lang)}</Link>
-          ) : (
-            <Link href={`/admin/grain-procurement/bill/${state.entryId}`} className="underline">{t("gr_view_entry_slip", lang)}</Link>
-          )}
-        </p>
+        <div className="mb-4 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm text-brand-800 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-200">
+          <p className="font-semibold">Entry record ho gayi, stock add ho gaya.</p>
+          <p className="mt-1 text-xs opacity-80">Ab purchase bill aur payment receipt alag se print ya share karein.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {state.entryId && (
+              <Link href={`/admin/grain-procurement/bill/${state.entryId}`} className="inline-flex items-center rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-700">
+                {t("gr_view_entry_slip", lang)}
+              </Link>
+            )}
+            {state.paymentId && (
+              <Link href={`/admin/grain-procurement/payment-slip/${state.paymentId}`} className="inline-flex items-center rounded-lg bg-white px-3 py-2 text-xs font-semibold text-brand-700 ring-1 ring-brand-200 hover:bg-brand-100 dark:bg-surface-900 dark:ring-brand-800">
+                {t("gr_view_payment_slip", lang)}
+              </Link>
+            )}
+          </div>
+        </div>
       )}
-      <form action={formAction} encType="multipart/form-data" className="space-y-3">
+      <form action={formAction} encType="multipart/form-data" className="space-y-5">
+        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.9fr)]">
+          <div className="space-y-5">
         <input type="hidden" name="seller_type" value={sellerType} />
         <input type="hidden" name="cut_percentage" value={effectiveCutPercentage} />
         <input type="hidden" name="has_expense" value={hasExpense} />
@@ -419,7 +339,6 @@ function NewEntryForm({
         <input type="hidden" name="chungi_type" value={chungiType} />
         <input type="hidden" name="chungi_kg" value={chungiKg} />
         <input type="hidden" name="chungi_amount" value={chungiCash} />
-        <input type="hidden" name="chungi_paid_by" value={chungiPaidBy} />
         <input type="hidden" name="make_payment" value={makePayment} />
 
         <div>
@@ -432,48 +351,24 @@ function NewEntryForm({
         {sellerType === "farmer" ? (
           <div>
             <Label>{t("gr_farmer_req", lang)}</Label>
-            <SearchableSelect
-              name="farmer_id"
-              required
-              placeholder="Naam, mobile ya CNIC se dhoondein..."
-              options={farmers.map((f) => ({
-                value: f.id,
-                label: f.full_name ?? f.farmer_code ?? f.id,
-                sub: [f.farmer_code, f.phone_number, f.cnic].filter(Boolean).join(" · ") || undefined,
-              }))}
-              onSelect={(id) => setSelectedSellerId(id)}
-            />
+            <Select name="farmer_id" required>
+              <option value="">- select -</option>
+              {farmers.map((f) => (
+                <option key={f.id} value={f.id}>{f.full_name} ({f.farmer_code})</option>
+              ))}
+            </Select>
           </div>
         ) : (
           <div>
             <Label>{t("gr_party_req", lang)}</Label>
-            <SearchableSelect
-              name="party_id"
-              required
-              placeholder="Party chunein ya naam likhen..."
-              options={parties.map((p) => ({
-                value: p.id,
-                label: p.party_name,
-                sub: [p.contact_person, p.phone].filter(Boolean).join(" · ") || undefined,
-              }))}
-              onSelect={(id) => setSelectedSellerId(id)}
-            />
+            <Select name="party_id" required>
+              <option value="">- select -</option>
+              {parties.map((p) => (
+                <option key={p.id} value={p.id}>{p.party_name}{p.contact_person ? ` - ${p.contact_person}` : ""}</option>
+              ))}
+            </Select>
           </div>
         )}
-        {(() => {
-          if (!selectedSellerId) return null;
-          const b = balances.find((x) => x.seller_id === selectedSellerId);
-          if (!b) return null;
-          return (
-            <div className={`rounded-lg border px-3 py-2 text-sm ${b.balance_due > 0 ? "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30" : "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30"}`}>
-              <span className={b.balance_due > 0 ? "font-medium text-amber-800 dark:text-amber-300" : "text-green-700 dark:text-green-400"}>
-                {b.balance_due > 0
-                  ? `Baaqi dena: Rs ${b.balance_due.toLocaleString()} (${b.entry_count} entries, kul Rs ${b.total_supplied.toLocaleString()})`
-                  : `Hisaab saaf — Rs ${b.total_paid.toLocaleString()} poora diya ja chuka`}
-              </span>
-            </div>
-          );
-        })()}
 
         <div>
           <Label>{t("gr_grain_type_req", lang)}</Label>
@@ -503,7 +398,7 @@ function NewEntryForm({
           <Input type="number" step="0.01" name="rate_per_kg" value={rate} onChange={(e) => setRate(e.target.value)} required />
         </div>
 
-        <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
+        <div className="rounded-xl border border-surface-200 bg-surface-50/60 p-4 dark:border-surface-700 dark:bg-surface-800/40">
           <Label>{t("gr_cut_deduction", lang)}</Label>
           <div className="mt-1 flex gap-2">
             <button type="button" onClick={() => setCutMode("preset")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${cutMode === "preset" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_from_preset", lang)}</button>
@@ -525,21 +420,9 @@ function NewEntryForm({
           </div>
         </div>
 
-        <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
+        <div className="rounded-xl border border-surface-200 bg-surface-50/60 p-4 dark:border-surface-700 dark:bg-surface-800/40">
           <Label>{t("gr_chungi", lang)}</Label>
-          {/* Kisne di chungi — Party ne ya Boss ne khud */}
           <div className="mt-1 flex gap-2">
-            <button type="button" onClick={() => setChungiPaidBy("party")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiPaidBy === "party" ? "border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300" : "border-surface-200 text-surface-500"}`}>Party ne di</button>
-            <button type="button" onClick={() => setChungiPaidBy("self")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiPaidBy === "self" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>Maine khud di</button>
-          </div>
-          {chungiPaidBy === "party" && (
-            <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-400">Party ki raqam se kategi — payable kam ho ga</p>
-          )}
-          {chungiPaidBy === "self" && (
-            <p className="mt-1 text-[10px] text-brand-600 dark:text-brand-400">Aapne khud di — party ka payable nahi katega</p>
-          )}
-          {/* Kis soorat mein chungi — Cash ya Anaaj */}
-          <div className="mt-2 flex gap-2">
             <button type="button" onClick={() => setChungiType("cash")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiType === "cash" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_cash_rs", lang)}</button>
             <button type="button" onClick={() => setChungiType("grain")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiType === "grain" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_grain_kg", lang)}</button>
           </div>
@@ -622,26 +505,6 @@ function NewEntryForm({
           )}
         </div>
 
-        <div className="rounded-lg bg-surface-50 p-3 dark:bg-surface-800">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-surface-700 dark:text-surface-300">{t("gr_grain_value", lang)}</span>
-            <span className="font-display text-lg font-bold text-brand-700 dark:text-brand-300">Rs {total.toLocaleString()}</span>
-          </div>
-          {chungiAmount > 0 && chungiPaidBy === "party" && (
-            <div className="mt-1 flex items-center justify-between text-xs text-amber-700 dark:text-amber-400">
-              <span>Chungi Katoti — Party ne di ({chungiType === "grain" ? `${chungiKg} kg` : "Cash"})</span><span>- Rs {chungiAmount.toLocaleString()}</span>
-            </div>
-          )}
-          {chungiAmount > 0 && chungiPaidBy === "self" && (
-            <div className="mt-1 flex items-center justify-between text-xs text-brand-600 dark:text-brand-400">
-              <span>Chungi — Maine khud di (party se nahi kati)</span><span>Rs {chungiAmount.toLocaleString()}</span>
-            </div>
-          )}
-          <div className="mt-1 flex items-center justify-between border-t border-surface-200 pt-1 text-sm font-semibold text-surface-800 dark:border-surface-700 dark:text-surface-200">
-            <span>{t("gr_payable", lang)}</span><span>Rs {payableToSeller.toLocaleString()}</span>
-          </div>
-        </div>
-
         <div className={`rounded-lg border-2 p-3 ${makePayment === "" ? "border-red-300 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20" : "border-surface-200 dark:border-surface-700"}`}>
           <Label>{t("gr_pay_now", lang)}</Label>
           <div className="mt-1 flex gap-2">
@@ -687,6 +550,34 @@ function NewEntryForm({
           )}
         </div>
 
+          </div>
+
+          <aside className="sticky top-4 rounded-2xl border border-brand-200 bg-brand-50/80 p-5 shadow-sm dark:border-brand-900/50 dark:bg-brand-950/20">
+            <div className="mb-4 border-b border-brand-200 pb-4 dark:border-brand-900/50">
+              <h3 className="font-display text-lg font-semibold text-surface-900 dark:text-white">Live Calculation</h3>
+              <p className="mt-1 text-xs text-surface-500">Har field ke sath amount update hoga.</p>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between"><span className="text-surface-500">Gross Weight</span><span className="font-semibold text-surface-900 dark:text-white">{gross.toLocaleString()} kg</span></div>
+              <div className="flex items-center justify-between"><span className="text-surface-500">Cut / Deduction</span><span className="font-semibold text-amber-700">{cutKg.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg</span></div>
+              <div className="flex items-center justify-between border-b border-brand-200 pb-3 dark:border-brand-900/50"><span className="text-surface-500">Net Weight</span><span className="font-semibold text-surface-900 dark:text-white">{netWeight.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg</span></div>
+              <div className="flex items-center justify-between"><span className="text-surface-500">Rate</span><span className="font-semibold text-surface-900 dark:text-white">Rs {rateNum.toLocaleString()}/kg</span></div>
+              <div className="flex items-center justify-between"><span className="text-surface-500">Gandum Value</span><span className="font-display text-lg font-bold text-brand-700 dark:text-brand-300">Rs {total.toLocaleString()}</span></div>
+              <div className="flex items-center justify-between border-b border-brand-200 pb-3 dark:border-brand-900/50"><span className="text-surface-500">Chungi / Bardana</span><span className="font-semibold text-amber-700">- Rs {chungiAmount.toLocaleString()}</span></div>
+              <div className="flex items-center justify-between pt-1"><span className="font-semibold text-surface-800 dark:text-surface-200">Payable to Farmer</span><span className="font-display text-xl font-bold text-brand-700 dark:text-brand-300">Rs {payableToSeller.toLocaleString()}</span></div>
+            </div>
+            <div className="mt-5 rounded-xl border border-brand-200 bg-white/70 p-3 text-xs text-surface-500 dark:border-brand-900/50 dark:bg-surface-900/40">
+              <p className="font-semibold text-surface-700 dark:text-surface-200">After this:</p>
+              <p className="mt-2">3 · Moisture &amp; Quality</p>
+              <p>4 · Warehouse &amp; Notes</p>
+              <p>5 · Expenses (Yes / No)</p>
+              <p>6 · Payment (Yes / No)</p>
+            </div>
+            <div className="mt-4 rounded-lg border border-brand-200 bg-brand-100/60 px-3 py-2 text-center text-xs font-semibold text-brand-700 dark:border-brand-900/50 dark:bg-brand-950/30 dark:text-brand-300">Save Entry → Bill + Payment Receipt</div>
+          </aside>
+
+        </div>
+
         <SubmitButton label={t("gr_record_entry", lang)} disabled={hasExpense === "" || makePayment === ""} />
       </form>
     </div>
@@ -712,7 +603,7 @@ function PaymentModal({ balance, financeAccounts, onClose }: { balance: Balance;
           <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("gd_payment_recorded", lang)}<Link href={`/admin/grain-procurement/payment-slip/${state.entryId}`} className="underline">{t("gr_view_slip", lang)}</Link>
           </p>
         )}
-        <form action={formAction} encType="multipart/form-data" className="space-y-3">
+        <form action={formAction} encType="multipart/form-data" className="space-y-5">
           <input type="hidden" name="seller_type" value={balance.seller_type} />
           <input type="hidden" name={balance.seller_type === "farmer" ? "farmer_id" : "party_id"} value={balance.seller_id} />
           <div>

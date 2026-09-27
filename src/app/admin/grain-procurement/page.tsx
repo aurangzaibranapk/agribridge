@@ -104,10 +104,10 @@ export default async function AdminGrainProcurementPage() {
   });
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-[1500px]">
       <PageHeader title={t("gr_title", lang)} description={t("gr_subtitle", lang)} />
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("at_total_bought_kg", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{totalPurchasedKg.toLocaleString()} kg</p>
