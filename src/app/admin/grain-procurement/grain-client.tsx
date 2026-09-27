@@ -312,14 +312,22 @@ function NewEntryForm({
       </div>
       {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
       {state.success && (
-        <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
-          Entry record ho gayi, stock add ho gaya.{" "}
-          {state.paymentId ? (
-            <Link href={`/admin/grain-procurement/payment-slip/${state.paymentId}`} className="underline">{t("gr_view_payment_slip", lang)}</Link>
-          ) : (
-            <Link href={`/admin/grain-procurement/bill/${state.entryId}`} className="underline">{t("gr_view_entry_slip", lang)}</Link>
-          )}
-        </p>
+        <div className="mb-4 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm text-brand-800 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-200">
+          <p className="font-semibold">Entry record ho gayi, stock add ho gaya.</p>
+          <p className="mt-1 text-xs opacity-80">Ab purchase bill aur payment receipt alag se print ya share karein.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {state.entryId && (
+              <Link href={`/admin/grain-procurement/bill/${state.entryId}`} className="inline-flex items-center rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-700">
+                {t("gr_view_entry_slip", lang)}
+              </Link>
+            )}
+            {state.paymentId && (
+              <Link href={`/admin/grain-procurement/payment-slip/${state.paymentId}`} className="inline-flex items-center rounded-lg bg-white px-3 py-2 text-xs font-semibold text-brand-700 ring-1 ring-brand-200 hover:bg-brand-100 dark:bg-surface-900 dark:ring-brand-800">
+                {t("gr_view_payment_slip", lang)}
+              </Link>
+            )}
+          </div>
+        </div>
       )}
       <form action={formAction} encType="multipart/form-data" className="space-y-5">
         <input type="hidden" name="seller_type" value={sellerType} />
