@@ -576,6 +576,8 @@ function NewEntryForm({
             <div className="mt-4 rounded-lg border border-brand-200 bg-brand-100/60 px-3 py-2 text-center text-xs font-semibold text-brand-700 dark:border-brand-900/50 dark:bg-brand-950/30 dark:text-brand-300">Save Entry → Bill + Payment Receipt</div>
           </aside>
 
+        </div>
+
         <SubmitButton label={t("gr_record_entry", lang)} disabled={hasExpense === "" || makePayment === ""} />
       </form>
     </div>
