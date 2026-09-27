@@ -18,6 +18,8 @@ export async function recordSupplierPayment(_prev: ActionState, formData: FormDa
   const notes = (formData.get("notes") as string) || null;
   if (!supplierId) return { error: "Missing supplier id." };
   if (!amount || amount <= 0) return { error: "Amount sahi likhein." };
+  const financeAccountId = String(formData.get("finance_account_id") ?? "").trim() || null;
+  if (!financeAccountId) return { error: "Payment ke liye khata (bank/cash/Wasela) zaroori hai — please account chunein." };
 
   let slipUrl: string | null = null;
   const slip = formData.get("slip");
@@ -38,7 +40,7 @@ export async function recordSupplierPayment(_prev: ActionState, formData: FormDa
     amount,
     paymentDate,
     paymentMethod,
-    accountId: String(formData.get("finance_account_id") ?? "").trim() || null,
+    accountId: financeAccountId,
     notes,
     slipUrl,
     createdBy: user?.id ?? null,
