@@ -2,6 +2,7 @@ import { DeskWorkspace } from "@/components/guided/desk-workspace";
 import { ShopOverview } from "@/components/desk/shop-overview";
 import { redirect } from "next/navigation";
 import * as Icons from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
@@ -9,6 +10,7 @@ import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attentio
 import { NeedsAttention } from "@/components/guided/needs-attention";
 import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadRecentActivity } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
+import { InPageWorkspace } from "@/components/guided/in-page-workspace";
 import { TrainingBanner } from "@/components/guided/training-banner";
 import { departmentForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -163,6 +165,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
     ...(fourthKpi ? [fourthKpi] : []),
   ];
 
+  // Desk shortcuts sirf maujooda access permissions se filter hote hain.
   const canRoute = (path: string) => allowed === null || routeAllowed(allowed, path);
   const now = new Date();
   const nowDate = new Intl.DateTimeFormat(lang === "ur" ? "ur-PK" : "en-GB", {
@@ -173,9 +176,24 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   }).format(now);
 
   const hour = new Date().getHours();
+  const greetKey = hour < 12 ? "mw_hello_morning" : hour < 17 ? "mw_hello_afternoon" : "mw_hello_evening";
 
-  return (
-    <DeskWorkspace className="desk-my-work">
+  const deskLinks = [
+    { href: "/admin/pos", label: "POS Sale" },
+    { href: "/admin/agri-orders/new", label: "Create Order" },
+    { href: "/admin/load-bill", label: "Log Payment · Load & Bill" },
+    { href: "/admin/kharche", label: "Paisa & Khata" },
+    { href: "/admin/stock-count", label: "Stock Check" },
+    { href: "/admin/farmers", label: "Farmers" },
+    { href: "/admin/cash-handover", label: "Cash Handover" },
+  ].filter(link => canRoute(link.href));
+
+  // Shop staff can have a shop assignment and desk access without having
+  // the POS route itself (for example Load & Bill + Paisa & Khata only).
+  // Requiring /admin/pos here sent those users to the legacy dashboard and
+  // hid their shop-scoped Ledger. Keep each shortcut permission-filtered.
+  if (me.shop_id && deskLinks.length > 0) {
+    return <DeskWorkspace className="desk-my-work">
       <header className="staff-desk-header">
         <section className="staff-desk-identity" aria-label="Logged-in staff member">
           <span className="staff-desk-eyebrow">Welcome Back</span>
@@ -199,20 +217,83 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
           </div>
         </section>
 
-        <section className="staff-desk-location" aria-label="Active work area">
+        <section className="staff-desk-location" aria-label="Active shop and branch">
           <span className="staff-desk-shop-icon"><Icons.Store aria-hidden="true" /></span>
           <div>
-            <span className="staff-desk-eyebrow">Work Area</span>
-            <strong>{shopName || dept?.label || "Assigned Work Area"}</strong>
+            <span className="staff-desk-eyebrow">Active POS</span>
+            <strong>{shopName || "Assigned Shop"}</strong>
             <p>{branchName || "Assigned Branch"}</p>
           </div>
         </section>
       </header>
       <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language={lang} />
-      {me.shop_id && canRoute("/admin/pos") && (
-        <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} />
-      )}
-      <div className="mx-auto w-full max-w-[1100px]">
+      <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} />
+    </DeskWorkspace>;
+  }
+
+  return (
+    <InPageWorkspace>
+    <div className="mx-auto w-full max-w-[1100px]">
+      {/* Malik (7 September): safhe ka oopri hissa bahut jagah khata tha --
+          greeting, date/time aur score teen alag boxon mein. Ab ek hi
+          patti: naam+role+branch baayen, tareekh/waqt/score daayen, ek
+          satar mein -- taake neeche asal kaam ke liye jagah bache. */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-card border border-surface-200 bg-white px-5 py-3 dark:border-surface-700 dark:bg-surface-900">
+        <div className="min-w-0">
+          <h1 className="font-display text-[19px] font-semibold leading-tight text-surface-900 dark:text-surface-100">
+            {t(greetKey, lang)}, {me.full_name}
+          </h1>
+          {/* Naam ke neeche: banda kaun hai, kis department mein hai, aur
+              kis shaakh par. Malik ka usool (5 September): "Neeche uska
+              Role + Department + Branch."
+
+              Jo hissa maloom na ho wo LIKHA HI NAHI jata -- khali jagah
+              bhar dene ke liye "—" ya koi bana hua naam daal dena us
+              bande ko ghalat maloomat deta hai. */}
+          <p className="mt-0.5 truncate text-[13px] text-surface-500">
+            {[roleLabel, dept?.label ?? null, branchName].filter(Boolean).join(" · ")}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-4">
+          {scoreRow && (
+            <div className="text-right">
+              <p className="text-[10px] uppercase tracking-wide text-surface-400">{t("mw_my_score", lang)}</p>
+              {scoreRow.score == null ? (
+                // Sifar nahi. Engine ne abhi faisla kiya hi nahi.
+                <p className="text-[13px] font-medium text-surface-600 dark:text-surface-300">
+                  {t("mw_score_building", lang)}
+                </p>
+              ) : (
+                <p className="flex items-center justify-end gap-1.5">
+                  <span className="text-base font-semibold tabular-nums text-surface-900 dark:text-surface-100">
+                    {scoreRow.score}
+                  </span>
+                  {scoreRow.band && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                        BAND_TONE[scoreRow.band] ?? "bg-surface-100 text-surface-700"
+                      }`}
+                    >
+                      {scoreRow.band}
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+          )}
+          {/* Waqt Pakistan ka -- server kahin bhi ho, banda apni ghari se
+              milata hai. */}
+          <div className="flex items-center gap-2 border-l border-surface-200 pl-4 dark:border-surface-700">
+            <CalendarDays className="h-4 w-4 shrink-0 text-surface-400" />
+            <p className="whitespace-nowrap text-[13px] font-medium text-surface-700 dark:text-surface-200">
+              {nowDate} · {nowTime}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language={lang} />
 
       {me.training_mode && (
         <div className="mb-4">
@@ -315,7 +396,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         </div>
       </div>
     </div>
-    </DeskWorkspace>
+    </InPageWorkspace>
   );
 }
 
