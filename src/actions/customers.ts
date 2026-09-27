@@ -101,6 +101,17 @@ export async function saveCustomer(_prev: ActionState, formData: FormData): Prom
   if (!name) return { error: "Customer name is required." };
   if (!phoneNumber) return { error: "Phone number is required." };
 
+  // Branch + organization -- RLS policy `tenant_and_branch_scoped_access`
+  // chahti hai ke branch_id ho. Bina is ke naya customer NULL branch se
+  // banta hai aur staff ko POS mein nazar nahi aata (sirf admin dekhta).
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+  const { data: myProfile } = await supabase
+    .from("profiles")
+    .select("branch_id, organization_id, role")
+    .eq("id", user.id)
+    .maybeSingle();
+
   const payload = {
     name,
     contact_person: (formData.get("contact_person") as string) || null,
@@ -127,6 +138,8 @@ export async function saveCustomer(_prev: ActionState, formData: FormData): Prom
       formData.get("customer_type") === "wholesale_shop"
         ? (formData.get("business_name") as string)?.trim() || null
         : null,
+    branch_id: myProfile?.branch_id ?? null,
+    organization_id: myProfile?.organization_id ?? undefined,
   };
 
   const { data: created, error } = await supabase.from("customers").insert(payload).select("id").single();
@@ -134,16 +147,10 @@ export async function saveCustomer(_prev: ActionState, formData: FormData): Prom
 
   const raw = String(formData.get("purana_baqaya") ?? "").trim();
   if (raw) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    const { data: me } = user
-      ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
-      : { data: null };
-    if (!me || !UNRESTRICTED_ROLES.includes(me.role)) {
+    if (!myProfile || !UNRESTRICTED_ROLES.includes(myProfile.role)) {
       return { error: "Customer ban gaya, magar purana baqaya darj karna sirf Manager/Admin/Owner ka kaam hai." };
     }
-    const adj = await postOpeningAdjustment(formData, created.id, name, user!.id);
+    const adj = await postOpeningAdjustment(formData, created.id, name, user.id);
     if (adj.error) return { error: `Customer ban gaya, magar ${adj.error}` };
   }
 
