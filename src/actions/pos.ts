@@ -160,8 +160,10 @@ export async function posCheckout(input: {
   // Live Notifications mein pehle se hain (load-bill.ts, customer-
   // udhaar.ts ke notifyUser se) -- sirf POS Sale isi tarah nazar nahi
   // aati thi." Load & Bill wale isi pattern ke barabar.
+  // await nahi karte -- notification cosmetic hai, bill aane mein delay
+  // nahi karna chahiye.
   const saleTotal = input.items.reduce((s, i) => s + i.quantity * i.unit_price, 0) - discount;
-  await notifyUser(user?.id ?? null, "POS Sale darj", `Rs ${saleTotal.toLocaleString()}`, "/admin/pos");
+  void notifyUser(user?.id ?? null, "POS Sale darj", `Rs ${saleTotal.toLocaleString()}`, "/admin/pos");
 
   // Bikri ho chuki hai aur maal gahak ke haath mein ja chuka hai. Usay
   // mitana ab ghalat hoga. Magar chup rehna us se bhi bura: bulane wale
@@ -354,11 +356,27 @@ async function checkCredit(input: {
 async function postSaleToLedger(saleId: string, userId: string | null): Promise<string | null> {
   const service = createServiceClient();
 
-  const { data: sale } = await service
-    .from("pos_sales")
-    .select("id, total_amount, gross_amount, discount_amount, khata_amount, total_cogs, branch_id, dealer_id, crm_customer_id, created_at")
-    .eq("id", saleId)
-    .maybeSingle();
+  const [{ data: sale }, { data: payments }, { data: waselaSettingRow }] = await Promise.all([
+    service
+      .from("pos_sales")
+      .select("id, total_amount, gross_amount, discount_amount, khata_amount, total_cogs, branch_id, dealer_id, crm_customer_id, created_at")
+      .eq("id", saleId)
+      .maybeSingle(),
+    service
+      .from("pos_sale_payment_details")
+      .select("payment_method, amount")
+      .eq("sale_id", saleId),
+    // Wasela Pakistan integration: jab enabled ho, Wasela Card ki adaigi
+    // seedha 2062 (Wasela Pakistan Dena) par jati hai — hamara dena un ke
+    // yahan usi waqt kam hota hai, hamare wallet mein nahi girta.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (service as any)
+      .from("system_settings")
+      .select("value")
+      .eq("key", "wasela_pakistan_enabled")
+      .maybeSingle(),
+  ]);
+
   if (!sale) return "Bikri ka record nahi mila, ledger mein nahi ja saki.";
 
   /**
@@ -398,20 +416,6 @@ async function postSaleToLedger(saleId: string, userId: string | null): Promise<
    */
   if (sale.dealer_id) return null;
 
-  const { data: payments } = await service
-    .from("pos_sale_payment_details")
-    .select("payment_method, amount")
-    .eq("sale_id", saleId);
-
-  // Wasela Pakistan integration: jab enabled ho, Wasela Card ki adaigi
-  // seedha 2062 (Wasela Pakistan Dena) par jati hai — hamara dena un ke
-  // yahan usi waqt kam hota hai, hamare wallet mein nahi girta.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: waselaSettingRow } = await (service as any)
-    .from("system_settings")
-    .select("value")
-    .eq("key", "wasela_pakistan_enabled")
-    .maybeSingle();
   const waselaEnabled = (waselaSettingRow as { value: string } | null)?.value === "true";
 
   const lines: JournalLine[] = [];
@@ -421,43 +425,47 @@ async function postSaleToLedger(saleId: string, userId: string | null): Promise<
   // aata hai (payment_method_account_map), wohi jo cash book bharte waqt
   // istemal hota hai -- warna cash book kuch aur kehti aur ledger kuch
   // aur.
-  for (const p of payments ?? []) {
-    const amount = Number(p.amount);
-    if (amount <= 0 || p.payment_method === "khata") continue;
+  // Sab payment lines ek sath fetch karo (parallel) taki ek ek kar ke
+  // round trip na lage.
+  await Promise.all(
+    (payments ?? []).map(async (p) => {
+      const amount = Number(p.amount);
+      if (amount <= 0 || p.payment_method === "khata") return;
 
-    // Wasela Card: integration ON ho to 2062 (dena kam karo), OFF ho to
-    // aam raaste se 1019 (mobile wallet) mein girta hai.
-    if (p.payment_method === "waseela_card" && waselaEnabled) {
-      lines.push({ account: ACC.waselaPayable, debit: amount, memo: "POS — waseela_card (Wasela Pakistan dena)" });
-      continue;
-    }
+      // Wasela Card: integration ON ho to 2062 (dena kam karo), OFF ho to
+      // aam raaste se 1019 (mobile wallet) mein girta hai.
+      if (p.payment_method === "waseela_card" && waselaEnabled) {
+        lines.push({ account: ACC.waselaPayable, debit: amount, memo: "POS — waseela_card (Wasela Pakistan dena)" });
+        return;
+      }
 
-    const { data: map } = await service
-      .from("payment_method_account_map")
-      .select("finance_account_id")
-      .eq("payment_method", p.payment_method)
-      .maybeSingle();
-
-    const gl = map?.finance_account_id ? await glForFinanceAccount(map.finance_account_id) : ACC.suspense;
-    lines.push({ account: gl, debit: amount, memo: `POS — ${p.payment_method}` });
-
-    // Cash book ki jis qatar ne ye paisa likha tha, us par is entry ka
-    // daawa. Bina daawe ke wo qatar hamesha "ledger mein nahi gayi" ki
-    // fehrist mein khaRi rehti.
-    if (map?.finance_account_id) {
-      const { data: txn } = await service
-        .from("finance_transactions")
-        .select("id")
-        .eq("account_id", map.finance_account_id)
-        .eq("category", "pos_sale")
-        .eq("amount", amount)
-        .gte("created_at", sale.created_at)
-        .order("created_at", { ascending: true })
-        .limit(1)
+      const { data: map } = await service
+        .from("payment_method_account_map")
+        .select("finance_account_id")
+        .eq("payment_method", p.payment_method)
         .maybeSingle();
-      if (txn?.id) claims.push({ table: "finance_transactions", rowId: txn.id });
-    }
-  }
+
+      const gl = map?.finance_account_id ? await glForFinanceAccount(map.finance_account_id) : ACC.suspense;
+      lines.push({ account: gl, debit: amount, memo: `POS — ${p.payment_method}` });
+
+      // Cash book ki jis qatar ne ye paisa likha tha, us par is entry ka
+      // daawa. Bina daawe ke wo qatar hamesha "ledger mein nahi gayi" ki
+      // fehrist mein khaRi rehti.
+      if (map?.finance_account_id) {
+        const { data: txn } = await service
+          .from("finance_transactions")
+          .select("id")
+          .eq("account_id", map.finance_account_id)
+          .eq("category", "pos_sale")
+          .eq("amount", amount)
+          .gte("created_at", sale.created_at)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (txn?.id) claims.push({ table: "finance_transactions", rowId: txn.id });
+      }
+    })
+  );
 
   const khata = Number(sale.khata_amount ?? 0);
   if (khata > 0) {
