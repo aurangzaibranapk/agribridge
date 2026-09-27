@@ -330,6 +330,8 @@ function NewEntryForm({
         </div>
       )}
       <form action={formAction} encType="multipart/form-data" className="space-y-5">
+        <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.9fr)]">
+          <div className="space-y-5">
         <input type="hidden" name="seller_type" value={sellerType} />
         <input type="hidden" name="cut_percentage" value={effectiveCutPercentage} />
         <input type="hidden" name="has_expense" value={hasExpense} />
@@ -503,21 +505,6 @@ function NewEntryForm({
           )}
         </div>
 
-        <div className="sticky bottom-3 z-10 rounded-xl border border-brand-200 bg-brand-50/95 p-4 shadow-lg backdrop-blur dark:border-brand-900/50 dark:bg-brand-950/90">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-surface-700 dark:text-surface-300">{t("gr_grain_value", lang)}</span>
-            <span className="font-display text-lg font-bold text-brand-700 dark:text-brand-300">Rs {total.toLocaleString()}</span>
-          </div>
-          {chungiAmount > 0 && (
-            <div className="mt-1 flex items-center justify-between text-xs text-red-600">
-              <span>Chungi Katoti ({chungiType === "grain" ? `${chungiKg} kg` : "Cash"})</span><span>- Rs {chungiAmount.toLocaleString()}</span>
-            </div>
-          )}
-          <div className="mt-1 flex items-center justify-between border-t border-surface-200 pt-1 text-sm font-semibold text-surface-800 dark:border-surface-700 dark:text-surface-200">
-            <span>{t("gr_payable", lang)}</span><span>Rs {payableToSeller.toLocaleString()}</span>
-          </div>
-        </div>
-
         <div className={`rounded-lg border-2 p-3 ${makePayment === "" ? "border-red-300 bg-red-50 dark:border-red-900/50 dark:bg-red-950/20" : "border-surface-200 dark:border-surface-700"}`}>
           <Label>{t("gr_pay_now", lang)}</Label>
           <div className="mt-1 flex gap-2">
@@ -562,6 +549,32 @@ function NewEntryForm({
             </div>
           )}
         </div>
+
+          </div>
+
+          <aside className="sticky top-4 rounded-2xl border border-brand-200 bg-brand-50/80 p-5 shadow-sm dark:border-brand-900/50 dark:bg-brand-950/20">
+            <div className="mb-4 border-b border-brand-200 pb-4 dark:border-brand-900/50">
+              <h3 className="font-display text-lg font-semibold text-surface-900 dark:text-white">Live Calculation</h3>
+              <p className="mt-1 text-xs text-surface-500">Har field ke sath amount update hoga.</p>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between"><span className="text-surface-500">Gross Weight</span><span className="font-semibold text-surface-900 dark:text-white">{gross.toLocaleString()} kg</span></div>
+              <div className="flex items-center justify-between"><span className="text-surface-500">Cut / Deduction</span><span className="font-semibold text-amber-700">{cutKg.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg</span></div>
+              <div className="flex items-center justify-between border-b border-brand-200 pb-3 dark:border-brand-900/50"><span className="text-surface-500">Net Weight</span><span className="font-semibold text-surface-900 dark:text-white">{netWeight.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg</span></div>
+              <div className="flex items-center justify-between"><span className="text-surface-500">Rate</span><span className="font-semibold text-surface-900 dark:text-white">Rs {rateNum.toLocaleString()}/kg</span></div>
+              <div className="flex items-center justify-between"><span className="text-surface-500">Gandum Value</span><span className="font-display text-lg font-bold text-brand-700 dark:text-brand-300">Rs {total.toLocaleString()}</span></div>
+              <div className="flex items-center justify-between border-b border-brand-200 pb-3 dark:border-brand-900/50"><span className="text-surface-500">Chungi / Bardana</span><span className="font-semibold text-amber-700">- Rs {chungiAmount.toLocaleString()}</span></div>
+              <div className="flex items-center justify-between pt-1"><span className="font-semibold text-surface-800 dark:text-surface-200">Payable to Farmer</span><span className="font-display text-xl font-bold text-brand-700 dark:text-brand-300">Rs {payableToSeller.toLocaleString()}</span></div>
+            </div>
+            <div className="mt-5 rounded-xl border border-brand-200 bg-white/70 p-3 text-xs text-surface-500 dark:border-brand-900/50 dark:bg-surface-900/40">
+              <p className="font-semibold text-surface-700 dark:text-surface-200">After this:</p>
+              <p className="mt-2">3 · Moisture &amp; Quality</p>
+              <p>4 · Warehouse &amp; Notes</p>
+              <p>5 · Expenses (Yes / No)</p>
+              <p>6 · Payment (Yes / No)</p>
+            </div>
+            <div className="mt-4 rounded-lg border border-brand-200 bg-brand-100/60 px-3 py-2 text-center text-xs font-semibold text-brand-700 dark:border-brand-900/50 dark:bg-brand-950/30 dark:text-brand-300">Save Entry → Bill + Payment Receipt</div>
+          </aside>
 
         <SubmitButton label={t("gr_record_entry", lang)} disabled={hasExpense === "" || makePayment === ""} />
       </form>
