@@ -15,6 +15,7 @@ import { TrainingBanner } from "@/components/guided/training-banner";
 import { departmentForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
+import { StaffMotivationCard } from "@/components/guided/staff-motivation-card";
 
 export const dynamic = "force-dynamic";
 
@@ -216,7 +217,8 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
           </div>
         </section>
       </header>
-      <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} />
+      <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language={lang} />
+      <ShopOverview shopId={me.shop_id!} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} />
     </DeskWorkspace>;
   }
 
@@ -281,6 +283,8 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
           </div>
         </div>
       </div>
+
+      <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language={lang} />
 
       {me.training_mode && (
         <div className="mb-4">
