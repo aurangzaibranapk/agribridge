@@ -276,9 +276,9 @@ function NewEntryForm({
   const gross = parseFloat(grossWeight) || 0;
   const cutKg = gross * (effectiveCutPercentage / 100);
   const netWeight = gross - cutKg;
-  const rateNum = parseFloat(rate) || 0;
-  const total = netWeight * rateNum;
-  const chungiAmount = chungiType === "grain" ? (parseFloat(chungiKg) || 0) * rateNum : parseFloat(chungiCash) || 0;
+  const rateNum = parseFloat(rate) || 0; // per-maund rate hai (user yahi enter karta hai)
+  const total = (netWeight / 40) * rateNum;
+  const chungiAmount = chungiType === "grain" ? ((parseFloat(chungiKg) || 0) / 40) * rateNum : parseFloat(chungiCash) || 0;
   const payableToSeller = total - chungiAmount;
 
   const expensesJson = JSON.stringify(
@@ -431,7 +431,7 @@ function NewEntryForm({
           ) : (
             <div className="mt-2">
               <Input type="number" step="0.01" value={chungiKg} onChange={(e) => setChungiKg(e.target.value)} placeholder={t("gr_how_many_kg", lang)} />
-              <p className="mt-1 text-[11px] text-surface-400">Rate se khud calculate hoga: {(parseFloat(chungiKg) || 0)} kg x Rs {rateNum} = Rs {chungiAmount.toLocaleString()}</p>
+              <p className="mt-1 text-[11px] text-surface-400">Rate se khud calculate hoga: {(parseFloat(chungiKg) || 0)} kg ÷ 40 = {((parseFloat(chungiKg) || 0) / 40).toFixed(2)} maund × Rs {rateNum.toLocaleString()} = Rs {chungiAmount.toLocaleString()}</p>
             </div>
           )}
         </div>
@@ -561,7 +561,7 @@ function NewEntryForm({
               <div className="flex items-center justify-between"><span className="text-surface-500">Gross Weight</span><span className="font-semibold text-surface-900 dark:text-white">{gross.toLocaleString()} kg</span></div>
               <div className="flex items-center justify-between"><span className="text-surface-500">Cut / Deduction</span><span className="font-semibold text-amber-700">{cutKg.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg</span></div>
               <div className="flex items-center justify-between border-b border-brand-200 pb-3 dark:border-brand-900/50"><span className="text-surface-500">Net Weight</span><span className="font-semibold text-surface-900 dark:text-white">{netWeight.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg</span></div>
-              <div className="flex items-center justify-between"><span className="text-surface-500">Rate</span><span className="font-semibold text-surface-900 dark:text-white">Rs {rateNum.toLocaleString()}/kg</span></div>
+              <div className="flex items-center justify-between"><span className="text-surface-500">Rate</span><span className="font-semibold text-surface-900 dark:text-white">Rs {rateNum.toLocaleString()}/maund</span></div>
               <div className="flex items-center justify-between"><span className="text-surface-500">Gandum Value</span><span className="font-display text-lg font-bold text-brand-700 dark:text-brand-300">Rs {total.toLocaleString()}</span></div>
               <div className="flex items-center justify-between border-b border-brand-200 pb-3 dark:border-brand-900/50"><span className="text-surface-500">Chungi / Bardana</span><span className="font-semibold text-amber-700">- Rs {chungiAmount.toLocaleString()}</span></div>
               <div className="flex items-center justify-between pt-1"><span className="font-semibold text-surface-800 dark:text-surface-200">Payable to Farmer</span><span className="font-display text-xl font-bold text-brand-700 dark:text-brand-300">Rs {payableToSeller.toLocaleString()}</span></div>
