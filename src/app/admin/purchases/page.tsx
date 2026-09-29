@@ -48,7 +48,7 @@ export default async function AdminPurchasesPage() {
   const staffBranchRel: any = (profile as any)?.branches;
   const staffBranchName = Array.isArray(staffBranchRel) ? staffBranchRel[0]?.name : staffBranchRel?.name;
 
-  const [{ data: purchases }, { data: suppliers }, { data: products }, { data: branches }] = await Promise.all([
+  const [{ data: purchases }, { data: suppliers }, { data: products }, { data: branches }, { data: financeAccounts }] = await Promise.all([
     supabase
       .from("purchases")
       .select(
@@ -65,6 +65,7 @@ export default async function AdminPurchasesPage() {
     isAdminLevel
       ? supabase.from("branches").select("id, name").eq("is_active", true).order("name")
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    supabase.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("name"),
   ]);
 
   // Kaam kis ke haath mein gaya -- isi safhe par sabz patti ke liye
@@ -199,6 +200,7 @@ export default async function AdminPurchasesPage() {
           branches={branches ?? []}
           staffBranchName={staffBranchName ?? null}
           uiMode={await getUiMode()}
+          financeAccounts={financeAccounts ?? []}
         />
       </div>
 
