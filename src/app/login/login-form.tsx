@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useSafeSearchParams } from "@/hooks/use-safe-search-params";
 import { useFormState, useFormStatus } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Label } from "@/components/ui/form";
@@ -51,7 +52,7 @@ const identifierEmptyState: IdentifierLoginState = {};
 function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () => void }) {
   const lang = useLang();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSafeSearchParams();
   const [state, action] = useFormState(loginWithIdentifier, identifierEmptyState);
 
   useEffect(() => {
@@ -76,7 +77,7 @@ function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () 
             <Label htmlFor="password">{t("pm_password", lang)}</Label>
             <Link href="/forgot-password" className="text-xs font-semibold text-[#1E4A2E] hover:underline">{t("au_forgot_password", lang)}</Link>
           </div>
-          <PasswordInput id="password" name="password" required placeholder="••••••••" className={FIELD} />
+          <PasswordInput id="password" name="password" required placeholder="········" className={FIELD} />
         </div>
         <SubmitBtn label="Sign in" busy="Sign in ho raha hai..." />
       </form>
@@ -224,7 +225,7 @@ function FarmerUsernameLogin({ onBack }: { onBack: () => void }) {
   const router = useRouter();
   const [state, action] = useFormState(loginWithIdentifier, identifierEmptyState);
   useEffect(() => { if (state.success) { router.push(state.redirectPath ?? "/portal/dashboard"); router.refresh(); } }, [state.success, state.redirectPath, router]);
-  return <div><div className="mb-4"><StepBadge>↳</StepBadge><span className="ml-2 text-sm font-semibold text-surface-800">User ID se login</span></div><form action={action} className="space-y-4">{state.error && <Alert tone="error">{state.error}</Alert>}<div><Label htmlFor="identifier">{t("pm_user_id", lang)}</Label><Input id="identifier" name="identifier" required autoComplete="username" placeholder={t("pm_eg_username", lang)} className={FIELD} /></div><div><Label htmlFor="fpassword">{t("pm_password", lang)}</Label><PasswordInput id="fpassword" name="password" required placeholder="••••••••" className={FIELD} /></div><SubmitBtn label={t("au_go_in", lang)} busy="Check ho raha hai..." /></form><button type="button" onClick={onBack} className="mt-4 w-full text-center text-xs font-semibold text-[#1E4A2E] hover:underline">Mobile / OTP login par wapas</button></div>;
+  return <div><div className="mb-4"><StepBadge>↳</StepBadge><span className="ml-2 text-sm font-semibold text-surface-800">User ID se login</span></div><form action={action} className="space-y-4">{state.error && <Alert tone="error">{state.error}</Alert>}<div><Label htmlFor="identifier">{t("pm_user_id", lang)}</Label><Input id="identifier" name="identifier" required autoComplete="username" placeholder={t("pm_eg_username", lang)} className={FIELD} /></div><div><Label htmlFor="fpassword">{t("pm_password", lang)}</Label><PasswordInput id="fpassword" name="password" required placeholder="········" className={FIELD} /></div><SubmitBtn label={t("au_go_in", lang)} busy="Check ho raha hai..." /></form><button type="button" onClick={onBack} className="mt-4 w-full text-center text-xs font-semibold text-[#1E4A2E] hover:underline">Mobile / OTP login par wapas</button></div>;
 }
 
 function SubmitBtn({
