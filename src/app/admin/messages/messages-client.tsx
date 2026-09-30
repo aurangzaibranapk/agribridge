@@ -6,6 +6,24 @@ import { sendMessage, markConversationRead, type ActionState } from "@/actions/m
 import { Send, Paperclip, Bot, FileText, X } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { createClient } from "@/lib/supabase/client";
+
+function playMsgDing() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(740, ctx.currentTime);
+    osc.frequency.setValueAtTime(987, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch { /* ignore */ }
+}
 
 const initialState: ActionState = {};
 
@@ -29,6 +47,7 @@ interface Message {
   message: string | null;
   attachment_url: string | null;
   attachment_type: string | null;
+  is_read: boolean;
   created_at: string;
 }
 
@@ -37,10 +56,41 @@ export function MessagesClient({ currentUserId, contacts, messages }: { currentU
   const [selectedId, setSelectedId] = useState(contacts[0]?.id ?? "");
   const router = useRouter();
 
-  // Poll every 5 seconds so conversations feel "live" without a full
-  // websocket setup — cheap and reliable on shared hosting.
+  // Supabase Realtime se foran nayi message sunna -- migration 483 mein
+  // staff_messages publication mein daali gayi. Jab nayi message aaye to
+  // awaaz bajao aur page refresh karo. Polling backup ke taur par bhi hai.
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
   useEffect(() => {
-    const interval = setInterval(() => router.refresh(), 5000);
+    const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      channel = supabase
+        .channel(`staff-messages:${user.id}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "staff_messages", filter: `recipient_id=eq.${user.id}` },
+          () => {
+            playMsgDing();
+            router.refresh();
+          }
+        )
+        .subscribe();
+    })();
+
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [router]);
+
+  // 10-second fallback polling -- realtime band ho jaye to bhi kaam kare.
+  useEffect(() => {
+    const interval = setInterval(() => router.refresh(), 10000);
     return () => clearInterval(interval);
   }, [router]);
 
@@ -134,7 +184,14 @@ function ChatWindow({ currentUserId, contact, conversation }: { currentUserId: s
                   <a href={m.attachment_url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 text-xs underline">
                     <FileText className="h-3 w-3" />{t("mg_view_file", lang)}</a>
                 )}
-                <p className={`mt-1 text-[10px] ${isMine ? "text-brand-100" : "text-surface-400"}`}>{new Date(m.created_at).toLocaleTimeString()}</p>
+                <p className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${isMine ? "text-brand-100" : "text-surface-400"}`}>
+                  {new Date(m.created_at).toLocaleTimeString()}
+                  {isMine && (
+                    <span title={m.is_read ? "Parh liya" : "Bheja"} className="select-none">
+                      {m.is_read ? "✓✓" : "✓"}
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
           );
