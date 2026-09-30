@@ -17,6 +17,23 @@ import { CoachMessage } from "@/components/guided/coach-message";
 const initialState: ActionState = {};
 const initialBroadcastState: BroadcastActionState = {};
 
+function playMsgDing() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(740, ctx.currentTime);
+    osc.frequency.setValueAtTime(987, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch { /* ignore */ }
+}
+
 /**
  * Assistant + Paighaam + Tajaweez -- ek hi panel (276).
  *
@@ -160,7 +177,7 @@ export function AssistantPanel() {
           table: "staff_messages",
           filter: `recipient_id=eq.${userId}`,
         },
-        () => { if (active) void loadMessages(userId); }
+        () => { if (active) { playMsgDing(); void loadMessages(userId); } }
       )
       .subscribe();
 
@@ -731,8 +748,13 @@ function ChatPane({
                     <FileText className="h-3 w-3" />{t("sh_file", lang)}
                   </a>
                 )}
-                <p className={`mt-0.5 text-[9px] ${isMine ? "text-white/70" : "text-surface-400"}`}>
+                <p className={`mt-0.5 flex items-center gap-1 text-[9px] ${isMine ? "text-white/70" : "text-surface-400"}`}>
                   {new Date(m.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  {isMine && (
+                    <span title={m.is_read ? "Parh liya" : "Bheja"} className="select-none">
+                      {m.is_read ? "✓✓" : "✓"}
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
