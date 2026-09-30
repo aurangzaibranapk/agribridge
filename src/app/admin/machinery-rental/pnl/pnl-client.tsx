@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useSafeSearchParams } from "@/hooks/use-safe-search-params";
 import { useMemo, useState } from "react";
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, ReferenceLine,
@@ -59,7 +60,7 @@ export function PnlClient({
   seasonLabel: string | null;
 }) {
   const router = useRouter();
-  const params = useSearchParams();
+  const params = useSafeSearchParams();
   const [drill, setDrill] = useState<null | string>(null);
 
   function go(next: Record<string, string | null>) {
@@ -120,7 +121,7 @@ export function PnlClient({
     };
     const monthKey = basis === "work" ? (r: PnlRow) => r.workDate : (r: PnlRow) => r.billDate;
     return {
-      machine: by((r) => r.machineId, (r) => `${r.machineType ?? "-"}${r.machineCode ? ` · ${r.machineCode}` : ""}`),
+      machine: by((r) => r.machineId, (r) => `${r.machineType ?? "-"}${r.machineCode ? ` · ${r.machineCode}` : ""}` ),
       vendor: by((r) => r.vendorId, (r) => r.vendorName ?? "-"),
       crop: by((r) => r.cropType ?? "darj nahi", (r) => r.cropType ?? "darj nahi"),
       month: by(
@@ -264,7 +265,7 @@ export function PnlClient({
 
               {/* Jo kharche machinery abhi darj hi nahi karti. Inhen Rs 0
                   likhna jhoot hota: sifar kehta hai "tasdeeq shuda: kuch
-                  kharch nahi hua", jabke sach ye hai ke koi khana hi nahi. */}
+                  nahi hua", jabke sach ye hai ke koi khana hi nahi. */}
               <NotTracked label={t("mp_repairs", lang)} lang={lang} />
               <NotTracked label={t("mp_transport", lang)} lang={lang} />
               <NotTracked label={t("mp_operator", lang)} lang={lang} />

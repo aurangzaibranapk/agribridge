@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useSafeSearchParams } from "@/hooks/use-safe-search-params";
 import { useMemo } from "react";
 import {
   Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
@@ -99,7 +100,7 @@ export function CapacityPlanner({
 }) {
   const lang = useLang();
   const router = useRouter();
-  const params = useSearchParams();
+  const params = useSafeSearchParams();
 
   function go(next: { machine?: string; day?: string | null }) {
     const q = new URLSearchParams(params.toString());
