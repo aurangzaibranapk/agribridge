@@ -223,7 +223,7 @@ export function ProductCardGrid({
               <div className="mt-1.5 flex items-center justify-between text-xs">
                 <span className="text-surface-400">{warehouseLabel ?? t("ao_warehouse_label", lang)}</span>
                 <span className={`font-medium ${stockStatus === "out" ? "text-red-600" : stockStatus === "low" ? "text-amber-600" : "text-green-600"}`}>
-                  {p.warehouse_stock} {stockStatus === "out" ? "(Khatam)" : stockStatus === "low" ? "(Kam)" : ""}
+                  {Math.max(0, p.warehouse_stock)} {stockStatus === "out" ? "(Khatam)" : stockStatus === "low" ? "(Kam)" : ""}
                 </span>
               </div>
               {outOfStock ? (
