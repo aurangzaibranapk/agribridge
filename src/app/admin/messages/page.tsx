@@ -56,6 +56,7 @@ export default async function MessagesPage() {
     message: m.message,
     attachment_url: m.attachment_url,
     attachment_type: m.attachment_type,
+    is_read: m.is_read ?? false,
     created_at: m.created_at,
   }));
 

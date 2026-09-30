@@ -6,6 +6,27 @@ import { createClient } from "@/lib/supabase/client";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
+// Browser ka Audio API se ding bajao -- koi file nahi chahiye.
+// User interaction ke baad hi AudioContext kaam karta hai; pehli
+// notification tab bhi awaaz degi jab user ne page par kuch click
+// kiya ho. Agar nahi kiya to catch mein khamoshi se skip hota hai.
+function playDing() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(660, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.35, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.55);
+  } catch { /* ignore */ }
+}
+
 /**
  * Ghanti -- ab sirf adad nahi, khud ittila'at bhi.
  *
@@ -93,6 +114,7 @@ export function NotificationBell({ initialCount, href }: { initialCount: number;
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "notifications", filter: `recipient_user_id=eq.${user.id}` },
           () => {
+            playDing();
             void refreshCount();
             if (openRef.current) void load();
           }
