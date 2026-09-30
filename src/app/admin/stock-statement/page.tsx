@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { Card, PageHeader } from "@/components/ui/layout-primitives";
 import Link from "next/link";
-import { TrendingDown, TrendingUp, Package, ArrowRight, Building2, AlertTriangle } from "lucide-react";
+import { TrendingDown, TrendingUp, Package, ArrowRight, Building2, AlertTriangle, MoveRight, ShoppingCart } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -158,6 +158,36 @@ export default async function StockStatementPage() {
         title="Stock Statement"
         description="Kitna stock kahan se aaya, kahan gaya, kitna bacha — ek nazar mein"
       />
+
+      {/* Two statement shortcuts */}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Link
+          href="/admin/stock-statement/transfers"
+          className="group flex items-center gap-4 rounded-card border border-surface-200 bg-white p-4 shadow-card transition hover:border-brand-300 hover:shadow-md dark:border-surface-800 dark:bg-surface-900 dark:hover:border-brand-700"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 group-hover:bg-brand-100 dark:bg-brand-900/20 dark:text-brand-400">
+            <MoveRight className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="font-semibold text-surface-900 dark:text-white">HQ se Dukan — Maal Bheja</p>
+            <p className="text-xs text-surface-500">Har dispatch: kaunsa maal, kab, kahan gaya</p>
+          </div>
+          <ArrowRight className="ml-auto h-4 w-4 text-surface-400 group-hover:text-brand-600 dark:group-hover:text-brand-400" />
+        </Link>
+        <Link
+          href="/admin/stock-statement/sales"
+          className="group flex items-center gap-4 rounded-card border border-surface-200 bg-white p-4 shadow-card transition hover:border-brand-300 hover:shadow-md dark:border-surface-800 dark:bg-surface-900 dark:hover:border-brand-700"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400">
+            <ShoppingCart className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="font-semibold text-surface-900 dark:text-white">Dukan se Gahak — Bikri</p>
+            <p className="text-xs text-surface-500">Har sale: invoice, gahak, cheez, miqdar</p>
+          </div>
+          <ArrowRight className="ml-auto h-4 w-4 text-surface-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400" />
+        </Link>
+      </div>
 
       {/* Grand summary */}
       <div className="mb-6 grid grid-cols-3 gap-4">
