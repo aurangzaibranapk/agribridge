@@ -27,8 +27,8 @@ export function GuideOverlay() {
   const sp = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const key = sp.get("guide");
-  const step = Math.max(1, Number(sp.get("step") ?? 1) || 1);
+  const key = sp?.get("guide") ?? null;
+  const step = Math.max(1, Number(sp?.get("step") ?? 1) || 1);
   const [guide, setGuide] = useState<Guide | null>(null);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [missing, setMissing] = useState(false);

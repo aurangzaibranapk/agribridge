@@ -21,6 +21,6 @@ import { usePathname, useSearchParams } from "next/navigation";
 export function ChromeGate({ children }: { children: React.ReactNode }) {
   const params = useSearchParams();
   const pathname = usePathname();
-  if (params.get("workspace") === "1" || pathname === "/admin/pos") return null;
+  if (params?.get("workspace") === "1" || pathname === "/admin/pos") return null;
   return <>{children}</>;
 }
