@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useState, useCallback } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useSafeSearchParams } from "@/hooks/use-safe-search-params";
 import { ArrowRight, ArrowLeft, X, MapPin } from "lucide-react";
 
 interface GuideStep {
@@ -24,11 +25,11 @@ interface Guide {
  * hota hai aur "Wahan jayein" wahan le jata hai.
  */
 export function GuideOverlay() {
-  const sp = useSearchParams();
+  const sp = useSafeSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const key = sp?.get("guide") ?? null;
-  const step = Math.max(1, Number(sp?.get("step") ?? 1) || 1);
+  const key = sp.get("guide");
+  const step = Math.max(1, Number(sp.get("step") ?? 1) || 1);
   const [guide, setGuide] = useState<Guide | null>(null);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [missing, setMissing] = useState(false);

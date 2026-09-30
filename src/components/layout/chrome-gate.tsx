@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useSafeSearchParams } from "@/hooks/use-safe-search-params";
 
 /**
  * Workspace overlay ke andar khulne wala safha apna topbar/sidebar
@@ -19,8 +20,8 @@ import { usePathname, useSearchParams } from "next/navigation";
  * kaam ki hai.
  */
 export function ChromeGate({ children }: { children: React.ReactNode }) {
-  const params = useSearchParams();
+  const params = useSafeSearchParams();
   const pathname = usePathname();
-  if (params?.get("workspace") === "1" || pathname === "/admin/pos") return null;
+  if (params.get("workspace") === "1" || pathname === "/admin/pos") return null;
   return <>{children}</>;
 }

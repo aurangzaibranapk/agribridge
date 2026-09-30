@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useSafeSearchParams } from "@/hooks/use-safe-search-params";
 import Link from "next/link";
 import { resetPasswordWithToken, type ActionState } from "@/actions/password-reset";
 import { t } from "@/lib/i18n/translations";
@@ -11,7 +12,7 @@ const initialState: ActionState = {};
 
 export function ResetPasswordForm() {
   const lang = useLang();
-  const searchParams = useSearchParams();
+  const searchParams = useSafeSearchParams();
   const router = useRouter();
   const token = searchParams.get("token") ?? "";
   const [state, formAction] = useFormState(resetPasswordWithToken, initialState);

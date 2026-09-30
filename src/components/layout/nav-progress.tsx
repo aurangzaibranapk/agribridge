@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useSafeSearchParams } from "@/hooks/use-safe-search-params";
 
 /**
  * Upar chalti hui hari patti -- "safha khul raha hai".
@@ -19,7 +20,7 @@ import { usePathname, useSearchParams } from "next/navigation";
  */
 export function NavProgress() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const searchParams = useSafeSearchParams();
   const [visible, setVisible] = useState(false);
   const [width, setWidth] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
