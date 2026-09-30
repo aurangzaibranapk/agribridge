@@ -165,6 +165,30 @@ export const inventoryDict = {
   inv_pc_no_stock: { en: "No stock row in any warehouse yet.", rm: "Abhi kisi godam mein is ka khana nahi.", ur: "ابھی کسی گودام میں اس کا خانہ نہیں۔" },
   inv_pc_back: { en: "Back to inventory", rm: "Stock ki fehrist par wapas", ur: "اسٹاک کی فہرست پر واپس" },
 
+  // ---- Product Statement (ledger) ----
+  inv_stmt_title: { en: "Stock Statement", rm: "Maal ki Puri Fehrist", ur: "مال کی پوری فہرست" },
+  inv_stmt_desc: { en: "Every movement — when stock came in and when it went out", rm: "Har hisaab — kab maal aya, kab gaya", ur: "ہر حساب — کب مال آیا، کب گیا" },
+  inv_stmt_back: { en: "Back to product", rm: "Product par wapas", ur: "پروڈکٹ پر واپس" },
+  inv_stmt_view: { en: "Full Statement →", rm: "Puri Fehrist →", ur: "پوری فہرست ←" },
+  inv_stmt_date: { en: "Date", rm: "Tareekh", ur: "تاریخ" },
+  inv_stmt_details: { en: "Details", rm: "Tafseel", ur: "تفصیل" },
+  inv_stmt_in: { en: "IN", rm: "Aya (Credit)", ur: "آیا (کریڈٹ)" },
+  inv_stmt_out: { en: "OUT", rm: "Gaya (Debit)", ur: "گیا (ڈیبٹ)" },
+  inv_stmt_balance: { en: "Balance", rm: "Baqi", ur: "باقی" },
+  inv_stmt_warehouse: { en: "Warehouse", rm: "Godam", ur: "گودام" },
+  inv_stmt_all_wh: { en: "All Warehouses", rm: "Sab Godam", ur: "سب گودام" },
+  inv_stmt_no_movements: { en: "No movements recorded yet.", rm: "Abhi koi hisaab darj nahi.", ur: "ابھی کوئی حساب درج نہیں۔" },
+  inv_stmt_purchase_in: { en: "Purchase", rm: "Kharid (maal aya)", ur: "خرید (مال آیا)" },
+  inv_stmt_sale_out: { en: "Sale", rm: "Bikri (maal gaya)", ur: "بکری (مال گیا)" },
+  inv_stmt_adj_inc: { en: "Adjustment +", rm: "Izafa (adjustment)", ur: "اضافہ (ایڈجسٹمنٹ)" },
+  inv_stmt_adj_dec: { en: "Adjustment −", rm: "Kami (adjustment)", ur: "کمی (ایڈجسٹمنٹ)" },
+  inv_stmt_transfer_out: { en: "Transfer Out", rm: "Godam badal gaya", ur: "گودام بدل گیا" },
+  inv_stmt_return_in: { en: "Return In", rm: "Wapas aya", ur: "واپس آیا" },
+  inv_stmt_opening: { en: "Opening Balance", rm: "Pehla Baqi (shuruat)", ur: "پہلا باقی (شروعات)" },
+  inv_stmt_closing: { en: "Closing Balance", rm: "Aakhri Baqi", ur: "آخری باقی" },
+  inv_stmt_total_in: { en: "Total IN", rm: "Kul Aya", ur: "کل آیا" },
+  inv_stmt_total_out: { en: "Total OUT", rm: "Kul Gaya", ur: "کل گیا" },
+
   // ---- Cheezon ki tasveerein, AI se masoda (296) ----
   pi_title: { en: "Product images", rm: "Cheezon ki tasveerein", ur: "چیزوں کی تصویریں" },
   pi_desc: {
