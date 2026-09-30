@@ -1,5 +1,6 @@
 "use client";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { useSafeSearchParams } from "@/hooks/use-safe-search-params";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -13,7 +14,7 @@ export function BranchFilter({
   const router = useRouter();
   const lang = useLang();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const searchParams = useSafeSearchParams();
 
   function setBranch(value: string) {
     const params = new URLSearchParams(searchParams.toString());

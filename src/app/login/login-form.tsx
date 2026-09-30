@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useSafeSearchParams } from "@/hooks/use-safe-search-params";
 import { useFormState, useFormStatus } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Label } from "@/components/ui/form";
@@ -51,7 +52,7 @@ const identifierEmptyState: IdentifierLoginState = {};
 function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () => void }) {
   const lang = useLang();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSafeSearchParams();
   const [state, action] = useFormState(loginWithIdentifier, identifierEmptyState);
 
   useEffect(() => {

@@ -1,12 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { useSafeSearchParams } from "@/hooks/use-safe-search-params";
 import { DATE_RANGE_OPTIONS, type DateRangeKey } from "@/lib/utils/dashboard-filters";
 
 export function DateRangeFilter({ current, from, to }: { current: DateRangeKey; from?: string; to?: string }) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const searchParams = useSafeSearchParams();
   const [customFrom, setCustomFrom] = useState(from ?? "");
   const [customTo, setCustomTo] = useState(to ?? "");
   const [loading, setLoading] = useState(false);

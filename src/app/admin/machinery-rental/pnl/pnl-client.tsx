@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useSafeSearchParams } from "@/hooks/use-safe-search-params";
 import { useMemo, useState } from "react";
 import {
   Bar, BarChart, CartesianGrid, Cell, Legend, ReferenceLine,
@@ -59,7 +60,7 @@ export function PnlClient({
   seasonLabel: string | null;
 }) {
   const router = useRouter();
-  const params = useSearchParams();
+  const params = useSafeSearchParams();
   const [drill, setDrill] = useState<null | string>(null);
 
   function go(next: Record<string, string | null>) {
