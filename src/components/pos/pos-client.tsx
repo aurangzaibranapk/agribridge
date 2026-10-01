@@ -698,9 +698,9 @@ export function PosClient({
         </>
       )}
 
-      <Card className="flex flex-col gap-4 print:hidden lg:h-full lg:min-h-0 lg:overflow-y-auto">
+      <Card className="flex flex-col gap-4 print:hidden lg:h-full lg:min-h-0">
         <div className="flex items-center gap-2"><ShoppingCart className="h-5 w-5 text-brand-600" /><h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_cart", lang)}</h2></div>
-        <div className="max-h-64 space-y-2 overflow-y-auto">
+        <div className="max-h-48 space-y-2 overflow-y-auto lg:flex-1 lg:max-h-none lg:min-h-0">
           {cart.length === 0 && <div className="py-6 text-center"><p className="text-sm text-surface-500">{t("pos_cart_empty", lang)}</p><p className="mt-1 text-xs text-surface-400">{t("pos_cart_empty_hint", lang)}</p></div>}
           {cart.map((line) => {
             const item = inventory.find((i) => i.product_id === line.product_id);
@@ -717,7 +717,7 @@ export function PosClient({
           })}
         </div>
 
-        <div className="border-t border-surface-100 pt-3 dark:border-surface-800">
+        <div className="shrink-0 border-t border-surface-100 pt-3 dark:border-surface-800">
           <Label>{t("pos_customer", lang)} {khataTotal > 0 && <span className="text-red-500">*</span>}</Label>
           <div className="mb-2 grid grid-cols-3 gap-1.5">
             {([ ["walkin", t("pos_walkin", lang)], ["regular", t("pos_regular", lang)], ["wholesale", t("pos_wholesale", lang)] ] as [CustomerMode, string][]).map(([customerMode, label]) => (
@@ -763,7 +763,7 @@ export function PosClient({
           )}
         </div>
 
-        <div>
+        <div className="shrink-0">
           <div className="mb-1.5 flex items-center justify-between"><Label>{t("pos_payment", lang)}</Label><button type="button" onClick={addPaymentLine} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"><Plus className="h-3 w-3" /> {t("pos_add_split", lang)}</button></div>
           {custMode === "walkin" && <p className="mb-1.5 text-[11px] text-surface-400">{t("pos_walkin_no_credit", lang)}</p>}
           <div className="space-y-2">
@@ -782,7 +782,7 @@ export function PosClient({
           {khataTotal > 0 && <p className="mt-1.5 text-[11px] text-amber-700">Khata remaining amount ko automatically cover karta hai. Cash/Bank ki amount badlein to Khata khud adjust ho jayega.</p>}
         </div>
 
-        <div className="space-y-1 border-t border-surface-100 pt-3 text-sm dark:border-surface-800">
+        <div className="shrink-0 space-y-1 border-t border-surface-100 pt-3 text-sm dark:border-surface-800">
           <div className="flex items-center justify-between"><span className="text-surface-500">{t("pos_total_quantity", lang)}</span><span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">{cart.reduce((s, l) => s + l.quantity, 0)}</span></div>
           <div className="flex items-center justify-between"><span className="text-surface-500">{t("pos_subtotal", lang)}</span><span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">Rs {total.toLocaleString()}</span></div>
           {perms.canGiveDiscount && cart.length > 0 && (
