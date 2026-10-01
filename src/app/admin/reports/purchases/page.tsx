@@ -72,6 +72,18 @@ export default async function PurchasesReportPage({
     purchase_value: number;
   };
 
+  // Build accurate per-product stock from locationStock (sums all warehouses per product)
+  const productStock = new Map<string, { qty: number; cost: number; name: string }>();
+  for (const row of (locationStock ?? [])) {
+    const inv = row as any;
+    const prod = Array.isArray(inv.products) ? inv.products[0] : inv.products;
+    const pid: string = prod?.id ?? inv.product_id;
+    if (!pid) continue;
+    const existing = productStock.get(pid) ?? { qty: 0, cost: Number(prod?.purchase_price ?? 0), name: prod?.name ?? pid };
+    existing.qty += Number(inv.quantity_on_hand ?? 0);
+    productStock.set(pid, existing);
+  }
+
   const byProduct = new Map<string, ItemRow>();
   (smData ?? []).forEach((r: any) => {
     const inv = Array.isArray(r.inventory) ? r.inventory[0] : r.inventory;
@@ -83,7 +95,7 @@ export default async function PurchasesReportPage({
     const existing = byProduct.get(pid) ?? {
       product: name, purchase_in: 0, sale_out: 0, transfer_out: 0,
       adj_in: 0, adj_out: 0,
-      damaged_out: 0, current_stock: Number(inv?.quantity_on_hand ?? 0),
+      damaged_out: 0, current_stock: 0,
       unit_cost: Number(prod?.purchase_price ?? 0),
       stock_value: 0, sale_value: 0, transfer_value: 0, purchase_value: 0,
     };
@@ -98,6 +110,23 @@ export default async function PurchasesReportPage({
     }
     byProduct.set(pid, existing);
   });
+
+  // Overwrite current_stock with accurate multi-warehouse total from productStock
+  for (const [pid, row] of byProduct) {
+    const ps = productStock.get(pid);
+    if (ps) { row.current_stock = ps.qty; row.unit_cost = ps.cost; }
+  }
+  // Products in locationStock but missing from smData (no movements yet)
+  for (const [pid, ps] of productStock) {
+    if (!byProduct.has(pid)) {
+      byProduct.set(pid, {
+        product: ps.name, purchase_in: 0, sale_out: 0, transfer_out: 0,
+        adj_in: 0, adj_out: 0, damaged_out: 0,
+        current_stock: ps.qty, unit_cost: ps.cost,
+        stock_value: 0, sale_value: 0, transfer_value: 0, purchase_value: 0,
+      });
+    }
+  }
 
   const itemRows: ItemRow[] = [...byProduct.values()]
     .map((v) => ({
