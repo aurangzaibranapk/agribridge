@@ -218,7 +218,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   // Requiring /admin/pos here sent those users to the legacy dashboard and
   // hid their shop-scoped Ledger. Keep each shortcut permission-filtered.
   if (me.shop_id && deskLinks.length > 0) {
-    return <DeskWorkspace>
+    return <DeskWorkspace className="desk-my-work">
       {/* 3-card header: Welcome Back / Staff Performance / Work Area */}
       <header className="staff-desk-header">
         <section className="staff-desk-identity" aria-label="Logged-in staff member">
@@ -251,20 +251,10 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         </section>
       </header>
 
-      <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language={lang} />
-
-      {/* KPI tiles — pending approvals, tasks, urgent, farmers */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {kpis.map((k) => (
-          <div key={k.key} className="rounded-card border border-surface-200 bg-white px-4 py-3 dark:border-surface-700 dark:bg-surface-900">
-            <p className="text-2xl font-semibold tabular-nums text-surface-900 dark:text-surface-100">{k.value ?? "—"}</p>
-            <p className="mt-0.5 text-[12px] text-surface-500">{k.label}</p>
-          </div>
-        ))}
-      </div>
+      <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language={lang} dayIndex={Math.floor(Date.now() / 86400000)} />
 
       <DeskTabs items={[
-        { id: "overview", label: "Ledger", content: <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems} /> },
+        { id: "overview", label: "Ledger", content: <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems} kpis={kpis} /> },
         { id: "tasks", label: `Tasks (${attentionItems.length})`, content: <NeedsAttention lang={lang} allowedRoutes={allowed} variant="list" compact /> },
         { id: "notifications", label: "Notifications", content: <ShopNotifications userId={user.id} /> },
         { id: "work", label: "My Departments", content: <MyWorkBody lang={lang} quick={model.quick} departments={nav.unrestricted ? model.departments : []} defaultDept={defaultDashboardForRole(me.role)} attention={attentionTop} attentionTotal={attentionItems.length} attentionAllHref={null} /> },

@@ -8,6 +8,8 @@ interface StaffMotivationCardProps {
   language?: string | null;
   salesAmount?: number | null;
   targetAmount?: number | null;
+  /** Pass Math.floor(Date.now()/86400000) from server for daily rotation. */
+  dayIndex?: number | null;
 }
 
 const TONE: Record<string, string> = {
@@ -18,7 +20,7 @@ const TONE: Record<string, string> = {
 };
 
 export function StaffMotivationCard(props: StaffMotivationCardProps) {
-  const motivation = buildStaffMotivation(props);
+  const motivation = buildStaffMotivation({ ...props, language: "ur" });
   return (
     <section className={`mb-4 rounded-card border p-4 ${TONE[motivation.tone] ?? TONE.focus}`} aria-label="Daily staff motivation">
       <div className="flex items-start gap-3">

@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import "./desk-workspace.css";
+
+const DeskTabsCtx = createContext<{ active: string; setActive: (id: string) => void } | null>(null);
+
+/** Access the active DeskTabs panel and navigate from anywhere inside the tab tree. */
+export function useDeskTabs() { return useContext(DeskTabsCtx); }
 
 /** Route-local viewport ownership. Other admin pages retain their existing layout. */
 export function DeskWorkspace({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -15,13 +20,15 @@ export function DeskWorkspace({ children, className = "" }: { children: ReactNod
 }
 
 export function DeskTabs({ items }: { items: { id: string; label: string; content: ReactNode }[] }) {
-  const [active, setActive] = useState(items[0]?.id);
-  return <div className="desk-tabs">
-    <div role="tablist" aria-label="Workspace sections" className="flex shrink-0 gap-2 border-b pb-2">
-      {items.map(item => <button key={item.id} type="button" role="tab" id={`tab-${item.id}`} aria-controls={`panel-${item.id}`} aria-selected={active === item.id} onClick={() => setActive(item.id)} className={`rounded-lg px-4 py-2 text-sm font-medium ${active === item.id ? "bg-brand-700 text-white" : "border bg-white text-surface-700 dark:bg-surface-900 dark:text-surface-200"}`}>{item.label}</button>)}
+  const [active, setActive] = useState(items[0]?.id ?? "");
+  return <DeskTabsCtx.Provider value={{ active, setActive }}>
+    <div className="desk-tabs">
+      <div role="tablist" aria-label="Workspace sections" className="flex shrink-0 gap-2 border-b pb-2">
+        {items.map(item => <button key={item.id} type="button" role="tab" id={`tab-${item.id}`} aria-controls={`panel-${item.id}`} aria-selected={active === item.id} onClick={() => setActive(item.id)} className={`rounded-lg px-4 py-2 text-sm font-medium ${active === item.id ? "bg-brand-700 text-white" : "border bg-white text-surface-700 dark:bg-surface-900 dark:text-surface-200"}`}>{item.label}</button>)}
+      </div>
+      {items.map(item => <section key={item.id} role="tabpanel" id={`panel-${item.id}`} aria-labelledby={`tab-${item.id}`} hidden={active !== item.id} className="desk-tab-panel">{item.content}</section>)}
     </div>
-    {items.map(item => <section key={item.id} role="tabpanel" id={`panel-${item.id}`} aria-labelledby={`tab-${item.id}`} hidden={active !== item.id} className="desk-tab-panel">{item.content}</section>)}
-  </div>;
+  </DeskTabsCtx.Provider>;
 }
 
 export function Pager({ page, count, size, onChange }: { page: number; count: number; size: number; onChange: (page: number) => void }) {
