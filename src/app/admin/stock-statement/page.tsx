@@ -265,7 +265,12 @@ export default async function StockStatementPage() {
                       className="border-b border-surface-100 last:border-0 dark:border-surface-800"
                     >
                       <td className="px-4 py-2.5 font-medium text-surface-900 dark:text-white">
-                        {w.warehouseName}
+                        <Link
+                          href={`/admin/stock-statement/warehouse/${w.warehouseId}`}
+                          className="hover:text-brand-600 hover:underline dark:hover:text-brand-400"
+                        >
+                          {w.warehouseName}
+                        </Link>
                       </td>
                       <td className="px-4 py-2.5 text-surface-500 dark:text-surface-400">
                         {w.branchName}
