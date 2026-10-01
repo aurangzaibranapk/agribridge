@@ -703,9 +703,9 @@ export function PosClient({
         </>
       )}
 
-      <Card className="flex flex-col gap-4 print:hidden lg:h-full lg:min-h-0">
+      <Card className="flex flex-col gap-4 print:hidden lg:h-full lg:min-h-0 lg:overflow-y-auto">
         <div className="flex items-center gap-2"><ShoppingCart className="h-5 w-5 text-brand-600" /><h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_cart", lang)}</h2></div>
-        <div className="max-h-48 space-y-2 overflow-y-auto lg:flex-1 lg:max-h-none lg:min-h-[7rem]">
+        <div className="max-h-48 space-y-2 overflow-y-auto lg:max-h-[30vh] lg:min-h-[6rem]">
           {cart.length === 0 && <div className="py-6 text-center"><p className="text-sm text-surface-500">{t("pos_cart_empty", lang)}</p><p className="mt-1 text-xs text-surface-400">{t("pos_cart_empty_hint", lang)}</p></div>}
           {cart.map((line) => {
             const item = inventory.find((i) => i.product_id === line.product_id);
