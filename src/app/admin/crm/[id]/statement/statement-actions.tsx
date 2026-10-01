@@ -11,19 +11,41 @@ type WAData = {
   kulDiya: number;
 };
 
-function buildWAText(data: WAData, pageUrl: string): string {
+function buildWAText(data: WAData, pageUrl: string, start?: string, end?: string): string {
   const baqi = data.baqi == null ? "maloom nahi" : `Rs ${Number(data.baqi).toLocaleString("en-PK")}`;
+  const today = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "short", year: "numeric" });
+  const period = start && end
+    ? `${start} — ${end}`
+    : start
+    ? `${start} se aaj tak`
+    : end
+    ? `Shuru se ${end} tak`
+    : "Tamam entries";
+
   const lines = [
-    `*Al Rana Traders — Khata Bayaan*`,
-    `Gahak: *${data.name}*`,
+    `🏪 *AL RANA TRADERS*`,
+    `_Main Branch Mahabali_`,
+    `━━━━━━━━━━━━━━━━━━━━`,
     ``,
-    `Kul khareed:  Rs ${data.kulLiya.toLocaleString("en-PK")}`,
-    `Kul ada kiya: Rs ${data.kulDiya.toLocaleString("en-PK")}`,
-    `━━━━━━━━━━━━━━━━━━`,
-    `*Abhi baqi: ${baqi}*`,
+    `📋 *KHATA BAYAAN*`,
+    `📅 Taareekh: ${today}`,
+    `🗓 Period: ${period}`,
     ``,
-    `Poori details:`,
+    `👤 Gahak: *${data.name}*`,
+    ``,
+    `💰 *Hisaab:*`,
+    `   Kul Khareed (Maal Liya):  Rs ${data.kulLiya.toLocaleString("en-PK")}`,
+    `   Kul Ada Kiya (Cash+Wapsi): Rs ${data.kulDiya.toLocaleString("en-PK")}`,
+    `─────────────────────────`,
+    data.baqi !== null && Number(data.baqi) > 0
+      ? `   🔴 *Baqi Adaigi: ${baqi}*`
+      : `   ✅ *Baqi: ${baqi}*`,
+    ``,
+    `━━━━━━━━━━━━━━━━━━━━`,
+    `🔗 Poori tafseeel:`,
     pageUrl,
+    ``,
+    `_Al Rana Traders — Shukriya_ 🙏`,
   ];
   return lines.join("\n");
 }
@@ -47,7 +69,7 @@ export function StatementActions({
       typeof window !== "undefined"
         ? window.location.href
         : `https://alranatraders.pk/admin/crm/${customerId}/statement`;
-    const text = buildWAText(waData, pageUrl);
+    const text = buildWAText(waData, pageUrl, start, end);
     const phone = waData.phone ? waData.phone.replace(/\D/g, "") : "";
     // Pakistani numbers: 03xx → 923xx
     const intlPhone = phone.startsWith("0") ? "92" + phone.slice(1) : phone;
