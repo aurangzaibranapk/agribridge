@@ -6,6 +6,7 @@ import { Download, Mail, MessageCircle, Printer } from "lucide-react";
 type WAData = {
   phone: string | null;
   name: string;
+  branch: string | null;
   baqi: number | null;
   kulLiya: number;
   kulDiya: number;
@@ -22,32 +23,19 @@ function buildWAText(data: WAData, pageUrl: string, start?: string, end?: string
     ? `Shuru se ${end} tak`
     : "Tamam entries";
 
+  const branchLine = data.branch ? `_Co-Partner: ART · ${data.branch}_` : `_Co-Partner: ART_`;
   const lines = [
-    `🏪 *KISAN ECO MAHABALI*`,
-    `_Main Branch_`,
-    `━━━━━━━━━━━━━━━━━━━━`,
+    `*KISAN ECO MAHABALI*`,
+    branchLine,
     ``,
-    `📋 *KHATA BAYAAN*`,
-    `📅 Taareekh: ${today}`,
-    `🗓 Period: ${period}`,
-    ``,
-    `👤 Gahak: *${data.name}*`,
-    ``,
-    `💰 *Hisaab:*`,
-    `   Kul Khareed (Maal Liya):  Rs ${data.kulLiya.toLocaleString("en-PK")}`,
-    `   Kul Ada Kiya (Cash+Wapsi): Rs ${data.kulDiya.toLocaleString("en-PK")}`,
-    `─────────────────────────`,
+    `*${data.name}* — Khata`,
+    `Khareed: Rs ${data.kulLiya.toLocaleString("en-PK")} · Ada: Rs ${data.kulDiya.toLocaleString("en-PK")}`,
     data.baqi !== null && Number(data.baqi) > 0
-      ? `   🔴 *Baqi Adaigi: ${baqi}*`
-      : `   ✅ *Baqi: ${baqi}*`,
+      ? `*Baqi: ${baqi}*`
+      : `Baqi: ${baqi}`,
     ``,
-    `━━━━━━━━━━━━━━━━━━━━`,
-    `🔗 Poori tafseeel:`,
     pageUrl,
-    ``,
-    `_Kisan Eco Mahabali — Jhang_`,
-    `🌐 www.alranatraders.pk`,
-    `_Shukriya_ 🙏`,
+    `_www.alranatraders.pk_`,
   ];
   return lines.join("\n");
 }

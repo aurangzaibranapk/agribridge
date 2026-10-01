@@ -55,7 +55,7 @@ export default async function CustomerStatementPage({
 
   const { data: customer } = await supabase
     .from("customers")
-    .select("id, name, phone_number, credit_limit")
+    .select("id, name, phone_number, credit_limit, branches(name)")
     .eq("id", id)
     .maybeSingle();
 
@@ -150,7 +150,7 @@ export default async function CustomerStatementPage({
       <div className="hidden print:block mb-6 border-b-2 border-black pb-4">
         <div className="text-center mb-3">
           <h1 className="text-2xl font-bold tracking-wide">KISAN ECO MAHABALI</h1>
-          <p className="text-sm">Main Branch · Jhang</p>
+          <p className="text-sm">{(customer?.branches as any)?.name ?? "Main Branch"} · Jhang</p>
           <p className="text-xs text-gray-500">www.alranatraders.pk</p>
           <p className="text-base font-semibold mt-1">CUSTOMER ACCOUNT STATEMENT — KHATA BAYAAN</p>
         </div>
@@ -194,6 +194,7 @@ export default async function CustomerStatementPage({
         waData={{
           phone: customer?.phone_number ?? null,
           name: customer?.name ?? "Gahak",
+          branch: (customer?.branches as any)?.name ?? null,
           baqi: baqi ?? null,
           kulLiya,
           kulDiya,
