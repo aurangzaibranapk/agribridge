@@ -38,10 +38,17 @@ body {
 
   body { background: white !important; color: black !important; }
 
-  table td:last-child,
-  table th:last-child { display: none; } /* Actions column */
+  /* Actions column sirf data tables mein chhupao — statement table nahi */
+  table:not(.statement-print-table) td:last-child,
+  table:not(.statement-print-table) th:last-child { display: none; }
+
+  /* Statement table: saaf borders aur professional look */
+  .statement-print-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .statement-print-table th { border-bottom: 2px solid #000; padding: 4px 8px; text-align: left; font-weight: 600; }
+  .statement-print-table td { border-bottom: 1px solid #ccc; padding: 4px 8px; }
+  .statement-print-table td:nth-child(1) { display: none; } /* chevron column */
 
   a { text-decoration: none; color: inherit; }
 
-  @page { margin: 1cm; }
+  @page { margin: 1.5cm; }
 }

@@ -134,14 +134,45 @@ export default async function CustomerStatementPage({
     return s + (sale ? sale.cash_paid : 0) + Number(r.credit);
   }, 0);
 
+  const printDate = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "long", year: "numeric" });
+  const periodLabel = sp.start && sp.end
+    ? `${sp.start} se ${sp.end} tak`
+    : sp.start
+    ? `${sp.start} se aaj tak`
+    : sp.end
+    ? `Shuru se ${sp.end} tak`
+    : "Tamam entries";
+
   return (
     <div className="space-y-4">
-      <PageHeader
-        title={`${customer?.name ?? "Gahak"} — Khata`}
-        description="Har lena aur dena, tareekh ke sath — ledger se seedha."
-      />
 
-      <form className="flex flex-wrap items-end gap-2 rounded-card border border-surface-200 bg-white p-3 dark:border-surface-800 dark:bg-surface-900">
+      {/* Print-only professional letterhead */}
+      <div className="hidden print:block mb-6 border-b-2 border-black pb-4">
+        <div className="text-center mb-3">
+          <h1 className="text-2xl font-bold tracking-wide">AL RANA TRADERS</h1>
+          <p className="text-sm">Main Branch Mahabali · POS Solution by ZR Technologies</p>
+          <p className="text-base font-semibold mt-1">CUSTOMER ACCOUNT STATEMENT — KHATA BAYAAN</p>
+        </div>
+        <div className="flex justify-between text-sm border-t border-gray-300 pt-2">
+          <div>
+            <p><strong>Gahak / Customer:</strong> {customer?.name ?? "—"}</p>
+            {customer?.phone_number && <p><strong>Phone:</strong> {customer.phone_number}</p>}
+          </div>
+          <div className="text-right">
+            <p><strong>Print Date:</strong> {printDate}</p>
+            <p><strong>Period:</strong> {periodLabel}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="print:hidden">
+        <PageHeader
+          title={`${customer?.name ?? "Gahak"} — Khata`}
+          description="Har lena aur dena, tareekh ke sath — ledger se seedha."
+        />
+      </div>
+
+      <form className="flex flex-wrap items-end gap-2 rounded-card border border-surface-200 bg-white p-3 dark:border-surface-800 dark:bg-surface-900 print:hidden">
         <label className="text-xs text-surface-500">
           From
           <input type="date" name="start" defaultValue={sp.start} className="ml-2 rounded-lg border border-surface-200 px-2 py-1.5 dark:bg-surface-900" />
@@ -155,7 +186,18 @@ export default async function CustomerStatementPage({
         </button>
       </form>
 
-      <StatementActions customerId={id} start={sp.start} end={sp.end} />
+      <StatementActions
+        customerId={id}
+        start={sp.start}
+        end={sp.end}
+        waData={{
+          phone: customer?.phone_number ?? null,
+          name: customer?.name ?? "Gahak",
+          baqi: baqi ?? null,
+          kulLiya,
+          kulDiya,
+        }}
+      />
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="py-3">
@@ -213,7 +255,7 @@ export default async function CustomerStatementPage({
         )}
       </Card>
 
-      <p className="text-xs text-surface-500">
+      <p className="text-xs text-surface-500 print:hidden">
         <Link href="/admin/crm" className="underline">
           ← CRM par wapas
         </Link>
@@ -224,6 +266,11 @@ export default async function CustomerStatementPage({
         </Link>
         .
       </p>
+      {/* Print footer */}
+      <div className="hidden print:block mt-6 border-t border-gray-300 pt-3 text-xs text-gray-500 flex justify-between">
+        <span>Al Rana Traders — Khata Bayaan</span>
+        <span>Print Date: {printDate}</span>
+      </div>
     </div>
   );
 }

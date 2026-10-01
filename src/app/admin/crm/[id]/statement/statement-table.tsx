@@ -49,7 +49,7 @@ export function StatementTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[44rem] text-sm">
+      <table className="statement-print-table w-full min-w-[44rem] text-sm">
         <thead className="bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800/50">
           <tr>
             <th className="w-6 px-2 py-2" />
