@@ -55,7 +55,7 @@ export default async function CustomerStatementPage({
 
   const { data: customer } = await supabase
     .from("customers")
-    .select("id, name, phone_number, credit_limit, branches(name)")
+    .select("id, name, phone_number, credit_limit")
     .eq("id", id)
     .maybeSingle();
 
@@ -64,7 +64,7 @@ export default async function CustomerStatementPage({
   // hisaab chal raha ho.
   const openingEnd = sp.start ? new Date(`${sp.start}T00:00:00Z`) : null;
   if (openingEnd) openingEnd.setUTCDate(openingEnd.getUTCDate() - 1);
-  const [{ data: rows }, { data: baqi }, { data: openingRows }] = await Promise.all([
+  const [{ data: rows }, { data: baqi }, { data: openingRows }, { data: primaryBranch }] = await Promise.all([
     supabase.rpc("fn_customer_ledger", {
       p_customer: id,
       p_start: sp.start ?? undefined,
@@ -74,6 +74,7 @@ export default async function CustomerStatementPage({
     sp.start
       ? supabase.rpc("fn_customer_ledger", { p_customer: id, p_start: undefined, p_end: openingEnd!.toISOString().slice(0, 10) })
       : Promise.resolve({ data: [] as any[] }),
+    (supabase as any).rpc("fn_customer_primary_branch", { p_customer: id }),
   ]);
 
   // source_id migration 485 ke baad DB mein hai — types regenerate hone tak any cast
@@ -150,7 +151,7 @@ export default async function CustomerStatementPage({
       <div className="hidden print:block mb-6 border-b-2 border-black pb-4">
         <div className="text-center mb-3">
           <h1 className="text-2xl font-bold tracking-wide">KISAN ECO MAHABALI</h1>
-          <p className="text-sm">{(customer?.branches as any)?.name ?? "Main Branch"} · Jhang</p>
+          <p className="text-sm">{(primaryBranch as string | null) ?? "Main Branch"} · Jhang</p>
           <p className="text-xs text-gray-500">www.alranatraders.pk</p>
           <p className="text-base font-semibold mt-1">CUSTOMER ACCOUNT STATEMENT — KHATA BAYAAN</p>
         </div>
@@ -194,7 +195,7 @@ export default async function CustomerStatementPage({
         waData={{
           phone: customer?.phone_number ?? null,
           name: customer?.name ?? "Gahak",
-          branch: (customer?.branches as any)?.name ?? null,
+          branch: (primaryBranch as string | null) ?? null,
           baqi: baqi ?? null,
           kulLiya,
           kulDiya,
