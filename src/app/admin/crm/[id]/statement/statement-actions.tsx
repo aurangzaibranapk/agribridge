@@ -23,8 +23,8 @@ function buildWAText(data: WAData, pageUrl: string, start?: string, end?: string
     : "Tamam entries";
 
   const lines = [
-    `🏪 *AL RANA TRADERS*`,
-    `_Main Branch Mahabali_`,
+    `🏪 *KISAAN KARYANA MAHABALI*`,
+    `_Main Branch_`,
     `━━━━━━━━━━━━━━━━━━━━`,
     ``,
     `📋 *KHATA BAYAAN*`,
@@ -45,7 +45,9 @@ function buildWAText(data: WAData, pageUrl: string, start?: string, end?: string
     `🔗 Poori tafseeel:`,
     pageUrl,
     ``,
-    `_Al Rana Traders — Shukriya_ 🙏`,
+    `_Co-Partner: Kisaan Eco Mahabali Jhang_`,
+    `🌐 www.alranatraders.pk`,
+    `_Shukriya_ 🙏`,
   ];
   return lines.join("\n");
 }
