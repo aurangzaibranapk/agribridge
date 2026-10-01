@@ -85,20 +85,25 @@ export default async function CustomerStatementPage({
     chalta += Number(r.debit) - Number(r.credit);
     return { ...r, balance: chalta };
   });
-  const kulLiya = qatarein.reduce((s, r) => s + Number(r.debit), 0);
-  const kulDiya = qatarein.reduce((s, r) => s + Number(r.credit), 0);
-
-  // POS rows ke liye items batch-fetch: source_id wali qatarein
+  // POS rows ke liye items + sale data batch-fetch: source_id wali qatarein
   const posSourceIds = qatarein
     .filter((r) => r.module === "pos" && r.source_id)
     .map((r) => r.source_id as string);
 
   let itemsMap: Record<string, SaleItem[]> = {};
+  let salesMap: Record<string, { total_amount: number; cash_paid: number }> = {};
+
   if (posSourceIds.length > 0) {
-    const { data: saleItems } = await supabase
-      .from("pos_sale_items")
-      .select("sale_id, quantity, unit_price, subtotal, products(name)")
-      .in("sale_id", posSourceIds);
+    const [{ data: saleItems }, { data: salesData }] = await Promise.all([
+      supabase
+        .from("pos_sale_items")
+        .select("sale_id, quantity, unit_price, subtotal, products(name)")
+        .in("sale_id", posSourceIds),
+      supabase
+        .from("pos_sales")
+        .select("id, total_amount, cash_paid")
+        .in("id", posSourceIds),
+    ]);
     if (saleItems) {
       for (const item of saleItems) {
         const sid = item.sale_id as string;
@@ -111,7 +116,23 @@ export default async function CustomerStatementPage({
         });
       }
     }
+    if (salesData) {
+      for (const sale of salesData) {
+        salesMap[sale.id] = { total_amount: Number(sale.total_amount), cash_paid: Number(sale.cash_paid) };
+      }
+    }
   }
+
+  // kulLiya / kulDiya: POS split payment mein poori sale + cash payment dono dikhao
+  // (balance delta wahi rehta hai: total_amount - cash_paid = khata_amount = journal debit)
+  const kulLiya = qatarein.reduce((s, r) => {
+    const sale = r.source_id ? salesMap[r.source_id] : undefined;
+    return s + (sale ? sale.total_amount : Number(r.debit));
+  }, 0);
+  const kulDiya = qatarein.reduce((s, r) => {
+    const sale = r.source_id ? salesMap[r.source_id] : undefined;
+    return s + (sale ? sale.cash_paid : 0) + Number(r.credit);
+  }, 0);
 
   return (
     <div className="space-y-4">
@@ -138,13 +159,13 @@ export default async function CustomerStatementPage({
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="py-3">
-          <p className="text-xs text-surface-500 dark:text-surface-400">Is ne liya (udhaar chaRha)</p>
+          <p className="text-xs text-surface-500 dark:text-surface-400">Kul khareed (maal liya)</p>
           <p className="font-display text-xl font-semibold tabular-nums text-surface-900 dark:text-white">
             {rs(kulLiya)}
           </p>
         </Card>
         <Card className="py-3">
-          <p className="text-xs text-surface-500 dark:text-surface-400">Is ne diya (wapas kia)</p>
+          <p className="text-xs text-surface-500 dark:text-surface-400">Kul ada kiya (cash + wapsi)</p>
           <p className="font-display text-xl font-semibold tabular-nums text-surface-900 dark:text-white">
             {rs(kulDiya)}
           </p>
@@ -188,7 +209,7 @@ export default async function CustomerStatementPage({
             kehta hai ke is ka hisaab abhi shuru hi nahi hua.
           </p>
         ) : (
-          <StatementTable rows={saathBalance} itemsMap={itemsMap} />
+          <StatementTable rows={saathBalance} itemsMap={itemsMap} salesMap={salesMap} />
         )}
       </Card>
 

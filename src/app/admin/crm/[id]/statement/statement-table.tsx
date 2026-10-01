@@ -26,12 +26,16 @@ type SaleItem = {
   subtotal: number;
 };
 
+type SaleSummary = { total_amount: number; cash_paid: number };
+
 export function StatementTable({
   rows,
   itemsMap,
+  salesMap = {},
 }: {
   rows: LedgerRow[];
   itemsMap: Record<string, SaleItem[]>;
+  salesMap?: Record<string, SaleSummary>;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -63,6 +67,10 @@ export function StatementTable({
             const isPOS = r.module === "pos" && r.source_id;
             const items = isPOS ? (itemsMap[r.source_id!] ?? []) : [];
             const isOpen = expanded.has(key);
+            // Split payment: poori sale aur cash dono dikhao
+            const sale = isPOS && r.source_id ? salesMap[r.source_id] : undefined;
+            const displayDebit = sale ? sale.total_amount : Number(r.debit);
+            const displayCredit = sale ? sale.cash_paid + Number(r.credit) : Number(r.credit);
 
             return (
               <>
@@ -90,10 +98,10 @@ export function StatementTable({
                   <td className="px-4 py-2 font-mono text-xs">{r.entry_number}</td>
                   <td className="px-4 py-2">{r.tafseel}</td>
                   <td className="px-4 py-2 text-right tabular-nums">
-                    {Number(r.debit) ? rs(Number(r.debit)) : "—"}
+                    {displayDebit ? rs(displayDebit) : "—"}
                   </td>
                   <td className="px-4 py-2 text-right tabular-nums">
-                    {Number(r.credit) ? rs(Number(r.credit)) : "—"}
+                    {displayCredit ? rs(displayCredit) : "—"}
                   </td>
                   <td className="px-4 py-2 text-right font-medium tabular-nums">
                     {rs(r.balance)}
