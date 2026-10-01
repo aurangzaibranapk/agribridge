@@ -23,7 +23,7 @@ function buildWAText(data: WAData, pageUrl: string, start?: string, end?: string
     : "Tamam entries";
 
   const lines = [
-    `🏪 *KISAAN KARYANA MAHABALI*`,
+    `🏪 *KISAN ECO MAHABALI*`,
     `_Main Branch_`,
     `━━━━━━━━━━━━━━━━━━━━`,
     ``,
@@ -45,7 +45,7 @@ function buildWAText(data: WAData, pageUrl: string, start?: string, end?: string
     `🔗 Poori tafseeel:`,
     pageUrl,
     ``,
-    `_Co-Partner: Kisaan Eco Mahabali Jhang_`,
+    `_Kisan Eco Mahabali — Jhang_`,
     `🌐 www.alranatraders.pk`,
     `_Shukriya_ 🙏`,
   ];

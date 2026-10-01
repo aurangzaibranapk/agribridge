@@ -149,8 +149,8 @@ export default async function CustomerStatementPage({
       {/* Print-only professional letterhead */}
       <div className="hidden print:block mb-6 border-b-2 border-black pb-4">
         <div className="text-center mb-3">
-          <h1 className="text-2xl font-bold tracking-wide">KISAAN KARYANA MAHABALI</h1>
-          <p className="text-sm">Main Branch · Co-Partner: Kisaan Eco Mahabali Jhang</p>
+          <h1 className="text-2xl font-bold tracking-wide">KISAN ECO MAHABALI</h1>
+          <p className="text-sm">Main Branch · Jhang</p>
           <p className="text-xs text-gray-500">www.alranatraders.pk</p>
           <p className="text-base font-semibold mt-1">CUSTOMER ACCOUNT STATEMENT — KHATA BAYAAN</p>
         </div>
