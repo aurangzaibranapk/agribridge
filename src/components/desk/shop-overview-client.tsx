@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { AlertTriangle, Bell, CheckCircle2, ClipboardList, LayoutDashboard, ShoppingBag, Users, Wallet } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardList, LayoutDashboard, ShoppingBag, Users, Wallet } from "lucide-react";
 import { ShopNotifications } from "@/components/desk/shop-notifications";
-import { useDeskTabs } from "@/components/guided/desk-workspace";
 import type { ShopPaymentMethodRow } from "@/lib/pos/shop-payment-methods";
 
 const money = (n: number | null) => n == null ? "Unavailable" : `Rs ${n.toLocaleString("en-PK", { maximumFractionDigits: 0 })}`;
@@ -33,13 +32,6 @@ export function ShopOverviewClient({ methods, trend, stock, credit, cash, digita
   kpis?: KpiItem[];
 }) {
   const [activePanel, setActivePanel] = useState<"ledger" | "tasks" | "notifications">("ledger");
-  const deskTabs = useDeskTabs();
-  const DESK_TABS = [
-    { id: "overview", label: "Ledger" },
-    { id: "tasks", label: "Tasks" },
-    { id: "notifications", label: "Notifications" },
-    { id: "work", label: "My Departments" },
-  ];
   const total = received + credit;
   const totalMethods = methods.reduce((sum, method) => sum + method.sales, 0);
   const maxTrend = Math.max(...trend.map(day => day.sales), 1);
@@ -137,11 +129,6 @@ export function ShopOverviewClient({ methods, trend, stock, credit, cash, digita
               <span>{k.label}</span>
             </div>)}
           </div>
-          {deskTabs && <div className="staff-desk-quickview-tabs" role="group" aria-label="Section navigation">
-            {DESK_TABS.map(tab => <button key={tab.id} type="button" onClick={() => deskTabs.setActive(tab.id)} className={deskTabs.active === tab.id ? "active" : ""}>
-              {tab.label}
-            </button>)}
-          </div>}
         </section>
       </> : activePanel === "tasks" ? <section className="desk-card staff-desk-focus-panel">
         <div className="staff-desk-card-title"><span><ClipboardList /> TODAY&apos;S TASKS</span><small>{tasks.length} items</small></div>
