@@ -1,27 +1,21 @@
-import { DeskWorkspace } from "@/components/guided/desk-workspace";
+import { DeskWorkspace, DeskTabs } from "@/components/guided/desk-workspace";
 import { ShopOverview } from "@/components/desk/shop-overview";
-import { FinanceOverview } from "@/components/desk/finance-overview";
-import { WarehouseOverview } from "@/components/desk/warehouse-overview";
-import { ProcurementOverview } from "@/components/desk/procurement-overview";
-import { DairyOverview } from "@/components/desk/dairy-overview";
-import { MachineryOverview } from "@/components/desk/machinery-overview";
-import { HROverview } from "@/components/desk/hr-overview";
-import { ManagerOverview } from "@/components/desk/manager-overview";
-import { AdminOverview } from "@/components/desk/admin-overview";
+import { ShopNotifications } from "@/components/desk/shop-notifications";
 import { redirect } from "next/navigation";
 import * as Icons from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
 import { NeedsAttention } from "@/components/guided/needs-attention";
-import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadRecentActivity } from "@/lib/access/my-work";
+import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadRecentActivity, QUICK_BY_ROLE } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
+import { InPageWorkspace } from "@/components/guided/in-page-workspace";
 import { TrainingBanner } from "@/components/guided/training-banner";
 import { departmentForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
-import { StaffMotivationCard } from "@/components/guided/staff-motivation-card";
 
 export const dynamic = "force-dynamic";
 
@@ -145,16 +139,10 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
     href: it.href,
   }));
 
-  const [{ data: branch }, { data: shop }] = await Promise.all([
-    me.branch_id
-      ? supabase.from("branches").select("name").eq("id", me.branch_id).maybeSingle()
-      : Promise.resolve({ data: null }),
-    me.shop_id
-      ? supabase.from("shops").select("name").eq("id", me.shop_id).maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
+  const { data: branch } = me.branch_id
+    ? await supabase.from("branches").select("name").eq("id", me.branch_id).maybeSingle()
+    : { data: null };
   const branchName = branch?.name ?? null;
-  const shopName = shop?.name ?? null;
 
   // KPI patti (7 September ka spec): teen fixed + ek role-specific khana.
   // Pehli teen wahi Needs Attention ke rang se nikalti hain -- koi nayi
@@ -171,7 +159,32 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
     ...(fourthKpi ? [fourthKpi] : []),
   ];
 
+  // Quick Actions -- sirf wo shortcut jin ka safha is bande ko khulta
+  // hai. Koi nayi ijazat nahi banti, sirf maujooda raaston ka chhota
+  // chuna hua raasta.
   const canRoute = (path: string) => allowed === null || routeAllowed(allowed, path);
+  type QuickAction = { href: string; label: string; icon: string };
+
+  // Sidebar ki "Quick Access" mein jo raaste pehle se khare hain, wo
+  // yahan dobara nahi aane chahiye -- malik (12 September): "sidebar
+  // mein hai to Quick Actions se hata do." Sidebar restricted staff ke
+  // liye us ka HAR kaam dikhati hai (admin/layout.tsx ka quickSide);
+  // unrestricted (Owner/Admin/Manager) ke liye sirf QUICK_BY_ROLE ki
+  // chuni hui 6 -- dono jagah wohi hisaab yahan dobara laga rahe hain.
+  const sidebarHrefs = nav.unrestricted
+    ? new Set((QUICK_BY_ROLE[me.role] ?? []).slice(0, 6).map((k) => `/admin/${k.replace(/\./g, "/")}`))
+    : new Set(nav.groups.flatMap((g) => g.items.map((i) => i.href)));
+
+  const quickActions: QuickAction[] = [
+    canRoute("/admin/pos") ? { href: "/admin/pos", label: t("mw_qa_new_sale", lang), icon: "ShoppingCart" } : null,
+    canRoute("/admin/farmers") ? { href: "/admin/farmers", label: t("mw_qa_add_farmer", lang), icon: "UserPlus" } : null,
+    canRoute("/admin/kharche") ? { href: "/admin/kharche", label: t("mw_qa_add_expense", lang), icon: "Receipt" } : null,
+    canRoute("/admin/agri-orders/new") ? { href: "/admin/agri-orders/new", label: t("mw_qa_create_order", lang), icon: "ClipboardPlus" } : null,
+    canRoute("/admin/load-bill") ? { href: "/admin/load-bill", label: t("mw_qa_receive_payment", lang), icon: "Banknote" } : null,
+  ]
+    .filter((x): x is QuickAction => x !== null)
+    .filter((qa) => !sidebarHrefs.has(qa.href));
+
   const now = new Date();
   const nowDate = new Intl.DateTimeFormat(lang === "ur" ? "ur-PK" : "en-GB", {
     timeZone: "Asia/Karachi", day: "2-digit", month: "short", year: "numeric",
@@ -181,70 +194,95 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   }).format(now);
 
   const hour = new Date().getHours();
+  const greetKey = hour < 12 ? "mw_hello_morning" : hour < 17 ? "mw_hello_afternoon" : "mw_hello_evening";
+
+  const deskLinks = [
+    { href: "/admin/pos", label: "POS Sale" },
+    { href: "/admin/agri-orders/new", label: "Create Order" },
+    { href: "/admin/load-bill", label: "Log Payment · Load & Bill" },
+    { href: "/admin/kharche", label: "Paisa & Khata" },
+    { href: "/admin/stock-count", label: "Stock Check" },
+    { href: "/admin/farmers", label: "Farmers" },
+    { href: "/admin/cash-handover", label: "Cash Handover" },
+  ].filter(link => canRoute(link.href));
+
+  // Shop staff can have a shop assignment and desk access without having
+  // the POS route itself (for example Load & Bill + Paisa & Khata).
+  // Requiring /admin/pos here sent those users to the legacy dashboard and
+  // hid their shop-scoped Ledger. Keep each shortcut permission-filtered.
+  if (me.shop_id && deskLinks.length > 0) {
+    return <DeskWorkspace>
+      <header className="flex shrink-0 items-center justify-between"><div><h1 className="text-2xl font-semibold">My Work</h1><p className="text-xs text-surface-500">{me.full_name} · {branchName}</p></div><span className="text-xs">{nowDate} · {nowTime}</span></header>
+      <DeskTabs items={[
+        { id: "overview", label: "Ledger", content: <ShopOverview shopId={me.shop_id} branchId={me.branch_id} links={deskLinks} attentionItems={attentionItems} /> },
+        { id: "tasks", label: `Tasks (${attentionItems.length})`, content: <NeedsAttention lang={lang} allowedRoutes={allowed} variant="list" compact /> },
+        { id: "notifications", label: "Notifications", content: <ShopNotifications userId={user.id} /> },
+        { id: "work", label: "My Departments", content: <MyWorkBody lang={lang} quick={model.quick} departments={nav.unrestricted ? model.departments : []} defaultDept={defaultDashboardForRole(me.role)} attention={attentionTop} attentionTotal={attentionItems.length} attentionAllHref={null} /> },
+      ]} />
+    </DeskWorkspace>;
+  }
 
   return (
-    <DeskWorkspace className="desk-my-work">
-      <header className="staff-desk-header">
-        <section className="staff-desk-identity" aria-label="Logged-in staff member">
-          <span className="staff-desk-eyebrow">Welcome Back</span>
-          <h1>{me.full_name || "Staff Member"}</h1>
-          <p>{roleLabel || "Staff"} · {nowDate} · {nowTime}</p>
-        </section>
+    <InPageWorkspace>
+    <div className="mx-auto w-full max-w-[1100px]">
+      {/* Malik (7 September): safhe ka oopri hissa bahut jagah khata tha --
+          greeting, date/time aur score teen alag boxon mein. Ab ek hi
+          patti: naam+role+branch baayen, tareekh/waqt/score daayen, ek
+          satar mein -- taake neeche asal kaam ke liye jagah bache. */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-card border border-surface-200 bg-white px-5 py-3 dark:border-surface-700 dark:bg-surface-900">
+        <div className="min-w-0">
+          <h1 className="font-display text-[19px] font-semibold leading-tight text-surface-900 dark:text-surface-100">
+            {t(greetKey, lang)}, {me.full_name}
+          </h1>
+          {/* Naam ke neeche: banda kaun hai, kis department mein hai, aur
+              kis shaakh par. Malik ka usool (5 September): "Neeche uska
+              Role + Department + Branch."
 
-        <section className="staff-desk-performance" aria-label="Staff performance score">
-          <div className="staff-desk-performance-heading">
-            <div>
-              <span className="staff-desk-eyebrow">Staff Performance</span>
-              <strong>{scoreRow?.score == null ? "Score is building" : `${Math.round(scoreRow.score)}/100`}</strong>
+              Jo hissa maloom na ho wo LIKHA HI NAHI jata -- khali jagah
+              bhar dene ke liye "—" ya koi bana hua naam daal dena us
+              bande ko ghalat maloomat deta hai. */}
+          <p className="mt-0.5 truncate text-[13px] text-surface-500">
+            {[roleLabel, dept?.label ?? null, branchName].filter(Boolean).join(" · ")}
+          </p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-4">
+          {scoreRow && (
+            <div className="text-right">
+              <p className="text-[10px] uppercase tracking-wide text-surface-400">{t("mw_my_score", lang)}</p>
+              {scoreRow.score == null ? (
+                // Sifar nahi. Engine ne abhi faisla kiya hi nahi.
+                <p className="text-[13px] font-medium text-surface-600 dark:text-surface-300">
+                  {t("mw_score_building", lang)}
+                </p>
+              ) : (
+                <p className="flex items-center justify-end gap-1.5">
+                  <span className="text-base font-semibold tabular-nums text-surface-900 dark:text-surface-100">
+                    {scoreRow.score}
+                  </span>
+                  {scoreRow.band && (
+                    <span
+                      className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                        BAND_TONE[scoreRow.band] ?? "bg-surface-100 text-surface-700"
+                      }`}
+                    >
+                      {scoreRow.band}
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
-            {scoreRow?.band && <span className="staff-desk-performance-band">{scoreRow.band}</span>}
+          )}
+          {/* Waqt Pakistan ka -- server kahin bhi ho, banda apni ghari se
+              milata hai. */}
+          <div className="flex items-center gap-2 border-l border-surface-200 pl-4 dark:border-surface-700">
+            <CalendarDays className="h-4 w-4 shrink-0 text-surface-400" />
+            <p className="whitespace-nowrap text-[13px] font-medium text-surface-700 dark:text-surface-200">
+              {nowDate} · {nowTime}
+            </p>
           </div>
-          <div className="staff-desk-performance-track" aria-hidden="true">
-            <i style={{ width: `${scoreRow?.score == null ? 0 : Math.min(100, Math.max(0, scoreRow.score))}%` }} />
-          </div>
-          <div className="staff-desk-performance-scale" aria-hidden="true">
-            <span>Needs Focus</span><span>Improving</span><span>Good</span><span>Excellent</span>
-          </div>
-        </section>
-
-        <section className="staff-desk-location" aria-label="Active work area">
-          <span className="staff-desk-shop-icon"><Icons.Store aria-hidden="true" /></span>
-          <div>
-            <span className="staff-desk-eyebrow">Work Area</span>
-            <strong>{shopName || dept?.label || "Assigned Work Area"}</strong>
-            <p>{branchName || "Assigned Branch"}</p>
-          </div>
-        </section>
-      </header>
-      <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language={lang} />
-      {me.shop_id && canRoute("/admin/pos") && (
-        <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} />
-      )}
-      {me.role === "finance" && (
-        <FinanceOverview branchId={me.branch_id} />
-      )}
-      {me.role === "warehouse" && (
-        <WarehouseOverview branchId={me.branch_id} />
-      )}
-      {me.role === "procurement" && (
-        <ProcurementOverview branchId={me.branch_id} />
-      )}
-      {me.role === "milk_collection" && (
-        <DairyOverview branchId={me.branch_id} />
-      )}
-      {me.role === "machinery" && (
-        <MachineryOverview branchId={me.branch_id} />
-      )}
-      {me.role === "hr" && (
-        <HROverview branchId={me.branch_id} />
-      )}
-      {me.role === "manager" && (
-        <ManagerOverview branchId={me.branch_id} />
-      )}
-      {me.role === "admin_assistant" && (
-        <AdminOverview />
-      )}
-      <div className="mx-auto w-full max-w-[1100px]">
+        </div>
+      </div>
 
       {me.training_mode && (
         <div className="mb-4">
@@ -320,6 +358,29 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         <div className="flex flex-col gap-4">
           <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
             <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
+              <Icons.Zap className="h-4 w-4" /> {t("mw_quick_actions_title", lang)}
+            </h2>
+            <div className="grid grid-cols-2 gap-2.5 p-4 sm:grid-cols-3">
+              {quickActions.map((qa) => {
+                const QaIcon = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[qa.icon] ?? Icons.LayoutGrid;
+                return (
+                  <Link
+                    key={qa.href}
+                    href={qa.href}
+                    className="flex flex-col items-center gap-1.5 rounded-xl border border-surface-200 px-3 py-3 text-center transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-surface-800 dark:hover:bg-brand-950/20"
+                  >
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
+                      <QaIcon className="h-[18px] w-[18px]" />
+                    </span>
+                    <span className="text-[12px] font-medium text-surface-700 dark:text-surface-200">{qa.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
+            <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
               <Icons.Activity className="h-4 w-4" /> {t("mw_activity_title", lang)}
             </h2>
             <div className="divide-y divide-surface-100 overflow-y-auto dark:divide-surface-800" style={{ maxHeight: "min(35vh, 300px)" }}>
@@ -347,7 +408,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         </div>
       </div>
     </div>
-    </DeskWorkspace>
+    </InPageWorkspace>
   );
 }
 
