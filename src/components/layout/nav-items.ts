@@ -1,6 +1,6 @@
 ﻿import {
   LayoutDashboard, FileText, Quote, Image as ImageIcon, HelpCircle,
-  Smartphone, Mail, Handshake, Sliders, Menu as MenuIcon, FileCode, UserCog, History, Package, Wheat, FolderOpen, Tag, Layers, Building2, ShoppingCart, Wallet, BarChart3, Truck, ClipboardList, Boxes, Droplet, Store, ArrowLeftRight, Users, PackageSearch, LineChart, PiggyBank, Sprout, Bug, Leaf, Beef, ShoppingBasket, Landmark, Contact, Globe, ShoppingBag, HandCoins, CircleDollarSign, CreditCard, FileCheck, Calculator, Bell, List, MapPin, Briefcase, ShieldCheck, AlertTriangle, Bike, Zap, Wrench, Receipt, ClipboardCheck, PackagePlus, WalletCards, LayoutGrid, MailPlus, Home, ClipboardType, FileBarChart, ReceiptText, Scale, FileSpreadsheet, Sparkles, IdCard, Bot, SlidersHorizontal, MessageCircle, Trash2, Undo2, Inbox, ListChecks, PackageCheck, RefreshCw,
+  Smartphone, Mail, Handshake, Sliders, Menu as MenuIcon, FileCode, UserCog, History, Package, Wheat, FolderOpen, Tag, Layers, Building2, ShoppingCart, Wallet, BarChart3, Truck, ClipboardList, Boxes, Droplet, Store, ArrowLeftRight, Users, PackageSearch, LineChart, PiggyBank, Sprout, Bug, Leaf, Beef, ShoppingBasket, Landmark, Contact, Globe, ShoppingBag, HandCoins, CircleDollarSign, CreditCard, FileCheck, Calculator, Bell, List, MapPin, Briefcase, ShieldCheck, AlertTriangle, Bike, Zap, Wrench, Receipt, ClipboardCheck, PackagePlus, WalletCards, LayoutGrid, MailPlus, Home, ClipboardType, FileBarChart, ReceiptText, Scale, FileSpreadsheet, Sparkles, IdCard, Bot, SlidersHorizontal, MessageCircle, Trash2, Undo2, Inbox, ListChecks, PackageCheck, RefreshCw, Trophy, Target,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -157,6 +157,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/reports/credit", label: "Udhaar Report", icon: CreditCard },
       { href: "/admin/reports/procurement", label: "Anaj Kharid Report", icon: Wheat },
       { href: "/admin/reports/audit", label: "Audit Center (Nuqsan)", icon: AlertTriangle },
+      { href: "/admin/reports/salary-planner", label: "Salary Planner", icon: Calculator },
     ],
   },
   {
@@ -191,6 +192,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/hr-dashboard", label: "HR Dashboard", icon: LayoutGrid },
       { href: "/admin/email-templates", label: "Email ke Namune", icon: MailPlus },
       { href: "/admin/hr", label: "Staff (HR)", icon: UserCog },
+      { href: "/admin/staff-achievement", label: "Staff Achievement", icon: Trophy },
       { href: "/admin/staff-khata", label: "Staff Salary Khata", icon: WalletCards },
       { href: "/admin/hr/whatsapp", label: "Staff WhatsApp", icon: MessageCircle },
       { href: "/admin/hr/attendance-log", label: "Hazri Record", icon: ClipboardCheck },

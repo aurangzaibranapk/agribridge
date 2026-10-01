@@ -286,11 +286,35 @@ export async function markBillPaid(_prev: ActionState, formData: FormData): Prom
 
   const supabase = createClient();
   const billId = String(formData.get("bill_id") ?? "");
+  const payMethod = (formData.get("pay_method") as string) || "shop_cash";
   if (!billId) return { error: "Missing bill id." };
 
-  const { error } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { error } = await (supabase as any)
     .from("shop_bills")
-    .update({ status: "paid", paid_date: aajKaKhana() })
+    .update({ status: "paid", paid_date: aajKaKhana(), pay_method: payMethod, paid_by: user?.id ?? null })
+    .eq("id", billId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/shop-rent");
+  return { success: true };
+}
+
+export async function requestFinancePayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const billId = String(formData.get("bill_id") ?? "");
+  if (!billId) return { error: "Missing bill id." };
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { error } = await (supabase as any)
+    .from("shop_bills")
+    .update({
+      status: "finance_requested",
+      finance_requested_at: new Date().toISOString(),
+      finance_requested_by: user?.id ?? null,
+    })
     .eq("id", billId);
   if (error) return { error: error.message };
 
