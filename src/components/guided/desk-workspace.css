@@ -9,8 +9,9 @@
 .desk-table td { padding:8px; border-bottom:1px solid #eef2f0; }
 .desk-metric { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; }
 @media (min-width:1024px) {
-  main.desk-main { overflow:hidden; padding:12px 18px; }
-  main.desk-main > p:last-child { display:none; }
+  main.desk-main { padding:12px 18px; }
+  main.desk-main:has(.desk-my-work) { overflow:hidden; }
+  main.desk-main:has(.desk-my-work) > p:last-child { display:none; }
   .desk-workspace { height:100%; min-height:0; overflow:hidden; }
   .desk-tab-panel { flex:1; overflow:auto; overscroll-behavior:contain; }
   /* My Work is a one-screen desk: only compact data lists may scroll. */
