@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
-import { formatDate } from "@/lib/utils/format";
 import { StatementActions } from "./statement-actions";
+import { StatementTable } from "./statement-table";
 
 export const dynamic = "force-dynamic";
 
 function rs(n: number): string {
   return `Rs ${n.toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
 }
+
+type SaleItem = { product_name: string; quantity: number; unit_price: number; subtotal: number };
 
 /**
  * Ek gahak ka poora khata.
@@ -74,8 +76,10 @@ export default async function CustomerStatementPage({
       : Promise.resolve({ data: [] as any[] }),
   ]);
 
-  const qatarein = rows ?? [];
-  const openingBalance = (openingRows ?? []).reduce((s, r) => s + Number(r.debit) - Number(r.credit), 0);
+  // source_id migration 485 ke baad DB mein hai — types regenerate hone tak any cast
+  type RawRow = { entry_date: string; entry_number: string; tafseel: string; module: string; source_id: string | null; debit: number; credit: number };
+  const qatarein = (rows ?? []) as unknown as RawRow[];
+  const openingBalance = (openingRows ?? []).reduce((s, r: any) => s + Number(r.debit) - Number(r.credit), 0);
   let chalta = openingBalance;
   const saathBalance = qatarein.map((r) => {
     chalta += Number(r.debit) - Number(r.credit);
@@ -83,6 +87,31 @@ export default async function CustomerStatementPage({
   });
   const kulLiya = qatarein.reduce((s, r) => s + Number(r.debit), 0);
   const kulDiya = qatarein.reduce((s, r) => s + Number(r.credit), 0);
+
+  // POS rows ke liye items batch-fetch: source_id wali qatarein
+  const posSourceIds = qatarein
+    .filter((r) => r.module === "pos" && r.source_id)
+    .map((r) => r.source_id as string);
+
+  let itemsMap: Record<string, SaleItem[]> = {};
+  if (posSourceIds.length > 0) {
+    const { data: saleItems } = await supabase
+      .from("pos_sale_items")
+      .select("sale_id, quantity, unit_price, subtotal, products(name)")
+      .in("sale_id", posSourceIds);
+    if (saleItems) {
+      for (const item of saleItems) {
+        const sid = item.sale_id as string;
+        if (!itemsMap[sid]) itemsMap[sid] = [];
+        itemsMap[sid].push({
+          product_name: (item.products as any)?.name ?? "—",
+          quantity: Number(item.quantity),
+          unit_price: Number(item.unit_price),
+          subtotal: Number(item.subtotal),
+        });
+      }
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -159,38 +188,7 @@ export default async function CustomerStatementPage({
             kehta hai ke is ka hisaab abhi shuru hi nahi hua.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[44rem] text-sm">
-              <thead className="bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800/50">
-                <tr>
-                  <th className="px-4 py-2">Tareekh</th>
-                  <th className="px-4 py-2">Entry</th>
-                  <th className="px-4 py-2">Tafseel</th>
-                  <th className="px-4 py-2 text-right">Liya</th>
-                  <th className="px-4 py-2 text-right">Diya</th>
-                  <th className="px-4 py-2 text-right">Baqi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {saathBalance.map((r, i) => (
-                  <tr key={`${r.entry_number}-${i}`} className="border-t border-surface-100 dark:border-surface-800">
-                    <td className="px-4 py-2 whitespace-nowrap text-xs text-surface-500">
-                      {formatDate(r.entry_date)}
-                    </td>
-                    <td className="px-4 py-2 font-mono text-xs">{r.entry_number}</td>
-                    <td className="px-4 py-2">{r.tafseel}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">
-                      {Number(r.debit) ? rs(Number(r.debit)) : "—"}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums">
-                      {Number(r.credit) ? rs(Number(r.credit)) : "—"}
-                    </td>
-                    <td className="px-4 py-2 text-right font-medium tabular-nums">{rs(r.balance)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <StatementTable rows={saathBalance} itemsMap={itemsMap} />
         )}
       </Card>
 
