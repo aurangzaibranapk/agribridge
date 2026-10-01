@@ -653,18 +653,23 @@ export function PosClient({
               const inCart = !!cartLine;
               const p = item.products;
               const upc = p?.units_per_pack ?? 0;
+              const petCount = upc > 1 ? Math.floor(item.stock_quantity / upc) : 0;
               return (
                 <button key={item.id} onClick={() => addToCart(item)} className={`overflow-hidden rounded-card border bg-white text-left shadow-card transition hover:shadow-md dark:bg-surface-900 ${inCart ? "border-brand-500 ring-1 ring-brand-200 dark:ring-brand-900/50" : "border-surface-200 hover:border-brand-400 dark:border-surface-800"}`}>
                   <div className="relative aspect-square bg-surface-50 dark:bg-surface-800">
                     {p?.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-2" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center text-surface-300 dark:text-surface-600"><Package className="h-8 w-8" strokeWidth={1.25} /></div>}
                     <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-surface-700 shadow-sm dark:bg-surface-900/90 dark:text-surface-200"><span className={`h-1.5 w-1.5 rounded-full ${stockTone(item.stock_quantity)}`} />{item.stock_quantity}</span>
-                    {inCart && cartLine && (
+                    {inCart && cartLine ? (
                       <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-brand-600 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
                         {wholesaleOn && upc > 1
                           ? `${cartLine.quantity} PET · ${cartLine.quantity * upc} btl`
                           : `${cartLine.quantity} btl`}
                       </span>
-                    )}
+                    ) : upc > 1 ? (
+                      <span className={`absolute left-1.5 top-1.5 inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-semibold shadow-sm ${petCount >= 1 ? "bg-emerald-100/90 text-emerald-800 dark:bg-emerald-900/80 dark:text-emerald-300" : "bg-red-100/90 text-red-700 dark:bg-red-900/80 dark:text-red-400"}`}>
+                        {petCount >= 1 ? `${petCount} PET` : "PET ✕"}
+                      </span>
+                    ) : null}
                   </div>
                   <div className="min-h-[3.25rem] border-t border-surface-100 px-2.5 py-2 dark:border-surface-800">
                     <p className="line-clamp-2 text-[13px] font-medium leading-tight text-surface-900 dark:text-surface-100">{p?.name ?? <span className="text-amber-700">{t("pos_no_name", lang)}</span>}{p?.pack_size ? <span className="text-surface-400"> {p.pack_size}</span> : null}</p>
