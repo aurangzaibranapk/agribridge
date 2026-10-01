@@ -100,6 +100,12 @@ function stockTone(qty: number): string {
   return "bg-emerald-500";
 }
 
+function stockAvail(item: InventoryItem, isWholesale: boolean): number {
+  const upc = item.products?.units_per_pack ?? 0;
+  if (isWholesale && upc > 1) return Math.floor(item.stock_quantity / upc);
+  return item.stock_quantity;
+}
+
 function shortDate(d: string | null | undefined): string | null {
   if (!d) return null;
   const dt = new Date(d);
@@ -325,9 +331,18 @@ export function PosClient({
 
   function addToCart(item: InventoryItem) {
     if (!item.products) return;
+    const avail = stockAvail(item, wholesaleOn);
+    const existing = cart.find((l) => l.product_id === item.product_id);
+    const currentQty = existing?.quantity ?? 0;
+    if (currentQty >= avail) {
+      const upc = item.products?.units_per_pack ?? 0;
+      const label = wholesaleOn && upc > 1 ? `${item.stock_quantity} btl = ${avail} PET` : `${avail}`;
+      setMessage({ type: "error", text: `"${item.products.name}" — Stock: ${label}. Mazeed nahi jod sakte.` });
+      return;
+    }
     setCart((prev) => {
-      const existing = prev.find((l) => l.product_id === item.product_id);
-      if (existing) {
+      const ex = prev.find((l) => l.product_id === item.product_id);
+      if (ex) {
         return prev.map((l) =>
           l.product_id === item.product_id ? { ...l, quantity: l.quantity + 1 } : l
         );
@@ -395,6 +410,15 @@ export function PosClient({
   function updateQuantity(product_id: string, quantity: number) {
     if (quantity <= 0) {
       removeLine(product_id);
+      return;
+    }
+    const item = inventory.find((i) => i.product_id === product_id);
+    const avail = item ? stockAvail(item, wholesaleOn) : Infinity;
+    if (quantity > avail) {
+      const upc = item?.products?.units_per_pack ?? 0;
+      const label = wholesaleOn && upc > 1 ? `${item?.stock_quantity ?? 0} btl = ${avail} PET` : `${avail}`;
+      setMessage({ type: "error", text: `Stock sirf ${label} available hai. ${quantity} nahi de sakte.` });
+      setCart((prev) => prev.map((l) => (l.product_id === product_id ? { ...l, quantity: avail } : l)));
       return;
     }
     setCart((prev) => prev.map((l) => (l.product_id === product_id ? { ...l, quantity } : l)));
@@ -497,6 +521,22 @@ export function PosClient({
     }
     if (Math.abs(remaining) > 0.5) {
       setMessage({ type: "error", text: `Payment poora nahi hai. Baaqi: Rs ${remaining.toLocaleString()}` });
+      return;
+    }
+
+    const stockErrors = cart.flatMap((line) => {
+      const item = inventory.find((i) => i.product_id === line.product_id);
+      if (!item) return [];
+      const avail = stockAvail(item, wholesaleOn);
+      if (line.quantity > avail) {
+        const upc = item.products?.units_per_pack ?? 0;
+        const label = wholesaleOn && upc > 1 ? `${item.stock_quantity} btl (${avail} PET)` : `${avail}`;
+        return [`"${line.name}": Maujood ${label}, Manga ${line.quantity}`];
+      }
+      return [];
+    });
+    if (stockErrors.length > 0) {
+      setMessage({ type: "error", text: `Stock nakaafi hai:\n${stockErrors.join("\n")}` });
       return;
     }
 
@@ -665,10 +705,12 @@ export function PosClient({
           {cart.map((line) => {
             const item = inventory.find((i) => i.product_id === line.product_id);
             const active = line.product_id === selectedId;
+            const avail = item ? stockAvail(item, wholesaleOn) : Infinity;
+            const stockShort = line.quantity > avail;
             return (
-              <button key={line.product_id} type="button" onClick={() => setSelectedId(line.product_id)} className={`flex w-full items-center gap-2 rounded-lg border p-2 text-left transition ${active ? "border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30" : "border-surface-100 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/60"}`}>
+              <button key={line.product_id} type="button" onClick={() => setSelectedId(line.product_id)} className={`flex w-full items-center gap-2 rounded-lg border p-2 text-left transition ${stockShort ? "border-red-300 bg-red-50/60 dark:border-red-800/60 dark:bg-red-950/20" : active ? "border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30" : "border-surface-100 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/60"}`}>
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-100 dark:bg-surface-800">{item?.products?.image_url ? <img src={item.products.image_url} alt="" className="h-full w-full object-contain" loading="lazy" /> : <Package className="h-4 w-4 text-surface-400" strokeWidth={1.5} />}</span>
-                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-surface-800 dark:text-surface-200">{line.name}</span><span className="block text-xs text-surface-400">{line.quantity} × Rs {line.unit_price.toLocaleString()}{wholesaleOn && item?.wholesale_price == null && <span className="ml-1 text-amber-700">{t("pf_pos_no_wholesale_rate", lang)}</span>}{regularKhataOn && !(item?.products?.mrp_price != null && item.products.mrp_price > 0) && <span className="ml-1 text-amber-700">(MRP darj nahi, retail lagi)</span>}</span></span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-surface-800 dark:text-surface-200">{line.name}</span><span className="block text-xs text-surface-400">{line.quantity} × Rs {line.unit_price.toLocaleString()}{wholesaleOn && item?.wholesale_price == null && <span className="ml-1 text-amber-700">{t("pf_pos_no_wholesale_rate", lang)}</span>}{regularKhataOn && !(item?.products?.mrp_price != null && item.products.mrp_price > 0) && <span className="ml-1 text-amber-700">(MRP darj nahi, retail lagi)</span>}{stockShort && <span className="ml-1 font-semibold text-red-600">⚠ Stock: {avail}</span>}</span></span>
                 <span className="shrink-0 text-right"><span className="block text-sm font-semibold tabular-nums text-surface-900 dark:text-surface-100">Rs {(line.quantity * line.unit_price).toLocaleString()}</span><span className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] text-brand-600 dark:text-brand-400">{t("pos_details", lang)} <ChevronRight className="h-3 w-3" /></span></span>
               </button>
             );
