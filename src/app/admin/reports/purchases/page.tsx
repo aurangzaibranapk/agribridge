@@ -53,7 +53,7 @@ export default async function PurchasesReportPage({
   // Location-wise stock: inventory table se seedha (per-location quantity_on_hand)
   const { data: locationStock } = await service
     .from("inventory")
-    .select("quantity_on_hand, warehouse_id, shop_id, warehouses(name), shops(name), products!inner(purchase_price)")
+    .select("product_id, quantity_on_hand, warehouse_id, shop_id, warehouses(name), shops(name), products!inner(id, name, purchase_price)")
     .gt("quantity_on_hand", 0);
 
   type ItemRow = {
