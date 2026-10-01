@@ -212,9 +212,53 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   // hid their shop-scoped Ledger. Keep each shortcut permission-filtered.
   if (me.shop_id && deskLinks.length > 0) {
     return <DeskWorkspace>
-      <header className="flex shrink-0 items-center justify-between"><div><h1 className="text-2xl font-semibold">My Work</h1><p className="text-xs text-surface-500">{me.full_name} · {branchName}</p></div><span className="text-xs">{nowDate} · {nowTime}</span></header>
+      {/* Welcome header — naam, role, score, waqt */}
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-card border border-surface-200 bg-white px-5 py-3 dark:border-surface-700 dark:bg-surface-900">
+        <div className="min-w-0">
+          <h1 className="font-display text-[19px] font-semibold leading-tight text-surface-900 dark:text-surface-100">
+            {t(greetKey, lang)}, {me.full_name}
+          </h1>
+          <p className="mt-0.5 truncate text-[13px] text-surface-500">
+            {[roleLabel, dept?.label ?? null, branchName].filter(Boolean).join(" · ")}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-4">
+          {scoreRow && (
+            <div className="text-right">
+              <p className="text-[10px] uppercase tracking-wide text-surface-400">{t("mw_my_score", lang)}</p>
+              {scoreRow.score == null ? (
+                <p className="text-[13px] font-medium text-surface-600 dark:text-surface-300">{t("mw_score_building", lang)}</p>
+              ) : (
+                <p className="flex items-center justify-end gap-1.5">
+                  <span className="text-base font-semibold tabular-nums text-surface-900 dark:text-surface-100">{scoreRow.score}</span>
+                  {scoreRow.band && (
+                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${BAND_TONE[scoreRow.band] ?? "bg-surface-100 text-surface-700"}`}>
+                      {scoreRow.band}
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+          )}
+          <div className="flex items-center gap-2 border-l border-surface-200 pl-4 dark:border-surface-700">
+            <CalendarDays className="h-4 w-4 shrink-0 text-surface-400" />
+            <p className="whitespace-nowrap text-[13px] font-medium text-surface-700 dark:text-surface-200">{nowDate} · {nowTime}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* KPI tiles — pending approvals, tasks, urgent, farmers */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {kpis.map((k) => (
+          <div key={k.key} className="rounded-card border border-surface-200 bg-white px-4 py-3 dark:border-surface-700 dark:bg-surface-900">
+            <p className="text-2xl font-semibold tabular-nums text-surface-900 dark:text-surface-100">{k.value ?? "—"}</p>
+            <p className="mt-0.5 text-[12px] text-surface-500">{k.label}</p>
+          </div>
+        ))}
+      </div>
+
       <DeskTabs items={[
-        { id: "overview", label: "Ledger", content: <ShopOverview shopId={me.shop_id} branchId={me.branch_id} links={deskLinks} attentionItems={attentionItems} /> },
+        { id: "overview", label: "Ledger", content: <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems} /> },
         { id: "tasks", label: `Tasks (${attentionItems.length})`, content: <NeedsAttention lang={lang} allowedRoutes={allowed} variant="list" compact /> },
         { id: "notifications", label: "Notifications", content: <ShopNotifications userId={user.id} /> },
         { id: "work", label: "My Departments", content: <MyWorkBody lang={lang} quick={model.quick} departments={nav.unrestricted ? model.departments : []} defaultDept={defaultDashboardForRole(me.role)} attention={attentionTop} attentionTotal={attentionItems.length} attentionAllHref={null} /> },
