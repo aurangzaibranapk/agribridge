@@ -16,37 +16,162 @@ const FIELD = "h-12 rounded-xl border-surface-200 bg-white px-3.5 text-[15px] sh
 const BIG_BTN = "h-12 w-full rounded-xl bg-[#174B2B] text-[15px] font-semibold tracking-wide text-white shadow-sm transition hover:bg-[#123D23] disabled:cursor-not-allowed disabled:opacity-60";
 
 export function LoginForm() {
-  const lang = useLang();
-  const [mode, setMode] = useState<"public" | "team">("public");
-
-  return (
-    <div>
-      <div className="mb-5 grid grid-cols-2 rounded-xl border border-surface-200 bg-surface-50 p-1">
-        <button type="button" onClick={() => setMode("public")} aria-pressed={mode === "public"}
-          className={`rounded-lg px-2 py-2.5 text-[13px] font-semibold transition ${mode === "public" ? "bg-[#174B2B] text-white shadow-sm" : "text-surface-500 hover:bg-white hover:text-surface-800"}`}>
-          {t("au_farmer_customer", lang)}
-        </button>
-        <button type="button" onClick={() => setMode("team")} aria-pressed={mode === "team"}
-          className={`rounded-lg px-2 py-2.5 text-[13px] font-semibold transition ${mode === "team" ? "bg-[#174B2B] text-white shadow-sm" : "text-surface-500 hover:bg-white hover:text-surface-800"}`}>
-          {t("au_admin_staff_vendor", lang)}
-        </button>
-      </div>
-
-      <div className="mb-5">
-        <p className="text-sm font-semibold text-surface-800">
-          {mode === "public" ? "Kisan / Customer Login" : "Team Secure Login"}
-        </p>
-        <p className="mt-1 text-xs leading-relaxed text-surface-500">
-          {mode === "public" ? "Mobile par OTP sab se asaan raasta hai. Email account ho to email bhi use kar sakte hain." : "Admin, staff aur vendor apni registered ID aur password se sign in karein."}
-        </p>
-      </div>
-
-      {mode === "public" ? <PublicLogin /> : <PasswordLogin />}
-    </div>
-  );
+  return <UnifiedLogin />;
 }
 
 const identifierEmptyState: IdentifierLoginState = {};
+
+/**
+ * Sab identities ke liye ek hi login card. Existing server actions aur
+ * redirects reuse hote hain; sirf purane do-tab UI ko ek screen mein jama
+ * kiya gaya hai. My Work, permissions aur kisi dashboard ko yahan touch nahi
+ * kiya jata.
+ */
+function UnifiedLogin() {
+  const lang = useLang();
+  const router = useRouter();
+  const supabase = createClient();
+  const [identifier, setIdentifier] = useState("");
+  const [passwordState, passwordAction] = useFormState(loginWithIdentifier, identifierEmptyState);
+  const [phone, setPhone] = useState("");
+  const [otpState, otpAction] = useFormState(requestFarmerOtp, emptyState);
+  const [checkState, checkAction] = useFormState(verifyFarmerOtp, emptyState);
+  const [emailStage, setEmailStage] = useState<"none" | "sent">("none");
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (passwordState.success) {
+      router.push(passwordState.redirectPath ?? "/");
+      router.refresh();
+    }
+  }, [passwordState.success, passwordState.redirectPath, router]);
+
+  useEffect(() => {
+    if (checkState.success) {
+      router.push(checkState.hasUsername ? "/portal/dashboard" : "/portal/profile");
+      router.refresh();
+    }
+  }, [checkState.success, checkState.hasUsername, router]);
+
+  async function sendEmailOtp() {
+    setEmailBusy(true);
+    setEmailError(null);
+    const { error } = await supabase.auth.signInWithOtp({
+      email: identifier.trim(),
+      options: { shouldCreateUser: false },
+    });
+    setEmailBusy(false);
+    if (error) {
+      setEmailError(error.message);
+      return;
+    }
+    setEmailStage("sent");
+  }
+
+  async function verifyEmailOtp(formData: FormData) {
+    setEmailBusy(true);
+    setEmailError(null);
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: identifier.trim(),
+      token: String(formData.get("code") ?? "").trim(),
+      type: "email",
+    });
+    if (error || !data.user) {
+      setEmailBusy(false);
+      setEmailError(error?.message ?? "Code theek nahi.");
+      return;
+    }
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role, is_active")
+      .eq("id", data.user.id)
+      .single();
+    setEmailBusy(false);
+    if (!profile || !profile.is_active) {
+      await supabase.auth.signOut();
+      setEmailError("Account active nahi hai. Admin se rabta karein.");
+      return;
+    }
+    router.push(getRoleRedirectPath(profile.role));
+    router.refresh();
+  }
+
+  const otpSent = otpState.otpSent;
+  const isEmail = identifier.includes("@");
+
+  if (emailStage === "sent") {
+    return (
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-surface-800">Email OTP verify karein</p>
+          <p className="mt-1 text-xs text-surface-500">Code {identifier} par bhej diya gaya.</p>
+        </div>
+        {emailError && <Alert tone="error">{emailError}</Alert>}
+        <form action={verifyEmailOtp} className="space-y-4">
+          <Input name="code" required inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="- - - - - -" className={`${FIELD} text-center font-mono text-xl tracking-[0.35em]`} />
+          <Button type="submit" disabled={emailBusy} className={BIG_BTN}>{emailBusy ? "Check ho raha hai..." : "Email OTP verify karein"}</Button>
+        </form>
+        <button type="button" onClick={() => setEmailStage("none")} className="w-full text-center text-xs font-semibold text-[#1E4A2E] hover:underline">Login screen par wapas</button>
+      </div>
+    );
+  }
+
+  if (otpSent) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-surface-800">Mobile OTP verify karein</p>
+          <p className="mt-1 text-xs text-surface-500">Code WhatsApp/SMS par bhej diya gaya.</p>
+        </div>
+        {checkState.error && <Alert tone="error">{checkState.error}</Alert>}
+        <form action={checkAction} className="space-y-4">
+          <input type="hidden" name="phone" value={phone} />
+          <Input name="code" required inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="- - - - - -" className={`${FIELD} text-center font-mono text-xl tracking-[0.35em]`} />
+          <SubmitBtn label="OTP verify karein" busy="Check ho raha hai..." />
+        </form>
+        <button type="button" onClick={() => setPhone("")} className="w-full text-center text-xs font-semibold text-[#1E4A2E] hover:underline">Login screen par wapas</button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="mb-5">
+        <p className="text-sm font-semibold text-surface-800">One AgriBridge Login</p>
+        <p className="mt-1 text-xs leading-relaxed text-surface-500">Admin, staff, farmer, customer, dealer aur vendor sab yahin se login karein.</p>
+      </div>
+      {passwordState.error && <Alert tone="error">{passwordState.error}</Alert>}
+      {otpState.error && <div className="mb-3"><Alert tone="error">{otpState.error}</Alert></div>}
+      <form action={passwordAction} className="space-y-4">
+        <div>
+          <Label htmlFor="unified-identifier">Mobile, Email ya User ID</Label>
+          <Input id="unified-identifier" name="identifier" required value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="Mobile / email / User ID" className={FIELD} />
+        </div>
+        <div>
+          <Label htmlFor="unified-password">Password <span className="font-normal text-surface-400">(OTP users ke liye optional)</span></Label>
+          <PasswordInput id="unified-password" name="password" placeholder="••••••••" className={FIELD} />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <SubmitBtn label="Sign in" busy="Sign in ho raha hai..." />
+          <button
+            type="button"
+            disabled={!identifier.trim() || emailBusy}
+            onClick={() => {
+              if (isEmail) void sendEmailOtp();
+              else { setPhone(identifier.trim()); const form = new FormData(); form.set("phone", identifier.trim()); form.set("channel", "whatsapp"); otpAction(form); }
+            }}
+            className="h-12 w-full rounded-xl border border-[#174B2B] bg-[#E9F4EC] text-[15px] font-semibold text-[#174B2B] transition hover:bg-[#DCEFE1] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {emailBusy ? "Bheja ja raha hai..." : "Send OTP"}
+          </button>
+        </div>
+        <Link href="/forgot-password" className="block text-right text-xs font-semibold text-[#1E4A2E] hover:underline">Password bhool gaye?</Link>
+      </form>
+      <div className="mt-4 rounded-xl border border-[#DCE8DF] bg-[#F5F9F6] px-3 py-2.5 text-center text-xs leading-relaxed text-[#496052]">Login ke baad system aapki identity ke mutabiq sahi portal khol dega.</div>
+    </div>
+  );
+}
 
 function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () => void }) {
   const lang = useLang();
