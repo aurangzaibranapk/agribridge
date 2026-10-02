@@ -54,6 +54,8 @@ export async function posCheckout(input: {
   paymentMode: string;
   cashPaid: number;
   khataAmount: number;
+  /** Bill se zyada received payment; selected customer ke Jama/Advance mein credit hoti hai. */
+  overpayment?: number;
   items: PosCartItem[];
   paymentLines: PosPaymentLine[];
   /** Bill par chhoRi hui raqam. 0 = discount diya hi nahi. */
@@ -121,6 +123,11 @@ export async function posCheckout(input: {
   // rok ki hai. Jis ke paas rate girane ki ijazat nahi, us ke haath
   // mein discount dena bhi wohi taqat hai: maal us qeemat par chala
   // jata hai jo malik ne tay nahi ki.
+  const overpayment = Math.max(0, Math.round((input.overpayment ?? 0) * 100) / 100);
+  if (overpayment > 0 && !input.customerId) {
+    return { error: "Zyada payment ko customer ke Jama/Advance mein dalne ke liye customer select karein." };
+  }
+
   const discount = Math.round((input.discount ?? 0) * 100) / 100;
   const discountReason = (input.discountReason ?? "").trim();
   if (discount < 0) return { error: "Discount manfi nahi hota." };
@@ -154,7 +161,7 @@ export async function posCheckout(input: {
     await supabase.from("sales").update({ notes: `Wasol kiya: ${receivedBy}` }).eq("id", saleId);
   }
 
-  const posted = await postSaleToLedger(saleId, user?.id ?? null);
+  const posted = await postSaleToLedger(saleId, user?.id ?? null, overpayment);
 
   // Malik (18 September): "My Work par Bill, Load, Udhaar, Recovery to
   // Live Notifications mein pehle se hain (load-bill.ts, customer-
@@ -353,13 +360,13 @@ async function checkCredit(input: {
  * kar ek hi entry hai -- waqia bhi ek hi hai. Do entriyan banane se ek
  * ke nakaam hone par doosri akeli reh jati hai.
  */
-async function postSaleToLedger(saleId: string, userId: string | null): Promise<string | null> {
+async function postSaleToLedger(saleId: string, userId: string | null, overpayment = 0): Promise<string | null> {
   const service = createServiceClient();
 
   const [{ data: sale }, { data: payments }, { data: waselaSettingRow }] = await Promise.all([
     service
       .from("pos_sales")
-      .select("id, total_amount, gross_amount, discount_amount, khata_amount, total_cogs, branch_id, dealer_id, crm_customer_id, created_at")
+      .select("id, total_amount, gross_amount, discount_amount, khata_amount, total_cogs, branch_id, dealer_id, customer_id, crm_customer_id, created_at")
       .eq("id", saleId)
       .maybeSingle(),
     service
@@ -493,6 +500,17 @@ async function postSaleToLedger(saleId: string, userId: string | null): Promise<
   // magar ye sawal kabhi jawab na paata: "is mahine hum ne kitna
   // discount diya?"
   const discount = Number(sale.discount_amount ?? 0);
+  if (overpayment > 0 && sale.crm_customer_id) {
+    // Extra cash/bank payment customer ke khate mein Jama/Advance (credit) hai.
+    // Is se POS receipt, customer statement aur available balance teenon ek hi hisaab dikhate hain.
+    lines.push({
+      account: ACC.customerDue,
+      credit: overpayment,
+      partyType: "customer",
+      partyId: sale.crm_customer_id,
+      memo: "POS — customer Jama / Advance",
+    });
+  }
   if (discount > 0) {
     lines.push({ account: ACC.salesDiscount, debit: discount, memo: "POS — discount diya" });
   }
@@ -533,16 +551,17 @@ async function postSaleToLedger(saleId: string, userId: string | null): Promise<
    * ye khana update na ho to sirf agli jaanch dhili paRti hai, kitab
    * ghalat nahi hoti -- is liye ghalti par yahan safha rokna theek nahi.
    */
-  if (khata > 0 && sale.crm_customer_id) {
+  if ((khata > 0 || overpayment > 0) && sale.crm_customer_id) {
     const { data: cust } = await service
       .from("customers")
       .select("current_balance")
       .eq("id", sale.crm_customer_id)
       .maybeSingle();
     const abTak = cust?.current_balance == null ? 0 : Number(cust.current_balance);
+    const nayaBalance = Math.round((abTak + khata - overpayment) * 100) / 100;
     await service
       .from("customers")
-      .update({ current_balance: Math.round((abTak + khata) * 100) / 100 })
+      .update({ current_balance: nayaBalance })
       .eq("id", sale.crm_customer_id);
   }
 
