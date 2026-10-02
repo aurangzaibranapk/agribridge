@@ -15,11 +15,12 @@ export const dynamic = "force-dynamic";
 export default async function PurchasesReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; branch?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ range?: string; branch?: string; from?: string; to?: string; location?: string }>;
 }) {
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "year";
   const branchId = params.branch || "";
+  const locationFilter = params.location || "";
   const lang = getLanguageFromCookies("rm");
   const { start, end } = getDateRange(range, params.from, params.to);
   const supabase = createClient();
@@ -51,10 +52,12 @@ export default async function PurchasesReportPage({
     `);
 
   // Location-wise stock: inventory table se seedha (per-location quantity_on_hand)
-  const { data: locationStock } = await service
+  let locationStockQuery = service
     .from("inventory")
     .select("product_id, quantity_on_hand, warehouse_id, shop_id, warehouses(name), shops(name), products!inner(id, name, purchase_price)")
     .gt("quantity_on_hand", 0);
+  if (locationFilter) locationStockQuery = locationStockQuery.eq("warehouse_id", locationFilter);
+  const { data: locationStock } = await locationStockQuery;
 
   // Location-wise FIFO stock value: stock_batches se (asli batch cost, purchase_price nahi)
   const { data: batchLocationData } = await service
@@ -90,8 +93,15 @@ export default async function PurchasesReportPage({
     productStock.set(pid, existing);
   }
 
+  const filteredSmData = locationFilter
+    ? (smData ?? []).filter((r: any) => {
+        const inv = Array.isArray(r.inventory) ? r.inventory[0] : r.inventory;
+        return inv?.warehouse_id === locationFilter;
+      })
+    : (smData ?? []);
+
   const byProduct = new Map<string, ItemRow>();
-  (smData ?? []).forEach((r: any) => {
+  filteredSmData.forEach((r: any) => {
     const inv = Array.isArray(r.inventory) ? r.inventory[0] : r.inventory;
     const prod = Array.isArray(inv?.products) ? inv.products[0] : inv?.products;
     const pid: string = prod?.id ?? inv?.product_id;
@@ -145,7 +155,7 @@ export default async function PurchasesReportPage({
     .sort((a, b) => b.stock_value - a.stock_value);
 
   // Location-wise stock summary — FIFO (stock_batches.unit_cost), purchase_price nahi
-  type LocationStock = { name: string; kind: "warehouse" | "shop"; stockValue: number; qty: number };
+  type LocationStock = { id: string; name: string; kind: "warehouse" | "shop"; stockValue: number; qty: number };
   const byLocation = new Map<string, LocationStock>();
   for (const row of (batchLocationData ?? [])) {
     const b = row as any;
@@ -154,13 +164,25 @@ export default async function PurchasesReportPage({
     const key = b.warehouse_id ?? "unknown";
     const qty = Number(b.remaining_quantity ?? 0);
     const cost = Number(b.unit_cost ?? 0);
-    const existing = byLocation.get(key) ?? { name, kind: "warehouse" as const, stockValue: 0, qty: 0 };
+    const existing = byLocation.get(key) ?? { id: key, name, kind: "warehouse" as const, stockValue: 0, qty: 0 };
     existing.stockValue += qty * cost;
     existing.qty += qty;
     byLocation.set(key, existing);
   }
   const locationRows = [...byLocation.values()].sort((a, b) => b.stockValue - a.stockValue);
   const totalLocationStockValue = locationRows.reduce((s, r) => s + r.stockValue, 0);
+  const selectedLocationName = locationFilter ? (locationRows.find((l) => l.id === locationFilter)?.name ?? "") : "";
+
+  function makeUrl(extraParams: Record<string, string>) {
+    const p = new URLSearchParams();
+    if (range !== "year") p.set("range", range);
+    if (branchId) p.set("branch", branchId);
+    if (params.from) p.set("from", params.from);
+    if (params.to) p.set("to", params.to);
+    for (const [k, v] of Object.entries(extraParams)) { if (v) p.set(k, v); else p.delete(k); }
+    const qs = p.toString();
+    return `/admin/reports/purchases${qs ? `?${qs}` : ""}`;
+  }
 
   const totalAmount       = (purchases ?? []).reduce((sum, p) => sum + Number(p.total_amount ?? 0), 0);
   const totalStockValue   = itemRows.reduce((s, r) => s + r.stock_value,    0);
@@ -293,29 +315,42 @@ export default async function PurchasesReportPage({
           {/* Stock by Location */}
           {locationRows.length > 0 && (
             <div className="rounded-card border border-brand-200 bg-brand-50 p-5 shadow-card dark:border-brand-900/40 dark:bg-brand-950/20">
-              <h2 className="mb-3 flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-                <Package className="h-4 w-4 text-brand-600" /> Stock — Location Se
-              </h2>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h2 className="flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+                  <Package className="h-4 w-4 text-brand-600" /> Stock — Location Se
+                </h2>
+                {locationFilter && (
+                  <a href={makeUrl({ location: "" })} className="text-xs text-brand-600 underline dark:text-brand-400">Tamam</a>
+                )}
+              </div>
               <ul className="space-y-2 text-sm">
-                {locationRows.map((loc) => (
-                  <li key={loc.name} className="rounded-lg border border-brand-100 bg-white px-3 py-2 dark:border-brand-900/30 dark:bg-surface-900">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-medium text-surface-900 dark:text-surface-100">{loc.name}</p>
-                        <p className="text-xs text-surface-500">{loc.kind === "warehouse" ? "Warehouse" : "Shop"} · {Math.round(loc.qty).toLocaleString()} items</p>
-                      </div>
-                      <span className="shrink-0 font-semibold text-brand-700 dark:text-brand-300">
-                        Rs. {Math.round(loc.stockValue).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-brand-100 dark:bg-brand-900/30">
-                      <div
-                        className="h-full rounded-full bg-brand-500"
-                        style={{ width: totalLocationStockValue > 0 ? `${(loc.stockValue / totalLocationStockValue) * 100}%` : "0%" }}
-                      />
-                    </div>
-                  </li>
-                ))}
+                {locationRows.map((loc) => {
+                  const isActive = locationFilter === loc.id;
+                  return (
+                    <li key={loc.id}>
+                      <a
+                        href={makeUrl({ location: isActive ? "" : loc.id })}
+                        className={`block rounded-lg border px-3 py-2 transition-colors ${isActive ? "border-brand-500 bg-brand-100 dark:border-brand-400 dark:bg-brand-900/40" : "border-brand-100 bg-white hover:border-brand-300 hover:bg-brand-50 dark:border-brand-900/30 dark:bg-surface-900 dark:hover:bg-brand-950/30"}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className={`font-medium ${isActive ? "text-brand-800 dark:text-brand-200" : "text-surface-900 dark:text-surface-100"}`}>{loc.name}</p>
+                            <p className="text-xs text-surface-500">{loc.kind === "warehouse" ? "Warehouse" : "Shop"} · {Math.round(loc.qty).toLocaleString()} items</p>
+                          </div>
+                          <span className={`shrink-0 font-semibold ${isActive ? "text-brand-800 dark:text-brand-200" : "text-brand-700 dark:text-brand-300"}`}>
+                            Rs. {Math.round(loc.stockValue).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-brand-100 dark:bg-brand-900/30">
+                          <div
+                            className="h-full rounded-full bg-brand-500"
+                            style={{ width: totalLocationStockValue > 0 ? `${(loc.stockValue / totalLocationStockValue) * 100}%` : "0%" }}
+                          />
+                        </div>
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
               <p className="mt-2 text-xs text-surface-500">
                 Total: Rs. {Math.round(totalLocationStockValue).toLocaleString()}
@@ -328,11 +363,19 @@ export default async function PurchasesReportPage({
       {/* Stock Ledger — Kharida / Bika / Baqi / Qeemat */}
       {itemRows.length > 0 && (
         <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h2 className="mb-1 flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            <Package className="h-4 w-4" /> Stock Ledger — Aya / Bika / Nuksan / Baqi / Qeemat
-          </h2>
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+              <Package className="h-4 w-4" /> Stock Ledger — Aya / Bika / Nuksan / Baqi / Qeemat
+            </h2>
+            {selectedLocationName && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-300 bg-brand-50 px-3 py-0.5 text-xs font-medium text-brand-700 dark:border-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
+                <Package className="h-3 w-3" /> {selectedLocationName}
+                <a href={makeUrl({ location: "" })} className="ml-1 text-brand-500 hover:text-brand-700 dark:text-brand-400">✕</a>
+              </span>
+            )}
+          </div>
           <p className="mb-3 text-xs text-surface-400">
-            Poora waqt ka hisaab — stock_movements se. <strong>Kharida = Bika + Transfer + Nuksan + Baqi.</strong>
+            {selectedLocationName ? `Sirf ${selectedLocationName} ka hisaab —` : "Poora waqt ka hisaab —"} stock_movements se. <strong>Kharida = Bika + Transfer + Nuksan + Baqi.</strong>
           </p>
 
           {/* Reconciliation summary */}
