@@ -123,12 +123,19 @@ export async function posCheckout(input: {
   // rok ki hai. Jis ke paas rate girane ki ijazat nahi, us ke haath
   // mein discount dena bhi wohi taqat hai: maal us qeemat par chala
   // jata hai jo malik ne tay nahi ki.
-  const overpayment = Math.max(0, Math.round((input.overpayment ?? 0) * 100) / 100);
+  const discount = Math.round((input.discount ?? 0) * 100) / 100;
+  const serverDue = Math.round(
+    (input.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0) - discount) * 100
+  ) / 100;
+  const serverReceived = Math.round(
+    input.paymentLines.reduce((sum, line) => sum + Number(line.amount || 0), 0) * 100
+  ) / 100;
+  // Overpayment browser ke bheje hue number par nahi, server ke asal bill/payment
+  // totals par calculate hoti hai.
+  const overpayment = Math.max(0, Math.round((serverReceived - serverDue) * 100) / 100);
   if (overpayment > 0 && !input.customerId) {
     return { error: "Zyada payment ko customer ke Jama/Advance mein dalne ke liye customer select karein." };
   }
-
-  const discount = Math.round((input.discount ?? 0) * 100) / 100;
   const discountReason = (input.discountReason ?? "").trim();
   if (discount < 0) return { error: "Discount manfi nahi hota." };
   if (discount > 0) {
