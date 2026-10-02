@@ -5,7 +5,7 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
 import { BranchFilter } from "@/components/dashboard/branch-filter";
 import { isDateRangeKey, getDateRange, type DateRangeKey } from "@/lib/utils/dashboard-filters";
-import { ShoppingCart, ClipboardList, Clock, CheckCircle2, Truck, Package, AlertTriangle } from "lucide-react";
+import { ShoppingCart, CheckCircle2, Truck, Package, AlertTriangle } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { AutoRefresh } from "./auto-refresh";
@@ -249,13 +249,117 @@ export default async function PurchasesReportPage({
     (r) => r.current_stock === 0 || r.current_stock <= LOW_STOCK_THRESHOLD
   );
 
+  // Purchase suggestion: v_reorder_suggestions se — daily rate, days_cover, suggested_qty, supplier
+  const { data: reorderRaw } = await service
+    .from("v_reorder_suggestions" as any)
+    .select("product_id, name, pack_size, sold_30, sold_7, on_hand, daily_rate, days_cover, suggested_qty, urgency, last_supplier_name")
+    .order("suggested_qty", { ascending: false })
+    .limit(60);
+  const reorderItems: {
+    name: string; packSize: string | null; sold30: number; sold7: number;
+    onHand: number; dailyRate: number; daysCover: number | null;
+    suggestedQty: number; urgency: string; supplier: string | null;
+  }[] = (reorderRaw ?? []).map((r: any) => ({
+    name: r.name,
+    packSize: r.pack_size ?? null,
+    sold30: Number(r.sold_30 ?? 0),
+    sold7: Number(r.sold_7 ?? 0),
+    onHand: Number(r.on_hand ?? 0),
+    dailyRate: Number(r.daily_rate ?? 0),
+    daysCover: r.days_cover != null ? Math.round(Number(r.days_cover)) : null,
+    suggestedQty: Math.ceil(Number(r.suggested_qty ?? 0)),
+    urgency: r.urgency ?? "watch",
+    supplier: r.last_supplier_name ?? null,
+  }));
+  const criticalItems = reorderItems.filter((r) => r.urgency === "critical");
+  const urgentItems   = reorderItems.filter((r) => r.urgency === "urgent");
+  const watchItems    = reorderItems.filter((r) => r.urgency === "watch");
+
   return (
     <div>
       <AutoRefresh intervalSeconds={60} />
       <PageHeader title={t("rpu_title", lang)} description="Purchase orders across all branches" />
 
-      {/* Stock Alert Banner */}
-      {stockAlerts.length > 0 && (
+      {/* Purchase Suggestion — actionable reorder list */}
+      {reorderItems.length > 0 && (
+        <div className="mt-4 rounded-lg border border-orange-200 bg-orange-50 dark:border-orange-900/40 dark:bg-orange-950/20">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-orange-200 px-5 py-3 dark:border-orange-900/40">
+            <div className="flex items-center gap-2 font-semibold text-orange-800 dark:text-orange-300">
+              <ShoppingCart className="h-5 w-5" />
+              Purchase Suggestion —{" "}
+              {criticalItems.length > 0 && <span className="rounded bg-red-600 px-2 py-0.5 text-xs text-white">{criticalItems.length} Kal tak khatam</span>}
+              {urgentItems.length > 0 && <span className="rounded bg-orange-500 px-2 py-0.5 text-xs text-white">{urgentItems.length} Jaldi mangwao</span>}
+              {watchItems.length > 0 && <span className="rounded bg-yellow-500 px-2 py-0.5 text-xs text-white">{watchItems.length} Nazar rakhein</span>}
+            </div>
+            <a
+              href="/admin/products/reorder"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-600"
+            >
+              <ShoppingCart className="h-4 w-4" /> Purchase Draft Banao →
+            </a>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-orange-200 dark:border-orange-900/40 text-xs text-orange-700 dark:text-orange-400">
+                  <th className="px-4 py-2">Item</th>
+                  <th className="px-3 py-2 text-right">Baqi Stock</th>
+                  <th className="px-3 py-2 text-right">30-din Bika</th>
+                  <th className="px-3 py-2 text-right">Roz ki Bikri</th>
+                  <th className="px-3 py-2 text-right">Din Bacha</th>
+                  <th className="px-3 py-2 text-right font-semibold">Mangwao (Qty)</th>
+                  <th className="px-3 py-2">Supplier</th>
+                  <th className="px-3 py-2">Halat</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...criticalItems, ...urgentItems, ...watchItems].map((r, i) => (
+                  <tr
+                    key={`${r.name}-${i}`}
+                    className="border-b border-orange-100 last:border-0 dark:border-orange-900/20"
+                  >
+                    <td className="px-4 py-2 font-medium text-surface-900 dark:text-surface-100">
+                      {r.name}
+                      {r.packSize && <span className="ml-1 text-xs text-surface-400">{r.packSize}</span>}
+                    </td>
+                    <td className={`px-3 py-2 text-right tabular-nums font-semibold ${r.onHand === 0 ? "text-red-600 dark:text-red-400" : r.onHand <= 5 ? "text-orange-600 dark:text-orange-400" : "text-surface-700 dark:text-surface-300"}`}>
+                      {r.onHand === 0 ? "Khatam" : r.onHand.toLocaleString()}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-surface-600 dark:text-surface-400">
+                      {r.sold30 > 0 ? r.sold30.toLocaleString() : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-surface-600 dark:text-surface-400">
+                      {r.dailyRate > 0 ? r.dailyRate.toFixed(1) : "—"}
+                    </td>
+                    <td className={`px-3 py-2 text-right tabular-nums ${r.daysCover != null && r.daysCover <= 3 ? "font-semibold text-red-600 dark:text-red-400" : r.daysCover != null && r.daysCover <= 10 ? "text-orange-600 dark:text-orange-400" : "text-surface-600 dark:text-surface-400"}`}>
+                      {r.daysCover != null ? `${r.daysCover} din` : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      <span className="rounded bg-orange-600 px-2 py-0.5 text-xs font-bold text-white dark:bg-orange-700">
+                        {r.suggestedQty > 0 ? r.suggestedQty.toLocaleString() : "—"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-surface-600 dark:text-surface-400 text-xs">
+                      {r.supplier ?? "—"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {r.urgency === "critical" && <span className="rounded bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white">Fori</span>}
+                      {r.urgency === "urgent"   && <span className="rounded bg-orange-500 px-2 py-0.5 text-[10px] font-semibold text-white">Jaldi</span>}
+                      {r.urgency === "watch"    && <span className="rounded bg-yellow-500 px-2 py-0.5 text-[10px] font-semibold text-white">Nazar</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="px-4 py-2 text-[11px] text-orange-700/70 dark:text-orange-400/70">
+            Fori = 3 din se kam bacha · Jaldi = 10 din se kam · Nazar = abhi theek hai magar jald mangwana hoga · Mangwao = 30-din ki bikri par based
+          </p>
+        </div>
+      )}
+
+      {/* Stock Alert Banner — fallback agar reorder view na ho */}
+      {reorderItems.length === 0 && stockAlerts.length > 0 && (
         <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
           <div className="mb-2 flex items-center gap-2 font-semibold text-red-700 dark:text-red-400">
             <AlertTriangle className="h-4 w-4" />
