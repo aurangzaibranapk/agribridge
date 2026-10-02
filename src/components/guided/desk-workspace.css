@@ -333,10 +333,23 @@
     gap:8px;
   }
   .staff-desk-header > section { min-width:0; border:1px solid #dfe9e2; border-radius:12px; background:#fff; padding:10px 13px; box-shadow:0 2px 8px #12351d0b; }
+  /* Shop staff view (no DeskTabs): header cards taller, slight top margin */
+  .desk-workspace.desk-my-work .staff-desk-header {
+    margin-top:18px;
+    min-height:120px;
+    flex:0 0 120px;
+  }
+  .desk-workspace.desk-my-work .staff-desk-header > section { padding:14px 16px; }
+  .desk-workspace.desk-my-work > section { padding:18px 16px; }
   .staff-desk-eyebrow { display:block; color:#65766c; font-size:9px; font-weight:700; letter-spacing:.08em; line-height:1.1; text-transform:uppercase; }
   .staff-desk-identity { display:flex; flex-direction:column; justify-content:center; border-left:3px solid #16814b!important; background:linear-gradient(145deg,#fff,#f7fcf8)!important; }
   .staff-desk-identity h1 { overflow:hidden; margin:3px 0 0; color:#17251e; font-size:23px; font-weight:750; line-height:1.08; text-overflow:ellipsis; white-space:nowrap; }
   .staff-desk-identity p { overflow:hidden; margin:4px 0 0; color:#607067; font-size:9px; text-overflow:ellipsis; white-space:nowrap; }
+  .desk-workspace.desk-my-work .staff-desk-identity h1 { font-size:26px; }
+  .desk-workspace.desk-my-work .staff-desk-identity p { font-size:10px; margin-top:6px; }
+  .desk-workspace.desk-my-work .staff-desk-performance-heading strong { font-size:22px; }
+  .desk-workspace.desk-my-work .staff-desk-location strong { font-size:16px; }
+  .desk-workspace.desk-my-work .staff-desk-location p { font-size:10px; margin-top:5px; }
   .staff-desk-performance { display:flex; flex-direction:column; justify-content:center; }
   .staff-desk-performance-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; }
   .staff-desk-performance-heading strong { display:block; margin-top:3px; color:#176b40; font-size:19px; line-height:1; }
@@ -470,6 +483,9 @@
   .desk-workspace.desk-my-work { gap:5px; }
   .staff-desk-header { min-height:76px; flex-basis:76px; gap:6px; }
   .staff-desk-header > section { padding:8px 10px; }
+  .desk-workspace.desk-my-work .staff-desk-header { min-height:96px; flex-basis:96px; margin-top:12px; }
+  .desk-workspace.desk-my-work .staff-desk-header > section { padding:10px 13px; }
+  .desk-workspace.desk-my-work > section { padding:14px 13px; }
   .staff-desk-identity h1 { font-size:20px; }
   .staff-desk-performance-heading strong { font-size:17px; }
   .staff-desk-performance-track { margin-top:6px; }
