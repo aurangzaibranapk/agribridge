@@ -1,5 +1,6 @@
 "use client";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { useSafeSearchParams } from "@/hooks/use-safe-search-params";
 
 export function ShopFilter({
   shops,
@@ -10,7 +11,7 @@ export function ShopFilter({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const searchParams = useSafeSearchParams();
 
   function setShop(value: string) {
     const params = new URLSearchParams(searchParams.toString());

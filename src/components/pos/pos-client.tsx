@@ -100,6 +100,12 @@ function stockTone(qty: number): string {
   return "bg-emerald-500";
 }
 
+function stockAvail(item: InventoryItem, isWholesale: boolean): number {
+  const upc = item.products?.units_per_pack ?? 0;
+  if (isWholesale && upc > 1) return Math.floor(item.stock_quantity / upc);
+  return item.stock_quantity;
+}
+
 function shortDate(d: string | null | undefined): string | null {
   if (!d) return null;
   const dt = new Date(d);
@@ -325,9 +331,18 @@ export function PosClient({
 
   function addToCart(item: InventoryItem) {
     if (!item.products) return;
+    const avail = stockAvail(item, wholesaleOn);
+    const existing = cart.find((l) => l.product_id === item.product_id);
+    const currentQty = existing?.quantity ?? 0;
+    if (currentQty >= avail) {
+      const upc = item.products?.units_per_pack ?? 0;
+      const label = wholesaleOn && upc > 1 ? `${item.stock_quantity} btl = ${avail} PET` : `${avail}`;
+      setMessage({ type: "error", text: `"${item.products.name}" — Stock: ${label}. Mazeed nahi jod sakte.` });
+      return;
+    }
     setCart((prev) => {
-      const existing = prev.find((l) => l.product_id === item.product_id);
-      if (existing) {
+      const ex = prev.find((l) => l.product_id === item.product_id);
+      if (ex) {
         return prev.map((l) =>
           l.product_id === item.product_id ? { ...l, quantity: l.quantity + 1 } : l
         );
@@ -395,6 +410,15 @@ export function PosClient({
   function updateQuantity(product_id: string, quantity: number) {
     if (quantity <= 0) {
       removeLine(product_id);
+      return;
+    }
+    const item = inventory.find((i) => i.product_id === product_id);
+    const avail = item ? stockAvail(item, wholesaleOn) : Infinity;
+    if (quantity > avail) {
+      const upc = item?.products?.units_per_pack ?? 0;
+      const label = wholesaleOn && upc > 1 ? `${item?.stock_quantity ?? 0} btl = ${avail} PET` : `${avail}`;
+      setMessage({ type: "error", text: `Stock sirf ${label} available hai. ${quantity} nahi de sakte.` });
+      setCart((prev) => prev.map((l) => (l.product_id === product_id ? { ...l, quantity: avail } : l)));
       return;
     }
     setCart((prev) => prev.map((l) => (l.product_id === product_id ? { ...l, quantity } : l)));
@@ -497,6 +521,22 @@ export function PosClient({
     }
     if (Math.abs(remaining) > 0.5) {
       setMessage({ type: "error", text: `Payment poora nahi hai. Baaqi: Rs ${remaining.toLocaleString()}` });
+      return;
+    }
+
+    const stockErrors = cart.flatMap((line) => {
+      const item = inventory.find((i) => i.product_id === line.product_id);
+      if (!item) return [];
+      const avail = stockAvail(item, wholesaleOn);
+      if (line.quantity > avail) {
+        const upc = item.products?.units_per_pack ?? 0;
+        const label = wholesaleOn && upc > 1 ? `${item.stock_quantity} btl (${avail} PET)` : `${avail}`;
+        return [`"${line.name}": Maujood ${label}, Manga ${line.quantity}`];
+      }
+      return [];
+    });
+    if (stockErrors.length > 0) {
+      setMessage({ type: "error", text: `Stock nakaafi hai:\n${stockErrors.join("\n")}` });
       return;
     }
 
@@ -613,18 +653,23 @@ export function PosClient({
               const inCart = !!cartLine;
               const p = item.products;
               const upc = p?.units_per_pack ?? 0;
+              const petCount = upc > 1 ? Math.floor(item.stock_quantity / upc) : 0;
               return (
                 <button key={item.id} onClick={() => addToCart(item)} className={`overflow-hidden rounded-card border bg-white text-left shadow-card transition hover:shadow-md dark:bg-surface-900 ${inCart ? "border-brand-500 ring-1 ring-brand-200 dark:ring-brand-900/50" : "border-surface-200 hover:border-brand-400 dark:border-surface-800"}`}>
                   <div className="relative aspect-square bg-surface-50 dark:bg-surface-800">
                     {p?.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-2" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center text-surface-300 dark:text-surface-600"><Package className="h-8 w-8" strokeWidth={1.25} /></div>}
                     <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-surface-700 shadow-sm dark:bg-surface-900/90 dark:text-surface-200"><span className={`h-1.5 w-1.5 rounded-full ${stockTone(item.stock_quantity)}`} />{item.stock_quantity}</span>
-                    {inCart && cartLine && (
+                    {inCart && cartLine ? (
                       <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-brand-600 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
                         {wholesaleOn && upc > 1
                           ? `${cartLine.quantity} PET · ${cartLine.quantity * upc} btl`
                           : `${cartLine.quantity} btl`}
                       </span>
-                    )}
+                    ) : upc > 1 ? (
+                      <span className={`absolute left-1.5 top-1.5 inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-semibold shadow-sm ${petCount >= 1 ? "bg-emerald-100/90 text-emerald-800 dark:bg-emerald-900/80 dark:text-emerald-300" : "bg-red-100/90 text-red-700 dark:bg-red-900/80 dark:text-red-400"}`}>
+                        {petCount >= 1 ? `${petCount} PET` : "PET ✕"}
+                      </span>
+                    ) : null}
                   </div>
                   <div className="min-h-[3.25rem] border-t border-surface-100 px-2.5 py-2 dark:border-surface-800">
                     <p className="line-clamp-2 text-[13px] font-medium leading-tight text-surface-900 dark:text-surface-100">{p?.name ?? <span className="text-amber-700">{t("pos_no_name", lang)}</span>}{p?.pack_size ? <span className="text-surface-400"> {p.pack_size}</span> : null}</p>
@@ -660,22 +705,24 @@ export function PosClient({
 
       <Card className="flex flex-col gap-4 print:hidden lg:h-full lg:min-h-0 lg:overflow-y-auto">
         <div className="flex items-center gap-2"><ShoppingCart className="h-5 w-5 text-brand-600" /><h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_cart", lang)}</h2></div>
-        <div className="max-h-64 space-y-2 overflow-y-auto">
+        <div className="max-h-48 space-y-2 overflow-y-auto lg:max-h-[30vh] lg:min-h-[6rem]">
           {cart.length === 0 && <div className="py-6 text-center"><p className="text-sm text-surface-500">{t("pos_cart_empty", lang)}</p><p className="mt-1 text-xs text-surface-400">{t("pos_cart_empty_hint", lang)}</p></div>}
           {cart.map((line) => {
             const item = inventory.find((i) => i.product_id === line.product_id);
             const active = line.product_id === selectedId;
+            const avail = item ? stockAvail(item, wholesaleOn) : Infinity;
+            const stockShort = line.quantity > avail;
             return (
-              <button key={line.product_id} type="button" onClick={() => setSelectedId(line.product_id)} className={`flex w-full items-center gap-2 rounded-lg border p-2 text-left transition ${active ? "border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30" : "border-surface-100 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/60"}`}>
+              <button key={line.product_id} type="button" onClick={() => setSelectedId(line.product_id)} className={`flex w-full items-center gap-2 rounded-lg border p-2 text-left transition ${stockShort ? "border-red-300 bg-red-50/60 dark:border-red-800/60 dark:bg-red-950/20" : active ? "border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30" : "border-surface-100 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/60"}`}>
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-100 dark:bg-surface-800">{item?.products?.image_url ? <img src={item.products.image_url} alt="" className="h-full w-full object-contain" loading="lazy" /> : <Package className="h-4 w-4 text-surface-400" strokeWidth={1.5} />}</span>
-                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-surface-800 dark:text-surface-200">{line.name}</span><span className="block text-xs text-surface-400">{line.quantity} × Rs {line.unit_price.toLocaleString()}{wholesaleOn && item?.wholesale_price == null && <span className="ml-1 text-amber-700">{t("pf_pos_no_wholesale_rate", lang)}</span>}{regularKhataOn && !(item?.products?.mrp_price != null && item.products.mrp_price > 0) && <span className="ml-1 text-amber-700">(MRP darj nahi, retail lagi)</span>}</span></span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-surface-800 dark:text-surface-200">{line.name}</span><span className="block text-xs text-surface-400">{line.quantity} × Rs {line.unit_price.toLocaleString()}{wholesaleOn && item?.wholesale_price == null && <span className="ml-1 text-amber-700">{t("pf_pos_no_wholesale_rate", lang)}</span>}{regularKhataOn && !(item?.products?.mrp_price != null && item.products.mrp_price > 0) && <span className="ml-1 text-amber-700">(MRP darj nahi, retail lagi)</span>}{stockShort && <span className="ml-1 font-semibold text-red-600">⚠ Stock: {avail}</span>}</span></span>
                 <span className="shrink-0 text-right"><span className="block text-sm font-semibold tabular-nums text-surface-900 dark:text-surface-100">Rs {(line.quantity * line.unit_price).toLocaleString()}</span><span className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] text-brand-600 dark:text-brand-400">{t("pos_details", lang)} <ChevronRight className="h-3 w-3" /></span></span>
               </button>
             );
           })}
         </div>
 
-        <div className="border-t border-surface-100 pt-3 dark:border-surface-800">
+        <div className="shrink-0 border-t border-surface-100 pt-3 dark:border-surface-800">
           <Label>{t("pos_customer", lang)} {khataTotal > 0 && <span className="text-red-500">*</span>}</Label>
           <div className="mb-2 grid grid-cols-3 gap-1.5">
             {([ ["walkin", t("pos_walkin", lang)], ["regular", t("pos_regular", lang)], ["wholesale", t("pos_wholesale", lang)] ] as [CustomerMode, string][]).map(([customerMode, label]) => (
@@ -721,7 +768,7 @@ export function PosClient({
           )}
         </div>
 
-        <div>
+        <div className="shrink-0">
           <div className="mb-1.5 flex items-center justify-between"><Label>{t("pos_payment", lang)}</Label><button type="button" onClick={addPaymentLine} className="flex items-center gap-1 text-xs font-medium text-brand-600 hover:underline"><Plus className="h-3 w-3" /> {t("pos_add_split", lang)}</button></div>
           {custMode === "walkin" && <p className="mb-1.5 text-[11px] text-surface-400">{t("pos_walkin_no_credit", lang)}</p>}
           <div className="space-y-2">
@@ -740,7 +787,7 @@ export function PosClient({
           {khataTotal > 0 && <p className="mt-1.5 text-[11px] text-amber-700">Khata remaining amount ko automatically cover karta hai. Cash/Bank ki amount badlein to Khata khud adjust ho jayega.</p>}
         </div>
 
-        <div className="space-y-1 border-t border-surface-100 pt-3 text-sm dark:border-surface-800">
+        <div className="shrink-0 space-y-1 border-t border-surface-100 pt-3 text-sm dark:border-surface-800">
           <div className="flex items-center justify-between"><span className="text-surface-500">{t("pos_total_quantity", lang)}</span><span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">{cart.reduce((s, l) => s + l.quantity, 0)}</span></div>
           <div className="flex items-center justify-between"><span className="text-surface-500">{t("pos_subtotal", lang)}</span><span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">Rs {total.toLocaleString()}</span></div>
           {perms.canGiveDiscount && cart.length > 0 && (

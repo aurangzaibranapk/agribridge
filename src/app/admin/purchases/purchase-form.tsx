@@ -149,6 +149,7 @@ export function PurchaseForm({
   branches,
   staffBranchName,
   uiMode = "advanced",
+  financeAccounts = [],
 }: {
   suppliers: Supplier[];
   products: Product[];
@@ -157,6 +158,7 @@ export function PurchaseForm({
   staffBranchName: string | null;
   /** Simple = sirf product, tadad, rate, adaigi; batch/expiry/notes chhupe (E). */
   uiMode?: "simple" | "advanced";
+  financeAccounts?: { id: string; name: string; account_type: string }[];
 }) {
   const simple = uiMode === "simple";
   const lang = useLang();
@@ -407,6 +409,20 @@ export function PurchaseForm({
             if (v !== "credit") setSlips((prev) => (prev.length === 0 ? [{ ...emptySlip }] : prev));
           }}
         />
+
+        {/* Finance account: ledger mein kaunse khate se paisa gaya (required jab payment ho). */}
+        {terms !== "credit" && financeAccounts.length > 0 && (
+          <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-800">
+            <Label htmlFor="fa">Paid From (Khata)</Label>
+            <Select id="fa" name="finance_account_id" className="mt-1 w-full" required>
+              <option value="">— Khata chunein —</option>
+              {financeAccounts.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </Select>
+            <p className="mt-1 text-xs text-surface-500">Kaunse khate (cash/bank) se payment gayi — ledger mein yahi darj hoga.</p>
+          </div>
+        )}
 
         {/* Adaigi ki slips (436): har slip par raqam + tareekh + tasveer. */}
         {terms !== "credit" && (

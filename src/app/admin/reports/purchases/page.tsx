@@ -5,7 +5,7 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { DateRangeFilter } from "@/components/dashboard/date-range-filter";
 import { BranchFilter } from "@/components/dashboard/branch-filter";
 import { isDateRangeKey, getDateRange, type DateRangeKey } from "@/lib/utils/dashboard-filters";
-import { ShoppingCart, ClipboardList, Clock, CheckCircle2, Truck, Package, AlertTriangle } from "lucide-react";
+import { ShoppingCart, CheckCircle2, Truck, Package, AlertTriangle } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { AutoRefresh } from "./auto-refresh";
@@ -15,11 +15,12 @@ export const dynamic = "force-dynamic";
 export default async function PurchasesReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; branch?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ range?: string; branch?: string; from?: string; to?: string; location?: string }>;
 }) {
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "year";
   const branchId = params.branch || "";
+  const locationFilter = params.location || "";
   const lang = getLanguageFromCookies("rm");
   const { start, end } = getDateRange(range, params.from, params.to);
   const supabase = createClient();
@@ -51,10 +52,18 @@ export default async function PurchasesReportPage({
     `);
 
   // Location-wise stock: inventory table se seedha (per-location quantity_on_hand)
-  const { data: locationStock } = await service
+  let locationStockQuery = service
     .from("inventory")
-    .select("quantity_on_hand, warehouse_id, shop_id, warehouses(name), shops(name), products!inner(purchase_price)")
+    .select("product_id, quantity_on_hand, warehouse_id, shop_id, warehouses(name), shops(name), products!inner(id, name, purchase_price)")
     .gt("quantity_on_hand", 0);
+  if (locationFilter) locationStockQuery = locationStockQuery.eq("warehouse_id", locationFilter);
+  const { data: locationStock } = await locationStockQuery;
+
+  // Location-wise FIFO stock value: stock_batches se (asli batch cost, purchase_price nahi)
+  const { data: batchLocationData } = await service
+    .from("stock_batches")
+    .select("product_id, remaining_quantity, unit_cost, warehouse_id, warehouses(id, name)")
+    .gt("remaining_quantity", 0);
 
   type ItemRow = {
     product: string;
@@ -72,8 +81,27 @@ export default async function PurchasesReportPage({
     purchase_value: number;
   };
 
+  // Build accurate per-product stock from locationStock (sums all warehouses per product)
+  const productStock = new Map<string, { qty: number; cost: number; name: string }>();
+  for (const row of (locationStock ?? [])) {
+    const inv = row as any;
+    const prod = Array.isArray(inv.products) ? inv.products[0] : inv.products;
+    const pid: string = prod?.id ?? inv.product_id;
+    if (!pid) continue;
+    const existing = productStock.get(pid) ?? { qty: 0, cost: Number(prod?.purchase_price ?? 0), name: prod?.name ?? pid };
+    existing.qty += Number(inv.quantity_on_hand ?? 0);
+    productStock.set(pid, existing);
+  }
+
+  const filteredSmData = locationFilter
+    ? (smData ?? []).filter((r: any) => {
+        const inv = Array.isArray(r.inventory) ? r.inventory[0] : r.inventory;
+        return inv?.warehouse_id === locationFilter;
+      })
+    : (smData ?? []);
+
   const byProduct = new Map<string, ItemRow>();
-  (smData ?? []).forEach((r: any) => {
+  filteredSmData.forEach((r: any) => {
     const inv = Array.isArray(r.inventory) ? r.inventory[0] : r.inventory;
     const prod = Array.isArray(inv?.products) ? inv.products[0] : inv?.products;
     const pid: string = prod?.id ?? inv?.product_id;
@@ -83,7 +111,7 @@ export default async function PurchasesReportPage({
     const existing = byProduct.get(pid) ?? {
       product: name, purchase_in: 0, sale_out: 0, transfer_out: 0,
       adj_in: 0, adj_out: 0,
-      damaged_out: 0, current_stock: Number(inv?.quantity_on_hand ?? 0),
+      damaged_out: 0, current_stock: 0,
       unit_cost: Number(prod?.purchase_price ?? 0),
       stock_value: 0, sale_value: 0, transfer_value: 0, purchase_value: 0,
     };
@@ -99,36 +127,92 @@ export default async function PurchasesReportPage({
     byProduct.set(pid, existing);
   });
 
-  const itemRows: ItemRow[] = [...byProduct.values()]
-    .map((v) => ({
-      ...v,
-      stock_value:    Math.round(v.current_stock * v.unit_cost),
-      sale_value:     Math.round(v.sale_out      * v.unit_cost),
-      transfer_value: Math.round(v.transfer_out  * v.unit_cost),
-      purchase_value: Math.round(v.purchase_in   * v.unit_cost),
-    }))
+  // Overwrite current_stock with accurate multi-warehouse total from productStock
+  for (const [pid, row] of byProduct) {
+    const ps = productStock.get(pid);
+    if (ps) { row.current_stock = ps.qty; row.unit_cost = ps.cost; }
+  }
+  // Products in locationStock but missing from smData (no movements yet)
+  for (const [pid, ps] of productStock) {
+    if (!byProduct.has(pid)) {
+      byProduct.set(pid, {
+        product: ps.name, purchase_in: 0, sale_out: 0, transfer_out: 0,
+        adj_in: 0, adj_out: 0, damaged_out: 0,
+        current_stock: ps.qty, unit_cost: ps.cost,
+        stock_value: 0, sale_value: 0, transfer_value: 0, purchase_value: 0,
+      });
+    }
+  }
+
+  // Per-product FIFO weighted-average cost from stock_batches (location-filtered when active)
+  const productFifoMap = new Map<string, number>();
+  for (const row of (batchLocationData ?? [])) {
+    const b = row as any;
+    if (locationFilter && b.warehouse_id !== locationFilter) continue;
+    const pid: string = b.product_id;
+    if (!pid) continue;
+    const qty = Number(b.remaining_quantity ?? 0);
+    const cost = Number(b.unit_cost ?? 0);
+    const prev = productFifoMap.get(pid) ?? 0;
+    // Store total_value; divide later — or use weighted avg incrementally
+    productFifoMap.set(pid, prev + qty * cost);
+  }
+  // Also build qty map for dividing
+  const productFifoQty = new Map<string, number>();
+  for (const row of (batchLocationData ?? [])) {
+    const b = row as any;
+    if (locationFilter && b.warehouse_id !== locationFilter) continue;
+    const pid: string = b.product_id;
+    if (!pid) continue;
+    productFifoQty.set(pid, (productFifoQty.get(pid) ?? 0) + Number(b.remaining_quantity ?? 0));
+  }
+
+  const itemRows: ItemRow[] = [...byProduct.entries()]
+    .map(([pid, v]) => {
+      // FIFO se asli lागات — purchase_price se behtar
+      const fifoTotal = productFifoMap.get(pid) ?? null;
+      const fifoQty   = productFifoQty.get(pid) ?? 0;
+      const fifoCost  = fifoTotal !== null && fifoQty > 0 ? fifoTotal / fifoQty : v.unit_cost;
+      return {
+        ...v,
+        unit_cost:      fifoCost,
+        stock_value:    Math.round(v.current_stock * fifoCost),
+        sale_value:     Math.round(v.sale_out      * fifoCost),
+        transfer_value: Math.round(v.transfer_out  * fifoCost),
+        purchase_value: Math.round(v.purchase_in   * fifoCost),
+      };
+    })
     .sort((a, b) => b.stock_value - a.stock_value);
 
-  // Location-wise stock summary
-  type LocationStock = { name: string; kind: "warehouse" | "shop"; stockValue: number; qty: number };
+  // Location-wise stock summary — FIFO (stock_batches.unit_cost), purchase_price nahi
+  type LocationStock = { id: string; name: string; kind: "warehouse" | "shop"; stockValue: number; qty: number };
   const byLocation = new Map<string, LocationStock>();
-  for (const row of (locationStock ?? [])) {
-    const inv = row as any;
-    const wh = Array.isArray(inv.warehouses) ? inv.warehouses[0] : inv.warehouses;
-    const sh = Array.isArray(inv.shops) ? inv.shops[0] : inv.shops;
-    const prod = Array.isArray(inv.products) ? inv.products[0] : inv.products;
-    const name: string = wh?.name ?? sh?.name ?? "Unknown";
-    const key = inv.warehouse_id ?? inv.shop_id ?? "unknown";
-    const kind: "warehouse" | "shop" = inv.warehouse_id ? "warehouse" : "shop";
-    const qty = Number(inv.quantity_on_hand ?? 0);
-    const cost = Number(prod?.purchase_price ?? 0);
-    const existing = byLocation.get(key) ?? { name, kind, stockValue: 0, qty: 0 };
+  for (const row of (batchLocationData ?? [])) {
+    const b = row as any;
+    const wh = Array.isArray(b.warehouses) ? b.warehouses[0] : b.warehouses;
+    const name: string = wh?.name ?? "Unknown";
+    const key = b.warehouse_id ?? "unknown";
+    const qty = Number(b.remaining_quantity ?? 0);
+    const cost = Number(b.unit_cost ?? 0);
+    const existing = byLocation.get(key) ?? { id: key, name, kind: "warehouse" as const, stockValue: 0, qty: 0 };
     existing.stockValue += qty * cost;
     existing.qty += qty;
     byLocation.set(key, existing);
   }
   const locationRows = [...byLocation.values()].sort((a, b) => b.stockValue - a.stockValue);
   const totalLocationStockValue = locationRows.reduce((s, r) => s + r.stockValue, 0);
+  const selectedLocationName = locationFilter ? (locationRows.find((l) => l.id === locationFilter)?.name ?? "") : "";
+
+  function makeUrl(extraParams: Record<string, string>) {
+    const p = new URLSearchParams();
+    if (range !== "year") p.set("range", range);
+    if (branchId) p.set("branch", branchId);
+    if (params.from) p.set("from", params.from);
+    if (params.to) p.set("to", params.to);
+    for (const [k, v] of Object.entries(extraParams)) { if (v) p.set(k, v); else p.delete(k); }
+    const qs = p.toString();
+    return `/admin/reports/purchases${qs ? `?${qs}` : ""}`;
+  }
 
   const totalAmount       = (purchases ?? []).reduce((sum, p) => sum + Number(p.total_amount ?? 0), 0);
   const totalStockValue   = itemRows.reduce((s, r) => s + r.stock_value,    0);
@@ -165,13 +249,117 @@ export default async function PurchasesReportPage({
     (r) => r.current_stock === 0 || r.current_stock <= LOW_STOCK_THRESHOLD
   );
 
+  // Purchase suggestion: v_reorder_suggestions se — daily rate, days_cover, suggested_qty, supplier
+  const { data: reorderRaw } = await service
+    .from("v_reorder_suggestions" as any)
+    .select("product_id, name, pack_size, sold_30, sold_7, on_hand, daily_rate, days_cover, suggested_qty, urgency, last_supplier_name")
+    .order("suggested_qty", { ascending: false })
+    .limit(60);
+  const reorderItems: {
+    name: string; packSize: string | null; sold30: number; sold7: number;
+    onHand: number; dailyRate: number; daysCover: number | null;
+    suggestedQty: number; urgency: string; supplier: string | null;
+  }[] = (reorderRaw ?? []).map((r: any) => ({
+    name: r.name,
+    packSize: r.pack_size ?? null,
+    sold30: Number(r.sold_30 ?? 0),
+    sold7: Number(r.sold_7 ?? 0),
+    onHand: Number(r.on_hand ?? 0),
+    dailyRate: Number(r.daily_rate ?? 0),
+    daysCover: r.days_cover != null ? Math.round(Number(r.days_cover)) : null,
+    suggestedQty: Math.ceil(Number(r.suggested_qty ?? 0)),
+    urgency: r.urgency ?? "watch",
+    supplier: r.last_supplier_name ?? null,
+  }));
+  const criticalItems = reorderItems.filter((r) => r.urgency === "critical");
+  const urgentItems   = reorderItems.filter((r) => r.urgency === "urgent");
+  const watchItems    = reorderItems.filter((r) => r.urgency === "watch");
+
   return (
     <div>
       <AutoRefresh intervalSeconds={60} />
       <PageHeader title={t("rpu_title", lang)} description="Purchase orders across all branches" />
 
-      {/* Stock Alert Banner */}
-      {stockAlerts.length > 0 && (
+      {/* Purchase Suggestion — actionable reorder list */}
+      {reorderItems.length > 0 && (
+        <div className="mt-4 rounded-lg border border-orange-200 bg-orange-50 dark:border-orange-900/40 dark:bg-orange-950/20">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-orange-200 px-5 py-3 dark:border-orange-900/40">
+            <div className="flex items-center gap-2 font-semibold text-orange-800 dark:text-orange-300">
+              <ShoppingCart className="h-5 w-5" />
+              Purchase Suggestion —{" "}
+              {criticalItems.length > 0 && <span className="rounded bg-red-600 px-2 py-0.5 text-xs text-white">{criticalItems.length} Kal tak khatam</span>}
+              {urgentItems.length > 0 && <span className="rounded bg-orange-500 px-2 py-0.5 text-xs text-white">{urgentItems.length} Jaldi mangwao</span>}
+              {watchItems.length > 0 && <span className="rounded bg-yellow-500 px-2 py-0.5 text-xs text-white">{watchItems.length} Nazar rakhein</span>}
+            </div>
+            <a
+              href="/admin/products/reorder"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-orange-700 dark:bg-orange-700 dark:hover:bg-orange-600"
+            >
+              <ShoppingCart className="h-4 w-4" /> Purchase Draft Banao →
+            </a>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-orange-200 dark:border-orange-900/40 text-xs text-orange-700 dark:text-orange-400">
+                  <th className="px-4 py-2">Item</th>
+                  <th className="px-3 py-2 text-right">Baqi Stock</th>
+                  <th className="px-3 py-2 text-right">30-din Bika</th>
+                  <th className="px-3 py-2 text-right">Roz ki Bikri</th>
+                  <th className="px-3 py-2 text-right">Din Bacha</th>
+                  <th className="px-3 py-2 text-right font-semibold">Mangwao (Qty)</th>
+                  <th className="px-3 py-2">Supplier</th>
+                  <th className="px-3 py-2">Halat</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...criticalItems, ...urgentItems, ...watchItems].map((r, i) => (
+                  <tr
+                    key={`${r.name}-${i}`}
+                    className="border-b border-orange-100 last:border-0 dark:border-orange-900/20"
+                  >
+                    <td className="px-4 py-2 font-medium text-surface-900 dark:text-surface-100">
+                      {r.name}
+                      {r.packSize && <span className="ml-1 text-xs text-surface-400">{r.packSize}</span>}
+                    </td>
+                    <td className={`px-3 py-2 text-right tabular-nums font-semibold ${r.onHand === 0 ? "text-red-600 dark:text-red-400" : r.onHand <= 5 ? "text-orange-600 dark:text-orange-400" : "text-surface-700 dark:text-surface-300"}`}>
+                      {r.onHand === 0 ? "Khatam" : r.onHand.toLocaleString()}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-surface-600 dark:text-surface-400">
+                      {r.sold30 > 0 ? r.sold30.toLocaleString() : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums text-surface-600 dark:text-surface-400">
+                      {r.dailyRate > 0 ? r.dailyRate.toFixed(1) : "—"}
+                    </td>
+                    <td className={`px-3 py-2 text-right tabular-nums ${r.daysCover != null && r.daysCover <= 3 ? "font-semibold text-red-600 dark:text-red-400" : r.daysCover != null && r.daysCover <= 10 ? "text-orange-600 dark:text-orange-400" : "text-surface-600 dark:text-surface-400"}`}>
+                      {r.daysCover != null ? `${r.daysCover} din` : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      <span className="rounded bg-orange-600 px-2 py-0.5 text-xs font-bold text-white dark:bg-orange-700">
+                        {r.suggestedQty > 0 ? r.suggestedQty.toLocaleString() : "—"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-surface-600 dark:text-surface-400 text-xs">
+                      {r.supplier ?? "—"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {r.urgency === "critical" && <span className="rounded bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white">Fori</span>}
+                      {r.urgency === "urgent"   && <span className="rounded bg-orange-500 px-2 py-0.5 text-[10px] font-semibold text-white">Jaldi</span>}
+                      {r.urgency === "watch"    && <span className="rounded bg-yellow-500 px-2 py-0.5 text-[10px] font-semibold text-white">Nazar</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="px-4 py-2 text-[11px] text-orange-700/70 dark:text-orange-400/70">
+            Fori = 3 din se kam bacha · Jaldi = 10 din se kam · Nazar = abhi theek hai magar jald mangwana hoga · Mangwao = 30-din ki bikri par based
+          </p>
+        </div>
+      )}
+
+      {/* Stock Alert Banner — fallback agar reorder view na ho */}
+      {reorderItems.length === 0 && stockAlerts.length > 0 && (
         <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/20">
           <div className="mb-2 flex items-center gap-2 font-semibold text-red-700 dark:text-red-400">
             <AlertTriangle className="h-4 w-4" />
@@ -261,29 +449,42 @@ export default async function PurchasesReportPage({
           {/* Stock by Location */}
           {locationRows.length > 0 && (
             <div className="rounded-card border border-brand-200 bg-brand-50 p-5 shadow-card dark:border-brand-900/40 dark:bg-brand-950/20">
-              <h2 className="mb-3 flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-                <Package className="h-4 w-4 text-brand-600" /> Stock — Location Se
-              </h2>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h2 className="flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+                  <Package className="h-4 w-4 text-brand-600" /> Stock — Location Se
+                </h2>
+                {locationFilter && (
+                  <a href={makeUrl({ location: "" })} className="text-xs text-brand-600 underline dark:text-brand-400">Tamam</a>
+                )}
+              </div>
               <ul className="space-y-2 text-sm">
-                {locationRows.map((loc) => (
-                  <li key={loc.name} className="rounded-lg border border-brand-100 bg-white px-3 py-2 dark:border-brand-900/30 dark:bg-surface-900">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-medium text-surface-900 dark:text-surface-100">{loc.name}</p>
-                        <p className="text-xs text-surface-500">{loc.kind === "warehouse" ? "Warehouse" : "Shop"} · {Math.round(loc.qty).toLocaleString()} items</p>
-                      </div>
-                      <span className="shrink-0 font-semibold text-brand-700 dark:text-brand-300">
-                        Rs. {Math.round(loc.stockValue).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-brand-100 dark:bg-brand-900/30">
-                      <div
-                        className="h-full rounded-full bg-brand-500"
-                        style={{ width: totalLocationStockValue > 0 ? `${(loc.stockValue / totalLocationStockValue) * 100}%` : "0%" }}
-                      />
-                    </div>
-                  </li>
-                ))}
+                {locationRows.map((loc) => {
+                  const isActive = locationFilter === loc.id;
+                  return (
+                    <li key={loc.id}>
+                      <a
+                        href={makeUrl({ location: isActive ? "" : loc.id })}
+                        className={`block rounded-lg border px-3 py-2 transition-colors ${isActive ? "border-brand-500 bg-brand-100 dark:border-brand-400 dark:bg-brand-900/40" : "border-brand-100 bg-white hover:border-brand-300 hover:bg-brand-50 dark:border-brand-900/30 dark:bg-surface-900 dark:hover:bg-brand-950/30"}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className={`font-medium ${isActive ? "text-brand-800 dark:text-brand-200" : "text-surface-900 dark:text-surface-100"}`}>{loc.name}</p>
+                            <p className="text-xs text-surface-500">{loc.kind === "warehouse" ? "Warehouse" : "Shop"} · {Math.round(loc.qty).toLocaleString()} items</p>
+                          </div>
+                          <span className={`shrink-0 font-semibold ${isActive ? "text-brand-800 dark:text-brand-200" : "text-brand-700 dark:text-brand-300"}`}>
+                            Rs. {Math.round(loc.stockValue).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-brand-100 dark:bg-brand-900/30">
+                          <div
+                            className="h-full rounded-full bg-brand-500"
+                            style={{ width: totalLocationStockValue > 0 ? `${(loc.stockValue / totalLocationStockValue) * 100}%` : "0%" }}
+                          />
+                        </div>
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
               <p className="mt-2 text-xs text-surface-500">
                 Total: Rs. {Math.round(totalLocationStockValue).toLocaleString()}
@@ -296,11 +497,19 @@ export default async function PurchasesReportPage({
       {/* Stock Ledger — Kharida / Bika / Baqi / Qeemat */}
       {itemRows.length > 0 && (
         <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <h2 className="mb-1 flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
-            <Package className="h-4 w-4" /> Stock Ledger — Aya / Bika / Nuksan / Baqi / Qeemat
-          </h2>
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+              <Package className="h-4 w-4" /> Stock Ledger — Aya / Bika / Nuksan / Baqi / Qeemat
+            </h2>
+            {selectedLocationName && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-300 bg-brand-50 px-3 py-0.5 text-xs font-medium text-brand-700 dark:border-brand-700 dark:bg-brand-950/40 dark:text-brand-300">
+                <Package className="h-3 w-3" /> {selectedLocationName}
+                <a href={makeUrl({ location: "" })} className="ml-1 text-brand-500 hover:text-brand-700 dark:text-brand-400">✕</a>
+              </span>
+            )}
+          </div>
           <p className="mb-3 text-xs text-surface-400">
-            Poora waqt ka hisaab — stock_movements se. <strong>Kharida = Bika + Transfer + Nuksan + Baqi.</strong>
+            {selectedLocationName ? `Sirf ${selectedLocationName} ka hisaab —` : "Poora waqt ka hisaab —"} stock_movements se. <strong>Kharida = Bika + Transfer + Nuksan + Baqi.</strong>
           </p>
 
           {/* Reconciliation summary */}

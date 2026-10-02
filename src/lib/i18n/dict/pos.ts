@@ -81,6 +81,7 @@ export const posDict = {
   pos_total: { en: "Total", rm: "Kul", ur: "کل" },
   pos_cash_paid: { en: "Cash Paid", rm: "Naqad diya", ur: "نقد دیا" },
   pos_khata_credit: { en: "Khata (Credit)", rm: "Khata", ur: "کھاتہ" },
+  pos_prev_balance: { en: "Previous Balance", rm: "Sabqa baqi", ur: "سابقہ باقی" },
   pos_outstanding: { en: "Total Outstanding Balance", rm: "Kul baqi", ur: "کل باقی" },
   pos_thank_you: { en: "Thank You for Shopping!", rm: "Shukriya!", ur: "شکریہ!" },
   pos_close: { en: "Close", rm: "Band karein", ur: "بند کریں" },

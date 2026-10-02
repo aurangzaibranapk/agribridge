@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminGrainProcurementPage() {
   const supabase = createClient();
+  const service = createServiceClient();
   const lang = getLanguageFromCookies("rm");
   const [
     { data: farmers },
@@ -23,13 +25,14 @@ export default async function AdminGrainProcurementPage() {
     supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
     supabase.from("grain_cut_presets").select("id, grain_type, label, cut_percentage").eq("is_active", true).order("grain_type"),
     supabase.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("account_type"),
-    supabase
+    // serviceClient: party entries (farmer_id=NULL) RLS se block hoti hain — bypass karna zaruri hai
+    service
       .from("grain_procurement_entries")
       .select("id, entry_date, grain_type, gross_weight_kg, cut_percentage, cut_kg, weight_kg, moisture_percentage, quality_grade, rate_per_kg, total_amount, farmer_id, party_id, farmers(full_name), grain_parties(party_name)")
       .order("entry_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(200),
-    supabase
+    service
       .from("grain_procurement_payments")
       .select("id, amount, payment_method, notes, created_at, farmer_id, party_id, farmers(full_name), grain_parties(party_name)")
       .order("created_at", { ascending: false })

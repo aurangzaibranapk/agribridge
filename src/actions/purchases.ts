@@ -335,7 +335,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
   }
   const { data: items } = await supabase
     .from("purchase_items")
-    .select("id, product_id, batch_id, quantity, unit_cost, products(name)")
+    .select("id, product_id, batch_id, quantity, unit_cost, products(name, units_per_carton)")
     .eq("purchase_id", purchaseId);
   if (!items || items.length === 0) return { error: "No items on this purchase." };
   const {
@@ -358,6 +358,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     short: number;
     note: string | null;
     name: string;
+    units_per_carton: number | null;
   };
   const rows: Counted[] = [];
   for (const item of items) {
@@ -380,6 +381,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     if (short < 0) {
       return { error: `${name}: aaya (${received}) + toota (${damaged}) invoice ki tadad (${quantity}) se zyada hai.` };
     }
+    const upc = Array.isArray(rel) ? Number(rel[0]?.units_per_carton ?? 1) : Number(rel?.units_per_carton ?? 1);
     rows.push({
       id: item.id,
       product_id: item.product_id,
@@ -391,6 +393,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
       short,
       note,
       name,
+      units_per_carton: upc > 1 ? upc : null,
     });
   }
 
@@ -417,10 +420,17 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
       .eq("id", row.id);
     if (lineErr) return { error: `${row.name}: ginti likhi nahi ja saki: ${lineErr.message}` };
 
+    // Bill mein qty cartons mein hoti hai; stock bottles mein track hota hai.
+    // units_per_carton se tadeel karo -- null/1 ho to koi farq nahi.
+    const upc = row.units_per_carton ?? 1;
+    const bottleQty = row.received * upc;
+    // Batch ki unit_cost bhi per-bottle karni hai (FIFO/FEFO COGS ke liye).
+    const bottleUnitCost = upc > 1 ? row.unit_cost / upc : row.unit_cost;
+
     if (row.received <= 0) {
       // Kuch aaya hi nahi: batch khali, stock mein koi harkat nahi.
       if (row.batch_id) {
-        await supabase.from("stock_batches").update({ initial_quantity: 0, remaining_quantity: 0, unit_cost: row.unit_cost }).eq("id", row.batch_id);
+        await supabase.from("stock_batches").update({ initial_quantity: 0, remaining_quantity: 0, unit_cost: bottleUnitCost }).eq("id", row.batch_id);
       }
       continue;
     }
@@ -462,7 +472,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     if (batchId) {
       await supabase
         .from("stock_batches")
-        .update({ warehouse_id: warehouseId, initial_quantity: row.received, remaining_quantity: row.received, unit_cost: row.unit_cost })
+        .update({ warehouse_id: warehouseId, initial_quantity: bottleQty, remaining_quantity: bottleQty, unit_cost: bottleUnitCost })
         .eq("id", batchId);
     } else {
       const { data: newBatch, error: batchErr } = await supabase
@@ -471,9 +481,9 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
           product_id: row.product_id,
           warehouse_id: warehouseId,
           batch_number: `${purchase.purchase_number}-${row.id.slice(0, 8)}`,
-          initial_quantity: row.received,
-          remaining_quantity: row.received,
-          unit_cost: row.unit_cost,
+          initial_quantity: bottleQty,
+          remaining_quantity: bottleQty,
+          unit_cost: bottleUnitCost,
         })
         .select("id")
         .single();
@@ -519,10 +529,12 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     const { error: movementError } = await supabase.from("stock_movements").insert({
       inventory_id: inventoryId,
       movement_type: "purchase_in",
-      quantity: row.received,
+      quantity: bottleQty,
       reference_type: "purchase",
       reference_id: purchaseId,
-      notes: row.damaged + row.short > 0 ? `Invoice ${row.quantity}, aaya ${row.received}, toota ${row.damaged}, kam ${row.short}` : null,
+      notes: upc > 1
+        ? `${row.received} carton × ${upc} = ${bottleQty} bottle${row.damaged + row.short > 0 ? `; toota ${row.damaged}, kam ${row.short}` : ""}`
+        : (row.damaged + row.short > 0 ? `Invoice ${row.quantity}, aaya ${row.received}, toota ${row.damaged}, kam ${row.short}` : null),
       created_by: user?.id ?? null,
     });
     if (movementError) {

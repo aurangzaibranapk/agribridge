@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
-import { formatDate } from "@/lib/utils/format";
 import { StatementActions } from "./statement-actions";
+import { StatementTable } from "./statement-table";
 
 export const dynamic = "force-dynamic";
 
 function rs(n: number): string {
   return `Rs ${n.toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
 }
+
+type SaleItem = { product_name: string; quantity: number; unit_price: number; subtotal: number };
 
 /**
  * Ek gahak ka poora khata.
@@ -62,7 +64,7 @@ export default async function CustomerStatementPage({
   // hisaab chal raha ho.
   const openingEnd = sp.start ? new Date(`${sp.start}T00:00:00Z`) : null;
   if (openingEnd) openingEnd.setUTCDate(openingEnd.getUTCDate() - 1);
-  const [{ data: rows }, { data: baqi }, { data: openingRows }] = await Promise.all([
+  const [{ data: rows }, { data: baqi }, { data: openingRows }, { data: primaryBranch }] = await Promise.all([
     supabase.rpc("fn_customer_ledger", {
       p_customer: id,
       p_start: sp.start ?? undefined,
@@ -72,26 +74,107 @@ export default async function CustomerStatementPage({
     sp.start
       ? supabase.rpc("fn_customer_ledger", { p_customer: id, p_start: undefined, p_end: openingEnd!.toISOString().slice(0, 10) })
       : Promise.resolve({ data: [] as any[] }),
+    (supabase as any).rpc("fn_customer_primary_branch", { p_customer: id }),
   ]);
 
-  const qatarein = rows ?? [];
-  const openingBalance = (openingRows ?? []).reduce((s, r) => s + Number(r.debit) - Number(r.credit), 0);
+  // source_id migration 485 ke baad DB mein hai — types regenerate hone tak any cast
+  type RawRow = { entry_date: string; entry_number: string; tafseel: string; module: string; source_id: string | null; debit: number; credit: number };
+  const qatarein = (rows ?? []) as unknown as RawRow[];
+  const openingBalance = (openingRows ?? []).reduce((s, r: any) => s + Number(r.debit) - Number(r.credit), 0);
   let chalta = openingBalance;
   const saathBalance = qatarein.map((r) => {
     chalta += Number(r.debit) - Number(r.credit);
     return { ...r, balance: chalta };
   });
-  const kulLiya = qatarein.reduce((s, r) => s + Number(r.debit), 0);
-  const kulDiya = qatarein.reduce((s, r) => s + Number(r.credit), 0);
+  // POS rows ke liye items + sale data batch-fetch: source_id wali qatarein
+  const posSourceIds = qatarein
+    .filter((r) => r.module === "pos" && r.source_id)
+    .map((r) => r.source_id as string);
+
+  let itemsMap: Record<string, SaleItem[]> = {};
+  let salesMap: Record<string, { total_amount: number; cash_paid: number }> = {};
+
+  if (posSourceIds.length > 0) {
+    const [{ data: saleItems }, { data: salesData }] = await Promise.all([
+      supabase
+        .from("pos_sale_items")
+        .select("sale_id, quantity, unit_price, subtotal, products(name)")
+        .in("sale_id", posSourceIds),
+      supabase
+        .from("pos_sales")
+        .select("id, total_amount, cash_paid")
+        .in("id", posSourceIds),
+    ]);
+    if (saleItems) {
+      for (const item of saleItems) {
+        const sid = item.sale_id as string;
+        if (!itemsMap[sid]) itemsMap[sid] = [];
+        itemsMap[sid].push({
+          product_name: (item.products as any)?.name ?? "—",
+          quantity: Number(item.quantity),
+          unit_price: Number(item.unit_price),
+          subtotal: Number(item.subtotal),
+        });
+      }
+    }
+    if (salesData) {
+      for (const sale of salesData) {
+        salesMap[sale.id] = { total_amount: Number(sale.total_amount), cash_paid: Number(sale.cash_paid) };
+      }
+    }
+  }
+
+  // kulLiya / kulDiya: POS split payment mein poori sale + cash payment dono dikhao
+  // (balance delta wahi rehta hai: total_amount - cash_paid = khata_amount = journal debit)
+  const kulLiya = qatarein.reduce((s, r) => {
+    const sale = r.source_id ? salesMap[r.source_id] : undefined;
+    return s + (sale ? sale.total_amount : Number(r.debit));
+  }, 0);
+  const kulDiya = qatarein.reduce((s, r) => {
+    const sale = r.source_id ? salesMap[r.source_id] : undefined;
+    return s + (sale ? sale.cash_paid : 0) + Number(r.credit);
+  }, 0);
+
+  const printDate = new Date().toLocaleDateString("en-PK", { day: "2-digit", month: "long", year: "numeric" });
+  const periodLabel = sp.start && sp.end
+    ? `${sp.start} se ${sp.end} tak`
+    : sp.start
+    ? `${sp.start} se aaj tak`
+    : sp.end
+    ? `Shuru se ${sp.end} tak`
+    : "Tamam entries";
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title={`${customer?.name ?? "Gahak"} — Khata`}
-        description="Har lena aur dena, tareekh ke sath — ledger se seedha."
-      />
 
-      <form className="flex flex-wrap items-end gap-2 rounded-card border border-surface-200 bg-white p-3 dark:border-surface-800 dark:bg-surface-900">
+      {/* Print-only professional letterhead */}
+      <div className="hidden print:block mb-6 border-b-2 border-black pb-4">
+        <div className="text-center mb-3">
+          <h1 className="text-2xl font-bold tracking-wide">KISAN ECO MAHABALI</h1>
+          <p className="text-sm">{(primaryBranch as string | null) ?? "Main Branch"} · Jhang</p>
+          <p className="text-xs text-gray-500">www.alranatraders.pk</p>
+          <p className="text-base font-semibold mt-1">CUSTOMER ACCOUNT STATEMENT — KHATA BAYAAN</p>
+        </div>
+        <div className="flex justify-between text-sm border-t border-gray-300 pt-2">
+          <div>
+            <p><strong>Gahak / Customer:</strong> {customer?.name ?? "—"}</p>
+            {customer?.phone_number && <p><strong>Phone:</strong> {customer.phone_number}</p>}
+          </div>
+          <div className="text-right">
+            <p><strong>Print Date:</strong> {printDate}</p>
+            <p><strong>Period:</strong> {periodLabel}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="print:hidden">
+        <PageHeader
+          title={`${customer?.name ?? "Gahak"} — Khata`}
+          description="Har lena aur dena, tareekh ke sath — ledger se seedha."
+        />
+      </div>
+
+      <form className="flex flex-wrap items-end gap-2 rounded-card border border-surface-200 bg-white p-3 dark:border-surface-800 dark:bg-surface-900 print:hidden">
         <label className="text-xs text-surface-500">
           From
           <input type="date" name="start" defaultValue={sp.start} className="ml-2 rounded-lg border border-surface-200 px-2 py-1.5 dark:bg-surface-900" />
@@ -105,17 +188,29 @@ export default async function CustomerStatementPage({
         </button>
       </form>
 
-      <StatementActions customerId={id} start={sp.start} end={sp.end} />
+      <StatementActions
+        customerId={id}
+        start={sp.start}
+        end={sp.end}
+        waData={{
+          phone: customer?.phone_number ?? null,
+          name: customer?.name ?? "Gahak",
+          branch: (primaryBranch as string | null) ?? null,
+          baqi: baqi ?? null,
+          kulLiya,
+          kulDiya,
+        }}
+      />
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="py-3">
-          <p className="text-xs text-surface-500 dark:text-surface-400">Is ne liya (udhaar chaRha)</p>
+          <p className="text-xs text-surface-500 dark:text-surface-400">Kul khareed (maal liya)</p>
           <p className="font-display text-xl font-semibold tabular-nums text-surface-900 dark:text-white">
             {rs(kulLiya)}
           </p>
         </Card>
         <Card className="py-3">
-          <p className="text-xs text-surface-500 dark:text-surface-400">Is ne diya (wapas kia)</p>
+          <p className="text-xs text-surface-500 dark:text-surface-400">Kul ada kiya (cash + wapsi)</p>
           <p className="font-display text-xl font-semibold tabular-nums text-surface-900 dark:text-white">
             {rs(kulDiya)}
           </p>
@@ -159,42 +254,11 @@ export default async function CustomerStatementPage({
             kehta hai ke is ka hisaab abhi shuru hi nahi hua.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[44rem] text-sm">
-              <thead className="bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800/50">
-                <tr>
-                  <th className="px-4 py-2">Tareekh</th>
-                  <th className="px-4 py-2">Entry</th>
-                  <th className="px-4 py-2">Tafseel</th>
-                  <th className="px-4 py-2 text-right">Liya</th>
-                  <th className="px-4 py-2 text-right">Diya</th>
-                  <th className="px-4 py-2 text-right">Baqi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {saathBalance.map((r, i) => (
-                  <tr key={`${r.entry_number}-${i}`} className="border-t border-surface-100 dark:border-surface-800">
-                    <td className="px-4 py-2 whitespace-nowrap text-xs text-surface-500">
-                      {formatDate(r.entry_date)}
-                    </td>
-                    <td className="px-4 py-2 font-mono text-xs">{r.entry_number}</td>
-                    <td className="px-4 py-2">{r.tafseel}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">
-                      {Number(r.debit) ? rs(Number(r.debit)) : "—"}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums">
-                      {Number(r.credit) ? rs(Number(r.credit)) : "—"}
-                    </td>
-                    <td className="px-4 py-2 text-right font-medium tabular-nums">{rs(r.balance)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <StatementTable rows={saathBalance} itemsMap={itemsMap} salesMap={salesMap} />
         )}
       </Card>
 
-      <p className="text-xs text-surface-500">
+      <p className="text-xs text-surface-500 print:hidden">
         <Link href="/admin/crm" className="underline">
           ← CRM par wapas
         </Link>
@@ -205,6 +269,11 @@ export default async function CustomerStatementPage({
         </Link>
         .
       </p>
+      {/* Print footer */}
+      <div className="hidden print:block mt-6 border-t border-gray-300 pt-3 text-xs text-gray-500 flex justify-between">
+        <span>Al Rana Traders — Khata Bayaan</span>
+        <span>Print Date: {printDate}</span>
+      </div>
     </div>
   );
 }

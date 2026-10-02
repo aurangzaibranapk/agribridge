@@ -1,5 +1,7 @@
-import { DeskWorkspace } from "@/components/guided/desk-workspace";
+import { DeskWorkspace, DeskTabs } from "@/components/guided/desk-workspace";
 import { ShopOverview } from "@/components/desk/shop-overview";
+import { ShopNotifications } from "@/components/desk/shop-notifications";
+import { StaffMotivationCard } from "@/components/guided/staff-motivation-card";
 import { redirect } from "next/navigation";
 import * as Icons from "lucide-react";
 import { CalendarDays } from "lucide-react";
@@ -8,14 +10,13 @@ import { createClient } from "@/lib/supabase/server";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { loadNeedsAttention, filterAttention } from "@/lib/access/needs-attention";
 import { NeedsAttention } from "@/components/guided/needs-attention";
-import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadRecentActivity } from "@/lib/access/my-work";
+import { buildMyWork, defaultDashboardForRole, loadFourthKpi, loadRecentActivity, QUICK_BY_ROLE } from "@/lib/access/my-work";
 import { MyWorkBody } from "@/components/guided/work-cards";
 import { InPageWorkspace } from "@/components/guided/in-page-workspace";
 import { TrainingBanner } from "@/components/guided/training-banner";
 import { departmentForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
-import { StaffMotivationCard } from "@/components/guided/staff-motivation-card";
 
 export const dynamic = "force-dynamic";
 
@@ -148,7 +149,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
       : Promise.resolve({ data: null }),
   ]);
   const branchName = branch?.name ?? null;
-  const shopName = shop?.name ?? null;
+  const shopName = (shop as any)?.name ?? null;
 
   // KPI patti (7 September ka spec): teen fixed + ek role-specific khana.
   // Pehli teen wahi Needs Attention ke rang se nikalti hain -- koi nayi
@@ -165,8 +166,32 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
     ...(fourthKpi ? [fourthKpi] : []),
   ];
 
-  // Desk shortcuts sirf maujooda access permissions se filter hote hain.
+  // Quick Actions -- sirf wo shortcut jin ka safha is bande ko khulta
+  // hai. Koi nayi ijazat nahi banti, sirf maujooda raaston ka chhota
+  // chuna hua raasta.
   const canRoute = (path: string) => allowed === null || routeAllowed(allowed, path);
+  type QuickAction = { href: string; label: string; icon: string };
+
+  // Sidebar ki "Quick Access" mein jo raaste pehle se khare hain, wo
+  // yahan dobara nahi aane chahiye -- malik (12 September): "sidebar
+  // mein hai to Quick Actions se hata do." Sidebar restricted staff ke
+  // liye us ka HAR kaam dikhati hai (admin/layout.tsx ka quickSide);
+  // unrestricted (Owner/Admin/Manager) ke liye sirf QUICK_BY_ROLE ki
+  // chuni hui 6 -- dono jagah wohi hisaab yahan dobara laga rahe hain.
+  const sidebarHrefs = nav.unrestricted
+    ? new Set((QUICK_BY_ROLE[me.role] ?? []).slice(0, 6).map((k) => `/admin/${k.replace(/\./g, "/")}`))
+    : new Set(nav.groups.flatMap((g) => g.items.map((i) => i.href)));
+
+  const quickActions: QuickAction[] = [
+    canRoute("/admin/pos") ? { href: "/admin/pos", label: t("mw_qa_new_sale", lang), icon: "ShoppingCart" } : null,
+    canRoute("/admin/farmers") ? { href: "/admin/farmers", label: t("mw_qa_add_farmer", lang), icon: "UserPlus" } : null,
+    canRoute("/admin/kharche") ? { href: "/admin/kharche", label: t("mw_qa_add_expense", lang), icon: "Receipt" } : null,
+    canRoute("/admin/agri-orders/new") ? { href: "/admin/agri-orders/new", label: t("mw_qa_create_order", lang), icon: "ClipboardPlus" } : null,
+    canRoute("/admin/load-bill") ? { href: "/admin/load-bill", label: t("mw_qa_receive_payment", lang), icon: "Banknote" } : null,
+  ]
+    .filter((x): x is QuickAction => x !== null)
+    .filter((qa) => !sidebarHrefs.has(qa.href));
+
   const now = new Date();
   const nowDate = new Intl.DateTimeFormat(lang === "ur" ? "ur-PK" : "en-GB", {
     timeZone: "Asia/Karachi", day: "2-digit", month: "short", year: "numeric",
@@ -189,23 +214,23 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   ].filter(link => canRoute(link.href));
 
   // Shop staff can have a shop assignment and desk access without having
-  // the POS route itself (for example Load & Bill + Paisa & Khata only).
+  // the POS route itself (for example Load & Bill + Paisa & Khata).
   // Requiring /admin/pos here sent those users to the legacy dashboard and
   // hid their shop-scoped Ledger. Keep each shortcut permission-filtered.
   if (me.shop_id && deskLinks.length > 0) {
     return <DeskWorkspace className="desk-my-work">
+      {/* 3-card header: Welcome Back / Staff Performance / Work Area */}
       <header className="staff-desk-header">
         <section className="staff-desk-identity" aria-label="Logged-in staff member">
           <span className="staff-desk-eyebrow">Welcome Back</span>
           <h1>{me.full_name || "Staff Member"}</h1>
           <p>{roleLabel || "Staff"} · {nowDate} · {nowTime}</p>
         </section>
-
         <section className="staff-desk-performance" aria-label="Staff performance score">
           <div className="staff-desk-performance-heading">
             <div>
               <span className="staff-desk-eyebrow">Staff Performance</span>
-              <strong>{scoreRow?.score == null ? "Score is building" : `${Math.round(scoreRow.score)}/100`}</strong>
+              <strong>{scoreRow?.score == null ? t("mw_score_building", lang) : `${Math.round(scoreRow.score)}/100`}</strong>
             </div>
             {scoreRow?.band && <span className="staff-desk-performance-band">{scoreRow.band}</span>}
           </div>
@@ -216,18 +241,20 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
             <span>Needs Focus</span><span>Improving</span><span>Good</span><span>Excellent</span>
           </div>
         </section>
-
-        <section className="staff-desk-location" aria-label="Active shop and branch">
+        <section className="staff-desk-location" aria-label="Active work area">
           <span className="staff-desk-shop-icon"><Icons.Store aria-hidden="true" /></span>
           <div>
-            <span className="staff-desk-eyebrow">Active POS</span>
-            <strong>{shopName || "Assigned Shop"}</strong>
+            <span className="staff-desk-eyebrow">Work Area</span>
+            <strong>{shopName || dept?.label || "Assigned Work Area"}</strong>
             <p>{branchName || "Assigned Branch"}</p>
           </div>
         </section>
       </header>
-      <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language={lang} />
-      <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} />
+
+      <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language={lang} dayIndex={Math.floor(Date.now() / 86400000)} />
+
+      {/* Tabs hata diye — Ledger content seedha neeche */}
+      <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems} kpis={kpis} />
     </DeskWorkspace>;
   }
 
@@ -292,8 +319,6 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
           </div>
         </div>
       </div>
-
-      <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language={lang} />
 
       {me.training_mode && (
         <div className="mb-4">
@@ -367,6 +392,29 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         </div>
 
         <div className="flex flex-col gap-4">
+          <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
+            <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
+              <Icons.Zap className="h-4 w-4" /> {t("mw_quick_actions_title", lang)}
+            </h2>
+            <div className="grid grid-cols-2 gap-2.5 p-4 sm:grid-cols-3">
+              {quickActions.map((qa) => {
+                const QaIcon = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[qa.icon] ?? Icons.LayoutGrid;
+                return (
+                  <Link
+                    key={qa.href}
+                    href={qa.href}
+                    className="flex flex-col items-center gap-1.5 rounded-xl border border-surface-200 px-3 py-3 text-center transition hover:border-brand-300 hover:bg-brand-50/40 dark:border-surface-800 dark:hover:bg-brand-950/20"
+                  >
+                    <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-300">
+                      <QaIcon className="h-[18px] w-[18px]" />
+                    </span>
+                    <span className="text-[12px] font-medium text-surface-700 dark:text-surface-200">{qa.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="rounded-card border border-surface-200 bg-white dark:border-surface-800 dark:bg-surface-900">
             <h2 className="flex items-center gap-2 border-b border-surface-100 px-5 py-3 font-display text-[13px] font-semibold uppercase tracking-wide text-surface-500 dark:border-surface-800">
               <Icons.Activity className="h-4 w-4" /> {t("mw_activity_title", lang)}

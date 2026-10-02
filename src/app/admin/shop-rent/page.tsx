@@ -94,6 +94,8 @@ export default async function ShopRentPage() {
     due_date: b.due_date,
     status: b.status,
     bill_image_url: b.bill_image_url,
+    pay_method: b.pay_method ?? null,
+    paid_date: b.paid_date ?? null,
   }));
 
   return (

@@ -297,6 +297,63 @@ export async function confirmDelivery(_prev: ActionState, formData: FormData): P
     await supabase.from("agri_delivery_items").insert(itemRows);
   }
 
+  // Internal order (branch-to-branch): delivery confirm par destination warehouse mein stock credit karo
+  const { data: orderRow } = await supabase
+    .from("agri_orders")
+    .select("order_to_warehouse_id")
+    .eq("id", orderId)
+    .maybeSingle();
+  const destWarehouseId = (orderRow as any)?.order_to_warehouse_id ?? null;
+
+  if (destWarehouseId) {
+    // dispatch_items → order_items se product_id aur price nikalo
+    const dispatchItemIds = items.map((i) => i.dispatch_item_id).filter(Boolean) as string[];
+    if (dispatchItemIds.length > 0) {
+      const { data: dItems } = await supabase
+        .from("agri_dispatch_items")
+        .select("id, order_item_id, dispatched_qty")
+        .in("id", dispatchItemIds);
+      const orderItemIds = (dItems ?? []).map((d: any) => d.order_item_id).filter(Boolean);
+      if (orderItemIds.length > 0) {
+        const { data: oItems } = await supabase
+          .from("agri_order_items")
+          .select("id, product_id, net_price")
+          .in("id", orderItemIds);
+        const oItemMap = new Map((oItems ?? []).map((o: any) => [o.id, o]));
+        const dItemMap = new Map((dItems ?? []).map((d: any) => [d.id, d]));
+
+        for (const delivItem of items) {
+          if (!delivItem.dispatch_item_id || delivItem.received_qty <= 0) continue;
+          const di = dItemMap.get(delivItem.dispatch_item_id);
+          if (!di?.order_item_id) continue;
+          const oi = oItemMap.get(di.order_item_id);
+          if (!oi?.product_id) continue;
+
+          const unitCost = Number(oi.net_price ?? 0);
+          await moveStock({
+            fromWarehouseId: null,
+            toWarehouseId: destWarehouseId,
+            productId: oi.product_id,
+            qty: delivItem.received_qty,
+            referenceType: "agri_dispatch",
+            referenceId: dispatchId,
+            userId: user?.id ?? null,
+            inType: "transfer_in",
+          });
+          // Nayi batch destination warehouse mein
+          await supabase.from("stock_batches").insert({
+            product_id: oi.product_id,
+            warehouse_id: destWarehouseId,
+            batch_number: `AGR-${dispatchId.slice(0, 8)}`,
+            initial_quantity: delivItem.received_qty,
+            remaining_quantity: delivItem.received_qty,
+            unit_cost: unitCost,
+          });
+        }
+      }
+    }
+  }
+
   await supabase.from("agri_dispatches").update({ status: "delivered" }).eq("id", dispatchId);
   await supabase.from("agri_orders").update({ status: "delivered" }).eq("id", orderId);
   const summaryNote =

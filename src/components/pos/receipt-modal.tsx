@@ -232,6 +232,13 @@ export function ReceiptModal({
             {receipt.outstanding_balance > 0 && (
               <>
                 <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400 dark:border-surface-700" />
+                {receipt.khata_amount > 0 && (
+                  <ReceiptRow
+                    label={t("pos_prev_balance", lang)}
+                    value={`Rs ${(receipt.outstanding_balance - receipt.khata_amount).toLocaleString()}`}
+                    tone="amber"
+                  />
+                )}
                 <ReceiptRow
                   label={t("pos_outstanding", lang)}
                   value={`Rs ${receipt.outstanding_balance.toLocaleString()}`}

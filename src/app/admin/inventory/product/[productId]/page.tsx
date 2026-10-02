@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Boxes } from "lucide-react";
+import { ArrowLeft, Boxes, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -124,9 +124,17 @@ export default async function ProductCardPage({ params }: { params: { productId:
         title={`${product.name}${product.pack_size ? ` (${product.pack_size})` : ""}`}
         description={t("inv_pc_desc", lang)}
         actions={
-          <Link href="/admin/inventory" className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline">
-            <ArrowLeft className="h-4 w-4" /> {t("inv_pc_back", lang)}
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/admin/inventory/product/${params.productId}/statement`}
+              className="inline-flex items-center gap-1 rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-700 transition hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-400"
+            >
+              <FileText className="h-4 w-4" /> {t("inv_stmt_view", lang)}
+            </Link>
+            <Link href="/admin/inventory" className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline">
+              <ArrowLeft className="h-4 w-4" /> {t("inv_pc_back", lang)}
+            </Link>
+          </div>
         }
       />
 

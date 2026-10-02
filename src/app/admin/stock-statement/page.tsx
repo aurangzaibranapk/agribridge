@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { Card, PageHeader } from "@/components/ui/layout-primitives";
 import Link from "next/link";
-import { TrendingDown, TrendingUp, Package, ArrowRight, Building2, AlertTriangle } from "lucide-react";
+import { TrendingDown, TrendingUp, Package, ArrowRight, Building2, AlertTriangle, MoveRight, ShoppingCart, ArrowDownToLine, ChevronRight, Warehouse } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -159,6 +159,36 @@ export default async function StockStatementPage() {
         description="Kitna stock kahan se aaya, kahan gaya, kitna bacha — ek nazar mein"
       />
 
+      {/* Two statement shortcuts */}
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Link
+          href="/admin/stock-statement/transfers"
+          className="group flex items-center gap-4 rounded-card border border-surface-200 bg-white p-4 shadow-card transition hover:border-brand-300 hover:shadow-md dark:border-surface-800 dark:bg-surface-900 dark:hover:border-brand-700"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 group-hover:bg-brand-100 dark:bg-brand-900/20 dark:text-brand-400">
+            <MoveRight className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="font-semibold text-surface-900 dark:text-white">HQ se Dukan — Maal Bheja</p>
+            <p className="text-xs text-surface-500">Har dispatch: kaunsa maal, kab, kahan gaya</p>
+          </div>
+          <ArrowRight className="ml-auto h-4 w-4 text-surface-400 group-hover:text-brand-600 dark:group-hover:text-brand-400" />
+        </Link>
+        <Link
+          href="/admin/stock-statement/sales"
+          className="group flex items-center gap-4 rounded-card border border-surface-200 bg-white p-4 shadow-card transition hover:border-brand-300 hover:shadow-md dark:border-surface-800 dark:bg-surface-900 dark:hover:border-brand-700"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400">
+            <ShoppingCart className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="font-semibold text-surface-900 dark:text-white">Dukan se Gahak — Bikri</p>
+            <p className="text-xs text-surface-500">Har sale: invoice, gahak, cheez, miqdar</p>
+          </div>
+          <ArrowRight className="ml-auto h-4 w-4 text-surface-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400" />
+        </Link>
+      </div>
+
       {/* Grand summary */}
       <div className="mb-6 grid grid-cols-3 gap-4">
         <Card className="border-brand-200 bg-brand-50 dark:border-brand-900/40 dark:bg-brand-950/30">
@@ -206,93 +236,149 @@ export default async function StockStatementPage() {
         </div>
       )}
 
-      {/* Per-warehouse table */}
+      {/* Warehouse hierarchy — HQ upar, branches neeche */}
       <div className="mb-8">
-        <h2 className="mb-3 text-sm font-semibold text-surface-800 dark:text-surface-200">
-          Har Godam Ki Haalat
+        <h2 className="mb-4 text-sm font-semibold text-surface-800 dark:text-surface-200">
+          Godam ka Naqsha — Kahan Se Kahan Gaya
         </h2>
-        <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
-                  <th className="px-4 py-2.5 text-xs font-medium text-surface-500">Godam</th>
-                  <th className="px-4 py-2.5 text-xs font-medium text-surface-500">Branch</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-surface-500">Products</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-surface-500">Batches</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-brand-600">Total Aaya</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-red-600">Nikla / Gaya</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-green-700">Abhi Bacha</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-surface-500">% Bacha</th>
-                </tr>
-              </thead>
-              <tbody>
-                {whSummaries.map((w) => {
-                  const pct = w.initialValue > 0 ? (w.remainingValue / w.initialValue) * 100 : 0;
-                  return (
-                    <tr
-                      key={w.warehouseId}
-                      className="border-b border-surface-100 last:border-0 dark:border-surface-800"
+
+        {(() => {
+          const isHQ = (w: WhSummary) =>
+            w.warehouseName.toLowerCase().includes("hq") ||
+            w.warehouseName.toLowerCase().includes("head quarter") ||
+            w.branchName.toLowerCase().includes("hq") ||
+            w.branchName.toLowerCase().includes("head quarter");
+
+          const hqList    = whSummaries.filter(isHQ);
+          const branchList = whSummaries.filter((w) => !isHQ(w));
+
+          const WarehouseCard = ({ w, isCenter }: { w: WhSummary; isCenter: boolean }) => {
+            const pct = w.initialValue > 0 ? (w.remainingValue / w.initialValue) * 100 : 0;
+            return (
+              <div
+                className={`rounded-xl border p-5 shadow-sm ${
+                  isCenter
+                    ? "border-brand-300 bg-brand-50 dark:border-brand-800 dark:bg-brand-950/30"
+                    : "border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/20"
+                }`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                        isCenter
+                          ? "bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300"
+                          : "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                      }`}
                     >
-                      <td className="px-4 py-2.5 font-medium text-surface-900 dark:text-white">
-                        {w.warehouseName}
-                      </td>
-                      <td className="px-4 py-2.5 text-surface-500 dark:text-surface-400">
-                        {w.branchName}
-                      </td>
-                      <td className="px-4 py-2.5 text-right text-surface-600 dark:text-surface-400">
-                        {w.productCount}
-                      </td>
-                      <td className="px-4 py-2.5 text-right text-surface-600 dark:text-surface-400">
-                        {w.batchCount}
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-medium text-brand-700 dark:text-brand-300">
-                        {rs(w.initialValue)}
-                      </td>
-                      <td className="px-4 py-2.5 text-right text-red-700 dark:text-red-400">
-                        {w.goneValue > 0 ? rs(w.goneValue) : "—"}
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-semibold text-green-700 dark:text-green-400">
-                        {rs(w.remainingValue)}
-                      </td>
-                      <td className="px-4 py-2.5 text-right">
-                        <span
-                          className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${
-                            pct >= 70
-                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                              : pct >= 30
-                              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      {isCenter ? <Building2 className="h-5 w-5" /> : <Warehouse className="h-5 w-5" />}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={`/admin/stock-statement/warehouse/${w.warehouseId}`}
+                          className={`font-semibold hover:underline ${
+                            isCenter
+                              ? "text-brand-800 dark:text-brand-200"
+                              : "text-green-800 dark:text-green-200"
                           }`}
                         >
-                          {pct.toFixed(0)}%
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-                <tr className="border-t-2 border-surface-300 bg-surface-50 dark:border-surface-700 dark:bg-surface-800">
-                  <td
-                    colSpan={4}
-                    className="px-4 py-2.5 text-right text-xs font-bold text-surface-600 dark:text-surface-400"
+                          {w.warehouseName}
+                        </Link>
+                        {isCenter && (
+                          <span className="rounded-full bg-brand-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-800 dark:bg-brand-800 dark:text-brand-200">
+                            Central HQ
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-surface-500">{w.branchName} · {w.productCount} products · {w.batchCount} batches</p>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/admin/stock-statement/warehouse/${w.warehouseId}`}
+                    className="flex items-center gap-1 rounded-lg border border-surface-200 bg-white px-3 py-1.5 text-xs font-medium text-surface-700 shadow-sm hover:border-brand-300 hover:text-brand-700 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-300"
                   >
-                    TOTAL
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-bold text-brand-700 dark:text-brand-300">
-                    {rs(totalInitial)}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-bold text-red-700 dark:text-red-400">
-                    {rs(totalGone)}
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-bold text-green-700 dark:text-green-400">
-                    {rs(totalRemaining)}
-                  </td>
-                  <td />
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+                    Products dekhein <ChevronRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+
+                {/* Stats row */}
+                <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
+                  <div className="rounded-lg bg-white/70 px-3 py-2 dark:bg-surface-900/50">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-brand-600 dark:text-brand-400">Total Aaya</p>
+                    <p className="tabular-nums font-bold text-brand-800 dark:text-brand-200">{rs(w.initialValue)}</p>
+                  </div>
+                  <div className="rounded-lg bg-white/70 px-3 py-2 dark:bg-surface-900/50">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-red-600 dark:text-red-400">Nikla / Gaya</p>
+                    <p className="tabular-nums font-bold text-red-700 dark:text-red-300">{w.goneValue > 0 ? rs(w.goneValue) : "—"}</p>
+                  </div>
+                  <div className="rounded-lg bg-white/70 px-3 py-2 dark:bg-surface-900/50">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-green-700 dark:text-green-400">Abhi Bacha</p>
+                    <p className="tabular-nums font-bold text-green-800 dark:text-green-300">{rs(w.remainingValue)}</p>
+                  </div>
+                  <div className="rounded-lg bg-white/70 px-3 py-2 dark:bg-surface-900/50">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-surface-500">% Bacha</p>
+                    <p className={`tabular-nums font-bold ${pct >= 70 ? "text-green-700 dark:text-green-400" : pct >= 30 ? "text-amber-700 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
+                      {pct.toFixed(0)}%
+                    </p>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/60 dark:bg-surface-900/40">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      pct >= 70 ? "bg-green-500" : pct >= 30 ? "bg-amber-400" : "bg-red-500"
+                    }`}
+                    style={{ width: `${Math.min(pct, 100)}%` }}
+                  />
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <div>
+              {/* HQ Warehouses */}
+              {hqList.map((w) => (
+                <div key={w.warehouseId} className="mb-2">
+                  <WarehouseCard w={w} isCenter={true} />
+
+                  {/* Arrow + Agri Orders connector */}
+                  {branchList.length > 0 && (
+                    <div className="flex flex-col items-center py-2">
+                      <div className="h-4 w-px bg-brand-300 dark:bg-brand-700" />
+                      <div className="flex items-center gap-2 rounded-full border border-brand-200 bg-white px-3 py-1 text-xs font-medium text-brand-700 shadow-sm dark:border-brand-800 dark:bg-surface-900 dark:text-brand-300">
+                        <ArrowDownToLine className="h-3.5 w-3.5" />
+                        {branchOrderSummaries.length > 0
+                          ? `${branchOrderSummaries.reduce((s, b) => s + b.orderCount, 0)} Agri Orders — ${rs(totalAgriValue)} bheja`
+                          : "Stock bheja →"}
+                      </div>
+                      <div className="h-4 w-px bg-brand-300 dark:bg-brand-700" />
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Branch Warehouses */}
+              <div className={`space-y-3 ${hqList.length > 0 ? "pl-4 border-l-2 border-brand-200 dark:border-brand-800" : ""}`}>
+                {branchList.map((w) => (
+                  <WarehouseCard key={w.warehouseId} w={w} isCenter={false} />
+                ))}
+              </div>
+
+              {/* Total footer */}
+              <div className="mt-4 flex flex-wrap gap-4 rounded-lg border border-surface-200 bg-surface-50 px-4 py-3 text-sm dark:border-surface-700 dark:bg-surface-800">
+                <span className="font-semibold text-surface-600 dark:text-surface-400">TOTAL</span>
+                <span className="font-bold text-brand-700 dark:text-brand-300">{rs(totalInitial)} aaya</span>
+                <span className="text-surface-400">−</span>
+                <span className="font-bold text-red-700 dark:text-red-400">{rs(totalGone)} gaya</span>
+                <span className="text-surface-400">=</span>
+                <span className="font-bold text-green-700 dark:text-green-400">{rs(totalRemaining)} bacha</span>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Agri orders - stock kahan gaya */}

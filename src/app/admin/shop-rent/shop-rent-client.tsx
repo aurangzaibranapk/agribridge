@@ -7,6 +7,7 @@ import {
   recordRentPayment,
   createShopBill,
   markBillPaid,
+  requestFinancePayment,
   uploadCompanyStamp,
   type ActionState,
 } from "@/actions/shop-rent";
@@ -58,6 +59,8 @@ interface Bill {
   due_date: string | null;
   status: string;
   bill_image_url: string | null;
+  pay_method: string | null;
+  paid_date: string | null;
 }
 
 export function ShopRentClient({
@@ -178,19 +181,79 @@ function AgreementCard({ agreement, currentMonth, currentYear, bills, canManage 
 }
 
 function BillChip({ bill, canManage }: { bill: Bill; canManage: boolean }) {
-  const [, formAction] = useFormState(markBillPaid, initialState);
+  const [payState, payAction] = useFormState(markBillPaid, initialState);
+  const [reqState, reqAction] = useFormState(requestFinancePayment, initialState);
+  const [showOptions, setShowOptions] = useState(false);
   const lang = useLang();
+
+  const isPaid = bill.status === "paid";
+  const isFinReq = bill.status === "finance_requested";
+
+  const chipColor = isPaid
+    ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300"
+    : isFinReq
+    ? "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
+    : "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300";
+
+  const statusLabel = isPaid
+    ? `✓ ${bill.pay_method === "finance" ? "Finance" : "Shop"} — paid`
+    : isFinReq
+    ? "⏳ Finance se request"
+    : "Pending";
+
   return (
-    <span className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs ${bill.status === "paid" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
-      {bill.bill_type} ({MONTHS[bill.bill_month - 1]}) Rs {bill.amount.toLocaleString()}
-      {bill.status !== "paid" && canManage && (
-        <form action={formAction}>
-          <input type="hidden" name="bill_id" value={bill.id} />
-          <button type="submit" title={t("sr_mark_paid", lang)}><CheckCircle2 className="h-3 w-3" /></button>
-        </form>
+    <div className="relative">
+      <div className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-xs ${chipColor} ${!isPaid && canManage ? "cursor-pointer" : ""}`}
+        onClick={() => !isPaid && canManage && setShowOptions(v => !v)}
+      >
+        <span>{bill.bill_type} ({MONTHS[bill.bill_month - 1]}) <strong>Rs {bill.amount.toLocaleString()}</strong></span>
+        <span className="ml-1 opacity-70">{statusLabel}</span>
+        {!isPaid && canManage && <span className="ml-0.5 text-[10px]">▼</span>}
+      </div>
+
+      {showOptions && !isPaid && canManage && (
+        <div className="absolute left-0 top-full z-20 mt-1 w-52 rounded-xl border border-surface-200 bg-white shadow-lg dark:border-surface-700 dark:bg-surface-900 p-2 space-y-1">
+          <p className="text-[10px] text-surface-400 px-1 pb-0.5">Payment kaise dein?</p>
+
+          {/* Shop cash */}
+          <form action={payAction} onSubmit={() => setShowOptions(false)}>
+            <input type="hidden" name="bill_id" value={bill.id} />
+            <input type="hidden" name="pay_method" value="shop_cash" />
+            <SubmitBtn label="🏪 Shop se diya (Cash)" className="w-full rounded-lg bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700 hover:bg-emerald-100 text-left" />
+          </form>
+
+          {/* Finance request — only if not already requested */}
+          {!isFinReq && (
+            <form action={reqAction} onSubmit={() => setShowOptions(false)}>
+              <input type="hidden" name="bill_id" value={bill.id} />
+              <SubmitBtn label="🏦 Finance ko bhejo" className="w-full rounded-lg bg-blue-50 px-3 py-1.5 text-xs text-blue-700 hover:bg-blue-100 text-left" />
+            </form>
+          )}
+
+          {/* Finance confirm paid — if already finance_requested */}
+          {isFinReq && (
+            <form action={payAction} onSubmit={() => setShowOptions(false)}>
+              <input type="hidden" name="bill_id" value={bill.id} />
+              <input type="hidden" name="pay_method" value="finance" />
+              <SubmitBtn label="✓ Finance ne pay kiya" className="w-full rounded-lg bg-green-50 px-3 py-1.5 text-xs text-green-700 hover:bg-green-100 text-left" />
+            </form>
+          )}
+
+          <button className="w-full rounded-lg px-3 py-1 text-xs text-surface-400 hover:bg-surface-50 text-left" onClick={() => setShowOptions(false)}>
+            Cancel
+          </button>
+          {(payState.error || reqState.error) && (
+            <p className="text-[10px] text-red-600 px-1">{payState.error ?? reqState.error}</p>
+          )}
+        </div>
       )}
-    </span>
+    </div>
   );
+}
+
+function SubmitBtn({ label, className }: { label: string; className: string }) {
+  const { pending } = useFormStatus();
+  return <button type="submit" disabled={pending} className={className}>{pending ? "…" : label}</button>;
 }
 
 function PayModal({ agreement, currentMonth, currentYear, onClose }: { agreement: Agreement; currentMonth: number; currentYear: number; onClose: () => void }) {

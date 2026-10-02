@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSafeSearchParams } from "@/hooks/use-safe-search-params";
 import { Send, Sparkles, Camera, X, Mic, MicOff, BarChart2 } from "lucide-react";
 import { CoachMessage } from "@/components/guided/coach-message";
 import { PageHeader } from "@/components/ui/layout-primitives";
@@ -29,7 +29,7 @@ export default function BridgeAiPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const lang = useLang();
   // "?" panel se "AI se poochein" -> sawal pehle se likha hua aata hai (266).
-  const searchParams = useSearchParams();
+  const searchParams = useSafeSearchParams();
   const [input, setInput] = useState(searchParams.get("q") ?? "");
   const [loading, setLoading] = useState(false);
   const [actionsEnabled, setActionsEnabled] = useState(false);
