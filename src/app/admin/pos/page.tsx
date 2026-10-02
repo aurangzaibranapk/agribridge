@@ -281,6 +281,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         businessName?: string | null;
       }[]
     | null = null;
+  let topCustomerIds: string[] = [];
   if (dealer) {
     const [{ data: inv }, { data: cust }] = await Promise.all([
       supabase
@@ -299,13 +300,35 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     // table hai. Sab retail.
     rawCustomers = (cust ?? []).map((c) => ({ ...c, isWholesaleShop: false }));
   } else {
-    const { data: invRows } = warehouseId
-      ? await supabase
-          .from("inventory")
-          .select("product_id, quantity_on_hand, batch_id, products(name, pack_size, units_per_pack, barcode, internal_barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending, mrp_price, purchase_price, expiry_date)")
-          .eq("warehouse_id", warehouseId)
-          .gt("quantity_on_hand", 0)
-      : { data: [] };
+    // ── PARALLEL FETCH 1: inventory + customers + farmers + top customers ──
+    // Pehle ye sab alag alag await ho rahe the (4 round trips = ~400ms+).
+    // Ab ek sath chalte hain.
+    const [invResult, custResult, farmersResult, topResult] = await Promise.all([
+      warehouseId
+        ? supabase
+            .from("inventory")
+            .select("product_id, quantity_on_hand, batch_id, products(name, pack_size, units_per_pack, barcode, internal_barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending, mrp_price, purchase_price, expiry_date)")
+            .eq("warehouse_id", warehouseId)
+            .gt("quantity_on_hand", 0)
+        : Promise.resolve({ data: [] as any[], error: null }),
+      supabase
+        .from("customers")
+        .select("id, name, phone_number, cnic, customer_type, business_name, current_balance, credit_limit, farmer_id")
+        .order("name"),
+      supabase
+        .from("farmers")
+        .select("id, full_name, phone_number, cnic")
+        .eq("is_deleted", false)
+        .order("full_name"),
+      (supabase.rpc as unknown as (fn: string, args: Record<string, unknown>) => Promise<{ data: { customer_id: string; total_amount: number }[] | null }>)(
+        "fn_top_customers_by_purchase", { p_limit: 4 }
+      ),
+    ]);
+    const invRows = invResult.data;
+    const cust = custResult.data;
+    const farmersRaw = farmersResult.data;
+    topCustomerIds = (topResult.data ?? []).map((r) => r.customer_id);
+
     const aggMap = new Map<string, any>();
     // Jis cheez ka sale rate abhi darj nahi hua, wo counter par aati hi
     // nahi. Wajah: us ka selling_price 0 hota hai, aur 0 ko qeemat
@@ -335,10 +358,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
       aggMap.set(row.product_id, cur);
     });
     rawInventory = [...aggMap.values()];
-    const { data: cust } = await supabase
-      .from("customers")
-      .select("id, name, phone_number, cnic, customer_type, business_name, current_balance, credit_limit, farmer_id")
-      .order("name");
+
     // Farmer khud POS mein customer ki tarah dhoonda ja sake (384) --
     // malik ka hukm (10 September). Jis farmer ka Customer record pehle
     // se bana hua hai (upar wali fehrist mein aa chuka), use yahan
@@ -346,11 +366,6 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     // banata. "farmer:<id>" wali banawati ID posCheckout khud asal
     // customers.id mein badal deti hai, pehli khareed par.
     const linkedFarmerIds = new Set((cust ?? []).map((c: any) => c.farmer_id).filter(Boolean));
-    const { data: farmersRaw } = await supabase
-      .from("farmers")
-      .select("id, full_name, phone_number, cnic")
-      .eq("is_deleted", false)
-      .order("full_name");
 
     // 20 September: combined balance -- farmer ka customer-side khata
     // (current_balance) aur farmer-side ledger (agri inputs, advances)
@@ -405,25 +420,6 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         isWholesaleShop: false,
       });
     }
-  }
-
-  // Search khali ho to poori (alphabetical) fehrist ki jagah sirf wo 4
-  // gahak jin ki kul khareedari (completed sales) sab se zyada hai --
-  // malik (12 September): "sirf 4 customer wo hon jin ki sab se zyada
-  // buying hai." Dealer ke apne gahak alag table (dealer_customers) mein
-  // hain, wahan ye hisaab nahi lagta.
-  let topCustomerIds: string[] = [];
-  if (!dealer) {
-    // `fn_top_customers_by_purchase` migration 392 ka hai; generated
-    // types abhi us se pehle ke hain. Types dobara banne par ye cast
-    // hat jayega.
-    const { data: topRows } = await (
-      supabase.rpc as unknown as (
-        fn: string,
-        args: Record<string, unknown>
-      ) => Promise<{ data: { customer_id: string; total_amount: number }[] | null }>
-    )("fn_top_customers_by_purchase", { p_limit: 4 });
-    topCustomerIds = (topRows ?? []).map((r) => r.customer_id);
   }
 
   const inventory = (rawInventory ?? []).map((item: any) => ({
