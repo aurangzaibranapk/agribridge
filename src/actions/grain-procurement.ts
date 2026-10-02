@@ -112,7 +112,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: entry, error } = await (supabase as any)
+  const { data: entry, error } = await (serviceClient as any)
     .from("grain_procurement_entries")
     .insert({
       farmer_id: farmerId,
