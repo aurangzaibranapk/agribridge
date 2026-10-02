@@ -224,7 +224,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
       batch_number: `GRAIN-${entry.id.slice(0, 8)}`,
       initial_quantity: netWeight,
       remaining_quantity: netWeight,
-      unit_cost: rate,
+      unit_cost: rate / 40, // rate per-maund hai, stock qty kg mein — per-kg convert karo
     });
   }
 
