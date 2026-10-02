@@ -62,7 +62,7 @@ export default async function PurchasesReportPage({
   // Location-wise FIFO stock value: stock_batches se (asli batch cost, purchase_price nahi)
   const { data: batchLocationData } = await service
     .from("stock_batches")
-    .select("remaining_quantity, unit_cost, warehouse_id, warehouses(id, name)")
+    .select("product_id, remaining_quantity, unit_cost, warehouse_id, warehouses(id, name)")
     .gt("remaining_quantity", 0);
 
   type ItemRow = {
@@ -144,14 +144,44 @@ export default async function PurchasesReportPage({
     }
   }
 
-  const itemRows: ItemRow[] = [...byProduct.values()]
-    .map((v) => ({
-      ...v,
-      stock_value:    Math.round(v.current_stock * v.unit_cost),
-      sale_value:     Math.round(v.sale_out      * v.unit_cost),
-      transfer_value: Math.round(v.transfer_out  * v.unit_cost),
-      purchase_value: Math.round(v.purchase_in   * v.unit_cost),
-    }))
+  // Per-product FIFO weighted-average cost from stock_batches (location-filtered when active)
+  const productFifoMap = new Map<string, number>();
+  for (const row of (batchLocationData ?? [])) {
+    const b = row as any;
+    if (locationFilter && b.warehouse_id !== locationFilter) continue;
+    const pid: string = b.product_id;
+    if (!pid) continue;
+    const qty = Number(b.remaining_quantity ?? 0);
+    const cost = Number(b.unit_cost ?? 0);
+    const prev = productFifoMap.get(pid) ?? 0;
+    // Store total_value; divide later — or use weighted avg incrementally
+    productFifoMap.set(pid, prev + qty * cost);
+  }
+  // Also build qty map for dividing
+  const productFifoQty = new Map<string, number>();
+  for (const row of (batchLocationData ?? [])) {
+    const b = row as any;
+    if (locationFilter && b.warehouse_id !== locationFilter) continue;
+    const pid: string = b.product_id;
+    if (!pid) continue;
+    productFifoQty.set(pid, (productFifoQty.get(pid) ?? 0) + Number(b.remaining_quantity ?? 0));
+  }
+
+  const itemRows: ItemRow[] = [...byProduct.entries()]
+    .map(([pid, v]) => {
+      // FIFO se asli lागات — purchase_price se behtar
+      const fifoTotal = productFifoMap.get(pid) ?? null;
+      const fifoQty   = productFifoQty.get(pid) ?? 0;
+      const fifoCost  = fifoTotal !== null && fifoQty > 0 ? fifoTotal / fifoQty : v.unit_cost;
+      return {
+        ...v,
+        unit_cost:      fifoCost,
+        stock_value:    Math.round(v.current_stock * fifoCost),
+        sale_value:     Math.round(v.sale_out      * fifoCost),
+        transfer_value: Math.round(v.transfer_out  * fifoCost),
+        purchase_value: Math.round(v.purchase_in   * fifoCost),
+      };
+    })
     .sort((a, b) => b.stock_value - a.stock_value);
 
   // Location-wise stock summary — FIFO (stock_batches.unit_cost), purchase_price nahi
