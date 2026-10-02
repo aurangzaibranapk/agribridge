@@ -21,6 +21,7 @@ interface InlineExpense {
   description: string;
   amount: number;
   account_id: string;
+  paid_by?: "us" | "farmer";
 }
 
 async function getGrainProductId(supabase: ReturnType<typeof createClient>, grainType: string): Promise<string | null> {
@@ -80,9 +81,10 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
   // rate field mein per-maund rate aata hai -- kg mein convert: rate/40
   const totalAmount = (netWeight / 40) * rate;
   const chungiAmount = chungiType === "grain" ? (chungiKg / 40) * rate : chungiAmountInput;
+  const chungiPaidBy = (formData.get("chungi_paid_by") as string) === "farmer" ? "farmer" : "us";
   if (chungiAmount < 0) return { error: "Chungi amount sahi likhein." };
   if (chungiAmount > totalAmount) return { error: "Chungi amount total value se zyada nahi ho sakta." };
-  const payableToSeller = totalAmount - chungiAmount;
+  const payableToSeller = totalAmount - (chungiPaidBy === "farmer" ? 0 : chungiAmount);
 
   const makePayment = String(formData.get("make_payment") ?? "");
   if (makePayment !== "yes" && makePayment !== "no") {
@@ -126,6 +128,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
       chungi_type: chungiType,
       chungi_kg: chungiType === "grain" ? chungiKg : 0,
       chungi_amount: chungiAmount,
+      chungi_paid_by: chungiPaidBy,
       moisture_percentage: moisture,
       quality_grade: quality,
       rate_per_kg: rate,
@@ -226,6 +229,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
   }
 
   for (const exp of inlineExpenses) {
+    const expPaidBy: "us" | "farmer" = exp.paid_by === "farmer" ? "farmer" : "us";
     await supabase.from("grain_expenses").insert({
       expense_date: entryDate,
       category: exp.category,
@@ -233,8 +237,14 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
       amount: exp.amount,
       account_id: exp.account_id,
       entry_id: entry.id,
+      paid_by: expPaidBy,
       created_by: user?.id ?? null,
     });
+
+    // Agar farmer ne khud cash diya to ye kharcha business ke account se
+    // nahi gaya -- finance transaction aur ledger entry nahi banegi.
+    if (expPaidBy === "farmer") continue;
+
     const { data: opExpRow } = await supabase
       .from("finance_transactions")
       .insert({

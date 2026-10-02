@@ -256,13 +256,14 @@ function NewEntryForm({
   }
 
   const [hasExpense, setHasExpense] = useState<"" | "yes" | "no">("");
-  const [expenseRows, setExpenseRows] = useState<{ category: string; description: string; amount: string; account_id: string }[]>([
-    { category: "diesel_fuel", description: "", amount: "", account_id: "" },
+  const [expenseRows, setExpenseRows] = useState<{ category: string; description: string; amount: string; account_id: string; paid_by: "us" | "farmer" }[]>([
+    { category: "diesel_fuel", description: "", amount: "", account_id: "", paid_by: "us" },
   ]);
 
   const [chungiType, setChungiType] = useState<"cash" | "grain">("cash");
   const [chungiCash, setChungiCash] = useState("0");
   const [chungiKg, setChungiKg] = useState("0");
+  const [chungiPaidByFarmer, setChungiPaidByFarmer] = useState(false);
 
   const [makePayment, setMakePayment] = useState<"" | "yes" | "no">("");
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -279,16 +280,16 @@ function NewEntryForm({
   const rateNum = parseFloat(rate) || 0; // per-maund rate hai (user yahi enter karta hai)
   const total = (netWeight / 40) * rateNum;
   const chungiAmount = chungiType === "grain" ? ((parseFloat(chungiKg) || 0) / 40) * rateNum : parseFloat(chungiCash) || 0;
-  const payableToSeller = total - chungiAmount;
+  const payableToSeller = total - (chungiPaidByFarmer ? 0 : chungiAmount);
 
   const expensesJson = JSON.stringify(
     expenseRows
       .filter((r) => r.amount && Number(r.amount) > 0)
-      .map((r) => ({ category: r.category, description: r.description, amount: Number(r.amount), account_id: r.account_id }))
+      .map((r) => ({ category: r.category, description: r.description, amount: Number(r.amount), account_id: r.account_id, paid_by: r.paid_by }))
   );
 
   function addExpenseRow() {
-    setExpenseRows((prev) => [...prev, { category: "diesel_fuel", description: "", amount: "", account_id: "" }]);
+    setExpenseRows((prev) => [...prev, { category: "diesel_fuel", description: "", amount: "", account_id: "", paid_by: "us" as const }]);
   }
   function removeExpenseRow(idx: number) {
     setExpenseRows((prev) => prev.filter((_, i) => i !== idx));
@@ -339,6 +340,7 @@ function NewEntryForm({
         <input type="hidden" name="chungi_type" value={chungiType} />
         <input type="hidden" name="chungi_kg" value={chungiKg} />
         <input type="hidden" name="chungi_amount" value={chungiCash} />
+        <input type="hidden" name="chungi_paid_by" value={chungiPaidByFarmer ? "farmer" : "us"} />
         <input type="hidden" name="make_payment" value={makePayment} />
 
         <div>
@@ -434,6 +436,22 @@ function NewEntryForm({
               <p className="mt-1 text-[11px] text-surface-400">Rate se khud calculate hoga: {(parseFloat(chungiKg) || 0)} kg ÷ 40 = {((parseFloat(chungiKg) || 0) / 40).toFixed(2)} maund × Rs {rateNum.toLocaleString()} = Rs {chungiAmount.toLocaleString()}</p>
             </div>
           )}
+          <label className="mt-2 flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={chungiPaidByFarmer}
+              onChange={(e) => setChungiPaidByFarmer(e.target.checked)}
+              className="h-4 w-4 rounded border-surface-300 text-brand-600"
+            />
+            <span className="text-xs font-medium text-surface-600 dark:text-surface-400">
+              Farmer ne khud cash diya (bill se nahi katega)
+            </span>
+          </label>
+          {chungiPaidByFarmer && chungiAmount > 0 && (
+            <p className="mt-1 text-[11px] text-green-700 dark:text-green-400">
+              ✓ Chungi Rs {chungiAmount.toLocaleString()} bill se nahi kategi — farmer ne khud ada ki
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -490,12 +508,21 @@ function NewEntryForm({
                     </select>
                     <input placeholder={t("gr_amount_rs", lang)} type="number" step="0.01" value={row.amount} onChange={(e) => updateExpenseRow(idx, "amount", e.target.value)} className="rounded-lg border border-surface-200 p-1.5 text-xs" />
                     <input placeholder={t("gr_description", lang)} value={row.description} onChange={(e) => updateExpenseRow(idx, "description", e.target.value)} className="col-span-2 rounded-lg border border-surface-200 p-1.5 text-xs" />
-                    <select value={row.account_id} onChange={(e) => updateExpenseRow(idx, "account_id", e.target.value)} className="col-span-2 rounded-lg border border-surface-200 p-1.5 text-xs">
+                    <select value={row.account_id} onChange={(e) => updateExpenseRow(idx, "account_id", e.target.value)} className="col-span-2 rounded-lg border border-surface-200 p-1.5 text-xs" disabled={row.paid_by === "farmer"}>
                       <option value="">- Konsa Account Se Paisa Gaya -</option>
                       {financeAccounts.map((a) => (
                         <option key={a.id} value={a.id}>{a.name}</option>
                       ))}
                     </select>
+                    <label className="col-span-2 flex cursor-pointer items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        checked={row.paid_by === "farmer"}
+                        onChange={(e) => updateExpenseRow(idx, "paid_by", e.target.checked ? "farmer" : "us")}
+                        className="h-3.5 w-3.5 rounded border-surface-300 text-brand-600"
+                      />
+                      <span className="text-[11px] text-surface-500">Farmer ne khud cash diya (account se nahi katega)</span>
+                    </label>
                   </div>
                 </div>
               ))}
@@ -563,7 +590,13 @@ function NewEntryForm({
               <div className="flex items-center justify-between border-b border-brand-200 pb-3 dark:border-brand-900/50"><span className="text-surface-500">Net Weight</span><span className="font-semibold text-surface-900 dark:text-white">{netWeight.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg</span></div>
               <div className="flex items-center justify-between"><span className="text-surface-500">Rate</span><span className="font-semibold text-surface-900 dark:text-white">Rs {rateNum.toLocaleString()}/maund</span></div>
               <div className="flex items-center justify-between"><span className="text-surface-500">Gandum Value</span><span className="font-display text-lg font-bold text-brand-700 dark:text-brand-300">Rs {total.toLocaleString()}</span></div>
-              <div className="flex items-center justify-between border-b border-brand-200 pb-3 dark:border-brand-900/50"><span className="text-surface-500">Chungi / Bardana</span><span className="font-semibold text-amber-700">- Rs {chungiAmount.toLocaleString()}</span></div>
+              <div className="flex items-center justify-between border-b border-brand-200 pb-3 dark:border-brand-900/50">
+                <span className="text-surface-500">Chungi / Bardana</span>
+                {chungiPaidByFarmer
+                  ? <span className="text-xs text-green-600 dark:text-green-400">Rs {chungiAmount.toLocaleString()} (farmer ne diya)</span>
+                  : <span className="font-semibold text-amber-700">- Rs {chungiAmount.toLocaleString()}</span>
+                }
+              </div>
               <div className="flex items-center justify-between pt-1"><span className="font-semibold text-surface-800 dark:text-surface-200">Payable to Farmer</span><span className="font-display text-xl font-bold text-brand-700 dark:text-brand-300">Rs {payableToSeller.toLocaleString()}</span></div>
             </div>
             <div className="mt-5 rounded-xl border border-brand-200 bg-white/70 p-3 text-xs text-surface-500 dark:border-brand-900/50 dark:bg-surface-900/40">
