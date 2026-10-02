@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
-import { postCashOut, postWalletMovement, ACC } from "@/lib/ledger/rules";
+import { postCashIn, postCashOut, postWalletMovement, ACC, failed } from "@/lib/ledger/rules";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles } from "@/lib/notifications";
 import { sendDeptMail, mailWrapper } from "@/lib/mailer";
@@ -387,15 +387,16 @@ export async function recordGrainPayment(_prev: ActionState, formData: FormData)
   const paymentMethod = (formData.get("payment_method") as string) || null;
   const accountId = (formData.get("account_id") as string) || null;
   const notes = (formData.get("notes") as string) || null;
+  const isPartyReceipt = sellerType === "party";
 
   if (sellerType === "farmer" && !farmerId) return { error: "Farmer select karein." };
   if (sellerType === "party" && !partyId) return { error: "Party select karein." };
   if (!amount || amount <= 0) return { error: "Amount must be greater than zero." };
-  if (!accountId) return { error: "Konsa account se paisa gaya, wo select karein." };
+  if (!accountId) return { error: isPartyReceipt ? "Paisa kis account mein receive hua, wo select karein." : "Konsa account se paisa gaya, wo select karein." };
 
   let receiptPhotoUrl: string | null = null;
   const receiptPhoto = formData.get("receipt_photo");
-  if (paymentMethod === "cash") {
+  if (paymentMethod === "cash" && !isPartyReceipt) {
     if (!(receiptPhoto instanceof File) || receiptPhoto.size === 0) {
       return { error: "Cash payment ke liye Farmer ki signed Receiving ki photo attach karna zaroori hai." };
     }
@@ -461,7 +462,36 @@ export async function recordGrainPayment(_prev: ActionState, formData: FormData)
     if (creditError) return { error: `Udhaar ki katauti darj nahi ho saki: ${creditError.message}` };
   }
 
-  if (actualCashOut > 0) {
+  if (isPartyReceipt) {
+    const { data: saleReceiptRow, error: receiptError } = await supabase
+      .from("finance_transactions")
+      .insert({
+        account_id: accountId,
+        transaction_type: "income",
+        category: "Grain Sale Receipt",
+        amount,
+        transaction_date: aajKaKhana(),
+        notes: `Grain sale receipt from party (${paymentMethod ?? "cash"})`,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+    if (receiptError) return { error: receiptError.message };
+    if (saleReceiptRow?.id) {
+      const posted = await postCashIn({
+        accountId,
+        amount,
+        description: `Grain sale ki received payment (${paymentMethod ?? "cash"})`,
+        againstAccount: ACC.salesGrain,
+        ctx: {
+          createdBy: user?.id ?? null,
+          entryDate: aajKaKhana(),
+          claims: [{ table: "finance_transactions", rowId: saleReceiptRow.id }],
+        },
+      });
+      if (failed(posted)) return { error: `Received payment ledger mein post nahi ho saki: ${posted.error}` };
+    }
+  } else if (actualCashOut > 0) {
     await supabase.from("finance_transactions").insert({
       account_id: accountId,
       transaction_type: "expense",

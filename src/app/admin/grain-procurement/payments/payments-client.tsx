@@ -128,7 +128,7 @@ export function GrainPaymentsClient({
                         onClick={() => setPaying(r)}
                         className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-700"
                       >
-                        {t("gp_pay", lang)}
+                        {r.seller_type === "party" ? "Receive Payment" : t("gp_pay", lang)}
                       </button>
                     )}
                   </td>
@@ -163,7 +163,7 @@ function PayModal({
       <div className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
           <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">
-            {t("gp_pay_title", lang)}
+            {row.seller_type === "party" ? "Receive Payment" : t("gp_pay_title", lang)}
           </h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700">
             <X className="h-5 w-5" />
@@ -171,7 +171,7 @@ function PayModal({
         </div>
 
         <p className="mb-3 text-sm text-surface-500">
-          {row.name} — {t("gp_due", lang)}: <strong className="text-red-600">Rs {Math.round(row.due).toLocaleString()}</strong>
+          {row.name} — {row.seller_type === "party" ? "Pending from buyer" : t("gp_due", lang)}: <strong className="text-red-600">Rs {Math.round(row.due).toLocaleString()}</strong>
         </p>
 
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
@@ -194,9 +194,9 @@ function PayModal({
           </div>
 
           <div>
-            <Label>{t("gr_which_account_req", lang)}</Label>
+            <Label>{row.seller_type === "party" ? "Which account received the money? *" : t("gr_which_account_req", lang)}</Label>
             <Select name="account_id" required defaultValue="">
-              <option value="">{t("gr_which_account_from_req", lang)}</option>
+              <option value="">{row.seller_type === "party" ? "Select receiving account" : t("gr_which_account_from_req", lang)}</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
@@ -205,7 +205,7 @@ function PayModal({
 
           {/* Naqad par raseed ki photo lazmi hai -- ye rok server par bhi
               hai, yahan sirf is liye ke wajah pehle se saamne rahe. */}
-          {method === "cash" && (
+          {method === "cash" && row.seller_type === "farmer" && (
             <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/20">
               <Label>{t("gr_receiving_photo_req", lang)}</Label>
               <input type="file" name="receipt_photo" accept="image/*" capture="environment" className="mt-1 w-full text-xs" />
@@ -233,7 +233,7 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} className="w-full">
-      {pending ? t("gr_saving", lang) : t("gr_record_payment", lang)}
+      {pending ? t("gr_saving", lang) : "Record Received Payment"}
     </Button>
   );
 }
