@@ -24,7 +24,7 @@ export const STAFF_ROLES: UserRole[] = [
 ];
 
 export function getRoleRedirectPath(role: UserRole): string {
-  if (STAFF_ROLES.includes(role)) return "/admin";
+  if (STAFF_ROLES.includes(role)) return "/admin/portal";
   if (role === "farmer") return "/portal/dashboard";
   // Vendor hamara mulazim nahi -- us ka apna safha hai, /admin nahi.
   if (role === "machinery_vendor") return "/vendor";

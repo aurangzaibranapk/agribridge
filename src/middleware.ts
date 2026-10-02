@@ -6,6 +6,7 @@ import { ACCESS_REVIEW_ROUTE, roleCanReviewAccess, headGrantActive } from "@/lib
 
 /** Ye hamesha khulte hain, chahe ijazat mein likhe hon ya na hon. */
 const ALWAYS_OPEN = [
+  "/admin/portal",
   "/admin/permissions-denied",
   "/admin/my-attendance",
   "/admin/my-work",
