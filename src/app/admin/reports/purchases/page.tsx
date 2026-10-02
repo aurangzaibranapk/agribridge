@@ -56,6 +56,12 @@ export default async function PurchasesReportPage({
     .select("product_id, quantity_on_hand, warehouse_id, shop_id, warehouses(name), shops(name), products!inner(id, name, purchase_price)")
     .gt("quantity_on_hand", 0);
 
+  // Location-wise FIFO stock value: stock_batches se (asli batch cost, purchase_price nahi)
+  const { data: batchLocationData } = await service
+    .from("stock_batches")
+    .select("remaining_quantity, unit_cost, warehouse_id, warehouses(id, name)")
+    .gt("remaining_quantity", 0);
+
   type ItemRow = {
     product: string;
     purchase_in: number;
@@ -138,20 +144,17 @@ export default async function PurchasesReportPage({
     }))
     .sort((a, b) => b.stock_value - a.stock_value);
 
-  // Location-wise stock summary
+  // Location-wise stock summary — FIFO (stock_batches.unit_cost), purchase_price nahi
   type LocationStock = { name: string; kind: "warehouse" | "shop"; stockValue: number; qty: number };
   const byLocation = new Map<string, LocationStock>();
-  for (const row of (locationStock ?? [])) {
-    const inv = row as any;
-    const wh = Array.isArray(inv.warehouses) ? inv.warehouses[0] : inv.warehouses;
-    const sh = Array.isArray(inv.shops) ? inv.shops[0] : inv.shops;
-    const prod = Array.isArray(inv.products) ? inv.products[0] : inv.products;
-    const name: string = wh?.name ?? sh?.name ?? "Unknown";
-    const key = inv.warehouse_id ?? inv.shop_id ?? "unknown";
-    const kind: "warehouse" | "shop" = inv.warehouse_id ? "warehouse" : "shop";
-    const qty = Number(inv.quantity_on_hand ?? 0);
-    const cost = Number(prod?.purchase_price ?? 0);
-    const existing = byLocation.get(key) ?? { name, kind, stockValue: 0, qty: 0 };
+  for (const row of (batchLocationData ?? [])) {
+    const b = row as any;
+    const wh = Array.isArray(b.warehouses) ? b.warehouses[0] : b.warehouses;
+    const name: string = wh?.name ?? "Unknown";
+    const key = b.warehouse_id ?? "unknown";
+    const qty = Number(b.remaining_quantity ?? 0);
+    const cost = Number(b.unit_cost ?? 0);
+    const existing = byLocation.get(key) ?? { name, kind: "warehouse" as const, stockValue: 0, qty: 0 };
     existing.stockValue += qty * cost;
     existing.qty += qty;
     byLocation.set(key, existing);
