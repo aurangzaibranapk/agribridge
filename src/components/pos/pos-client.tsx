@@ -317,6 +317,8 @@ export function PosClient({
     [paymentLines]
   );
   const remaining = deyRaqam - totalAllocated;
+  // Bill se zyada wasool hone wali raqam customer ke Jama/Advance mein jayegi.
+  const overpayment = Math.max(0, Math.round((totalAllocated - deyRaqam) * 100) / 100);
   const khataTotal = paymentLines.filter((l) => l.method === "khata").reduce((s, l) => s + (parseFloat(l.amount) || 0), 0);
 
   const selectedLine = cart.find((l) => l.product_id === selectedId) ?? null;
@@ -495,12 +497,18 @@ export function PosClient({
       setMessage({ type: "error", text: t("pos_wholesale_needs_shop", lang) });
       return;
     }
-    if (Math.abs(remaining) > 0.5) {
+    if (remaining > 0.5) {
       setMessage({ type: "error", text: `Payment poora nahi hai. Baaqi: Rs ${remaining.toLocaleString()}` });
       return;
     }
+    if (overpayment > 0 && !customerId) {
+      setMessage({ type: "error", text: "Zyada payment ko customer ke Jama/Advance mein dalne ke liye customer select karein." });
+      return;
+    }
 
-    const cashCollected = deyRaqam - khataTotal;
+    const cashCollected = paymentLines
+      .filter((l) => l.method === "cash")
+      .reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0);
     const primaryMethod = paymentLines.length === 1 ? paymentLines[0].method : "split";
 
     setSubmitting(true);
@@ -509,6 +517,7 @@ export function PosClient({
       paymentMode: primaryMethod,
       cashPaid: cashCollected,
       khataAmount: khataTotal,
+      overpayment,
       items: cart.map((l) => ({
         product_id: l.product_id,
         quantity: l.quantity,
@@ -759,7 +768,8 @@ export function PosClient({
           <div className="flex items-center justify-between"><span className="text-surface-500">{t("pos_paid", lang)}</span><span className="font-medium tabular-nums text-surface-900 dark:text-surface-100">Rs {(totalAllocated - khataTotal).toLocaleString()}</span></div>
         </div>
         <div className="flex items-center justify-between"><span className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pos_grand_total", lang)}</span><span className="font-display text-xl font-bold tabular-nums text-brand-700 dark:text-brand-300">Rs {deyRaqam.toLocaleString()}</span></div>
-        <div className={`flex items-center justify-between text-sm ${Math.abs(remaining) > 0.5 ? "text-amber-600" : "text-green-600"}`}><span>{remaining > 0 ? "Baaqi Rakam" : remaining < 0 ? "Zyada Amount" : "Poora Paid"}</span><span className="font-semibold tabular-nums">Rs {Math.abs(remaining).toLocaleString()}</span></div>
+        <div className={`flex items-center justify-between text-sm ${remaining > 0.5 ? "text-amber-600" : "text-green-600"}`}><span>{remaining > 0 ? "Baaqi Rakam" : "Poora Paid"}</span><span className="font-semibold tabular-nums">Rs {Math.abs(remaining).toLocaleString()}</span></div>
+        {overpayment > 0 && <div className="flex items-center justify-between text-sm font-semibold text-emerald-700"><span>Customer Jama / Advance</span><span className="tabular-nums">Rs {overpayment.toLocaleString()}</span></div>}
         {message && <div className={`rounded-lg px-3 py-2 text-sm ${message.type === "success" ? "bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-300" : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"}`}>{message.text}</div>}
         <div className="flex gap-2"><button type="button" onClick={resetSale} disabled={submitting || cart.length === 0} className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-500 hover:bg-surface-50 disabled:opacity-40 dark:border-surface-700 dark:text-surface-400 dark:hover:bg-surface-800">{t("pos_clear_cart", lang)}</button><Button data-guide="pos-checkout" className="flex-1 py-3 text-base" onClick={handleCheckout} disabled={submitting || cart.length === 0}>{submitting ? "Processing..." : "Checkout"}</Button></div>
       </Card>
