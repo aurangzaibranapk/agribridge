@@ -253,12 +253,8 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
 
       <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language={lang} dayIndex={Math.floor(Date.now() / 86400000)} />
 
-      <DeskTabs items={[
-        { id: "overview", label: "Ledger", content: <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems} kpis={kpis} /> },
-        { id: "tasks", label: `Tasks (${attentionItems.length})`, content: <NeedsAttention lang={lang} allowedRoutes={allowed} variant="list" compact /> },
-        { id: "notifications", label: "Notifications", content: <ShopNotifications userId={user.id} /> },
-        { id: "work", label: "My Departments", content: <MyWorkBody lang={lang} quick={model.quick} departments={nav.unrestricted ? model.departments : []} defaultDept={defaultDashboardForRole(me.role)} attention={attentionTop} attentionTotal={attentionItems.length} attentionAllHref={null} /> },
-      ]} />
+      {/* Tabs hata diye — Ledger content seedha neeche */}
+      <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems} kpis={kpis} />
     </DeskWorkspace>;
   }
 
