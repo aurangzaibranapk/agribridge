@@ -10,6 +10,7 @@ import { t } from "@/lib/i18n/translations";
 import { Type, type FunctionDeclaration } from "@google/genai";
 import { SUGGESTION_TOOL, executeSuggestionTool } from "@/lib/ai/suggestion-tool";
 import { ACCESS_TOOL, CONFLICT_TOOL, executeAccessTool, executeConflictTool } from "@/lib/ai/access-tool";
+import { HQ_STOCK_TOOL, executeHqStockTool } from "@/lib/ai/hq-stock-tool";
 import { createServiceClient } from "@/lib/supabase/service";
 import { aiKeyOrNull, AI_KEY_MISSING, aiErrorMessage } from "@/lib/ai/ai-failure";
 import { recordAiUsage } from "@/lib/ai/usage";
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
       model: "gemini-3.6-flash",
       history,
       config: {
-        tools: [{ functionDeclarations: [...bridgeToolsForRole(callerRole), ...COACH_TOOLS, SUGGESTION_TOOL, ACCESS_TOOL, CONFLICT_TOOL] }],
+        tools: [{ functionDeclarations: [...bridgeToolsForRole(callerRole), ...COACH_TOOLS, SUGGESTION_TOOL, ACCESS_TOOL, CONFLICT_TOOL, HQ_STOCK_TOOL] }],
         systemInstruction,
       },
     });
@@ -93,6 +94,8 @@ export async function POST(request: NextRequest) {
                 ? await executeAccessTool(call.args ?? {}, ctx)
               : call.name === "check_access_conflicts"
                 ? await executeConflictTool(call.args ?? {}, ctx)
+              : call.name === "get_hq_stock"
+                ? await executeHqStockTool(call.args ?? {}, ctx)
               : COACH_TOOL_NAMES.has(call.name!)
                 ? await executeCoachTool(call.name!, call.args ?? {}, ctx)
                 : await executeBridgeTool(call.name!, supabase, call.args, callerRole);
