@@ -14,11 +14,25 @@ export async function createFarmerLoan(_prev: ActionState, formData: FormData): 
   const principalAmount = Number(formData.get("principal_amount") ?? 0);
   const weeklyInstallment = Number(formData.get("weekly_installment") ?? 0);
   const notes = (formData.get("notes") as string) || null;
+  const clientActionId = String(formData.get("client_action_id") ?? "").trim() || null;
 
   if (!farmerId) return { error: "Farmer select karein." };
   if (!principalAmount || principalAmount <= 0) return { error: "Loan amount sahi likhein." };
   if (!weeklyInstallment || weeklyInstallment <= 0) return { error: "Weekly installment sahi likhein." };
   if (weeklyInstallment > principalAmount) return { error: "Weekly installment, Loan amount se zyada nahi ho sakti." };
+
+  if (clientActionId) {
+    const { data, error } = await (supabase as any).rpc("fn_create_farmer_loan_atomic", {
+      p_farmer_id: farmerId, p_principal_amount: principalAmount,
+      p_weekly_installment: weeklyInstallment, p_notes: notes,
+      p_client_action_id: clientActionId,
+    });
+    if (error) return { error: error.message };
+    if (data?.success) {
+      revalidatePath("/admin/farmer-loans");
+      return { success: true };
+    }
+  }
 
   const { data: wallet } = await supabase.from("wallets").select("id").eq("owner_type", "farmer").eq("owner_id", farmerId).single();
   if (!wallet) return { error: "Is Farmer ka Wallet nahi mila." };
@@ -145,3 +159,4 @@ export async function runWeeklyLoanDeductions(): Promise<{ processed: number; er
 
   return { processed, errors };
 }
+
