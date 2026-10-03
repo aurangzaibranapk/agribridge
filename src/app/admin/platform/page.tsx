@@ -37,6 +37,7 @@ export default async function PlatformPage() {
   return (
     <div>
       <PageHeader title={t("at_platform_clients", lang)} description="Manage client organizations using AgriBridge" />
+      <div className="mb-5"><a href="/admin/platform/requests" className="inline-flex rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800">Organization Requests</a></div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
