@@ -214,6 +214,7 @@ export async function enqueue(input: {
     evidence_count: evidence.length,
   };
   await run(STORE_ACTIONS, "readwrite", (s) => s.put(action) as IDBRequest<IDBValidKey>);
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("agribridge:offline-queue-changed"));
   return clientActionId;
 }
 
@@ -275,6 +276,7 @@ export async function markSynced(id: string): Promise<void> {
     await run(STORE_EVIDENCE, "readwrite", (s) => s.delete(shot.id) as IDBRequest<undefined>);
   }
   await run(STORE_ACTIONS, "readwrite", (s) => s.delete(id) as IDBRequest<undefined>);
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("agribridge:offline-queue-changed"));
 }
 
 /**
