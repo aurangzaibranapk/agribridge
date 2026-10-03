@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import {
@@ -14,6 +14,8 @@ import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { enqueue } from "@/lib/offline/queue";
+import { registerSender } from "@/lib/offline/sync";
 import { Wallet, ArrowUpCircle, ArrowLeftRight, Plus } from "lucide-react";
 
 interface Account {
@@ -279,6 +281,26 @@ function TransactionForm({ accounts }: { accounts: Account[] }) {
   const lang = useLang();
   const [state, formAction] = useFormState(recordFinanceTransaction, initialState);
 
+  useEffect(() => {
+    registerSender("finance.transaction", async (action) => {
+      try {
+        const res = await fetch("/api/finance/offline", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "transaction", fields: action.payload.fields }) });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Finance entry sync fail ho gayi." };
+        return { ok: true };
+      } catch (error) { return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" }; }
+    });
+  }, []);
+
+  async function handleOffline(event: FormEvent<HTMLFormElement>) {
+    if (typeof navigator === "undefined" || navigator.onLine) return;
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const clientActionId = crypto.randomUUID();
+    fields.client_action_id = clientActionId;
+    await enqueue({ actionType: "finance.transaction", entityType: "finance_transactions", payload: { fields }, clientActionId });
+  }
+
   return (
     <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
       <h3 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold text-surface-900 dark:text-white">
@@ -286,7 +308,7 @@ function TransactionForm({ accounts }: { accounts: Account[] }) {
       </h3>
       {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
       {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("fn_recorded", lang)}</p>}
-      <form action={formAction} className="space-y-2">
+      <form action={formAction} onSubmit={handleOffline} className="space-y-2">
         <Select name="account_id" required>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>{a.name}</option>
@@ -310,6 +332,26 @@ function TransferForm({ accounts }: { accounts: Account[] }) {
   const lang = useLang();
   const [state, formAction] = useFormState(transferBetweenAccounts, initialState);
 
+  useEffect(() => {
+    registerSender("finance.transfer", async (action) => {
+      try {
+        const res = await fetch("/api/finance/offline", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "transfer", fields: action.payload.fields }) });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Finance transfer sync fail ho gaya." };
+        return { ok: true };
+      } catch (error) { return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" }; }
+    });
+  }, []);
+
+  async function handleOffline(event: FormEvent<HTMLFormElement>) {
+    if (typeof navigator === "undefined" || navigator.onLine) return;
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const clientActionId = crypto.randomUUID();
+    fields.client_action_id = clientActionId;
+    await enqueue({ actionType: "finance.transfer", entityType: "finance_transactions", payload: { fields }, clientActionId });
+  }
+
   return (
     <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
       <h3 className="mb-3 flex items-center gap-2 font-display text-sm font-semibold text-surface-900 dark:text-white">
@@ -317,7 +359,7 @@ function TransferForm({ accounts }: { accounts: Account[] }) {
       </h3>
       {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
       {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("fn_transferred", lang)}</p>}
-      <form action={formAction} className="space-y-2">
+      <form action={formAction} onSubmit={handleOffline} className="space-y-2">
         <Select name="from_account_id" required>
           <option value="">{t("fn_from_account", lang)}</option>
           {accounts.map((a) => (
@@ -406,3 +448,4 @@ function AccountSubmitButton() {
   const { pending } = useFormStatus();
   return <Button type="submit" disabled={pending} className="flex-1">{pending ? t("fn_creating", lang) : t("fn_create", lang)}</Button>;
 }
+
