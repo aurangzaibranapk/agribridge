@@ -5,12 +5,14 @@ import { OnboardForm } from "@/app/admin/platform/onboard-form";
 import { OrgActions } from "@/app/admin/platform/org-actions";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { createServiceClient } from "@/lib/supabase/service";
 
 export const dynamic = "force-dynamic";
 
 export default async function PlatformPage() {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
+  const serviceClient = createServiceClient();
 
   const {
     data: { user },
@@ -27,9 +29,9 @@ export default async function PlatformPage() {
     );
   }
 
-  const { data: organizations } = await supabase
+  const { data: organizations } = await serviceClient
     .from("organizations")
-    .select("id, name, slug, is_active, created_at")
+    .select("id, name, slug, is_active, created_at, custom_domain, subscription_plan, subscription_status")
     .order("created_at", { ascending: false });
 
   return (
@@ -50,7 +52,7 @@ export default async function PlatformPage() {
                 >
                   <div>
                     <p className="font-medium text-surface-900 dark:text-white">{o.name}</p>
-                    <p className="text-xs text-surface-400">{o.slug}</p>
+                    <p className="text-xs text-surface-400">{o.slug}{o.custom_domain ? ` · ${o.custom_domain}` : ""} · {o.subscription_plan}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <span
