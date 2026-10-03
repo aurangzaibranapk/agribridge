@@ -26,17 +26,20 @@ export function OfflineSyncCoordinator() {
     const onOnline = () => run();
     const onVisible = () => { if (document.visibilityState === "visible") run(); };
     const onQueueChange = () => run();
+    const onSenderRegistered = () => run();
 
     run();
     window.addEventListener("online", onOnline);
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("agribridge:offline-queue-changed", onQueueChange);
+    window.addEventListener("agribridge:offline-sender-registered", onSenderRegistered);
     timer = window.setInterval(run, 15000);
 
     return () => {
       window.removeEventListener("online", onOnline);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("agribridge:offline-queue-changed", onQueueChange);
+      window.removeEventListener("agribridge:offline-sender-registered", onSenderRegistered);
       if (timer !== undefined) window.clearInterval(timer);
     };
   }, []);
