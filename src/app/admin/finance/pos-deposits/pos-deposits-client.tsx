@@ -1,9 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { FileImage, Check, XCircle, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { verifyCollectionDeposit, type ActionState, type PendingDepositRow } from "@/actions/pos-collection";
+import { enqueue } from "@/lib/offline/queue";
+import { registerSender } from "@/lib/offline/sync";
 
 const KHALI: ActionState = {};
 
@@ -36,6 +38,26 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
 function DepositCard({ deposit, highlighted }: { deposit: PendingDepositRow; highlighted: boolean }) {
   const [state, action] = useFormState(verifyCollectionDeposit, KHALI);
   const [note, setNote] = useState("");
+
+  useEffect(() => {
+    registerSender("finance.deposit-verify", async (queued) => {
+      try {
+        const res = await fetch("/api/finance/approvals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "deposit_verify", fields: queued.payload.fields }) });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Deposit approval sync fail ho gayi." };
+        return { ok: true };
+      } catch (error) { return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" }; }
+    });
+  }, []);
+
+  async function handleOffline(event: FormEvent<HTMLFormElement>) {
+    if (typeof navigator === "undefined" || navigator.onLine) return;
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const clientActionId = crypto.randomUUID();
+    fields.client_action_id = clientActionId;
+    await enqueue({ actionType: "finance.deposit-verify", entityType: "pos_collection_deposits", payload: { fields }, clientActionId });
+  }
 
   if (state.success) {
     return (
@@ -91,7 +113,7 @@ function DepositCard({ deposit, highlighted }: { deposit: PendingDepositRow; hig
       </a>
 
       {deposit.status === "pending" ? (
-        <form action={action} className="space-y-3">
+        <form action={action} onSubmit={handleOffline} className="space-y-3">
           <input type="hidden" name="deposit_id" value={deposit.id} />
           <input
             name="finance_note"
@@ -126,3 +148,4 @@ export function PosDepositsClient({ deposits, highlightId }: { deposits: Pending
     </div>
   );
 }
+
