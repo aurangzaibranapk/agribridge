@@ -30,6 +30,7 @@ export default async function GrainDashboardPage() {
     supabase
       .from("grain_procurement_entries")
       .select("id, entry_date, total_amount, weight_kg, grain_type, farmer_id, party_id, farmers(full_name), grain_parties(party_name)")
+      .is("reclassified_as_sale_id", null)
       .order("entry_date", { ascending: false })
       .limit(300),
     supabase.from("grain_sales").select("total_amount, total_cogs, profit, quantity_kg, grain_type, amount_received"),
