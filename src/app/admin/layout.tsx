@@ -54,6 +54,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // fehrist barqarar rehti hai.
   let unrestricted = false;
   let showSidebar = true;
+  let tenantBrandName = "";
   /** "work" = staff wali chhoti sidebar, "none" = sirf cards. */
   let sidebarKind: SidebarKind = "full";
   let showPos = false;
@@ -81,8 +82,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // hota agar hum khali sidebar dikha kar chup ho jate.
   try {
   if (user) {
-    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+    const { data: profile } = await supabase.from("profiles").select("role, organization_id").eq("id", user.id).single();
     role = profile?.role ?? "";
+    if (profile?.organization_id) {
+      const { data: organization } = await supabase
+        .from("organizations")
+        .select("brand_name, name")
+        .eq("id", profile.organization_id)
+        .maybeSingle();
+      tenantBrandName = organization?.brand_name || organization?.name || "";
+    }
     // Menu ab database se banta hai. Rok bhi wahi fehrist parhti hai --
     // do jagah alag hisaab hota to banda menu mein cheez dekhta aur khol
     // na pata.
@@ -237,7 +246,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               />
             )}
             {showSidebar && (
-              <Sidebar subtitle={t("at_website_admin", lang)} homeHref={homePageForRole(role)} role={role} allowedPages={allowedPages} groups={navGroups} />
+                <Sidebar subtitle={tenantBrandName || t("at_website_admin", lang)} homeHref={homePageForRole(role)} role={role} allowedPages={allowedPages} groups={navGroups} />
             )}
           </div>
         </ChromeGate>
@@ -259,7 +268,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <div className="print:hidden">
               {showSidebar ? (
                 <Topbar
-                  subtitle={t("at_website_admin", lang)}
+                  subtitle={tenantBrandName || t("at_website_admin", lang)}
                   searchAction="/admin/search"
                   searchPlaceholder="Search..."
                   notificationsHref="/admin/contact-messages"
