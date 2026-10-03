@@ -223,6 +223,11 @@ export async function selfCheckIn(_prev: ActionState, formData: FormData): Promi
 
   const today = new Date().toISOString().split("T")[0];
   const now = new Date().toISOString();
+  const clientActionId = typeof formData.get("client_action_id") === "string" ? String(formData.get("client_action_id")) : "";
+  if (clientActionId) {
+    const { data: alreadyPosted } = await supabase.from("attendance_records").select("id").eq("client_action_id", clientActionId).maybeSingle();
+    if (alreadyPosted) return { success: true };
+  }
   const lat = formData.get("lat") ? Number(formData.get("lat")) : null;
   const lng = formData.get("lng") ? Number(formData.get("lng")) : null;
 
@@ -250,6 +255,7 @@ export async function selfCheckIn(_prev: ActionState, formData: FormData): Promi
     attendance_date: today,
     status: "present",
     source: "web",
+    client_action_id: clientActionId || null,
     check_in_at: now,
     check_in_lat: lat,
     check_in_lng: lng,
@@ -284,6 +290,11 @@ export async function selfCheckOut(_prev: ActionState, formData: FormData): Prom
 
   const today = new Date().toISOString().split("T")[0];
   const now = new Date().toISOString();
+  const clientActionId = typeof formData.get("client_action_id") === "string" ? String(formData.get("client_action_id")) : "";
+  if (clientActionId) {
+    const { data: alreadyPosted } = await supabase.from("attendance_records").select("id").eq("client_action_id", clientActionId).maybeSingle();
+    if (alreadyPosted) return { success: true };
+  }
   const lat = formData.get("lat") ? Number(formData.get("lat")) : null;
   const lng = formData.get("lng") ? Number(formData.get("lng")) : null;
 
