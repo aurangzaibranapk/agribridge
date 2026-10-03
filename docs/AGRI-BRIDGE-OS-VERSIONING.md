@@ -22,4 +22,4 @@ Each approved release must record:
 
 ## Current baseline
 
-The first approved baseline is documented in `docs/releases/AgriBridge-OS-v0.1.0.md`.
+The current approved release is documented in `docs/releases/AgriBridge-OS-v0.2.0.md`.
