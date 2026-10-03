@@ -20,6 +20,7 @@ export async function adjustStock(_prev: ActionState, formData: FormData): Promi
   const rate = Number(formData.get("rate") ?? 0) || null;
   const billNo = String(formData.get("bill_no") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
+  const clientActionId = String(formData.get("client_action_id") ?? "").trim() || null;
 
   if (!quantity || quantity <= 0) return { error: "Miqdar sifar se zyada honi chahiye." };
   if (direction !== "increase" && direction !== "decrease") return { error: "Direction ghalat hai." };
@@ -62,6 +63,15 @@ export async function adjustStock(_prev: ActionState, formData: FormData): Promi
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (clientActionId) {
+    const { data: alreadyRecorded } = await supabase
+      .from("stock_movements")
+      .select("id")
+      .eq("client_action_id", clientActionId)
+      .maybeSingle();
+    if (alreadyRecorded) return { success: true };
+  }
+
   const notesText = [billNo ? `Bill: ${billNo}` : null, notes].filter(Boolean).join(" | ") || null;
 
   const { error } = await supabase.from("stock_movements").insert({
@@ -71,9 +81,13 @@ export async function adjustStock(_prev: ActionState, formData: FormData): Promi
     reference_type: "manual_adjustment",
     notes: notesText,
     created_by: user?.id ?? null,
+    ...(clientActionId ? { client_action_id: clientActionId } : {}),
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    if (clientActionId && error.code === "23505") return { success: true };
+    return { error: error.message };
+  }
 
   // Stock IN par batch bhi banta hai — is se Stock Value ka FIFO hisaab sahi hota hai
   if (direction === "increase" && rate && rate > 0) {
@@ -105,6 +119,7 @@ export async function transferStock(_prev: ActionState, formData: FormData): Pro
   const toWarehouseId = String(formData.get("to_warehouse_id") ?? "");
   const quantity = Number(formData.get("quantity") ?? 0);
   const notes = (formData.get("notes") as string) || null;
+  const clientActionId = String(formData.get("client_action_id") ?? "").trim() || null;
 
   if (!productId || !fromWarehouseId || !toWarehouseId) {
     return { error: "Product, source, and destination warehouse are all required." };
@@ -114,6 +129,15 @@ export async function transferStock(_prev: ActionState, formData: FormData): Pro
   }
   if (!quantity || quantity <= 0) {
     return { error: "Quantity must be greater than zero." };
+  }
+
+  if (clientActionId) {
+    const { data: alreadyRequested } = await supabase
+      .from("stock_transfers")
+      .select("id")
+      .eq("client_action_id", clientActionId)
+      .maybeSingle();
+    if (alreadyRequested) return { success: true };
   }
 
   const {
@@ -136,9 +160,11 @@ export async function transferStock(_prev: ActionState, formData: FormData): Pro
     status: "pending",
     notes,
     requested_by: user?.id ?? null,
+    ...(clientActionId ? { client_action_id: clientActionId } : {}),
   });
 
   if (createError) {
+    if (clientActionId && createError.code === "23505") return { success: true };
     return { error: createError.message };
   }
 
@@ -297,3 +323,4 @@ export async function fixUnbatchedInventory(_prev: ActionState, formData: FormDa
   }
   return { success: true, fixed };
 }
+
