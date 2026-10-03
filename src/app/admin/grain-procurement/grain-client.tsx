@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo, type FormEvent } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
@@ -8,6 +8,8 @@ import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { X, Plus, FileText, AlertTriangle, Trash2 } from "lucide-react";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { enqueue, allActions, type QueuedAction } from "@/lib/offline/queue";
+import { registerSender, syncQueue } from "@/lib/offline/sync";
 
 const initialState: ActionState = {};
 
@@ -235,6 +237,8 @@ function NewEntryForm({
 }) {
   const lang = useLang();
   const [state, formAction] = useFormState(createGrainEntry, initialState);
+  const [offlineNotice, setOfflineNotice] = useState("");
+  const [offlinePending, setOfflinePending] = useState(0);
   const [sellerType, setSellerType] = useState<"farmer" | "party">("farmer");
   const [grainType, setGrainType] = useState("wheat");
   const [grossWeight, setGrossWeight] = useState("");
@@ -268,6 +272,35 @@ function NewEntryForm({
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [paymentAccountId, setPaymentAccountId] = useState("");
+
+  useEffect(() => {
+    registerSender("grain.entry", async (action: QueuedAction, evidence) => {
+      try {
+        const body = new FormData();
+        body.set("fields", JSON.stringify(action.payload.fields ?? {}));
+        const photo = evidence.find((item) => item.slot === "receipt_photo");
+        if (photo) body.set("receipt_photo", photo.blob, "grain-receiving-photo.jpg");
+        const res = await fetch("/api/grain-procurement/entry", { method: "POST", body });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Grain entry sync fail ho gayi." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+    const refresh = async () => {
+      const rows = await allActions().catch(() => []);
+      setOfflinePending(rows.filter((row) => row.action_type === "grain.entry" && (row.sync_status === "pending" || row.sync_status === "syncing")).length);
+    };
+    const restored = async () => { await syncQueue().catch(() => undefined); await refresh(); };
+    void refresh();
+    window.addEventListener("online", restored);
+    window.addEventListener("agribridge:offline-queue-changed", refresh);
+    return () => {
+      window.removeEventListener("online", restored);
+      window.removeEventListener("agribridge:offline-queue-changed", refresh);
+    };
+  }, []);
 
   const relevantPresets = useMemo(() => cutPresets.filter((p) => p.grain_type === grainType), [cutPresets, grainType]);
   const selectedPreset = relevantPresets.find((p) => p.id === selectedPresetId);
@@ -311,6 +344,8 @@ function NewEntryForm({
         <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-950/30 dark:text-brand-300">Step 1 · Entry</span>
       </div>
       {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
+      {offlineNotice && <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
+      {offlinePending > 0 && <p className="mb-3 text-xs text-amber-700 dark:text-amber-400">{offlinePending} grain entries sync ka intezar kar rahi hain.</p>}
       {state.success && (
         <div className="mb-4 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm text-brand-800 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-200">
           <p className="font-semibold">Entry record ho gayi, stock add ho gaya.</p>
@@ -329,7 +364,31 @@ function NewEntryForm({
           </div>
         </div>
       )}
-      <form action={formAction} encType="multipart/form-data" className="space-y-5">
+      <form
+        action={formAction}
+        encType="multipart/form-data"
+        onSubmit={async (event: FormEvent<HTMLFormElement>) => {
+          if (typeof navigator === "undefined" || navigator.onLine !== false) return;
+          event.preventDefault();
+          try {
+            const formData = new FormData(event.currentTarget);
+            const photo = formData.get("receipt_photo");
+            const fields = Object.fromEntries(formData.entries());
+            delete (fields as Record<string, FormDataEntryValue>).receipt_photo;
+            const evidence = photo instanceof File && photo.size > 0 ? [{ blob: photo, slot: "receipt_photo" }] : undefined;
+            await enqueue({
+              actionType: "grain.entry",
+              entityType: "grain_procurement_entries",
+              payload: { fields },
+              evidence,
+            });
+            setOfflineNotice("Internet nahi hai. Grain entry device par save ho gayi; internet aate hi stock/ledger mein sync hogi.");
+          } catch {
+            setOfflineNotice("Offline grain entry save nahi ho saki.");
+          }
+        }}
+        className="space-y-5"
+      >
         <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.9fr)]">
           <div className="space-y-5">
         <input type="hidden" name="seller_type" value={sellerType} />
