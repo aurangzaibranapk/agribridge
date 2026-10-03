@@ -5,6 +5,8 @@ import { BINA_QISM } from "@/lib/pos/constants";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { posCheckout } from "@/actions/pos";
+import { enqueue, allActions } from "@/lib/offline/queue";
+import { registerSender, syncQueue } from "@/lib/offline/sync";
 import { Button, Input, Select, Label } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
 import {
@@ -24,6 +26,7 @@ import {
   Lock,
 } from "lucide-react";
 import { ReceiptModal } from "@/components/pos/receipt-modal";
+import { OfflineReceiptModal, type OfflineReceiptData } from "@/components/pos/offline-receipt-modal";
 import { BarcodeCameraModal } from "@/components/pos/barcode-camera-modal";
 import { PosReturn } from "@/components/pos/pos-return";
 import type { PosPermissions } from "@/lib/pos/permissions";
@@ -192,12 +195,34 @@ export function PosClient({
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [completedSaleId, setCompletedSaleId] = useState<string | null>(null);
+  const [offlineReceipt, setOfflineReceipt] = useState<OfflineReceiptData | null>(null);
   const [barcodeError, setBarcodeError] = useState<string | null>(null);
+  const [offlinePending, setOfflinePending] = useState(0);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     barcodeRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    registerSender("pos.sale", async (action) => {
+      try {
+        const result = await posCheckout({ ...(action.payload as any), clientActionId: action.client_action_id });
+        if (result.error) return { ok: false, retryable: false, error: result.error };
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, retryable: true, error: e instanceof Error ? e.message : "Network error" };
+      }
+    });
+    const refresh = async () => {
+      const rows = await allActions().catch(() => []);
+      setOfflinePending(rows.filter((r) => r.action_type === "pos.sale" && (r.sync_status === "pending" || r.sync_status === "syncing")).length);
+    };
+    const restored = async () => { await syncQueue().catch(() => undefined); await refresh(); };
+    void refresh();
+    window.addEventListener("online", restored);
+    return () => window.removeEventListener("online", restored);
   }, []);
 
   const regularKhataOn = custMode === "regular" && paymentLines.some((l) => l.method === "khata");
@@ -511,26 +536,43 @@ export function PosClient({
       .reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0);
     const primaryMethod = paymentLines.length === 1 ? paymentLines[0].method : "split";
 
-    setSubmitting(true);
-    const result = await posCheckout({
+    const salePayload = {
       customerId: customerId || null,
       paymentMode: primaryMethod,
       cashPaid: cashCollected,
       khataAmount: khataTotal,
       overpayment,
-      items: cart.map((l) => ({
-        product_id: l.product_id,
-        quantity: l.quantity,
-        unit_price: l.unit_price,
-      })),
-      paymentLines: paymentLines
-        .filter((l) => (parseFloat(l.amount) || 0) > 0)
-        .map((l) => ({ method: l.method, amount: parseFloat(l.amount) || 0, reference: l.reference || "", receipt_url: l.receiptUrl || "" })),
+      items: cart.map((l) => ({ product_id: l.product_id, quantity: l.quantity, unit_price: l.unit_price })),
+      paymentLines: paymentLines.filter((l) => (parseFloat(l.amount) || 0) > 0).map((l) => ({ method: l.method, amount: parseFloat(l.amount) || 0, reference: l.reference || "", receipt_url: l.receiptUrl || "" })),
       discount: chhoot,
       discountReason: discountReason.trim(),
       counterId,
       receivedBy: receivedBy.trim(),
-    });
+    };
+
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setSubmitting(true);
+      try {
+        await enqueue({ actionType: "pos.sale", entityType: "pos_sales", payload: salePayload });
+        const rows = await allActions();
+        setOfflinePending(rows.filter((r) => r.action_type === "pos.sale" && r.sync_status === "pending").length);
+        setOfflineReceipt({
+          receiptNo: `OFF-${new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14)}`,
+          createdAt: new Date().toISOString(), sellerName,
+          customerName: chosenCustomer?.businessName || chosenCustomer?.name || "Walk-in Customer",
+          paymentMode: primaryMethod, total: deyRaqam, cashPaid: cashCollected, khataAmount: khataTotal,
+          items: cart.map((l) => ({ name: l.name, quantity: l.quantity, unitPrice: l.unit_price, subtotal: l.quantity * l.unit_price })),
+        });
+        setMessage({ type: "success", text: "Offline bill device par save ho gaya. Internet aate hi sync hoga." });
+        resetSale();
+      } catch (e) {
+        setMessage({ type: "error", text: e instanceof Error ? e.message : "Offline bill save nahi ho saka." });
+      } finally { setSubmitting(false); }
+      return;
+    }
+
+    setSubmitting(true);
+    const result = await posCheckout(salePayload);
 
     const data = result.saleId;
     if (result.error) {
@@ -582,6 +624,7 @@ export function PosClient({
 
   return (
     <div className={`grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:overflow-hidden ${selectedLine && selectedItem ? "lg:grid-cols-[minmax(0,1fr)_21rem_22rem]" : "lg:grid-cols-[minmax(0,1fr)_23rem]"}`}>
+      {offlinePending > 0 && <div className="fixed bottom-4 left-4 z-30 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white shadow-lg">{offlinePending} offline bill sync ka intezar kar raha hai</div>}
       <section className="flex flex-col print:hidden lg:min-h-0">
         <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2 lg:flex-nowrap">
           <h1 className="min-w-0 flex-1 truncate font-display text-base font-semibold leading-tight text-surface-900 dark:text-white" title={`${sellerName} - POS`}>{sellerName} - POS</h1>
@@ -774,6 +817,7 @@ export function PosClient({
         <div className="flex gap-2"><button type="button" onClick={resetSale} disabled={submitting || cart.length === 0} className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-500 hover:bg-surface-50 disabled:opacity-40 dark:border-surface-700 dark:text-surface-400 dark:hover:bg-surface-800">{t("pos_clear_cart", lang)}</button><Button data-guide="pos-checkout" className="flex-1 py-3 text-base" onClick={handleCheckout} disabled={submitting || cart.length === 0}>{submitting ? "Processing..." : "Checkout"}</Button></div>
       </Card>
       {completedSaleId && <ReceiptModal saleId={completedSaleId} onClose={() => setCompletedSaleId(null)} lang={lang} />}
+      {offlineReceipt && <OfflineReceiptModal receipt={offlineReceipt} onClose={() => setOfflineReceipt(null)} />}
       {showCameraModal && <BarcodeCameraModal onDetected={handleCameraDetected} onClose={() => setShowCameraModal(false)} lang={lang} />}
     </div>
   );

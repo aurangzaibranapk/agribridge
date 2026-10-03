@@ -179,8 +179,9 @@ export async function enqueue(input: {
   entityType: string;
   payload: Record<string, unknown>;
   evidence?: Array<{ blob: Blob; slot: string }>;
+  clientActionId?: string;
 }): Promise<string> {
-  const clientActionId = crypto.randomUUID();
+  const clientActionId = input.clientActionId ?? crypto.randomUUID();
   const device = await deviceId();
   const evidence = input.evidence ?? [];
 

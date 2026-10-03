@@ -69,6 +69,7 @@ export async function posCheckout(input: {
    * hai") -- sirf record ke liye, koi ledger/hisaab is se nahi badalta.
    */
   receivedBy?: string;
+  clientActionId?: string;
 }): Promise<PosCheckoutState> {
   const supabase = createClient();
   const {
@@ -148,7 +149,7 @@ export async function posCheckout(input: {
     }
   }
 
-  const { data: saleIdRaw, error } = await supabase.rpc("create_pos_sale", {
+  const rpcArgs = {
     p_customer_id: input.customerId as string,
     p_payment_mode: input.paymentMode,
     p_cash_paid: input.cashPaid,
@@ -158,7 +159,9 @@ export async function posCheckout(input: {
     p_discount: discount,
     p_discount_reason: discount > 0 ? discountReason : undefined,
     p_counter_id: input.counterId ?? undefined,
-  });
+    ...(input.clientActionId ? { p_client_action_id: input.clientActionId } : {}),
+  };
+  const { data: saleIdRaw, error } = await (supabase as any).rpc("create_pos_sale", rpcArgs);
 
   const saleId = saleIdRaw as string | null;
   if (error || !saleId) return { error: error?.message ?? "Bikri nahi ho saki." };
