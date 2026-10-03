@@ -44,6 +44,7 @@ export default async function GrainStatementPage({
       .from("grain_procurement_entries")
       .select("*")
       .eq(filterColumn, sellerId)
+      .is("reclassified_as_sale_id", null)
       .order("entry_date", { ascending: true }),
     supabase
       .from("grain_procurement_payments")
