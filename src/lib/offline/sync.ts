@@ -29,6 +29,12 @@ import {
 
 const BATCH = 5;
 
+// Ek hi browser tab mein reconnect, visibility aur module-level listeners
+// ek sath fire ho sakte hain. Do sync parallel chalne dein to ek hi qatar
+// do baar server ko bhej sakti hai. Is lock se qatar hamesha single-file
+// raaste se jati hai.
+let syncInFlight: Promise<SyncOutcome> | null = null;
+
 /** Ek qatar kis raaste se jayegi. Har module apna raasta yahan likhta hai. */
 export type Sender = (
   action: QueuedAction,
@@ -64,6 +70,16 @@ function definitelyOffline(): boolean {
 }
 
 export async function syncQueue(): Promise<SyncOutcome> {
+  if (syncInFlight) return syncInFlight;
+  syncInFlight = syncQueueInternal();
+  try {
+    return await syncInFlight;
+  } finally {
+    syncInFlight = null;
+  }
+}
+
+async function syncQueueInternal(): Promise<SyncOutcome> {
   const out: SyncOutcome = { sent: 0, stopped: 0, waiting: 0 };
   if (definitelyOffline()) {
     out.waiting = (await pendingActions()).length;
@@ -76,11 +92,11 @@ export async function syncQueue(): Promise<SyncOutcome> {
     for (const action of batch) {
       const sender = senders.get(action.action_type);
       if (!sender) {
-        // Aisi qatar jise bhejne wala hi koi nahi -- ye code ki ghalti
-        // hai. Chup chaap qatar mein rakhne se wo hamesha "pending"
-        // dikhti rehti aur kabhi jati nahi.
-        await markNeedsAttention(action.client_action_id, `Is qism ka koi raasta nahi: ${action.action_type}`);
-        out.stopped += 1;
+        // Sender aksar safha badalne ya hard refresh ke baad thori dair
+        // se register hota hai. Is soorat mein entry ko ghalat keh kar
+        // `needs_attention` banana data ko rok deta tha. Pending rehne dein;
+        // jis module ka sender aaye ga, agli central koshish mein chali jayegi.
+        out.waiting += 1;
         continue;
       }
 
