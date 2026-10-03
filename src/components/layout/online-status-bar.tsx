@@ -45,7 +45,7 @@ export function OnlineStatusBar() {
   return (
     <div className={`flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-1.5 text-xs font-semibold text-white print:hidden ${queue.needsAttention > 0 ? "bg-red-600" : "bg-brand-600"}`}>
       <span className="h-2 w-2 rounded-full bg-white" />
-      <span>{status === "restored" ? "Online Mode — internet wapas aa gaya" : "Online Mode"}</span>
+      <span>{status === "restored" ? "Online Mode — internet wapas aa gaya, sync khud chal rahi hai" : "Online Mode"}</span>
       {queue.pending > 0 && <span className="rounded bg-white/20 px-1.5 py-0.5">{queue.pending} sync pending</span>}
       {queue.needsAttention > 0 && <span className="rounded bg-white/20 px-1.5 py-0.5">{queue.needsAttention} attention required</span>}
     </div>
