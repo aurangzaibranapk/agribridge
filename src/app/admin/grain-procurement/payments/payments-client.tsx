@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { recordGrainPayment, type ActionState } from "@/actions/grain-procurement";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
@@ -7,6 +7,8 @@ import { Card } from "@/components/ui/layout-primitives";
 import { Search, X, Wallet, AlertTriangle } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { enqueue, allActions, type QueuedAction } from "@/lib/offline/queue";
+import { registerSender, syncQueue } from "@/lib/offline/sync";
 
 const initialState: ActionState = {};
 
@@ -32,6 +34,36 @@ export function GrainPaymentsClient({
   const lang = useLang();
   const [query, setQuery] = useState("");
   const [paying, setPaying] = useState<Row | null>(null);
+  const [offlinePending, setOfflinePending] = useState(0);
+
+  useEffect(() => {
+    registerSender("grain.payment", async (action: QueuedAction, evidence) => {
+      try {
+        const body = new FormData();
+        body.set("fields", JSON.stringify(action.payload.fields ?? {}));
+        const photo = evidence.find((item) => item.slot === "receipt_photo");
+        if (photo) body.set("receipt_photo", photo.blob, "grain-receiving-photo.jpg");
+        const res = await fetch("/api/grain-procurement/payment", { method: "POST", body });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Grain payment sync fail ho gayi." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+    const refresh = async () => {
+      const rows = await allActions().catch(() => []);
+      setOfflinePending(rows.filter((row) => row.action_type === "grain.payment" && (row.sync_status === "pending" || row.sync_status === "syncing")).length);
+    };
+    const restored = async () => { await syncQueue().catch(() => undefined); await refresh(); };
+    void refresh();
+    window.addEventListener("online", restored);
+    window.addEventListener("agribridge:offline-queue-changed", refresh);
+    return () => {
+      window.removeEventListener("online", restored);
+      window.removeEventListener("agribridge:offline-queue-changed", refresh);
+    };
+  }, []);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -64,6 +96,7 @@ export function GrainPaymentsClient({
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{owedCount}</p>
         </Card>
       </div>
+      {offlinePending > 0 && <p className="text-xs text-amber-700 dark:text-amber-400">{offlinePending} grain payments sync ka intezar kar rahi hain.</p>}
 
       <div className="relative">
         <Search className="absolute left-3 top-2.5 h-4 w-4 text-surface-400" />
@@ -156,6 +189,7 @@ function PayModal({
   const lang = useLang();
   const [state, formAction] = useFormState(recordGrainPayment, initialState);
   const [method, setMethod] = useState("cash");
+  const [offlineNotice, setOfflineNotice] = useState("");
   if (state.success) setTimeout(() => window.location.reload(), 800);
 
   return (
@@ -176,7 +210,31 @@ function PayModal({
 
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
 
-        <form action={formAction} encType="multipart/form-data" className="space-y-3">
+        <form
+          action={formAction}
+          encType="multipart/form-data"
+          onSubmit={async (event: FormEvent<HTMLFormElement>) => {
+            if (typeof navigator === "undefined" || navigator.onLine !== false) return;
+            event.preventDefault();
+            try {
+              const formData = new FormData(event.currentTarget);
+              const photo = formData.get("receipt_photo");
+              const fields = Object.fromEntries(formData.entries());
+              delete (fields as Record<string, FormDataEntryValue>).receipt_photo;
+              const evidence = photo instanceof File && photo.size > 0 ? [{ blob: photo, slot: "receipt_photo" }] : undefined;
+              await enqueue({
+                actionType: "grain.payment",
+                entityType: "grain_procurement_payments",
+                payload: { fields },
+                evidence,
+              });
+              setOfflineNotice("Internet nahi hai. Payment device par save ho gayi; internet aate hi farmer/buyer ledger mein post hogi.");
+            } catch {
+              setOfflineNotice("Offline grain payment save nahi ho saki.");
+            }
+          }}
+          className="space-y-3"
+        >
           <input type="hidden" name="seller_type" value={row.seller_type} />
           <input type="hidden" name={row.seller_type === "party" ? "party_id" : "farmer_id"} value={row.id} />
 
@@ -220,6 +278,8 @@ function PayModal({
             <Label>{t("gr_notes", lang)}</Label>
             <Textarea name="notes" rows={2} />
           </div>
+
+          {offlineNotice && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
 
           <SubmitButton />
         </form>
