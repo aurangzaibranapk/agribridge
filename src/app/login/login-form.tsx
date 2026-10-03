@@ -15,8 +15,8 @@ import { useLang } from "@/lib/i18n/lang-context";
 const FIELD = "h-12 rounded-xl border-surface-200 bg-white px-3.5 text-[15px] shadow-sm outline-none transition focus:border-[#2E6840] focus:ring-2 focus:ring-[#2E6840]/10 placeholder:text-surface-400";
 const BIG_BTN = "h-12 w-full rounded-xl bg-[#174B2B] text-[15px] font-semibold tracking-wide text-white shadow-sm transition hover:bg-[#123D23] disabled:cursor-not-allowed disabled:opacity-60";
 
-export function LoginForm() {
-  return <UnifiedLogin />;
+export function LoginForm({ tenantName = "AgriBridge" }: { tenantName?: string }) {
+  return <UnifiedLogin tenantName={tenantName} />;
 }
 
 const identifierEmptyState: IdentifierLoginState = {};
@@ -27,7 +27,7 @@ const identifierEmptyState: IdentifierLoginState = {};
  * kiya gaya hai. My Work, permissions aur kisi dashboard ko yahan touch nahi
  * kiya jata.
  */
-function UnifiedLogin() {
+function UnifiedLogin({ tenantName }: { tenantName: string }) {
   const lang = useLang();
   const router = useRouter();
   const supabase = createClient();
@@ -138,7 +138,7 @@ function UnifiedLogin() {
   return (
     <div>
       <div className="mb-5">
-        <p className="text-sm font-semibold text-surface-800">One AgriBridge Login</p>
+        <p className="text-sm font-semibold text-surface-800">One {tenantName} Login</p>
         <p className="mt-1 text-xs leading-relaxed text-surface-500">Admin, staff, farmer, customer, dealer aur vendor sab yahin se login karein.</p>
       </div>
       {passwordState.error && <Alert tone="error">{passwordState.error}</Alert>}
