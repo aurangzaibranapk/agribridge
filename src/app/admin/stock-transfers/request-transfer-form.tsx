@@ -1,11 +1,13 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo, type FormEvent } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { requestInternalTransfer, type ActionState } from "@/actions/stock-transfer-workflow";
 import { Button, Label, Select } from "@/components/ui/form";
 import { ProductCardGrid } from "@/app/admin/agri-orders/new/product-card-grid";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { enqueue } from "@/lib/offline/queue";
+import { registerSender } from "@/lib/offline/sync";
 
 const initialState: ActionState = {};
 
@@ -54,6 +56,32 @@ export function RequestTransferForm({
   const [fromLocation, setFromLocation] = useState(currentShopId ?? "central");
   const [toLocation, setToLocation] = useState("");
   const [rows, setRows] = useState<Record<string, { qty: number; price: number }>>({});
+
+  useEffect(() => {
+    registerSender("stock-transfer.request", async (action) => {
+      try {
+        const res = await fetch("/api/stock-transfers/offline", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fields: action.payload.fields }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Transfer request sync fail ho gaya." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+  }, []);
+
+  async function handleOffline(event: FormEvent<HTMLFormElement>) {
+    if (typeof navigator === "undefined" || navigator.onLine) return;
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const clientActionId = crypto.randomUUID();
+    fields.client_action_id = clientActionId;
+    await enqueue({ actionType: "stock-transfer.request", entityType: "stock_transfers", payload: { fields }, clientActionId });
+  }
 
   function handleUpdateRow(productId: string, field: "qty" | "price", value: number, defaultPrice: number) {
     setRows((prev) => ({
@@ -174,7 +202,7 @@ export function RequestTransferForm({
           {t("st_request_sent", lang)}
         </p>
       )}
-      <form action={formAction} className="space-y-3">
+      <form action={formAction} onSubmit={handleOffline} className="space-y-3">
         <input type="hidden" name="items_json" value={itemsJson} />
         {isAdminLevel && <input type="hidden" name="from_location" value={fromLocation} />}
         <input type="hidden" name="to_location" value={toLocation} />
@@ -272,3 +300,4 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
     </Button>
   );
 }
+
