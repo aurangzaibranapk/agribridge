@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   if (!isStaff) return NextResponse.json({ error: "Staff permission required." }, { status: 403 });
 
   const body = await req.json().catch(() => ({}));
-  const kind = body.kind === "fuel" || body.kind === "work" ? body.kind : "";
+  const kind = body.kind === "fuel" || body.kind === "work" || body.kind === "payment" ? body.kind : "";
   if (!kind || !body.fields || typeof body.fields !== "object") {
     return NextResponse.json({ error: "Machinery entry ki maloomat durust nahi." }, { status: 400 });
   }
@@ -19,7 +19,11 @@ export async function POST(req: NextRequest) {
   for (const [key, value] of Object.entries(body.fields as Record<string, unknown>)) {
     if (typeof value === "string") formData.set(key, value);
   }
-  const result = kind === "fuel" ? await recordFuelEntry({}, formData) : await recordWorkCompletion({}, formData);
+  const result = kind === "fuel"
+    ? await recordFuelEntry({}, formData)
+    : kind === "work"
+      ? await recordWorkCompletion({}, formData)
+      : await recordFinalPayment({}, formData);
   if (result.error) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json({ success: true });
 }
