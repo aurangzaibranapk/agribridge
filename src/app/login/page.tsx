@@ -5,6 +5,7 @@ import { LoginForm } from "@/app/login/login-form";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { LangProvider } from "@/lib/i18n/lang-context";
 import { t } from "@/lib/i18n/translations";
+import { resolveTenantFromRequest } from "@/lib/tenant/resolve-tenant";
 
 export const metadata: Metadata = {
   title: "Login",
@@ -16,8 +17,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function LoginPage() {
+export default async function LoginPage() {
   const lang = getLanguageFromCookies("ur");
+  const tenant = await resolveTenantFromRequest();
+  const brandName = tenant?.brandName || t("au_company", lang);
   const features = [
     ["Farmer Management", "One Farmer, One Profile", <FarmerMark key="farmer" />],
     ["Retail & Inventory", "POS, stock aur purchasing", <CartMark key="cart" />],
@@ -46,7 +49,7 @@ export default function LoginPage() {
             <div className="flex items-center gap-4">
               <BrandMark />
               <div>
-                <p className="font-display text-xl font-bold text-[#123d2a]">{t("au_company", lang)}</p>
+                <p className="font-display text-xl font-bold text-[#123d2a]">{brandName}</p>
                 <p className="mt-0.5 text-[11px] font-bold uppercase tracking-[0.28em] text-[#4e7656]">{t("au_brand", lang)}</p>
               </div>
             </div>
@@ -78,13 +81,13 @@ export default function LoginPage() {
           <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#f0e6b5]/35 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-[#b8d8c2]/25 blur-3xl" />
           <div className="relative w-full max-w-[470px]">
-            <div className="mb-5 flex items-center justify-between lg:hidden">
-              <div className="flex items-center gap-3"><BrandMark compact /><div><p className="font-display text-base font-semibold text-[#123321]">{t("au_company", lang)}</p><p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#5c795f]">{t("au_brand", lang)}</p></div></div>
+              <div className="mb-5 flex items-center justify-between lg:hidden">
+              <div className="flex items-center gap-3"><BrandMark compact /><div><p className="font-display text-base font-semibold text-[#123321]">{brandName}</p><p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#5c795f]">{t("au_brand", lang)}</p></div></div>
               <Link href="/" className="rounded-full border border-[#dfe5dc] bg-white px-3 py-2 text-xs font-semibold text-[#385442] shadow-sm">Website</Link>
             </div>
-            <div className="mb-4 lg:mb-3"><p className="text-sm font-semibold text-[#2f6b45]">Welcome to AgriBridge</p><h2 className="mt-1 font-display text-3xl font-semibold tracking-tight text-[#103b29]">Apna account kholain</h2><p className="mt-1.5 text-sm leading-5 text-[#66766b]">Farmer, customer, staff aur vendor — apna sahi login raasta chunain.</p></div>
+            <div className="mb-4 lg:mb-3"><p className="text-sm font-semibold text-[#2f6b45]">Welcome to {brandName}</p><h2 className="mt-1 font-display text-3xl font-semibold tracking-tight text-[#103b29]">Apna account kholain</h2><p className="mt-1.5 text-sm leading-5 text-[#66766b]">Farmer, customer, staff aur vendor — apna sahi login raasta chunain.</p></div>
             <div className="rounded-[28px] border border-[#e1e6de] bg-white/95 p-5 shadow-[0_24px_70px_-30px_rgba(13,40,24,0.32)] sm:p-6 lg:p-5">
-              <Suspense fallback={null}><LoginForm /></Suspense>
+              <Suspense fallback={null}><LoginForm tenantName={brandName} /></Suspense>
               <div className="mt-4 border-t border-[#e9ece7] pt-3"><div className="flex items-start gap-3 rounded-xl bg-[#f2f7f2] px-3.5 py-2.5"><span className="mt-0.5 text-[#2f6b45]"><ShieldMark /></span><div><p className="text-xs font-semibold text-[#284a34]">Aapki maloomat mehfooz hai</p><p className="mt-0.5 text-[11px] leading-4 text-[#708076]">OTP, account aur business data secure access ke sath use hota hai.</p></div></div><Link href="/request-demo" className="mt-3 block text-center text-xs font-bold text-[#2f6b45] hover:underline">Apne business ke liye AgriBridge OS hasil karein</Link></div>
             </div>
             <div className="mt-3 grid grid-cols-3 divide-x divide-[#cddacb] rounded-2xl border border-[#cfe3b9] bg-white/90 px-2 py-2.5 text-[#164a31] shadow-[0_8px_26px_-15px_rgba(55,109,53,0.7)] ring-1 ring-[#e5f0cf]">
