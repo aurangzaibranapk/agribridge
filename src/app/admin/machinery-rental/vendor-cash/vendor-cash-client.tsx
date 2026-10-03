@@ -1,10 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { recordVendorCashHandover, type ActionState } from "@/actions/machinery-lifecycle";
 import { useLang } from "@/lib/i18n/lang-context";
 import { t } from "@/lib/i18n/translations";
+import { enqueue } from "@/lib/offline/queue";
+import { registerSender } from "@/lib/offline/sync";
 
 const initialState: ActionState = {};
 
@@ -51,6 +53,25 @@ function VendorCard({
   const lang = useLang();
   const [state, action] = useFormState(recordVendorCashHandover, initialState);
   const [open, setOpen] = useState(false);
+  const [offlineNotice, setOfflineNotice] = useState("");
+  const [clientActionId] = useState(() => crypto.randomUUID());
+
+  useEffect(() => {
+    registerSender("machinery.vendor-handover", async (queued) => {
+      try {
+        const res = await fetch("/api/machinery/offline", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ kind: "vendor_handover", fields: queued.payload.fields ?? {} }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Vendor handover sync fail ho gaya." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+  }, []);
 
   const daysOld = vendor.oldest
     ? Math.floor((Date.now() - new Date(vendor.oldest).getTime()) / 86400000)
@@ -97,8 +118,18 @@ function VendorCard({
             {t("vc_received", lang)}
           </button>
         ) : (
-          <form action={action} className="mt-3 space-y-2">
+          <form action={action} className="mt-3 space-y-2" onSubmit={async (event: FormEvent<HTMLFormElement>) => {
+            if (typeof navigator === "undefined" || navigator.onLine !== false) return;
+            event.preventDefault();
+            const form = new FormData(event.currentTarget);
+            form.set("client_action_id", clientActionId);
+            const fields = Object.fromEntries(form.entries());
+            await enqueue({ actionType: "machinery.vendor-handover", entityType: "machinery_payments", payload: { fields }, clientActionId });
+            setOfflineNotice("Vendor handover device par save ho gaya; internet aate hi sync hoga.");
+          }}>
             <input type="hidden" name="vendor_id" value={vendor.vendorId} />
+            <input type="hidden" name="client_action_id" value={clientActionId} />
+            {offlineNotice && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
             <div className="grid grid-cols-2 gap-2">
               <input
                 type="number"
