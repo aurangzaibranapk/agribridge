@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { Camera, PackageCheck, X } from "lucide-react";
 import { receivePurchase, type ActionState } from "@/actions/purchases";
@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Button, Input, Label, Textarea } from "@/components/ui/form";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { enqueue, allActions } from "@/lib/offline/queue";
+import { registerSender, syncQueue } from "@/lib/offline/sync";
 
 const initialState: ActionState = {};
 
@@ -34,6 +36,37 @@ export function ReceiveButton({ purchaseId, purchaseNumber, items }: { purchaseI
   const [photoUrl, setPhotoUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [offlineNotice, setOfflineNotice] = useState("");
+  const [offlinePending, setOfflinePending] = useState(0);
+
+  useEffect(() => {
+    registerSender("purchases.receive", async (queued) => {
+      try {
+        const res = await fetch("/api/purchases/receive", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(queued.payload),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "GRN sync fail ho gaya." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+    const refresh = async () => {
+      const rows = await allActions().catch(() => []);
+      setOfflinePending(rows.filter((row) => row.action_type === "purchases.receive" && row.payload.purchase_id === purchaseId && (row.sync_status === "pending" || row.sync_status === "syncing")).length);
+    };
+    const restored = async () => { await syncQueue().catch(() => undefined); await refresh(); };
+    void refresh();
+    window.addEventListener("online", restored);
+    window.addEventListener("agribridge:offline-queue-changed", refresh);
+    return () => {
+      window.removeEventListener("online", restored);
+      window.removeEventListener("agribridge:offline-queue-changed", refresh);
+    };
+  }, [purchaseId]);
 
   useEffect(() => {
     if (state.success) {
@@ -119,7 +152,25 @@ export function ReceiveButton({ purchaseId, purchaseNumber, items }: { purchaseI
                   .replace("{short}", String(state.grn?.short ?? summary.short))}
               </p>
             ) : (
-              <form action={formAction} className="space-y-4">
+              <form
+                action={formAction}
+                onSubmit={async (event: FormEvent<HTMLFormElement>) => {
+                  if (typeof navigator === "undefined" || navigator.onLine !== false) return;
+                  event.preventDefault();
+                  try {
+                    const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+                    await enqueue({
+                      actionType: "purchases.receive",
+                      entityType: "purchases",
+                      payload: { purchase_id: purchaseId, fields },
+                    });
+                    setOfflineNotice("Internet nahi hai. GRN device par save ho gayi; internet aate hi stock/ledger mein post hogi.");
+                  } catch {
+                    setOfflineNotice("Offline GRN save nahi ho saki.");
+                  }
+                }}
+                className="space-y-4"
+              >
                 <input type="hidden" name="purchase_id" value={purchaseId} />
                 <input type="hidden" name="grn_photo_url" value={photoUrl} />
 
@@ -233,6 +284,9 @@ export function ReceiveButton({ purchaseId, purchaseNumber, items }: { purchaseI
                 {state.error && (
                   <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>
                 )}
+
+                {offlineNotice && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
+                {offlinePending > 0 && <p className="text-[11px] text-amber-700 dark:text-amber-400">Is purchase ki {offlinePending} GRN sync ka intezar kar rahi hai.</p>}
 
                 <SubmitButton disabled={!!summary.bad || uploading} />
               </form>
