@@ -226,8 +226,8 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
           </div>
         </section>
       </header>
-      <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language={lang} />
-      <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} />
+      <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language="ur" />
+      <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} kpis={kpis} />
     </DeskWorkspace>;
   }
 

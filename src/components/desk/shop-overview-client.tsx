@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { AlertTriangle, Bell, CheckCircle2, ClipboardList, ShoppingBag, Users, Wallet } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardList, LayoutDashboard, ShoppingBag, Users, Wallet } from "lucide-react";
 import { ShopNotifications } from "@/components/desk/shop-notifications";
 import type { ShopPaymentMethodRow } from "@/lib/pos/shop-payment-methods";
 
@@ -13,7 +13,8 @@ const PAYMENT_COLORS = ["#119b61", "#287ac0", "#e0a122", "#dc5547", "#8456c9", "
 type FarmerGlance = { id: string; full_name: string | null; farmer_code: string; phone_number: string | null; milk_liters_per_day: number | null };
 type Approval = { label: string; count: number | null; href: string };
 type TaskItem = { key: string; label: string; count: number | null; tone: "red" | "amber" | "blue" | "gray"; href: string };
-export function ShopOverviewClient({ methods, trend, stock, credit, cash, digital, received, branchAvailable, customerHealth, farmers, approvals, orders, tasks, userId }: {
+type KpiItem = { key: string; label: string; value: number | null };
+export function ShopOverviewClient({ methods, trend, stock, credit, cash, digital, received, branchAvailable, customerHealth, farmers, approvals, orders, tasks, userId, kpis = [] }: {
   methods: ShopPaymentMethodRow[];
   trend: { day: string; sales: number }[];
   stock: number | null;
@@ -28,6 +29,7 @@ export function ShopOverviewClient({ methods, trend, stock, credit, cash, digita
   orders: { awaiting: number; processing: number; completed: number } | null;
   tasks: TaskItem[];
   userId: string;
+  kpis?: KpiItem[];
 }) {
   const [activePanel, setActivePanel] = useState<"ledger" | "tasks" | "notifications">("ledger");
   const total = received + credit;
@@ -117,6 +119,16 @@ export function ShopOverviewClient({ methods, trend, stock, credit, cash, digita
         <section className="desk-card staff-desk-farmers">
           <div className="staff-desk-card-title"><span><Users /> FARMERS AT A GLANCE</span><Link href="/admin/farmers">All farmers →</Link></div>
           {farmers === null ? <p className="staff-desk-muted">Farmer data unavailable.</p> : farmers.length ? farmers.slice(0, 4).map(farmer => <div key={farmer.id} className="staff-desk-farmer"><span className="staff-desk-avatar">{(farmer.full_name || farmer.farmer_code).slice(0, 1).toUpperCase()}</span><span className="staff-desk-farmer-name"><strong>{farmer.full_name || farmer.farmer_code}</strong><small>{farmer.farmer_code}</small></span><strong>{farmer.milk_liters_per_day == null ? "" : `${farmer.milk_liters_per_day} L`}</strong></div>) : <p className="staff-desk-muted">Is shop se linked farmer record nahi mila.</p>}
+        </section>
+
+        <section className="desk-card staff-desk-quickview">
+          <div className="staff-desk-card-title"><span><LayoutDashboard /> QUICK VIEW</span></div>
+          <div className="staff-desk-quickview-kpis">
+            {kpis.map(k => <div key={k.key} className="staff-desk-quickview-kpi">
+              <strong>{k.value ?? "—"}</strong>
+              <span>{k.label}</span>
+            </div>)}
+          </div>
         </section>
       </> : activePanel === "tasks" ? <section className="desk-card staff-desk-focus-panel">
         <div className="staff-desk-card-title"><span><ClipboardList /> TODAY&apos;S TASKS</span><small>{tasks.length} items</small></div>
