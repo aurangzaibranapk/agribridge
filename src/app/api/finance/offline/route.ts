@@ -1,0 +1,19 @@
+import { NextRequest, NextResponse } from "next/server";
+import { recordFinanceTransaction, transferBetweenAccounts } from "@/actions/finance";
+import { createClient } from "@/lib/supabase/server";
+
+/** Atomic offline finance income/expense/transfer sync. */
+export async function POST(req: NextRequest) {
+  const auth = createClient();
+  const { data: { user } } = await auth.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Login required." }, { status: 401 });
+  const body = await req.json().catch(() => ({}));
+  const kind = body.kind === "transaction" || body.kind === "transfer" ? body.kind : "";
+  if (!kind || !body.fields || typeof body.fields !== "object") return NextResponse.json({ error: "Finance entry ki maloomat durust nahi." }, { status: 400 });
+  const formData = new FormData();
+  for (const [key, value] of Object.entries(body.fields as Record<string, unknown>)) if (typeof value === "string") formData.set(key, value);
+  const result = kind === "transaction" ? await recordFinanceTransaction({}, formData) : await transferBetweenAccounts({}, formData);
+  if (result.error) return NextResponse.json({ error: result.error }, { status: 400 });
+  return NextResponse.json({ success: true });
+}
+
