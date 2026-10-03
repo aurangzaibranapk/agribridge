@@ -1,11 +1,14 @@
 "use client";
 import { aajPakistan } from "@/lib/utils/format";
 import { useState } from "react";
+import { useEffect, type FormEvent } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { selfCheckIn, selfCheckOut, type ActionState } from "@/actions/hr";
 import { MapPin, LogIn, LogOut, Loader2, CheckCircle2 } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { enqueue, allActions, type QueuedAction } from "@/lib/offline/queue";
+import { registerSender, syncQueue } from "@/lib/offline/sync";
 
 const initialState: ActionState = {};
 
@@ -85,11 +88,20 @@ export function CheckinClient({ today }: { today: TodayRecord | null }) {
 function CheckInForm({ coords, disabled }: { coords: { lat: number; lng: number } | null; disabled: boolean }) {
   const lang = useLang();
   const [state, formAction] = useFormState(selfCheckIn, initialState);
+  const [offlineNotice, setOfflineNotice] = useState("");
+  useAttendanceSender("attendance.check-in");
   return (
-    <form action={formAction}>
+    <form action={formAction} onSubmit={async (event: FormEvent<HTMLFormElement>) => {
+      if (typeof navigator === "undefined" || navigator.onLine !== false) return;
+      event.preventDefault();
+      const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+      await enqueue({ actionType: "attendance.check-in", entityType: "attendance_records", payload: { fields } });
+      setOfflineNotice("Check-in device par save ho gaya; internet aate hi sync hoga.");
+    }}>
       <input type="hidden" name="lat" value={coords?.lat ?? ""} />
       <input type="hidden" name="lng" value={coords?.lng ?? ""} />
       <ActionButton icon={LogIn} label={t("at_check_in", lang)} disabled={disabled} color="brand" />
+      {offlineNotice && <p className="mt-1 text-[11px] text-amber-700">{offlineNotice}</p>}
       {state.error && <p className="mt-1 text-xs text-red-600">{state.error}</p>}
     </form>
   );
@@ -98,14 +110,45 @@ function CheckInForm({ coords, disabled }: { coords: { lat: number; lng: number 
 function CheckOutForm({ coords, disabled }: { coords: { lat: number; lng: number } | null; disabled: boolean }) {
   const lang = useLang();
   const [state, formAction] = useFormState(selfCheckOut, initialState);
+  const [offlineNotice, setOfflineNotice] = useState("");
+  useAttendanceSender("attendance.check-out");
   return (
-    <form action={formAction}>
+    <form action={formAction} onSubmit={async (event: FormEvent<HTMLFormElement>) => {
+      if (typeof navigator === "undefined" || navigator.onLine !== false) return;
+      event.preventDefault();
+      const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+      await enqueue({ actionType: "attendance.check-out", entityType: "attendance_records", payload: { fields } });
+      setOfflineNotice("Check-out device par save ho gaya; internet aate hi sync hoga.");
+    }}>
       <input type="hidden" name="lat" value={coords?.lat ?? ""} />
       <input type="hidden" name="lng" value={coords?.lng ?? ""} />
       <ActionButton icon={LogOut} label={t("at_check_out", lang)} disabled={disabled} color="surface" />
+      {offlineNotice && <p className="mt-1 text-[11px] text-amber-700">{offlineNotice}</p>}
       {state.error && <p className="mt-1 text-xs text-red-600">{state.error}</p>}
     </form>
   );
+}
+
+function useAttendanceSender(actionType: "attendance.check-in" | "attendance.check-out") {
+  useEffect(() => {
+    registerSender(actionType, async (action: QueuedAction) => {
+      try {
+        const res = await fetch("/api/hr/attendance", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ kind: actionType === "attendance.check-in" ? "check_in" : "check_out", fields: action.payload.fields ?? {} }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Attendance sync fail ho gayi." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+    const refresh = () => { void allActions().then(() => syncQueue()).catch(() => undefined); };
+    window.addEventListener("online", refresh);
+    return () => window.removeEventListener("online", refresh);
+  }, [actionType]);
 }
 
 function ActionButton({ icon: Icon, label, disabled, color }: { icon: any; label: string; disabled: boolean; color: "brand" | "surface" }) {
