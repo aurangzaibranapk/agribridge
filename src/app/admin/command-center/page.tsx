@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   CircleDollarSign,
   CreditCard,
+  Home,
   Landmark,
   Package,
   ReceiptText,
@@ -115,13 +116,21 @@ export default async function CommandCenterPage() {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-[1800px] space-y-3 2xl:h-[calc(100vh-7rem)] 2xl:overflow-hidden">
+    <div className="mx-auto w-full max-w-[1800px] space-y-3 pb-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-surface-900 dark:text-white">Owner Command Center</h1>
-          <p className="mt-0.5 text-sm text-surface-500">Today&apos;s money, department performance aur zaroori actions — ek nazar mein.</p>
+          <p className="mt-0.5 text-sm text-surface-500">Today&apos;s money, department performance aur zaroori actions — ek nazar mein. Neeche scroll karke poora dashboard dekhein.</p>
         </div>
         <div className="flex items-center gap-2 pt-1">
+          <Link
+            href="/admin/my-work"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-white px-3 py-2 text-xs font-semibold text-brand-800 shadow-sm transition hover:border-brand-400 hover:bg-brand-50 dark:border-surface-700 dark:bg-surface-900 dark:text-brand-300 dark:hover:bg-surface-800"
+            title="AgriBridge OS Home — My Work"
+          >
+            <Home className="h-3.5 w-3.5" />
+            AgriBridge OS Home
+          </Link>
           <LiveRefresh
             tables={[
               "pos_sales",
