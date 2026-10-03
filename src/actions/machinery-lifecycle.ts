@@ -1479,7 +1479,12 @@ export async function recordFuelEntry(_prev: ActionState, formData: FormData): P
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
   const bookingId = str(formData, "booking_id");
+  const clientActionId = str(formData, "client_action_id");
   if (!bookingId) return { error: "Booking nahi mili." };
+  if (clientActionId) {
+    const { data: alreadyPosted } = await supabase.from("machinery_fuel_logs").select("id").eq("client_action_id", clientActionId).maybeSingle();
+    if (alreadyPosted) return { success: true, notice: "Diesel entry pehle hi sync ho chuki hai." };
+  }
 
   // Raqam ab maangi hi nahi jati -- litre aur us din ka rate maange
   // jate hain, aur raqam DB khud banata hai (170).
@@ -1537,6 +1542,7 @@ export async function recordFuelEntry(_prev: ActionState, formData: FormData): P
     .from("machinery_fuel_logs")
     .insert({
       booking_id: bookingId,
+      client_action_id: clientActionId || null,
       log_date: str(formData, "log_date") ?? aajKaKhana(),
       litres,
       rate_per_litre: ratePerLitre,
@@ -1764,7 +1770,12 @@ export async function recordWorkCompletion(_prev: ActionState, formData: FormDat
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
   const bookingId = str(formData, "booking_id");
+  const clientActionId = str(formData, "client_action_id");
   if (!bookingId) return { error: "Booking nahi mili." };
+  if (clientActionId) {
+    const { data: alreadyPosted } = await supabase.from("machinery_work_records").select("id").eq("client_action_id", clientActionId).maybeSingle();
+    if (alreadyPosted) return { success: true, notice: "Work entry pehle hi sync ho chuki hai." };
+  }
 
   const acres = num(formData, "actual_area_acres");
   const kanal = num(formData, "actual_area_kanal");
@@ -1818,6 +1829,7 @@ export async function recordWorkCompletion(_prev: ActionState, formData: FormDat
   // chaRh kar 6 ho jate.
   const payload = {
     booking_id: bookingId,
+    client_action_id: clientActionId || null,
     work_date: workDate,
     is_final: isFinal,
     // Staff ka likha hua kaam seedha tasdeeq shuda hai: wahan dekhne
@@ -2526,7 +2538,20 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
   const supabase = createClient();
   const actorId = await currentUserId(supabase);
   const bookingId = str(formData, "booking_id");
+  const clientActionId = str(formData, "client_action_id");
   if (!bookingId) return { error: "Booking nahi mili." };
+
+  // Offline retry mein pehli payment already ledger tak pahunch chuki ho
+  // sakti hai magar response device tak na aya ho. Unique device key par
+  // pehle se bani payment mil jaye to dobara ledger post nahi karte.
+  if (clientActionId) {
+    const { data: alreadyPosted } = await supabase
+      .from("machinery_payments")
+      .select("id")
+      .eq("client_action_id", clientActionId)
+      .maybeSingle();
+    if (alreadyPosted) return { success: true, notice: "Payment pehle hi sync ho chuki hai." };
+  }
 
   const { data: booking } = await supabase
     .from("machinery_bookings")
@@ -2619,6 +2644,7 @@ export async function recordFinalPayment(_prev: ActionState, formData: FormData)
       .from("machinery_payments")
       .insert({
         booking_id: bookingId,
+        client_action_id: clientActionId || null,
         kind: "final",
         amount: line.amount,
         method: line.method,
