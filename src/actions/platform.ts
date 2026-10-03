@@ -39,16 +39,31 @@ export async function onboardNewOrganization(_prev: ActionState, formData: FormD
   const adminEmail = String(formData.get("admin_email") ?? "").trim();
   const adminName = String(formData.get("admin_name") ?? "").trim();
   const adminPhone = (formData.get("admin_phone") as string) || null;
+  const customDomain = String(formData.get("custom_domain") ?? "").trim().toLowerCase() || null;
+  const subscriptionPlan = String(formData.get("subscription_plan") ?? "starter").trim();
 
   if (!orgName) return { error: "Company name is required." };
   if (!adminEmail || !adminEmail.includes("@")) return { error: "A valid admin email is required." };
   if (!adminName) return { error: "Admin full name is required." };
+  if (customDomain && !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i.test(customDomain)) {
+    return { error: "Custom domain format is invalid." };
+  }
+  if (!["starter", "business", "enterprise"].includes(subscriptionPlan)) {
+    return { error: "Invalid subscription plan." };
+  }
 
   const slug = slugify(orgName);
 
   const { data: org, error: orgError } = await serviceClient
     .from("organizations")
-    .insert({ name: orgName, slug })
+    .insert({
+      name: orgName,
+      slug,
+      brand_name: orgName,
+      custom_domain: customDomain,
+      subscription_plan: subscriptionPlan,
+      subscription_status: "trial",
+    })
     .select("id")
     .single();
 
