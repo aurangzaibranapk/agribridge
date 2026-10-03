@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { Smartphone, FileText, Wallet, AlertTriangle, CheckCircle2, Clock, HandCoins, Banknote, Landmark, Printer, MessageCircle, X } from "lucide-react";
@@ -24,6 +24,8 @@ import {
   takeCustomerRepayment,
   type UdhaarState,
 } from "@/actions/customer-udhaar";
+import { enqueue, allActions } from "@/lib/offline/queue";
+import { registerSender, syncQueue } from "@/lib/offline/sync";
 
 const initial: LoadState = {};
 const udhaarInitial: UdhaarState = {};
@@ -269,6 +271,7 @@ export function LoadBillClient({
   const [bankState, bankAction] = useFormState(createBankTransfer, initial);
   const [bankTidState, bankTidAction] = useFormState(attachBankTransferTid, initial);
   const [bankReverseState, bankReverseAction] = useFormState(reverseBankTransfer, initial);
+  const [offlineUdhaarPending, setOfflineUdhaarPending] = useState(0);
   const submittedTabRef = useRef<ServiceTab | null>(null);
   const [lastSavedTab, setLastSavedTab] = useState<ServiceTab | null>(null);
   useEffect(() => {
@@ -317,6 +320,40 @@ export function LoadBillClient({
   const [bankCustomerPhone, setBankCustomerPhone] = useState("");
   const [bankTid, setBankTid] = useState("");
   const [quickViewOpen, setQuickViewOpen] = useState(false);
+
+  useEffect(() => {
+    const sender = async (queued: import("@/lib/offline/queue").QueuedAction) => {
+      try {
+        const res = await fetch("/api/customer-udhaar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(queued.payload),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Payment sync fail ho gayi." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    };
+    registerSender("customer-udhaar.loan", sender);
+    registerSender("customer-udhaar.repayment", sender);
+    const refresh = async () => {
+      const rows = await allActions().catch(() => []);
+      setOfflineUdhaarPending(rows.filter((row) =>
+        (row.action_type === "customer-udhaar.loan" || row.action_type === "customer-udhaar.repayment") &&
+        (row.sync_status === "pending" || row.sync_status === "syncing")
+      ).length);
+    };
+    const restored = async () => { await syncQueue().catch(() => undefined); await refresh(); };
+    void refresh();
+    window.addEventListener("online", restored);
+    window.addEventListener("agribridge:offline-queue-changed", refresh);
+    return () => {
+      window.removeEventListener("online", restored);
+      window.removeEventListener("agribridge:offline-queue-changed", refresh);
+    };
+  }, []);
 
   // Account ki fehrist provider se NAHI chhanti.
   //
@@ -574,6 +611,7 @@ export function LoadBillClient({
               note={ledgerNote}
               onNoteChange={(note) => { setLedgerNote(note); setLastSavedTab(null); }}
               onSubmit={() => { submittedTabRef.current = tab; setLastSavedTab(null); }}
+              offlinePending={offlineUdhaarPending}
               date={ledgerDate}
               onDateChange={(date) => { setLedgerDate(date); setLastSavedTab(null); }}
               account={ledgerAccount}
@@ -1041,6 +1079,7 @@ function BankTransferForm({
   providerTid,
   onProviderTidChange,
   onSubmit,
+  offlinePending,
 }: {
   action: (formData: FormData) => void;
   people: PersonOption[];
@@ -1068,6 +1107,7 @@ function BankTransferForm({
   providerTid: string;
   onProviderTidChange: (value: string) => void;
   onSubmit: () => void;
+  offlinePending: number;
 }) {
   const digitalAccounts = financeAccounts.filter((account) => account.accountType !== "cash");
   const principal = Number(amount.replace(/,/g, "")) || 0;
@@ -1212,9 +1252,31 @@ function UdhaarForm({
 }) {
   const chuna = selectedPerson;
   const diya = kaam === "diya";
+  const [offlineNotice, setOfflineNotice] = useState("");
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+    if (!offline) {
+      onSubmit();
+      return;
+    }
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+    try {
+      await enqueue({
+        actionType: diya ? "customer-udhaar.loan" : "customer-udhaar.repayment",
+        entityType: "customer_udhaar",
+        payload: { kind: diya ? "loan" : "repayment", fields },
+      });
+      setOfflineNotice("Internet nahi hai. Entry device par save ho gayi; internet aate hi ledger mein sync hogi.");
+      onSubmit();
+    } catch {
+      setOfflineNotice("Offline entry save nahi ho saki.");
+    }
+  }
 
   return (
-    <form action={diya ? loanAction : wapsiAction} onSubmit={onSubmit} className="load-form load-form-party space-y-3">
+    <form action={diya ? loanAction : wapsiAction} onSubmit={handleSubmit} className="load-form load-form-party space-y-3">
       <div className="load-field-customer">
         <Label htmlFor="udhaar_customer">Kis ka — customer ya kisan</Label>
         <PersonPicker
@@ -1282,6 +1344,8 @@ function UdhaarForm({
       </div>
 
       <Submit label={diya ? "Udhaar darj karein" : "Wapsi darj karein"} />
+      {offlineNotice && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
+      {offlinePending > 0 && <p className="text-[11px] text-amber-700 dark:text-amber-400">{offlinePending} payment/udhaar entries sync ka intezar kar rahi hain.</p>}
     </form>
   );
 }
