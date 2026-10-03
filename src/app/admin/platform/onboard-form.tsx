@@ -39,6 +39,18 @@ export function OnboardForm() {
           <Label htmlFor="admin_phone">{t("pl_admin_phone", lang)}</Label>
           <Input id="admin_phone" name="admin_phone" />
         </div>
+        <div>
+          <Label htmlFor="custom_domain">Custom domain (optional)</Label>
+          <Input id="custom_domain" name="custom_domain" placeholder="erp.example.com" />
+        </div>
+        <div>
+          <Label htmlFor="subscription_plan">Plan</Label>
+          <select id="subscription_plan" name="subscription_plan" defaultValue="starter" className="w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-950">
+            <option value="starter">Starter</option>
+            <option value="business">Business</option>
+            <option value="enterprise">Enterprise</option>
+          </select>
+        </div>
         <SubmitButton />
       </form>
       <p className="mt-3 text-xs text-surface-400">{t("pl_isolated_note", lang)}</p>
