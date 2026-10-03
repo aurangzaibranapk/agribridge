@@ -1,6 +1,8 @@
 "use server";
 
 import { createServiceClient } from "@/lib/supabase/service";
+import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 
 export type OrganizationSignupState = { error?: string; success?: boolean };
 
@@ -52,3 +54,57 @@ export async function submitOrganizationSignup(
   return { success: true };
 }
 
+async function requireSuperAdmin() {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { supabase, user: null, error: "Not authenticated." };
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (profile?.role !== "super_admin") return { supabase, user: null, error: "Only a Super Admin can review requests." };
+  return { supabase, user, error: null };
+}
+
+export async function reviewOrganizationSignup(_prev: OrganizationSignupState, formData: FormData): Promise<OrganizationSignupState> {
+  const auth = await requireSuperAdmin();
+  if (auth.error || !auth.user) return { error: auth.error ?? "Not authorized." };
+  const requestId = clean(formData.get("request_id"));
+  const decision = clean(formData.get("decision"));
+  if (!requestId || !["approve", "reject"].includes(decision)) return { error: "Invalid review request." };
+
+  const service = createServiceClient();
+  const { data: request, error: requestError } = await service
+    .from("organization_signup_requests")
+    .select("id, company_name, admin_name, admin_email, admin_phone, custom_domain, subscription_plan, status")
+    .eq("id", requestId)
+    .eq("status", "pending")
+    .single();
+  if (requestError || !request) return { error: "Request nahi mili ya pehle review ho chuki hai." };
+
+  if (decision === "reject") {
+    await service.from("organization_signup_requests").update({ status: "rejected", reviewed_by: auth.user.id, reviewed_at: new Date().toISOString() }).eq("id", request.id);
+    revalidatePath("/admin/platform/requests");
+    return { success: true };
+  }
+
+  const slug = request.company_name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || `tenant-${request.id.slice(0, 8)}`;
+  const { data: org, error: orgError } = await service.from("organizations").insert({
+    name: request.company_name,
+    brand_name: request.company_name,
+    slug,
+    custom_domain: request.custom_domain,
+    subscription_plan: request.subscription_plan,
+    subscription_status: "trial",
+  }).select("id").single();
+  if (orgError || !org) return { error: `Organization create nahi hui: ${orgError?.message ?? "unknown error"}` };
+
+  const { error: branchError } = await service.from("branches").insert({ organization_id: org.id, name: "Main Branch", is_main_branch: true });
+  if (branchError) return { error: `Main branch create nahi hui: ${branchError.message}` };
+  const { data: invited, error: inviteError } = await service.auth.admin.inviteUserByEmail(request.admin_email, { data: { full_name: request.admin_name } });
+  if (inviteError || !invited?.user) return { error: `Admin invite nahi bheja ja saka: ${inviteError?.message ?? "unknown error"}` };
+  const { error: profileError } = await service.from("profiles").update({ role: "super_admin", organization_id: org.id, phone_number: request.admin_phone }).eq("id", invited.user.id);
+  if (profileError) return { error: `Admin profile setup nahi hui: ${profileError.message}` };
+
+  await service.from("organization_signup_requests").update({ status: "approved", reviewed_by: auth.user.id, reviewed_at: new Date().toISOString() }).eq("id", request.id);
+  revalidatePath("/admin/platform");
+  revalidatePath("/admin/platform/requests");
+  return { success: true };
+}
