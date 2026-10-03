@@ -195,6 +195,7 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
   const wajah = [category, wajahMatn].filter(Boolean).join(" — ");
   const reference = String(formData.get("reference") ?? "").trim() || null;
   const tareekh = String(formData.get("tareekh") ?? "").trim() || aajKaKhana();
+  const clientActionId = String(formData.get("client_action_id") ?? "").trim() || null;
 
   if (partyType !== "customer" && partyType !== "farmer") {
     return { error: "Customer ya kisan chunein — kis ko paisa diya." };
@@ -271,6 +272,7 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
       },
       { account: gl, credit: rakam, memo: tafseel },
     ],
+    clientActionId,
   });
   if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
 
@@ -358,6 +360,7 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
   const wajah = [category, wajahMatn].filter(Boolean).join(" — ");
   const reference = String(formData.get("reference") ?? "").trim() || null;
   const tareekh = String(formData.get("tareekh") ?? "").trim() || aajKaKhana();
+  const clientActionId = String(formData.get("client_action_id") ?? "").trim() || null;
 
   if (partyType !== "customer" && partyType !== "farmer") {
     return { error: "Customer ya kisan chunein — kis ne paisa diya." };
@@ -430,6 +433,7 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
         memo: tafseel,
       },
     ],
+    clientActionId,
   });
   if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
 
