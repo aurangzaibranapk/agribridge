@@ -24,6 +24,7 @@ function isNew(dateStr?: string): boolean {
 const ALL_FEATURES: Feature[] = [
   // ── MASTER COMMAND ──────────────────────────────────────────────────────────
   { section: "Master Command", label: "Owner Command Center", href: "/admin/command-center", description: "Aaj ka saara paisa, departmental performance, attention queue, aur zaroori actions — ek jagah par.", who: "Malik / Admin" },
+  { section: "Master Command", label: "Master Dashboard", href: "/admin/master-dashboard", description: "Business-wide totals — cash, bank, receivables, payables, stock value, milk, sales, expenses aur shop-wise detail.", who: "Malik / Admin" },
 
   // ── BUSINESS ────────────────────────────────────────────────────────────────
   { section: "Business", label: "Kisan", href: "/admin/farmers", description: "Tamam kisanon ki fehrist, unka profile, khata, aur kharid-farookht ka record.", who: "Admin / Staff" },
@@ -62,7 +63,7 @@ const ALL_FEATURES: Feature[] = [
   { section: "Inventory", label: "Cheezein (Products)", href: "/admin/products", description: "Tamam products ki fehrist — naam, category, rates, barcode, aur image.", who: "Admin / Product Manager" },
   { section: "Inventory", label: "Product Setup", href: "/admin/products/setup", description: "Incomplete products — jo baracode missing hain, rate nahi laga, image nahi — ek jagah fix karo.", who: "Admin / Product Manager" },
   { section: "Inventory", label: "Product ki Bunyadi Fehrist", href: "/admin/products/masters", description: "Products ke masters — company, category, aur unit types manage karo.", who: "Admin" },
-  { section: "Inventory", label: "Product Cycles (Shops)", href: "/admin/product-cycles", description: "Do kaam: (1) Shop product rotation — dukanen mein kaunsa maal bhejein. (2) Daily Stock Count Cycle — roz ek batch products ki ginti.", who: "Admin / Warehouse", addedDate: "2026-09-25" },
+  { section: "Inventory", label: "Product Cycles (Shops)", href: "/admin/product-cycles", description: "Do kaam: (1) Shop product rotation. (2) Daily Stock Count Cycle — admin batch/staff ko Urdu notification bhejta hai, submit hone tak popup reminder aata rehta hai, aur staff assigned products count karta hai.", who: "Admin / Warehouse", addedDate: "2026-09-25" },
   { section: "Inventory", label: "Stock (Inventory)", href: "/admin/inventory", description: "Har product ka current stock — kaunsa godam mein kitna hai.", who: "Admin / Warehouse" },
   { section: "Inventory", label: "Stock Statement", href: "/admin/stock-statement", description: "Stock ki mufassal report — opening, aaya, gaya, closing.", who: "Malik / Admin" },
   { section: "Inventory", label: "Stock ka Khata (Ledger)", href: "/admin/stock-ledger", description: "Har product ki movement history — kab aaya, kab gaya, kahan gaya.", who: "Admin / Accounts" },
@@ -154,6 +155,8 @@ const ALL_FEATURES: Feature[] = [
   { section: "Website CMS", label: "Sarmayakar ke Sawal", href: "/admin/investor-inquiries", description: "Website par investors ki inquiries.", who: "Admin / Malik" },
 
   // ── ADMINISTRATION ──────────────────────────────────────────────────────────
+  { section: "Administration", label: "Email Templates", href: "/admin/email-templates", description: "System emails ke ready templates — staff, customer aur admin messages ko manage karo.", who: "Admin / HR" },
+  { section: "Administration", label: "Test Data Reset", href: "/admin/reset-test-data", description: "Sirf testing data reset karo — live/business records ko touch nahi karta.", who: "Owner / Admin" },
   { section: "Administration", label: "Paighaam (Messages)", href: "/admin/messages", description: "Internal messages — staff aur admin ke darmiyan.", who: "Staff / Admin" },
   { section: "Administration", label: "Abram (AI Assistant)", href: "/admin/bridge-ai", description: "AI assistant Abram — sawaal poochho, kaam karwao.", who: "Admin / Malik" },
   { section: "Administration", label: "Abram Activity Log", href: "/admin/bridge-ai/activity-log", description: "Abram ne kya kiya — har action ka log.", who: "Admin / Malik" },
