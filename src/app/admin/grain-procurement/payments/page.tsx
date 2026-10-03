@@ -21,7 +21,7 @@ export default async function GrainPaymentsPage() {
   const [{ data: farmerBalances }, { data: entries }, { data: payments }, { data: parties }, { data: accounts }] =
     await Promise.all([
       supabase.from("grain_farmer_balances").select("*").order("balance_due", { ascending: false }),
-      supabase.from("grain_procurement_entries").select("party_id, total_amount"),
+      supabase.from("grain_procurement_entries").select("party_id, total_amount").is("reclassified_as_sale_id", null),
       supabase.from("grain_procurement_payments").select("party_id, amount, farmer_id, payment_date, created_at").order("created_at", { ascending: false }),
       supabase.from("grain_parties").select("id, party_name, contact_person, phone"),
       supabase.from("finance_accounts").select("id, name").eq("is_active", true).order("account_type"),
