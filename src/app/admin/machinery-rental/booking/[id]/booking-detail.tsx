@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 38551)
-Total output lines: 3611
-
 "use client";
 import Link from "next/link";
 import { aajKaKhana } from "@/lib/utils/format";
@@ -839,7 +836,1845 @@ export function BookingDetail({
                       <th className="py-2 pr-3 font-medium">Date</th>
                       <th className="py-2 pr-3 font-medium">Given By</th>
                       <th className="py-2 pr-3 text-right font-medium">Litres</th>
-                      <th className="py-2 pr-3 text-right font-medium">Rate</th>…18551 tokens truncated…kta hai: aadha din ka kaam darj karna ho to wo bhi isi khane se
+                      <th className="py-2 pr-3 text-right font-medium">Rate</th>
+                      <th className="py-2 pr-3 text-right font-medium">Total</th>
+                      <th className="py-2 pr-3 font-medium">Account / Khata</th>
+                      <th className="py-2 font-medium" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Mansookh shuda diesel kisi jor mein nahi aata (313).
+                        Safhe par wo phir bhi nazar aata hai -- chhupa dene
+                        se ye sawal khara reh jata hai ke "diesel to daala
+                        tha, gaya kahan". */}
+                    {fuelLogs.map((f) => {
+                      const mansookh = f.verification_status === "cancelled";
+                      const dim = mansookh ? "text-surface-400 line-through dark:text-surface-500" : "";
+                      return (
+                        <tr key={f.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
+                          <td className={`py-2 pr-3 text-surface-600 dark:text-surface-300 ${dim}`}>{f.log_date}</td>
+                          <td className={`py-2 pr-3 text-surface-700 dark:text-surface-200 ${dim}`}>
+                            {f.paid_by === "company"
+                              ? t("mc_diesel_by_company", lang)
+                              : f.paid_by === "vendor"
+                              ? t("mc_diesel_by_vendor", lang)
+                              : t("mc_diesel_by_farmer", lang)}
+                          </td>
+                          <td className={`py-2 pr-3 text-right ${dim}`}>{f.litres ?? "—"}</td>
+                          <td className={`py-2 pr-3 text-right ${dim}`}>
+                            {f.rate_per_litre === null ? "—" : `Rs ${f.rate_per_litre.toLocaleString()}`}
+                          </td>
+                          <td className={`py-2 pr-3 text-right font-medium text-surface-900 dark:text-surface-100 ${dim}`}>
+                            Rs {f.amount.toLocaleString()}
+                          </td>
+                          {/* Khata staff se poochha NAHI jata (B.2) -- wo
+                              khud tay hota hai. Yahan sirf dikhaya jata
+                              hai, taake bande ko pata ho ke ye raqam
+                              kahan gayi. */}
+                          <td className={`py-2 pr-3 text-surface-600 dark:text-surface-300 ${dim}`}>
+                            {f.paid_by === "company"
+                              ? f.vendor_recoverable
+                                ? "Vendor se wasooli"
+                                : "ART ka diesel kharcha"
+                              : f.paid_by === "vendor"
+                              ? "Vendor ka apna"
+                              : "Farmer ka apna — bill se katega"}
+                          </td>
+                          <td className="py-2 text-right">
+                            {mansookh ? (
+                              <span className="text-[11px] text-surface-400 dark:text-surface-500">
+                                Mansookh{f.cancelled_reason ? ` — ${f.cancelled_reason}` : ""}
+                              </span>
+                            ) : (
+                              /* Ghalti se do dafa darj ho jaye to us ka
+                                 raasta yahin hona chahiye (5 September). */
+                              <CancelFuelButton fuelId={f.id} />
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {ourFuelRecoverable > 0 && (
+              <p className="mt-2 text-xs text-surface-500">
+                {t("mc_fuel_recoverable", lang)}: Rs {ourFuelRecoverable.toLocaleString()}
+              </p>
+            )}
+          </Card>
+
+          {/* Machine ne kaisa kaam kiya. Ye adad kisi ke bharne se nahi
+              bante -- waqt aur diesel ke indraj se khud nikalte hain.
+              Isi liye in par bharosa kiya ja sakta hai. */}
+          {efficiency && (efficiency.kulGhante || efficiency.kulLitre) && (
+            <Card>
+              <h2 className="mb-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+                {t("mc_eff_title", lang)}
+              </h2>
+              <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+                {efficiency.kulGhante !== null && <Eff label={t("mc_eff_hours", lang)} value={`${efficiency.kulGhante}`} />}
+                {efficiency.kulLitre !== null && <Eff label={t("mc_eff_litres", lang)} value={`${efficiency.kulLitre} L`} />}
+                {efficiency.litrePerGhanta !== null && <Eff label={t("mc_eff_lph", lang)} value={`${efficiency.litrePerGhanta} L`} />}
+                {efficiency.acrePerGhanta !== null && <Eff label={t("mc_eff_aph", lang)} value={`${efficiency.acrePerGhanta}`} />}
+                {efficiency.litrePerAcre !== null && <Eff label={t("mc_eff_lpa", lang)} value={`${efficiency.litrePerAcre} L`} />}
+              </div>
+              <p className="mt-2 text-xs text-surface-500">{t("mc_eff_note", lang)}</p>
+            </Card>
+          )}
+
+          {/* Jo kaam darj ho chuka. */}
+          {work.length > 0 && (
+            <Card>
+              <h2 className="mb-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+                {t("mc_step_work", lang)}
+              </h2>
+              <div className="space-y-1 text-sm">
+                {work.map((w) => (
+                  <div
+                    key={w.id}
+                    className="flex items-center justify-between rounded border border-surface-100 px-2 py-1 dark:border-surface-800"
+                  >
+                    <span className="text-surface-600 dark:text-surface-300">
+                      {new Date(w.work_date).toLocaleDateString()}
+                      {w.is_final && ` · ${t("mc_work_done_flag", lang)}`}
+                    </span>
+                    <span className="flex items-center gap-2">
+                      {/* Jis indraj ke sath jagah mehfooz hai us par nishan
+                          aata hai -- "jahan jahan kattai hui" ka jawab in
+                          nishanon se banta hai, kisi alag fehrist se nahi. */}
+                      {w.location_lat != null && w.location_lng != null && (
+                        <a
+                          href={`https://www.google.com/maps?q=${w.location_lat},${w.location_lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-brand-700 underline dark:text-brand-300"
+                        >
+                          {t("mc_work_on_map", lang)}
+                        </a>
+                      )}
+                      <span className="font-medium text-surface-900 dark:text-surface-100">{w.actual_area} acre</span>
+                    </span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between border-t border-surface-200 pt-1 font-display font-semibold dark:border-surface-700">
+                  <span>{t("mc_work_done_total", lang)}</span>
+                  <span>{workDone} acre</span>
+                </div>
+                {!workFinished && (
+                  <p className="text-amber-700 dark:text-amber-300">
+                    {t("mc_work_remaining", lang)}: {workRemaining} acre — {t("mc_work_not_final_hint", lang)}
+                  </p>
+                )}
+                {workFinished && booking.harvest_area !== workDone && (
+                  <p className="text-amber-700 dark:text-amber-300">
+                    Booking par andaza {booking.harvest_area} acre tha — bill asal {workDone} acre ka bana.
+                  </p>
+                )}
+              </div>
+            </Card>
+          )}
+        </>
+      )}
+
+      {/* -----------------------------------------------------------------
+          5. Booking Timeline.
+          ----------------------------------------------------------------- */}
+      <Card>
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+          Booking Timeline
+        </h2>
+        <Timeline reached={reached} cancelled={cancelled} />
+      </Card>
+
+      {/* -----------------------------------------------------------------
+          6. Settlement Summary -- koi nayi ginti nahi (B.6). Har adad
+          wohi hai jo upar ke khanon mein bhi chal raha hai.
+          ----------------------------------------------------------------- */}
+      <Card>
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+          Settlement Summary
+        </h2>
+        <SettlementRows
+          bill={bill}
+          paidTotal={paidTotal}
+          balance={balance}
+          paidToVendor={paidToVendor}
+          vendorRemaining={vendorRemaining}
+          vendorName={vendorName}
+          ourFuelExpense={ourFuelExpense}
+          ourFuelRecoverable={ourFuelRecoverable}
+          othersFuel={othersFuel}
+        />
+        {/* Kisan ka poora paisa hamari aamdani nahi. */}
+        <p className="mt-3 border-t border-surface-100 pt-2 text-xs text-surface-500 dark:border-surface-800">
+          Kisan ka poora paisa hamari aamdani nahi. Bill bante hi commission hamara aur baqi vendor ka ho jata hai — wo
+          raqam sirf hamare paas se guzar rahi hoti hai.
+        </p>
+      </Card>
+
+      {/* Kis ne kya kiya -- poora waqia, tarteeb se. */}
+      <Card>
+        <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
+          {t("mc_who_did_what", lang)}
+        </h2>
+        <ul className="space-y-2">
+          {events.map((e) => (
+            <li key={e.id} className="flex gap-3 text-sm">
+              <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand-500" />
+              <div>
+                <p className="text-surface-800 dark:text-surface-200">{e.event_type.replace(/_/g, " ")}</p>
+                {e.note && <p className="text-surface-500">{e.note}</p>}
+                <p className="text-xs text-surface-400">
+                  {new Date(e.created_at).toLocaleString()}
+                  {e.actor_name && ` · ${e.actor_name}`}
+                </p>
+              </div>
+            </li>
+          ))}
+          {events.length === 0 && <li className="text-sm text-surface-400">{t("mc_nothing_yet", lang)}</li>}
+        </ul>
+      </Card>
+
+      {/* -----------------------------------------------------------------
+          Chaar khane. Har ek ke andar WOHI purana form hai jo pehle
+          StepCard mein khula rehta tha -- sirf jagah badli hai, kaam
+          nahi. Koi naya action, koi nayi ginti nahi.
+          ----------------------------------------------------------------- */}
+      <Modal open={modal === "payment"} title="Add Payment" onClose={() => setModal(null)}>
+        <AddPayment
+          booking={booking}
+          accounts={accounts}
+          advanceTotal={advanceTotal}
+          bill={bill}
+          balance={balance}
+          confirmed={confirmed}
+          reminders={reminders}
+          vendorName={vendorName}
+          vendorRemaining={vendorRemaining}
+          paidToVendor={paidToVendor}
+        />
+        {/* Malik (17 September): "Work Complete ke baad Diesel, phir
+            Payment, phir Close — isi tarteeb se ho." Hisaab barabar ho
+            chuka ho (bill ban chuka aur baqi sifar) to yahin se Close
+            Booking ka raasta bhi mil jata hai — dobara top ke button
+            tak wapas jane ki zaroorat nahi. */}
+        {bill && (balance ?? 0) <= 0 && (
+          <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
+            <Button type="button" variant="secondary" className="w-full" onClick={() => setModal("close")}>
+              Ab Booking Close karein →
+            </Button>
+          </div>
+        )}
+      </Modal>
+
+      <Modal open={modal === "diesel"} title="Add Diesel" onClose={() => setModal(null)}>
+        {/* Wohi purana FuelForm -- `already` khali hai kyunke khana
+            khud is button se khula hai, safhe par apne aap nahi. */}
+        <FuelForm bookingId={booking.id} accounts={accounts} already={false} />
+        {/* "Is booking par diesel dala hi nahi" -- ye bhi ek jawab hai,
+            aur us ka darj hona zaroori hai: khali khana aur "nahi dala"
+            ek cheez nahi. Pehla kehta hai "kisi ne poochha hi nahi",
+            doosra kehta hai "poochha, aur jawab nahi tha". Booking us
+            waqt tak "diesel darj karna" ki qatar mein khari rehti hai.
+            Jawab pehle se darj ho to us ke wapis lene ka raasta. */}
+        {booking.diesel_none_at ? (
+          <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
+            <DieselNone bookingId={booking.id} />
+          </div>
+        ) : (
+          fuelLogs.length === 0 && (
+            <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
+              <MarkDieselNoneButton bookingId={booking.id} />
+            </div>
+          )
+        )}
+        {/* Diesel ke baad agla qadam Payment hai (malik ka tarteeb wala
+            usool, 17 September) -- chahe diesel abhi darj hui ho ya
+            "nahi dala" kaha ho, dono soorton mein agla sawal payment ka
+            hai. */}
+        <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
+          <Button type="button" variant="secondary" className="w-full" onClick={() => setModal("payment")}>
+            Ab Payment darj karein →
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal open={modal === "work"} title="Mark Work Complete" onClose={() => setModal(null)}>
+        {/* Wohi WorkForm -- farq sirf itna ke "kaam mukammal" ka nishan
+            pehle se laga hua aata hai, kyunke button ka naam wohi keh
+            raha hai. Banda chahe to utaar sakta hai (aadha din ka kaam
+            darj karna ho to). */}
+        <WorkForm
+          bookingId={booking.id}
+          estimated={booking.harvest_area}
+          done={workDone}
+          harvestType={booking.harvest_type}
+          accounts={accounts}
+          defaultFinal
+        />
+        {/* Malik (17 September): "Work Complete ke andar Diesel ka bhi
+            sawal-jawab ho, phir Payment, phir Close" -- kaam mukammal
+            darj hote hi agla qadam seedha yahin se, top ke chaar button
+            mein se dhoondna na paray. */}
+        <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
+          <Button type="button" variant="secondary" className="w-full" onClick={() => setModal("diesel")}>
+            Ab Diesel darj karein →
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal open={modal === "close"} title="Close Booking" onClose={() => setModal(null)}>
+        <div className="space-y-3">
+          <p className="text-sm text-surface-600 dark:text-surface-300">
+            Band karne se pehle poora hisaab saamne — wohi adad jo Settlement Summary mein hain.
+          </p>
+          <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
+            <SettlementRows
+              bill={bill}
+              paidTotal={paidTotal}
+              balance={balance}
+              paidToVendor={paidToVendor}
+              vendorRemaining={vendorRemaining}
+              vendorName={vendorName}
+              ourFuelExpense={ourFuelExpense}
+              ourFuelRecoverable={ourFuelRecoverable}
+              othersFuel={othersFuel}
+            />
+          </div>
+          <CloseBookingForm bookingId={booking.id} bill={Boolean(bill)} balance={balance} vendorRemaining={vendorRemaining} />
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Chhote hissay
+// ---------------------------------------------------------------------
+
+/**
+ * Booking Timeline -- malik ke mockup wali horizontal patti.
+ *
+ * Har qadam ka "ho gaya ya nahi" upar wale component mein tay hota hai,
+ * yahan nahi. Wajah: teen qadam DB ke status se nahi, INDRAJ se bante
+ * hain (machine nikli, kaam shuru hua) -- aur wo indraj us safhe ke paas
+ * hain, is patti ke paas nahi.
+ */
+function Timeline({ reached, cancelled }: { reached: boolean[]; cancelled: boolean }) {
+  if (cancelled) {
+    return (
+      <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+        Ye booking cancel ho chuki — safar yahin ruk gaya.
+      </p>
+    );
+  }
+  // Aakhri qadam jo ho chuka. Us se aage wale khali dikhte hain, aur
+  // usi par nishan lagta hai ke booking abhi kahan khari hai.
+  const current = reached.lastIndexOf(true);
+  return (
+    <ol className="flex flex-wrap items-start gap-x-1 gap-y-3">
+      {CHAIN.map((step, i) => {
+        const done = reached[i];
+        const here = i === current;
+        return (
+          <li key={step.key} className="flex items-start">
+            <div className="flex w-24 flex-col items-center text-center sm:w-28">
+              <span
+                className={
+                  "flex h-7 w-7 items-center justify-center rounded-full border-2 " +
+                  (done
+                    ? here
+                      ? "border-brand-600 bg-brand-600 text-white"
+                      : "border-brand-500 bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300"
+                    : "border-surface-200 bg-surface-50 text-surface-400 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-500")
+                }
+              >
+                {done ? <Check className="h-4 w-4" /> : <Circle className="h-3 w-3" />}
+              </span>
+              <span
+                className={
+                  "mt-1.5 text-[11px] leading-tight " +
+                  (done
+                    ? "font-medium text-surface-800 dark:text-surface-200"
+                    : "text-surface-400 dark:text-surface-500")
+                }
+              >
+                {step.label}
+              </span>
+            </div>
+            {i < CHAIN.length - 1 && (
+              <span
+                className={
+                  "mt-3.5 hidden h-0.5 w-4 sm:block " +
+                  (reached[i + 1] ? "bg-brand-500" : "bg-surface-200 dark:bg-surface-700")
+                }
+              />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/**
+ * Chaar bade button -- mockup ka asal hissa.
+ *
+ * Band button ghayab nahi hota, sirf wajah likh deta hai. Ghayab button
+ * staff ko ye sochne par majboor karta hai ke raasta hai hi nahi, aur
+ * phir wo kisi aur safhe par dhoondhne nikal jata hai.
+ */
+const BIG_BUTTON_TONES = {
+  green: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  blue: "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300",
+  amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+} as const;
+
+function BigButton({
+  icon: Icon,
+  tone,
+  label,
+  hint,
+  onClick,
+  disabled,
+}: {
+  icon: typeof Wallet;
+  tone: keyof typeof BIG_BUTTON_TONES;
+  label: string;
+  hint?: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={
+        "flex min-h-[76px] items-center gap-3 rounded-card border-2 px-4 py-3 text-left transition " +
+        (disabled
+          ? "cursor-not-allowed border-surface-200 bg-surface-50 text-surface-400 dark:border-surface-700 dark:bg-surface-800/50 dark:text-surface-500"
+          : "border-brand-500 bg-brand-50 text-brand-800 hover:bg-brand-100 dark:border-brand-700 dark:bg-brand-950/30 dark:text-brand-200 dark:hover:bg-brand-900/40")
+      }
+    >
+      <span
+        className={
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg " +
+          (disabled ? "bg-surface-200 text-surface-400 dark:bg-surface-700 dark:text-surface-500" : BIG_BUTTON_TONES[tone])
+        }
+      >
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="flex-1">
+        <span className="block font-display text-sm font-semibold leading-tight">{label}</span>
+        {hint && <span className="block text-xs font-normal opacity-80">{hint}</span>}
+      </span>
+      <ChevronRight className="h-4 w-4 shrink-0 opacity-60" />
+    </button>
+  );
+}
+
+/**
+ * Wo khane jo mockup ke chaar button mein nahi hain magar hatae bhi
+ * nahi ja sakte (rate ki tasdeeq, rawangi, bill, fasal uthana).
+ *
+ * Band halat mein ek hi lakeer mein apna haal bata dete hain. Yehi
+ * malik ki asal shikayat ka jawab hai: khana khula rakhna hi wo cheez
+ * thi jo safhe ko "mushkil" bana rahi thi -- magar khana hata dena us
+ * se bura hota, kyunke phir raasta hi na rehta.
+ */
+function Compact({
+  title,
+  summary,
+  tone,
+  open,
+  children,
+}: {
+  title: string;
+  summary: string;
+  tone: "done" | "todo";
+  open?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <details open={open}>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+          <span className="flex items-center gap-2">
+            <span
+              className={
+                "flex h-5 w-5 items-center justify-center rounded-full " +
+                (tone === "done" ? "bg-brand-600 text-white" : "bg-surface-300 text-white dark:bg-surface-600")
+              }
+            >
+              {tone === "done" ? <Check className="h-3 w-3" /> : <Circle className="h-2.5 w-2.5" />}
+            </span>
+            <span className="font-display text-sm font-semibold text-surface-900 dark:text-surface-100">{title}</span>
+          </span>
+          <span className="text-right text-xs text-surface-500">{summary}</span>
+        </summary>
+        <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">{children}</div>
+      </details>
+    </Card>
+  );
+}
+
+/**
+ * Ek khana jo button dabane par khulta hai.
+ *
+ * Andar koi naya form nahi banta -- wohi purane form yahan utar aate
+ * hain. Is parat ka kaam sirf itna hai ke form us waqt saamne aaye jab
+ * banda us ka naam khud dabaye.
+ */
+function Modal({
+  open,
+  title,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  // Escape par band. Chhota sa raasta, magar us ke baghair mobile par
+  // banda phansa hua mehsoos karta hai.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 sm:p-6">
+      {/* Peeche dabane par band -- magar andar dabane par nahi, warna
+          form bharte hue ek ghalat click sab mita deta hai. */}
+      <div className="absolute inset-0" onClick={onClose} aria-hidden />
+      <div className="relative z-10 my-auto w-full max-w-2xl rounded-card border border-surface-200 bg-white p-4 shadow-xl dark:border-surface-700 dark:bg-surface-900">
+        <div className="mb-3 flex items-center justify-between gap-3 border-b border-surface-100 pb-2 dark:border-surface-800">
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1 text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800"
+            aria-label="Band karein"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Add Payment ka andar wala hissa -- pehle ye poochha jata hai ke paisa
+ * KIS raaste se aa raha hai, phir wohi purana form khulta hai.
+ *
+ * Har raasta apne mojooda action par jata hai (B.1 ka naqsha):
+ *   Farmer se advance        -> `recordAdvance`
+ *   Farmer se bill ki adaigi -> `recordFinalPayment` (khud PaymentForm)
+ *   ART se Vendor ko         -> `recordVendorPayout`
+ *
+ * Jo raasta is waqt mumkin nahi wo fehrist mein aata hi nahi -- band
+ * raasta dikha kar "kyun nahi" ka sawal khara karna staff ka waqt
+ * khata hai.
+ */
+function AddPayment({
+  booking,
+  accounts,
+  advanceTotal,
+  bill,
+  balance,
+  confirmed,
+  reminders,
+  vendorName,
+  vendorRemaining,
+  paidToVendor,
+}: {
+  booking: Booking;
+  accounts: Array<{ id: string; name: string; account_type: string }>;
+  advanceTotal: number;
+  bill: { bill_number: string } | null;
+  balance: number | null;
+  confirmed: boolean;
+  reminders: Array<{ id: string; status: string; error: string | null; sentAt: string; bySystem: boolean }>;
+  vendorName: string | null;
+  vendorRemaining: number;
+  paidToVendor: number;
+}) {
+  const lang = useLang();
+  // Advance ek hi dafa. Bill ban jane ke baad us ka darwaza band: us ke
+  // baad jo paisa aata hai wo advance nahi, bill ki adaigi hai.
+  const canAdvance = advanceTotal === 0 && !bill;
+  // Baqi kuch na ho to adaigi ka khana nahi khulta -- bilkul waise hi
+  // jaise pehle safhe par khulta hi nahi tha. Khula hua khana jahan
+  // kuch dena hi na ho wahan sirf ek raasta banata hai: zyada paisa
+  // darj ho jana, aur phir us ko wapas nikalna.
+  const canFinal = Boolean(bill) && (balance ?? 0) > 0;
+  const canVendor = Boolean(bill) && vendorRemaining > 0;
+
+  const options: Array<{ key: string; label: string; hint: string }> = [];
+  if (canAdvance) options.push({ key: "advance", label: "Farmer se advance", hint: "Bill se pehle" });
+  if (canFinal) options.push({ key: "final", label: "Farmer se bill ki payment", hint: `Baqi Rs ${(balance ?? 0).toLocaleString()}` });
+  if (canVendor)
+    options.push({
+      key: "vendor",
+      label: `ART se ${vendorName ?? "Vendor"} ko`,
+      hint: `Dena Rs ${vendorRemaining.toLocaleString()}`,
+    });
+
+  const [choice, setChoice] = useState<string | null>(options.length === 1 ? options[0].key : null);
+
+  if (options.length === 0) {
+    return (
+      <div className="space-y-2 text-sm text-surface-600 dark:text-surface-300">
+        {advanceTotal > 0 && !bill ? (
+          <p>{t("mc_advance_already", lang)}</p>
+        ) : bill ? (
+          <p>Is booking par koi adaigi baqi nahi.</p>
+        ) : (
+          <p>{t("mc_advance_after_bill", lang)}</p>
+        )}
+        {!confirmed && <p className="text-xs text-surface-500">{t("mb_gate_note", lang)}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {options.length > 1 && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-surface-800 dark:text-surface-200">Paisa kis raaste se?</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {options.map((o) => (
+              <button
+                key={o.key}
+                type="button"
+                onClick={() => setChoice(o.key)}
+                className={
+                  "rounded-lg border px-3 py-2 text-left text-sm " +
+                  (choice === o.key
+                    ? "border-brand-500 bg-brand-50 text-brand-800 dark:border-brand-700 dark:bg-brand-950/30 dark:text-brand-200"
+                    : "border-surface-200 text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800")
+                }
+              >
+                <span className="block font-medium">{o.label}</span>
+                <span className="block text-xs text-surface-500">{o.hint}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {choice && <div className="border-t border-surface-100 pt-3 dark:border-surface-800" />}
+
+      {/* Neeche har soorat mein WOHI purana form hai jo pehle StepCard
+          mein khula rehta tha. Koi naya action nahi. */}
+      {choice === "advance" &&
+        (booking.advance_declined_at ? (
+          /* Kisan ne booking par hi mana kar diya tha. Wo jawab mehfooz
+             hai -- to sawal dobara nahi poochha jata. */
+          <AdvanceDeclined bookingId={booking.id} accounts={accounts} />
+        ) : (
+          <AdvanceForm bookingId={booking.id} accounts={accounts} />
+        ))}
+
+      {choice === "final" && (
+        <FinalPaymentStep
+          bookingId={booking.id}
+          accounts={accounts}
+          remaining={balance ?? 0}
+          promiseDate={booking.payment_promise_date}
+          promiseNote={booking.payment_promise_note}
+          willSell={booking.will_sell_to_us}
+          reminders={reminders}
+        />
+      )}
+
+      {choice === "vendor" && (
+        <VendorPayoutForm
+          bookingId={booking.id}
+          accounts={accounts}
+          remaining={vendorRemaining}
+          paidSoFar={paidToVendor}
+          vendorName={vendorName}
+        />
+      )}
+
+      {/* Vendor ne hamein cash wapas diya ho to wo is booking ka nahi,
+          vendor ke apne khate ka maamla hai -- aur wahan wo khud tasdeeq
+          karta hai. Is liye yahan sirf raasta dikhaya jata hai, dobara
+          khana nahi banaya jata. */}
+      <p className="border-t border-surface-100 pt-2 text-xs text-surface-500 dark:border-surface-800">
+        Vendor ne hamein paisa wapas diya ho to wo yahan nahi —{" "}
+        <Link href="/admin/machinery-rental/vendor-cash" className="underline hover:text-surface-700">
+          {t("mc_vendor_khata_link", lang)}
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Settlement ki lakeerein -- EK jagah likhi hui.
+ *
+ * Yehi lakeerein safhe ke neeche wale panel mein bhi hain aur "Close
+ * Booking" ke khane mein bhi. Do jagah likhna wohi purana masla banata
+ * (A.3/A.4 usi ko theek kar rahi hai): ek din ek jagah ka adad badalta
+ * aur doosri jagah ka nahi, aur phir koi nahi bata sakta ke sach kaun sa
+ * hai.
+ *
+ * Yahan koi nayi ginti nahi hoti (B.6) -- sab adad upar se aate hain.
+ */
+function SettlementRows({
+  bill,
+  paidTotal,
+  balance,
+  paidToVendor,
+  vendorRemaining,
+  vendorName,
+  ourFuelExpense,
+  ourFuelRecoverable,
+  othersFuel,
+}: {
+  bill: { gross_amount: number; commission_percentage: number; commission_amount: number; vendor_payable: number } | null;
+  paidTotal: number;
+  balance: number | null;
+  paidToVendor: number;
+  vendorRemaining: number;
+  vendorName: string | null;
+  ourFuelExpense: number;
+  ourFuelRecoverable: number;
+  othersFuel: number;
+}) {
+  const lang = useLang();
+  return (
+    <div className="text-sm">
+      {bill ? (
+        <Row label="Total Bill" value={bill.gross_amount} />
+      ) : (
+        <Missing label="Total Bill" note="bill abhi nahi bana" />
+      )}
+      <Row label="Total Paid (advance + adaigi)" value={paidTotal} />
+      {bill ? (
+        <div className="flex justify-between py-0.5 font-medium">
+          <span className="text-surface-700 dark:text-surface-200">Farmer Balance</span>
+          <span className={(balance ?? 0) > 0 ? "text-red-600 dark:text-red-400" : "text-brand-700 dark:text-brand-300"}>
+            Rs {(balance ?? 0).toLocaleString()}
+          </span>
+        </div>
+      ) : (
+        <Missing label="Farmer Balance" note="bill ke baad" />
+      )}
+
+      <div className="my-2 border-t border-surface-100 dark:border-surface-800" />
+
+      {bill ? (
+        <>
+          <Row label={`${vendorName ?? "Vendor"} ko dena (vendor payable)`} value={bill.vendor_payable} />
+          {paidToVendor > 0 && <Row label={t("mc_paid_so_far", lang)} value={-paidToVendor} />}
+          <div className="flex justify-between py-0.5 font-medium">
+            <span className="text-surface-700 dark:text-surface-200">Vendor Balance</span>
+            <span className={vendorRemaining > 0 ? "text-amber-600 dark:text-amber-400" : "text-brand-700 dark:text-brand-300"}>
+              Rs {vendorRemaining.toLocaleString()}
+            </span>
+          </div>
+        </>
+      ) : (
+        <Missing label="Vendor Payable" note="bill ke baad" />
+      )}
+
+      <div className="my-2 border-t border-surface-100 dark:border-surface-800" />
+
+      {/* Diesel ek adad nahi, teen alag cheezein hain (170). Teenon ko
+          jorh kar "Diesel Cost" likh dena hamare munafe ko jhoota kar
+          deta hai: vendor ki machine par diya hua diesel hamara kharcha
+          hai hi nahi -- wo us ke hisse se wapas aata hai. */}
+      <Row label="Diesel — ART ka apna kharcha" value={ourFuelExpense} />
+      <Row label="Diesel — vendor se wasool hona hai" value={ourFuelRecoverable} />
+      <Row label="Diesel — farmer/vendor ka apna" value={othersFuel} />
+
+      <div className="my-2 border-t border-surface-100 dark:border-surface-800" />
+
+      {bill ? (
+        <div className="flex justify-between py-0.5 font-display font-semibold">
+          <span>ART Commission ({bill.commission_percentage}%)</span>
+          <span className="text-brand-700 dark:text-brand-300">Rs {bill.commission_amount.toLocaleString()}</span>
+        </div>
+      ) : (
+        <Missing label="ART Commission" note="bill ke baad" />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Jis adad ka abhi wajood hi nahi, us ke saamne "Rs 0" likhna jhoot hai.
+ * Sifar kehta hai "dekh liya, kuch nahi bana" -- yahan baat ye hai ke
+ * hisaab abhi bana hi nahi.
+ */
+function Missing({ label, note }: { label: string; note: string }) {
+  return (
+    <div className="flex justify-between py-0.5">
+      <span className="text-surface-600 dark:text-surface-300">{label}</span>
+      <span className="text-surface-400 dark:text-surface-500">— {note}</span>
+    </div>
+  );
+}
+
+/**
+ * "Confirm & Close".
+ *
+ * Ye khud koi shart nahi parakhta. Band ho sakti hai ya nahi -- wo
+ * faisla `fn_machinery_booking_guard` ka hai (bill maujood ho, aur
+ * farmer ka balance sifar ho), aur wohi apne alfaz mein mana karta hai.
+ * Wahi shart yahan dobara likhna do-jagah-hisaab ki shuruaat hoti.
+ *
+ * Upar summary pehle hi saara hisaab dikha chuki hoti hai, is liye rok
+ * lagne par banda hairaan nahi hota -- wajah us ke saamne thi.
+ *
+ * Vendor ka balance band hone ki shart nahi hai (aaj bhi nahi) --
+ * dikhta hai magar rokta nahi.
+ */
+function CloseBookingForm({
+  bookingId,
+  bill,
+  balance,
+  vendorRemaining,
+}: {
+  bookingId: string;
+  bill: boolean;
+  balance: number | null;
+  vendorRemaining: number;
+}) {
+  const [state, action] = useFormState(closeBookingIfSettled, initialState);
+  const settled = bill && (balance ?? 0) <= 0;
+  return (
+    <form action={action} className="space-y-3">
+      <Err state={state} />
+      <input type="hidden" name="booking_id" value={bookingId} />
+      {!bill ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+          Bill banaye baghair booking band nahi ki ja sakti.
+        </p>
+      ) : (balance ?? 0) > 0 ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+          Kisan ka Rs {(balance ?? 0).toLocaleString()} abhi baqi hai — pehle wo adaigi darj karein.
+        </p>
+      ) : vendorRemaining > 0 ? (
+        <p className="rounded-lg border border-surface-200 bg-surface-50 p-2 text-sm text-surface-600 dark:border-surface-700 dark:bg-surface-800/50 dark:text-surface-300">
+          Kisan ka hisaab barabar hai. Vendor ka Rs {vendorRemaining.toLocaleString()} abhi baqi hai — ye booking band
+          hone se nahi rokta, magar wo raqam vendor ke khate par khari rahegi.
+        </p>
+      ) : null}
+      <Submit label="Confirm & Close" disabled={!settled} />
+    </form>
+  );
+}
+
+function Stat({ label, value, tone, hint }: { label: string; value: string; tone?: "green" | "amber" | "red" | "gray"; hint?: string }) {
+  const color =
+    tone === "green" ? "text-brand-700 dark:text-brand-300"
+    : tone === "amber" ? "text-wheat-600 dark:text-wheat-400"
+    : tone === "red" ? "text-red-600 dark:text-red-400"
+    : "text-surface-900 dark:text-surface-100";
+  return (
+    <div>
+      <p className="text-xs text-surface-500">{label}</p>
+      <p className={`font-display text-base font-semibold ${color}`}>{value}</p>
+      {hint && <p className="text-[11px] text-surface-400">{hint}</p>}
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: number }) {
+  // Manfi sifar ko sifar likha jaye: kharche wali lakeerein `value={-x}`
+  // bhejti hain, aur x sifar ho to JavaScript mein `-0` banta hai. `-0 < 0`
+  // GHALAT hai, is liye neeche wali shart usay manfi nahi samajhti aur
+  // seedha "-0" chhaap deti hai. Paise ke safhe par "Rs -0" parh kar banda
+  // rukta hai aur sochta hai kya cheez manfi hai. Kuch bhi nahi.
+  const v = value === 0 ? 0 : value;
+  return (
+    <div className="flex justify-between py-0.5">
+      <span className="text-surface-600 dark:text-surface-300">{label}</span>
+      <span className={v < 0 ? "text-surface-500" : "text-surface-900 dark:text-surface-100"}>
+        {v < 0 ? "−" : ""}Rs {Math.abs(v).toLocaleString()}
+      </span>
+    </div>
+  );
+}
+
+/* `StepCard` yahan se hata diya gaya (14 September).
+ *
+ * Ye wo khana tha jo har qadam ke liye HAMESHA khula rehta tha -- aathon
+ * ek sath, chahe kaam ho chuka ho. Malik ki asal shikayat wohi thi:
+ * "booking wala kaam bohat mushkil bana diya hai." Us ki jagah ab teen
+ * cheezein hain: chaar bade button (jo khana khud kholte hain), `Compact`
+ * (jo band rehta hai aur ek lakeer mein apna haal bata deta hai), aur do
+ * table (jo ho chuka wo dikhati hain).
+ *
+ * Andar ke saare form wohi hain -- ek bhi action nahi badla. */
+function Eff({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-surface-50 px-2 py-1.5 dark:bg-surface-800">
+      <p className="text-xs text-surface-500">{label}</p>
+      <p className="font-display font-semibold text-surface-900 dark:text-surface-100">{value}</p>
+    </div>
+  );
+}
+
+
+// ---------------------------------------------------------------------
+
+/**
+ * Kisan ne booking par kaha tha: advance nahi.
+ *
+ * Wo jawab aa chuka hai, is liye ye qadam poora hai -- khali nahi.
+ * Safha wohi sawal dobara nahi poochhta: jo baat kisan pehle keh
+ * chuka hai, us ko dobara poochhna staff ko ye shak deta hai ke
+ * shayad pehle wala darj hi nahi hua, aur wohi shak ek hi raqam do
+ * dafa likhwa deta hai.
+ *
+ * Phir bhi paisa aa jaye to raasta band nahi -- magar wo staff ke
+ * kehne par khulta hai, safhe ke poochhne par nahi.
+ */
+/**
+ * "Wapis" ka button.
+ *
+ * Sirf un jagahon par lagta hai jahan ek CLICK ne nishan laga diya tha
+ * aur paisa hila hi nahi. Jahan paisa hil chuka ho wahan ye nahi aata
+ * -- wahan reversal ka apna nizaam hai (156), jahan qatar mitai nahi
+ * jati balke ulti qatar lagti hai.
+ *
+ * Poochh kar hi chalta hai: ye bhi ek hi click hai, aur wohi ghalti
+ * dobara na ho.
+ */
+function DieselNone({ bookingId }: { bookingId: string }) {
+  const lang = useLang();
+  return (
+    <div className="space-y-2">
+      <p className="rounded-lg border border-surface-200 bg-surface-50 p-3 text-sm text-surface-600 dark:border-surface-700 dark:bg-surface-800/50 dark:text-surface-300">
+        {t("mc_diesel_none_done", lang)}
+      </p>
+      {/* Yahan bhi paisa hila hi nahi -- sirf ek jawab likha gaya tha --
+          is liye usay wapis lena mehfooz hai. */}
+      <UndoButton bookingId={bookingId} action={undoDieselNone} label={t("mc_diesel_none_undo", lang)} />
+    </div>
+  );
+}
+
+function MarkDieselNoneButton({ bookingId }: { bookingId: string }) {
+  const lang = useLang();
+  const [state, formAction] = useFormState(markDieselNone, initialState);
+  if (state.error) return <p className="text-xs text-red-600 dark:text-red-400">{state.error}</p>;
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <button
+        type="submit"
+        className="flex items-center gap-2 rounded-lg border border-surface-200 px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
+      >
+        <CheckCircle2 className="h-4 w-4" />
+        {t("mc_diesel_none_mark", lang)}
+      </button>
+    </form>
+  );
+}
+
+function YesNo({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        on
+          ? "rounded-lg bg-brand-700 px-3 py-1.5 text-sm font-medium text-white"
+          : "rounded-lg border border-surface-200 px-3 py-1.5 text-sm text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
+function UndoButton({
+  bookingId,
+  action,
+  label,
+}: {
+  bookingId: string;
+  action: (prev: ActionState, fd: FormData) => Promise<ActionState>;
+  label: string;
+}) {
+  const lang = useLang();
+  const [state, formAction] = useFormState(action, initialState);
+  const [asking, setAsking] = useState(false);
+
+  if (state.error) {
+    return <p className="text-xs text-red-600 dark:text-red-400">{state.error}</p>;
+  }
+
+  if (!asking) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAsking(true)}
+        className="flex items-center gap-1 text-xs text-surface-500 underline hover:text-surface-700 dark:hover:text-surface-300"
+      >
+        <Undo2 className="h-3 w-3" />
+        {label}
+      </button>
+    );
+  }
+
+  return (
+    <form action={formAction} className="flex flex-wrap items-center gap-2">
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <span className="text-xs text-surface-600 dark:text-surface-400">{t("mc_undo_sure", lang)}</span>
+      <Submit label={t("mc_undo_yes", lang)} />
+      <button
+        type="button"
+        onClick={() => setAsking(false)}
+        className="text-xs text-surface-500 underline hover:text-surface-700"
+      >
+        {t("mc_undo_no", lang)}
+      </button>
+    </form>
+  );
+}
+
+function AdvanceDeclined({
+  bookingId,
+  accounts,
+}: {
+  bookingId: string;
+  accounts: Array<{ id: string; name: string; account_type: string }>;
+}) {
+  const lang = useLang();
+  const [open, setOpen] = useState(false);
+
+  if (open) return <AdvanceForm bookingId={bookingId} accounts={accounts} />;
+
+  return (
+    <div className="space-y-2">
+      <p className="rounded-lg border border-surface-200 bg-surface-50 p-3 text-sm text-surface-600 dark:border-surface-700 dark:bg-surface-800/50 dark:text-surface-300">
+        {t("mc_advance_declined", lang)}
+      </p>
+      {/* Ghalti se laga hua nishan wapis. Yahan paisa hila hi nahi --
+          sirf ek jawab likha gaya tha -- is liye wapis lena mehfooz
+          hai. Jahan paisa hil chuka ho wahan ye button nahi aata. */}
+      <UndoButton
+        bookingId={bookingId}
+        action={undoAdvanceDeclined}
+        label={t("mc_undo_declined", lang)}
+      />
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-xs text-surface-500 underline hover:text-surface-700 dark:hover:text-surface-300"
+      >
+        {t("mc_advance_came_later", lang)}
+      </button>
+    </div>
+  );
+}
+
+function AdvanceForm({ bookingId, accounts }: { bookingId: string; accounts: Array<{ id: string; name: string; account_type: string }> }) {
+  const lang = useLang();
+  const [state, action] = useFormState(recordAdvance, initialState);
+  const [method, setMethod] = useState("cash");
+  const [evidence, setEvidence] = useState("");
+  return (
+    <form action={action} className="space-y-3">
+      <Err state={state} />
+      {/* Advance lazmi nahi. Bohat si bookings bina advance ke hoti
+          hain -- kisan kehta hai kaam ke baad de dunga. Ye qadam pehla
+          hai is liye lagta tha ke ise bharay baghair aage nahi ja
+          sakte, aur khali form bhejne par ek laal error milta tha jo is
+          ghalat fehmi ko pakka kar deta. */}
+      <p className="text-xs text-surface-500">{t("mc_advance_optional", lang)}</p>
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <input type="hidden" name="evidence_url" value={evidence} />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>{t("mc_amount", lang)}</Label>
+          <Input type="number" name="amount" step="0.01" />
+        </div>
+        <div>
+          <Label>{t("mc_method", lang)}</Label>
+          <Select name="method" value={method} onChange={(e) => setMethod(e.target.value)}>
+            <option value="cash">{t("mc_cash", lang)}</option>
+            <option value="bank">{t("mc_bank", lang)}</option>
+            <option value="wallet">{t("mc_wallet", lang)}</option>
+            <option value="other">{t("mc_other", lang)}</option>
+          </Select>
+        </div>
+      </div>
+
+      {/* Cash par khata nahi poochha jata -- wo lene wale ke naam par
+          khara hota hai (171). Us ki jagah sirf ye poochha jata hai ke
+          kahan liya. */}
+      {method === "cash" ? (
+        <div>
+          <Label>{t("mc_cash_where", lang)}</Label>
+          <Select name="received_location" defaultValue="office">
+            <option value="office">{t("mc_cash_office", lang)}</option>
+            <option value="field">{t("mc_cash_field", lang)}</option>
+          </Select>
+          <p className="mt-1 text-xs text-surface-500">{t("mc_cash_custody_note", lang)}</p>
+        </div>
+      ) : (
+        <div>
+          <Label>{t("mc_khata", lang)}</Label>
+          <Select name="finance_account_id" defaultValue="">
+            <option value="">—</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name} ({a.account_type})
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>{t("mc_date", lang)}</Label>
+          <Input type="date" name="payment_date" defaultValue={aajKaKhana()} />
+        </div>
+        <div>
+          <Label>{t("mc_reference", lang)}</Label>
+          <Input name="reference" />
+        </div>
+      </div>
+      <PaymentSlipUpload onUploaded={setEvidence} />
+      <Submit label={t("mc_record_advance", lang)} />
+    </form>
+  );
+}
+
+function RateConfirmationForm({
+  bookingId,
+  defaultRate,
+  harvestType,
+  sabitArea,
+  kutraArea,
+  totalArea,
+  defaultSabitRate,
+  defaultKutraRate,
+}: {
+  bookingId: string;
+  defaultRate: number | null;
+  harvestType: string | null;
+  sabitArea: number | null;
+  kutraArea: number | null;
+  totalArea: number | null;
+  defaultSabitRate: number | null;
+  defaultKutraRate: number | null;
+}) {
+  const lang = useLang();
+  const [state, action] = useFormState(sendRateConfirmation, initialState);
+
+  // Rate aksar booking BANATE WAQT hi tay ho chuka hota hai (177 ka
+  // rate card, ya staff ka apna likha hua). Ye qadam use dobara nahi
+  // poochhta -- wahi rate saamne rakhta hai, badalne ki gunjaish ke
+  // sath, aur us se banne wala kul kharcha bhi.
+  const isDono = harvestType === "dono";
+  const [sRate, setSRate] = useState(String(defaultSabitRate ?? ""));
+  const [kRate, setKRate] = useState(String(defaultKutraRate ?? ""));
+  const [oneRate, setOneRate] = useState(String(defaultRate ?? ""));
+  const [sendAs, setSendAs] = useState<"rate" | "total">("rate");
+
+  const sA = Number(sabitArea ?? 0);
+  const kA = Number(kutraArea ?? 0);
+  const area = isDono ? sA + kA : Number(totalArea ?? 0);
+
+  const sabitRaqam = Math.round(sA * (Number(sRate) || 0));
+  const kutraRaqam = Math.round(kA * (Number(kRate) || 0));
+  const total = isDono ? sabitRaqam + kutraRaqam : Math.round(area * (Number(oneRate) || 0));
+  const avg = area > 0 ? Math.round((total / area) * 100) / 100 : 0;
+
+  return (
+    <form action={action} className="space-y-3">
+      <Err state={state} />
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <input type="hidden" name="send_as" value={sendAs} />
+
+      {isDono ? (
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>
+              {t("mh_sabit", lang)} — {sA} {t("md_acres_short", lang)}
+            </Label>
+            <Input type="number" name="sabit_rate" step="0.01" value={sRate} onChange={(e) => setSRate(e.target.value)} />
+            <p className="mt-1 text-xs text-surface-500">Rs / {t("md_acres_short", lang)}</p>
+          </div>
+          <div>
+            <Label>
+              {t("mh_kutra", lang)} — {kA} {t("md_acres_short", lang)}
+            </Label>
+            <Input type="number" name="kutra_rate" step="0.01" value={kRate} onChange={(e) => setKRate(e.target.value)} />
+            <p className="mt-1 text-xs text-surface-500">Rs / {t("md_acres_short", lang)}</p>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <Label>{t("mc_final_rate_per_acre", lang)}</Label>
+          <Input type="number" name="final_rate" step="0.01" value={oneRate} onChange={(e) => setOneRate(e.target.value)} />
+        </div>
+      )}
+
+      {(defaultSabitRate !== null || defaultRate !== null) && (
+        <p className="text-xs text-surface-500">{t("mrx_from_booking", lang)}</p>
+      )}
+
+      {/* Kul kharcha saamne. Pehle sirf per acre rate dikhta tha, aur
+          kisan ka pehla sawal hamesha "kitne paise banenge" hota hai. */}
+      {total > 0 && (
+        <div className="rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800">
+          {isDono && (
+            <>
+              <div className="flex justify-between text-xs text-surface-600 dark:text-surface-400">
+                <span>
+                  {t("mh_sabit", lang)}: {sA} × Rs {(Number(sRate) || 0).toLocaleString()}
+                </span>
+                <span>Rs {sabitRaqam.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-xs text-surface-600 dark:text-surface-400">
+                <span>
+                  {t("mh_kutra", lang)}: {kA} × Rs {(Number(kRate) || 0).toLocaleString()}
+                </span>
+                <span>Rs {kutraRaqam.toLocaleString()}</span>
+              </div>
+              <div className="my-1 border-t border-surface-200 dark:border-surface-700" />
+              <div className="flex justify-between text-xs text-surface-600 dark:text-surface-400">
+                <span>{t("mrx_avg", lang)}</span>
+                <span>Rs {avg.toLocaleString()}</span>
+              </div>
+            </>
+          )}
+          <div className="flex justify-between font-display font-semibold text-surface-900 dark:text-white">
+            <span>{t("mrx_total", lang)}</span>
+            <span>Rs {total.toLocaleString()}</span>
+          </div>
+          <p className="mt-1 text-xs text-surface-500">{t("mrx_on_booked", lang)}</p>
+        </div>
+      )}
+
+      {/* Kuch kisan rate se samajhte hain, kuch sirf kul raqam se.
+          Dono adad paighaam mein jate hain -- sirf pehli lakeer badalti
+          hai, taake wo cheez upar ho jo us kisan ko samajh aati hai. */}
+      <div>
+        <Label>{t("mrx_send_as", lang)}</Label>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => setSendAs("rate")}
+            className={
+              sendAs === "rate"
+                ? "rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white"
+                : "rounded-lg bg-surface-100 px-3 py-1.5 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300"
+            }
+          >
+            {t("mrx_send_rate", lang)}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSendAs("total")}
+            className={
+              sendAs === "total"
+                ? "rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white"
+                : "rounded-lg bg-surface-100 px-3 py-1.5 text-sm font-medium text-surface-700 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300"
+            }
+          >
+            {t("mrx_send_total", lang)}
+          </button>
+        </div>
+        <p className="mt-1 text-xs text-surface-500">{t("mrx_both_go", lang)}</p>
+      </div>
+
+      <p className="text-xs text-surface-500">
+        Bhejte hi purani tasdeeq (agar thi) khatam ho jayegi — warna kisan ne kisi aur rate par haan ki hoti aur record
+        naye rate par &ldquo;tasdeeq shuda&rdquo; dikhata rehta.
+      </p>
+      <Submit label={t("mc_send_rate_confirmation", lang)} />
+    </form>
+  );
+}
+
+function FarmerResponseForm({ bookingId }: { bookingId: string }) {
+  const lang = useLang();
+  const [state, action] = useFormState(recordFarmerConfirmation, initialState);
+  const [decision, setDecision] = useState("");
+  return (
+    <form action={action} className="space-y-3">
+      <Err state={state} />
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <input type="hidden" name="decision" value={decision} />
+
+      {/* Faisla pehle, jumla baad mein.
+          Kisan ne haan ki ya aitraaz -- ye us bande ko maloom hai jo
+          phone par tha. Pehle ye jumle se andaza lagaya jata tha, aur
+          "call" jaisa lafz aitraaz ban jata tha. */}
+      <div>
+        <Label>{t("mc_farmer_decision", lang)}</Label>
+        <div className="mt-1 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setDecision("accept")}
+            className={`flex-1 rounded-lg border py-2 text-sm font-medium ${
+              decision === "accept"
+                ? "border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-950/30"
+                : "border-surface-200 text-surface-500 dark:border-surface-700"
+            }`}
+          >
+            {t("mc_farmer_said_yes", lang)}
+          </button>
+          <button
+            type="button"
+            onClick={() => setDecision("issue")}
+            className={`flex-1 rounded-lg border py-2 text-sm font-medium ${
+              decision === "issue"
+                ? "border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-950/30"
+                : "border-surface-200 text-surface-500 dark:border-surface-700"
+            }`}
+          >
+            {t("mc_farmer_objected", lang)}
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>{t("mc_how_reply_came", lang)}</Label>
+          <Select name="channel" defaultValue="whatsapp">
+            <option value="whatsapp">{t("at_whatsapp", lang)}</option>
+            <option value="call">{t("mc_phone_call", lang)}</option>
+            <option value="in_person">{t("mc_in_person", lang)}</option>
+          </Select>
+        </div>
+      </div>
+      <div>
+        <Label>{t("mc_what_farmer_said", lang)}</Label>
+        <Textarea name="response" rows={2} placeholder={t("mc_what_farmer_said_hint", lang)} />
+      </div>
+      <Submit label={t("mc_record_reply", lang)} />
+    </form>
+  );
+}
+
+function OverrideForm({ bookingId }: { bookingId: string }) {
+  const lang = useLang();
+  const [state, action] = useFormState(overrideConfirmation, initialState);
+  const [open, setOpen] = useState(false);
+  const [evidence, setEvidence] = useState("");
+  if (!open) {
+    return (
+      <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(true)}>
+        {t("mc_override_title", lang)}
+      </Button>
+    );
+  }
+  return (
+    <form action={action} className="space-y-3 rounded-lg border border-amber-200 p-3 dark:border-amber-900/40">
+      <Err state={state} />
+      <p className="text-sm text-amber-800 dark:text-amber-300">
+        Ye kisan ki tasdeeq ke baghair aage barhna hai. Wajah aur saboot dono lazmi hain, aur ye admin ko ittila bhi
+        bhejta hai.
+      </p>
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <input type="hidden" name="evidence_url" value={evidence} />
+      <div>
+        <Label>{t("mc_reason", lang)}</Label>
+        <Textarea name="reason" rows={2} placeholder={t("mc_override_placeholder", lang)} />
+      </div>
+      <PaymentSlipUpload onUploaded={setEvidence} />
+      <div className="flex gap-2">
+        <Submit label={t("mc_override_do", lang)} />
+        <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function DispatchForm({
+  bookingId,
+  machines,
+  already,
+  harvestDate,
+  bookingAcres,
+}: {
+  bookingId: string;
+  machines: Array<{
+    id: string;
+    label: string;
+    driverName: string;
+    driverPhone: string;
+    /** Us din us machine ka bojh (180). Na maloom ho to null. */
+    capacity: number | null;
+    booked: number | null;
+    free: number | null;
+  }>;
+  already: boolean;
+  harvestDate: string | null;
+  bookingAcres: number;
+}) {
+  const lang = useLang();
+  const [state, action] = useFormState(dispatchMachine, initialState);
+  const [again, setAgain] = useState(false);
+
+  // Machine chunte hi us din ka bojh saamne (180). Pehle ye adad sirf
+  // ERROR ki shakl mein milta tha -- yani form bhar chukne ke baad, aur
+  // kisan saamne khaRa hota. Ab pehle se nazar aata hai, aur staff
+  // wahin faisla kar leta hai: is machine par bhejein ya tareekh badlein.
+  const [pickedMachine, setPickedMachine] = useState("");
+
+  // Driver machine ke sath likha hua hai (162), is liye machine
+  // chunte hi wo khud aa jata hai. Khane phir bhi khule hain: kisi
+  // din koi doosra le jata hai, aur us din sach wohi hai jo yahan
+  // likha jaye.
+  const [driverName, setDriverName] = useState("");
+  const [driverPhone, setDriverPhone] = useState("");
+
+  // Rawangi darj ho chuki ho to form band. Diesel ke liye neeche apna
+  // qadam hai -- pehle log yahi form dobara bhar dete the.
+  if (already && !again) {
+    return (
+      <div className="space-y-2">
+        <p className="text-xs text-surface-500">{t("mc_dispatch_done_hint", lang)}</p>
+        <button
+          type="button"
+          onClick={() => setAgain(true)}
+          className="text-sm font-medium text-brand-600 hover:underline"
+        >
+          {t("mc_dispatch_again", lang)}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <Err state={state} />
+
+      {/* Machine us din bhari thi -- to agli khali tareekh sirf batayi
+          nahi jati, wo yahin bhari ja sakti hai. System wo tareekh
+          pehle se jaanta hai; use jumle mein likh kar bande se dobara
+          likhwana wohi kaam do dafa karwana hai, aur ek adad ghalat
+          likh dene ki gunjaish khuli chhorna hai. */}
+      {state.nextFreeDate && <RescheduleForm bookingId={bookingId} nextFree={state.nextFreeDate} />}
+
+      <form action={action} className="space-y-3">
+        <input type="hidden" name="booking_id" value={bookingId} />
+        {again && <input type="hidden" name="again" value="on" />}
+      <div>
+        <Label>{t("mc_machine", lang)}</Label>
+        <Select
+          name="machine_id"
+          value={pickedMachine}
+          onChange={(e) => {
+            setPickedMachine(e.target.value);
+            const m = machines.find((x) => x.id === e.target.value);
+            setDriverName(m?.driverName ?? "");
+            setDriverPhone(m?.driverPhone ?? "");
+          }}
+        >
+          <option value="">—</option>
+          {machines.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+              {/* Har machine ke naam ke sath us din ka bojh -- chunne se
+                  pehle hi pata chal jaye ke kahan jagah hai. */}
+              {m.capacity !== null ? `  ·  ${m.booked}/${m.capacity} acre bandhe` : ""}
+            </option>
+          ))}
+        </Select>
+        {/* Chuni hui machine ka us din ka poora hisaab -- saaf jumle
+            mein, error se pehle. */}
+        <MachineDayLoad
+          machine={machines.find((m) => m.id === pickedMachine) ?? null}
+          date={harvestDate}
+          acres={bookingAcres}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>{t("mc_operator", lang)}</Label>
+          <Input name="operator_name" value={driverName} onChange={(e) => setDriverName(e.target.value)} />
+        </div>
+        <div>
+          <Label>{t("mc_driver_phone", lang)}</Label>
+          <Input name="driver_phone" value={driverPhone} onChange={(e) => setDriverPhone(e.target.value)} />
+        </div>
+      </div>
+      {/* Shuru ka meter yahan se hata diya gaya.
+          Kisi ne bhi wo kabhi nahi bhara -- machine nikalte waqt koi
+          meter dekhne nahi jata. Aur us ki zaroorat bhi nahi: ghante
+          kaam ke waqt se khud nikalte hain, aur machine ka meter kaam
+          darj karte waqt likha jata hai. Jo khana hamesha khali rehta
+          hai wo form ko lamba karta hai aur kuch nahi. */}
+      <p className="text-xs text-surface-500">{t("mc_dispatch_no_diesel", lang)}</p>
+        <Submit label={t("mc_record_dispatch", lang)} />
+      </form>
+    </div>
+  );
+}
+
+/**
+ * Agli khali tareekh par booking khiskana.
+ *
+ * Tareekh pehle se bhari hui hai -- wohi jo system ne nikali. Phir bhi
+ * khana khula hai, kyunke agli khali tareekh sab se pehli mumkin
+ * tareekh hai, hamesha sab se munasib nahi: kisan ki apni majboori ho
+ * sakti hai. System tajweez deta hai, faisla insaan ka rehta hai.
+ */
+/**
+ * Us machine par us din kitna bandha hua hai (180).
+ *
+ * Ye ROKTA nahi -- sirf batata hai. Malik ka faisla hai ke rok na ho;
+ * manager kabhi doosri machine ka bandobast kar leta hai. Magar jo baat
+ * DB error ke baad batayi jati thi, wo ab pehle nazar aa jati hai.
+ */
+/**
+ * Waqt ka khana -- ek "Theek hai" ke sath.
+ *
+ * Browser ka apna calendar/ghari ka dabba hamara nahi hai; us ke andar
+ * koi button daalna mumkin nahi. Magar us ko BAND karne ka saaf raasta
+ * dena mumkin hai: "Theek hai" par khana chhoR diya jata hai aur dabba
+ * apne aap band ho jata hai. Chuna hua waqt neeche saaf likha rehta hai
+ * -- pehle wo sirf usi tang khane mein dikhta tha.
+ */
+function TimeField({
+  name,
+  value,
+  onChange,
+  min,
+}: {
+  name: string;
+  value: string;
+  onChange: (v: string) => void;
+  min?: string;
+}) {
+  const lang = useLang();
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div>
+      <div className="flex gap-2">
+        <Input
+          ref={ref}
+          type="datetime-local"
+          name={name}
+          value={value}
+          min={min}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          className="shrink-0"
+          onClick={() => ref.current?.blur()}
+        >{t("mb_ok", lang)}</Button>
+      </div>
+      {value && (
+        <p className="mt-1 text-xs text-surface-500">
+          {new Date(value).toLocaleString(undefined, {
+            weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit",
+          })}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function MachineDayLoad({
+  machine,
+  date,
+  acres,
+}: {
+  machine: { label: string; capacity: number | null; booked: number | null; free: number | null } | null;
+  date: string | null;
+  acres: number;
+}) {
+  const lang = useLang();
+  if (!machine || machine.capacity === null || !date) return null;
+
+  const capacity = machine.capacity;
+  const booked = machine.booked ?? 0;
+  const free = machine.free ?? 0;
+
+  if (capacity === 0) {
+    return (
+      <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">{t("mb_machine_unfit", lang)}</p>
+    );
+  }
+
+  const fits = acres <= free + 0.001;
+  const pct = Math.min(Math.round((booked / capacity) * 100), 100);
+
+  return (
+    <div
+      className={`mt-2 rounded-lg border px-3 py-2 text-sm ${
+        fits
+          ? "border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/20"
+          : "border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/20"
+      }`}
+    >
+      <p className={fits ? "text-green-800 dark:text-green-300" : "text-amber-800 dark:text-amber-300"}>
+        <strong>{date}</strong>{t("mb_on_this_machine", lang)}<strong>{booked} / {capacity} acre</strong> bandhe hain —{" "}
+        <strong>{free} acre</strong> bachi hai. Ye booking {acres} acre ki hai.
+      </p>
+      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/70 dark:bg-surface-800">
+        <div
+          className={`h-full rounded-full ${fits ? "bg-green-500" : "bg-amber-500"}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {!fits && (
+        <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">
+          Jagah kam hai. Doosri machine ya doosri tareekh behtar hai — warna manager ki ijazat aur wajah darj karni
+          hogi.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function RescheduleForm({ bookingId, nextFree }: { bookingId: string; nextFree: string }) {
+  const lang = useLang();
+  const [state, action] = useFormState(rescheduleBooking, initialState);
+
+  if (state.success) {
+    return (
+      <p className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm text-brand-800 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-200">
+        {state.notice}
+      </p>
+    );
+  }
+
+  return (
+    <form action={action} className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+      <Err state={state} />
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <Label>{t("mc_move_to_date", lang)}</Label>
+      <div className="flex flex-wrap items-center gap-2">
+        <Input type="date" name="preferred_date" defaultValue={nextFree} className="max-w-[200px]" />
+        <Submit label={t("mc_move_booking", lang)} />
+      </div>
+    </form>
+  );
+}
+
+/**
+ * Diesel ka indraj -- jitni baar dala jaye.
+ *
+ * Ye alag qadam is liye hai ke diesel ek dafa nahi dala jata: 20 acre
+ * ki kattai teen din chalti hai, beech mein hum daalte hain, agle din
+ * kisan khud dalwa deta hai.
+ */
+function useMachineryOfflineSender(actionType: "machinery.fuel" | "machinery.work") {
+  useEffect(() => {
+    registerSender(actionType, async (action: QueuedAction) => {
+      try {
+        const res = await fetch("/api/machinery/offline", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ kind: actionType === "machinery.fuel" ? "fuel" : "work", fields: action.payload.fields ?? {} }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Machinery entry sync fail ho gayi." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+  }, [actionType]);
+}
+
+function FuelForm({
+  bookingId,
+  accounts,
+  already,
+}: {
+  bookingId: string;
+  accounts: Array<{ id: string; name: string; account_type: string }>;
+  already: boolean;
+}) {
+  const lang = useLang();
+  const [state, action] = useFormState(recordFuelEntry, initialState);
+  const [offlineNotice, setOfflineNotice] = useState("");
+  const [clientActionId] = useState(() => crypto.randomUUID());
+  useMachineryOfflineSender("machinery.fuel");
+
+  // Raqam ka khana yahan se hata diya gaya.
+  //
+  // Ab litre aur us din ka rate poochhe jate hain, aur raqam khud
+  // banti hai -- sirf dikhane ke liye yahan, aur asal mein DB par
+  // (170). Haath se likhi hui raqam wo jagah hai jahan ek sifar
+  // zyada lag jata hai aur kisi ko pata nahi chalta.
+  //
+  // Aur us se do adad kabhi nahi milte jo asal mein chahiye hote
+  // hain: litre per acre, aur kis din kis rate par liya.
+  const [litres, setLitres] = useState("");
+  const [rate, setRate] = useState("");
+  const total = Number(litres) > 0 && Number(rate) > 0 ? Number(litres) * Number(rate) : null;
+  const [paidBy, setPaidBy] = useState("");
+  const [more, setMore] = useState(false);
+
+  // Ek dafa darj hone ke baad form band. Khula hua form wohi ghalti
+  // dobara karwata hai jo rawangi par hui thi: aadmi samajhta hai ke
+  // shayad pichhla gaya hi nahi, aur wohi diesel do dafa kharche mein
+  // chala jata hai. Mazeed diesel dala ho to jaan boojh kar maangna
+  // parta hai.
+  const closed = (already || state.success) && !more;
+
+  if (closed) {
+    return (
+      <div className="space-y-2">
+        {state.notice && (
+          <p className="rounded border border-brand-200 bg-brand-50 p-2 text-sm text-brand-700 dark:border-brand-900/40 dark:bg-brand-950/30 dark:text-brand-300">
+            {state.notice}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            setMore(true);
+            setPaidBy("");
+          }}
+          className="text-sm font-medium text-brand-600 hover:underline"
+        >
+          + {t("mc_fuel_add_more", lang)}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form action={action} className="space-y-3" onSubmit={async (event) => {
+      if (typeof navigator === "undefined" || navigator.onLine !== false) return;
+      event.preventDefault();
+      const form = new FormData(event.currentTarget);
+      form.set("client_action_id", clientActionId);
+      const fields = Object.fromEntries(form.entries());
+      await enqueue({ actionType: "machinery.fuel", entityType: "machinery_fuel_logs", payload: { fields }, clientActionId });
+      setOfflineNotice("Diesel entry device par save ho gayi; internet aate hi sync hogi.");
+    }}>
+      {offlineNotice && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
+      <input type="hidden" name="client_action_id" value={clientActionId} />
+      <Err state={state} />
+      <input type="hidden" name="booking_id" value={bookingId} />
+      <p className="text-xs text-surface-500">{t("mc_fuel_hint", lang)}</p>
+
+      {/* Raqam saamne dikhti hai magar bhari nahi jati -- wo litre aur
+          rate se khud banti hai. Banda dekh sakta hai ke jo wo likh
+          raha hai us ka natija kya hoga, magar us natije ko haath
+          nahi laga sakta. */}
+      {total !== null && (
+        <p className="rounded-lg bg-surface-50 px-3 py-2 text-sm dark:bg-surface-800">
+          {litres} × Rs {rate} ={" "}
+          <strong className="font-display">Rs {total.toLocaleString()}</strong>
+        </p>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>{t("mc_date", lang)}</Label>
+          <Input type="date" name="log_date" defaultValue={aajKaKhana()} />
+        </div>
+        <div>
+          <Label>{t("mc_diesel_litre", lang)} *</Label>
+          <Input type="number" name="litres" step="0.01" value={litres} onChange={(e) => setLitres(e.target.value)} />
+        </div>
+        <div>
+          <Label>{t("mc_diesel_rate", lang)} *</Label>
+          <Input type="number" name="rate_per_litre" step="0.01" value={rate} onChange={(e) => setRate(e.target.value)} />
+        </div>
+        <div>
+          <Label>{t("mc_diesel_paid_by", lang)}</Label>
+          {/* "Driver" screen par alag dikhta hai magar peeche wohi
+              `vendor` hai (B.2).
+
+              Malik ne driver ko chautha payer maanga tha. Us ke liye
+              `paid_by` mein naya qadar daalna sab se mehnga raasta hota:
+              har wo view aur guard jo aaj `company | vendor | farmer`
+              ginta hai (diesel ki wasooli, vendor settlement, P&L) chup
+              chaap us qatar ko chhoR deta -- aur diesel gum ho jata.
+              Driver vendor ka apna aadmi hai, us ka diya hua diesel
+              vendor ke hisse se hi wapas aata hai, is liye hisaab dono
+              soorton mein bilkul ek jaisa hai. Farq sirf lafz ka hai,
+              aur lafz yahin rehta hai. */}
+          <Select value={paidBy} onChange={(e) => setPaidBy(e.target.value)}>
+            <option value="">—</option>
+            <option value="farmer">{t("mc_diesel_by_farmer", lang)}</option>
+            <option value="vendor">{t("mc_diesel_by_vendor", lang)}</option>
+            <option value="driver">Driver</option>
+            <option value="company">{t("mc_diesel_by_company", lang)}</option>
+          </Select>
+          <input type="hidden" name="paid_by" value={paidBy === "driver" ? "vendor" : paidBy} />
+        </div>
+      </div>
+      {paidBy === "driver" && (
+        <p className="text-xs text-surface-500">
+          Driver ka diya hua diesel vendor ke khate mein darj hota hai — wo vendor ka apna aadmi hai, aur ye raqam usi
+          ke hisse se wapas aati hai.
+        </p>
+      )}
+      {paidBy === "company" && (
+        <div>
+          <Label>{t("mc_diesel_account", lang)}</Label>
+          <Select name="finance_account_id" defaultValue="">
+            <option value="">—</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </Select>
+        </div>
+      )}
+      {paidBy && paidBy !== "company" && (
+        <p className="text-xs text-surface-500">{t("mc_diesel_not_ours", lang)}</p>
+      )}
+      <div className="flex gap-2">
+        <Submit label={t("mc_fuel_save", lang)} />
+        {already && (
+          <button
+            type="button"
+            onClick={() => setMore(false)}
+            className="rounded-lg border border-surface-200 px-3 text-sm text-surface-500 dark:border-surface-700"
+          >
+            {t("ac_cancel", lang)}
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}
+
+function WorkForm({
+  bookingId,
+  estimated,
+  done,
+  harvestType,
+  accounts,
+  defaultFinal,
+}: {
+  bookingId: string;
+  estimated: number;
+  done: number;
+  harvestType: string | null;
+  accounts: Array<{ id: string; name: string; account_type: string }>;
+  /**
+   * "Mark Work Complete" wale khane se aaye to nishan pehle se laga hua
+   * aata hai -- button ka naam wohi keh raha hai. Banda phir bhi utaar
+   * sakta hai: aadha din ka kaam darj karna ho to wo bhi isi khane se
    * hota hai.
    */
   defaultFinal?: boolean;
