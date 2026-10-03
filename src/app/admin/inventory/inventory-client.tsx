@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { adjustStock, transferStock, type ActionState } from "@/actions/inventory";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/layout-primitives";
 import { AlertTriangle, Package, DollarSign, Settings2, ArrowLeftRight, Pencil, X, Printer } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { enqueue } from "@/lib/offline/queue";
+import { registerSender } from "@/lib/offline/sync";
 
 interface InventoryRow {
   id: string;
@@ -348,6 +350,33 @@ function AdjustModal({ row, direction, onClose }: { row: InventoryRow; direction
   const [qty, setQty] = useState("");
   const [rate, setRate] = useState(String(row.purchase_price > 0 ? row.purchase_price : ""));
 
+  useEffect(() => {
+    registerSender("inventory.adjust", async (action) => {
+      try {
+        const res = await fetch("/api/inventory/offline", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind: "adjust", fields: action.payload.fields }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Stock adjustment sync fail ho gaya." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+  }, []);
+
+  async function handleOffline(event: FormEvent<HTMLFormElement>) {
+    if (typeof navigator === "undefined" || navigator.onLine) return;
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const clientActionId = crypto.randomUUID();
+    fields.client_action_id = clientActionId;
+    await enqueue({ actionType: "inventory.adjust", entityType: "stock_movements", payload: { fields }, clientActionId });
+    onClose();
+  }
+
   const amount = qty && rate ? (Number(qty) * Number(rate)).toLocaleString("en-PK") : "—";
   const isIn = direction === "increase";
 
@@ -372,7 +401,7 @@ function AdjustModal({ row, direction, onClose }: { row: InventoryRow; direction
         </p>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
         {state.success && <p className="mb-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">Ho gaya!</p>}
-        <form action={formAction} className="space-y-3">
+        <form action={formAction} onSubmit={handleOffline} className="space-y-3">
           <input type="hidden" name="inventory_id" value={row.id} />
           <input type="hidden" name="direction" value={direction} />
           <div className="grid grid-cols-3 gap-2">
@@ -433,6 +462,34 @@ function TransferModal({ row, warehouses, onClose }: { row: InventoryRow; wareho
   const lang = useLang();
   const [state, formAction] = useFormState(transferStock, initialState);
 
+  useEffect(() => {
+    registerSender("inventory.transfer", async (action) => {
+      try {
+        const res = await fetch("/api/inventory/offline", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind: "transfer", fields: action.payload.fields }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Warehouse transfer sync fail ho gaya." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+  }, []);
+
+  async function handleOffline(event: FormEvent<HTMLFormElement>) {
+    if (typeof navigator === "undefined" || navigator.onLine) return;
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+    fields.from_warehouse_id = row.warehouse_id;
+    const clientActionId = crypto.randomUUID();
+    fields.client_action_id = clientActionId;
+    await enqueue({ actionType: "inventory.transfer", entityType: "stock_transfers", payload: { fields }, clientActionId });
+    onClose();
+  }
+
   if (state.success) {
     setTimeout(onClose, 800);
   }
@@ -451,11 +508,12 @@ function TransferModal({ row, warehouses, onClose }: { row: InventoryRow; wareho
         </p>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
         {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("inv_transferred", lang)}</p>}
-        <form action={formAction} className="space-y-3">
+        <form action={formAction} onSubmit={handleOffline} className="space-y-3">
           <input type="hidden" name="product_id" value={row.product_id} />
           <input type="hidden" name="batch_id" value={row.batch_id ?? ""} />
           <div>
             <Label>{t("inv_from_warehouse", lang)}</Label>
+            <input type="hidden" name="from_warehouse_id" value={row.warehouse_id} />
             <Select name="from_warehouse_id" defaultValue={row.warehouse_id} disabled>
               <option value={row.warehouse_id}>{row.warehouse_name}</option>
             </Select>
@@ -489,3 +547,4 @@ function SubmitButton({ label, className }: { label: string; className?: string 
   const { pending } = useFormStatus();
   return <Button type="submit" disabled={pending} className={className ?? "w-full"}>{pending ? t("inv_processing", lang) : label}</Button>;
 }
+
