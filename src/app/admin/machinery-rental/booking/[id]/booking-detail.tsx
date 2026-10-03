@@ -2511,6 +2511,7 @@ function FuelForm({
   const lang = useLang();
   const [state, action] = useFormState(recordFuelEntry, initialState);
   const [offlineNotice, setOfflineNotice] = useState("");
+  const [clientActionId] = useState(() => crypto.randomUUID());
   useMachineryOfflineSender("machinery.fuel");
 
   // Raqam ka khana yahan se hata diya gaya.
@@ -2561,11 +2562,14 @@ function FuelForm({
     <form action={action} className="space-y-3" onSubmit={async (event) => {
       if (typeof navigator === "undefined" || navigator.onLine !== false) return;
       event.preventDefault();
-      const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
-      await enqueue({ actionType: "machinery.fuel", entityType: "machinery_fuel_logs", payload: { fields } });
+      const form = new FormData(event.currentTarget);
+      form.set("client_action_id", clientActionId);
+      const fields = Object.fromEntries(form.entries());
+      await enqueue({ actionType: "machinery.fuel", entityType: "machinery_fuel_logs", payload: { fields }, clientActionId });
       setOfflineNotice("Diesel entry device par save ho gayi; internet aate hi sync hogi.");
     }}>
       {offlineNotice && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
+      <input type="hidden" name="client_action_id" value={clientActionId} />
       <Err state={state} />
       <input type="hidden" name="booking_id" value={bookingId} />
       <p className="text-xs text-surface-500">{t("mc_fuel_hint", lang)}</p>
@@ -2678,6 +2682,7 @@ function WorkForm({
   const lang = useLang();
   const [state, action] = useFormState(recordWorkCompletion, initialState);
   const [offlineNotice, setOfflineNotice] = useState("");
+  const [clientActionId] = useState(() => crypto.randomUUID());
   useMachineryOfflineSender("machinery.work");
   const [photo, setPhoto] = useState("");
   const [isFinal, setIsFinal] = useState(Boolean(defaultFinal));
@@ -2751,11 +2756,14 @@ function WorkForm({
     <form action={action} className="space-y-3" onSubmit={async (event) => {
       if (typeof navigator === "undefined" || navigator.onLine !== false) return;
       event.preventDefault();
-      const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
-      await enqueue({ actionType: "machinery.work", entityType: "machinery_work_records", payload: { fields } });
+      const form = new FormData(event.currentTarget);
+      form.set("client_action_id", clientActionId);
+      const fields = Object.fromEntries(form.entries());
+      await enqueue({ actionType: "machinery.work", entityType: "machinery_work_records", payload: { fields }, clientActionId });
       setOfflineNotice("Work completion device par save ho gaya; internet aate hi sync hoga.");
     }}>
       {offlineNotice && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
+      <input type="hidden" name="client_action_id" value={clientActionId} />
       <Err state={state} />
       <input type="hidden" name="booking_id" value={bookingId} />
       <input type="hidden" name="completion_photo_url" value={photo} />
