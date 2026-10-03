@@ -91,6 +91,7 @@ export async function approveSupplierPayment(_prev: ActionState, formData: FormD
 
   const { data: request, error: fetchError } = await supabase.from("supplier_payment_requests").select("*").eq("id", requestId).single();
   if (fetchError || !request) return { error: "Request nahi mili." };
+  if (request.status === "approved") return { success: true };
   if (request.status !== "pending") return { error: "Ye request already process ho chuki hai." };
 
   const { error: updateError } = await supabase
@@ -136,6 +137,9 @@ export async function rejectSupplierPayment(_prev: ActionState, formData: FormDa
   const role = profile?.role ?? null;
   if (!HQ_APPROVER_ROLES.includes(role ?? "")) return { error: "Sirf Admin/Owner is request ko reject kar sakte hain." };
 
+  const { data: current } = await supabase.from("supplier_payment_requests").select("status").eq("id", requestId).maybeSingle();
+  if (current?.status === "rejected") return { success: true };
+
   const { error } = await supabase
     .from("supplier_payment_requests")
     .update({ status: "rejected", rejection_reason: reason, approved_by: user.id, approved_at: new Date().toISOString() })
@@ -145,3 +149,4 @@ export async function rejectSupplierPayment(_prev: ActionState, formData: FormDa
   revalidatePath("/admin/finance/queue");
   return { success: true };
 }
+
