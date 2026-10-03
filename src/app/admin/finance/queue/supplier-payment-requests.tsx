@@ -1,10 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { requestSupplierPayment, approveSupplierPayment, rejectSupplierPayment, type ActionState } from "@/actions/supplier-payment-requests";
 import { X, CheckCircle2, XCircle, FileText, Plus } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { enqueue } from "@/lib/offline/queue";
+import { registerSender } from "@/lib/offline/sync";
 
 const initialState: ActionState = {};
 
@@ -86,9 +88,37 @@ function ApproveRejectButtons({ requestId }: { requestId: string }) {
   const [showReject, setShowReject] = useState(false);
   const [, approveAction] = useFormState(approveSupplierPayment, initialState);
 
+  useEffect(() => {
+    registerSender("finance.supplier-approve", async (action) => {
+      try {
+        const res = await fetch("/api/finance/approvals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "supplier_approve", fields: action.payload.fields }) });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Supplier approval sync fail ho gayi." };
+        return { ok: true };
+      } catch (error) { return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" }; }
+    });
+    registerSender("finance.supplier-reject", async (action) => {
+      try {
+        const res = await fetch("/api/finance/approvals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "supplier_reject", fields: action.payload.fields }) });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Supplier rejection sync fail ho gayi." };
+        return { ok: true };
+      } catch (error) { return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" }; }
+    });
+  }, []);
+
+  async function handleApproveOffline(event: FormEvent<HTMLFormElement>) {
+    if (typeof navigator === "undefined" || navigator.onLine) return;
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const clientActionId = crypto.randomUUID();
+    fields.client_action_id = clientActionId;
+    await enqueue({ actionType: "finance.supplier-approve", entityType: "supplier_payment_requests", payload: { fields }, clientActionId });
+  }
+
   return (
     <div className="mt-2 flex gap-2">
-      <form action={approveAction}>
+      <form action={approveAction} onSubmit={handleApproveOffline}>
         <input type="hidden" name="request_id" value={requestId} />
         <button type="submit" className="flex items-center gap-1 rounded-lg bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100">
           <CheckCircle2 className="h-3 w-3" /> {t("fq_approve", lang)}
@@ -105,6 +135,15 @@ function ApproveRejectButtons({ requestId }: { requestId: string }) {
 function RejectModal({ requestId, onClose }: { requestId: string; onClose: () => void }) {
   const lang = useLang();
   const [state, formAction] = useFormState(rejectSupplierPayment, initialState);
+  async function handleRejectOffline(event: FormEvent<HTMLFormElement>) {
+    if (typeof navigator === "undefined" || navigator.onLine) return;
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const clientActionId = crypto.randomUUID();
+    fields.client_action_id = clientActionId;
+    await enqueue({ actionType: "finance.supplier-reject", entityType: "supplier_payment_requests", payload: { fields }, clientActionId });
+    onClose();
+  }
   if (state.success) setTimeout(onClose, 800);
 
   return (
@@ -115,7 +154,7 @@ function RejectModal({ requestId, onClose }: { requestId: string; onClose: () =>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-        <form action={formAction} className="space-y-2">
+        <form action={formAction} onSubmit={handleRejectOffline} className="space-y-2">
           <input type="hidden" name="request_id" value={requestId} />
           <textarea name="rejection_reason" required rows={3} placeholder={t("fq_reject_reason_ph", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <button type="submit" className="w-full rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700">{t("fq_confirm_reject", lang)}</button>
@@ -170,3 +209,4 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   return <button type="submit" disabled={pending} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">{pending ? "..." : t("fq_send_request", lang)}</button>;
 }
+
