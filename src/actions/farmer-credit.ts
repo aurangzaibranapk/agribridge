@@ -26,10 +26,20 @@ export async function issueFarmerCredit(_prev: ActionState, formData: FormData):
   const collectedBy = (formData.get("collected_by") as string) || null;
   const notes = (formData.get("notes") as string) || null;
   const overrideLimit = formData.get("override_limit") === "true";
+  const clientActionId = String(formData.get("client_action_id") ?? "").trim() || null;
 
   if (!farmerId) return { error: "Farmer select karein." };
   if (!sourceType) return { error: "Source type select karein." };
   if (!amount || amount <= 0) return { error: "Amount sahi likhein." };
+
+  if (clientActionId) {
+    const { data, error } = await (supabase as any).rpc("fn_post_farmer_credit_atomic", {
+      p_mode: "issue", p_farmer_id: farmerId, p_amount: amount, p_source_type: sourceType,
+      p_notes: notes, p_collected_by: collectedBy, p_client_action_id: clientActionId,
+    });
+    if (error) return { error: error.message };
+    if (data?.success) return { success: true };
+  }
 
   const { data: farmer } = await supabase.from("farmers").select("credit_limit").eq("id", farmerId).maybeSingle();
   if (farmer?.credit_limit) {
@@ -81,10 +91,20 @@ export async function recordFarmerCreditRepayment(_prev: ActionState, formData: 
   const amount = Number(formData.get("amount") ?? 0);
   const accountId = (formData.get("account_id") as string) || null;
   const notes = (formData.get("notes") as string) || null;
+  const clientActionId = String(formData.get("client_action_id") ?? "").trim() || null;
 
   if (!farmerId) return { error: "Farmer select karein." };
   if (!amount || amount <= 0) return { error: "Amount sahi likhein." };
   if (!accountId) return { error: "Konsa account mein paisa aya, wo select karein." };
+
+  if (clientActionId) {
+    const { data, error } = await (supabase as any).rpc("fn_post_farmer_credit_atomic", {
+      p_mode: "repayment", p_farmer_id: farmerId, p_amount: amount, p_account_id: accountId,
+      p_notes: notes, p_client_action_id: clientActionId,
+    });
+    if (error) return { error: error.message };
+    if (data?.success) return { success: true };
+  }
 
   const {
     data: { user },
@@ -207,3 +227,4 @@ export async function setFarmerCreditLimit(_prev: ActionState, formData: FormDat
   revalidatePath("/admin/farmer-credit");
   return { success: true };
 }
+
