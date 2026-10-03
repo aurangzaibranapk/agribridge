@@ -19,6 +19,8 @@ import { bestMatches, MATCH_STRONG } from "@/lib/product-match";
 import { EyeOff, AlertTriangle, PlusCircle, X, Pencil, Check, Save, Merge, Tag } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { enqueue, allActions } from "@/lib/offline/queue";
+import { registerSender, syncQueue } from "@/lib/offline/sync";
 
 const initialState: ActionState = {};
 
@@ -133,6 +135,63 @@ export function CountingSheet({
   const [doneIds, setDoneIds] = useState<Set<string>>(
     () => new Set(lines.filter((l) => l.counted != null).map((l) => l.id))
   );
+  const [offlinePending, setOfflinePending] = useState(0);
+
+  useEffect(() => {
+    registerSender("stock-count.row", async (action) => {
+      try {
+        const res = await fetch("/api/stock-count/save-row", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(action.payload),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          return { ok: false, retryable: res.status >= 500, error: json.error || "Stock count sync fail ho gaya." };
+        }
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+
+    const refresh = async () => {
+      const rows = await allActions().catch(() => []);
+      const pending = rows.filter(
+        (row) => row.action_type === "stock-count.row" && row.payload.count_id === countId &&
+          (row.sync_status === "pending" || row.sync_status === "syncing")
+      );
+      setOfflinePending(pending.length);
+      // Page reload par jo offline drafts bachay hain, unhein dobara sheet par dikha dein.
+      if (pending.length) {
+        setValues((current) => {
+          const next = { ...current };
+          for (const row of pending) {
+            const lineId = String(row.payload.line_id || "");
+            if (lineId && row.payload.counted != null) next[lineId] = String(row.payload.counted);
+          }
+          return next;
+        });
+        setDoneIds((current) => {
+          const next = new Set(current);
+          for (const row of pending) {
+            const lineId = String(row.payload.line_id || "");
+            if (lineId) next.add(lineId);
+          }
+          return next;
+        });
+      }
+    };
+
+    const restored = async () => { await syncQueue().catch(() => undefined); await refresh(); };
+    void refresh();
+    window.addEventListener("online", restored);
+    window.addEventListener("agribridge:offline-queue-changed", refresh);
+    return () => {
+      window.removeEventListener("online", restored);
+      window.removeEventListener("agribridge:offline-queue-changed", refresh);
+    };
+  }, [countId]);
 
   // Duplicate ke liye system khud dekhta hai, staff ko poori list
   // chhaan kar dhoondna nahi paRta (malik, 14 September) -- wohi milaan
@@ -179,13 +238,33 @@ export function CountingSheet({
       const fd = new FormData();
       fd.set("count_id", countId);
       fd.set(`qty_${l.id}`, value);
-      const result = await saveCounts({}, fd);
+      let result: ActionState;
+      const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+      if (offline) {
+        await enqueue({
+          actionType: "stock-count.row",
+          entityType: "stock_count_lines",
+          payload: { count_id: countId, line_id: l.id, counted: Number(value) },
+        });
+        result = { success: true, message: "Offline — sync pending" };
+      } else {
+        try {
+          result = await saveCounts({}, fd);
+        } catch {
+          await enqueue({
+            actionType: "stock-count.row",
+            entityType: "stock_count_lines",
+            payload: { count_id: countId, line_id: l.id, counted: Number(value) },
+          });
+          result = { success: true, message: "Network nahi mila — sync pending" };
+        }
+      }
       if (result.error) {
         setSaveStatus("error");
         setSaveMsg(result.error);
       } else {
         setSaveStatus("saved");
-        setSaveMsg("");
+        setSaveMsg(result.message?.includes("pending") ? result.message : "");
         setDoneIds((prev) => new Set(prev).add(l.id));
       }
     }
@@ -252,6 +331,11 @@ export function CountingSheet({
         <p className="text-xs font-medium text-surface-500">
           {t("sc_total_items", lang)}: {lines.length} · {t("sc_remaining", lang)}: {lines.length - done.length}
         </p>
+        {offlinePending > 0 && (
+          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+            {offlinePending} offline sync pending
+          </span>
+        )}
       </div>
 
       <input
