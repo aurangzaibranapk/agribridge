@@ -21,6 +21,6 @@ Release status: approved foundation baseline
 - A release is not marked complete until `npm run build` passes.
 - Every approved release gets a Git commit and matching version tag.
 
-## Next planned version
+## Superseded by
 
-`v0.2.0` — daily operations: staff-specific stock assignments, Urdu notifications, approval flow, purchase/GRN, payable and recovery improvements.
+`v0.2.0` — Tenant & Portal Release, documented in `docs/releases/AgriBridge-OS-v0.2.0.md`.
