@@ -45,6 +45,7 @@ const senders = new Map<string, Sender>();
 
 export function registerSender(actionType: string, sender: Sender): void {
   senders.set(actionType, sender);
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("agribridge:offline-sender-registered"));
 }
 
 export interface SyncOutcome {
