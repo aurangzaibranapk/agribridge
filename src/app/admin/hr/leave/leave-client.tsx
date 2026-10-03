@@ -1,11 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { CalendarPlus, Check, RotateCcw, X } from "lucide-react";
 import { requestLeave, decideLeave, type LeaveState } from "@/actions/leave";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { t, type Lang, type TranslationKey } from "@/lib/i18n/translations";
+import { enqueue } from "@/lib/offline/queue";
+import { registerSender } from "@/lib/offline/sync";
 
 const initial: LeaveState = {};
 
@@ -61,6 +63,35 @@ export function LeaveClient({
   const [askState, askAction] = useFormState(requestLeave, initial);
   const [decideState, decideAction] = useFormState(decideLeave, initial);
   const [open, setOpen] = useState(false);
+  const [offlineQueued, setOfflineQueued] = useState(false);
+
+  useEffect(() => {
+    registerSender("hr.leave-request", async (action) => {
+      try {
+        const res = await fetch("/api/hr/leave/offline", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fields: action.payload.fields }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Leave request sync fail ho gayi." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+  }, []);
+
+  async function handleLeaveSubmit(event: FormEvent<HTMLFormElement>) {
+    if (typeof navigator === "undefined" || navigator.onLine) return;
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const clientActionId = crypto.randomUUID();
+    fields.client_action_id = clientActionId;
+    await enqueue({ actionType: "hr.leave-request", entityType: "leave_requests", payload: { fields }, clientActionId });
+    setOfflineQueued(true);
+    setOpen(false);
+  }
 
   return (
     <div className="space-y-4">
@@ -133,9 +164,10 @@ export function LeaveClient({
 
         {askState.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{askState.error}</p>}
         {askState.notice && <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{askState.notice}</p>}
+        {offlineQueued && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">Darkhwast offline save ho gayi — internet aate hi khud sync hogi.</p>}
 
         {open && (
-          <form action={askAction} className="space-y-3 rounded-lg border border-brand-200 p-3 dark:border-brand-900/40">
+          <form action={askAction} onSubmit={handleLeaveSubmit} className="space-y-3 rounded-lg border border-brand-200 p-3 dark:border-brand-900/40">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>{t("lv_from", lang)}</Label>
