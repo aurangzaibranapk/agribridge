@@ -23,6 +23,7 @@ export default async function ProcurementReportPage({
   const { data: entries } = await supabase
     .from("grain_procurement_entries")
     .select("id, farmer_id, grain_type, entry_date, weight_kg, moisture_percentage, quality_grade, rate_per_kg, total_amount")
+    .is("reclassified_as_sale_id", null)
     .gte("entry_date", start.toISOString().slice(0, 10))
     .lte("entry_date", end.toISOString().slice(0, 10))
     .order("entry_date", { ascending: false })
