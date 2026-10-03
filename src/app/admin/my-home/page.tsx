@@ -6,6 +6,7 @@ import { loadNav } from "@/lib/access/nav";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { LangProvider } from "@/lib/i18n/lang-context";
 import { iconByName } from "@/lib/access/icons";
+import { AGRIBRIDGE_OS_RELEASE, AGRIBRIDGE_OS_VERSION } from "@/lib/app-version";
 
 export const dynamic = "force-dynamic";
 
@@ -46,8 +47,8 @@ export default async function MyHomePage() {
                 <Home className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <p className="truncate font-display text-lg font-bold tracking-tight">AgriBridge <span className="text-emerald-300">OS</span></p>
-                <p className="truncate text-[11px] text-surface-300">Owner / Admin My Home · {me.full_name || roleLabel}</p>
+                <p className="truncate font-display text-lg font-bold tracking-tight">AgriBridge <span className="text-emerald-300">OS</span> <span className="ml-1 text-xs font-semibold text-emerald-200">{AGRIBRIDGE_OS_VERSION}</span></p>
+                <p className="truncate text-[11px] text-surface-300">{AGRIBRIDGE_OS_RELEASE} · Owner / Admin My Home · {me.full_name || roleLabel}</p>
               </div>
             </div>
 
