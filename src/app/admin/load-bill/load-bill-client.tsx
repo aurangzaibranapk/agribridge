@@ -322,7 +322,7 @@ export function LoadBillClient({
   const [quickViewOpen, setQuickViewOpen] = useState(false);
 
   useEffect(() => {
-    const sender = async (queued: import("@/lib/offline/queue").QueuedAction) => {
+    const sender: import("@/lib/offline/sync").Sender = async (queued) => {
       try {
         const res = await fetch("/api/customer-udhaar", {
           method: "POST",
@@ -1079,7 +1079,6 @@ function BankTransferForm({
   providerTid,
   onProviderTidChange,
   onSubmit,
-  offlinePending,
 }: {
   action: (formData: FormData) => void;
   people: PersonOption[];
@@ -1107,7 +1106,6 @@ function BankTransferForm({
   providerTid: string;
   onProviderTidChange: (value: string) => void;
   onSubmit: () => void;
-  offlinePending: number;
 }) {
   const digitalAccounts = financeAccounts.filter((account) => account.accountType !== "cash");
   const principal = Number(amount.replace(/,/g, "")) || 0;
@@ -1228,6 +1226,7 @@ function UdhaarForm({
   note,
   onNoteChange,
   onSubmit,
+  offlinePending,
   date,
   onDateChange,
   account,
@@ -1245,6 +1244,7 @@ function UdhaarForm({
   note: string;
   onNoteChange: (note: string) => void;
   onSubmit: () => void;
+  offlinePending: number;
   date: string;
   onDateChange: (date: string) => void;
   account: string;
@@ -1262,11 +1262,14 @@ function UdhaarForm({
     }
     event.preventDefault();
     const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const clientActionId = crypto.randomUUID();
+    fields.client_action_id = clientActionId;
     try {
       await enqueue({
         actionType: diya ? "customer-udhaar.loan" : "customer-udhaar.repayment",
         entityType: "customer_udhaar",
         payload: { kind: diya ? "loan" : "repayment", fields },
+        clientActionId,
       });
       setOfflineNotice("Internet nahi hai. Entry device par save ho gayi; internet aate hi ledger mein sync hogi.");
       onSubmit();
