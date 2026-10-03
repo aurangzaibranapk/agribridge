@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
-import { postCashIn, postCashOut, postTransferIn, postTransferOut, failed, ACC } from "@/lib/ledger/rules";
+import { postCashIn, postCashOut, postTransferIn, postTransferOut, failed, ACC, expenseAccountFor, incomeAccountFor } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -191,10 +191,22 @@ export async function recordFinanceTransaction(_prev: ActionState, formData: For
   const amount = Number(formData.get("amount") ?? 0);
   const transactionDate = String(formData.get("transaction_date") ?? aajKaKhana());
   const notes = (formData.get("notes") as string) || null;
+  const clientActionId = String(formData.get("client_action_id") ?? "").trim() || null;
 
   if (!accountId) return { error: "Account is required." };
   if (!["income", "expense"].includes(type)) return { error: "Invalid transaction type." };
   if (!amount || amount <= 0) return { error: "Amount must be greater than zero." };
+
+  if (clientActionId) {
+    const against = type === "income" ? incomeAccountFor(category) : expenseAccountFor(category);
+    const { data, error } = await (supabase as any).rpc("fn_post_finance_atomic", {
+      p_mode: type, p_account_id: accountId, p_amount: amount, p_category: category,
+      p_transaction_date: transactionDate, p_notes: notes, p_against_account: against,
+      p_client_action_id: clientActionId,
+    });
+    if (error) return { error: error.message };
+    if (data?.success) { revalidatePath("/admin/finance"); return { success: true }; }
+  }
 
   const {
     data: { user },
@@ -245,10 +257,21 @@ export async function transferBetweenAccounts(_prev: ActionState, formData: Form
   const amount = Number(formData.get("amount") ?? 0);
   const transactionDate = String(formData.get("transaction_date") ?? aajKaKhana());
   const notes = (formData.get("notes") as string) || null;
+  const clientActionId = String(formData.get("client_action_id") ?? "").trim() || null;
 
   if (!fromAccountId || !toAccountId) return { error: "Both accounts are required." };
   if (fromAccountId === toAccountId) return { error: "Source and destination must be different." };
   if (!amount || amount <= 0) return { error: "Amount must be greater than zero." };
+
+  if (clientActionId) {
+    const { data, error } = await (supabase as any).rpc("fn_post_finance_atomic", {
+      p_mode: "transfer", p_account_id: fromAccountId, p_to_account_id: toAccountId,
+      p_amount: amount, p_transaction_date: transactionDate, p_notes: notes,
+      p_client_action_id: clientActionId,
+    });
+    if (error) return { error: error.message };
+    if (data?.success) { revalidatePath("/admin/finance"); return { success: true }; }
+  }
 
   const {
     data: { user },
@@ -315,3 +338,4 @@ export async function transferBetweenAccounts(_prev: ActionState, formData: Form
   revalidatePath("/admin/money-trail");
   return { success: true };
 }
+
