@@ -63,6 +63,8 @@ export interface JournalInput {
   backdateReason?: string | null;
   /** Kaun si rows ka hisaab -- v_ledger_unposted isi se khali hota hai. */
   claims?: SourceClaim[];
+  /** Device action key for offline replay; NULL keeps all online callers unchanged. */
+  clientActionId?: string | null;
 }
 
 export interface PostedEntry {
@@ -124,6 +126,14 @@ export async function postJournal(input: JournalInput): Promise<PostedEntry | { 
   }
 
   const service = createServiceClient();
+  if (input.clientActionId) {
+    const { data: alreadyPosted } = await (service as any)
+      .from("journal_entries")
+      .select("id, entry_number")
+      .eq("client_action_id", input.clientActionId)
+      .maybeSingle();
+    if (alreadyPosted) return { id: alreadyPosted.id, entryNumber: alreadyPosted.entry_number, total: debit };
+  }
   const entryNumber = await nextEntryNumber();
   const today = aajKaKhana();
   const entryDate = input.entryDate ?? today;
@@ -133,7 +143,7 @@ export async function postJournal(input: JournalInput): Promise<PostedEntry | { 
     return { error: "Purani tareekh ki entry ke liye wajah likhna zaroori hai." };
   }
 
-  const { data: entry, error: entryError } = await service
+  const { data: entry, error: entryError } = await (service as any)
     .from("journal_entries")
     .insert({
       entry_number: entryNumber,
@@ -145,6 +155,7 @@ export async function postJournal(input: JournalInput): Promise<PostedEntry | { 
       is_backdated: backdated,
       backdate_reason: backdated ? (input.backdateReason ?? null) : null,
       created_by: input.createdBy,
+      ...(input.clientActionId ? { client_action_id: input.clientActionId } : {}),
     })
     .select("id, entry_number")
     .single();
