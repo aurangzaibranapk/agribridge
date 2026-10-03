@@ -89,17 +89,21 @@ function CheckInForm({ coords, disabled }: { coords: { lat: number; lng: number 
   const lang = useLang();
   const [state, formAction] = useFormState(selfCheckIn, initialState);
   const [offlineNotice, setOfflineNotice] = useState("");
+  const [clientActionId] = useState(() => crypto.randomUUID());
   useAttendanceSender("attendance.check-in");
   return (
     <form action={formAction} onSubmit={async (event: FormEvent<HTMLFormElement>) => {
       if (typeof navigator === "undefined" || navigator.onLine !== false) return;
       event.preventDefault();
-      const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
-      await enqueue({ actionType: "attendance.check-in", entityType: "attendance_records", payload: { fields } });
+      const form = new FormData(event.currentTarget);
+      form.set("client_action_id", clientActionId);
+      const fields = Object.fromEntries(form.entries());
+      await enqueue({ actionType: "attendance.check-in", entityType: "attendance_records", payload: { fields }, clientActionId });
       setOfflineNotice("Check-in device par save ho gaya; internet aate hi sync hoga.");
     }}>
       <input type="hidden" name="lat" value={coords?.lat ?? ""} />
       <input type="hidden" name="lng" value={coords?.lng ?? ""} />
+      <input type="hidden" name="client_action_id" value={clientActionId} />
       <ActionButton icon={LogIn} label={t("at_check_in", lang)} disabled={disabled} color="brand" />
       {offlineNotice && <p className="mt-1 text-[11px] text-amber-700">{offlineNotice}</p>}
       {state.error && <p className="mt-1 text-xs text-red-600">{state.error}</p>}
@@ -111,17 +115,21 @@ function CheckOutForm({ coords, disabled }: { coords: { lat: number; lng: number
   const lang = useLang();
   const [state, formAction] = useFormState(selfCheckOut, initialState);
   const [offlineNotice, setOfflineNotice] = useState("");
+  const [clientActionId] = useState(() => crypto.randomUUID());
   useAttendanceSender("attendance.check-out");
   return (
     <form action={formAction} onSubmit={async (event: FormEvent<HTMLFormElement>) => {
       if (typeof navigator === "undefined" || navigator.onLine !== false) return;
       event.preventDefault();
-      const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
-      await enqueue({ actionType: "attendance.check-out", entityType: "attendance_records", payload: { fields } });
+      const form = new FormData(event.currentTarget);
+      form.set("client_action_id", clientActionId);
+      const fields = Object.fromEntries(form.entries());
+      await enqueue({ actionType: "attendance.check-out", entityType: "attendance_records", payload: { fields }, clientActionId });
       setOfflineNotice("Check-out device par save ho gaya; internet aate hi sync hoga.");
     }}>
       <input type="hidden" name="lat" value={coords?.lat ?? ""} />
       <input type="hidden" name="lng" value={coords?.lng ?? ""} />
+      <input type="hidden" name="client_action_id" value={clientActionId} />
       <ActionButton icon={LogOut} label={t("at_check_out", lang)} disabled={disabled} color="surface" />
       {offlineNotice && <p className="mt-1 text-[11px] text-amber-700">{offlineNotice}</p>}
       {state.error && <p className="mt-1 text-xs text-red-600">{state.error}</p>}
