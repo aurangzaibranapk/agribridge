@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -22,6 +22,8 @@ import {
   X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/form";
+import { enqueue, allActions } from "@/lib/offline/queue";
+import { registerSender, syncQueue } from "@/lib/offline/sync";
 
 export type RecoveryParty = {
   type: string;
@@ -118,6 +120,28 @@ export function RecoveryClient({
   failedCount: number;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [offlinePending, setOfflinePending] = useState(0);
+
+  useEffect(() => {
+    registerSender("recovery.action", async (queued) => {
+      try {
+        const res = await fetch("/api/recovery", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(queued.payload) });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Recovery request fail ho gayi." };
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, retryable: true, error: e instanceof Error ? e.message : "Network error" };
+      }
+    });
+    const refresh = async () => {
+      const rows = await allActions().catch(() => []);
+      setOfflinePending(rows.filter((r) => r.action_type === "recovery.action" && (r.sync_status === "pending" || r.sync_status === "syncing")).length);
+    };
+    const restored = async () => { await syncQueue().catch(() => undefined); await refresh(); };
+    void refresh();
+    window.addEventListener("online", restored);
+    return () => window.removeEventListener("online", restored);
+  }, []);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | RecoveryParty["status"]>("all");
   const [typeFilter, setTypeFilter] = useState<"all" | string>("all");
@@ -188,12 +212,23 @@ export function RecoveryClient({
       setNotice("Pehle account select karein.");
       return;
     }
+    const payload = { action, parties: targets, channel: "whatsapp", ...extra };
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      try {
+        await enqueue({ actionType: "recovery.action", entityType: "recovery", payload: payload as Record<string, unknown> });
+        const rows = await allActions();
+        setOfflinePending(rows.filter((r) => r.action_type === "recovery.action" && r.sync_status === "pending").length);
+        setNotice("Internet nahi hai. Recovery request device par save ho gayi; internet aate hi bhej di jayegi.");
+        setMode(null);
+      } catch { setNotice("Offline request save nahi ho saki."); }
+      return;
+    }
     setBusy(true);
     setNotice("");
     const res = await fetch("/api/recovery", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, parties: targets, channel: "whatsapp", ...extra }),
+      body: JSON.stringify(payload),
     });
     const json = await res.json();
     setBusy(false);
@@ -240,6 +275,7 @@ export function RecoveryClient({
 
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      {offlinePending > 0 && <div className="fixed bottom-4 left-4 z-30 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white shadow-lg">{offlinePending} recovery request sync ka intezar kar rahi hai</div>}
       <div className="flex min-h-0 flex-col gap-4">
         {/* ---- Stat cards ---- */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
