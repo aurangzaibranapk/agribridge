@@ -1,13 +1,15 @@
 "use client";
 import Link from "next/link";
 import { aajKaKhana } from "@/lib/utils/format";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { Button, Input, Label, Select } from "@/components/ui/form";
 import { Plus } from "lucide-react";
 import { recordFinalPayment, type ActionState } from "@/actions/machinery-lifecycle";
+import { enqueue } from "@/lib/offline/queue";
+import { registerSender } from "@/lib/offline/sync";
 
 /**
  * Kisan se paisa lene ka khana -- EK jagah likha hua.
@@ -74,6 +76,25 @@ export function PaymentForm({
 }) {
   const lang = useLang();
   const [state, action] = useFormState(recordFinalPayment, initialState);
+  const [offlineNotice, setOfflineNotice] = useState("");
+  const [clientActionId] = useState(() => crypto.randomUUID());
+
+  useEffect(() => {
+    registerSender("machinery.payment", async (queued) => {
+      try {
+        const res = await fetch("/api/machinery/offline", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ kind: "payment", fields: queued.payload.fields ?? {} }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Machinery payment sync fail ho gayi." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+  }, []);
 
   useEffect(() => {
     if (state.success) onRecorded?.();
@@ -121,7 +142,17 @@ export function PaymentForm({
   }
 
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} className="space-y-3" onSubmit={async (event: FormEvent<HTMLFormElement>) => {
+      if (typeof navigator === "undefined" || navigator.onLine !== false) return;
+      event.preventDefault();
+      const form = new FormData(event.currentTarget);
+      form.set("client_action_id", clientActionId);
+      const fields = Object.fromEntries(form.entries());
+      await enqueue({ actionType: "machinery.payment", entityType: "machinery_payments", payload: { fields }, clientActionId });
+      setOfflineNotice("Machinery payment device par save ho gayi; internet aate hi sync hogi.");
+    }}>
+      <input type="hidden" name="client_action_id" value={clientActionId} />
+      {offlineNotice && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
       <Err state={state} />
       <input type="hidden" name="booking_id" value={bookingId} />
 
