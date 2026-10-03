@@ -124,9 +124,9 @@ export default async function CommandCenterPage() {
         </div>
         <div className="flex items-center gap-2 pt-1">
           <Link
-            href="/admin/my-work"
+            href="/admin/my-home"
             className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-white px-3 py-2 text-xs font-semibold text-brand-800 shadow-sm transition hover:border-brand-400 hover:bg-brand-50 dark:border-surface-700 dark:bg-surface-900 dark:text-brand-300 dark:hover:bg-surface-800"
-            title="AgriBridge OS Home — My Work"
+            title="AgriBridge OS Home"
           >
             <Home className="h-3.5 w-3.5" />
             AgriBridge OS Home
