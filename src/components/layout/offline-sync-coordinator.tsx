@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { syncQueue } from "@/lib/offline/sync";
+import { syncQueue as syncMilkQueue } from "@/lib/milk-offline-sync";
 
 /**
  * Staff shell ka aik markazi sync engine.
@@ -19,7 +20,7 @@ export function OfflineSyncCoordinator() {
     const run = () => {
       if (queued || navigator.onLine === false) return;
       queued = true;
-      void syncQueue().finally(() => { queued = false; });
+      void Promise.allSettled([syncQueue(), syncMilkQueue()]).finally(() => { queued = false; });
     };
 
     const onOnline = () => run();
