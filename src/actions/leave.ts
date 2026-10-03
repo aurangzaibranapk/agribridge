@@ -31,6 +31,7 @@ export async function requestLeave(_prev: LeaveState, formData: FormData): Promi
   const type = String(formData.get("leave_type") ?? "casual");
   const reason = String(formData.get("reason") ?? "").trim();
   const isHalfDay = formData.get("is_half_day") === "yes";
+  const clientActionId = String(formData.get("client_action_id") ?? "").trim() || null;
 
   if (!from) return { error: "Kis din se, wo tareekh chunein." };
   if (to < from) return { error: "Khatam hone ki tareekh shuru se pehle nahi ho sakti." };
@@ -98,9 +99,13 @@ export async function requestLeave(_prev: LeaveState, formData: FormData): Promi
     reason,
     is_half_day: isHalfDay,
     manager_id: sd?.reports_to ?? null,
+    client_action_id: clientActionId,
   });
 
   if (error) {
+    if (clientActionId && (error.code === "23505" || error.message.toLowerCase().includes("client_action_id"))) {
+      return { success: true, notice: "Darkhwast pehle hi sync ho chuki hai." };
+    }
     if (error.message.includes("leave_no_overlap")) {
       return { error: "In dinon ki chhutti pehle se manzoor hai." };
     }
