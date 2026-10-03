@@ -1,11 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { Printer, Download, Mail, MessageCircle, X, Plus, Landmark } from "lucide-react";
 import { recordSupplierPayment, type ActionState } from "@/actions/supplier-payments";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { enqueue, allActions } from "@/lib/offline/queue";
+import { registerSender, syncQueue } from "@/lib/offline/sync";
 
 const initialState: ActionState = {};
 
@@ -166,7 +168,39 @@ export function SupplierStatementClient(props: Props) {
 
 function PaymentModal({ supplierId, onClose }: { supplierId: string; onClose: () => void }) {
   const [state, formAction] = useFormState(recordSupplierPayment, initialState);
+  const [offlineNotice, setOfflineNotice] = useState("");
+  const [offlinePending, setOfflinePending] = useState(0);
   const lang = useLang();
+
+  useEffect(() => {
+    registerSender("supplier.payment", async (queued) => {
+      try {
+        const res = await fetch("/api/supplier-payments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(queued.payload),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Supplier payment sync fail ho gayi." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+    const refresh = async () => {
+      const rows = await allActions().catch(() => []);
+      setOfflinePending(rows.filter((row) => row.action_type === "supplier.payment" && row.payload.supplier_id === supplierId && (row.sync_status === "pending" || row.sync_status === "syncing")).length);
+    };
+    const restored = async () => { await syncQueue().catch(() => undefined); await refresh(); };
+    void refresh();
+    window.addEventListener("online", restored);
+    window.addEventListener("agribridge:offline-queue-changed", refresh);
+    return () => {
+      window.removeEventListener("online", restored);
+      window.removeEventListener("agribridge:offline-queue-changed", refresh);
+    };
+  }, [supplierId]);
+
   if (state.success) setTimeout(onClose, 800);
 
   return (
@@ -177,7 +211,27 @@ function PaymentModal({ supplierId, onClose }: { supplierId: string; onClose: ()
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-        <form action={formAction} encType="multipart/form-data" className="space-y-2">
+        <form
+          action={formAction}
+          encType="multipart/form-data"
+          onSubmit={async (event: FormEvent<HTMLFormElement>) => {
+            if (typeof navigator === "undefined" || navigator.onLine !== false) return;
+            event.preventDefault();
+            try {
+              const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+              delete (fields as Record<string, FormDataEntryValue>).slip;
+              await enqueue({
+                actionType: "supplier.payment",
+                entityType: "supplier_payments",
+                payload: { supplier_id: supplierId, fields },
+              });
+              setOfflineNotice("Internet nahi hai. Payment device par save ho gayi; internet aate hi supplier ledger mein post hogi. Slip baad mein attach kar sakte hain.");
+            } catch {
+              setOfflineNotice("Offline payment save nahi ho saki.");
+            }
+          }}
+          className="space-y-2"
+        >
           <input type="hidden" name="supplier_id" value={supplierId} />
           <input type="date" name="payment_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="number" step="0.01" name="amount" required placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
@@ -192,6 +246,8 @@ function PaymentModal({ supplierId, onClose }: { supplierId: string; onClose: ()
             <label className="text-xs text-surface-500">{t("c_upload_payment_slip", lang)}</label>
             <input type="file" name="slip" accept="image/*,application/pdf" className="mt-1 w-full text-xs" />
           </div>
+          {offlineNotice && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{offlineNotice}</p>}
+          {offlinePending > 0 && <p className="text-[11px] text-amber-700">{offlinePending} supplier payment sync ka intezar kar rahi hai.</p>}
           <SubmitButton />
         </form>
       </div>
