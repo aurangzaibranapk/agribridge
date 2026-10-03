@@ -37,6 +37,8 @@ import { CancelFuelButton } from "./cancel-fuel-button";
 import { Check, Circle, Plus, X, Undo2, CheckCircle2, Wallet, Fuel, Flag, ChevronRight } from "lucide-react";
 
 import { PaymentForm, Err, Submit, initialState } from "@/components/machinery/payment-form";
+import { enqueue, type QueuedAction } from "@/lib/offline/queue";
+import { registerSender } from "@/lib/offline/sync";
 
 /**
  * Zanjeer ka poora nazara -- ek Booking ID ke neeche.
@@ -2478,6 +2480,25 @@ function RescheduleForm({ bookingId, nextFree }: { bookingId: string; nextFree: 
  * ki kattai teen din chalti hai, beech mein hum daalte hain, agle din
  * kisan khud dalwa deta hai.
  */
+function useMachineryOfflineSender(actionType: "machinery.fuel" | "machinery.work") {
+  useEffect(() => {
+    registerSender(actionType, async (action: QueuedAction) => {
+      try {
+        const res = await fetch("/api/machinery/offline", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ kind: actionType === "machinery.fuel" ? "fuel" : "work", fields: action.payload.fields ?? {} }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Machinery entry sync fail ho gayi." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+  }, [actionType]);
+}
+
 function FuelForm({
   bookingId,
   accounts,
@@ -2489,6 +2510,8 @@ function FuelForm({
 }) {
   const lang = useLang();
   const [state, action] = useFormState(recordFuelEntry, initialState);
+  const [offlineNotice, setOfflineNotice] = useState("");
+  useMachineryOfflineSender("machinery.fuel");
 
   // Raqam ka khana yahan se hata diya gaya.
   //
@@ -2535,7 +2558,14 @@ function FuelForm({
   }
 
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} className="space-y-3" onSubmit={async (event) => {
+      if (typeof navigator === "undefined" || navigator.onLine !== false) return;
+      event.preventDefault();
+      const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+      await enqueue({ actionType: "machinery.fuel", entityType: "machinery_fuel_logs", payload: { fields } });
+      setOfflineNotice("Diesel entry device par save ho gayi; internet aate hi sync hogi.");
+    }}>
+      {offlineNotice && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
       <Err state={state} />
       <input type="hidden" name="booking_id" value={bookingId} />
       <p className="text-xs text-surface-500">{t("mc_fuel_hint", lang)}</p>
@@ -2647,6 +2677,8 @@ function WorkForm({
 }) {
   const lang = useLang();
   const [state, action] = useFormState(recordWorkCompletion, initialState);
+  const [offlineNotice, setOfflineNotice] = useState("");
+  useMachineryOfflineSender("machinery.work");
   const [photo, setPhoto] = useState("");
   const [isFinal, setIsFinal] = useState(Boolean(defaultFinal));
   const [reminder, setReminder] = useState("");
@@ -2716,7 +2748,14 @@ function WorkForm({
       ? new Date(nextDayEnd).getTime() - new Date(startAt).getTime() <= 24 * 3600000
       : false;
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} className="space-y-3" onSubmit={async (event) => {
+      if (typeof navigator === "undefined" || navigator.onLine !== false) return;
+      event.preventDefault();
+      const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+      await enqueue({ actionType: "machinery.work", entityType: "machinery_work_records", payload: { fields } });
+      setOfflineNotice("Work completion device par save ho gaya; internet aate hi sync hoga.");
+    }}>
+      {offlineNotice && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
       <Err state={state} />
       <input type="hidden" name="booking_id" value={bookingId} />
       <input type="hidden" name="completion_photo_url" value={photo} />
