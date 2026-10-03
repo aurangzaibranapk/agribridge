@@ -26,6 +26,7 @@ export default async function AdminGrainProcurementPage() {
     supabase
       .from("grain_procurement_entries")
       .select("id, entry_date, grain_type, gross_weight_kg, cut_percentage, cut_kg, weight_kg, moisture_percentage, quality_grade, rate_per_kg, total_amount, farmer_id, party_id, farmers(full_name), grain_parties(party_name)")
+      .is("reclassified_as_sale_id", null)
       .order("entry_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(200),
