@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import { createGrainSale, recordGrainSalePayment, type ActionState } from "@/actions/grain-sales";
@@ -7,6 +7,8 @@ import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { X } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { enqueue, allActions, type QueuedAction } from "@/lib/offline/queue";
+import { registerSender, syncQueue } from "@/lib/offline/sync";
 
 const initialState: ActionState = {};
 
@@ -121,6 +123,37 @@ function NewSaleForm({
   const [deliveryTerm, setDeliveryTerm] = useState("load_deliver");
   const [bardanaCost, setBardanaCost] = useState("0");
   const [mazdooriCost, setMazdooriCost] = useState("0");
+  const [offlineNotice, setOfflineNotice] = useState("");
+  const [offlinePending, setOfflinePending] = useState(0);
+
+  useEffect(() => {
+    registerSender("grain.sale", async (action: QueuedAction) => {
+      try {
+        const res = await fetch("/api/grain-sales/entry", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ fields: action.payload.fields ?? {} }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Grain sale sync fail ho gayi." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+    const refresh = async () => {
+      const rows = await allActions().catch(() => []);
+      setOfflinePending(rows.filter((row) => row.action_type === "grain.sale" && (row.sync_status === "pending" || row.sync_status === "syncing")).length);
+    };
+    const restored = async () => { await syncQueue().catch(() => undefined); await refresh(); };
+    void refresh();
+    window.addEventListener("online", restored);
+    window.addEventListener("agribridge:offline-queue-changed", refresh);
+    return () => {
+      window.removeEventListener("online", restored);
+      window.removeEventListener("agribridge:offline-queue-changed", refresh);
+    };
+  }, []);
 
   const availableStock = stockByWarehouseAndType[warehouseId]?.[grainType] ?? 0;
   const total = (parseFloat(quantity) || 0) * (parseFloat(rate) || 0);
@@ -133,7 +166,15 @@ function NewSaleForm({
       <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("gs_new_sale", lang)}</h2>
       {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
       {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("gs_sale_done", lang)}</p>}
-      <form action={formAction} className="space-y-3">
+      {offlineNotice && <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
+      {offlinePending > 0 && <p className="mb-3 text-xs text-amber-700 dark:text-amber-400">{offlinePending} grain sales sync ka intezar kar rahi hain.</p>}
+      <form action={formAction} className="space-y-3" onSubmit={async (event: FormEvent<HTMLFormElement>) => {
+        if (typeof navigator === "undefined" || navigator.onLine !== false) return;
+        event.preventDefault();
+        const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+        await enqueue({ actionType: "grain.sale", entityType: "grain_sales", payload: { fields } });
+        setOfflineNotice("Internet band hai. Grain sale device par save ho gayi; connection aate hi sync ho jayegi.");
+      }}>
         <div>
           <Label>{t("gd_buyer_req", lang)}</Label>
           <Select name="buyer_id" required>
@@ -230,6 +271,36 @@ function SalePaymentModal({ sale, financeAccounts, onClose }: { sale: Sale; fina
   const [state, formAction] = useFormState(recordGrainSalePayment, initialState);
   const lang = useLang();
   const remaining = sale.total_amount - sale.amount_received;
+  const [offlineNotice, setOfflineNotice] = useState("");
+  const [offlinePending, setOfflinePending] = useState(0);
+  useEffect(() => {
+    registerSender("grain.sale.payment", async (action: QueuedAction) => {
+      try {
+        const res = await fetch("/api/grain-sales/payment", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ fields: action.payload.fields ?? {} }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Grain sale payment sync fail ho gayi." };
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" };
+      }
+    });
+    const refresh = async () => {
+      const rows = await allActions().catch(() => []);
+      setOfflinePending(rows.filter((row) => row.action_type === "grain.sale.payment" && (row.sync_status === "pending" || row.sync_status === "syncing")).length);
+    };
+    const restored = async () => { await syncQueue().catch(() => undefined); await refresh(); };
+    void refresh();
+    window.addEventListener("online", restored);
+    window.addEventListener("agribridge:offline-queue-changed", refresh);
+    return () => {
+      window.removeEventListener("online", restored);
+      window.removeEventListener("agribridge:offline-queue-changed", refresh);
+    };
+  }, []);
   if (state.success) setTimeout(onClose, 900);
 
   return (
@@ -242,7 +313,15 @@ function SalePaymentModal({ sale, financeAccounts, onClose }: { sale: Sale; fina
         <p className="mb-3 text-sm text-surface-500">{sale.buyer_name} - Baaqi: Rs {remaining.toLocaleString()}</p>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
         {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("gs_payment_recorded", lang)}</p>}
-        <form action={formAction} className="space-y-3">
+        {offlineNotice && <p className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
+        {offlinePending > 0 && <p className="mb-2 text-[11px] text-amber-700 dark:text-amber-400">{offlinePending} grain payment sync ka intezar kar rahi hai.</p>}
+        <form action={formAction} className="space-y-3" onSubmit={async (event: FormEvent<HTMLFormElement>) => {
+          if (typeof navigator === "undefined" || navigator.onLine !== false) return;
+          event.preventDefault();
+          const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+          await enqueue({ actionType: "grain.sale.payment", entityType: "grain_sale_payments", payload: { fields } });
+          setOfflineNotice("Internet band hai. Payment device par save ho gayi; connection aate hi sync ho jayegi.");
+        }}>
           <input type="hidden" name="sale_id" value={sale.id} />
           <div>
             <Label>{t("gd_amount_req", lang)}</Label>
