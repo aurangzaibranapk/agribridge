@@ -3950,10 +3950,20 @@ export async function recordVendorCashHandover(_prev: ActionState, formData: For
   const vendorId = str(formData, "vendor_id");
   const accountId = str(formData, "finance_account_id");
   const amount = num(formData, "amount") ?? 0;
+  const clientActionId = str(formData, "client_action_id");
 
   if (!vendorId) return { error: "Vendor nahi mila." };
   if (amount <= 0) return { error: "Raqam sahi likhein." };
   if (!accountId) return { error: "Paisa kis khate mein aaya, wo select karein." };
+
+  if (clientActionId) {
+    const { data: alreadyPosted } = await supabase
+      .from("machinery_payments")
+      .select("id")
+      .eq("client_action_id", clientActionId)
+      .maybeSingle();
+    if (alreadyPosted) return { success: true, notice: "Vendor handover pehle hi sync ho chuka hai." };
+  }
 
   const { data: vendor } = await supabase
     .from("machinery_vendors")
@@ -3978,6 +3988,35 @@ export async function recordVendorCashHandover(_prev: ActionState, formData: For
     return { error: `Vendor ke paas hamara Rs ${holding.toLocaleString()} hai, us se zyada nahi liya ja sakta.` };
   }
 
+  // Pehle un poori qataaron par nishan lagate hain jo is handover mein
+  // aa rahi hain. Ye nishan device key bhi rakhta hai. Agar network jawab
+  // se pehle toot jaye to agla retry isi key se pehchan lega; agar ledger
+  // nakaam ho to nishan wapas hata diya jata hai.
+  let left = amount;
+  const service = createServiceClient();
+  const rowsToMark: Array<{ id: string; amount: number }> = [];
+  for (const row of pending ?? []) {
+    const rowAmount = Number(row.amount);
+    if (rowAmount > left + 0.01) break;
+    rowsToMark.push({ id: row.id, amount: rowAmount });
+    left = Math.round((left - rowAmount) * 100) / 100;
+  }
+  if (rowsToMark.length === 0) return { error: "Is handover ke liye payment ki poori qatar available nahi." };
+
+  const marked: string[] = [];
+  for (const row of rowsToMark) {
+    const { error } = await service
+      .from("machinery_payments")
+      .update({ finance_account_id: accountId, ...(marked.length === 0 && clientActionId ? { client_action_id: clientActionId } : {}) })
+      .eq("id", row.id)
+      .is("finance_account_id", null);
+    if (error) {
+      if (marked.length) await service.from("machinery_payments").update({ finance_account_id: null, ...(clientActionId ? { client_action_id: null } : {}) }).in("id", marked);
+      return { error: `Vendor handover lock nahi ho saka: ${error.message}` };
+    }
+    marked.push(row.id);
+  }
+
   const posted = await postVendorCashHandover({
     vendorId,
     accountId,
@@ -3985,7 +4024,10 @@ export async function recordVendorCashHandover(_prev: ActionState, formData: For
     description: `${vendor.vendor_name} ne kisan se wasool shuda paisa hamein diya`,
     ctx: { createdBy: actorId, entryDate: str(formData, "received_date") ?? undefined },
   });
-  if (failed(posted)) return { error: `Ledger mein nahi gaya: ${posted.error}` };
+  if (failed(posted)) {
+    await service.from("machinery_payments").update({ finance_account_id: null, ...(clientActionId ? { client_action_id: null } : {}) }).in("id", marked);
+    return { error: `Ledger mein nahi gaya: ${posted.error}` };
+  }
 
   // Cash Book ka rukh bhi (19 September ka finance review): vendor se
   // aaya paisa jis khate mein utra, wahan Cash Book mein bhi likha jaye.
@@ -4005,15 +4047,6 @@ export async function recordVendorCashHandover(_prev: ActionState, formData: For
   // isi se wo "vendor ke paas para hua" ki fehrist se nikalti hain.
   // Aadhi qatar par nishaan nahi lagta: adhoori adaigi ka matlab wo
   // qatar abhi puri nahi hui.
-  let left = amount;
-  const service = createServiceClient();
-  for (const row of pending ?? []) {
-    const rowAmount = Number(row.amount);
-    if (rowAmount > left + 0.01) break;
-    await service.from("machinery_payments").update({ finance_account_id: accountId }).eq("id", row.id);
-    left = Math.round((left - rowAmount) * 100) / 100;
-  }
-
   revalidatePath("/admin/machinery-rental/vendor-cash");
   revalidatePath("/admin/finance");
   return {
