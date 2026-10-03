@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { recordFuelEntry, recordWorkCompletion } from "@/actions/machinery-lifecycle";
+import { recordFuelEntry, recordWorkCompletion, recordFinalPayment, recordVendorCashHandover } from "@/actions/machinery-lifecycle";
 import { createClient } from "@/lib/supabase/server";
 
 /** Offline machinery field-work sync. Existing lifecycle actions remain the source of truth. */
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   if (!isStaff) return NextResponse.json({ error: "Staff permission required." }, { status: 403 });
 
   const body = await req.json().catch(() => ({}));
-  const kind = body.kind === "fuel" || body.kind === "work" || body.kind === "payment" ? body.kind : "";
+  const kind = body.kind === "fuel" || body.kind === "work" || body.kind === "payment" || body.kind === "vendor_handover" ? body.kind : "";
   if (!kind || !body.fields || typeof body.fields !== "object") {
     return NextResponse.json({ error: "Machinery entry ki maloomat durust nahi." }, { status: 400 });
   }
@@ -23,7 +23,9 @@ export async function POST(req: NextRequest) {
     ? await recordFuelEntry({}, formData)
     : kind === "work"
       ? await recordWorkCompletion({}, formData)
-      : await recordFinalPayment({}, formData);
+      : kind === "payment"
+        ? await recordFinalPayment({}, formData)
+        : await recordVendorCashHandover({}, formData);
   if (result.error) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json({ success: true });
 }
