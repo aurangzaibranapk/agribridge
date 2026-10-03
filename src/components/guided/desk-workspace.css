@@ -409,7 +409,7 @@
   .staff-desk-method-track { height:5px; grid-column:1; overflow:hidden; border-radius:999px; background:#edf1ee; }
   .staff-desk-method-track i { display:block; height:100%; border-radius:inherit; }
   .staff-desk-method-percent { grid-column:2; grid-row:1 / span 2; color:#59685f; font-size:9px; }
-  .staff-desk-bottom { min-height:0; display:grid; grid-template-columns:1.05fr 1.15fr 1fr; gap:8px; overflow:hidden; }
+  .staff-desk-bottom { min-height:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; overflow:hidden; }
   .staff-desk-bottom > .desk-card { min-height:0; overflow:hidden; padding:10px 11px; box-shadow:0 2px 7px #12351d09; }
   .staff-desk-lists { display:flex; flex-direction:column; }
   .staff-desk-task-columns { min-height:0; flex:1; display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
