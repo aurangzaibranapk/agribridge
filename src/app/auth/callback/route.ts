@@ -12,14 +12,28 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
 
-  // This app is only ever deployed at this one domain, so the redirect
-  // target is hardcoded rather than derived from the incoming request —
-  // behind cPanel/Passenger's reverse proxy, Next.js sees the internal
-  // request (often http://localhost:PORT), not the public domain, and
-  // relying on forwarded headers turned out to be unreliable on this
-  // host. Local development (`npm run dev`) isn't affected since OAuth
-  // sign-in isn't tested that way.
-  const origin = "https://alranatraders.pk";
+  // Keep the callback on the domain that started sign-in. Only the main
+  // domain and an active organization.custom_domain are trusted; arbitrary
+  // Host headers must never become an open redirect.
+  const requestUrl = new URL(request.url);
+  const host = request.headers.get("host")?.split(":")[0]?.toLowerCase().replace(/^www\./, "");
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const localHost = host === "localhost" || host === "127.0.0.1";
+  let origin = "https://alranatraders.pk";
+  if (localHost) {
+    origin = `${requestUrl.protocol}//${requestUrl.host}`;
+  } else if (host === "alranatraders.pk") {
+    origin = "https://alranatraders.pk";
+  } else if (host) {
+    const serviceClient = createServiceClient();
+    const { data: tenant } = await serviceClient
+      .from("organizations")
+      .select("id")
+      .eq("custom_domain", host)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (tenant) origin = `${forwardedProto === "http" ? "http" : "https"}://${host}`;
+  }
 
   if (code) {
     const supabase = createClient();
