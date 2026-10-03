@@ -53,6 +53,7 @@ export async function requestInternalTransfer(_prev: ActionState, formData: Form
   const itemsJson = String(formData.get("items_json") ?? "[]");
   const notes = (formData.get("notes") as string) || null;
   const paymentSlipUrl = (formData.get("payment_slip_url") as string) || null;
+  const clientActionId = String(formData.get("client_action_id") ?? "").trim() || null;
 
   let items: TransferItemInput[] = [];
   try {
@@ -84,6 +85,10 @@ export async function requestInternalTransfer(_prev: ActionState, formData: Form
   if (!toWarehouseId) return { error: "Destination location has no warehouse set up." };
 
   const batchPrefix = `INT-${Date.now()}`;
+  const actionIds = clientActionId ? items.map((_, idx) => `${clientActionId}:${idx}`) : [];
+  const existingIds = clientActionId
+    ? new Set((await supabase.from("stock_transfers").select("offline_item_key").in("offline_item_key", actionIds)).data?.map((row) => row.offline_item_key) ?? [])
+    : new Set<string>();
   const rows = items.map((item, idx) => ({
     transfer_number: items.length > 1 ? `${batchPrefix}-${idx + 1}` : batchPrefix,
     from_warehouse_id: fromWarehouseId,
@@ -96,11 +101,17 @@ export async function requestInternalTransfer(_prev: ActionState, formData: Form
     notes,
     payment_slip_url: paymentSlipUrl,
     requested_by: user.id,
-  }));
+    ...(clientActionId ? { offline_item_key: actionIds[idx] } : {}),
+  })).filter((row) => !clientActionId || !existingIds.has(row.offline_item_key));
+
+  if (rows.length === 0) return { success: true };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await supabase.from("stock_transfers").insert(rows as any);
-  if (error) return { error: error.message };
+  if (error) {
+    if (clientActionId && error.code === "23505") return { success: true };
+    return { error: error.message };
+  }
   revalidatePath("/admin/stock-transfers");
   return { success: true };
 }
@@ -459,3 +470,4 @@ export async function cancelInternalTransfer(_prev: ActionState, formData: FormD
   revalidatePath("/admin/stock-transfers");
   return { success: true };
 }
+
