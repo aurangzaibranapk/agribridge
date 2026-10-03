@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { createFarmerLoan, type ActionState } from "@/actions/farmer-loans";
@@ -7,6 +7,8 @@ import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/f
 import { Plus, X } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { enqueue } from "@/lib/offline/queue";
+import { registerSender } from "@/lib/offline/sync";
 
 const initialState: ActionState = {};
 
@@ -81,6 +83,27 @@ export function FarmerLoansClient({ farmers, loans }: { farmers: Farmer[]; loans
 function NewLoanModal({ farmers, onClose }: { farmers: Farmer[]; onClose: () => void }) {
   const [state, formAction] = useFormState(createFarmerLoan, initialState);
   const lang = useLang();
+
+  useEffect(() => {
+    registerSender("farmer-loan.issue", async (action) => {
+      try {
+        const res = await fetch("/api/farmer-loans/offline", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields: action.payload.fields }) });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Farmer loan sync fail ho gaya." };
+        return { ok: true };
+      } catch (error) { return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" }; }
+    });
+  }, []);
+
+  async function handleOffline(event: FormEvent<HTMLFormElement>) {
+    if (typeof navigator === "undefined" || navigator.onLine) return;
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const clientActionId = crypto.randomUUID();
+    fields.client_action_id = clientActionId;
+    await enqueue({ actionType: "farmer-loan.issue", entityType: "farmer_loans", payload: { fields }, clientActionId });
+    onClose();
+  }
   if (state.success) setTimeout(() => window.location.reload(), 900);
 
   return (
@@ -91,7 +114,7 @@ function NewLoanModal({ farmers, onClose }: { farmers: Farmer[]; onClose: () => 
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
-        <form action={formAction} className="space-y-3">
+        <form action={formAction} onSubmit={handleOffline} className="space-y-3">
           <div>
             <Label>{t("fl_farmer_req", lang)}</Label>
             <Select name="farmer_id" required>
@@ -125,3 +148,4 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   return <Button type="submit" disabled={pending} className="w-full">{pending ? "Saving..." : "Loan Dein"}</Button>;
 }
+
