@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import {
@@ -13,6 +13,8 @@ import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { Plus, X, FileText, Settings } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { enqueue } from "@/lib/offline/queue";
+import { registerSender } from "@/lib/offline/sync";
 
 const initialState: ActionState = {};
 
@@ -173,6 +175,27 @@ function IssueCreditModal({ farmers, onClose }: { farmers: Farmer[]; onClose: ()
   const lang = useLang();
   const [confirmOverride, setConfirmOverride] = useState(false);
   const isLimitError = state.error?.startsWith("LIMIT_EXCEEDED:");
+
+  useEffect(() => {
+    registerSender("farmer-credit.issue", async (action) => {
+      try {
+        const res = await fetch("/api/farmer-credit/offline", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "issue", fields: action.payload.fields }) });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Farmer credit sync fail ho gaya." };
+        return { ok: true };
+      } catch (error) { return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" }; }
+    });
+  }, []);
+
+  async function handleOffline(event: FormEvent<HTMLFormElement>) {
+    if (typeof navigator === "undefined" || navigator.onLine) return;
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const clientActionId = crypto.randomUUID();
+    fields.client_action_id = clientActionId;
+    await enqueue({ actionType: "farmer-credit.issue", entityType: "farmer_credit_ledger", payload: { fields }, clientActionId });
+    onClose();
+  }
   if (state.success) setTimeout(onClose, 900);
 
   return (
@@ -191,7 +214,7 @@ function IssueCreditModal({ farmers, onClose }: { farmers: Farmer[]; onClose: ()
           </div>
         )}
         {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("fc_credit_issued", lang)}</p>}
-        <form action={formAction} className="space-y-3">
+        <form action={formAction} onSubmit={handleOffline} className="space-y-3">
           <input type="hidden" name="override_limit" value={confirmOverride ? "true" : "false"} />
           <div>
             <Label>{t("fl_farmer_req", lang)}</Label>
@@ -236,6 +259,26 @@ function IssueCreditModal({ farmers, onClose }: { farmers: Farmer[]; onClose: ()
 function RepaymentModal({ farmers, financeAccounts, onClose }: { farmers: Farmer[]; financeAccounts: FinanceAccount[]; onClose: () => void }) {
   const [state, formAction] = useFormState(recordFarmerCreditRepayment, initialState);
   const lang = useLang();
+  useEffect(() => {
+    registerSender("farmer-credit.repayment", async (action) => {
+      try {
+        const res = await fetch("/api/farmer-credit/offline", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "repayment", fields: action.payload.fields }) });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Farmer repayment sync fail ho gaya." };
+        return { ok: true };
+      } catch (error) { return { ok: false, retryable: true, error: error instanceof Error ? error.message : "Network error" }; }
+    });
+  }, []);
+
+  async function handleOffline(event: FormEvent<HTMLFormElement>) {
+    if (typeof navigator === "undefined" || navigator.onLine) return;
+    event.preventDefault();
+    const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
+    const clientActionId = crypto.randomUUID();
+    fields.client_action_id = clientActionId;
+    await enqueue({ actionType: "farmer-credit.repayment", entityType: "farmer_credit_ledger", payload: { fields }, clientActionId });
+    onClose();
+  }
   if (state.success) setTimeout(onClose, 900);
 
   return (
@@ -247,7 +290,7 @@ function RepaymentModal({ farmers, financeAccounts, onClose }: { farmers: Farmer
         </div>
         {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
         {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("fc_repayment_done", lang)}</p>}
-        <form action={formAction} className="space-y-3">
+        <form action={formAction} onSubmit={handleOffline} className="space-y-3">
           <div>
             <Label>{t("fl_farmer_req", lang)}</Label>
             <Select name="farmer_id" required>
@@ -362,3 +405,4 @@ function SubmitButton({ label, disabled }: { label: string; disabled?: boolean }
   const { pending } = useFormStatus();
   return <Button type="submit" disabled={pending || disabled} className="w-full">{pending ? "Saving..." : label}</Button>;
 }
+
