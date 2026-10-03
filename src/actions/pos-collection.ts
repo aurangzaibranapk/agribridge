@@ -182,6 +182,9 @@ export async function verifyCollectionDeposit(_prev: ActionState, formData: Form
     .maybeSingle();
   if (!deposit) return { error: "Deposit nahi mila." };
   if (deposit.status !== "pending") {
+    if ((decision === "approve" && deposit.status === "approved") || (decision === "reject" && deposit.status === "rejected")) {
+      return { success: true, message: "Ye approval pehle hi complete ho chuki hai." };
+    }
     return { error: "Ye deposit pehle hi process ho chuki hai." };
   }
 
@@ -581,3 +584,4 @@ export async function myDepositHistory(limit = 20, highlightId?: string | null):
     financeNote: r.finance_note,
   }));
 }
+
