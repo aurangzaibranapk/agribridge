@@ -192,7 +192,12 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   // the POS route itself (for example Load & Bill + Paisa & Khata only).
   // Requiring /admin/pos here sent those users to the legacy dashboard and
   // hid their shop-scoped Ledger. Keep each shortcut permission-filtered.
-  if (me.shop_id && deskLinks.length > 0) {
+  // Owner/Admin ka OS Home hamesha poora unified My Work map dikhaye.
+  // Shop-scoped desk sirf operational staff ke liye hai; warna owner ke
+  // paas shop_id hone ki wajah se baqi departments ke cards chhup jate the.
+  const showShopDesk = !["owner", "super_admin", "admin"].includes(me.role) && me.shop_id && deskLinks.length > 0;
+
+  if (showShopDesk) {
     return <DeskWorkspace className="desk-my-work">
       <header className="staff-desk-header">
         <section className="staff-desk-identity" aria-label="Logged-in staff member">
