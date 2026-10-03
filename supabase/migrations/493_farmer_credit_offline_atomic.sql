@@ -115,4 +115,3 @@ begin
   return jsonb_build_object('success', true, 'ledger_id', v_ledger_id, 'cash_id', v_cash_id, 'entry_id', v_entry_id);
 end;
 $$;
-

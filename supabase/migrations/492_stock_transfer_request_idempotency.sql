@@ -3,4 +3,3 @@
 alter table stock_transfers add column if not exists offline_item_key text;
 create unique index if not exists stock_transfers_offline_item_key_uidx
   on stock_transfers (offline_item_key) where offline_item_key is not null;
-

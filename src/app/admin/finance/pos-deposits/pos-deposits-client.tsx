@@ -148,4 +148,3 @@ export function PosDepositsClient({ deposits, highlightId }: { deposits: Pending
     </div>
   );
 }
-

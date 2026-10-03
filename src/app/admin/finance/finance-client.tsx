@@ -448,4 +448,3 @@ function AccountSubmitButton() {
   const { pending } = useFormStatus();
   return <Button type="submit" disabled={pending} className="flex-1">{pending ? t("fn_creating", lang) : t("fn_create", lang)}</Button>;
 }
-

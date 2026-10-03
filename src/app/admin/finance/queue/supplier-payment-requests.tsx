@@ -209,4 +209,3 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   return <button type="submit" disabled={pending} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">{pending ? "..." : t("fq_send_request", lang)}</button>;
 }
-

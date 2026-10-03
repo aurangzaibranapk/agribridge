@@ -77,4 +77,3 @@ begin
   return jsonb_build_object('success', true, 'loan_id', v_loan, 'wallet_transaction_id', v_wallet_tx, 'entry_id', v_entry);
 end;
 $$;
-

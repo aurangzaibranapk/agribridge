@@ -338,4 +338,3 @@ export async function transferBetweenAccounts(_prev: ActionState, formData: Form
   revalidatePath("/admin/money-trail");
   return { success: true };
 }
-

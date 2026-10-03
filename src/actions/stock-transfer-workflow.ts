@@ -470,4 +470,3 @@ export async function cancelInternalTransfer(_prev: ActionState, formData: FormD
   revalidatePath("/admin/stock-transfers");
   return { success: true };
 }
-

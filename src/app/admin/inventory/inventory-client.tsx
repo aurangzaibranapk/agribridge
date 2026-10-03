@@ -547,4 +547,3 @@ function SubmitButton({ label, className }: { label: string; className?: string 
   const { pending } = useFormStatus();
   return <Button type="submit" disabled={pending} className={className ?? "w-full"}>{pending ? t("inv_processing", lang) : label}</Button>;
 }
-

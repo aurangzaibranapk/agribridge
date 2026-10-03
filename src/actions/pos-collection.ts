@@ -584,4 +584,3 @@ export async function myDepositHistory(limit = 20, highlightId?: string | null):
     financeNote: r.finance_note,
   }));
 }
-

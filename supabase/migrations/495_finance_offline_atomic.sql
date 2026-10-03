@@ -119,4 +119,3 @@ begin
   return jsonb_build_object('success', true, 'transaction_id', v_row, 'transfer_id', v_transfer, 'entry_id', v_entry, 'in_entry_id', v_in_entry);
 end;
 $$;
-
