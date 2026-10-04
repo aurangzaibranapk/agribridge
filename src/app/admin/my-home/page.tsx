@@ -1,23 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, Bell, Boxes, CheckCircle2, Grid2X2, Home, LayoutGrid } from "lucide-react";
+import { Bell, Boxes, CheckCircle2, Grid2X2, Home } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { loadNav } from "@/lib/access/nav";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { LangProvider } from "@/lib/i18n/lang-context";
-import { iconByName } from "@/lib/access/icons";
 import { AGRIBRIDGE_OS_RELEASE, AGRIBRIDGE_OS_VERSION } from "@/lib/app-version";
+import { ModuleSearch } from "./module-search";
 
 export const dynamic = "force-dynamic";
-
-const GROUP_TONES = [
-  "from-emerald-500 to-green-700",
-  "from-blue-500 to-indigo-700",
-  "from-amber-500 to-orange-700",
-  "from-cyan-500 to-teal-700",
-  "from-violet-500 to-purple-700",
-  "from-rose-500 to-red-700",
-];
 
 export default async function MyHomePage() {
   const supabase = createClient();
@@ -83,35 +74,7 @@ export default async function MyHomePage() {
             </div>
           </div>
 
-          <div className="space-y-8">
-            {groups.map((group, groupIndex) => {
-              const tone = GROUP_TONES[groupIndex % GROUP_TONES.length];
-              return (
-                <section key={group.key}>
-                  <div className="mb-3 flex items-center gap-3">
-                    <span className={`grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br ${tone} text-white shadow-sm`}><LayoutGrid className="h-4 w-4" /></span>
-                    <div><h2 className="font-display text-lg font-bold">{group.label}</h2><p className="text-xs text-surface-500">{group.items.length} active options</p></div>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                    {group.items.map((item) => {
-                      const Icon = iconByName(item.icon);
-                      return (
-                        <Link key={`${group.key}-${item.href}`} href={item.href} className="group rounded-2xl border border-surface-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-lg dark:border-surface-800 dark:bg-surface-900 dark:hover:border-emerald-700">
-                          <div className="flex items-start justify-between gap-3">
-                            <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${tone} text-white shadow-sm`}><Icon className="h-5 w-5" /></span>
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Active</span>
-                          </div>
-                          <h3 className="mt-4 line-clamp-2 min-h-[2.75rem] text-base font-bold text-surface-900 dark:text-white">{item.label}</h3>
-                          <p className="mt-1 line-clamp-2 min-h-[2.5rem] text-xs leading-5 text-surface-500 dark:text-surface-400">{item.description || "Is module ka kaam khol kar dekhein."}</p>
-                          <div className="mt-4 flex items-center justify-between border-t border-surface-100 pt-3 text-xs font-bold text-emerald-700 dark:border-surface-800 dark:text-emerald-300"><span>Open Module</span><ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </section>
-              );
-            })}
-          </div>
+          <ModuleSearch groups={groups} />
 
           {groups.length === 0 && <div className="rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center text-sm text-amber-800">Koi active module nahi mila. Admin se access check karwayein.</div>}
           <div className="mt-10 flex justify-center"><Link href="/admin/command-center" className="inline-flex items-center gap-2 rounded-xl bg-[#102e4d] px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-[#173f66]"><Boxes className="h-4 w-4" /> Dashboard / Sidebar Admin Panel</Link></div>

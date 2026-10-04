@@ -338,13 +338,15 @@ export function CountingSheet({
         )}
       </div>
 
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder={t("sc_search_item", lang)}
-        className="w-full rounded-lg border border-surface-300 px-3 py-2 text-sm dark:border-surface-700 dark:bg-surface-900"
-      />
+      <div className="rounded-xl border border-surface-200 bg-surface-50 px-3 py-2 dark:border-surface-800 dark:bg-surface-900">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={`${t("sc_search_item", lang)}...`}
+          className="w-full bg-transparent text-sm outline-none placeholder:text-surface-400"
+        />
+      </div>
 
       {/* Ginti karte waqt hi "kuch mila jo list mein nahi" darj karna hai
           -- is liye button upar wali (baqi) list ke sath hi rahe, sab
@@ -354,13 +356,15 @@ export function CountingSheet({
     <form action={formAction} className="space-y-3">
       <input type="hidden" name="count_id" value={countId} />
 
-      <div className="overflow-hidden rounded-card border border-surface-200 dark:border-surface-800">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-surface-200 dark:border-surface-800">
+        <table className="w-full min-w-[680px] text-sm">
           <thead className="border-b border-surface-200 bg-surface-50 text-left text-xs text-surface-500 dark:border-surface-800 dark:bg-surface-900">
             <tr>
               <th className="w-10 px-4 py-2 text-right font-medium">#</th>
               <th className="px-4 py-2 font-medium">{t("sc_item", lang)}</th>
+              <th className="w-24 px-4 py-2 font-medium">Unit</th>
               <th className="w-44 px-4 py-2 text-right font-medium">{t("sc_you_counted", lang)}</th>
+              <th className="w-32 px-4 py-2 font-medium">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
@@ -378,14 +382,16 @@ export function CountingSheet({
                     <RateCell productId={l.productId} saleRatePending={l.saleRatePending} tradeRatePending={l.tradeRatePending} />
                   )}
                 </td>
+                <td className="px-4 py-2 text-xs text-surface-500">{l.unit ?? "—"}</td>
                 <td className="px-4 py-2">
                   <CountCell l={l} />
                 </td>
+                <td className="px-4 py-2"><span className="inline-flex rounded-full bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">Remaining</span></td>
               </tr>
             ))}
             {pending.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-sm text-surface-400">
+                <td colSpan={5} className="px-4 py-6 text-center text-sm text-surface-400">
                   {q ? t("sc_no_match", lang) : t("sc_all_done", lang)}
                 </td>
               </tr>

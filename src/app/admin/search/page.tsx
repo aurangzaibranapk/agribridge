@@ -2,10 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { UserCog, LayoutGrid } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { ADMIN_NAV_GROUPS } from "@/components/layout/nav-items";
 import { iconByName } from "@/lib/access/icons";
+import { loadNav } from "@/lib/access/nav";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +20,9 @@ export const dynamic = "force-dynamic";
  * seedha substring hone ki wajah se "perchase" jaisi aam spelling se
  * "Purchases" kabhi nahi milta tha.
  *
- * Ab teen jagah dhoondta hai: departments (dashboards), safhe
- * (features), aur staff (profiles) -- aur har lafz par thori si spelling
- * ki ghalti maaf hai (edit distance).
+ * Ab teen jagah dhoondta hai: departments, permitted safhe, aur staff
+ * (profiles). Search result wahi routes dikhata hai jo current user ke menu
+ * mein active hain; is se result click karne par dead/blocked link nahi banta.
  */
 
 /** Do lafzon ka farq -- kitne harf badalne/ghatane/barhane paRenge. */
@@ -75,27 +76,28 @@ export default async function AdminSearchPage({ searchParams }: { searchParams: 
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const lang = getLanguageFromCookies("rm");
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  const nav = profile?.role ? await loadNav(user.id, profile.role, lang) : null;
+
   let pageMatches: { href: string; label: string; icon: string | null; description?: string | null }[] = [];
   let deptMatches: { key: string; label: string }[] = [];
 
   if (q) {
-    try {
-      const service = createServiceClient();
-      const [{ data: features }, { data: dashboards }] = await Promise.all([
-        service.from("features").select("key, label, label_en, label_ur, route, icon, description").eq("is_active", true),
-        service.from("dashboards").select("key, label, label_en, label_ur").eq("is_active", true).order("sort_order"),
-      ]);
+    if (nav) {
+      const seen = new Set<string>();
+      pageMatches = nav.groups
+        .flatMap((group) => group.items.map((item) => ({ group, item })))
+        .filter(({ group, item }) => matchesQuery(q, [group.label, group.key, group.description, item.label, item.description, item.href]))
+        .filter(({ item }) => (seen.has(item.href) ? false : (seen.add(item.href), true)))
+        .slice(0, 50)
+        .map(({ item }) => ({ href: item.href, label: item.label, icon: item.icon, description: item.description }));
 
-      pageMatches = (features ?? [])
-        .filter((f) => matchesQuery(q, [f.label, f.label_en, f.label_ur, f.key, f.route]))
-        .slice(0, 30)
-        .map((f) => ({ href: f.route, label: f.label, icon: f.icon, description: f.description }));
-
-      deptMatches = (dashboards ?? [])
-        .filter((d) => matchesQuery(q, [d.label, d.label_en, d.label_ur, d.key]))
-        .slice(0, 10)
-        .map((d) => ({ key: d.key, label: d.label }));
-    } catch {
+      deptMatches = nav.groups
+        .filter((group) => matchesQuery(q, [group.label, group.key, group.description]))
+        .slice(0, 20)
+        .map((group) => ({ key: group.key, label: group.label }));
+    } else {
       // Database na mile to purani code wali fehrist -- khali nataij se
       // koi bhi fehrist behtar hai (wahi usool jo loadNav ka hai).
       pageMatches = ADMIN_NAV_GROUPS.flatMap((g) => g.items)
@@ -107,10 +109,11 @@ export default async function AdminSearchPage({ searchParams }: { searchParams: 
 
   let staffMatches: { id: string; full_name: string | null; role: string; phone_number: string | null; is_active: boolean | null }[] = [];
   if (q) {
+    const safeQ = q.replace(/[%,()]/g, " ").trim();
     const { data } = await supabase
       .from("profiles")
       .select("id, full_name, role, phone_number, is_active")
-      .or(`full_name.ilike.%${q}%,phone_number.ilike.%${q}%`)
+      .or(`full_name.ilike.%${safeQ}%,phone_number.ilike.%${safeQ}%`)
       .order("full_name")
       .limit(30);
     staffMatches = data ?? [];

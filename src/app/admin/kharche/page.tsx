@@ -11,10 +11,11 @@ import { canDo } from "@/lib/access/guard";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { billQismKaLabel } from "@/lib/kharche";
 import { shopPaymentMethodBreakdown } from "@/lib/pos/shop-payment-methods";
-import { ArrowDownCircle, ArrowUpCircle, Clock, Wallet } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Clock, Wallet, ArrowLeft } from "lucide-react";
 import { LiveRefresh } from "@/components/live/live-refresh";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -213,26 +214,29 @@ export default async function KharchePage({
 
   return (
     <DeskWorkspace>
-      <PageHeader
-        title={t("kh_page_title", lang)}
-        description={t("kh_page_desc", lang)}
-        actions={
+      <div className="mx-auto w-full max-w-[1800px] space-y-5 pb-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <Link href="/admin/my-work" className="mb-2 inline-flex items-center gap-1.5 text-sm text-surface-500 transition hover:text-brand-700">
+              <ArrowLeft className="h-4 w-4" /> Back to My Work
+            </Link>
+            <PageHeader title={t("kh_page_title", lang)} description={t("kh_page_desc", lang)} />
+          </div>
           <LiveRefresh tables={["company_expense_requests", "labour_work_entries", "finance_transactions"]} />
-        }
-      />
+        </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label={t("kh_stat_aaj_gaya", lang)} value={`Rs. ${aajGaya.toLocaleString()}`} icon={ArrowDownCircle} tone="red" />
-        <StatCard label={t("kh_stat_aaj_aaya", lang)} value={`Rs. ${aajAaya.toLocaleString()}`} icon={ArrowUpCircle} tone="green" />
-        <StatCard
-          label={`${t("kh_stat_manzoori_intezar", lang)} (${intezar.length})`}
-          value={`Rs. ${intezarKiRaqam.toLocaleString()}`}
-          icon={Clock}
-          tone="warn"
-        />
-      </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <StatCard label={t("kh_stat_aaj_gaya", lang)} value={`Rs. ${aajGaya.toLocaleString()}`} icon={ArrowDownCircle} tone="red" />
+          <StatCard label={t("kh_stat_aaj_aaya", lang)} value={`Rs. ${aajAaya.toLocaleString()}`} icon={ArrowUpCircle} tone="green" />
+          <StatCard
+            label={`${t("kh_stat_manzoori_intezar", lang)} (${intezar.length})`}
+            value={`Rs. ${intezarKiRaqam.toLocaleString()}`}
+            icon={Clock}
+            tone="warn"
+          />
+        </div>
 
-      <DeskTabs items={[
+        <DeskTabs items={[
         { id: "accounts", label: "Accounts", content: (<> {shopScoped ? (
         <Card className="mt-4">
           <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-surface-400">
@@ -338,7 +342,8 @@ export default async function KharchePage({
         manzoorKarSakta={manzoorKarSakta}
         taseeqKarSakta={taseeqKarSakta}
       />) },
-      ]} />
+        ]} />
+      </div>
     </DeskWorkspace>
   );
 }
