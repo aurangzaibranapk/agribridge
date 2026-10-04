@@ -26,6 +26,7 @@ import {
 import { LiveRefresh } from "@/components/live/live-refresh";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { StaffMotivationCard } from "@/components/guided/staff-motivation-card";
 
 export const dynamic = "force-dynamic";
 
@@ -73,12 +74,16 @@ export default async function CommandCenterPage() {
     data: { user },
   } = await supabase.auth.getUser();
   const { data: me } = user
-    ? await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle()
+    ? await supabase.from("profiles").select("role, is_active, full_name").eq("id", user.id).maybeSingle()
     : { data: null };
 
   if (!me?.is_active || !OWNER_ROLES.includes(me.role)) {
     return <div className="p-8 text-center text-surface-400">{t("c_only_owner_admin", lang)}</div>;
   }
+
+  const scoreRes = await supabase.rpc("fn_recalc_score", { p_subject_type: "staff", p_subject_id: user!.id })
+    .then(() => supabase.rpc("fn_score_for", { p_subject_type: "staff", p_subject_id: user!.id }));
+  const scoreRow = (Array.isArray(scoreRes.data) ? scoreRes.data[0] : null) as { score?: number | null } | null;
 
   const [money, depts, alerts, entityCounts, salesTrend, branchPerformance, topShops] = await Promise.all([
     loadMoneyToday(),
@@ -144,6 +149,8 @@ export default async function CommandCenterPage() {
           />
         </div>
       </div>
+
+      <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={me.role} language="ur" />
 
       {/* Primary business position */}
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
