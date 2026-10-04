@@ -118,7 +118,7 @@ const THEME_INIT_SCRIPT = `
 const SW_REGISTER_SCRIPT = `
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(function () {});
   });
 }
 `;
