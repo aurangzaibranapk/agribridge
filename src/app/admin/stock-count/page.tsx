@@ -104,7 +104,7 @@ export default async function StockCountPage({
   // Admin ke liye command/response monitor. Existing stock-count records se
   // reporting banti hai; koi purana data ya product quantity change nahi hoti.
   const commandService = supabase as any;
-  const [{ data: commandCounts }, { data: commandSchedules }, { data: commandProfiles }] = await Promise.all([
+  const [{ data: commandCounts }, { data: commandSchedules }, { data: commandProfiles }, { data: commandLogs }] = await Promise.all([
     commandService
       .from("stock_counts")
       .select("id, warehouse_id, status, started_by, started_at, verified_at, posted_at, warehouses(name), stock_count_lines(counted_qty)")
@@ -115,14 +115,37 @@ export default async function StockCountPage({
       .select("warehouse_id, zimmedar, updated_at, warehouses(name)")
       .limit(100),
     commandService.from("profiles").select("id, full_name").eq("is_active", true).limit(500),
+    commandService
+      .from("stock_count_command_logs")
+      .select("id, warehouse_id, staff_id, stock_count_id, status, sent_at, response_started_at, completed_at, warehouses(name)")
+      .order("sent_at", { ascending: false })
+      .limit(100),
   ]);
   const profileNames = new Map<string, string>((commandProfiles ?? []).map((p: any) => [p.id, p.full_name ?? "—"]));
   const scheduleByWarehouse = new Map<string, any>((commandSchedules ?? []).map((s: any) => [s.warehouse_id, s]));
+  const countById = new Map<string, any>((commandCounts ?? []).map((c: any) => [c.id, c]));
+  const logRows: StockCountCommandRow[] = (commandLogs ?? []).map((log: any) => {
+    const count = log.stock_count_id ? countById.get(log.stock_count_id) : null;
+    const lines = Array.isArray(count?.stock_count_lines) ? count.stock_count_lines : [];
+    return {
+      id: log.stock_count_id ?? `command-${log.id}`,
+      countId: log.stock_count_id ?? null,
+      warehouseName: log.warehouses?.name ?? count?.warehouses?.name ?? "—",
+      staffName: profileNames.get(log.staff_id) ?? "Staff assignment nahi",
+      commandAt: log.sent_at ?? null,
+      startedAt: log.response_started_at ?? count?.started_at ?? null,
+      completedAt: log.completed_at ?? count?.posted_at ?? count?.verified_at ?? null,
+      totalProducts: lines.length,
+      countedProducts: lines.filter((l: any) => l.counted_qty !== null).length,
+      status: log.status ?? count?.status ?? "assigned",
+    };
+  });
   const countRows: StockCountCommandRow[] = (commandCounts ?? []).map((c: any) => {
     const schedule = scheduleByWarehouse.get(c.warehouse_id);
     const lines = Array.isArray(c.stock_count_lines) ? c.stock_count_lines : [];
     return {
       id: c.id,
+      countId: c.id,
       warehouseName: c.warehouses?.name ?? schedule?.warehouses?.name ?? "—",
       staffName: profileNames.get(schedule?.zimmedar ?? c.started_by) ?? "Staff assignment nahi",
       commandAt: schedule?.updated_at ?? c.started_at ?? null,
@@ -138,6 +161,7 @@ export default async function StockCountPage({
     .filter((s: any) => s.zimmedar && !countedWarehouses.has(s.warehouses?.name ?? "—"))
     .map((s: any) => ({
       id: `schedule-${s.warehouse_id}`,
+      countId: null,
       warehouseName: s.warehouses?.name ?? "—",
       staffName: profileNames.get(s.zimmedar) ?? "Staff assignment nahi",
       commandAt: s.updated_at ?? null,
@@ -147,7 +171,8 @@ export default async function StockCountPage({
       countedProducts: 0,
       status: "assigned",
     }));
-  const commandRows: StockCountCommandRow[] = [...countRows, ...assignedOnlyRows];
+  const loggedCountIds = new Set((commandLogs ?? []).map((log: any) => log.stock_count_id).filter(Boolean));
+  const commandRows: StockCountCommandRow[] = [...logRows, ...countRows.filter((row) => !loggedCountIds.has(row.id)), ...assignedOnlyRows];
 
   const assignedCount = current?.lines.length ?? null;
   const countedCount = current ? current.lines.filter((line) => line.counted != null).length : null;
