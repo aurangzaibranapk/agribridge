@@ -164,12 +164,30 @@ export function ReceiptModal({
              liye sab kuch pakka siyah, aur dashed lines mota. */
           #receipt-print-area, #receipt-print-area * { color: #000 !important; }
           #receipt-print-area .receipt-rule { border-top-width: 1.5px !important; border-color: #000 !important; }
+          #receipt-print-area .receipt-watermark { opacity: 0.16 !important; }
+        }
+        #receipt-print-area { position: relative; overflow: hidden; }
+        #receipt-print-area > *:not(.receipt-watermark) { position: relative; z-index: 1; }
+        .receipt-watermark {
+          position: absolute;
+          inset: 0;
+          z-index: 0;
+          pointer-events: none;
+          opacity: 0.28;
+          background-image:
+            linear-gradient(45deg, transparent 49.5%, rgba(242,139,36,0.18) 49.8%, rgba(242,139,36,0.18) 50.2%, transparent 50.5%),
+            linear-gradient(-45deg, transparent 49.5%, rgba(242,139,36,0.18) 49.8%, rgba(242,139,36,0.18) 50.2%, transparent 50.5%),
+            url('/branding/kisan-watermark.svg');
+          background-size: 180px 180px, 180px 180px, 360px 180px;
+          background-position: center, center, center;
+          background-repeat: repeat;
         }
       `}</style>
       <div
         id="receipt-print-area"
         className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-card bg-white p-5 font-mono text-black shadow-xl dark:bg-surface-900 print:max-h-none print:w-full print:p-0 print:text-[13px] print:shadow-none"
       >
+        <div className="receipt-watermark" aria-hidden="true" />
         <div className="mb-3 flex items-center justify-between print:hidden">
           <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pos_receipt", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700 dark:hover:text-surface-200">
