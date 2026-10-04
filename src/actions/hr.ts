@@ -363,7 +363,15 @@ export async function selfCheckOut(_prev: ActionState, formData: FormData): Prom
 }
 
 export async function inviteStaffMember(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
   const serviceClient = createServiceClient();
+
+  const { data: { user: callingUser } } = await supabase.auth.getUser();
+  if (!callingUser) return { error: "Login zaroori hai." };
+  const { data: callerProfile } = await supabase.from("profiles").select("organization_id, role, is_active").eq("id", callingUser.id).single();
+  if (!callerProfile?.is_active || !callerProfile.organization_id || !["owner", "super_admin", "admin", "hr"].includes(String(callerProfile.role))) {
+    return { error: "Sirf authorized Admin/HR staff invite kar sakta hai." };
+  }
 
   const fullName = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -375,7 +383,7 @@ export async function inviteStaffMember(_prev: ActionState, formData: FormData):
   if (!fullName) return { error: "Naam zaroori hai." };
   if (!email) return { error: "Email zaroori hai." };
 
-  const { data: org } = await serviceClient.from("organizations").select("id").limit(1).single();
+  const { data: org } = await serviceClient.from("organizations").select("id").eq("id", callerProfile.organization_id).single();
 
   const randomPassword = Math.random().toString(36).slice(-6) + Math.random().toString(36).slice(-6).toUpperCase() + "!1";
 
