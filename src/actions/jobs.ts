@@ -443,14 +443,17 @@ export async function createOfficialLogin(_prev: ActionState, formData: FormData
   if (createError) return { error: createError.message };
   if (!authUser.user) return { error: "Account create nahi ho saka." };
 
-  const { data: org } = await serviceClient.from("organizations").select("id").limit(1).single();
+  const { data: org } = latestOffer?.branch_id
+    ? await serviceClient.from("branches").select("organization_id").eq("id", latestOffer.branch_id).single()
+    : { data: null };
+  if (!org?.organization_id) return { error: "Is staff ke liye organization/branch assign nahi hai." };
 
   await (serviceClient as any).from("profiles").upsert({
     id: authUser.user.id,
     full_name: application.full_name,
     role: "sales_staff",
     branch_id: latestOffer?.branch_id ?? null,
-    organization_id: org?.id ?? null,
+    organization_id: org.organization_id,
     is_active: true,
   });
 
