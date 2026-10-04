@@ -14,6 +14,11 @@ import { useLang } from "@/lib/i18n/lang-context";
 
 const FIELD = "h-12 rounded-xl border-surface-200 bg-white px-3.5 text-[15px] shadow-sm outline-none transition focus:border-[#2E6840] focus:ring-2 focus:ring-[#2E6840]/10 placeholder:text-surface-400";
 const BIG_BTN = "h-12 w-full rounded-xl bg-[#174B2B] text-[15px] font-semibold tracking-wide text-white shadow-sm transition hover:bg-[#123D23] disabled:cursor-not-allowed disabled:opacity-60";
+const OFFLINE_ROUTE_KEY = "agribridge:last-login-route";
+
+function rememberLoginRoute(route: string) {
+  try { window.localStorage.setItem(OFFLINE_ROUTE_KEY, route); } catch {}
+}
 
 export function LoginForm({ tenantName = "AgriBridge" }: { tenantName?: string }) {
   return <UnifiedLogin tenantName={tenantName} />;
@@ -39,17 +44,62 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
   const [emailStage, setEmailStage] = useState<"none" | "sent">("none");
   const [emailBusy, setEmailBusy] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [offline, setOffline] = useState(false);
+  const [offlineReady, setOfflineReady] = useState(false);
+  const [offlineError, setOfflineError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    async function checkOfflineSession() {
+      const isOffline = !navigator.onLine;
+      if (!alive) return;
+      setOffline(isOffline);
+      if (!isOffline) return;
+      let savedRoute = "";
+      try { savedRoute = window.localStorage.getItem(OFFLINE_ROUTE_KEY) ?? ""; } catch {}
+      const { data } = await createClient().auth.getSession();
+      if (alive) setOfflineReady(Boolean(savedRoute && data.session));
+    }
+    void checkOfflineSession();
+    const onOffline = () => { void checkOfflineSession(); };
+    const onOnline = () => { setOffline(false); setOfflineReady(false); setOfflineError(null); };
+    window.addEventListener("offline", onOffline);
+    window.addEventListener("online", onOnline);
+    return () => {
+      alive = false;
+      window.removeEventListener("offline", onOffline);
+      window.removeEventListener("online", onOnline);
+    };
+  }, []);
+
+  async function continueOffline() {
+    setOfflineError(null);
+    let savedRoute = "";
+    try { savedRoute = window.localStorage.getItem(OFFLINE_ROUTE_KEY) ?? ""; } catch {}
+    const { data } = await createClient().auth.getSession();
+    if (!data.session || !savedRoute) {
+      setOfflineReady(false);
+      setOfflineError("Pehli dafa login ke liye internet zaroori hai. Online ek dafa login karein.");
+      return;
+    }
+    // Full navigation service worker ke cached HTML ko use karti hai.
+    window.location.assign(savedRoute);
+  }
 
   useEffect(() => {
     if (passwordState.success) {
-      router.push(passwordState.redirectPath ?? "/");
+      const route = passwordState.redirectPath ?? "/";
+      rememberLoginRoute(route);
+      router.push(route);
       router.refresh();
     }
   }, [passwordState.success, passwordState.redirectPath, router]);
 
   useEffect(() => {
     if (checkState.success) {
-      router.push(checkState.hasUsername ? "/portal/dashboard" : "/portal/profile");
+      const route = checkState.hasUsername ? "/portal/dashboard" : "/portal/profile";
+      rememberLoginRoute(route);
+      router.push(route);
       router.refresh();
     }
   }, [checkState.success, checkState.hasUsername, router]);
@@ -93,7 +143,9 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
       setEmailError("Account active nahi hai. Admin se rabta karein.");
       return;
     }
-    router.push(getRoleRedirectPath(profile.role));
+    const route = getRoleRedirectPath(profile.role);
+    rememberLoginRoute(route);
+    router.push(route);
     router.refresh();
   }
 
@@ -137,6 +189,18 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
 
   return (
     <div>
+      {offline && (
+        <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-sm text-amber-900">
+          <p className="font-semibold">Internet band hai</p>
+          <p className="mt-1 text-xs leading-relaxed">Saved session ke sath pehle se khola hua AgriBridge page offline chal sakta hai.</p>
+          {offlineReady ? (
+            <Button type="button" onClick={() => void continueOffline()} className="mt-2 h-10 w-full rounded-xl bg-[#174B2B] text-sm font-semibold text-white">Offline portal kholen</Button>
+          ) : (
+            <p className="mt-2 text-xs font-medium">Pehli dafa login ya naya OTP internet ke baghair nahi ho sakta.</p>
+          )}
+          {offlineError && <p className="mt-2 text-xs font-semibold text-red-700">{offlineError}</p>}
+        </div>
+      )}
       <div className="mb-5">
         <p className="text-sm font-semibold text-surface-800">One {tenantName} Login</p>
         <p className="mt-1 text-xs leading-relaxed text-surface-500">Admin, staff, farmer, customer, dealer aur vendor sab yahin se login karein.</p>
