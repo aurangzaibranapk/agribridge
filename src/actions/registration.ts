@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { alreadyRegisteredMessage, findFarmerByPhone } from "@/lib/farmers/identity";
+import { resolveRequestOrganizationId } from "@/lib/tenant/request-organization";
 
 export interface RegisterState {
   error?: string;
@@ -46,12 +47,8 @@ export async function registerFarmer(_prev: RegisterState, formData: FormData): 
     return { error: "Password must be at least 6 characters." };
   }
 
-  const { data: defaultOrganization } = await serviceClient
-    .from("organizations")
-    .select("id")
-    .eq("slug", "al-rana-traders")
-    .maybeSingle();
-  if (!defaultOrganization) return { error: "Default organization is not configured." };
+  const organizationId = await resolveRequestOrganizationId();
+  if (!organizationId) return { error: "Organization is not configured." };
 
   // Number ki asal par sawal, harf-ba-harf nahi: 0300-1234567 aur
   // +923001234567 ek hi banda hai (migration 124).
@@ -84,7 +81,7 @@ export async function registerFarmer(_prev: RegisterState, formData: FormData): 
 
   const { error: farmerError } = await serviceClient.from("farmers").insert({
     user_id: createData.user.id,
-    organization_id: defaultOrganization.id,
+    organization_id: organizationId,
     full_name: fullName,
     phone_number: phoneNumber,
     email,
