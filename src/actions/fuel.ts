@@ -3,6 +3,8 @@ import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { requireAction } from "@/lib/access/guard";
+import { COMMENT_MIN, COMMENT_MAX } from "@/lib/whatsapp-submissions";
 
 export interface ActionState {
   error?: string;
@@ -75,6 +77,7 @@ export async function logFuelEntry(_prev: ActionState, formData: FormData): Prom
   const openingKm = Number(formData.get("opening_km") ?? 0);
   const closingKm = Number(formData.get("closing_km") ?? 0);
   const fuelLiters = Number(formData.get("fuel_liters_purchased") ?? 0);
+  const submittedRate = Number(formData.get("petrol_rate_per_liter") ?? 0);
   const routeName = (formData.get("route_name") as string) || null;
   const milkVolume = formData.get("milk_volume_collected") ? Number(formData.get("milk_volume_collected")) : null;
   const notes = (formData.get("notes") as string) || null;
@@ -87,25 +90,27 @@ export async function logFuelEntry(_prev: ActionState, formData: FormData): Prom
   const expectedKmPerLiter = Number(vehicle?.expected_km_per_liter ?? 45);
 
   const { data: settings } = await supabase.from("fuel_rate_settings").select("petrol_rate, margin").limit(1).single();
-  const rate = Number(settings?.petrol_rate ?? 280) + Number(settings?.margin ?? 5);
+  const rate = submittedRate > 0 ? submittedRate : Number(settings?.petrol_rate ?? 280) + Number(settings?.margin ?? 5);
 
   const kmTravelled = closingKm - openingKm;
   const kmPerLiter = fuelLiters > 0 ? kmTravelled / fuelLiters : null;
   const fuelCost = fuelLiters > 0 ? fuelLiters * rate : null;
   const fuelCostPerLiterMilk = milkVolume && milkVolume > 0 && fuelCost ? fuelCost / milkVolume : null;
+  const expectedFuelLiters = expectedKmPerLiter > 0 ? kmTravelled / expectedKmPerLiter : null;
+  const fuelVarianceLiters = expectedFuelLiters != null && fuelLiters > 0 ? fuelLiters - expectedFuelLiters : null;
 
   const isAnomaly = kmPerLiter !== null && Math.abs(kmPerLiter - expectedKmPerLiter) / expectedKmPerLiter > 0.25;
 
-  let meterPhotoUrl: string | null = null;
-  const photo = formData.get("meter_photo");
-  if (photo instanceof File && photo.size > 0) {
-    const path = `fuel/${vehicleId}/${Date.now()}-${photo.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+  async function uploadMeterPhoto(field: string): Promise<string | null> {
+    const photo = formData.get(field);
+    if (!(photo instanceof File) || photo.size === 0) return null;
+    const path = `fuel/${vehicleId}/${Date.now()}-${field}-${photo.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
     const { error: uploadError } = await serviceClient.storage.from("meter-readings").upload(path, photo);
-    if (!uploadError) {
-      const { data } = serviceClient.storage.from("meter-readings").getPublicUrl(path);
-      meterPhotoUrl = data.publicUrl;
-    }
+    if (uploadError) return null;
+    return serviceClient.storage.from("meter-readings").getPublicUrl(path).data.publicUrl;
   }
+  const openingMeterPhotoUrl = await uploadMeterPhoto("opening_meter_photo");
+  const closingMeterPhotoUrl = await uploadMeterPhoto("closing_meter_photo");
 
   const {
     data: { user },
@@ -119,17 +124,39 @@ export async function logFuelEntry(_prev: ActionState, formData: FormData): Prom
     km_travelled: kmTravelled,
     fuel_liters_purchased: fuelLiters || null,
     fuel_cost: fuelCost,
+    petrol_rate_per_liter: rate,
+    expected_fuel_liters: expectedFuelLiters,
+    fuel_variance_liters: fuelVarianceLiters,
     km_per_liter: kmPerLiter,
     route_name: routeName,
     milk_volume_collected: milkVolume,
     fuel_cost_per_liter_milk: fuelCostPerLiterMilk,
     is_anomaly: isAnomaly,
-    meter_photo_url: meterPhotoUrl,
+    meter_photo_url: closingMeterPhotoUrl,
+    opening_meter_photo_url: openingMeterPhotoUrl,
+    closing_meter_photo_url: closingMeterPhotoUrl,
     notes,
     created_by: user?.id ?? null,
+    approval_status: "pending",
   });
   if (error) return { error: error.message };
 
   revalidatePath("/admin/milk-collection/fuel");
   return { success: true };
+}
+
+export async function approveFuelEntry(formData: FormData): Promise<void> {
+  const supabase = createClient();
+  const logId = String(formData.get("log_id") ?? "");
+  const comment = String(formData.get("approval_comment") ?? "").trim();
+  if (!logId || comment.length < COMMENT_MIN || comment.length > COMMENT_MAX) return;
+  const gate = await requireAction("fuel", "approve");
+  if ("error" in gate) return;
+  const { error } = await supabase.from("fuel_logs").update({
+    approval_status: "approved",
+    approval_comment: comment,
+    approved_by: gate.caller.userId,
+    approved_at: new Date().toISOString(),
+  }).eq("id", logId).eq("approval_status", "pending");
+  if (!error) revalidatePath("/admin/milk-collection/fuel");
 }
