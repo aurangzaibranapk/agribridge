@@ -75,10 +75,10 @@ export function ShopOverviewClient({ methods, trend, stock, credit, cash, digita
         <h2><Users /> Customer Health</h2>
         <div className="staff-desk-health">
           <div><strong>{countText(customerHealth.total)}</strong><span>Active</span></div>
-          <div><strong>{countText(customerHealth.withBalance)}</strong><span>Khata due</span></div>
+          <div><strong>{customerHealth.withBalance == null ? "—" : money(customerHealth.withBalance)}</strong><span>Khata due</span></div>
           <div><strong>{countText(customerHealth.newThisWeek)}</strong><span>Naye · 7 din</span></div>
         </div>
-        <p className="staff-desk-note">Shop ke active customers. Khata due ka shop-wise verified total abhi available nahi.</p>
+        <p className="staff-desk-note">{customerHealth.withBalance == null ? "Shop-linked khata ledger available nahi." : "Shop ke active customers aur account 1100 ke ledger se due amount."}</p>
       </section>
 
       <section className="desk-card staff-desk-summary staff-desk-urgent">
