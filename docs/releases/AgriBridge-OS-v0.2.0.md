@@ -35,6 +35,6 @@ Frontend hosting upload and production smoke testing remain owner-side actions.
 This release is pushed to the GitHub `main` branch and can be deployed from the
 owner's hosting panel.
 
-## Next planned version
+## Superseded by
 
-`v0.3.0` — tenant self-service settings, plan limits and operational SaaS billing hooks.
+`v0.3.0` — Tenant Branding & Usage Release, documented in `docs/releases/AgriBridge-OS-v0.3.0.md`.
