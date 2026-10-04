@@ -21,6 +21,12 @@ export default function OfflinePage() {
           Is waqt network available nahi. Pehle khola hua koi safha cache mein hoga.
         </p>
       </div>
+      <a
+        href="/login"
+        className="rounded-lg border border-brand-200 bg-white px-5 py-2.5 text-sm font-semibold text-brand-700 shadow-sm hover:bg-brand-50"
+      >
+        Offline login kholen
+      </a>
       <button
         onClick={() => window.history.back()}
         className="mt-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
