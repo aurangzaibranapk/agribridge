@@ -122,6 +122,12 @@ export async function verifyFarmerOtp(
 
   const supabase = createClient();
   const service = createServiceClient();
+  const { data: defaultOrganization } = await service
+    .from("organizations")
+    .select("id")
+    .eq("slug", "al-rana-traders")
+    .maybeSingle();
+  if (!defaultOrganization) return { error: "Default organization configure nahi hai." };
 
   const match = await findFarmerByPhone(service, phone);
   if (!match && !fullName) {
@@ -175,6 +181,7 @@ export async function verifyFarmerOtp(
   } else {
     const { error } = await service.from("farmers").insert({
       user_id: userId,
+      organization_id: defaultOrganization.id,
       full_name: fullName,
       phone_number: phone,
       village: village || null,
