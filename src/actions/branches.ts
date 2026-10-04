@@ -3,19 +3,39 @@ import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/service";
 import { profileKaKhanaBadlein } from "@/lib/profile-write";
 import { createClient } from "@/lib/supabase/server";
+import { TENANT_PLAN_LIMITS, tenantPlan } from "@/lib/tenant/plan-limits";
 export interface ActionState {
   error?: string;
   success?: boolean;
 }
 export async function saveBranch(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("organization_id, role, is_active")
+    .eq("id", user.id)
+    .single();
+  if (!profile?.is_active || !profile.organization_id || !["owner", "super_admin", "admin"].includes(String(profile.role))) {
+    return { error: "Sirf active Owner/Admin branch bana sakta hai." };
+  }
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { error: "Branch/Shop name is required." };
   const district = (formData.get("district") as string) || null;
   const tehsil = (formData.get("tehsil") as string) || null;
   const address = (formData.get("address") as string) || null;
-  const { data: org } = await supabase.from("organizations").select("id").limit(1).single();
-  if (!org) return { error: "No organization found - cannot create branch." };
+  const { data: org } = await supabase.from("organizations").select("id, subscription_plan").eq("id", profile.organization_id).single();
+  if (!org) return { error: "Organization nahi mili - branch create nahi ho sakti." };
+  const { count: activeBranches } = await supabase
+    .from("branches")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", org.id)
+    .eq("is_active", true);
+  const branchLimit = TENANT_PLAN_LIMITS[tenantPlan(org.subscription_plan)].branches;
+  if (branchLimit !== null && (activeBranches ?? 0) >= branchLimit) {
+    return { error: `Aapke ${tenantPlan(org.subscription_plan)} plan mein ${branchLimit} active branches ki limit hai.` };
+  }
   const { data: branch, error } = await supabase
     .from("branches")
     .insert({
