@@ -7,7 +7,7 @@ import { Card, PageHeader } from "@/components/ui/layout-primitives";
 export const dynamic = "force-dynamic";
 
 type Params = { productId: string };
-type SearchParams = { warehouse?: string; from?: string; to?: string };
+type SearchParams = { warehouse?: string; from?: string; to?: string; movement?: string; supplier?: string };
 
 const IN_TYPES = new Set(["purchase_in", "transfer_in", "adjustment_increase", "return_in"]);
 const OUT_TYPES = new Set(["sale_out", "transfer_out", "adjustment_decrease", "damaged_out", "expired_out"]);
@@ -34,6 +34,8 @@ export default async function ProductStatementPage({
   const supabase = createClient();
   const from = searchParams?.from ?? "";
   const to = searchParams?.to ?? "";
+  const selectedMovement = searchParams?.movement ?? "";
+  const selectedSupplier = searchParams?.supplier ?? "";
 
   const [{ data: product }, { data: inventoryRows }] = await Promise.all([
     supabase.from("products").select("id, name, pack_size, units_per_pack, purchase_price, selling_price").eq("id", params.productId).maybeSingle(),
@@ -68,7 +70,7 @@ export default async function ProductStatementPage({
   const countIds = [...new Set(moves.filter((m: any) => m.reference_type === "stock_count" && m.reference_id).map((m: any) => m.reference_id))];
 
   const [{ data: purchases }, { data: sales }, { data: transfers }, { data: counts }] = await Promise.all([
-    purchaseIds.length ? supabase.from("purchases").select("id, purchase_number, supplier_bill_no, supplier_id, suppliers(name)").in("id", purchaseIds) : Promise.resolve({ data: [] as any[] }),
+    purchaseIds.length ? supabase.from("purchases").select("id, purchase_number, supplier_bill_no, supplier_id, purchase_date, total_amount, invoice_total, suppliers(name)").in("id", purchaseIds) : Promise.resolve({ data: [] as any[] }),
     saleIds.length ? supabase.from("pos_sales").select("id, payment_mode, cash_paid, khata_amount, crm_customer_id, customer_id, shop_id").in("id", saleIds) : Promise.resolve({ data: [] as any[] }),
     transferIds.length ? supabase.from("stock_transfers").select("id, transfer_number, from_warehouse_id, to_warehouse_id").in("id", transferIds) : Promise.resolve({ data: [] as any[] }),
     countIds.length ? supabase.from("stock_counts").select("id, count_date, status, notes").in("id", countIds) : Promise.resolve({ data: [] as any[] }),
@@ -134,12 +136,14 @@ export default async function ProductStatementPage({
       party = m.notes ?? "Manual adjustment";
       warning = true;
     }
-    return { ...m, warehouseId, warehouse: warehouseMap.get(warehouseId) ?? "Unknown", qty, delta, balance, detail, party, reference, payment, warning };
+    return { ...m, warehouseId, warehouse: warehouseMap.get(warehouseId) ?? "Unknown", qty, delta, balance, detail, party, reference, payment, warning, supplierId: m.reference_type === "purchase" ? purchaseMap.get(m.reference_id)?.supplier_id ?? "" : "" };
   }).reverse();
 
   const selectedWarehouse = searchParams?.warehouse ?? "";
   const visibleRows = rows.filter((r: any) => {
     if (selectedWarehouse && r.warehouseId !== selectedWarehouse) return false;
+    if (selectedMovement && r.movement_type !== selectedMovement) return false;
+    if (selectedSupplier && r.supplierId !== selectedSupplier) return false;
     if (from && new Date(r.created_at) < new Date(`${from}T00:00:00`)) return false;
     if (to && new Date(r.created_at) > new Date(`${to}T23:59:59.999`)) return false;
     return true;
@@ -150,6 +154,10 @@ export default async function ProductStatementPage({
   for (const row of inventoryRows ?? []) currentByWarehouse.set((row as any).warehouse_id, number((row as any).quantity_on_hand) + (currentByWarehouse.get((row as any).warehouse_id) ?? 0));
   const currentTotal = [...currentByWarehouse.values()].reduce((s, n) => s + n, 0);
   const issueRows = visibleRows.filter((r: any) => r.warning);
+  const supplierOptions = [...new Map((purchases ?? []).map((p: any) => {
+    const supplier = Array.isArray(p.suppliers) ? p.suppliers[0] : p.suppliers;
+    return [p.supplier_id, supplier?.name ?? "Supplier not linked"];
+  }))];
 
   return (
     <div className="space-y-4">
@@ -159,6 +167,8 @@ export default async function ProductStatementPage({
         <div><p className="text-xl font-semibold text-surface-900 dark:text-white">{product.name}</p><p className="text-xs text-surface-500">{product.pack_size ?? ""} · {product.units_per_pack ? `${product.units_per_pack} units/pack` : "Piece"}</p></div>
         <form className="flex flex-wrap items-center gap-2 text-sm">
           <select name="warehouse" defaultValue={selectedWarehouse} className="rounded-lg border border-surface-200 bg-white px-3 py-2 dark:border-surface-700 dark:bg-surface-900"><option value="">All locations</option>{[...warehouseMap.entries()].map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select>
+          <select name="movement" defaultValue={selectedMovement} className="rounded-lg border border-surface-200 bg-white px-3 py-2 dark:border-surface-700 dark:bg-surface-900"><option value="">All movements</option>{[...new Set(moves.map((m: any) => m.movement_type))].map((type: string) => <option key={type} value={type}>{label(type)}</option>)}</select>
+          <select name="supplier" defaultValue={selectedSupplier} className="rounded-lg border border-surface-200 bg-white px-3 py-2 dark:border-surface-700 dark:bg-surface-900"><option value="">All suppliers</option>{supplierOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select>
           <input name="from" type="date" defaultValue={from} className="rounded-lg border border-surface-200 bg-white px-3 py-2 dark:border-surface-700 dark:bg-surface-900" />
           <input name="to" type="date" defaultValue={to} className="rounded-lg border border-surface-200 bg-white px-3 py-2 dark:border-surface-700 dark:bg-surface-900" />
           <button className="rounded-lg bg-brand-600 px-3 py-2 font-medium text-white">Apply</button>
@@ -178,7 +188,7 @@ export default async function ProductStatementPage({
 
       <Card className="overflow-x-auto">
         <div className="mb-3 flex items-center justify-between"><h2 className="font-semibold text-surface-900 dark:text-white">Statement Ledger</h2><div className="flex gap-2"><button className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs"><FileText className="h-3.5 w-3.5" /> Print</button><button className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs"><Download className="h-3.5 w-3.5" /> Export</button></div></div>
-        <table className="w-full min-w-[1050px] text-sm"><thead><tr className="border-b border-surface-200 bg-surface-50 text-left text-xs text-surface-500 dark:border-surface-800 dark:bg-surface-800"><th className="px-3 py-2">Date</th><th className="px-3 py-2">Reference</th><th className="px-3 py-2">Details</th><th className="px-3 py-2">Customer / Shop</th><th className="px-3 py-2">Location</th><th className="px-3 py-2 text-right text-emerald-700">Credit / In</th><th className="px-3 py-2 text-right text-red-600">Debit / Out</th><th className="px-3 py-2 text-right">Balance</th><th className="px-3 py-2">Payment / Note</th></tr></thead><tbody>{visibleRows.map((r: any) => <tr key={r.id} className={`border-b border-surface-100 dark:border-surface-800 ${r.warning ? "bg-amber-50/60 dark:bg-amber-950/10" : ""}`}><td className="whitespace-nowrap px-3 py-2 text-xs text-surface-500">{dateLabel(r.created_at)}</td><td className="px-3 py-2 font-mono text-xs">{r.reference}</td><td className="px-3 py-2"><span className="font-medium">{r.detail}</span>{r.notes && <span className="block max-w-[260px] truncate text-[11px] text-surface-400">{r.notes}</span>}</td><td className="px-3 py-2">{r.party}</td><td className="px-3 py-2 text-xs text-surface-500">{r.warehouse}</td><td className="px-3 py-2 text-right font-semibold text-emerald-700">{r.delta > 0 ? `+${r.qty}` : "—"}</td><td className="px-3 py-2 text-right font-semibold text-red-600">{r.delta < 0 ? `−${r.qty}` : "—"}</td><td className="px-3 py-2 text-right font-semibold tabular-nums">{r.balance}</td><td className="px-3 py-2 text-xs text-surface-500">{r.payment}</td></tr>)}</tbody></table>
+        <table className="w-full min-w-[1150px] text-sm"><thead><tr className="border-b border-surface-200 bg-surface-50 text-left text-xs text-surface-500 dark:border-surface-800 dark:bg-surface-800"><th className="px-3 py-2">Date</th><th className="px-3 py-2">Reference</th><th className="px-3 py-2">Details</th><th className="px-3 py-2">Customer / Supplier</th><th className="px-3 py-2">Location</th><th className="px-3 py-2 text-right text-emerald-700">Credit / In</th><th className="px-3 py-2 text-right text-red-600">Debit / Out</th><th className="px-3 py-2 text-right">Balance</th><th className="px-3 py-2">Payment / Note</th><th className="px-3 py-2">Bill</th></tr></thead><tbody>{visibleRows.map((r: any) => <tr key={r.id} className={`border-b border-surface-100 dark:border-surface-800 ${r.warning ? "bg-amber-50/60 dark:bg-amber-950/10" : ""}`}><td className="whitespace-nowrap px-3 py-2 text-xs text-surface-500">{dateLabel(r.created_at)}</td><td className="px-3 py-2 font-mono text-xs">{r.reference}</td><td className="px-3 py-2"><span className="font-medium">{r.detail}</span>{r.notes && <span className="block max-w-[260px] truncate text-[11px] text-surface-400">{r.notes}</span>}</td><td className="px-3 py-2">{r.party}</td><td className="px-3 py-2 text-xs text-surface-500">{r.warehouse}</td><td className="px-3 py-2 text-right font-semibold text-emerald-700">{r.delta > 0 ? `+${r.qty}` : "—"}</td><td className="px-3 py-2 text-right font-semibold text-red-600">{r.delta < 0 ? `−${r.qty}` : "—"}</td><td className="px-3 py-2 text-right font-semibold tabular-nums">{r.balance}</td><td className="px-3 py-2 text-xs text-surface-500">{r.payment}</td><td className="px-3 py-2">{r.reference_type === "purchase" ? <Link className="text-xs font-medium text-brand-600 hover:underline" href={`/admin/inventory/product/${product.id}/statement/purchase/${r.reference_id}`}>View bill</Link> : "—"}</td></tr>)}</tbody></table>
         {visibleRows.length === 0 && <p className="py-8 text-center text-sm text-surface-500">Is filter ke liye koi movement nahi.</p>}
       </Card>
 
