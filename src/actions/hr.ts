@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { postStaffLedger } from "@/lib/ledger/rules";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles, notifyUser } from "@/lib/notifications";
+import { TENANT_PLAN_LIMITS, tenantPlan } from "@/lib/tenant/plan-limits";
 
 export interface ActionState {
   error?: string;
@@ -383,7 +384,17 @@ export async function inviteStaffMember(_prev: ActionState, formData: FormData):
   if (!fullName) return { error: "Naam zaroori hai." };
   if (!email) return { error: "Email zaroori hai." };
 
-  const { data: org } = await serviceClient.from("organizations").select("id").eq("id", callerProfile.organization_id).single();
+  const { data: org } = await serviceClient.from("organizations").select("id, subscription_plan").eq("id", callerProfile.organization_id).single();
+  if (!org) return { error: "Organization nahi mili." };
+  const { count: activeStaff } = await serviceClient
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", org.id)
+    .eq("is_active", true);
+  const staffLimit = TENANT_PLAN_LIMITS[tenantPlan(org.subscription_plan)].staff;
+  if (staffLimit !== null && (activeStaff ?? 0) >= staffLimit) {
+    return { error: `Aapke ${tenantPlan(org.subscription_plan)} plan mein ${staffLimit} active staff ki limit hai.` };
+  }
 
   const randomPassword = Math.random().toString(36).slice(-6) + Math.random().toString(36).slice(-6).toUpperCase() + "!1";
 
