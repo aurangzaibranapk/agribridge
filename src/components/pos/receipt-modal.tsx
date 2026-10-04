@@ -66,6 +66,8 @@ export function ReceiptModal({
   }
 
   function buildReceiptText(r: ReceiptData) {
+    const previousBalance = Math.max(0, r.outstanding_balance - r.khata_amount);
+    const currentBalance = Math.max(0, r.khata_amount);
     const lines = [
       r.shop_name ? `${r.shop_name}` : `${r.seller_name}`,
       r.shop_name ? `${r.seller_name}` : "",
@@ -81,7 +83,11 @@ export function ReceiptModal({
     ];
     if (r.cash_paid > 0) lines.push(`Cash Paid: Rs ${r.cash_paid.toLocaleString()}`);
     if (r.khata_amount > 0) lines.push(`Khata (Credit): Rs ${r.khata_amount.toLocaleString()}`);
-    if (r.outstanding_balance > 0) lines.push(`${t("pos_outstanding", lang)}: Rs ${r.outstanding_balance.toLocaleString()}`);
+    if (r.customer_name) {
+      lines.push(`Saqba Balance: Rs ${previousBalance.toLocaleString()}`);
+      lines.push(`Current Balance: Rs ${currentBalance.toLocaleString()}`);
+      lines.push(`Total Balance: Rs ${r.outstanding_balance.toLocaleString()}`);
+    }
     lines.push("", "Thank You for Shopping!", "POS Solution by ZR Technologies", "📞 0312-6513294");
     return lines.filter(Boolean).join("\n");
   }
@@ -229,15 +235,26 @@ export function ReceiptModal({
               )}
             </div>
 
-            {receipt.outstanding_balance > 0 && (
+            {receipt.customer_name && (
               <>
                 <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400 dark:border-surface-700" />
-                <ReceiptRow
-                  label={t("pos_outstanding", lang)}
-                  value={`Rs ${receipt.outstanding_balance.toLocaleString()}`}
-                  tone="amber"
-                  strong
-                />
+                <div className="space-y-1 text-xs">
+                  <ReceiptRow
+                    label="Saqba Balance"
+                    value={`Rs ${Math.max(0, receipt.outstanding_balance - receipt.khata_amount).toLocaleString()}`}
+                  />
+                  <ReceiptRow
+                    label="Current Balance"
+                    value={`Rs ${Math.max(0, receipt.khata_amount).toLocaleString()}`}
+                    tone="red"
+                  />
+                  <ReceiptRow
+                    label="Total Balance"
+                    value={`Rs ${receipt.outstanding_balance.toLocaleString()}`}
+                    tone="amber"
+                    strong
+                  />
+                </div>
               </>
             )}
 
