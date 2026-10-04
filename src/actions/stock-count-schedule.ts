@@ -112,6 +112,21 @@ export async function saveCountSchedule(
   );
   if (error) return { error: error.message };
 
+  // Har assignment ka immutable command record: Admin ko baad mein
+  // pata rahe kis staff ko kab ginti di gayi thi.
+  if (zimmedar) {
+    const { error: commandError } = await supabase.from("stock_count_command_logs").insert({
+      warehouse_id: warehouseId,
+      staff_id: zimmedar,
+      sent_by: user.id,
+      command_type: "stock_count",
+      status: "assigned",
+      sent_at: new Date().toISOString(),
+      notes: "Stock count assignment recorded from admin schedule",
+    });
+    if (commandError) return { error: `Tarteeb save ho gayi magar command log nahi bana: ${commandError.message}` };
+  }
+
   await logAudit({
     actionType: before ? "update" : "create",
     module: "stock_count",
