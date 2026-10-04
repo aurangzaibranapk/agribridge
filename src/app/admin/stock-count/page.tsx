@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
-import { Card, EmptyState } from "@/components/ui/layout-primitives";
+import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { StartCountForm, CountingSheet, ReviewSheet } from "./count-client";
 import { LiabilityPanel } from "./liability-client";
 import {
@@ -13,8 +13,7 @@ import {
   COUNT_OVERDUE_DAYS,
 } from "@/lib/ledger/stock-count";
 import { ScheduleSection } from "./schedule-client";
-import { AdminCommandMonitor, type StockCountCommandRow } from "./admin-command-monitor";
-import { AlertTriangle, CheckCircle2, PackageSearch, EyeOff, ArrowLeft, ClipboardCheck, Clock3, Wifi } from "lucide-react";
+import { AlertTriangle, CheckCircle2, PackageSearch, EyeOff } from "lucide-react";
 import { canDo } from "@/lib/access/guard";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 
@@ -26,10 +25,12 @@ function rs(value: number): string {
   return `Rs ${Math.round(value).toLocaleString()}`;
 }
 
-export default async function StockCountPage({
+export async function StockCountPage({
   searchParams,
+  embedded = false,
 }: {
   searchParams: Promise<{ w?: string; step?: string }>;
+  embedded?: boolean;
 }) {
   const params = await searchParams;
   const supabase = createClient();
@@ -101,84 +102,6 @@ export default async function StockCountPage({
     openCountsByWarehouse(),
   ]);
 
-  // Admin ke liye command/response monitor. Existing stock-count records se
-  // reporting banti hai; koi purana data ya product quantity change nahi hoti.
-  const commandService = supabase as any;
-  const [{ data: commandCounts }, { data: commandSchedules }, { data: commandProfiles }, { data: commandLogs }] = await Promise.all([
-    commandService
-      .from("stock_counts")
-      .select("id, warehouse_id, status, started_by, started_at, verified_at, posted_at, warehouses(name), stock_count_lines(counted_qty)")
-      .order("started_at", { ascending: false })
-      .limit(50),
-    commandService
-      .from("stock_count_schedules")
-      .select("warehouse_id, zimmedar, updated_at, warehouses(name)")
-      .limit(100),
-    commandService.from("profiles").select("id, full_name").eq("is_active", true).limit(500),
-    commandService
-      .from("stock_count_command_logs")
-      .select("id, warehouse_id, staff_id, stock_count_id, status, sent_at, response_started_at, completed_at, warehouses(name)")
-      .order("sent_at", { ascending: false })
-      .limit(100),
-  ]);
-  const profileNames = new Map<string, string>((commandProfiles ?? []).map((p: any) => [p.id, p.full_name ?? "—"]));
-  const scheduleByWarehouse = new Map<string, any>((commandSchedules ?? []).map((s: any) => [s.warehouse_id, s]));
-  const countById = new Map<string, any>((commandCounts ?? []).map((c: any) => [c.id, c]));
-  const logRows: StockCountCommandRow[] = (commandLogs ?? []).map((log: any) => {
-    const count = log.stock_count_id ? countById.get(log.stock_count_id) : null;
-    const lines = Array.isArray(count?.stock_count_lines) ? count.stock_count_lines : [];
-    return {
-      id: log.stock_count_id ?? `command-${log.id}`,
-      countId: log.stock_count_id ?? null,
-      warehouseName: log.warehouses?.name ?? count?.warehouses?.name ?? "—",
-      staffName: profileNames.get(log.staff_id) ?? "Staff assignment nahi",
-      commandAt: log.sent_at ?? null,
-      startedAt: log.response_started_at ?? count?.started_at ?? null,
-      completedAt: log.completed_at ?? count?.posted_at ?? count?.verified_at ?? null,
-      totalProducts: lines.length,
-      countedProducts: lines.filter((l: any) => l.counted_qty !== null).length,
-      status: log.status ?? count?.status ?? "assigned",
-    };
-  });
-  const countRows: StockCountCommandRow[] = (commandCounts ?? []).map((c: any) => {
-    const schedule = scheduleByWarehouse.get(c.warehouse_id);
-    const lines = Array.isArray(c.stock_count_lines) ? c.stock_count_lines : [];
-    return {
-      id: c.id,
-      countId: c.id,
-      warehouseName: c.warehouses?.name ?? schedule?.warehouses?.name ?? "—",
-      staffName: profileNames.get(schedule?.zimmedar ?? c.started_by) ?? "Staff assignment nahi",
-      commandAt: schedule?.updated_at ?? c.started_at ?? null,
-      startedAt: c.started_at ?? null,
-      completedAt: c.posted_at ?? c.verified_at ?? null,
-      totalProducts: lines.length,
-      countedProducts: lines.filter((l: any) => l.counted_qty !== null).length,
-      status: c.status ?? "—",
-    };
-  });
-  const countedWarehouses = new Set(countRows.map((row) => row.warehouseName));
-  const assignedOnlyRows: StockCountCommandRow[] = (commandSchedules ?? [])
-    .filter((s: any) => s.zimmedar && !countedWarehouses.has(s.warehouses?.name ?? "—"))
-    .map((s: any) => ({
-      id: `schedule-${s.warehouse_id}`,
-      countId: null,
-      warehouseName: s.warehouses?.name ?? "—",
-      staffName: profileNames.get(s.zimmedar) ?? "Staff assignment nahi",
-      commandAt: s.updated_at ?? null,
-      startedAt: null,
-      completedAt: null,
-      totalProducts: 0,
-      countedProducts: 0,
-      status: "assigned",
-    }));
-  const loggedCountIds = new Set((commandLogs ?? []).map((log: any) => log.stock_count_id).filter(Boolean));
-  const commandRows: StockCountCommandRow[] = [...logRows, ...countRows.filter((row) => !loggedCountIds.has(row.id)), ...assignedOnlyRows];
-
-  const assignedCount = current?.lines.length ?? null;
-  const countedCount = current ? current.lines.filter((line) => line.counted != null).length : null;
-  const remainingCount = assignedCount != null && countedCount != null ? assignedCount - countedCount : null;
-  const progress = assignedCount && countedCount != null ? Math.round((countedCount / assignedCount) * 100) : null;
-
   // Ginti ka farq jo staff ke khate ke liye bheja gaya hai -- staff
   // apna hissa yahin qabool/mana karta hai (malik, 15 September: "har
   // product ke sath button ho verify/acknowledge karne ka"). Admin/
@@ -210,43 +133,15 @@ export default async function StockCountPage({
   });
 
   return (
-    <div className="mx-auto w-full max-w-[1800px] space-y-5 pb-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <a href="/admin/my-work" className="mb-3 inline-flex items-center gap-1.5 text-sm text-surface-500 transition hover:text-brand-700">
-            <ArrowLeft className="h-4 w-4" /> My Work
-          </a>
-          <h1 className="font-display text-3xl font-bold tracking-tight text-surface-900 dark:text-white">{t("sc_title", lang)}</h1>
-          <p className="mt-1 max-w-3xl text-sm text-surface-500 dark:text-surface-400">{t("sc_subtitle", lang)}</p>
-        </div>
-        <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300">
-          <Wifi className="h-4 w-4" /> Offline save + auto sync active
-        </div>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          { label: "Assigned Products", value: assignedCount == null ? "—" : assignedCount.toLocaleString(), tone: "blue", icon: ClipboardCheck },
-          { label: "Counted", value: countedCount == null ? "—" : countedCount.toLocaleString(), tone: "green", icon: CheckCircle2 },
-          { label: "Remaining", value: remainingCount == null ? "—" : remainingCount.toLocaleString(), tone: "amber", icon: Clock3 },
-          { label: "Progress", value: progress == null ? "—" : `${progress}%`, tone: "violet", icon: ClipboardCheck },
-        ].map((stat) => {
-          const Icon = stat.icon;
-          const tone = stat.tone === "green" ? "border-emerald-200 bg-emerald-50/70 text-emerald-800" : stat.tone === "amber" ? "border-amber-200 bg-amber-50/70 text-amber-800" : stat.tone === "violet" ? "border-violet-200 bg-violet-50/70 text-violet-800" : "border-blue-200 bg-blue-50/70 text-blue-800";
-          return <div key={stat.label} className={`flex items-center gap-3 rounded-2xl border p-4 shadow-sm dark:border-surface-800 dark:bg-surface-900 ${tone}`}><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/80 dark:bg-surface-800"><Icon className="h-5 w-5" /></span><div><p className="text-xs font-medium opacity-80">{stat.label}</p><p className="mt-0.5 text-2xl font-bold tabular-nums">{stat.value}</p></div></div>;
-        })}
-      </div>
-
-      {current && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50/80 px-4 py-3 dark:border-rose-900/40 dark:bg-rose-950/20">
-          <p className="flex items-center gap-2 text-sm font-semibold text-rose-800 dark:text-rose-300"><ClipboardCheck className="h-5 w-5" /> آج مقرر کردہ مصنوعات کی گنتی مکمل کریں</p>
-          <p className="text-xs text-rose-700/80 dark:text-rose-300/70">Only assigned products are shown · System quantity is hidden</p>
-        </div>
+    <div className="space-y-4">
+      {!embedded && (
+        <PageHeader
+          title={t("sc_title", lang)}
+          description={t("sc_subtitle", lang)}
+        />
       )}
 
       <LiabilityPanel shares={liabilityShares} isAdmin={sabKuchWala} />
-
-      {sabKuchWala && <AdminCommandMonitor rows={commandRows} />}
 
       {/* ---- Jin godamon ki ginti nahi hui ---- */}
       {overdue.length > 0 && (
@@ -285,14 +180,14 @@ export default async function StockCountPage({
         <div
           className={
             warehouses.length > 1
-              ? "grid gap-5 lg:grid-cols-[minmax(0,280px)_minmax(0,1fr)]"
-              : "grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]"
+              ? "grid gap-4 lg:grid-cols-[minmax(0,340px)_1fr]"
+              : "mx-auto w-full max-w-2xl space-y-4"
           }
         >
           {/* Ek se zyada godam ki ijazat ho to hi chunne wali list --
               ek godam wale (jaise Anwar) ke liye ye khaali box sirf
               jagah leta, kuch chunne ko hota hi nahi. */}
-          {(warehouses.length > 1 || current) && (
+          {warehouses.length > 1 && (
             <div className="space-y-4">
               <Card className="p-4">
                 <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("sc_warehouse", lang)}</h2>
@@ -307,8 +202,7 @@ export default async function StockCountPage({
                             : "text-surface-700 hover:bg-surface-50 dark:text-surface-300 dark:hover:bg-surface-900"
                         }`}
                       >
-                        <span>{w.name}</span>
-                        {selected === w.id && <span className="block text-[10px] text-emerald-700 dark:text-emerald-300">Current count</span>}
+                        {w.name}
                       </a>
                     </li>
                   ))}
@@ -336,27 +230,6 @@ export default async function StockCountPage({
           )}
 
           <div className="space-y-4">
-            {current && (
-              <Card className="border-emerald-200 bg-white p-4 shadow-sm dark:border-emerald-900/40 dark:bg-surface-900">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <div>
-                    <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">Ginti ki surat-e-haal</h2>
-                    <p className="text-xs text-surface-500">{countedCount} / {assignedCount} products counted</p>
-                  </div>
-                  <span className="text-lg font-bold text-emerald-700 dark:text-emerald-300">{progress}%</span>
-                </div>
-                <div className="h-2.5 overflow-hidden rounded-full bg-surface-100 dark:bg-surface-800">
-                  <div className="h-full rounded-full bg-emerald-600 transition-all" style={{ width: `${progress}%` }} />
-                </div>
-                <div className="mt-3 flex items-center justify-between text-xs">
-                  <span className="font-semibold text-amber-700 dark:text-amber-300">{remainingCount} baqi</span>
-                  {current.allCounted || canApprove ? (
-                    <a href={`/admin/stock-count?w=${current.warehouseId}&step=review`} className="rounded-lg bg-emerald-700 px-3 py-2 font-semibold text-white hover:bg-emerald-800">Review &amp; Submit</a>
-                  ) : <span className="text-surface-500">Assigned items complete karein</span>}
-                </div>
-              </Card>
-            )}
-
             {/* ---- Khuli hui ginti ---- */}
             {current ? (
               <Card className="p-4">
@@ -509,3 +382,5 @@ export default async function StockCountPage({
     </div>
   );
 }
+
+export default StockCountPage;
