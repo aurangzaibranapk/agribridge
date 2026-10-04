@@ -19,6 +19,9 @@ export default async function AdminFarmerDetailPage({ params }: { params: { id: 
 
   if (!farmer) notFound();
 
+  const { data: me } = await supabase.from("profiles").select("role").eq("id", (await supabase.auth.getUser()).data.user?.id ?? "").maybeSingle();
+  const canEdit = ["admin", "owner", "super_admin", "manager", "admin_assistant"].includes(String(me?.role ?? ""));
+
   const { data: farms } = await supabase
     .from("farms")
     .select("id, name, area_acres, village, district, is_verified")
@@ -80,7 +83,13 @@ export default async function AdminFarmerDetailPage({ params }: { params: { id: 
 
       <FarmerMachineryHistory farmerId={farmer.id} />
 
-      <AdminFarmerForm farmer={farmer} />
+      {canEdit ? (
+        <AdminFarmerForm farmer={farmer} />
+      ) : (
+        <div className="rounded-card border border-surface-200 bg-surface-50 p-4 text-sm text-surface-500 dark:border-surface-800 dark:bg-surface-900 dark:text-surface-400">
+          Aap member ki details dekh sakte hain, lekin edit karne ki ijazat nahi hai.
+        </div>
+      )}
 
       {/* Edit ka haq hai, magar us ke sath uska record bhi. Ijazat
           bina nishaan ke dena wo cheez hai jis ka jawab baad mein koi
