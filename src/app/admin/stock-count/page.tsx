@@ -13,6 +13,7 @@ import {
   COUNT_OVERDUE_DAYS,
 } from "@/lib/ledger/stock-count";
 import { ScheduleSection } from "./schedule-client";
+import { AdminCommandMonitor, type StockCountCommandRow } from "./admin-command-monitor";
 import { AlertTriangle, CheckCircle2, PackageSearch, EyeOff, ArrowLeft, ClipboardCheck, Clock3, Wifi } from "lucide-react";
 import { canDo } from "@/lib/access/guard";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
@@ -100,6 +101,54 @@ export default async function StockCountPage({
     openCountsByWarehouse(),
   ]);
 
+  // Admin ke liye command/response monitor. Existing stock-count records se
+  // reporting banti hai; koi purana data ya product quantity change nahi hoti.
+  const commandService = supabase as any;
+  const [{ data: commandCounts }, { data: commandSchedules }, { data: commandProfiles }] = await Promise.all([
+    commandService
+      .from("stock_counts")
+      .select("id, warehouse_id, status, started_by, started_at, verified_at, posted_at, warehouses(name), stock_count_lines(counted_qty)")
+      .order("started_at", { ascending: false })
+      .limit(50),
+    commandService
+      .from("stock_count_schedules")
+      .select("warehouse_id, zimmedar, updated_at, warehouses(name)")
+      .limit(100),
+    commandService.from("profiles").select("id, full_name").eq("is_active", true).limit(500),
+  ]);
+  const profileNames = new Map<string, string>((commandProfiles ?? []).map((p: any) => [p.id, p.full_name ?? "—"]));
+  const scheduleByWarehouse = new Map<string, any>((commandSchedules ?? []).map((s: any) => [s.warehouse_id, s]));
+  const countRows: StockCountCommandRow[] = (commandCounts ?? []).map((c: any) => {
+    const schedule = scheduleByWarehouse.get(c.warehouse_id);
+    const lines = Array.isArray(c.stock_count_lines) ? c.stock_count_lines : [];
+    return {
+      id: c.id,
+      warehouseName: c.warehouses?.name ?? schedule?.warehouses?.name ?? "—",
+      staffName: profileNames.get(schedule?.zimmedar ?? c.started_by) ?? "Staff assignment nahi",
+      commandAt: schedule?.updated_at ?? c.started_at ?? null,
+      startedAt: c.started_at ?? null,
+      completedAt: c.posted_at ?? c.verified_at ?? null,
+      totalProducts: lines.length,
+      countedProducts: lines.filter((l: any) => l.counted_qty !== null).length,
+      status: c.status ?? "—",
+    };
+  });
+  const countedWarehouses = new Set(countRows.map((row) => row.warehouseName));
+  const assignedOnlyRows: StockCountCommandRow[] = (commandSchedules ?? [])
+    .filter((s: any) => s.zimmedar && !countedWarehouses.has(s.warehouses?.name ?? "—"))
+    .map((s: any) => ({
+      id: `schedule-${s.warehouse_id}`,
+      warehouseName: s.warehouses?.name ?? "—",
+      staffName: profileNames.get(s.zimmedar) ?? "Staff assignment nahi",
+      commandAt: s.updated_at ?? null,
+      startedAt: null,
+      completedAt: null,
+      totalProducts: 0,
+      countedProducts: 0,
+      status: "assigned",
+    }));
+  const commandRows: StockCountCommandRow[] = [...countRows, ...assignedOnlyRows];
+
   const assignedCount = current?.lines.length ?? null;
   const countedCount = current ? current.lines.filter((line) => line.counted != null).length : null;
   const remainingCount = assignedCount != null && countedCount != null ? assignedCount - countedCount : null;
@@ -171,6 +220,8 @@ export default async function StockCountPage({
       )}
 
       <LiabilityPanel shares={liabilityShares} isAdmin={sabKuchWala} />
+
+      {sabKuchWala && <AdminCommandMonitor rows={commandRows} />}
 
       {/* ---- Jin godamon ki ginti nahi hui ---- */}
       {overdue.length > 0 && (
