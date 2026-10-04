@@ -46,6 +46,13 @@ export async function registerFarmer(_prev: RegisterState, formData: FormData): 
     return { error: "Password must be at least 6 characters." };
   }
 
+  const { data: defaultOrganization } = await serviceClient
+    .from("organizations")
+    .select("id")
+    .eq("slug", "al-rana-traders")
+    .maybeSingle();
+  if (!defaultOrganization) return { error: "Default organization is not configured." };
+
   // Number ki asal par sawal, harf-ba-harf nahi: 0300-1234567 aur
   // +923001234567 ek hi banda hai (migration 124).
   const [phoneMatch, { data: emailMatch }] = await Promise.all([
@@ -77,6 +84,7 @@ export async function registerFarmer(_prev: RegisterState, formData: FormData): 
 
   const { error: farmerError } = await serviceClient.from("farmers").insert({
     user_id: createData.user.id,
+    organization_id: defaultOrganization.id,
     full_name: fullName,
     phone_number: phoneNumber,
     email,
