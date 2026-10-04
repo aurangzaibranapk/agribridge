@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
-import { ArrowLeft, Clock, Lock, X, CheckCircle2, AlertTriangle, Receipt, Send, Repeat, ChevronDown, Landmark, User } from "lucide-react";
+import { ArrowLeft, Clock, Lock, X, CheckCircle2, AlertTriangle, Receipt, Send, Repeat, ChevronDown, Landmark, User, Printer, MessageCircle, Mail } from "lucide-react";
 import { closeShift, getShiftSummary, shiftCashRecipients, shiftCashCarriers, type ActionState } from "@/actions/pos-counters";
 import { sendCash, type ActionState as HandoverState } from "@/actions/cash-handover";
 import { bankAccountsForCollectionDeposit, submitCollectionDeposit, type ActionState as DepositState } from "@/actions/pos-collection";
@@ -300,6 +300,97 @@ function CloseButton() {
   );
 }
 
+function shiftReportText({
+  shiftNumber,
+  shopName,
+  counterName,
+  summary,
+  countedCash,
+}: {
+  shiftNumber: string;
+  shopName: string;
+  counterName: string;
+  summary: ShiftCashSummary;
+  countedCash: number;
+}) {
+  const difference = countedCash - summary.expectedCash;
+  return [
+    "AgriBridge — POS Shift Close Report",
+    `Shift: ${shiftNumber}`,
+    `Shop: ${shopName}`,
+    `Counter: ${counterName}`,
+    "",
+    `Sales: ${summary.saleCount}`,
+    `Gross Sale: ${rs(summary.totalSales)}`,
+    `Returns: ${rs(summary.returnsTotal)}`,
+    `Net Sale: ${rs(summary.totalSales - summary.returnsTotal)}`,
+    `Cash Sales: ${rs(summary.cashSalesTotal)}`,
+    `Digital: ${rs(summary.digitalTotal)}`,
+    `Khata: ${rs(summary.khataTotal)}`,
+    `Bill Payment: ${rs(summary.billTotal)}`,
+    `Mobile Load: ${rs(summary.loadTotal)}`,
+    `Recovery (Cash): ${rs(summary.recoveryCashTotal)}`,
+    `Udhaar Given (Cash): ${rs(summary.udhaarGivenCashTotal)}`,
+    `Expected Cash: ${rs(summary.expectedCash)}`,
+    `Counted Cash: ${rs(countedCash)}`,
+    `Difference: ${rs(difference)}`,
+  ].join("\n");
+}
+
+function ShiftCloseActions({
+  shiftNumber,
+  shopName,
+  counterName,
+  summary,
+  countedCash,
+}: {
+  shiftNumber: string;
+  shopName: string;
+  counterName: string;
+  summary: ShiftCashSummary;
+  countedCash: number;
+}) {
+  const text = shiftReportText({ shiftNumber, shopName, counterName, summary, countedCash });
+
+  function printReport() {
+    const printWindow = window.open("", "_blank", "width=720,height=820");
+    if (!printWindow) return;
+    const lines = text
+      .split("\n")
+      .map((line) => `<div>${line.replace(/&/g, "&amp;").replace(/</g, "&lt;") || "&nbsp;"}</div>`)
+      .join("");
+    printWindow.document.write(`<!doctype html><html><head><title>${shiftNumber} — Shift Close</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#17201d}h1{font-size:20px;margin:0 0 6px}p{color:#66736f;margin:0 0 20px;font-size:12px}div{font-size:14px;line-height:1.8;border-bottom:1px solid #edf0ef;padding:2px 0}</style></head><body><h1>AgriBridge — POS Shift Close Report</h1><p>${shopName} · ${counterName} · ${shiftNumber}</p>${lines}</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  }
+
+  function shareWhatsApp() {
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  }
+
+  function emailReport() {
+    window.location.href = `mailto:?subject=${encodeURIComponent(`AgriBridge Shift Close — ${shiftNumber}`)}&body=${encodeURIComponent(text)}`;
+  }
+
+  return (
+    <div className="mt-4 border-t border-surface-100 pt-4 dark:border-surface-800">
+      <p className="mb-2 text-center text-[11px] font-medium uppercase tracking-wide text-surface-400">Shift report share karein</p>
+      <div className="grid grid-cols-3 gap-2">
+        <button type="button" onClick={printReport} className="flex items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-2 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-950/30 dark:text-brand-300">
+          <Printer className="h-3.5 w-3.5" /> Print
+        </button>
+        <button type="button" onClick={shareWhatsApp} className="flex items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+          <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+        </button>
+        <button type="button" onClick={emailReport} className="flex items-center justify-center gap-1.5 rounded-lg border border-surface-200 bg-surface-50 px-2 py-2 text-xs font-semibold text-surface-700 hover:bg-surface-100 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-200">
+          <Mail className="h-3.5 w-3.5" /> Email
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Doosre counters par jump karne ka button -- shift band kiye baghair
  * (423). Malik: "2/3 POS hon to shift close kiye baghair doosre pay ja
@@ -555,6 +646,15 @@ export function ShiftBar({
                   <div className="mt-3">
                     <ShiftCashHandoverForm shiftId={shiftId} branchId={branchId} shopId={shopId ?? null} countedCash={state.countedCash} />
                   </div>
+                )}
+                {summary && state.countedCash != null && (
+                  <ShiftCloseActions
+                    shiftNumber={shiftNumber}
+                    shopName={shopName}
+                    counterName={counterName}
+                    summary={summary}
+                    countedCash={state.countedCash}
+                  />
                 )}
                 <p className="mt-3 text-center text-xs text-surface-400">Band karein — safha refresh ho jayega.</p>
               </div>
