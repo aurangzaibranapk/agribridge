@@ -665,7 +665,7 @@ export async function createVendorLogin(
   const service = createServiceClient();
   const { data: vendor } = await service
     .from("machinery_vendors")
-    .select("id, vendor_name, phone, user_id")
+    .select("id, vendor_name, phone, user_id, organization_id")
     .eq("id", vendorId)
     .maybeSingle();
   if (!vendor) return { error: "Vendor nahi mila." };
@@ -736,6 +736,7 @@ export async function createVendorLogin(
       id: created.user.id,
       full_name: vendor.vendor_name,
       role: "machinery_vendor",
+      organization_id: vendor.organization_id,
       is_active: true,
     },
     { onConflict: "id" }
