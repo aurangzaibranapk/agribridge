@@ -67,7 +67,7 @@ export function StockCountNudge() {
           </p>
           <div className="mt-3 flex items-center gap-2">
             <Link
-              href="/admin/stock-count"
+              href="/admin/product-cycles?tab=warehouse"
               className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-blue-700 active:scale-95"
               onClick={() => setShow(false)}
             >
