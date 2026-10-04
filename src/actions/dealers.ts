@@ -20,6 +20,9 @@ async function getRoleContext(supabase: ReturnType<typeof createClient>) {
 export async function convertInquiryToDealer(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const serviceClient = createServiceClient();
+  const { data: { user: callingUser } } = await supabase.auth.getUser();
+  const { data: callerProfile } = await supabase.from("profiles").select("organization_id, role, is_active").eq("id", callingUser?.id ?? "").maybeSingle();
+  if (!callerProfile?.is_active || !callerProfile.organization_id || !["owner", "super_admin", "admin"].includes(String(callerProfile.role))) return { error: "Sirf authorized Admin/Owner dealer bana sakta hai." };
 
   const inquiryId = String(formData.get("inquiry_id") ?? "");
   const businessName = String(formData.get("business_name") ?? "").trim();
@@ -39,7 +42,7 @@ export async function convertInquiryToDealer(_prev: ActionState, formData: FormD
     return { error: `Failed to invite dealer: ${inviteError?.message ?? "unknown error"}` };
   }
 
-  await serviceClient.from("profiles").update({ role: "customer" }).eq("id", invited.user.id);
+  await serviceClient.from("profiles").update({ role: "customer", organization_id: callerProfile.organization_id }).eq("id", invited.user.id);
 
   const dealerCode = `DLR-${Date.now().toString().slice(-6)}`;
 
@@ -47,6 +50,7 @@ export async function convertInquiryToDealer(_prev: ActionState, formData: FormD
     .from("dealers")
     .insert({
       user_id: invited.user.id,
+      organization_id: callerProfile.organization_id,
       dealer_code: dealerCode,
       business_name: businessName,
       phone_number: phone,
@@ -86,6 +90,9 @@ export async function convertInquiryToDealer(_prev: ActionState, formData: FormD
 export async function createDealer(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const serviceClient = createServiceClient();
+  const { data: { user: callingUser } } = await supabase.auth.getUser();
+  const { data: callerProfile } = await supabase.from("profiles").select("organization_id, role, is_active").eq("id", callingUser?.id ?? "").maybeSingle();
+  if (!callerProfile?.is_active || !callerProfile.organization_id || !["owner", "super_admin", "admin"].includes(String(callerProfile.role))) return { error: "Sirf authorized Admin/Owner dealer bana sakta hai." };
 
   const businessName = String(formData.get("business_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
@@ -107,7 +114,7 @@ export async function createDealer(_prev: ActionState, formData: FormData): Prom
     return { error: `Failed to invite dealer: ${inviteError?.message ?? "unknown error"}` };
   }
 
-  await serviceClient.from("profiles").update({ role: "customer" }).eq("id", invited.user.id);
+  await serviceClient.from("profiles").update({ role: "customer", organization_id: callerProfile.organization_id }).eq("id", invited.user.id);
 
   const dealerCode = `DLR-${Date.now().toString().slice(-6)}`;
 
@@ -115,6 +122,7 @@ export async function createDealer(_prev: ActionState, formData: FormData): Prom
     .from("dealers")
     .insert({
       user_id: invited.user.id,
+      organization_id: callerProfile.organization_id,
       dealer_code: dealerCode,
       business_name: businessName,
       phone_number: phone,
