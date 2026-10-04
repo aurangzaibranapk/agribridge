@@ -19,6 +19,9 @@ async function getRoleContext(supabase: ReturnType<typeof createClient>) {
 export async function createBuyer(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const serviceClient = createServiceClient();
+  const { data: { user: callingUser } } = await supabase.auth.getUser();
+  const { data: callerProfile } = await supabase.from("profiles").select("organization_id, role, is_active").eq("id", callingUser?.id ?? "").maybeSingle();
+  if (!callerProfile?.is_active || !callerProfile.organization_id || !["owner", "super_admin", "admin"].includes(String(callerProfile.role))) return { error: "Sirf authorized Admin/Owner buyer bana sakta hai." };
   const businessName = String(formData.get("business_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const phone = String(formData.get("phone_number") ?? "").trim();
@@ -35,13 +38,14 @@ export async function createBuyer(_prev: ActionState, formData: FormData): Promi
     if (inviteError || !invited?.user) {
       return { error: `Failed to invite buyer: ${inviteError?.message ?? "unknown error"}` };
     }
-    await serviceClient.from("profiles").update({ role: "customer" }).eq("id", invited.user.id);
+    await serviceClient.from("profiles").update({ role: "customer", organization_id: callerProfile.organization_id }).eq("id", invited.user.id);
     invitedUserId = invited.user.id;
   }
 
   const buyerCode = `BUY-${Date.now().toString().slice(-6)}`;
   const { error: buyerError } = await supabase.from("buyers").insert({
     user_id: invitedUserId,
+    organization_id: callerProfile.organization_id,
     buyer_code: buyerCode,
     business_name: businessName,
     contact_person: contactPerson,
