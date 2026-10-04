@@ -112,10 +112,11 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
 
   const [nav, scoreRes] = await Promise.all([
     loadNav(user.id, me.role, lang),
-    // Apna score. Visibility ka faisla database par hai (fn_score_visible)
-    // -- yahan sirf jo aaye wo dikhaya jata hai. Kuch na aaye to chip
-    // hi nahi banta.
-    supabase.rpc("fn_score_for", { p_subject_type: "staff", p_subject_id: user.id }),
+    // Har My Work load par score engine apne verified events se snapshot
+    // taaza karta hai. Is se score cron ke intezar ke baghair asal activity
+    // ke sath update hota hai; koi manual/fake score nahi banta.
+    supabase.rpc("fn_recalc_score", { p_subject_type: "staff", p_subject_id: user.id })
+      .then(() => supabase.rpc("fn_score_for", { p_subject_type: "staff", p_subject_id: user.id })),
   ]);
 
   const scoreRow = (Array.isArray(scoreRes.data) ? scoreRes.data[0] : null) as ScoreChip | null;
