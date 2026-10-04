@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { ProductCycleClient } from "./cycle-client";
 import { StockCountCycleClient } from "./stock-count-client";
 import { getCycleCountSettings, getTodaySession, getSessionItems } from "@/actions/cycle-stock-count";
+import { StockCountPage } from "@/app/admin/stock-count/page";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Product Cycles" };
@@ -13,7 +14,7 @@ export default async function ProductCyclesPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const params = await searchParams;
-  const activeTab = params.tab === "stock" ? "stock" : "shops";
+  const activeTab = params.tab === "stock" || params.tab === "warehouse" ? params.tab : "shops";
 
   const supabase = createClient();
 
@@ -24,12 +25,15 @@ export default async function ProductCyclesPage({
   ]);
 
   const items = session ? await getSessionItems(session.id) : [];
+  const warehouseStockCount = activeTab === "warehouse"
+    ? await StockCountPage({ searchParams: Promise.resolve({}), embedded: true })
+    : null;
 
   return (
     <div className="space-y-0">
       <PageHeader
         title="Product Cycles"
-        description="Shop product rotation aur daily cycle stock count — dono ek jagah."
+        description="Product rotation, daily cycle aur warehouse stock count — sab ek jagah."
       />
 
       {/* Tab bar */}
@@ -55,18 +59,28 @@ export default async function ProductCyclesPage({
           >
             Daily Stock Count Cycle
           </a>
+          <a
+            href="?tab=warehouse"
+            className={`border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+              activeTab === "warehouse"
+                ? "border-brand-600 text-brand-700 dark:text-brand-400"
+                : "border-transparent text-surface-500 hover:text-surface-700 dark:hover:text-surface-300"
+            }`}
+          >
+            Warehouse Stock Count
+          </a>
         </div>
       </div>
 
       {activeTab === "shops" ? (
         <ProductCycleClient shops={(shops ?? []) as any} />
-      ) : (
+      ) : activeTab === "stock" ? (
         <StockCountCycleClient
           initialSettings={settings}
           initialSession={session}
           initialItems={items}
         />
-      )}
+      ) : warehouseStockCount}
     </div>
   );
 }
