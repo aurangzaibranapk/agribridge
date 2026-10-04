@@ -7,7 +7,7 @@ import { formatDate } from "@/lib/utils/format";
 import { VerifyFarmerButton } from "@/app/admin/farmers/verify-farmer-button";
 import { FarmerActions } from "@/app/admin/farmers/farmer-actions";
 import { bulkToggleFarmerActive, bulkDeleteFarmers, type ActionState } from "@/actions/farmers-bulk";
-import { CheckSquare, FileText, AlertTriangle } from "lucide-react";
+import { CheckSquare, FileText, AlertTriangle, Search } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -60,8 +60,16 @@ export function FarmersListClient({
   mitaSakta?: boolean;
 }) {
   const lang = useLang();
+  const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const koiBulkKaam = tasdeeqKarSakta || mitaSakta;
+  const visibleFarmers = farmers.filter((f) => {
+    const haystack = [f.full_name, f.farmer_code, f.phone_number, f.cnic, f.village, f.tehsil, f.district]
+      .filter(Boolean)
+      .join(" ")
+      .toLocaleLowerCase();
+    return haystack.includes(query.trim().toLocaleLowerCase());
+  });
 
   function toggleSelect(id: string) {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -76,6 +84,18 @@ export function FarmersListClient({
       {koiBulkKaam && selected.length > 0 && (
         <BulkActionBar selectedIds={selected} onDone={() => setSelected([])} mitaSakta={mitaSakta} />
       )}
+
+      <div className="mb-3 flex items-center gap-2 rounded-card border border-surface-200 bg-white px-3 py-2 shadow-sm dark:border-surface-800 dark:bg-surface-900">
+        <Search className="h-4 w-4 shrink-0 text-surface-400" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Member / farmer ka naam, code, mobile ya CNIC search karein..."
+          className="w-full bg-transparent text-sm text-surface-800 outline-none placeholder:text-surface-400 dark:text-surface-100"
+          aria-label="Search members and farmers"
+        />
+        {query && <span className="shrink-0 text-xs text-surface-400">{visibleFarmers.length} record</span>}
+      </div>
 
       <div className="rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
@@ -95,7 +115,7 @@ export function FarmersListClient({
             </tr>
           </thead>
           <tbody>
-            {farmers.map((f) => {
+            {visibleFarmers.map((f) => {
               const overdueMinutes = !f.is_verified ? minutesSinceConfirmed(f.profile_confirmed_at) : null;
               // 30 minute ka usool malik ka hai: tasdeeq is se der ho to
               // qatar khud chhup kar nahi baithti -- surkh ho jati hai,
@@ -152,6 +172,9 @@ export function FarmersListClient({
             })}
           </tbody>
         </table>
+        {visibleFarmers.length === 0 && (
+          <p className="px-5 py-8 text-center text-sm text-surface-400">Is search ke mutabiq koi member nahi mila.</p>
+        )}
       </div>
     </div>
   );
