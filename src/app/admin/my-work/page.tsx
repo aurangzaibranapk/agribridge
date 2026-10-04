@@ -16,6 +16,7 @@ import { departmentForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { StaffMotivationCard } from "@/components/guided/staff-motivation-card";
+import CommandCenterPage from "@/app/admin/command-center/page";
 
 export const dynamic = "force-dynamic";
 
@@ -234,6 +235,15 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
       <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language="ur" />
       <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} kpis={kpis} />
     </DeskWorkspace>;
+  }
+
+  // Owner/Admin ka My Work bhi company-wide professional command view hai.
+  // Staff ka shop-scoped DeskWorkspace upar bilkul alag aur unchanged rehta
+  // hai; yahan existing live-data Owner Command Center reuse hota hai taake
+  // Admin ko sales, expenses, cash, receivables, departments aur alerts ek
+  // hi safhe par milen aur do alag business-calculation engines na banen.
+  if (["owner", "super_admin", "admin"].includes(me.role)) {
+    return <CommandCenterPage />;
   }
 
   return (
