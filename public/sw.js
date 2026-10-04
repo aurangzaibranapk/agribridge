@@ -1,8 +1,11 @@
-const SHELL_CACHE = "agribridge-shell-v2";
-const STATIC_CACHE = "agribridge-static-v2";
+const SHELL_CACHE = "agribridge-shell-v3";
+const STATIC_CACHE = "agribridge-static-v3";
 const ALL_CACHES = [SHELL_CACHE, STATIC_CACHE];
 
-const PRECACHE_URLS = ["/", "/manifest.json", "/offline"];
+// Login page ko pehle se cache rakha jata hai taake network down hone par
+// user saved session ke sath app dobara khol sake. Auth/API responses cache
+// nahi hote; naya login ab bhi internet par hi hota hai.
+const PRECACHE_URLS = ["/", "/manifest.json", "/offline", "/login"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
