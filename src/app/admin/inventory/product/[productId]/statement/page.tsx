@@ -51,8 +51,6 @@ export default async function ProductStatementPage({
     .select("id, inventory_id, movement_type, quantity, balance_after, reference_type, reference_id, notes, created_at, created_by")
     .in("inventory_id", inventoryIds)
     .order("created_at", { ascending: true });
-  if (from) movementQuery = movementQuery.gte("created_at", `${from}T00:00:00`);
-  if (to) movementQuery = movementQuery.lte("created_at", `${to}T23:59:59.999`);
   const { data: rawMoves } = await movementQuery.limit(5000);
   const moves = rawMoves ?? [];
 
@@ -140,7 +138,12 @@ export default async function ProductStatementPage({
   }).reverse();
 
   const selectedWarehouse = searchParams?.warehouse ?? "";
-  const visibleRows = selectedWarehouse ? rows.filter((r: any) => r.warehouseId === selectedWarehouse) : rows;
+  const visibleRows = rows.filter((r: any) => {
+    if (selectedWarehouse && r.warehouseId !== selectedWarehouse) return false;
+    if (from && new Date(r.created_at) < new Date(`${from}T00:00:00`)) return false;
+    if (to && new Date(r.created_at) > new Date(`${to}T23:59:59.999`)) return false;
+    return true;
+  });
   const totalIn = visibleRows.filter((r: any) => r.delta > 0).reduce((s: number, r: any) => s + r.qty, 0);
   const totalOut = visibleRows.filter((r: any) => r.delta < 0).reduce((s: number, r: any) => s + r.qty, 0);
   const currentByWarehouse = new Map<string, number>();
