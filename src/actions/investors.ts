@@ -11,6 +11,9 @@ export interface ActionState {
 export async function convertInquiryToInvestor(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const serviceClient = createServiceClient();
+  const { data: { user: callingUser } } = await supabase.auth.getUser();
+  const { data: callerProfile } = await supabase.from("profiles").select("organization_id, role, is_active").eq("id", callingUser?.id ?? "").maybeSingle();
+  if (!callerProfile?.is_active || !callerProfile.organization_id || !["owner", "super_admin", "admin"].includes(String(callerProfile.role))) return { error: "Sirf authorized Admin/Owner investor bana sakta hai." };
 
   const inquiryId = String(formData.get("inquiry_id") ?? "");
   const fullName = String(formData.get("full_name") ?? "").trim();
@@ -33,13 +36,14 @@ export async function convertInquiryToInvestor(_prev: ActionState, formData: For
     return { error: `Failed to invite investor: ${inviteError?.message ?? "unknown error"}` };
   }
 
-  await serviceClient.from("profiles").update({ role: "customer" }).eq("id", invited.user.id);
+  await serviceClient.from("profiles").update({ role: "customer", organization_id: callerProfile.organization_id }).eq("id", invited.user.id);
 
   const investorCode = `INV-${Date.now().toString().slice(-6)}`;
   const { data: investor, error: investorError } = await supabase
     .from("investors")
     .insert({
       user_id: invited.user.id,
+      organization_id: callerProfile.organization_id,
       investor_code: investorCode,
       full_name: fullName,
       phone_number: phone || null,
