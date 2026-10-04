@@ -152,6 +152,15 @@ export async function startCount(_prev: ActionState, formData: FormData): Promis
   );
   if (lineError) return { error: lineError.message };
 
+  await service
+    .from("stock_count_command_logs")
+    .update({ stock_count_id: header.id, status: "counting", response_started_at: new Date().toISOString() })
+    .eq("warehouse_id", warehouseId)
+    .eq("staff_id", user.id)
+    .eq("status", "assigned")
+    .order("sent_at", { ascending: false })
+    .limit(1);
+
   revalidatePath("/admin/stock-count");
   return {
     success: true,
@@ -509,6 +518,8 @@ export async function verifyCount(_prev: ActionState, formData: FormData): Promi
     .eq("id", countId);
   if (error) return { error: error.message };
 
+  await service.from("stock_count_command_logs").update({ status: "verified" }).eq("stock_count_id", countId);
+
   await logAudit({
     actionType: "verify",
     module: "stock-count",
@@ -791,6 +802,8 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
     })
     .eq("id", countId);
   if (error) return { error: error.message };
+
+  await service.from("stock_count_command_logs").update({ status: "posted", completed_at: new Date().toISOString() }).eq("stock_count_id", countId);
 
   revalidatePath("/admin/stock-count");
   revalidatePath("/admin/money-trail");
