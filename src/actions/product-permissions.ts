@@ -84,7 +84,7 @@ export async function staffProposeProduct(_prev: ActionState, formData: FormData
   if (!user) return { error: "Login zaroori hai." };
 
   const { data: permission } = await supabase.from("staff_product_permissions").select("can_add").eq("profile_id", user.id).single();
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("role, organization_id").eq("id", user.id).single();
   const isUnrestricted = profile?.role === "owner" || profile?.role === "super_admin" || profile?.role === "admin";
   if (!isUnrestricted && !permission?.can_add) return { error: "Aapke paas Product Add karne ki ijazat nahi hai." };
 
@@ -121,10 +121,10 @@ export async function staffProposeProduct(_prev: ActionState, formData: FormData
     }
   }
 
-  const { data: org } = await supabase.from("organizations").select("id").limit(1).single();
+  if (!profile?.organization_id) return { error: "Aapki organization assign nahi hai." };
 
   const { error } = await (supabase as any).from("products").insert({
-    organization_id: org?.id ?? null,
+    organization_id: profile.organization_id,
     category_id: categoryId,
     name,
     pack_size: packSize,
