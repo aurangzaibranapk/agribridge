@@ -148,8 +148,8 @@ export function ReceiptModal({
       */}
       <style>{`
         @media print {
-          @page { size: 80mm auto; margin: 3mm; }
-          html, body { margin: 0; background: #fff; }
+          @page { size: 80mm auto; margin: 0; }
+          html, body { width: 80mm; margin: 0 !important; padding: 0 !important; background: #fff; }
           /* 18 September, malik: print par receipt ke upar/neeche
              peeche wale safhe ka content (jaise Khata ki table, Sold/
              Can Return button) bhi chhap raha tha -- receipt ka koi
@@ -159,12 +159,23 @@ export function ReceiptModal({
              print:hidden nahi hai) dikhta hai. */
           body * { visibility: hidden; }
           #receipt-print-area, #receipt-print-area * { visibility: visible; }
-          #receipt-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+          #receipt-print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 74mm !important;
+            max-width: 74mm !important;
+            margin: 0 !important;
+            padding: 2mm !important;
+            box-sizing: border-box;
+            overflow: hidden !important;
+          }
           /* Halka grey thermal printer par mit jata hai -- print ke
              liye sab kuch pakka siyah, aur dashed lines mota. */
           #receipt-print-area, #receipt-print-area * { color: #000 !important; }
           #receipt-print-area .receipt-rule { border-top-width: 1.5px !important; border-color: #000 !important; }
-          #receipt-print-area .receipt-watermark { opacity: 0.16 !important; }
+          #receipt-print-area .receipt-watermark { opacity: 0.18 !important; }
+          #receipt-print-area .receipt-watermark img { display: block !important; }
         }
         #receipt-print-area { position: relative; overflow: hidden; }
         #receipt-print-area > *:not(.receipt-watermark) { position: relative; z-index: 1; }
@@ -176,18 +187,28 @@ export function ReceiptModal({
           opacity: 0.28;
           background-image:
             linear-gradient(45deg, transparent 49.5%, rgba(242,139,36,0.18) 49.8%, rgba(242,139,36,0.18) 50.2%, transparent 50.5%),
-            linear-gradient(-45deg, transparent 49.5%, rgba(242,139,36,0.18) 49.8%, rgba(242,139,36,0.18) 50.2%, transparent 50.5%),
-            url('/branding/kisan-watermark.svg');
-          background-size: 180px 180px, 180px 180px, 360px 180px;
-          background-position: center, center, center;
+            linear-gradient(-45deg, transparent 49.5%, rgba(242,139,36,0.18) 49.8%, rgba(242,139,36,0.18) 50.2%, transparent 50.5%);
+          background-size: 180px 180px, 180px 180px;
+          background-position: center, center;
           background-repeat: repeat;
+        }
+        .receipt-watermark img {
+          position: absolute;
+          left: 50%;
+          top: 50%;
+          width: 82%;
+          max-width: 300px;
+          transform: translate(-50%, -50%);
+          opacity: 0.62;
         }
       `}</style>
       <div
         id="receipt-print-area"
-        className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-card bg-white p-5 font-mono text-black shadow-xl dark:bg-surface-900 print:max-h-none print:w-full print:p-0 print:text-[13px] print:shadow-none"
+        className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-card bg-white p-5 font-mono text-black shadow-xl dark:bg-surface-900 print:max-h-none print:w-[74mm] print:max-w-[74mm] print:rounded-none print:p-[2mm] print:text-[13px] print:shadow-none"
       >
-        <div className="receipt-watermark" aria-hidden="true" />
+        <div className="receipt-watermark" aria-hidden="true">
+          <img src="/branding/kisan-watermark.svg" alt="" />
+        </div>
         <div className="mb-3 flex items-center justify-between print:hidden">
           <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pos_receipt", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700 dark:hover:text-surface-200">
