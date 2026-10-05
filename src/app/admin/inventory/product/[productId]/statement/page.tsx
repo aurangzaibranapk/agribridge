@@ -39,7 +39,7 @@ export default async function ProductStatementPage({
 
   const [{ data: product }, { data: inventoryRows }] = await Promise.all([
     supabase.from("products").select("id, name, pack_size, units_per_pack, purchase_price, selling_price").eq("id", params.productId).maybeSingle(),
-    supabase.from("inventory").select("id, warehouse_id, quantity_on_hand, warehouses(id, name)").eq("product_id", params.productId),
+    supabase.from("inventory").select("id, warehouse_id, quantity_on_hand").eq("product_id", params.productId),
   ]);
   if (!product) notFound();
 
@@ -56,12 +56,16 @@ export default async function ProductStatementPage({
   const { data: rawMoves } = await movementQuery.limit(5000);
   const moves = rawMoves ?? [];
 
+  const warehouseIds = [...new Set((inventoryRows ?? []).map((row: any) => row.warehouse_id).filter(Boolean))];
+  const { data: warehouseRows } = warehouseIds.length
+    ? await supabase.from("warehouses").select("id, name").in("id", warehouseIds)
+    : { data: [] as any[] };
+  const warehouseNameById = new Map((warehouseRows ?? []).map((row: any) => [row.id, row.name]));
   const warehouseMap = new Map<string, string>();
   const inventoryWarehouse = new Map<string, string>();
   for (const row of inventoryRows ?? []) {
-    const wh = Array.isArray((row as any).warehouses) ? (row as any).warehouses[0] : (row as any).warehouses;
     inventoryWarehouse.set((row as any).id, (row as any).warehouse_id);
-    warehouseMap.set((row as any).warehouse_id, wh?.name ?? "Unknown warehouse");
+    warehouseMap.set((row as any).warehouse_id, warehouseNameById.get((row as any).warehouse_id) ?? "Unknown warehouse");
   }
 
   const purchaseIds = [...new Set(moves.filter((m: any) => m.reference_type === "purchase" && m.reference_id).map((m: any) => m.reference_id))];
