@@ -528,6 +528,84 @@ export async function recordGrainPayment(_prev: ActionState, formData: FormData)
   return { success: true, entryId: payment?.id, paymentId: payment?.id };
 }
 
+/**
+ * An older grain row can be corrected without deleting its audit trail.
+ * Purchase remains payable; Sale is copied into the existing grain-sales
+ * flow and the original row is marked as reclassified.
+ */
+export async function editGrainEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const entryId = String(formData.get("entry_id") ?? "").trim();
+  const transactionType = String(formData.get("transaction_type") ?? "purchase");
+  const buyerId = String(formData.get("buyer_id") ?? "").trim();
+
+  if (!entryId) return { error: "Entry nahi mili." };
+  if (transactionType !== "purchase" && transactionType !== "sale") return { error: "Purchase ya Sale select karein." };
+
+  const { data: entry, error: entryError } = await supabase
+    .from("grain_procurement_entries")
+    .select("id, entry_date, grain_type, warehouse_id, weight_kg, rate_per_kg, total_amount, notes, reclassified_as_sale_id")
+    .eq("id", entryId)
+    .maybeSingle();
+  if (entryError) return { error: entryError.message };
+  if (!entry) return { error: "Grain entry nahi mili." };
+
+  if (transactionType === "purchase") {
+    if (entry.reclassified_as_sale_id) return { error: "Ye entry pehle Sale ban chuki hai. Isay Purchase mein wapas lane ke liye Sale reversal required hai." };
+    revalidatePath("/admin/grain-procurement");
+    return { success: true, notice: "Entry Purchase/Payable ke tor par save hai." };
+  }
+
+  if (!buyerId) return { error: "Sale ke liye buyer select karein." };
+  if (!entry.warehouse_id) return { error: "Sale banane se pehle entry ka warehouse zaroori hai." };
+  if (entry.reclassified_as_sale_id) return { success: true, notice: "Ye entry pehle hi Sale/Receivable ban chuki hai." };
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const year = new Date(`${entry.entry_date}T00:00:00`).getFullYear() % 100;
+  const { data: counter } = await supabase.from("grain_sale_counters").select("last_number").eq("year", year).maybeSingle();
+  const nextNumber = Number(counter?.last_number ?? 0) + 1;
+  if (counter) await supabase.from("grain_sale_counters").update({ last_number: nextNumber }).eq("year", year);
+  else await supabase.from("grain_sale_counters").insert({ year, last_number: nextNumber });
+  const saleNumber = `GRN-SALE-${year}-${String(nextNumber).padStart(5, "0")}`;
+
+  const { data: sale, error: saleError } = await supabase
+    .from("grain_sales")
+    .insert({
+      sale_number: saleNumber,
+      buyer_id: buyerId,
+      grain_type: entry.grain_type,
+      warehouse_id: entry.warehouse_id,
+      quantity_kg: Number(entry.weight_kg),
+      rate_per_kg: Number(entry.rate_per_kg),
+      total_amount: Number(entry.total_amount),
+      total_cogs: Number(entry.total_amount),
+      profit: 0,
+      sale_date: entry.entry_date,
+      amount_received: 0,
+      notes: `Reclassified from grain purchase entry ${entry.id}. ${entry.notes ?? ""}`.trim(),
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single();
+  if (saleError || !sale) return { error: saleError?.message ?? "Sale record nahi ban saka." };
+
+  const { error: markError } = await supabase
+    .from("grain_procurement_entries")
+    .update({ reclassified_as_sale_id: sale.id })
+    .eq("id", entry.id)
+    .is("reclassified_as_sale_id", null);
+  if (markError) {
+    await supabase.from("grain_sales").delete().eq("id", sale.id);
+    return { error: `Original entry mark nahi ho saki: ${markError.message}` };
+  }
+
+  revalidatePath("/admin/grain-procurement");
+  revalidatePath("/admin/grain-procurement/sell");
+  revalidatePath("/admin/grain-procurement/dashboard");
+  revalidatePath("/admin/finance");
+  return { success: true, notice: "Entry Sale/Receivable mein convert ho gayi." };
+}
+
 export async function editGrainPayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const paymentId = String(formData.get("payment_id") ?? "");
