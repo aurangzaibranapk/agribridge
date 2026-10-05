@@ -27,6 +27,7 @@ import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { RecentSalesTable } from "./recent-sales-table";
 import { StatementExportBar } from "./statement-export-bar";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -284,31 +285,59 @@ export default async function SalesReportPage({
   mereGodam.forEach((w: any) => godamKiDukan.set(w.id, (w.shop_id as string | null) ?? null));
   const godamIds = mereGodam.map((w: any) => w.id);
 
-  const [{ data: stockRows }, { data: productRows }] = await Promise.all([
+  const [{ data: stockRows }, { data: productRows }, { data: batchRows }] = await Promise.all([
     godamIds.length > 0
       ? supabase.from("inventory").select("product_id, quantity_on_hand, warehouse_id, updated_at").in("warehouse_id", godamIds)
       : Promise.resolve({
           data: [] as { product_id: string; quantity_on_hand: number; warehouse_id: string; updated_at: string }[],
         }),
     supabase.from("products").select("id, purchase_price").eq("is_deleted", false),
+    godamIds.length > 0
+      ? service.from("stock_batches").select("warehouse_id, remaining_quantity, unit_cost").in("warehouse_id", godamIds)
+      : Promise.resolve({ data: [] as { warehouse_id: string; remaining_quantity: number; unit_cost: number }[] }),
   ]);
 
   const kharidQeemat = new Map<string, number>();
   (productRows ?? []).forEach((p: any) => kharidQeemat.set(p.id, Number(p.purchase_price ?? 0)));
 
+  // My Work aur POS dono FIFO cost (`stock_batches`) use karte hain. Sales
+  // Report ko bhi isi canonical source par rakhna zaroori hai; warna current
+  // product purchase_price aur batch cost ke darmiyan purana farq nazar aata
+  // rehta hai. Sirf un purane godamon par product rate fallback hai jahan
+  // batch record maujood nahi.
+  const fifoValueByWarehouse = new Map<string, number>();
+  const warehousesWithBatches = new Set<string>();
+  for (const batch of batchRows ?? []) {
+    warehousesWithBatches.add(batch.warehouse_id);
+    fifoValueByWarehouse.set(
+      batch.warehouse_id,
+      (fifoValueByWarehouse.get(batch.warehouse_id) ?? 0) + Number(batch.remaining_quantity ?? 0) * Number(batch.unit_cost ?? 0)
+    );
+  }
+
   let kulStockQeemat = 0;
   let kulStockGinti = 0;
   const stockQismWar = new Map<string, number>();
+  const fallbackValueByWarehouse = new Map<string, number>();
   (stockRows ?? []).forEach((r: any) => {
     const ginti = Number(r.quantity_on_hand ?? 0);
     kulStockGinti += ginti;
-    const qeemat = ginti * (kharidQeemat.get(r.product_id) ?? 0);
-    if (qeemat === 0) return;
+    if (!warehousesWithBatches.has(r.warehouse_id)) {
+      fallbackValueByWarehouse.set(
+        r.warehouse_id,
+        (fallbackValueByWarehouse.get(r.warehouse_id) ?? 0) + ginti * (kharidQeemat.get(r.product_id) ?? 0)
+      );
+    }
+  });
+  for (const warehouse of mereGodam) {
+    const qeemat = warehousesWithBatches.has(warehouse.id)
+      ? fifoValueByWarehouse.get(warehouse.id) ?? 0
+      : fallbackValueByWarehouse.get(warehouse.id) ?? 0;
     kulStockQeemat += qeemat;
-    const shopId = godamKiDukan.get(r.warehouse_id) ?? null;
+    const shopId = godamKiDukan.get(warehouse.id) ?? null;
     const qism = shopId ? dukanKiQism.get(shopId) || "(qism darj nahi)" : "HQ godam (kisi dukan ka nahi)";
     stockQismWar.set(qism, (stockQismWar.get(qism) ?? 0) + qeemat);
-  });
+  }
 
   /**
    * Jo maal bahut arse se hila hi nahi.
@@ -417,6 +446,10 @@ export default async function SalesReportPage({
   const totalSales = (sales ?? []).reduce((sum, s) => sum + Number(s.total_amount ?? 0), 0);
   const totalCount = (sales ?? []).length;
   const avgSale = totalCount > 0 ? totalSales / totalCount : 0;
+  const cashSalePct = totalSales > 0 ? (naqadAaya / totalSales) * 100 : 0;
+  const udhaarPct = totalSales > 0 ? (udhaarDiya / totalSales) * 100 : 0;
+  const cashTargetMet = cashSalePct >= 70;
+  const creditLimitMet = udhaarPct <= 30;
 
   const allRows = (sales ?? []).map((s: any) => {
     const branch = Array.isArray(s.branches) ? s.branches[0] : s.branches;
@@ -522,7 +555,12 @@ export default async function SalesReportPage({
 
       <p className="mt-5 text-[11px] font-semibold uppercase tracking-wide text-surface-400">Aaj ka khulasa</p>
       <div className="mt-2 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Stock ki qeemat" value={rs(kulStockQeemat)} icon={Boxes} tone="purple" />
+        <div>
+          <Link href="/admin/reports/stock-reconcile" className="block">
+            <StatCard label="Stock ki qeemat" value={rs(kulStockQeemat)} icon={Boxes} tone="purple" />
+          </Link>
+          <Link href="/admin/reports/stock-reconcile" className="mt-1 block text-center text-[11px] font-semibold text-brand-700 hover:underline dark:text-brand-400">Farq / reconciliation dekhein →</Link>
+        </div>
         <StatCard
           label="Stock ki ginti"
           value={`${kulStockGinti.toLocaleString()} units`}
@@ -545,9 +583,12 @@ export default async function SalesReportPage({
                 {naHiliQatarein}
               </p>
             </div>
-            <span className="rounded-full bg-amber-200/70 px-2.5 py-1 text-[11px] font-medium text-amber-900 dark:bg-surface-800 dark:text-amber-300">
+            <Link
+              href={`/admin/reports/sales/slow-stock?days=${BEES_DIN}${branchId ? `&branch=${branchId}` : ""}${shopId ? `&shop=${shopId}` : ""}`}
+              className="rounded-full bg-amber-200/70 px-2.5 py-1 text-[11px] font-semibold text-amber-900 underline-offset-2 hover:underline dark:bg-surface-800 dark:text-amber-300"
+            >
               Stock dekhein
-            </span>
+            </Link>
           </div>
           {/* Daawa wohi jo ye khana waqai jaanta hai. */}
           <p className="mt-2 text-[11px] leading-snug text-amber-800/80 dark:text-amber-400/80">
@@ -590,6 +631,22 @@ export default async function SalesReportPage({
         <StatCard label="Udhaar diya" value={rs(udhaarDiya)} icon={CreditCard} tone="warn" />
         <StatCard label="Daily kharche" value={rs(kulKharche)} icon={ArrowDownCircle} tone="red" />
         <StatCard label={t("rs_transactions", lang)} value={String(totalCount)} icon={ClipboardList} tone="blue" />
+      </div>
+
+      <div className={`mt-4 rounded-card border p-5 ${cashTargetMet && creditLimitMet ? "border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/20" : "border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-950/20"}`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className={`font-display text-base font-semibold ${cashTargetMet && creditLimitMet ? "text-emerald-900 dark:text-emerald-300" : "text-red-900 dark:text-red-300"}`}>Shop cash-health check</h2>
+            <p className="mt-1 text-xs text-surface-600 dark:text-surface-300">Target: kam az kam 70% naqad sale, zyada se zyada 30% udhaar. Udhaar par staff ka cash-sale score/inam nahi banta.</p>
+          </div>
+          <span className={`rounded-full px-3 py-1 text-xs font-bold ${cashTargetMet && creditLimitMet ? "bg-emerald-600 text-white" : "bg-red-600 text-white"}`}>{cashTargetMet && creditLimitMet ? "Target theek" : "Warning: loss risk"}</span>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl bg-white/70 p-3 dark:bg-surface-900/60"><p className="text-xs text-surface-500">Cash sale</p><p className={`mt-1 text-xl font-bold ${cashTargetMet ? "text-emerald-700" : "text-red-700"}`}>{cashSalePct.toFixed(1)}%</p><p className="text-[11px] text-surface-500">{rs(naqadAaya)} / {rs(totalSales)}</p></div>
+          <div className="rounded-xl bg-white/70 p-3 dark:bg-surface-900/60"><p className="text-xs text-surface-500">Udhaar / Khata</p><p className={`mt-1 text-xl font-bold ${creditLimitMet ? "text-amber-700" : "text-red-700"}`}>{udhaarPct.toFixed(1)}%</p><p className="text-[11px] text-surface-500">{rs(udhaarDiya)} / {rs(totalSales)}</p></div>
+          <div className="rounded-xl bg-white/70 p-3 dark:bg-surface-900/60"><p className="text-xs text-surface-500">Staff score rule</p><p className="mt-1 text-sm font-bold text-surface-900 dark:text-surface-100">Sirf cash sale</p><p className="text-[11px] text-surface-500">Khata sale score mein shamil nahi</p></div>
+        </div>
+        {!cashTargetMet || !creditLimitMet ? <p className="mt-3 text-xs font-semibold text-red-800 dark:text-red-300">Warning: udhaar 30% se ooper ya cash sale 70% se neeche hai — shop ki recovery aur cash flow foran review karein.</p> : <p className="mt-3 text-xs font-semibold text-emerald-800 dark:text-emerald-300">Cash sale target aur udhaar ki hadd dono theek hain.</p>}
       </div>
 
       {/* Payment method se bikri ka breakdown */}
