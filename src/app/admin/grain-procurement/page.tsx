@@ -15,6 +15,7 @@ export default async function AdminGrainProcurementPage() {
     { data: warehouses },
     { data: cutPresets },
     { data: financeAccounts },
+    { data: buyers },
     { data: rawEntries },
     { data: rawPayments },
   ] = await Promise.all([
@@ -23,6 +24,7 @@ export default async function AdminGrainProcurementPage() {
     supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
     supabase.from("grain_cut_presets").select("id, grain_type, label, cut_percentage").eq("is_active", true).order("grain_type"),
     supabase.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("account_type"),
+    supabase.from("buyers").select("id, business_name").eq("is_active", true).order("business_name"),
     supabase
       .from("grain_procurement_entries")
       .select("id, entry_date, grain_type, gross_weight_kg, cut_percentage, cut_kg, weight_kg, moisture_percentage, quality_grade, rate_per_kg, total_amount, farmer_id, party_id, farmers(full_name), grain_parties(party_name)")
@@ -133,6 +135,7 @@ export default async function AdminGrainProcurementPage() {
         warehouses={warehouses ?? []}
         cutPresets={cutPresets ?? []}
         financeAccounts={financeAccounts ?? []}
+        buyers={buyers ?? []}
         entries={entries}
         payments={payments}
         balances={balances}
