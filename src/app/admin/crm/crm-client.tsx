@@ -7,6 +7,7 @@ import { CustomerActions } from "@/app/admin/crm/customer-actions";
 import { AddCustomerButton, EditCustomerButton } from "@/app/admin/crm/customer-form";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { partyBalanceAmount, partyBalanceLabel, partyBalanceStatus } from "@/lib/finance/party-balance";
 
 interface CustomerScore {
   score: number | null;
@@ -110,6 +111,11 @@ export function CrmClient({
     return "red" as const;
   }
 
+  function balanceTone(balance: number) {
+    const status = partyBalanceStatus(balance);
+    return status === "receivable" ? "red" as const : status === "payable" ? "amber" as const : "green" as const;
+  }
+
   function ScoreChip({ s }: { s: CustomerScore }) {
     if (!s.band && s.state !== "score_building") return <span className="text-[11px] text-surface-400">—</span>;
     if (s.state === "score_building" || !s.band)
@@ -172,7 +178,7 @@ export function CrmClient({
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
                 <th className="px-4 py-3 font-medium text-surface-500">{t("c_name", lang)}</th>
                 <th className="px-4 py-3 font-medium text-surface-500">{t("c_phone", lang)}</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("cr_khata_balance", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">Khata status</th>
                 <th className="px-4 py-3 font-medium text-surface-500">{t("c_status", lang)}</th>
                 <th className="px-4 py-3 font-medium text-surface-500">Score</th>
                 <th className="px-4 py-3 font-medium text-surface-500">{t("c_edit", lang)}</th>
@@ -195,9 +201,11 @@ export function CrmClient({
                       raqam nazar aati thi aur ye sawal kahin se jawab
                       nahi paata tha: "ye kab bana, aur is ne kab kya
                       diya?" */}
-                  <td className={`px-4 py-3 text-right font-semibold ${c.current_balance > 0 ? "text-red-600" : "text-surface-500"}`}>
+                  <td className="px-4 py-3 text-right">
                     <Link href={`/admin/crm/${c.id}/statement`} className="underline-offset-2 hover:underline">
-                      Rs {c.current_balance.toLocaleString()}
+                      <Badge tone={balanceTone(c.current_balance)}>
+                        {partyBalanceLabel(c.current_balance)}: Rs {partyBalanceAmount(c.current_balance).toLocaleString()}
+                      </Badge>
                     </Link>
                   </td>
                   <td className="px-4 py-3">
@@ -252,7 +260,7 @@ export function CrmClient({
                 <th className="px-4 py-3 font-medium text-surface-500">{t("c_name", lang)}</th>
                 <th className="px-4 py-3 font-medium text-surface-500">{t("fp_contact", lang)}</th>
                 <th className="px-4 py-3 font-medium text-surface-500">{t("c_phone", lang)}</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_payable", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">Khata status</th>
               </tr>
             </thead>
             <tbody>
@@ -261,8 +269,10 @@ export function CrmClient({
                   <td className="px-4 py-3 font-medium text-surface-800 dark:text-surface-200">{s.name}</td>
                   <td className="px-4 py-3 text-surface-600 dark:text-surface-400">{s.contact_person ?? "-"}</td>
                   <td className="px-4 py-3 text-surface-600 dark:text-surface-400">{s.phone_number ?? "-"}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-surface-800 dark:text-surface-200">
-                    Rs {s.current_payable.toLocaleString()}
+                  <td className="px-4 py-3 text-right">
+                    <Badge tone={s.current_payable > 0 ? "amber" : s.current_payable < 0 ? "red" : "green"}>
+                      {partyBalanceLabel(-s.current_payable)}: Rs {partyBalanceAmount(s.current_payable).toLocaleString()}
+                    </Badge>
                   </td>
                 </tr>
               ))}
@@ -313,7 +323,7 @@ export function CrmClient({
                 <th className="px-4 py-3 font-medium text-surface-500">{t("c_business_name", lang)}</th>
                 <th className="px-4 py-3 font-medium text-surface-500">{t("c_district", lang)}</th>
                 <th className="px-4 py-3 font-medium text-surface-500">{t("c_status", lang)}</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_payable", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">Khata status</th>
               </tr>
             </thead>
             <tbody>
@@ -324,8 +334,10 @@ export function CrmClient({
                   <td className="px-4 py-3">
                     <Badge tone={statusTone(d.verification_status)}>{d.verification_status}</Badge>
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold text-surface-800 dark:text-surface-200">
-                    Rs {d.current_payable.toLocaleString()}
+                  <td className="px-4 py-3 text-right">
+                    <Badge tone={d.current_payable > 0 ? "amber" : d.current_payable < 0 ? "red" : "green"}>
+                      {partyBalanceLabel(-d.current_payable)}: Rs {partyBalanceAmount(d.current_payable).toLocaleString()}
+                    </Badge>
                   </td>
                 </tr>
               ))}

@@ -28,8 +28,8 @@ export async function getCompanyProducts(supabase: ReturnType<typeof createClien
 // Farm/Crop/Expense History - is se AI ko pata chalta hai Farmer ki
 // asal situation kya hai (jaise crop kitne din ki hai, pehle kya laga chuka hai).
 export async function getFarmerContext(supabase: ReturnType<typeof createClient>, farmerId: string) {
-  const { data: farms } = await supabase.from("farms").select("id, name, total_area_acres, district").eq("farmer_id", farmerId);
-  const farmIds = (farms ?? []).map((f) => f.id);
+  const { data: farms } = await (supabase as any).from("farms").select("id, name, total_area_acres, district").eq("farmer_id", farmerId);
+  const farmIds = (farms ?? []).map((f: any) => f.id);
 
   const { data: crops } = farmIds.length
     ? await supabase
@@ -58,7 +58,7 @@ export async function getFarmerContext(supabase: ReturnType<typeof createClient>
   });
 
   return {
-    farms: (farms ?? []).map((f) => ({ name: f.name, areaAcres: Number(f.total_area_acres), district: f.district })),
+    farms: (farms ?? []).map((f: any) => ({ name: f.name, areaAcres: Number(f.total_area_acres), district: f.district })),
     recentCrops: cropsWithAge.map((c) => ({
       cropName: c.crop_name,
       sowingDate: c.sowing_date,

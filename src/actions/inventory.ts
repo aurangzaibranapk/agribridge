@@ -33,6 +33,8 @@ export async function adjustStock(_prev: ActionState, formData: FormData): Promi
       .select("id")
       .eq("product_id", productId)
       .eq("warehouse_id", warehouseId)
+      .order("quantity_on_hand", { ascending: false })
+      .limit(1)
       .maybeSingle();
     if (existing) {
       inventoryId = existing.id;

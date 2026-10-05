@@ -48,7 +48,11 @@ export function StaffKhataClient({ balances, ledger }: { balances: StaffBalance[
               <tbody>
                 {balances.map((b) => (
                   <tr key={b.profile_id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
-                    <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{b.full_name}</td>
+                    <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">
+                      <Link href={`/admin/khata/banda/staff/${b.profile_id}`} className="hover:text-brand-700 hover:underline dark:hover:text-brand-300">
+                        {b.full_name}
+                      </Link>
+                    </td>
                     <td className={`px-3 py-2 text-right font-semibold ${b.balance > 0 ? "text-brand-600" : "text-surface-400"}`}>
                       Rs {b.balance.toLocaleString()}
                     </td>
@@ -60,8 +64,8 @@ export function StaffKhataClient({ balances, ledger }: { balances: StaffBalance[
                             <TrendingUp className="h-3 w-3" />{t("sk_month_end", lang)}</button>
                         )}
                         {/* Ye qatar khud pehle se journal mein hai (party_type='staff', khata 2020) — Money Trail wahin se parhta hai. */}
-                        <Link href={`/admin/khata/banda/staff/${b.profile_id}`} className="text-[11px] text-surface-400 hover:text-brand-600 hover:underline">
-                          Poora khata
+                        <Link href={`/admin/khata/banda/staff/${b.profile_id}`} className="inline-flex items-center rounded-lg border border-brand-200 bg-brand-50 px-2 py-1 text-xs font-medium text-brand-700 hover:bg-brand-100 dark:border-brand-900 dark:bg-brand-950/30 dark:text-brand-300">
+                          Open Full Khata
                         </Link>
                       </div>
                     </td>

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { formatDate } from "@/lib/utils/format";
 import { StatementActions } from "./statement-actions";
+import { partyBalanceAmount, partyBalanceLabel, partyBalanceStatus } from "@/lib/finance/party-balance";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +63,7 @@ export default async function CustomerStatementPage({
   // hisaab chal raha ho.
   const openingEnd = sp.start ? new Date(`${sp.start}T00:00:00Z`) : null;
   if (openingEnd) openingEnd.setUTCDate(openingEnd.getUTCDate() - 1);
-  const [{ data: rows }, { data: baqi }, { data: openingRows }] = await Promise.all([
+  const [{ data: rows }, { data: baqi }, { data: openingRows }, { data: allRows }] = await Promise.all([
     supabase.rpc("fn_customer_ledger", {
       p_customer: id,
       p_start: sp.start ?? undefined,
@@ -72,6 +73,7 @@ export default async function CustomerStatementPage({
     sp.start
       ? supabase.rpc("fn_customer_ledger", { p_customer: id, p_start: undefined, p_end: openingEnd!.toISOString().slice(0, 10) })
       : Promise.resolve({ data: [] as any[] }),
+    supabase.rpc("fn_customer_ledger", { p_customer: id, p_start: undefined, p_end: undefined }),
   ]);
 
   const qatarein = rows ?? [];
@@ -83,6 +85,8 @@ export default async function CustomerStatementPage({
   });
   const kulLiya = qatarein.reduce((s, r) => s + Number(r.debit), 0);
   const kulDiya = qatarein.reduce((s, r) => s + Number(r.credit), 0);
+  const signedBaqi = (allRows ?? []).reduce((s, r) => s + Number(r.debit) - Number(r.credit), 0);
+  const displayBalance = Number.isFinite(signedBaqi) ? signedBaqi : Number(baqi ?? 0);
 
   return (
     <div className="space-y-4">
@@ -127,16 +131,8 @@ export default async function CustomerStatementPage({
             deta hai jab gahak mile hi na ya ijazat na ho -- us ke saamne
             "Rs 0" likh dena jhoot hai (CLAUDE.md).
           */}
-          <p
-            className={`font-display text-xl font-semibold tabular-nums ${
-              baqi === null
-                ? "text-surface-400"
-                : Number(baqi) > 0
-                  ? "text-red-700 dark:text-red-300"
-                  : "text-brand-700 dark:text-brand-300"
-            }`}
-          >
-            {baqi === null ? "maloom nahi" : rs(Number(baqi))}
+          <p className={`font-display text-xl font-semibold tabular-nums ${partyBalanceStatus(displayBalance) === "receivable" ? "text-red-700 dark:text-red-300" : partyBalanceStatus(displayBalance) === "payable" ? "text-amber-700 dark:text-amber-300" : "text-brand-700 dark:text-brand-300"}`}>
+            {baqi === null ? "maloom nahi" : `${partyBalanceLabel(displayBalance)} — ${rs(partyBalanceAmount(displayBalance))}`}
           </p>
           {baqi === null && (
             <p className="mt-0.5 text-[11px] leading-snug text-surface-400">

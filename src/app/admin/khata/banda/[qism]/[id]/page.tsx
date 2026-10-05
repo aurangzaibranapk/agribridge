@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { BandaKhataClient } from "./banda-khata-client";
 import { ArrowUpCircle, ArrowDownCircle, Scale } from "lucide-react";
+import { partyBalanceAmount, partyBalanceLabel, partyBalanceStatus } from "@/lib/finance/party-balance";
 
 export const dynamic = "force-dynamic";
 
@@ -127,10 +128,10 @@ export default async function BandeKaKhataPage({
         <StatCard label="Aap ko is se LENA" value={`Rs. ${Math.round(kulLena).toLocaleString()}`} icon={ArrowUpCircle} tone="brand" />
         <StatCard label="Aap ne is ko DENA" value={`Rs. ${Math.round(kulDena).toLocaleString()}`} icon={ArrowDownCircle} tone="warn" />
         <StatCard
-          label={net >= 0 ? "Net — lena" : "Net — dena"}
-          value={`Rs. ${Math.abs(Math.round(net)).toLocaleString()}`}
+          label={partyBalanceLabel(net)}
+          value={`Rs. ${partyBalanceAmount(net).toLocaleString()}`}
           icon={Scale}
-          tone={net >= 0 ? "blue" : "orange"}
+          tone={partyBalanceStatus(net) === "receivable" ? "blue" : partyBalanceStatus(net) === "payable" ? "orange" : "brand"}
         />
       </div>
 

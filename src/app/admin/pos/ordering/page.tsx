@@ -124,7 +124,7 @@ export default async function OrderingDashboardPage() {
 
       <div className="mb-3 flex items-center justify-between">
         <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pos_recent_orders", lang)}</h2>
-        <Link href="/admin/pos/ordering/history" className="text-xs font-medium text-brand-600 hover:underline">
+        <Link href="/admin/agri-orders" className="text-xs font-medium text-brand-600 hover:underline">
           {t("pos_view_all", lang)}
         </Link>
       </div>

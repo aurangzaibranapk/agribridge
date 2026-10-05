@@ -4,6 +4,7 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { InventoryClient } from "@/app/admin/inventory/inventory-client";
 import { UnbatchedBulkFixer, type MissingBatchProduct } from "@/app/admin/inventory/unbatched-bulk-fixer";
+import { ManualStockEntry } from "@/app/admin/inventory/manual-stock-entry";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
   const supabase = createClient();
   const lang = getLanguageFromCookies("rm");
 
-  const [{ data: rawInventory }, { data: warehouses }, { data: liveBatches }, { data: shops }] = await Promise.all([
+  const [{ data: rawInventory }, { data: warehouses }, { data: liveBatches }, { data: shops }, { data: products }] = await Promise.all([
     supabase
       .from("inventory")
       .select(
@@ -26,6 +27,7 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
       .select("product_id, warehouse_id, batch_number, expiry_date, days_left")
       .order("expiry_date", { ascending: true, nullsFirst: false }),
     supabase.from("shops").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("products").select("id, name, pack_size, purchase_price, is_deleted").eq("is_deleted", false).order("name"),
   ]);
 
   const nearest = new Map<string, { batch_number: string | null; expiry_date: string | null; days_left: number | null; count: number }>();
@@ -88,6 +90,7 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
   return (
     <div>
       <PageHeader title={t("inv_title", lang)} description={t("inv_subtitle", lang)} />
+      <ManualStockEntry products={products ?? []} warehouses={warehouses ?? []} />
       <UnbatchedBulkFixer products={missingBatchProducts} focusProductId={searchParams?.focus} />
       <InventoryClient rows={rows} warehouses={warehouses ?? []} shops={shops ?? []} />
     </div>

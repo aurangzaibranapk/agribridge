@@ -663,7 +663,7 @@ export async function createVendorLogin(
   if (!vendorId) return { error: "Vendor nahi mila." };
 
   const service = createServiceClient();
-  const { data: vendor } = await service
+  const { data: vendor } = await (service as any)
     .from("machinery_vendors")
     .select("id, vendor_name, phone, user_id, organization_id")
     .eq("id", vendorId)

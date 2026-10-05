@@ -34,7 +34,8 @@ export default async function AdminGrainProcurementPage() {
       .limit(200),
     supabase
       .from("grain_procurement_payments")
-      .select("id, amount, payment_method, notes, created_at, farmer_id, party_id, farmers(full_name), grain_parties(party_name)")
+      .select("id, amount, payment_method, notes, created_at, farmer_id, party_id, reclassified_as_sale_payment_id, farmers(full_name), grain_parties(party_name)")
+      .is("reclassified_as_sale_payment_id", null)
       .order("created_at", { ascending: false })
       .limit(200),
   ]);
@@ -130,7 +131,7 @@ export default async function AdminGrainProcurementPage() {
       </div>
 
       <GrainClient
-        farmers={farmers ?? []}
+        farmers={(farmers ?? []).map((farmer: any) => ({ ...farmer, full_name: farmer.full_name ?? "" }))}
         parties={parties ?? []}
         warehouses={warehouses ?? []}
         cutPresets={cutPresets ?? []}

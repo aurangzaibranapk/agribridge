@@ -288,7 +288,7 @@ export async function carrierConfirm(_prev: ActionState, formData: FormData): Pr
   } = await supabase.auth.getUser();
   if (!user) return { error: "Login karein." };
 
-  const { data: h } = await service
+  const { data: h } = await (service as any)
     .from("cash_handovers")
     .select("id, status, carrier_profile_id, carrier_confirmed_at")
     .eq("id", handoverId)

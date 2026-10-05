@@ -211,7 +211,7 @@ export async function tilesFor(key: string, branchId: string | null): Promise<Ti
         count(() => s.from("ai_purchase_suggestions").select("id", { count: "exact", head: true }).eq("status", "pending")),
         count(() => s.from("bridge_ai_action_requests").select("id", { count: "exact", head: true }).eq("status", "pending")),
         count(() => s.from("bridge_ai_activity_log").select("id", { count: "exact", head: true }).gte("created_at", t)),
-        count(() => s.from("bridge_ai_notifications").select("id", { count: "exact", head: true }).eq("is_read", false)),
+        count(() => (s as any).from("bridge_ai_notifications").select("id", { count: "exact", head: true }).eq("is_read", false)),
       ]);
       return [
         { label: "Suggestions pending", value: n(suggestions), href: "/admin/ai-suggestions", tone: suggestions ? "warn" : "normal" },

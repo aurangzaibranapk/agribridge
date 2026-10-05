@@ -33,7 +33,7 @@ const STAFF_ROLES = [
   "warehouse", "admin_assistant", "hr", "procurement", "milk_collection", "machinery", AI_ROLE,
 ];
 
-export const ROLE_LABELS: Record<string, string> = {
+const ROLE_LABELS: Record<string, string> = {
   super_admin: "Admin", admin: "Admin", owner: "Owner", admin_assistant: "Admin Assistant",
   manager: "Manager", sales_staff: "Sales", finance: "Finance", warehouse: "Warehouse",
   hr: "HR", procurement: "Procurement", milk_collection: "Milk Collection",

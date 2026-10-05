@@ -14,7 +14,7 @@ export default async function SlipPage({ params }: { params: { id: string } }) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: h } = await service
+  const { data: h } = await (service as any)
     .from("cash_handovers")
     .select("id, amount_sent, amount_received, difference, difference_reason, status, sent_note, from_source, sent_at, received_at, from_profile_id, to_profile_id, received_by, carrier_profile_id, carrier_confirmed_at, carrier_confirmed_by")
     .eq("id", params.id)

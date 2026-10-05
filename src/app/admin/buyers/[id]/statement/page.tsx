@@ -23,7 +23,7 @@ export default async function BuyerStatementPage({
     .eq("id", buyerId)
     .single();
 
-  const { data: rawOrders } = await supabase
+  const { data: rawOrders } = await (supabase as any)
     .from("produce_orders")
     .select("id, order_number, created_at, subtotal")
     .eq("buyer_id", buyerId)
@@ -44,7 +44,7 @@ export default async function BuyerStatementPage({
   // Buyer order = buyer ne produce khareeda (buyer humein/farmer ko amount deta hai) -> credit (unhone diya)
   // Payment "we_paid" -> debit (hum ne diya), "they_paid" -> credit (unhone diya)
   const entries: Entry[] = [
-    ...(rawOrders ?? []).map((o) => ({
+    ...(rawOrders ?? []).map((o: any) => ({
       date: String(o.created_at).slice(0, 10),
       description: `Order ${o.order_number}`,
       debit: 0,

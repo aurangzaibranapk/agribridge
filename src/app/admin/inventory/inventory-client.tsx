@@ -298,6 +298,13 @@ export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRo
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
+                      <Link
+                        href={`/admin/inventory/product/${r.product_id}/statement`}
+                        className="text-xs font-medium text-brand-600 hover:underline"
+                        title="Complete product statement"
+                      >
+                        Ledger
+                      </Link>
                       <button
                         onClick={() => setAdjustTarget({ row: r, direction: "increase" })}
                         className="rounded bg-emerald-600 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-emerald-700"

@@ -121,6 +121,10 @@ export function SimpleReceiptModal({
           #load-bill-receipt-print .receipt-rule { border-top-width: 1.5px !important; border-color: #000 !important; }
           #load-bill-receipt-print .receipt-watermark img { display: block !important; }
         }
+        #load-bill-receipt-print { position: relative; overflow: hidden; }
+        #load-bill-receipt-print > *:not(.receipt-watermark) { position: relative; z-index: 1; }
+        .receipt-watermark { position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0.18; background-image: linear-gradient(45deg, transparent 49.5%, rgba(242,139,36,0.18) 49.8%, rgba(242,139,36,0.18) 50.2%, transparent 50.5%), linear-gradient(-45deg, transparent 49.5%, rgba(242,139,36,0.18) 49.8%, rgba(242,139,36,0.18) 50.2%, transparent 50.5%); background-size: 180px 180px; }
+        .receipt-watermark img { position: absolute; left: 50%; top: 50%; width: 82%; transform: translate(-50%, -50%); opacity: 0.62; }
       `}</style>
       <style>{`.receipt-watermark { position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.18; background-image:linear-gradient(45deg,transparent 49.5%,rgba(242,139,36,.18) 49.8%,rgba(242,139,36,.18) 50.2%,transparent 50.5%),linear-gradient(-45deg,transparent 49.5%,rgba(242,139,36,.18) 49.8%,rgba(242,139,36,.18) 50.2%,transparent 50.5%); background-size:180px 180px; } .receipt-watermark img { position:absolute; left:50%; top:50%; width:82%; transform:translate(-50%,-50%); opacity:.62; } #load-bill-receipt-print { position:relative; overflow:hidden; } #load-bill-receipt-print > *:not(.receipt-watermark) { position:relative; z-index:1; }`}</style>
       <div

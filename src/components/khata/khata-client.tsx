@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/layout-primitives";
 import { Wallet, Search, History } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { partyBalanceAmount, partyBalanceLabel, partyBalanceStatus } from "@/lib/finance/party-balance";
 
 interface KhataAccount {
   id: string;
@@ -47,10 +48,8 @@ export function KhataClient({
     return accounts.filter((a) => a.customer?.name?.toLowerCase().includes(q));
   }, [accounts, search]);
 
-  const totalOutstanding = useMemo(
-    () => accounts.reduce((sum, a) => sum + (a.current_balance > 0 ? a.current_balance : 0), 0),
-    [accounts]
-  );
+  const totalReceivable = useMemo(() => accounts.reduce((sum, a) => sum + Math.max(a.current_balance, 0), 0), [accounts]);
+  const totalPayable = useMemo(() => accounts.reduce((sum, a) => sum + Math.max(-a.current_balance, 0), 0), [accounts]);
 
   async function loadTransactions(accountId: string) {
     setLoadingTx(true);
@@ -119,10 +118,9 @@ export function KhataClient({
               {dealerName} — Khata
             </h1>
             <p className="mt-1 text-sm text-surface-500">
-              Total Outstanding:{" "}
-              <span className="font-semibold text-red-600">
-                Rs {totalOutstanding.toLocaleString()}
-              </span>
+              Receivable: <span className="font-semibold text-red-600">Rs {totalReceivable.toLocaleString()}</span>
+              <span className="mx-2 text-surface-300">|</span>
+              Payable: <span className="font-semibold text-amber-600">Rs {totalPayable.toLocaleString()}</span>
             </p>
           </div>
           <div className="relative w-64">
@@ -142,7 +140,7 @@ export function KhataClient({
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
                 <th className="px-4 py-3 font-medium text-surface-500">{t("db_customer", lang)}</th>
                 <th className="px-4 py-3 font-medium text-surface-500">{t("c_phone", lang)}</th>
-                <th className="px-4 py-3 text-right font-medium text-surface-500">{t("c_balance", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">Khata status</th>
               </tr>
             </thead>
             <tbody>
@@ -158,12 +156,10 @@ export function KhataClient({
                     {a.customer?.name ?? "Unknown"}
                   </td>
                   <td className="px-4 py-3 text-surface-500">{a.customer?.phone ?? "—"}</td>
-                  <td
-                    className={`px-4 py-3 text-right font-semibold ${
-                      a.current_balance > 0 ? "text-red-600" : "text-brand-600"
-                    }`}
-                  >
-                    Rs {a.current_balance.toLocaleString()}
+                  <td className="px-4 py-3 text-right font-semibold">
+                    <Badge tone={partyBalanceStatus(a.current_balance) === "receivable" ? "red" : partyBalanceStatus(a.current_balance) === "payable" ? "amber" : "green"}>
+                      {partyBalanceLabel(a.current_balance)}: Rs {partyBalanceAmount(a.current_balance).toLocaleString()}
+                    </Badge>
                   </td>
                 </tr>
               ))}
@@ -251,7 +247,7 @@ export function KhataClient({
                 {selected.customer?.name}
               </p>
               <p className="text-xs text-surface-500">
-                Current Balance: Rs {selected.current_balance.toLocaleString()}
+                {partyBalanceLabel(selected.current_balance)}: Rs {partyBalanceAmount(selected.current_balance).toLocaleString()}
               </p>
             </div>
 
