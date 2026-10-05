@@ -106,8 +106,8 @@ export function SimpleReceiptModal({
           laagu rehta hai aur upar-neeche kaghaz khali chhoRta hai. */}
       <style>{`
         @media print {
-          @page { size: 80mm auto; margin: 3mm; }
-          html, body { margin: 0; background: #fff; }
+          @page { size: 80mm auto; margin: 0; }
+          html, body { width: 80mm; margin: 0 !important; padding: 0 !important; background: #fff; }
           /* 19 September, malik: "udhaar ki slip nikalne laga to ye a
              rahi hai" -- peeche wala Staff Sales Desk (Float Balance,
              Cash in Hand waghera) bhi print ho raha tha, kyunke sirf
@@ -116,15 +116,18 @@ export function SimpleReceiptModal({
              yahan bhi. */
           body * { visibility: hidden; }
           #load-bill-receipt-print, #load-bill-receipt-print * { visibility: visible; }
-          #load-bill-receipt-print { position: absolute; left: 0; top: 0; width: 100%; }
+          #load-bill-receipt-print { position: absolute; left: 0; top: 0; width: 74mm !important; max-width: 74mm !important; margin: 0 !important; padding: 2mm !important; box-sizing: border-box; overflow: hidden !important; }
           #load-bill-receipt-print, #load-bill-receipt-print * { color: #000 !important; }
           #load-bill-receipt-print .receipt-rule { border-top-width: 1.5px !important; border-color: #000 !important; }
+          #load-bill-receipt-print .receipt-watermark img { display: block !important; }
         }
       `}</style>
+      <style>{`.receipt-watermark { position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.18; background-image:linear-gradient(45deg,transparent 49.5%,rgba(242,139,36,.18) 49.8%,rgba(242,139,36,.18) 50.2%,transparent 50.5%),linear-gradient(-45deg,transparent 49.5%,rgba(242,139,36,.18) 49.8%,rgba(242,139,36,.18) 50.2%,transparent 50.5%); background-size:180px 180px; } .receipt-watermark img { position:absolute; left:50%; top:50%; width:82%; transform:translate(-50%,-50%); opacity:.62; } #load-bill-receipt-print { position:relative; overflow:hidden; } #load-bill-receipt-print > *:not(.receipt-watermark) { position:relative; z-index:1; }`}</style>
       <div
         id="load-bill-receipt-print"
-        className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-card bg-white p-5 font-mono text-black shadow-xl dark:bg-surface-900 print:max-h-none print:w-full print:p-0 print:text-[13px] print:shadow-none"
+        className="max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-card bg-white p-5 font-mono text-black shadow-xl dark:bg-surface-900 print:max-h-none print:w-[74mm] print:max-w-[74mm] print:rounded-none print:p-[2mm] print:text-[13px] print:shadow-none"
       >
+        <div className="receipt-watermark" aria-hidden="true"><img src="/branding/kisan-watermark.svg" alt="" /></div>
         <div className="mb-3 flex items-center justify-between print:hidden">
           <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Receipt</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700 dark:hover:text-surface-200">
