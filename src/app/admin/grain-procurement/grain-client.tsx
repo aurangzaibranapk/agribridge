@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo, type FormEvent } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
-import { createGrainEntry, recordGrainPayment, createGrainParty, type ActionState } from "@/actions/grain-procurement";
+import { createGrainEntry, recordGrainPayment, createGrainParty, editGrainEntry, type ActionState } from "@/actions/grain-procurement";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { X, Plus, FileText, AlertTriangle, Trash2 } from "lucide-react";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
@@ -54,6 +54,7 @@ interface Balance {
   balance_due: number;
 }
 interface GrainTypeSummary { grain_type: string; totalKg: number; totalValue: number; entryCount: number; }
+interface Buyer { id: string; business_name: string; }
 
 /**
  * Fasal aur kharche ka naam database mein angrezi mein rehta hai (wo
@@ -75,6 +76,7 @@ export function GrainClient({
   warehouses,
   cutPresets,
   financeAccounts,
+  buyers,
   entries,
   payments,
   balances,
@@ -85,6 +87,7 @@ export function GrainClient({
   warehouses: Warehouse[];
   cutPresets: CutPreset[];
   financeAccounts: FinanceAccount[];
+  buyers: Buyer[];
   entries: Entry[];
   payments: Payment[];
   balances: Balance[];
@@ -94,6 +97,7 @@ export function GrainClient({
   const [tab, setTab] = useState<"entry" | "balances" | "entries">("entry");
   const [payingBalance, setPayingBalance] = useState<Balance | null>(null);
   const [showNewParty, setShowNewParty] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
 
   return (
     <div className="mx-auto w-full max-w-[1280px]">
@@ -191,7 +195,7 @@ export function GrainClient({
                   <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">Rs {e.rate_per_kg}</td>
                   <td className="px-3 py-2 text-right font-semibold text-surface-900 dark:text-white">Rs {e.total_amount.toLocaleString()}</td>
                   <td className="px-3 py-2">
-                    <Link href={`/admin/grain-procurement/bill/${e.id}`} className="text-xs font-medium text-brand-600 hover:underline">{t("gr_bill", lang)}</Link>
+                    <div className="flex gap-2"><Link href={`/admin/grain-procurement/bill/${e.id}`} className="text-xs font-medium text-brand-600 hover:underline">{t("gr_bill", lang)}</Link><button type="button" onClick={() => setEditingEntry(e)} className="text-xs font-medium text-amber-700 hover:underline">Edit</button></div>
                   </td>
                 </tr>
               ))}
@@ -207,6 +211,7 @@ export function GrainClient({
         <PaymentModal balance={payingBalance} financeAccounts={financeAccounts} onClose={() => setPayingBalance(null)} />
       )}
       {showNewParty && <NewPartyModal onClose={() => setShowNewParty(false)} />}
+      {editingEntry && <EditEntryModal entry={editingEntry} buyers={buyers} onClose={() => setEditingEntry(null)} />}
     </div>
   );
 }
@@ -222,6 +227,27 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   );
 }
 
+
+function EditEntryModal({ entry, buyers, onClose }: { entry: Entry; buyers: Buyer[]; onClose: () => void }) {
+  const [state, formAction] = useFormState(editGrainEntry, initialState);
+  const [type, setType] = useState<"purchase" | "sale">("purchase");
+  useEffect(() => {
+    if (state.success) {
+      const timer = window.setTimeout(() => window.location.reload(), 700);
+      return () => window.clearTimeout(timer);
+    }
+  }, [state.success]);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-md rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
+        <div className="mb-3 flex items-center justify-between"><div><h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">Entry Edit / Classification</h3><p className="text-xs text-surface-500">{entry.seller_name} · {entry.weight_kg} kg · Rs {entry.total_amount.toLocaleString()}</p></div><button type="button" onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button></div>
+        {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
+        {state.success && <p className="mb-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">{state.notice ?? "Saved."}</p>}
+        <form action={formAction} className="space-y-3"><input type="hidden" name="entry_id" value={entry.id} /><label className="block text-sm font-medium">Entry type</label><div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => setType("purchase")} className={`rounded-lg border px-3 py-2 text-sm ${type === "purchase" ? "border-amber-500 bg-amber-50 text-amber-800" : "border-surface-200"}`}>Purchase / Payable</button><button type="button" onClick={() => setType("sale")} className={`rounded-lg border px-3 py-2 text-sm ${type === "sale" ? "border-emerald-500 bg-emerald-50 text-emerald-800" : "border-surface-200"}`}>Sale / Receivable</button></div><input type="hidden" name="transaction_type" value={type} />{type === "sale" && <label className="block text-sm">Buyer / customer<select name="buyer_id" required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"><option value="">Select buyer</option>{buyers.map((buyer) => <option key={buyer.id} value={buyer.id}>{buyer.business_name}</option>)}</select></label>}<p className="rounded-lg bg-surface-50 p-2 text-xs text-surface-500">Sale select karne par original entry delete nahi hogi; payable se hat kar receivable mein nazar aayegi.</p><SubmitButton label="Save classification" /></form>
+      </div>
+    </div>
+  );
+}
 function NewEntryForm({
   farmers,
   parties,
