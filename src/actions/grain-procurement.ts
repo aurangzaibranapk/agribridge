@@ -221,7 +221,10 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
       batch_number: `GRAIN-${entry.id.slice(0, 8)}`,
       initial_quantity: netWeight,
       remaining_quantity: netWeight,
-      unit_cost: rate,
+      // Form ka rate per-maund hota hai; stock_batches ka unit_cost per-kg
+      // hona chahiye. Seedha `rate` rakhne se Rs 4,500/kg ka jhoota stock
+      // value ban raha tha (actual Rs 4,500 per maund = Rs 112.50/kg).
+      unit_cost: netWeight > 0 ? totalAmount / netWeight : 0,
     });
   }
 
@@ -538,13 +541,14 @@ export async function editGrainEntry(_prev: ActionState, formData: FormData): Pr
   const entryId = String(formData.get("entry_id") ?? "").trim();
   const transactionType = String(formData.get("transaction_type") ?? "purchase");
   const buyerId = String(formData.get("buyer_id") ?? "").trim();
+  const paymentIds = (() => { try { const value = JSON.parse(String(formData.get("payment_ids") ?? "[]")); return Array.isArray(value) ? value.filter((id) => typeof id === "string") : []; } catch { return []; } })();
 
   if (!entryId) return { error: "Entry nahi mili." };
   if (transactionType !== "purchase" && transactionType !== "sale") return { error: "Purchase ya Sale select karein." };
 
   const { data: entry, error: entryError } = await supabase
     .from("grain_procurement_entries")
-    .select("id, entry_date, grain_type, warehouse_id, weight_kg, rate_per_kg, total_amount, notes, reclassified_as_sale_id")
+    .select("id, entry_date, grain_type, warehouse_id, weight_kg, rate_per_kg, total_amount, notes, party_id, farmer_id, reclassified_as_sale_id")
     .eq("id", entryId)
     .maybeSingle();
   if (entryError) return { error: entryError.message };
@@ -560,7 +564,9 @@ export async function editGrainEntry(_prev: ActionState, formData: FormData): Pr
   if (!entry.warehouse_id) return { error: "Sale banane se pehle entry ka warehouse zaroori hai." };
   if (entry.reclassified_as_sale_id) return { success: true, notice: "Ye entry pehle hi Sale/Receivable ban chuki hai." };
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const year = new Date(`${entry.entry_date}T00:00:00`).getFullYear() % 100;
   const { data: counter } = await supabase.from("grain_sale_counters").select("last_number").eq("year", year).maybeSingle();
   const nextNumber = Number(counter?.last_number ?? 0) + 1;
@@ -597,6 +603,31 @@ export async function editGrainEntry(_prev: ActionState, formData: FormData): Pr
   if (markError) {
     await supabase.from("grain_sales").delete().eq("id", sale.id);
     return { error: `Original entry mark nahi ho saki: ${markError.message}` };
+  }
+
+  // Only explicitly selected old receipts are moved. They remain in the
+  // source table for audit, but stop counting as procurement cash-out.
+  if (paymentIds.length > 0) {
+    const { data: oldPayments, error: oldPaymentError } = await supabase
+      .from("grain_procurement_payments")
+      .select("id, amount, payment_method, notes, farmer_id, party_id, reclassified_as_sale_payment_id")
+      .in("id", paymentIds);
+    if (oldPaymentError) return { error: oldPaymentError.message };
+    const validPayments = (oldPayments ?? []).filter((p: any) => !p.reclassified_as_sale_payment_id && ((entry.party_id && p.party_id === entry.party_id) || (entry.farmer_id && p.farmer_id === entry.farmer_id)));
+    let received = 0;
+    for (const oldPayment of validPayments) {
+      const { data: salePayment, error: salePaymentError } = await supabase.from("grain_sale_payments").insert({
+        sale_id: sale.id,
+        amount: Number(oldPayment.amount),
+        payment_method: oldPayment.payment_method,
+        notes: `Reclassified from procurement payment ${oldPayment.id}. ${oldPayment.notes ?? ""}`.trim(),
+        created_by: user?.id ?? null,
+      }).select("id").single();
+      if (salePaymentError || !salePayment) return { error: salePaymentError?.message ?? "Sale receipt link nahi ho saki." };
+      await supabase.from("grain_procurement_payments").update({ reclassified_as_sale_payment_id: salePayment.id }).eq("id", oldPayment.id);
+      received += Number(oldPayment.amount);
+    }
+    if (received > 0) await supabase.from("grain_sales").update({ amount_received: received }).eq("id", sale.id);
   }
 
   revalidatePath("/admin/grain-procurement");
