@@ -21,6 +21,14 @@ import { usePathname, useSearchParams } from "next/navigation";
 export function ChromeGate({ children }: { children: React.ReactNode }) {
   const params = useSearchParams();
   const pathname = usePathname();
-  if (params.get("workspace") === "1" || pathname === "/admin/pos" || pathname === "/admin/my-home") return null;
+  // Login ke baad AgriBridge OS portal bhi clean workspace hai: is par
+  // sirf role ke mutabiq active tools/cards aur us ka Dashboard button
+  // nazar aaye. Sidebar dashboard ke andar khulti rahegi, portal par nahi.
+  if (
+    params.get("workspace") === "1" ||
+    pathname === "/admin/pos" ||
+    pathname === "/admin/my-home" ||
+    pathname === "/admin/portal"
+  ) return null;
   return <>{children}</>;
 }
