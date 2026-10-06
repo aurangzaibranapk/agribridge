@@ -386,7 +386,7 @@ export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRo
                         <Pencil className="h-4 w-4" />
                       </Link>
                       <Link href={`/admin/products/duplicates?product=${r.product_id}`} className="text-xs font-medium text-red-600 hover:underline" title="Duplicate product review, merge or remove">
-                        Duplicate / Remove
+                        Review / Delete
                       </Link>
                     </div>
                   </td>
