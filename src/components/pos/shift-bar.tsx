@@ -491,6 +491,14 @@ export function ShiftBar({
   const [state, action] = useFormState(closeShift, KHALI);
   const [summary, setSummary] = useState<ShiftCashSummary | null>(null);
 
+  // A successful close has a permanent, reprintable slip. Navigate only
+  // after the server confirms the shift was closed; failed closes stay here.
+  useEffect(() => {
+    if (state.success && state.shiftId) {
+      window.location.assign(`/admin/pos/shift/${state.shiftId}/slip`);
+    }
+  }, [state.success, state.shiftId]);
+
   const openedTime = new Date(openedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
   async function refreshSummary() {
@@ -651,6 +659,11 @@ export function ShiftBar({
                   </div>
                   <p className="text-sm font-medium text-surface-900 dark:text-white">{state.message}</p>
                 </div>
+                {state.shiftId && (
+                  <Link href={`/admin/pos/shift/${state.shiftId}/slip`} className="mt-3 flex items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white">
+                    <Printer className="h-4 w-4" /> Daily Cash Slip kholen
+                  </Link>
+                )}
                 {state.countedCash != null && state.countedCash > 0 && (
                   <div className="mt-3">
                     <ShiftCashHandoverForm shiftId={shiftId} branchId={branchId} shopId={shopId ?? null} countedCash={state.countedCash} canSendCash={canSendCash} />
