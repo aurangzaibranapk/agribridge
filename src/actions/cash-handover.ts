@@ -98,11 +98,13 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
   // Apni custody se bhej rahe hain to pehle dekh lein ke itna hai
   // bhi. Ye adad ledger se aata hai -- kahin rakha hua nahi.
   if (fromSource === "my_custody") {
-    const { data: mine } = await service
+    // This view checks auth.uid()/staff role; the service client has no staff session.
+    const { data: mine, error: custodyError } = await supabase
       .from("v_cash_custody")
       .select("cash_paas_hai")
       .eq("profile_id", user.id)
       .maybeSingle();
+    if (custodyError) return { error: `Cash balance load nahi hua: ${custodyError.message}. Dobara try karein.` };
     let paas = Number(mine?.cash_paas_hai ?? 0);
 
     // Purani shifts mein close ke waqt custody journal entry fail ho gayi
@@ -137,7 +139,8 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
             .eq("source_id", shiftIds[0])
             .maybeSingle();
           if (existingRepair) {
-            paas += missing;
+            // A prior repair is already part of the ledger balance; never add it twice.
+            return { error: "Purani shift ki repair pehle hi darj hai, lekin cash balance kam hai. Finance se ledger check karwayein." };
           } else {
             const repaired = await postJournal({
               description: `Purani POS shift custody repair — Rs ${missing.toLocaleString()} staff ke paas`,
