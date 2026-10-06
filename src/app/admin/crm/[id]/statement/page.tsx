@@ -192,7 +192,7 @@ export async function CustomerStatementPage({
 
       <p className="text-xs text-surface-500">
         <Link href="/admin/khata" className="underline">
-          ← CRM par wapas
+          ← Customer Ledger par wapas
         </Link>
         {"  ·  "}
         Naya udhaar ya wapsi darj karni ho to{" "}
