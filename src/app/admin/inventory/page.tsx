@@ -8,17 +8,30 @@ import { ManualStockEntry } from "@/app/admin/inventory/manual-stock-entry";
 
 export const dynamic = "force-dynamic";
 
+async function loadInventory(supabase: ReturnType<typeof createClient>) {
+  const all: any[] = [];
+  const pageSize = 1000;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabase
+      .from("inventory")
+      .select(
+        "id, product_id, batch_id, quantity_on_hand, warehouses(id, name), stock_batches(batch_number, expiry_date), products(name, pack_size, units_per_pack, purchase_price, selling_price, wholesale_price, mrp_price, min_stock_threshold, is_deleted)"
+      )
+      .order("id")
+      .range(offset, offset + pageSize - 1);
+    if (error) throw new Error(`Inventory could not be loaded: ${error.message}`);
+    all.push(...(data ?? []));
+    if ((data?.length ?? 0) < pageSize) break;
+  }
+  return all;
+}
+
 export default async function AdminInventoryPage({ searchParams }: { searchParams?: { focus?: string } }) {
   const supabase = createClient();
   const lang = getLanguageFromCookies("rm");
 
-  const [{ data: rawInventory }, { data: warehouses }, { data: liveBatches }, { data: shops }, { data: products }] = await Promise.all([
-    supabase
-      .from("inventory")
-      .select(
-        "id, product_id, batch_id, quantity_on_hand, warehouses(id, name), stock_batches(batch_number, expiry_date), products(name, pack_size, units_per_pack, purchase_price, selling_price, wholesale_price, mrp_price, min_stock_threshold)"
-      )
-      .order("quantity_on_hand", { ascending: true }),
+  const [rawInventory, { data: warehouses }, { data: liveBatches }, { data: shops }, { data: products }] = await Promise.all([
+    loadInventory(supabase),
     supabase.from("warehouses").select("id, name, shop_id").eq("is_active", true).order("name"),
     // Miyaad batch ki hoti hai (257): har product/godam ka sab se
     // qareeb wala maal wala batch, aur kitne batch hain.
@@ -38,7 +51,12 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
     else nearest.set(k, { batch_number: b.batch_number, expiry_date: b.expiry_date, days_left: b.days_left, count: 1 });
   }
 
-  const rows = (rawInventory ?? []).map((row: any) => {
+  // Archived zero-stock SKUs leave the current stock list. If older data
+  // contains stock under an archived SKU, keep it visible for correction.
+  const rows = (rawInventory ?? []).filter((row: any) => {
+    const product = Array.isArray(row.products) ? row.products[0] : row.products;
+    return product?.is_deleted !== true || Number(row.quantity_on_hand) !== 0;
+  }).map((row: any) => {
     const warehouse = Array.isArray(row.warehouses) ? row.warehouses[0] : row.warehouses;
     const batch = Array.isArray(row.stock_batches) ? row.stock_batches[0] : row.stock_batches;
     const product = Array.isArray(row.products) ? row.products[0] : row.products;

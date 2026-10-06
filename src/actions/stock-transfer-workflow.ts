@@ -102,7 +102,7 @@ export async function requestInternalTransfer(_prev: ActionState, formData: Form
     payment_slip_url: paymentSlipUrl,
     requested_by: user.id,
     ...(clientActionId ? { offline_item_key: actionIds[idx] } : {}),
-  })).filter((row) => !clientActionId || !existingIds.has(row.offline_item_key));
+  })).filter((row) => !clientActionId || !existingIds.has(row.offline_item_key ?? null));
 
   if (rows.length === 0) return { success: true };
 

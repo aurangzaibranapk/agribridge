@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { renameDuplicateProduct, hideDuplicateProduct, type ActionState } from "@/actions/product-duplicates";
@@ -173,7 +174,7 @@ function ProductRow({ item, allProductNames }: { item: ProductItem; allProductNa
   const [renameState, renameAction] = useFormState(renameDuplicateProduct, initialState);
   const [hideState, hideAction] = useFormState(hideDuplicateProduct, initialState);
   const [rowGone, setRowGone] = useState(false);
-  const totalStock = item.stock.reduce((s, w) => s + w.qty, 0);
+  const hasStock = item.stock.some((w) => w.qty !== 0);
 
   if (hideState.success || rowGone) {
     return null;
@@ -207,17 +208,20 @@ function ProductRow({ item, allProductNames }: { item: ProductItem; allProductNa
           {item.category_name ?? "Bina qism"} · Trade Rs {item.purchase_price.toLocaleString()} · Sale Rs {item.selling_price.toLocaleString()}
         </p>
         <p className="mt-0.5 text-xs">
-          {totalStock > 0 ? (
+          {hasStock ? (
             <span className="text-surface-600 dark:text-surface-300">
               Stock: {item.stock.map((w) => `${w.warehouseName} (${w.qty})`).join(", ")}
             </span>
           ) : (
-            <span className="text-amber-600 dark:text-amber-400">Koi stock nahi — is duplicate ko hata dena mehfooz hai</span>
+            <span className="text-amber-600 dark:text-amber-400">Koi live stock nahi — catalog se hat sakta hai; purana ledger record rahega</span>
           )}
         </p>
         <RateFixCell productId={item.id} saleRatePending={item.sale_rate_pending} tradeRatePending={item.trade_rate_pending} />
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <Link href={`/admin/inventory/product/${item.id}/statement`} className="rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-medium text-brand-700 hover:bg-surface-50 dark:border-surface-700 dark:text-brand-300">
+          Ledger check
+        </Link>
         {!editing && (
           <button
             onClick={() => setEditing(true)}
@@ -226,7 +230,7 @@ function ProductRow({ item, allProductNames }: { item: ProductItem; allProductNa
             <Pencil className="h-3.5 w-3.5" /> Naam Badlein
           </button>
         )}
-        {totalStock > 0 ? (
+        {hasStock ? (
           <MergeDeleteButton
             productId={item.id}
             otherNames={allProductNames.filter((n) => n !== item.name)}

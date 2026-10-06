@@ -66,7 +66,7 @@ export default async function DuplicateProductsPage() {
   const stockByProduct = new Map<string, { warehouseName: string; qty: number }[]>();
   for (const row of (inventoryRows ?? []) as any[]) {
     const qty = Number(row.quantity_on_hand);
-    if (qty <= 0) continue;
+    if (qty === 0) continue;
     const warehouseName = Array.isArray(row.warehouses) ? row.warehouses[0]?.name : row.warehouses?.name;
     const list = stockByProduct.get(row.product_id) ?? [];
     list.push({ warehouseName: warehouseName ?? "—", qty });
