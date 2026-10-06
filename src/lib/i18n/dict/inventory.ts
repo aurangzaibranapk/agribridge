@@ -120,6 +120,7 @@ export const inventoryDict = {
     ur: "منظور آرڈرز جو ابھی اس گودام سے بھیجے نہیں گئے۔",
   },
   inv_pc_available: { en: "Free", rm: "Khula", ur: "کھلا" },
+  inv_stmt_view: { en: "Product Statement", rm: "Product Statement", ur: "پروڈکٹ اسٹیٹمنٹ" },
   inv_pc_batches: { en: "Batches", rm: "Batch", ur: "بیچ" },
   inv_pc_nearest: { en: "Nearest expiry", rm: "Qareeb miyaad", ur: "قریب میعاد" },
   inv_pc_last_move: { en: "Last movement", rm: "Aakhri harkat", ur: "آخری حرکت" },
