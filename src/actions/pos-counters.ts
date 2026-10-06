@@ -14,6 +14,7 @@ export interface ActionState {
   success?: boolean;
   message?: string;
   countedCash?: number;
+  shiftId?: string;
 }
 
 async function main() {
@@ -389,6 +390,7 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
   revalidatePath("/admin/pos");
   return {
     success: true,
+    shiftId,
     countedCash,
     message:
       difference === 0
@@ -447,4 +449,3 @@ export async function shiftCashCarriers(): Promise<
 
   return (data ?? []).map((r) => ({ id: r.id, name: r.full_name ?? "—", role: r.role }));
 }
-
