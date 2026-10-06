@@ -40,7 +40,7 @@ export default async function KhataPage() {
   // Staff ko isi Customer Ledger entry par customer list aur statements
   // dikhayein. Dealer ka apna khata apni jagah rehta hai.
   if (!dealer) {
-    return <AdminCrmPage />;
+    return <AdminCrmPage ledgerMode />;
   }
 
   const { data: accounts } = await supabase
