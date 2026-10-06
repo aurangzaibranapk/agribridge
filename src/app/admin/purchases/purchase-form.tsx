@@ -332,6 +332,11 @@ export function PurchaseForm({
         })
     );
   }, [lines]);
+  const hasValidItem = lines.some((line) => {
+    const quantity = Number(line.quantity);
+    const unitCost = Number(line.unit_cost);
+    return Boolean(line.product_id) && Number.isFinite(quantity) && quantity > 0 && Number.isFinite(unitCost) && unitCost >= 0;
+  });
   return (
     <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
       <h2 className="mb-4 font-display text-base font-semibold text-surface-900 dark:text-white">{t("pu_new_order", lang)}</h2>
@@ -697,7 +702,7 @@ export function PurchaseForm({
           </span>
         </div>
 
-        <SubmitButton />
+        <SubmitButton disabled={!supplierId || !hasValidItem} />
       </form>
     </div>
   );
@@ -782,11 +787,11 @@ function ProductPicker({
   );
 }
 
-function SubmitButton() {
+function SubmitButton({ disabled }: { disabled: boolean }) {
   const lang = useLang();
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" className="w-full" disabled={pending}>
+    <Button type="submit" className="w-full" disabled={pending || disabled} title={disabled ? "Select a supplier and add at least one product with a valid quantity and rate." : undefined}>
       {pending ? t("pu_creating", lang) : t("pu_create", lang)}
     </Button>
   );

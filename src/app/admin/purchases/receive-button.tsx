@@ -125,8 +125,10 @@ export function ReceiveButton({ purchaseId, purchaseNumber, items }: { purchaseI
     <>
       <button data-guide="purchase-receive"
         type="button"
+        disabled={items.length === 0}
+        title={items.length === 0 ? "This purchase has no products, so stock cannot be received." : undefined}
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-700"
+        className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <PackageCheck className="h-3.5 w-3.5" /> {t("pu_mark_received", lang)}
       </button>
@@ -288,7 +290,7 @@ export function ReceiveButton({ purchaseId, purchaseNumber, items }: { purchaseI
                 {offlineNotice && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
                 {offlinePending > 0 && <p className="text-[11px] text-amber-700 dark:text-amber-400">Is purchase ki {offlinePending} GRN sync ka intezar kar rahi hai.</p>}
 
-                <SubmitButton disabled={!!summary.bad || uploading} />
+                <SubmitButton disabled={items.length === 0 || !!summary.bad || uploading} />
               </form>
             )}
           </div>
