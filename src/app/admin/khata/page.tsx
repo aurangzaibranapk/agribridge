@@ -1,5 +1,6 @@
 ﻿import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import AdminCrmPage from "@/app/admin/crm/page";
 import { KhataClient } from "@/components/khata/khata-client";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -36,10 +37,10 @@ export default async function KhataPage() {
   // gahak ka baqi aur us ka poora statement khulta hai). Dealer ka khata
   // sirf DEALER ke liye hai, aur wo apni jagah chal raha hai.
   //
-  // Marne wala safha dikhane se behtar hai bande ko wahan bhej dena
-  // jahan wo kaam waqai hota hai.
+  // Staff ko isi Customer Ledger entry par customer list aur statements
+  // dikhayein. Dealer ka apna khata apni jagah rehta hai.
   if (!dealer) {
-    redirect("/admin/crm");
+    return <AdminCrmPage ledgerMode />;
   }
 
   const { data: accounts } = await supabase

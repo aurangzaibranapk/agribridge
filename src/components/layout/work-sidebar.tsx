@@ -70,7 +70,8 @@ export function WorkSidebar({
   }, []);
 
   function Row({ item }: { item: SideItem }) {
-    const active = pathname === item.href || pathname.startsWith(item.href + "/");
+    const itemPath = item.href.split(/[?#]/, 1)[0];
+    const active = pathname === itemPath || pathname.startsWith(itemPath + "/");
     const b = badges[item.href];
     const show = b && (b.count === null || b.count > 0);
     return (

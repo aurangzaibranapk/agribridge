@@ -41,7 +41,7 @@ function rs(n: number): string {
  * jawab ko "sifar" samajh lena is project mein pehle bhi ghalat adad de
  * chuka hai.
  */
-export default async function CustomerStatementPage({
+export async function CustomerStatementPage({
   params,
   searchParams,
 }: {
@@ -191,8 +191,8 @@ export default async function CustomerStatementPage({
       </Card>
 
       <p className="text-xs text-surface-500">
-        <Link href="/admin/crm" className="underline">
-          ← CRM par wapas
+        <Link href="/admin/khata" className="underline">
+          ← Customer Ledger par wapas
         </Link>
         {"  ·  "}
         Naya udhaar ya wapsi darj karni ho to{" "}
@@ -204,3 +204,5 @@ export default async function CustomerStatementPage({
     </div>
   );
 }
+
+export default CustomerStatementPage;

@@ -11,7 +11,7 @@ export const metadata = { title: "Product Cycles" };
 export default async function ProductCyclesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; w?: string; step?: string }>;
 }) {
   const params = await searchParams;
   const activeTab = params.tab === "stock" || params.tab === "warehouse" ? params.tab : "shops";
@@ -26,7 +26,7 @@ export default async function ProductCyclesPage({
 
   const items = session ? await getSessionItems(session.id) : [];
   const warehouseStockCount = activeTab === "warehouse"
-    ? await StockCountPage({ searchParams: Promise.resolve({}), embedded: true })
+    ? await StockCountPage({ searchParams: Promise.resolve({ w: params.w, step: params.step }), embedded: true })
     : null;
 
   return (

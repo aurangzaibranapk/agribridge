@@ -9,7 +9,7 @@ import { scoreDb } from "@/lib/score/read";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminCrmPage() {
+export default async function AdminCrmPage({ ledgerMode = false }: { ledgerMode?: boolean } = {}) {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
@@ -56,8 +56,8 @@ export default async function AdminCrmPage() {
   return (
     <div>
       <PageHeader
-        title={t("cr_title", lang)}
-        description="Customers, Suppliers, Companies, and Dealers in one place"
+        title={ledgerMode ? "Customer Ledger" : t("cr_title", lang)}
+        description={ledgerMode ? "Customer balances and full ledger statements" : "Customers, Suppliers, Companies, and Dealers in one place"}
         actions={
           sabKuchWala ? (
             <Link href="/admin/crm/import" className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800">
@@ -77,6 +77,7 @@ export default async function AdminCrmPage() {
         suppliers={(suppliers ?? []).map((s) => ({ ...s, current_payable: Number(s.current_payable) }))}
         companies={companies ?? []}
         dealers={(dealers ?? []).map((d) => ({ ...d, current_payable: Number(d.current_payable) }))}
+        customerLedgerMode={ledgerMode}
       />
     </div>
   );

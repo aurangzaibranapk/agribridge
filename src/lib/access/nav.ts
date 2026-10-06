@@ -261,7 +261,10 @@ export async function loadNav(profileId: string, role: string, lang: Lang = "rm"
  * jise sirf collection ki ijazat thi.
  */
 export function routeAllowed(allowedRoutes: string[], pathname: string): boolean {
-  return allowedRoutes.some((r) => pathname === r || pathname.startsWith(r + "/"));
+  return allowedRoutes.some((route) => {
+    const path = route.split(/[?#]/, 1)[0];
+    return pathname === path || pathname.startsWith(path + "/");
+  });
 }
 
 export { featureForPath };
