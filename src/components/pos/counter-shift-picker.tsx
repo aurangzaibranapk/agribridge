@@ -40,11 +40,13 @@ function OpenShiftButton() {
 export function CounterShiftPicker({
   counters,
   pendingHandover,
+  canSendCash,
   backHref = "/admin/my-work",
 }: {
   counters: Counter[];
   /** Pichli band hui shift ka cash jo abhi Manager/Finance ko bheja nahi gaya. */
   pendingHandover?: { shiftId: string; shiftIds?: string[]; countedCash: number; branchId: string | null } | null;
+  canSendCash: boolean;
   /** Kahan wapas jayen -- agar kahin aur pehle se shift khula hai to usi POS par, warna Dashboard (423). */
   backHref?: string;
 }) {
@@ -71,6 +73,7 @@ export function CounterShiftPicker({
                 shiftIds={pendingHandover.shiftIds}
                 branchId={pendingHandover.branchId}
                 countedCash={pendingHandover.countedCash}
+                canSendCash={canSendCash}
               />
             </div>
           )}
@@ -124,6 +127,7 @@ export function CounterShiftPicker({
             shiftIds={pendingHandover.shiftIds}
             branchId={pendingHandover.branchId}
             countedCash={pendingHandover.countedCash}
+            canSendCash={canSendCash}
           />
         </div>
       )}

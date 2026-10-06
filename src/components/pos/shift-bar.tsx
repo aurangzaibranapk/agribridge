@@ -65,12 +65,14 @@ export function ShiftCashHandoverForm({
   branchId,
   shopId,
   countedCash,
+  canSendCash,
 }: {
   shiftId: string;
   shiftIds?: string[];
   branchId: string | null;
   shopId?: string | null;
   countedCash: number;
+  canSendCash: boolean;
 }) {
   const [mode, setMode] = useState<"person" | "bank">("person");
   const [recipients, setRecipients] = useState<{ id: string; name: string; role: string }[] | null>(null);
@@ -151,7 +153,11 @@ export function ShiftCashHandoverForm({
       </div>
 
       {mode === "person" ? (
-        recipients === null ? null : recipients.length === 0 ? (
+        !canSendCash ? (
+          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+            Cash bhejne ki ijazat abhi nahi mili. Manager se cash-handover ki send ijazat dilwayein, ya bank deposit ka raasta chunain.
+          </p>
+        ) : recipients === null ? null : recipients.length === 0 ? (
           <p className="text-xs text-surface-400">
             Is branch ka koi Manager ya Finance nahi mila — "Bank mein jama" try karein.
           </p>
@@ -463,6 +469,7 @@ export function ShiftBar({
   openedAt,
   branchId,
   pendingHandover,
+  canSendCash,
   otherCounters,
 }: {
   shiftId: string;
@@ -475,6 +482,7 @@ export function ShiftBar({
   branchId: string | null;
   /** Band shifts ka cash jo abhi Manager/Finance ko bheja nahi gaya. */
   pendingHandover?: { shiftId: string; shiftIds?: string[]; countedCash: number; branchId: string | null; shopId?: string | null; pendingDepositAmount?: number | null; hasUnsubmittedShifts?: boolean; shifts?: { date: string; amount: number }[] } | null;
+  canSendCash: boolean;
   /** Staff ke baaqi counters -- shift band kiye baghair switch karne ke liye (423). */
   otherCounters?: { id: string; name: string; shopName: string; hasOpenShift: boolean }[];
 }) {
@@ -609,6 +617,7 @@ export function ShiftBar({
                 branchId={pendingHandover.branchId}
                 shopId={pendingHandover.shopId ?? null}
                 countedCash={pendingHandover.countedCash}
+                canSendCash={canSendCash}
               />
             </div>
           </div>
@@ -644,7 +653,7 @@ export function ShiftBar({
                 </div>
                 {state.countedCash != null && state.countedCash > 0 && (
                   <div className="mt-3">
-                    <ShiftCashHandoverForm shiftId={shiftId} branchId={branchId} shopId={shopId ?? null} countedCash={state.countedCash} />
+                    <ShiftCashHandoverForm shiftId={shiftId} branchId={branchId} shopId={shopId ?? null} countedCash={state.countedCash} canSendCash={canSendCash} />
                   </div>
                 )}
                 {summary && state.countedCash != null && (
