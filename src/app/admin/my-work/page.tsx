@@ -197,9 +197,13 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   // Owner/Admin ka OS Home hamesha poora unified My Work map dikhaye.
   // Shop-scoped desk sirf operational staff ke liye hai; warna owner ke
   // paas shop_id hone ki wajah se baqi departments ke cards chhup jate the.
-  const showShopDesk = !["owner", "super_admin", "admin"].includes(me.role) && me.shop_id && deskLinks.length > 0;
+  // shopDeskShopId narrows me.shop_id (string | null) to string once, so
+  // TSX below doesn't need a separate non-null assertion for ShopOverview.
+  const shopDeskShopId = !["owner", "super_admin", "admin"].includes(me.role) && deskLinks.length > 0
+    ? me.shop_id
+    : null;
 
-  if (showShopDesk) {
+  if (shopDeskShopId) {
     return <DeskWorkspace className="desk-my-work">
       <header className="staff-desk-header">
         <section className="staff-desk-identity" aria-label="Logged-in staff member">
@@ -234,7 +238,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
         </section>
       </header>
       <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={roleLabel} language="ur" />
-      <ShopOverview shopId={me.shop_id} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} kpis={kpis} />
+      <ShopOverview shopId={shopDeskShopId} branchId={me.branch_id} userId={user.id} attentionItems={attentionItems.map(item => ({ ...item, label: t(item.label, lang) }))} kpis={kpis} />
     </DeskWorkspace>;
   }
 
