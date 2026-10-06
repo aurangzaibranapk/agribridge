@@ -8,6 +8,7 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { loadPosPermissions } from "@/lib/pos/permissions";
 import { t } from "@/lib/i18n/translations";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
+import { canDo } from "@/lib/access/guard";
 export const dynamic = "force-dynamic";
 export default async function PosPage({ searchParams }: { searchParams: Promise<{ counter?: string }> }) {
   const lang = getLanguageFromCookies("rm");
@@ -24,6 +25,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
   // checkout ke andar bhi parhi jati hai -- safha aur server ek hi
   // jagah se poochte hain.
   const perms = await loadPosPermissions(user.id);
+  const canSendCash = await canDo("cash-handover", "send");
   const { data: dealer } = await supabase
     .from("dealers")
     .select("id, business_name")
@@ -214,7 +216,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
           ? myCounters.filter((c) => c.id === requestedCounterId)
           : myCounters;
         const backHref = openShifts[0] ? `/admin/pos?counter=${openShifts[0].counter_id}` : "/admin/my-work";
-        return <CounterShiftPicker counters={pickerCounters} pendingHandover={pendingHandover} backHref={backHref} />;
+        return <CounterShiftPicker counters={pickerCounters} pendingHandover={pendingHandover} backHref={backHref} canSendCash={canSendCash} />;
       }
 
       const { data: counterRow } = await supabase.from("pos_counters").select("warehouse_id").eq("id", active.id).maybeSingle();
@@ -593,6 +595,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
           openedAt={openShiftInfo.openedAt}
           branchId={branch?.id ?? null}
           pendingHandover={pendingHandover}
+          canSendCash={canSendCash}
           otherCounters={otherCounters}
         />
       )}
