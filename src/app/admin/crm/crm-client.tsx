@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Badge, Input } from "@/components/ui/form";
-import { Users, Truck, Building2, Briefcase, Search } from "lucide-react";
+import { Users, Truck, Building2, Briefcase, Search, Sprout } from "lucide-react";
 import { CustomerActions } from "@/app/admin/crm/customer-actions";
 import { AddCustomerButton, EditCustomerButton } from "@/app/admin/crm/customer-form";
 import { t } from "@/lib/i18n/translations";
@@ -33,6 +33,15 @@ interface Customer {
   score?: CustomerScore | null;
 }
 
+interface Farmer {
+  id: string;
+  name: string;
+  farmer_code: string | null;
+  phone_number: string;
+  village: string | null;
+  is_active: boolean;
+}
+
 interface Supplier {
   id: string;
   name: string;
@@ -58,6 +67,7 @@ interface Dealer {
 
 const TABS = [
   { value: "customers", label: "Customers", icon: Users },
+  { value: "farmers", label: "Farmers", icon: Sprout },
   { value: "suppliers", label: "Suppliers", icon: Truck },
   { value: "companies", label: "Companies", icon: Building2 },
   { value: "dealers", label: "Dealers", icon: Briefcase },
@@ -65,18 +75,20 @@ const TABS = [
 
 export function CrmClient({
   customers,
+  farmers,
   suppliers,
   companies,
   dealers,
   customerLedgerMode = false,
 }: {
   customers: Customer[];
+  farmers: Farmer[];
   suppliers: Supplier[];
   companies: Company[];
   dealers: Dealer[];
   customerLedgerMode?: boolean;
 }) {
-  const [activeTab, setActiveTab] = useState<"customers" | "suppliers" | "companies" | "dealers">("customers");
+  const [activeTab, setActiveTab] = useState<"customers" | "farmers" | "suppliers" | "companies" | "dealers">("customers");
   const lang = useLang();
 
   // Malik (18 September): "mobile no, name, cnic no k sath search ka
@@ -94,6 +106,13 @@ export function CrmClient({
         (c.business_name ?? "").toLowerCase().includes(q)
     );
   }, [customers, customerSearch]);
+
+  const [farmerSearch, setFarmerSearch] = useState("");
+  const filteredFarmers = useMemo(() => {
+    const q = farmerSearch.trim().toLowerCase();
+    if (!q) return farmers;
+    return farmers.filter((f) => f.name.toLowerCase().includes(q) || f.phone_number.toLowerCase().includes(q) || (f.farmer_code ?? "").toLowerCase().includes(q) || (f.village ?? "").toLowerCase().includes(q));
+  }, [farmers, farmerSearch]);
 
   const [supplierSearch, setSupplierSearch] = useState("");
   const filteredSuppliers = useMemo(() => {
@@ -186,6 +205,9 @@ export function CrmClient({
 
   return (
     <div>
+      <div className="mb-3 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm text-surface-700 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-300">
+        Total Members (Customers, Farmers, Suppliers, Dealers): <span className="font-semibold">{customers.length + farmers.length + suppliers.length + dealers.length}</span>
+      </div>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex gap-2">
           {TABS.map((tab) => {
@@ -289,6 +311,29 @@ export function CrmClient({
             </tbody>
           </table>
         </div>
+      )}
+
+      {activeTab === "farmers" && (
+        <>
+          <div className="mb-3 relative max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+            <Input value={farmerSearch} onChange={(e) => setFarmerSearch(e.target.value)} placeholder="Naam, mobile, code ya gaon se dhoondein" className="pl-9" />
+          </div>
+          <div className="mb-2 text-xs text-surface-500">Farmers: {farmers.length} · Is list mein balance zero honay par bhi tamam registered farmers shamil hain.</div>
+          <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
+                <th className="px-4 py-3 font-medium text-surface-500">Farmer</th><th className="px-4 py-3 font-medium text-surface-500">Mobile</th><th className="px-4 py-3 font-medium text-surface-500">Code</th><th className="px-4 py-3 font-medium text-surface-500">Village</th><th className="px-4 py-3 font-medium text-surface-500">Status</th><th className="px-4 py-3 text-right font-medium text-surface-500">Khata</th>
+              </tr></thead>
+              <tbody>
+                {filteredFarmers.map((f) => <tr key={f.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
+                  <td className="px-4 py-3 font-medium text-surface-800 dark:text-surface-200">{f.name}</td><td className="px-4 py-3 text-surface-600 dark:text-surface-400">{f.phone_number || "—"}</td><td className="px-4 py-3 text-surface-600 dark:text-surface-400">{f.farmer_code || "—"}</td><td className="px-4 py-3 text-surface-600 dark:text-surface-400">{f.village || "—"}</td><td className="px-4 py-3"><Badge tone={f.is_active ? "green" : "gray"}>{f.is_active ? "Active" : "Inactive"}</Badge></td><td className="px-4 py-3 text-right"><Link href={`/admin/khata/banda/farmer/${f.id}`} className="text-xs font-medium text-brand-700 underline-offset-2 hover:underline dark:text-brand-300">Khata</Link></td>
+                </tr>)}
+                {filteredFarmers.length === 0 && <tr><td colSpan={6} className="px-4 py-10 text-center text-surface-400">{farmerSearch ? "Is naam/number/code se koi farmer nahi mila." : "Koi farmer record nahi mila."}</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {activeTab === "suppliers" && (

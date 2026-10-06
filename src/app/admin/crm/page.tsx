@@ -24,6 +24,7 @@ export default async function AdminCrmPage({ ledgerMode = false }: { ledgerMode?
     { data: suppliers },
     { data: companies },
     { data: dealers },
+    { data: farmers },
     { data: rawScores },
   ] = await Promise.all([
     supabase
@@ -34,6 +35,11 @@ export default async function AdminCrmPage({ ledgerMode = false }: { ledgerMode?
     supabase.from("suppliers").select("id, name, contact_person, phone_number, current_payable").eq("is_active", true).order("name"),
     supabase.from("companies").select("id, name, contact_person, phone_number").order("name"),
     supabase.from("dealers").select("id, business_name, district, verification_status, current_payable").order("business_name"),
+    supabase
+      .from("farmers")
+      .select("id, full_name, farmer_code, phone_number, whatsapp_number, village, is_active")
+      .eq("is_deleted", false)
+      .order("full_name"),
     // Score sirf admin/owner ko dikhta hai -- scoreDb visibility fn_score_visible se control hoti hai.
     sabKuchWala
       ? scoreDb(supabase)
@@ -57,7 +63,7 @@ export default async function AdminCrmPage({ ledgerMode = false }: { ledgerMode?
     <div>
       <PageHeader
         title={ledgerMode ? "Customer Ledger" : t("cr_title", lang)}
-        description={ledgerMode ? "Customer balances and full ledger statements" : "Customers, Suppliers, Companies, and Dealers in one place"}
+        description={ledgerMode ? "Customer balances and full ledger statements" : "Customers, Farmers, Suppliers, Companies, and Dealers in one place"}
         actions={
           sabKuchWala ? (
             <Link href="/admin/crm/import" className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800">
@@ -67,6 +73,14 @@ export default async function AdminCrmPage({ ledgerMode = false }: { ledgerMode?
         }
       />
       <CrmClient
+        farmers={(farmers ?? []).map((f: any) => ({
+          id: f.id,
+          name: f.full_name,
+          farmer_code: f.farmer_code,
+          phone_number: f.whatsapp_number || f.phone_number || "",
+          village: f.village,
+          is_active: f.is_active !== false,
+        }))}
         customers={((customers ?? []) as any[]).map((c) => ({
           ...c,
           current_balance: Number(c.current_balance),
