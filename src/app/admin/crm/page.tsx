@@ -77,6 +77,7 @@ export default async function AdminCrmPage({ ledgerMode = false }: { ledgerMode?
         suppliers={(suppliers ?? []).map((s) => ({ ...s, current_payable: Number(s.current_payable) }))}
         companies={companies ?? []}
         dealers={(dealers ?? []).map((d) => ({ ...d, current_payable: Number(d.current_payable) }))}
+        customerLedgerMode={ledgerMode}
       />
     </div>
   );
