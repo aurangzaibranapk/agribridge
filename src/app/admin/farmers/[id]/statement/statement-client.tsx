@@ -2,6 +2,7 @@
 import { Printer, Download, Mail, MessageCircle } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { partyBalanceAmount, partyBalanceLabel } from "@/lib/finance/party-balance";
 
 interface Entry {
   date: string;
@@ -30,12 +31,12 @@ export function FarmerStatementClient(props: Props) {
       `Period: ${props.startDate} to ${props.endDate}`,
       "",
       ...props.entries.map(
-        (e) => `${e.date} | ${e.description} | ${e.debit ? `Debit: Rs ${e.debit.toLocaleString()}` : `Credit: Rs ${e.credit.toLocaleString()}`} | Balance: Rs ${e.runningBalance.toLocaleString()}`
+        (e) => `${e.date} | ${e.description} | ${e.debit ? `Debit: Rs ${e.debit.toLocaleString()}` : `Credit: Rs ${e.credit.toLocaleString()}`} | ${partyBalanceLabel(e.runningBalance)}: Rs ${partyBalanceAmount(e.runningBalance).toLocaleString()}`
       ),
       "",
       `Total Debit: Rs ${props.totalDebit.toLocaleString()}`,
       `Total Credit: Rs ${props.totalCredit.toLocaleString()}`,
-      `Closing Balance: Rs ${props.closingBalance.toLocaleString()}`,
+      `Closing Balance: ${partyBalanceLabel(props.closingBalance)} — Rs ${partyBalanceAmount(props.closingBalance).toLocaleString()}`,
     ];
     return lines.join("\n");
   }
@@ -92,7 +93,7 @@ export function FarmerStatementClient(props: Props) {
           </div>
           <div className="rounded-lg bg-amber-50 p-3">
             <p className="text-xs text-amber-500">{t("c_closing_balance", lang)}</p>
-            <p className="font-semibold text-amber-700">Rs {props.closingBalance.toLocaleString()}</p>
+            <p className="font-semibold text-amber-700">{partyBalanceLabel(props.closingBalance)} — Rs {partyBalanceAmount(props.closingBalance).toLocaleString()}</p>
           </div>
         </div>
 
@@ -113,7 +114,7 @@ export function FarmerStatementClient(props: Props) {
                 <td className="px-2 py-1.5 capitalize text-surface-700 dark:text-surface-300">{e.description}</td>
                 <td className="px-2 py-1.5 text-right text-red-600">{e.debit ? `Rs ${e.debit.toLocaleString()}` : "-"}</td>
                 <td className="px-2 py-1.5 text-right text-green-600">{e.credit ? `Rs ${e.credit.toLocaleString()}` : "-"}</td>
-                <td className="px-2 py-1.5 text-right text-surface-600 dark:text-surface-400">Rs {e.runningBalance.toLocaleString()}</td>
+                <td className="px-2 py-1.5 text-right text-surface-600 dark:text-surface-400">{partyBalanceLabel(e.runningBalance)} — Rs {partyBalanceAmount(e.runningBalance).toLocaleString()}</td>
               </tr>
             ))}
             {props.entries.length === 0 && (
