@@ -199,7 +199,7 @@ export default async function MyWorkPage({ searchParams }: { searchParams?: { al
   // paas shop_id hone ki wajah se baqi departments ke cards chhup jate the.
   const showShopDesk = !["owner", "super_admin", "admin"].includes(me.role) && me.shop_id && deskLinks.length > 0;
 
-  if (showShopDesk) {
+  if (showShopDesk && me.shop_id) {
     return <DeskWorkspace className="desk-my-work">
       <header className="staff-desk-header">
         <section className="staff-desk-identity" aria-label="Logged-in staff member">

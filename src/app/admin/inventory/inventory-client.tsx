@@ -51,6 +51,8 @@ export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRo
   const [transferTarget, setTransferTarget] = useState<InventoryRow | null>(null);
   const [shopFilter, setShopFilter] = useState("");
   const [warehouseFilter, setWarehouseFilter] = useState("");
+  const [productSearch, setProductSearch] = useState("");
+  const [initialFilter, setInitialFilter] = useState("");
   // "62 items ka rate missing" sirf ginti dikhata tha -- malik (13
   // September): "iske niche link hona chahiye, hum us par click karein
   // to inke asal page par chale jayein". Ab wahi ginti click hone par
@@ -77,6 +79,18 @@ export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRo
     return result;
   }, [rows, shopWarehouseIds, warehouseFilter]);
 
+  // Same name and pack size with different product IDs needs review. A
+  // product repeated across warehouses/batches is one SKU, not a duplicate.
+  const duplicateProductIds = useMemo(() => {
+    const groups = new Map<string, Set<string>>();
+    for (const row of rows) {
+      const key = `${row.product_name.trim().toLocaleLowerCase()}|${(row.pack_size ?? "").trim().toLocaleLowerCase()}`;
+      if (!groups.has(key)) groups.set(key, new Set());
+      groups.get(key)!.add(row.product_id);
+    }
+    return new Set([...groups.values()].filter((ids) => ids.size > 1).flatMap((ids) => [...ids]));
+  }, [rows]);
+
   const MISSING_RATE_KEY: Record<"trade" | "sale" | "wholesale" | "credit", (r: InventoryRow) => number | null> = {
     trade: (r) => r.purchase_price,
     sale: (r) => r.selling_price,
@@ -85,10 +99,21 @@ export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRo
   };
 
   const filteredRows = useMemo(() => {
-    if (!missingFilter) return warehouseFiltered;
-    const getRate = MISSING_RATE_KEY[missingFilter];
-    return warehouseFiltered.filter((r) => getRate(r) == null && r.quantity_on_hand > 0);
-  }, [warehouseFiltered, missingFilter]);
+    const query = productSearch.trim().toLocaleLowerCase();
+    const getRate = missingFilter ? MISSING_RATE_KEY[missingFilter] : null;
+    const reviewPriority = (row: InventoryRow) => row.quantity_on_hand < 0 ? 0 : duplicateProductIds.has(row.product_id) ? 1 : 2;
+    return warehouseFiltered
+      .filter((r) => (!getRate || (getRate(r) == null && r.quantity_on_hand > 0))
+        && (!query || `${r.product_name} ${r.pack_size ?? ""}`.toLocaleLowerCase().includes(query))
+        && (!initialFilter || r.product_name.trim().toLocaleUpperCase().startsWith(initialFilter)))
+      .sort((a, b) => reviewPriority(a) - reviewPriority(b)
+        || a.product_name.localeCompare(b.product_name, undefined, { sensitivity: "base", numeric: true })
+        || (a.pack_size ?? "").localeCompare(b.pack_size ?? "", undefined, { numeric: true })
+        || a.warehouse_name.localeCompare(b.warehouse_name)
+        || a.id.localeCompare(b.id));
+  }, [warehouseFiltered, missingFilter, productSearch, initialFilter, duplicateProductIds]);
+
+  const reviewRows = filteredRows.filter((row) => row.quantity_on_hand < 0 || duplicateProductIds.has(row.product_id));
 
   const totalValue = useMemo(
     () => warehouseFiltered.reduce((sum, r) => sum + r.quantity_on_hand * r.purchase_price, 0),
@@ -248,6 +273,39 @@ export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRo
         </div>
       )}
 
+      <div className="mb-3 flex flex-wrap items-end gap-3 print:hidden">
+        <div className="min-w-[240px] flex-1">
+          <Label htmlFor="inventory-product-search">Product search</Label>
+          <Input
+            id="inventory-product-search"
+            type="search"
+            placeholder="Naam ya pack size likhein..."
+            value={productSearch}
+            onChange={(e) => setProductSearch(e.target.value)}
+          />
+        </div>
+        <Link href="/admin/products/duplicates" className="rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200">
+          Duplicate products review / remove
+        </Link>
+      </div>
+      <div className="mb-3 flex flex-wrap gap-1 print:hidden" aria-label="Product name initial">
+        {["", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"].map((letter) => (
+          <button
+            key={letter || "all"}
+            type="button"
+            aria-pressed={initialFilter === letter}
+            onClick={() => setInitialFilter(letter)}
+            className={`min-w-8 rounded px-2 py-1 text-xs font-medium ${initialFilter === letter ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-600 hover:bg-surface-200 dark:bg-surface-800 dark:text-surface-300"}`}
+          >{letter || "All"}</button>
+        ))}
+      </div>
+
+      {reviewRows.length > 0 && (
+        <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200">
+          <strong>{reviewRows.length} stock rows review ke liye upar hain.</strong> Negative quantity aur same name/pack ke alag product IDs pehle dikh rahe hain. Ledger dekh kar sahi entry reverse ya duplicate merge karein; sirf naam dekh kar amount clear na karein.
+        </div>
+      )}
+
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
           <thead>
@@ -265,11 +323,13 @@ export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRo
             {filteredRows.map((r) => {
               const isLow = r.min_stock_threshold > 0 && r.quantity_on_hand <= r.min_stock_threshold;
               return (
-                <tr key={r.id} className={`border-b border-surface-100 last:border-0 dark:border-surface-800 ${isLow ? "bg-red-50/50 dark:bg-red-950/10" : ""}`}>
+                <tr key={r.id} className={`border-b border-surface-100 last:border-0 dark:border-surface-800 ${r.quantity_on_hand < 0 ? "bg-amber-50 dark:bg-amber-950/20" : isLow ? "bg-red-50/50 dark:bg-red-950/10" : ""}`}>
                   <td className="px-4 py-3 font-medium text-surface-800 dark:text-surface-200">
                     <Link href={`/admin/inventory/product/${r.product_id}`} className="hover:text-brand-600 hover:underline">
                       {r.product_name}{r.pack_size ? ` (${r.pack_size})` : ""}
                     </Link>
+                    {duplicateProductIds.has(r.product_id) && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">Duplicate review</span>}
+                    {r.quantity_on_hand < 0 && <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-[10px] text-red-700 dark:bg-red-900/40 dark:text-red-200">Negative stock</span>}
                   </td>
                   <td className="px-4 py-3 text-surface-600 dark:text-surface-400">{r.warehouse_name}</td>
                   <td className="px-4 py-3 text-surface-500">
@@ -324,6 +384,9 @@ export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRo
                       </button>
                       <Link href={`/admin/products/${r.product_id}/edit`} className="text-surface-400 hover:text-brand-600" title={t("inv_edit_product", lang)}>
                         <Pencil className="h-4 w-4" />
+                      </Link>
+                      <Link href="/admin/products/duplicates" className="text-xs font-medium text-red-600 hover:underline" title="Duplicate product review, merge or remove">
+                        Duplicate / Remove
                       </Link>
                     </div>
                   </td>

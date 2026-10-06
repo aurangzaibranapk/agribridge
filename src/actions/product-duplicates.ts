@@ -60,10 +60,23 @@ export async function hideDuplicateProduct(_prev: ActionState, formData: FormDat
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Missing product id." };
 
+  // A duplicate with stock must be consolidated into the correct SKU first.
+  // A zero net total is insufficient: positive and negative warehouse rows
+  // can cancel out while real stock is still attached to this product.
+  const { data: inventory, error: inventoryError } = await g.supabase
+    .from("inventory")
+    .select("quantity_on_hand")
+    .eq("product_id", id);
+  if (inventoryError) return { error: `Stock check failed: ${inventoryError.message}` };
+  if ((inventory ?? []).some((row) => Number(row.quantity_on_hand) !== 0)) {
+    return { error: "Is product ka stock abhi maujood hai. Pehle sahi product mein merge karein." };
+  }
+
   const { error } = await g.supabase.from("products").update({ is_deleted: true }).eq("id", id);
   if (error) return { error: error.message };
 
   revalidatePath("/admin/products/duplicates");
   revalidatePath("/admin/products");
+  revalidatePath("/admin/inventory");
   return { success: true };
 }

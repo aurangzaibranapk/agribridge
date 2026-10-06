@@ -308,6 +308,7 @@ export default async function SalesReportPage({
   const fifoValueByWarehouse = new Map<string, number>();
   const warehousesWithBatches = new Set<string>();
   for (const batch of batchRows ?? []) {
+    if (!batch.warehouse_id) continue;
     warehousesWithBatches.add(batch.warehouse_id);
     fifoValueByWarehouse.set(
       batch.warehouse_id,
