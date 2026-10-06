@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
@@ -195,7 +196,7 @@ export async function StockCountPage({
                   {warehouses.map((w) => (
                     <li key={w.id}>
                       <a
-                        href={`/admin/stock-count?w=${w.id}`}
+                        href={`/admin/product-cycles?tab=warehouse&w=${w.id}`}
                         className={`block rounded-lg px-3 py-2 text-sm transition ${
                           selected === w.id
                             ? "bg-brand-50 font-medium text-brand-800 dark:bg-brand-950/30 dark:text-brand-300"
@@ -250,7 +251,7 @@ export async function StockCountPage({
                   </div>
                   {(current.allCounted || canApprove) && !reviewing && (
                     <a
-                      href={`/admin/stock-count?w=${current.warehouseId}&step=review`}
+                      href={`/admin/product-cycles?tab=warehouse&w=${current.warehouseId}&step=review`}
                       className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-700"
                     >
                       {t("sc_go_to_review", lang)}
@@ -258,7 +259,7 @@ export async function StockCountPage({
                   )}
                   {reviewing && (
                     <a
-                      href={`/admin/stock-count?w=${current.warehouseId}`}
+                      href={`/admin/product-cycles?tab=warehouse&w=${current.warehouseId}`}
                       className="text-xs text-surface-500 underline"
                     >
                       {t("sc_back_to_count", lang)}
@@ -383,4 +384,15 @@ export async function StockCountPage({
   );
 }
 
-export default StockCountPage;
+/** Keep old bookmarks working by opening the unified warehouse-count tab. */
+export default async function StockCountRoute({
+  searchParams,
+}: {
+  searchParams: Promise<{ w?: string; step?: string }>;
+}) {
+  const params = await searchParams;
+  const query = new URLSearchParams({ tab: "warehouse" });
+  if (params.w) query.set("w", params.w);
+  if (params.step) query.set("step", params.step);
+  redirect(`/admin/product-cycles?${query.toString()}`);
+}
