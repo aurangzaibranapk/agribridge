@@ -24,6 +24,8 @@ interface ProductItem {
   stock: { warehouseName: string; qty: number }[];
 }
 
+interface MergeTarget { id: string; name: string; pack_size: string | null; }
+
 interface Group {
   norm: string;
   items: ProductItem[];
@@ -44,11 +46,10 @@ function SubmitBtn({ label, className }: { label: string; className: string }) {
  * pehle sahi naam par bheja jata hai, phir purana naam hataya jata hai --
  * ek hi click, request/approval ka intezar nahi (Admin khud kar raha hai).
  */
-function MergeDeleteButton({ productId, otherNames, onMerged }: { productId: string; otherNames: string[]; onMerged: () => void }) {
+function MergeDeleteButton({ productId, targets, onMerged }: { productId: string; targets: MergeTarget[]; onMerged: () => void }) {
   const [open, setOpen] = useState(false);
   const [targetName, setTargetName] = useState("");
   const [mergeState, mergeAction] = useFormState(mergeProductDirect, initialMergeState);
-  const listId = `dup-merge-names-${productId}`;
 
   useEffect(() => {
     if (mergeState.success) {
@@ -75,20 +76,16 @@ function MergeDeleteButton({ productId, otherNames, onMerged }: { productId: str
   return (
     <form action={mergeAction} className="flex items-center gap-1">
       <input type="hidden" name="source_product_id" value={productId} />
-      <input
-        name="target_name"
-        list={listId}
+      <select
+        name="target_product_id"
         value={targetName}
         onChange={(e) => setTargetName(e.target.value)}
-        placeholder="Sahi naam likhein"
-        autoFocus
-        className="w-40 rounded-lg border border-surface-200 p-1.5 text-sm dark:border-surface-700 dark:bg-surface-800"
-      />
-      <datalist id={listId}>
-        {otherNames.map((n) => (
-          <option key={n} value={n} />
-        ))}
-      </datalist>
+        required
+        className="w-56 rounded-lg border border-surface-200 p-1.5 text-sm dark:border-surface-700 dark:bg-surface-800"
+      >
+        <option value="">Sahi product select karein</option>
+        {targets.map((p) => <option key={p.id} value={p.id}>{p.name}{p.pack_size ? ` (${p.pack_size})` : ""} · {p.id.slice(0, 8)}</option>)}
+      </select>
       <SubmitBtn label="Merge & Hatayein" className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-60" />
       <button type="button" onClick={() => setOpen(false)} className="text-surface-400">
         <X className="h-3.5 w-3.5" />
@@ -169,7 +166,7 @@ function RateFixCell({ productId, saleRatePending, tradeRatePending }: { product
   );
 }
 
-function ProductRow({ item, allProductNames }: { item: ProductItem; allProductNames: string[] }) {
+function ProductRow({ item, allProducts }: { item: ProductItem; allProducts: MergeTarget[] }) {
   const [editing, setEditing] = useState(false);
   const [renameState, renameAction] = useFormState(renameDuplicateProduct, initialState);
   const [hideState, hideAction] = useFormState(hideDuplicateProduct, initialState);
@@ -233,7 +230,7 @@ function ProductRow({ item, allProductNames }: { item: ProductItem; allProductNa
         {hasStock ? (
           <MergeDeleteButton
             productId={item.id}
-            otherNames={allProductNames.filter((n) => n !== item.name)}
+            targets={allProducts.filter((p) => p.id !== item.id)}
             onMerged={() => setRowGone(true)}
           />
         ) : (
@@ -253,7 +250,7 @@ function ProductRow({ item, allProductNames }: { item: ProductItem; allProductNa
   );
 }
 
-export function DuplicatesClient({ groups, allProductNames }: { groups: Group[]; allProductNames: string[] }) {
+export function DuplicatesClient({ groups, allProducts }: { groups: Group[]; allProductNames: string[]; allProducts: MergeTarget[] }) {
   if (groups.length === 0) {
     return <p className="rounded-card border border-dashed border-surface-200 bg-white p-10 text-center text-surface-400">Koi duplicate naam nahi mila.</p>;
   }
@@ -262,9 +259,9 @@ export function DuplicatesClient({ groups, allProductNames }: { groups: Group[];
     <div className="space-y-4">
       {groups.map((g) => (
         <div key={g.norm} className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-surface-400">{g.items.length} products isi naam ke</p>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-surface-400">{g.items.length > 1 ? `${g.items.length} products isi naam / packing ke` : "Selected product — review / remove"}</p>
           {g.items.map((item) => (
-            <ProductRow key={item.id} item={item} allProductNames={allProductNames} />
+            <ProductRow key={item.id} item={item} allProducts={allProducts} />
           ))}
         </div>
       ))}

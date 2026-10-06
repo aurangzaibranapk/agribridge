@@ -124,11 +124,14 @@ async function executeMerge(
 ): Promise<{ totalQty: number; error?: string }> {
   // LIVE stock -- snapshot par nahi, kyunke request/preview aur asal
   // hilane ke beech ginti/bikri ho sakti hai.
-  const { data: sourceStock } = await service
+  const { data: sourceStock, error: stockError } = await service
     .from("inventory")
     .select("id, warehouse_id, quantity_on_hand")
-    .eq("product_id", sourceProductId)
-    .gt("quantity_on_hand", 0);
+    .eq("product_id", sourceProductId);
+  if (stockError) return { totalQty: 0, error: stockError.message };
+  if ((sourceStock ?? []).some((row) => Number(row.quantity_on_hand) < 0)) {
+    return { totalQty: 0, error: "Negative stock hai. Pehle Ledger mein ghalat entry reverse / correct karein; phir merge karein." };
+  }
 
   let totalQty = 0;
   for (const row of sourceStock ?? []) {
@@ -237,20 +240,18 @@ export async function mergeProductDirect(_prev: ActionState, formData: FormData)
   if (!canApprove || !userId) return { error: "Ye kaam sirf admin/owner kar sakte hain." };
 
   const sourceProductId = String(formData.get("source_product_id") ?? "");
-  const targetName = String(formData.get("target_name") ?? "").trim();
-  if (!sourceProductId) return { error: "Product saaf nahi." };
-  if (targetName.length < 2) return { error: "Doosra naam likhein." };
+  const targetProductId = String(formData.get("target_product_id") ?? "");
+  if (!sourceProductId || !targetProductId) return { error: "Sahi product select karein." };
+  if (sourceProductId === targetProductId) return { error: "Isi product mein merge nahi ho sakta." };
 
-  const { data: target } = await service
+  const { data: target, error: targetError } = await service
     .from("products")
     .select("id, name")
-    .ilike("name", targetName)
+    .eq("id", targetProductId)
     .eq("is_deleted", false)
-    .neq("id", sourceProductId)
     .maybeSingle();
-  if (!target) {
-    return { error: `"${targetName}" naam ka product nahi mila -- naam bilkul sahi likhein.` };
-  }
+  if (targetError) return { error: targetError.message };
+  if (!target) return { error: "Selected product nahi mila ya hata diya gaya hai." };
 
   const { totalQty, error } = await executeMerge(service, sourceProductId, target.id, userId, sourceProductId);
   if (error) return { error };
@@ -258,6 +259,7 @@ export async function mergeProductDirect(_prev: ActionState, formData: FormData)
   revalidatePath("/admin/products/duplicates");
   revalidatePath("/admin/products");
   revalidatePath("/admin/stock-count");
+  revalidatePath("/admin/inventory");
   return {
     success: true,
     message:

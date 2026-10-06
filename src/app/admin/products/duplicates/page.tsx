@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
  * Malik (13 September): ek hi cheez 4/4 dafa add ho gayi hai, us ka
  * draft chahiye taake naam set kar sakein ya duplicate khatam kar sakein.
  */
-export default async function DuplicateProductsPage() {
+export default async function DuplicateProductsPage({ searchParams }: { searchParams: { product?: string } }) {
   const supabase = createClient();
   const lang = getLanguageFromCookies("rm");
   const {
@@ -31,7 +31,7 @@ export default async function DuplicateProductsPage() {
     );
   }
 
-  const [{ data: products }, { data: inventoryRows }, { data: mergeRequests }] = await Promise.all([
+  const [{ data: products, error: productsError }, { data: inventoryRows, error: inventoryError }, { data: mergeRequests }] = await Promise.all([
     supabase
       .from("products")
       .select("id, name, pack_size, purchase_price, selling_price, sale_rate_pending, trade_rate_pending, categories(name)")
@@ -46,6 +46,10 @@ export default async function DuplicateProductsPage() {
       .eq("status", "pending")
       .order("created_at", { ascending: false }),
   ]);
+
+  if (productsError || inventoryError) {
+    return <p className="p-6 text-red-600">Products / stock load nahi hua: {productsError?.message ?? inventoryError?.message}. Dobara try karein.</p>;
+  }
 
   const pendingMerges = (mergeRequests ?? []).map((r: any) => {
     const source = Array.isArray(r.source) ? r.source[0] : r.source;
@@ -119,6 +123,11 @@ export default async function DuplicateProductsPage() {
     .map(([norm, items]) => ({ norm, items }))
     .sort((a, b) => b.items.length - a.items.length);
 
+  const selectedGroup = Array.from(groups.entries()).find(([, items]) => items.some((item) => item.id === searchParams.product));
+  const reviewGroups = selectedGroup
+    ? [{ norm: selectedGroup[0], items: selectedGroup[1] }, ...duplicateGroups.filter((g) => g.norm !== selectedGroup[0])]
+    : duplicateGroups;
+
   const totalDuplicateProducts = duplicateGroups.reduce((sum, g) => sum + g.items.length, 0);
 
   return (
@@ -129,7 +138,9 @@ export default async function DuplicateProductsPage() {
       />
       <ProductSetupTabs current="duplicates" lang={lang} />
       <MergeRequestsClient requests={pendingMerges} allProductNames={(products ?? []).map((p: any) => p.name)} />
-      <DuplicatesClient groups={duplicateGroups} allProductNames={(products ?? []).map((p: any) => p.name)} />
+      {searchParams.product && !selectedGroup && <p className="mb-4 text-amber-700">Selected product nahi mila ya pehle hi hata diya gaya hai.</p>}
+      {selectedGroup && <p className="mb-4 text-sm text-surface-600">Inventory se select kiya hua product neeche hai. Ek product ke alag godam / batches duplicate products nahi hote. Stock ho to sahi product mein merge karein; ghalat stock entry ko Ledger se reverse karein.</p>}
+      <DuplicatesClient groups={reviewGroups} allProductNames={(products ?? []).map((p: any) => p.name)} allProducts={(products ?? []).map((p: any) => ({ id: p.id, name: p.name, pack_size: p.pack_size }))} />
     </div>
   );
 }
