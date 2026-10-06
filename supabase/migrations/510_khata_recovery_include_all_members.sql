@@ -4,7 +4,7 @@
 create or replace function public.fn_recovery_outstanding(p_search text default null)
 returns table (
   party_type text, party_id uuid, party_name text, phone text, email text,
-  outstanding numeric, last_activity date
+  cnic text, outstanding numeric, last_activity date
 )
 language plpgsql stable security definer set search_path = public as $$
 begin
@@ -26,18 +26,18 @@ begin
     group by l.party_type,l.party_id
   ), members as (
     select 'customer'::text party_type, c.id party_id, c.name party_name,
-           c.phone_number phone, c.email
+           c.phone_number phone, c.email, c.cnic
     from customers c
     where coalesce(c.is_deleted,false)=false
     union all
-    select 'dealer'::text, d.id, d.business_name, d.phone_number, null::text
+    select 'dealer'::text, d.id, d.business_name, d.phone_number, null::text, null::text
     from dealers d
     union all
-    select 'supplier'::text, s.id, s.name, s.phone_number, null::text
+    select 'supplier'::text, s.id, s.name, s.phone_number, null::text, null::text
     from suppliers s
     where s.is_active = true
   ), combined as (
-    select m.party_type,m.party_id,m.party_name,m.phone,m.email,
+    select m.party_type,m.party_id,m.party_name,m.phone,m.email,m.cnic,
            case
              when m.party_type='customer' and exists (
                select 1 from customers c where c.id=m.party_id and c.farmer_id is not null
@@ -53,15 +53,17 @@ begin
     from members m
     left join gl_balances b using(party_type,party_id)
     union all
-    select 'farmer'::text, fc.farmer_id, coalesce(fc.full_name,'Farmer'), fc.phone, fc.email,
+    select 'farmer'::text, fc.farmer_id, coalesce(fc.full_name,'Farmer'), fc.phone, fc.email, f.cnic,
            greatest(coalesce(fc.total_baqi,0),0), fc.last_activity
     from v_farmer_combined_balance fc
+    join farmers f on f.id=fc.farmer_id
   )
-  select c.party_type,c.party_id,c.party_name,c.phone,c.email,c.outstanding,c.last_activity
+  select c.party_type,c.party_id,c.party_name,c.phone,c.email,c.cnic,c.outstanding,c.last_activity
   from combined c
   where p_search is null
      or c.party_name ilike '%'||p_search||'%'
      or coalesce(c.phone,'') ilike '%'||p_search||'%'
+     or coalesce(c.cnic,'') ilike '%'||p_search||'%'
   order by c.outstanding desc, c.party_name;
 end;
 $$;
