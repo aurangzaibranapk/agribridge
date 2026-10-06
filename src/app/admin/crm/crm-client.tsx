@@ -202,7 +202,7 @@ export function CrmClient({
                       nahi paata tha: "ye kab bana, aur is ne kab kya
                       diya?" */}
                   <td className="px-4 py-3 text-right">
-                    <Link href={`/admin/crm/${c.id}/statement`} className="underline-offset-2 hover:underline">
+                    <Link href={`/admin/khata/${c.id}/statement`} className="underline-offset-2 hover:underline">
                       <Badge tone={balanceTone(c.current_balance)}>
                         {partyBalanceLabel(c.current_balance)}: Rs {partyBalanceAmount(c.current_balance).toLocaleString()}
                       </Badge>
@@ -220,7 +220,7 @@ export function CrmClient({
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <Link
-                        href={`/admin/crm/${c.id}/statement`}
+                        href={`/admin/khata/${c.id}/statement`}
                         className="text-xs font-medium text-brand-700 underline-offset-2 hover:underline dark:text-brand-300"
                       >
                         Khata
