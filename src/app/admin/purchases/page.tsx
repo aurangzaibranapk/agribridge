@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
@@ -29,6 +30,7 @@ const REVIEW_KIND_KEY: Record<string, TranslationKey> = {
 };
 export default async function AdminPurchasesPage() {
   const supabase = createClient();
+  const service = createServiceClient();
   const lang = getLanguageFromCookies("rm");
 
   const {
@@ -48,7 +50,7 @@ export default async function AdminPurchasesPage() {
   const staffBranchRel: any = (profile as any)?.branches;
   const staffBranchName = Array.isArray(staffBranchRel) ? staffBranchRel[0]?.name : staffBranchRel?.name;
 
-  const [{ data: purchases }, { data: suppliers }, { data: products }, { data: branches }] = await Promise.all([
+  const [{ data: purchases }, { data: suppliers }, { data: products }, { data: branches }, { data: accounts }] = await Promise.all([
     supabase
       .from("purchases")
       .select(
@@ -65,6 +67,7 @@ export default async function AdminPurchasesPage() {
     isAdminLevel
       ? supabase.from("branches").select("id, name").eq("is_active", true).order("name")
       : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    service.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("account_type").order("name"),
   ]);
 
   // Kaam kis ke haath mein gaya -- isi safhe par sabz patti ke liye
@@ -197,6 +200,7 @@ export default async function AdminPurchasesPage() {
           products={products ?? []}
           isAdminLevel={isAdminLevel}
           branches={branches ?? []}
+          accounts={(accounts ?? []).map((account) => ({ ...account, account_type: String(account.account_type) }))}
           staffBranchName={staffBranchName ?? null}
           uiMode={await getUiMode()}
         />

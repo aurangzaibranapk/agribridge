@@ -147,6 +147,7 @@ export function PurchaseForm({
   products,
   isAdminLevel,
   branches,
+  accounts,
   staffBranchName,
   uiMode = "advanced",
 }: {
@@ -154,6 +155,7 @@ export function PurchaseForm({
   products: Product[];
   isAdminLevel: boolean;
   branches: { id: string; name: string }[];
+  accounts: { id: string; name: string; account_type: string }[];
   staffBranchName: string | null;
   /** Simple = sirf product, tadad, rate, adaigi; batch/expiry/notes chhupe (E). */
   uiMode?: "simple" | "advanced";
@@ -407,6 +409,36 @@ export function PurchaseForm({
             if (v !== "credit") setSlips((prev) => (prev.length === 0 ? [{ ...emptySlip }] : prev));
           }}
         />
+
+        {terms !== "credit" && (
+          <div className="grid gap-3 rounded-lg border border-surface-200 p-3 dark:border-surface-800 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="purchase-payment-method">Payment Method</Label>
+              <Select id="purchase-payment-method" name="payment_method" defaultValue="cash" required>
+                <option value="cash">Cash</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="cheque">Cheque</option>
+                <option value="easypaisa">Easypaisa</option>
+                <option value="jazzcash">JazzCash</option>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="purchase-finance-account">Paid From Account</Label>
+              <Select
+                id="purchase-finance-account"
+                name="finance_account_id"
+                defaultValue={accounts.find((account) => account.account_type === "cash")?.id ?? accounts[0]?.id ?? ""}
+                required
+              >
+                <option value="">Select account</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>{account.name}</option>
+                ))}
+              </Select>
+              {accounts.length === 0 && <p className="mt-1 text-xs text-rose-600">Pehle Finance Accounts mein active account banayein.</p>}
+            </div>
+          </div>
+        )}
 
         {/* Adaigi ki slips (436): har slip par raqam + tareekh + tasveer. */}
         {terms !== "credit" && (
