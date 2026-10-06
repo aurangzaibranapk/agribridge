@@ -3961,3 +3961,63 @@ git pull origin feature/supplier-bill-final-v2 && npm run build > build.log 2>&1
 ```
 ls -l .next/BUILD_ID && rm -f deploy.tar.gz && tar --exclude='.next/cache' -czf deploy.tar.gz .next && ls -lh deploy.tar.gz
 ```
+
+---
+
+## 6 October — database.types.ts corruption fix + migrations 500-510 na Testing na Live par mili
+
+### Kya mila
+
+`src/lib/types/database.types.ts` corrupt ho gayi thi (commit `88920230`,
+4 October) — token-truncation ka garbage text file ke beech mein phans
+gaya tha, jis se 5096 tsc errors aa rahe thे. `acb4e155` (25 September,
+aakhri saaf version) se restore kiya, phir 25 September ke baad likhi
+gayi migrations ke mutabiq columns/tables wapas jorे.
+
+Ye kaam karte waqt, live PostgREST schema introspection (service role
+key se `/rest/v1/` ka OpenAPI spec) se ye pata chala ke neeche di gayi
+migrations na Testing (`hwaiuwxqldxsoukkfefn`) na Live par chali hain —
+sirf repo mein likhi hui hain, kabhi apply nahi hui:
+
+| Migration file | Kya banata hai | Testing | Live |
+|---|---|---|---|
+| `500_saas_tenant_foundation.sql` + `502_tenant_owner_settings.sql` | `organizations.brand_name/custom_domain/logo_url/primary_color/subscription_*` | **BAQI** | **BAQI** |
+| `501_organization_signup_requests.sql` | poora `organization_signup_requests` table | **BAQI** | **BAQI** |
+| `507_stock_count_command_log.sql` | poora `stock_count_command_logs` table | **BAQI** | **BAQI** |
+| `509_product_costing_average_override_v2.sql` | `product_costing_overrides` table + `v_product_costing_with_override` view | **BAQI** | **BAQI** |
+| `20261005080000_fleet_route_lifecycle.sql` | `fuel_logs.route_status/work_description/voice_note/petrol_rate/fuel_receipt_url/opening_reading_source/closing_reading_source/closed_at` | **BAQI** | **BAQI** |
+| `20261005090000_grain_sale_payment_reclassification.sql` (+ `20261005183849_...`) | `grain_procurement_entries.reclassified_as_sale_id`, `grain_procurement_payments.reclassified_as_sale_payment_id` | **BAQI** | **BAQI** |
+
+In sab ke application code (`src/actions/organization-signup.ts`,
+`src/actions/product-costing.ts`, `src/actions/stock-count.ts`,
+`src/actions/stock-count-schedule.ts`, `src/actions/grain-procurement.ts`,
+`src/app/admin/platform/requests/page.tsx`,
+`src/app/admin/finance/costing/page.tsx`, `src/app/admin/milk-collection/fleet/*`)
+pehle se likha hua hai aur in migrations ko maan kar chalta hai —
+yani ye features "code complete" hain magar apne feature-checklist ke
+"Testing (rollback test testing DB par)" qadam se pehle hi hain. Jab
+tak ye migrations Testing par na chalen, in features ko asal mein
+chalane se Postgres "column/relation does not exist" error aayega.
+
+`database.types.ts` mein maine ye columns/tables un migration files
+ke mutabiq hi rakhe hain (jo already-likhe application code se match
+karte hain) — DB ki abhi ki asal halat se nahi. Jaise hi migrations
+Testing par chalengi, types already sahi hongi.
+
+**Maine koi migration nahi chalai** — `SUPABASE_DB_URL` se seedha
+connect karne ki koshish ki (CLI `migration list` aur Node `pg` client
+dono se) taake kam az kam yaqeen kiya ja sake, magar password
+authentication fail hoti hai (`password authentication failed for
+user "postgres"`). Ye ek alag, maujooda masla hai — secret shayad purana
+ya ghalat hai. REST API (service role key se) kaam karta hai, sirf
+seedha Postgres connection nahi.
+
+### Agle qadam (Boss ke faisle se)
+
+1. `SUPABASE_DB_URL` secret theek karna (ya naya connection string
+   dena) taake migrations CLI/psql se chal sakein.
+2. Upar wali 6 migrations **Testing par ek ek karke** chalana aur
+   test karna (feature checklist ka "Testing" qadam) — tab tak ye
+   chhe features istemal na karayen.
+3. Jo pass ho, usi tarteeb mein Live par (P0 rule: backup → ginti →
+   migration → ginti dobara → build → smoke test).
