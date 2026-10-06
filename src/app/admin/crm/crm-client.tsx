@@ -68,11 +68,13 @@ export function CrmClient({
   suppliers,
   companies,
   dealers,
+  customerLedgerMode = false,
 }: {
   customers: Customer[];
   suppliers: Supplier[];
   companies: Company[];
   dealers: Dealer[];
+  customerLedgerMode?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<"customers" | "suppliers" | "companies" | "dealers">("customers");
   const lang = useLang();
@@ -132,6 +134,53 @@ export function CrmClient({
       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${cls}`}>
         {s.score != null ? s.score : ""} {s.band.charAt(0).toUpperCase() + s.band.slice(1)}
       </span>
+    );
+  }
+
+  if (customerLedgerMode) {
+    return (
+      <div>
+        <div className="mb-3 relative max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+          <Input
+            value={customerSearch}
+            onChange={(e) => setCustomerSearch(e.target.value)}
+            placeholder="Naam, mobile ya CNIC se dhoondein"
+            className="pl-9"
+          />
+        </div>
+        <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_name", lang)}</th>
+                <th className="px-4 py-3 font-medium text-surface-500">{t("c_phone", lang)}</th>
+                <th className="px-4 py-3 text-right font-medium text-surface-500">Khata status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredCustomers.map((c) => (
+                <tr key={c.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
+                  <td className="px-4 py-3 font-medium text-surface-800 dark:text-surface-200">{c.name}</td>
+                  <td className="px-4 py-3 text-surface-600 dark:text-surface-400">{c.phone_number}</td>
+                  <td className="px-4 py-3 text-right">
+                    <Link href={"/admin/khata/" + c.id + "/statement"} className="underline-offset-2 hover:underline">
+                      <Badge tone={balanceTone(c.current_balance)}>
+                        {partyBalanceLabel(c.current_balance)}: Rs {partyBalanceAmount(c.current_balance).toLocaleString()}
+                      </Badge>
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+              {filteredCustomers.length === 0 && (
+                <tr><td colSpan={3} className="px-4 py-10 text-center text-surface-400">
+                  {customerSearch ? "Is naam/number/CNIC se koi customer nahi mila." : t("cr_no_customers", lang)}
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     );
   }
 
