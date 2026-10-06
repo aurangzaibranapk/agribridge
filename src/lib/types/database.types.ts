@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 282691)
-... 82188 bytes omitted ...
-
 export type Json =
   | string
   | number
@@ -10314,12 +10311,22 @@ export type Database = {
       }
       fuel_logs: {
         Row: {
+          approval_comment: string | null
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
+          closed_at: string | null
           closing_km: number | null
+          closing_meter_photo_url: string | null
+          closing_reading_source: string
           created_at: string
           created_by: string | null
+          expected_fuel_liters: number | null
           fuel_cost: number | null
           fuel_cost_per_liter_milk: number | null
           fuel_liters_purchased: number | null
+          fuel_receipt_url: string | null
+          fuel_variance_liters: number | null
           id: string
           is_anomaly: boolean
           km_per_liter: number | null
@@ -10329,16 +10336,33 @@ export type Database = {
           milk_volume_collected: number | null
           notes: string | null
           opening_km: number
+          opening_meter_photo_url: string | null
+          opening_reading_source: string
+          petrol_rate: number | null
+          petrol_rate_per_liter: number | null
           route_name: string | null
+          route_status: string
           vehicle_id: string
+          voice_note: string | null
+          work_description: string | null
         }
         Insert: {
+          approval_comment?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          closed_at?: string | null
           closing_km?: number | null
+          closing_meter_photo_url?: string | null
+          closing_reading_source?: string
           created_at?: string
           created_by?: string | null
+          expected_fuel_liters?: number | null
           fuel_cost?: number | null
           fuel_cost_per_liter_milk?: number | null
           fuel_liters_purchased?: number | null
+          fuel_receipt_url?: string | null
+          fuel_variance_liters?: number | null
           id?: string
           is_anomaly?: boolean
           km_per_liter?: number | null
@@ -10348,16 +10372,33 @@ export type Database = {
           milk_volume_collected?: number | null
           notes?: string | null
           opening_km: number
+          opening_meter_photo_url?: string | null
+          opening_reading_source?: string
+          petrol_rate?: number | null
+          petrol_rate_per_liter?: number | null
           route_name?: string | null
+          route_status?: string
           vehicle_id: string
+          voice_note?: string | null
+          work_description?: string | null
         }
         Update: {
+          approval_comment?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          closed_at?: string | null
           closing_km?: number | null
+          closing_meter_photo_url?: string | null
+          closing_reading_source?: string
           created_at?: string
           created_by?: string | null
+          expected_fuel_liters?: number | null
           fuel_cost?: number | null
           fuel_cost_per_liter_milk?: number | null
           fuel_liters_purchased?: number | null
+          fuel_receipt_url?: string | null
+          fuel_variance_liters?: number | null
           id?: string
           is_anomaly?: boolean
           km_per_liter?: number | null
@@ -10367,10 +10408,31 @@ export type Database = {
           milk_volume_collected?: number | null
           notes?: string | null
           opening_km?: number
+          opening_meter_photo_url?: string | null
+          opening_reading_source?: string
+          petrol_rate?: number | null
+          petrol_rate_per_liter?: number | null
           route_name?: string | null
+          route_status?: string
           vehicle_id?: string
+          voice_note?: string | null
+          work_description?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fuel_logs_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_logs_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "fuel_logs_created_by_fkey"
             columns: ["created_by"]
@@ -10459,13 +10521,21 @@ export type Database = {
       }
       generator_logs: {
         Row: {
+          approval_comment: string | null
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           branch_id: string | null
           closing_hours: number | null
+          closing_meter_photo_url: string | null
           created_at: string
           created_by: string | null
           diesel_cost: number | null
           diesel_liters_purchased: number | null
+          diesel_rate_per_liter: number | null
+          diesel_variance_liters: number | null
           electricity_units: number | null
+          expected_diesel_liters: number | null
           hours_run: number | null
           id: string
           is_anomaly: boolean
@@ -10475,15 +10545,24 @@ export type Database = {
           milk_volume_chilled: number | null
           notes: string | null
           opening_hours: number
+          opening_meter_photo_url: string | null
         }
         Insert: {
+          approval_comment?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           branch_id?: string | null
           closing_hours?: number | null
+          closing_meter_photo_url?: string | null
           created_at?: string
           created_by?: string | null
           diesel_cost?: number | null
           diesel_liters_purchased?: number | null
+          diesel_rate_per_liter?: number | null
+          diesel_variance_liters?: number | null
           electricity_units?: number | null
+          expected_diesel_liters?: number | null
           hours_run?: number | null
           id?: string
           is_anomaly?: boolean
@@ -10493,15 +10572,24 @@ export type Database = {
           milk_volume_chilled?: number | null
           notes?: string | null
           opening_hours: number
+          opening_meter_photo_url?: string | null
         }
         Update: {
+          approval_comment?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           branch_id?: string | null
           closing_hours?: number | null
+          closing_meter_photo_url?: string | null
           created_at?: string
           created_by?: string | null
           diesel_cost?: number | null
           diesel_liters_purchased?: number | null
+          diesel_rate_per_liter?: number | null
+          diesel_variance_liters?: number | null
           electricity_units?: number | null
+          expected_diesel_liters?: number | null
           hours_run?: number | null
           id?: string
           is_anomaly?: boolean
@@ -10511,8 +10599,23 @@ export type Database = {
           milk_volume_chilled?: number | null
           notes?: string | null
           opening_hours?: number
+          opening_meter_photo_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "generator_logs_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generator_logs_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
           {
             foreignKeyName: "generator_logs_branch_id_fkey"
             columns: ["branch_id"]
@@ -10755,6 +10858,7 @@ export type Database = {
           party_id: string | null
           quality_grade: string | null
           rate_per_kg: number
+          reclassified_as_sale_id: string | null
           total_amount: number
           warehouse_id: string | null
           weight_kg: number
@@ -10777,6 +10881,7 @@ export type Database = {
           party_id?: string | null
           quality_grade?: string | null
           rate_per_kg: number
+          reclassified_as_sale_id?: string | null
           total_amount: number
           warehouse_id?: string | null
           weight_kg: number
@@ -10799,6 +10904,7 @@ export type Database = {
           party_id?: string | null
           quality_grade?: string | null
           rate_per_kg?: number
+          reclassified_as_sale_id?: string | null
           total_amount?: number
           warehouse_id?: string | null
           weight_kg?: number
@@ -10917,6 +11023,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "grain_procurement_entries_reclassified_as_sale_id_fkey"
+            columns: ["reclassified_as_sale_id"]
+            isOneToOne: false
+            referencedRelation: "grain_sales"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "grain_procurement_entries_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
@@ -10966,6 +11079,7 @@ export type Database = {
           payment_date: string
           payment_method: string | null
           receipt_photo_url: string | null
+          reclassified_as_sale_payment_id: string | null
         }
         Insert: {
           amount: number
@@ -10986,6 +11100,7 @@ export type Database = {
           payment_date?: string
           payment_method?: string | null
           receipt_photo_url?: string | null
+          reclassified_as_sale_payment_id?: string | null
         }
         Update: {
           amount?: number
@@ -11006,6 +11121,7 @@ export type Database = {
           payment_date?: string
           payment_method?: string | null
           receipt_photo_url?: string | null
+          reclassified_as_sale_payment_id?: string | null
         }
         Relationships: [
           {
@@ -11146,6 +11262,13 @@ export type Database = {
             columns: ["party_id"]
             isOneToOne: false
             referencedRelation: "grain_parties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grain_procurement_payments_reclassified_as_sale_payment_fkey"
+            columns: ["reclassified_as_sale_payment_id"]
+            isOneToOne: false
+            referencedRelation: "grain_sale_payments"
             referencedColumns: ["id"]
           },
         ]
@@ -12429,7 +12552,9945 @@ export type Database = {
             columns: ["application_id"]
             isOneToOne: false
             referencedRelation: "job_applications"
- …62152 tokens truncated…        referencedRelation: "v_purchase_discrepancies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_offers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_offers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+      job_vacancies: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          description: string | null
+          designation: string | null
+          id: string
+          is_open: boolean
+          requirements: string | null
+          seats_filled: number | null
+          seats_total: number | null
+          title: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          description?: string | null
+          designation?: string | null
+          id?: string
+          is_open?: boolean
+          requirements?: string | null
+          seats_filled?: number | null
+          seats_total?: number | null
+          title: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          description?: string | null
+          designation?: string | null
+          id?: string
+          is_open?: boolean
+          requirements?: string | null
+          seats_filled?: number | null
+          seats_total?: number | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_vacancies_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_vacancies_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+        ]
+      }
+      journal_entries: {
+        Row: {
+          backdate_reason: string | null
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          entry_date: string
+          entry_number: string
+          id: string
+          is_backdated: boolean
+          is_reversal: boolean
+          reversal_of: string | null
+          reversal_reason: string | null
+          source_id: string | null
+          source_module: string
+        }
+        Insert: {
+          backdate_reason?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          entry_date?: string
+          entry_number: string
+          id?: string
+          is_backdated?: boolean
+          is_reversal?: boolean
+          reversal_of?: string | null
+          reversal_reason?: string | null
+          source_id?: string | null
+          source_module: string
+        }
+        Update: {
+          backdate_reason?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          entry_date?: string
+          entry_number?: string
+          id?: string
+          is_backdated?: boolean
+          is_reversal?: boolean
+          reversal_of?: string | null
+          reversal_reason?: string | null
+          source_id?: string | null
+          source_module?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "journal_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "journal_entries_reversal_of_fkey"
+            columns: ["reversal_of"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_reversal_of_fkey"
+            columns: ["reversal_of"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entries_reversal_of_fkey"
+            columns: ["reversal_of"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["entry_id"]
+          },
+        ]
+      }
+      journal_entry_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      journal_entry_sources: {
+        Row: {
+          entry_id: string
+          source_row_id: string
+          source_table: string
+        }
+        Insert: {
+          entry_id: string
+          source_row_id: string
+          source_table: string
+        }
+        Update: {
+          entry_id?: string
+          source_row_id?: string
+          source_table?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entry_sources_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_sources_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_sources_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["entry_id"]
+          },
+        ]
+      }
+      journal_lines: {
+        Row: {
+          account_code: string
+          credit: number
+          debit: number
+          entry_id: string
+          id: string
+          line_order: number
+          memo: string | null
+          party_id: string | null
+          party_type: string | null
+        }
+        Insert: {
+          account_code: string
+          credit?: number
+          debit?: number
+          entry_id: string
+          id?: string
+          line_order?: number
+          memo?: string | null
+          party_id?: string | null
+          party_type?: string | null
+        }
+        Update: {
+          account_code?: string
+          credit?: number
+          debit?: number
+          entry_id?: string
+          id?: string
+          line_order?: number
+          memo?: string | null
+          party_id?: string | null
+          party_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_lines_account_code_fkey"
+            columns: ["account_code"]
+            isOneToOne: false
+            referencedRelation: "gl_accounts"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "journal_lines_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_lines_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["entry_id"]
+          },
+        ]
+      }
+      khata_accounts: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          credit_limit: number | null
+          crm_customer_id: string | null
+          current_balance: number
+          customer_id: string | null
+          dealer_id: string | null
+          id: string
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          credit_limit?: number | null
+          crm_customer_id?: string | null
+          current_balance?: number
+          customer_id?: string | null
+          dealer_id?: string | null
+          id?: string
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          credit_limit?: number | null
+          crm_customer_id?: string | null
+          current_balance?: number
+          customer_id?: string | null
+          dealer_id?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "khata_accounts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "khata_accounts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "khata_accounts_crm_customer_id_fkey"
+            columns: ["crm_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "khata_accounts_crm_customer_id_fkey"
+            columns: ["crm_customer_id"]
+            isOneToOne: false
+            referencedRelation: "v_wholesale_shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "khata_accounts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "dealer_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "khata_accounts_dealer_id_fkey"
+            columns: ["dealer_id"]
+            isOneToOne: false
+            referencedRelation: "dealers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      khata_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          khata_account_id: string
+          note: string | null
+          reference_sale_id: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          khata_account_id: string
+          note?: string | null
+          reference_sale_id?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          khata_account_id?: string
+          note?: string | null
+          reference_sale_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "khata_transactions_khata_account_id_fkey"
+            columns: ["khata_account_id"]
+            isOneToOne: false
+            referencedRelation: "khata_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      labor_rates: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          labor_type: string
+          rate: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          labor_type: string
+          rate: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          labor_type?: string
+          rate?: number
+        }
+        Relationships: []
+      }
+      labour_work_entries: {
+        Row: {
+          advance_adjusted: number
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          entry_number: string
+          id: string
+          journal_entry_id: string | null
+          party_id: string
+          party_type: string
+          payable_added: number
+          quantity: number | null
+          rate: number | null
+          received_by_name: string | null
+          received_by_note: string | null
+          rejection_reason: string | null
+          shop_id: string | null
+          status: string
+          unit: string | null
+          work_date: string
+          work_detail: string
+        }
+        Insert: {
+          advance_adjusted?: number
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          entry_number: string
+          id?: string
+          journal_entry_id?: string | null
+          party_id: string
+          party_type: string
+          payable_added?: number
+          quantity?: number | null
+          rate?: number | null
+          received_by_name?: string | null
+          received_by_note?: string | null
+          rejection_reason?: string | null
+          shop_id?: string | null
+          status?: string
+          unit?: string | null
+          work_date?: string
+          work_detail: string
+        }
+        Update: {
+          advance_adjusted?: number
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          entry_number?: string
+          id?: string
+          journal_entry_id?: string | null
+          party_id?: string
+          party_type?: string
+          payable_added?: number
+          quantity?: number | null
+          rate?: number | null
+          received_by_name?: string | null
+          received_by_note?: string | null
+          rejection_reason?: string | null
+          shop_id?: string | null
+          status?: string
+          unit?: string | null
+          work_date?: string
+          work_detail?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "labour_work_entries_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "labour_work_entries_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["shop_id"]
+          },
+        ]
+      }
+      land_prep_rates: {
+        Row: {
+          activity_name: string
+          created_at: string
+          id: string
+          is_active: boolean
+          rate_per_acre: number
+        }
+        Insert: {
+          activity_name: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          rate_per_acre: number
+        }
+        Update: {
+          activity_name?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          rate_per_acre?: number
+        }
+        Relationships: []
+      }
+      leave_requests: {
+        Row: {
+          created_at: string
+          days: number | null
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          from_date: string
+          id: string
+          is_half_day: boolean
+          leave_type: string
+          manager_comment: string | null
+          manager_id: string | null
+          profile_id: string
+          reason: string
+          status: string
+          to_date: string
+        }
+        Insert: {
+          created_at?: string
+          days?: number | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          from_date: string
+          id?: string
+          is_half_day?: boolean
+          leave_type?: string
+          manager_comment?: string | null
+          manager_id?: string | null
+          profile_id: string
+          reason: string
+          status?: string
+          to_date: string
+        }
+        Update: {
+          created_at?: string
+          days?: number | null
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          from_date?: string
+          id?: string
+          is_half_day?: boolean
+          leave_type?: string
+          manager_comment?: string | null
+          manager_id?: string | null
+          profile_id?: string
+          reason?: string
+          status?: string
+          to_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "leave_requests_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "leave_requests_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      livestock_loans: {
+        Row: {
+          buffalo_count: number
+          cow_count: number
+          created_at: string
+          farmer_id: string
+          goat_count: number
+          id: string
+          loan_amount: number
+          notes: string | null
+          outstanding_amount: number | null
+          repayment_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          buffalo_count?: number
+          cow_count?: number
+          created_at?: string
+          farmer_id: string
+          goat_count?: number
+          id?: string
+          loan_amount: number
+          notes?: string | null
+          outstanding_amount?: number | null
+          repayment_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          buffalo_count?: number
+          cow_count?: number
+          created_at?: string
+          farmer_id?: string
+          goat_count?: number
+          id?: string
+          loan_amount?: number
+          notes?: string | null
+          outstanding_amount?: number | null
+          repayment_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "livestock_loans_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      load_accounts: {
+        Row: {
+          account_ref: string | null
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          finance_account_id: string | null
+          id: string
+          is_active: boolean
+          opened_on: string | null
+          opening_float: number | null
+          provider_id: string | null
+          tenant_key: string | null
+          title: string
+        }
+        Insert: {
+          account_ref?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          finance_account_id?: string | null
+          id?: string
+          is_active?: boolean
+          opened_on?: string | null
+          opening_float?: number | null
+          provider_id?: string | null
+          tenant_key?: string | null
+          title: string
+        }
+        Update: {
+          account_ref?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          finance_account_id?: string | null
+          id?: string
+          is_active?: boolean
+          opened_on?: string | null
+          opening_float?: number | null
+          provider_id?: string | null
+          tenant_key?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "load_accounts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_accounts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "load_accounts_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_accounts_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "load_accounts_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "load_accounts_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "load_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      load_commission_rules: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          from_date: string
+          id: string
+          is_active: boolean
+          kind: string
+          mode: string
+          note: string | null
+          provider_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          from_date?: string
+          id?: string
+          is_active?: boolean
+          kind: string
+          mode: string
+          note?: string | null
+          provider_id: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          from_date?: string
+          id?: string
+          is_active?: boolean
+          kind?: string
+          mode?: string
+          note?: string | null
+          provider_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "load_commission_rules_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "load_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      load_float_moves: {
+        Row: {
+          account_id: string
+          amount: number
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          finance_account_id: string | null
+          id: string
+          journal_entry_id: string | null
+          kind: string
+          reason: string | null
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          finance_account_id?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          kind: string
+          reason?: string | null
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          finance_account_id?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          kind?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "load_float_moves_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "load_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_float_moves_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_float_moves_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "load_float_moves_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "load_float_moves_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_float_moves_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_float_moves_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["entry_id"]
+          },
+        ]
+      }
+      load_providers: {
+        Row: {
+          bill_category: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          key: string
+          kind: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          bill_category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key: string
+          kind?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          bill_category?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key?: string
+          kind?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      load_reconciliations: {
+        Row: {
+          account_id: string
+          actual_closing: number | null
+          adjustments: number
+          approved_by: string | null
+          bill_principal: number
+          created_at: string
+          created_by: string | null
+          expected_closing: number
+          farq: number | null
+          float_added: number
+          id: string
+          journal_entry_id: string | null
+          load_principal: number
+          opening_float: number
+          reason: string | null
+          status: string
+          tareekh: string
+        }
+        Insert: {
+          account_id: string
+          actual_closing?: number | null
+          adjustments?: number
+          approved_by?: string | null
+          bill_principal?: number
+          created_at?: string
+          created_by?: string | null
+          expected_closing: number
+          farq?: number | null
+          float_added?: number
+          id?: string
+          journal_entry_id?: string | null
+          load_principal?: number
+          opening_float: number
+          reason?: string | null
+          status?: string
+          tareekh: string
+        }
+        Update: {
+          account_id?: string
+          actual_closing?: number | null
+          adjustments?: number
+          approved_by?: string | null
+          bill_principal?: number
+          created_at?: string
+          created_by?: string | null
+          expected_closing?: number
+          farq?: number | null
+          float_added?: number
+          id?: string
+          journal_entry_id?: string | null
+          load_principal?: number
+          opening_float?: number
+          reason?: string | null
+          status?: string
+          tareekh?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "load_reconciliations_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "load_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_reconciliations_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_reconciliations_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_reconciliations_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["entry_id"]
+          },
+        ]
+      }
+      load_transactions: {
+        Row: {
+          account_id: string
+          bill_category: string | null
+          branch_id: string | null
+          commission_confirmed: number | null
+          commission_expected: number | null
+          commission_status: string
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          customer_name: string | null
+          farmer_id: string | null
+          finance_account_id: string | null
+          float_settled: boolean
+          id: string
+          journal_entry_id: string | null
+          kind: string
+          payment_method: string
+          principal: number
+          provider_id: string
+          provider_tid: string | null
+          reference: string
+          reversal_of: string | null
+          service_charge: number | null
+          shop_id: string | null
+          status: string
+          txn_number: string
+        }
+        Insert: {
+          account_id: string
+          bill_category?: string | null
+          branch_id?: string | null
+          commission_confirmed?: number | null
+          commission_expected?: number | null
+          commission_status?: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          farmer_id?: string | null
+          finance_account_id?: string | null
+          float_settled?: boolean
+          id?: string
+          journal_entry_id?: string | null
+          kind: string
+          payment_method: string
+          principal: number
+          provider_id: string
+          provider_tid?: string | null
+          reference: string
+          reversal_of?: string | null
+          service_charge?: number | null
+          shop_id?: string | null
+          status?: string
+          txn_number: string
+        }
+        Update: {
+          account_id?: string
+          bill_category?: string | null
+          branch_id?: string | null
+          commission_confirmed?: number | null
+          commission_expected?: number | null
+          commission_status?: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          farmer_id?: string | null
+          finance_account_id?: string | null
+          float_settled?: boolean
+          id?: string
+          journal_entry_id?: string | null
+          kind?: string
+          payment_method?: string
+          principal?: number
+          provider_id?: string
+          provider_tid?: string | null
+          reference?: string
+          reversal_of?: string | null
+          service_charge?: number | null
+          status?: string
+          txn_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "load_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "load_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_transactions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_transactions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "v_wholesale_shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_transactions_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_transactions_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_transactions_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_transactions_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "load_transactions_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "load_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "load_transactions_reversal_of_fkey"
+            columns: ["reversal_of"]
+            isOneToOne: false
+            referencedRelation: "load_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      load_txn_counters: {
+        Row: {
+          kind: string
+          last_number: number
+          year: number
+        }
+        Insert: {
+          kind: string
+          last_number?: number
+          year: number
+        }
+        Update: {
+          kind?: string
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      loan_installments: {
+        Row: {
+          amount_due: number
+          amount_paid: number
+          created_at: string
+          created_by: string | null
+          due_date: string
+          id: string
+          loan_id: string
+          loan_type: string
+          organization_id: string | null
+          paid_at: string | null
+          seq: number
+        }
+        Insert: {
+          amount_due: number
+          amount_paid?: number
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          id?: string
+          loan_id: string
+          loan_type: string
+          organization_id?: string | null
+          paid_at?: string | null
+          seq: number
+        }
+        Update: {
+          amount_due?: number
+          amount_paid?: number
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          loan_id?: string
+          loan_type?: string
+          organization_id?: string | null
+          paid_at?: string | null
+          seq?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_installments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_installments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      loss_verifiers: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          profile_id: string
+          shop_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          profile_id: string
+          shop_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          profile_id?: string
+          shop_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loss_verifiers_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loss_verifiers_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "loss_verifiers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loss_verifiers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "loss_verifiers_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loss_verifiers_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["shop_id"]
+          },
+        ]
+      }
+      machinery_bill_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      machinery_bills: {
+        Row: {
+          actual_area: number
+          advance_adjusted: number
+          balance_payable: number
+          bill_date: string
+          bill_number: string
+          booking_id: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_reason: string | null
+          commission_amount: number
+          commission_percentage: number
+          created_at: string
+          created_by: string | null
+          diesel_deducted: number
+          discount_amount: number
+          discount_reason: string | null
+          due_date: string | null
+          gross_amount: number
+          id: string
+          kutra_amount: number | null
+          kutra_area: number | null
+          kutra_rate: number | null
+          previous_payment: number
+          rate_amount: number
+          sabit_amount: number | null
+          sabit_area: number | null
+          sabit_rate: number | null
+          terms_days: number | null
+          vendor_payable: number
+        }
+        Insert: {
+          actual_area: number
+          advance_adjusted?: number
+          balance_payable: number
+          bill_date?: string
+          bill_number: string
+          booking_id: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_reason?: string | null
+          commission_amount?: number
+          commission_percentage?: number
+          created_at?: string
+          created_by?: string | null
+          diesel_deducted?: number
+          discount_amount?: number
+          discount_reason?: string | null
+          due_date?: string | null
+          gross_amount: number
+          id?: string
+          kutra_amount?: number | null
+          kutra_area?: number | null
+          kutra_rate?: number | null
+          previous_payment?: number
+          rate_amount: number
+          sabit_amount?: number | null
+          sabit_area?: number | null
+          sabit_rate?: number | null
+          terms_days?: number | null
+          vendor_payable?: number
+        }
+        Update: {
+          actual_area?: number
+          advance_adjusted?: number
+          balance_payable?: number
+          bill_date?: string
+          bill_number?: string
+          booking_id?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_reason?: string | null
+          commission_amount?: number
+          commission_percentage?: number
+          created_at?: string
+          created_by?: string | null
+          diesel_deducted?: number
+          discount_amount?: number
+          discount_reason?: string | null
+          due_date?: string | null
+          gross_amount?: number
+          id?: string
+          kutra_amount?: number | null
+          kutra_area?: number | null
+          kutra_rate?: number | null
+          previous_payment?: number
+          rate_amount?: number
+          sabit_amount?: number | null
+          sabit_area?: number | null
+          sabit_rate?: number | null
+          terms_days?: number | null
+          vendor_payable?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_day_bookings"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_harvest_split"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_booking"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_unfinished"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_booking_settlement"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_commission"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_week"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bills_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_work_efficiency"
+            referencedColumns: ["booking_id"]
+          },
+        ]
+      }
+      machinery_booking_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      machinery_booking_drafts: {
+        Row: {
+          payload: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          payload: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          payload?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      machinery_booking_events: {
+        Row: {
+          actor_id: string | null
+          booking_id: string
+          created_at: string
+          event_type: string
+          evidence_url: string | null
+          from_status: string | null
+          id: string
+          note: string | null
+          to_status: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          booking_id: string
+          created_at?: string
+          event_type: string
+          evidence_url?: string | null
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          to_status?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          booking_id?: string
+          created_at?: string
+          event_type?: string
+          evidence_url?: string | null
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_day_bookings"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_harvest_split"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_booking"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_unfinished"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_booking_settlement"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_commission"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_week"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_booking_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_work_efficiency"
+            referencedColumns: ["booking_id"]
+          },
+        ]
+      }
+      machinery_bookings: {
+        Row: {
+          acres: number | null
+          advance_declined_at: string | null
+          advance_declined_by: string | null
+          amount_paid_to_vendor: number
+          amount_received_from_farmer: number
+          booking_date: string
+          booking_number: string
+          cancellation_party: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          capacity_override_by: string | null
+          capacity_override_reason: string | null
+          closed_at: string | null
+          commission_amount: number
+          commission_percentage: number
+          completed_at: string | null
+          confirmation_override_by: string | null
+          confirmation_override_evidence_url: string | null
+          confirmation_override_reason: string | null
+          created_at: string
+          created_by: string | null
+          crop_type: string | null
+          days: number | null
+          diesel_amount: number | null
+          diesel_none_at: string | null
+          diesel_none_by: string | null
+          diesel_rate: number | null
+          estimated_rate: number | null
+          expected_harvest_date: string | null
+          farm_id: string | null
+          farmer_confirmation_channel: string | null
+          farmer_confirmation_response: string | null
+          farmer_confirmed_at: string | null
+          farmer_id: string
+          field_ready: string | null
+          final_rate: number | null
+          harvest_area: number | null
+          harvest_area_acres: number | null
+          harvest_area_kanal: number | null
+          harvest_ready: string | null
+          harvest_type: string | null
+          hours: number | null
+          id: string
+          kutra_area: number | null
+          kutra_rate: number | null
+          location_address: string | null
+          location_lat: number | null
+          location_lng: number | null
+          machine_id: string | null
+          machine_type_requested: string | null
+          notes: string | null
+          parent_booking_id: string | null
+          payment_promise_at: string | null
+          payment_promise_by: string | null
+          payment_promise_date: string | null
+          payment_promise_note: string | null
+          preferred_date: string | null
+          preferred_time: string | null
+          rate_confirmation_rate: number | null
+          rate_confirmation_sent_at: string | null
+          rate_confirmation_sent_by: string | null
+          rate_reopened_at: string | null
+          rate_status: string
+          reached_farm_at: string | null
+          request_id: string | null
+          sabit_area: number | null
+          sabit_rate: number | null
+          status: string
+          total_amount: number | null
+          vendor_closing_at: string | null
+          vendor_closing_by: string | null
+          vendor_id: string | null
+          vendor_payable: number
+          verified_area: number | null
+          village: string | null
+          wants_next_season_reminder: boolean | null
+          will_sell_to_us: boolean | null
+          work_started_at: string | null
+        }
+        Insert: {
+          acres?: number | null
+          advance_declined_at?: string | null
+          advance_declined_by?: string | null
+          amount_paid_to_vendor?: number
+          amount_received_from_farmer?: number
+          booking_date?: string
+          booking_number: string
+          cancellation_party?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          capacity_override_by?: string | null
+          capacity_override_reason?: string | null
+          closed_at?: string | null
+          commission_amount?: number
+          commission_percentage?: number
+          completed_at?: string | null
+          confirmation_override_by?: string | null
+          confirmation_override_evidence_url?: string | null
+          confirmation_override_reason?: string | null
+          created_at?: string
+          created_by?: string | null
+          crop_type?: string | null
+          days?: number | null
+          diesel_amount?: number | null
+          diesel_none_at?: string | null
+          diesel_none_by?: string | null
+          diesel_rate?: number | null
+          estimated_rate?: number | null
+          expected_harvest_date?: string | null
+          farm_id?: string | null
+          farmer_confirmation_channel?: string | null
+          farmer_confirmation_response?: string | null
+          farmer_confirmed_at?: string | null
+          farmer_id: string
+          field_ready?: string | null
+          final_rate?: number | null
+          harvest_area?: number | null
+          harvest_area_acres?: number | null
+          harvest_area_kanal?: number | null
+          harvest_ready?: string | null
+          harvest_type?: string | null
+          hours?: number | null
+          id?: string
+          kutra_area?: number | null
+          kutra_rate?: number | null
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          machine_id?: string | null
+          machine_type_requested?: string | null
+          notes?: string | null
+          parent_booking_id?: string | null
+          payment_promise_at?: string | null
+          payment_promise_by?: string | null
+          payment_promise_date?: string | null
+          payment_promise_note?: string | null
+          preferred_date?: string | null
+          preferred_time?: string | null
+          rate_confirmation_rate?: number | null
+          rate_confirmation_sent_at?: string | null
+          rate_confirmation_sent_by?: string | null
+          rate_reopened_at?: string | null
+          rate_status?: string
+          reached_farm_at?: string | null
+          request_id?: string | null
+          sabit_area?: number | null
+          sabit_rate?: number | null
+          status?: string
+          total_amount?: number | null
+          vendor_closing_at?: string | null
+          vendor_closing_by?: string | null
+          vendor_id?: string | null
+          vendor_payable?: number
+          verified_area?: number | null
+          village?: string | null
+          wants_next_season_reminder?: boolean | null
+          will_sell_to_us?: boolean | null
+          work_started_at?: string | null
+        }
+        Update: {
+          acres?: number | null
+          advance_declined_at?: string | null
+          advance_declined_by?: string | null
+          amount_paid_to_vendor?: number
+          amount_received_from_farmer?: number
+          booking_date?: string
+          booking_number?: string
+          cancellation_party?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          capacity_override_by?: string | null
+          capacity_override_reason?: string | null
+          closed_at?: string | null
+          commission_amount?: number
+          commission_percentage?: number
+          completed_at?: string | null
+          confirmation_override_by?: string | null
+          confirmation_override_evidence_url?: string | null
+          confirmation_override_reason?: string | null
+          created_at?: string
+          created_by?: string | null
+          crop_type?: string | null
+          days?: number | null
+          diesel_amount?: number | null
+          diesel_none_at?: string | null
+          diesel_none_by?: string | null
+          diesel_rate?: number | null
+          estimated_rate?: number | null
+          expected_harvest_date?: string | null
+          farm_id?: string | null
+          farmer_confirmation_channel?: string | null
+          farmer_confirmation_response?: string | null
+          farmer_confirmed_at?: string | null
+          farmer_id?: string
+          field_ready?: string | null
+          final_rate?: number | null
+          harvest_area?: number | null
+          harvest_area_acres?: number | null
+          harvest_area_kanal?: number | null
+          harvest_ready?: string | null
+          harvest_type?: string | null
+          hours?: number | null
+          id?: string
+          kutra_area?: number | null
+          kutra_rate?: number | null
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          machine_id?: string | null
+          machine_type_requested?: string | null
+          notes?: string | null
+          parent_booking_id?: string | null
+          payment_promise_at?: string | null
+          payment_promise_by?: string | null
+          payment_promise_date?: string | null
+          payment_promise_note?: string | null
+          preferred_date?: string | null
+          preferred_time?: string | null
+          rate_confirmation_rate?: number | null
+          rate_confirmation_sent_at?: string | null
+          rate_confirmation_sent_by?: string | null
+          rate_reopened_at?: string | null
+          rate_status?: string
+          reached_farm_at?: string | null
+          request_id?: string | null
+          sabit_area?: number | null
+          sabit_rate?: number | null
+          status?: string
+          total_amount?: number | null
+          vendor_closing_at?: string | null
+          vendor_closing_by?: string | null
+          vendor_id?: string | null
+          vendor_payable?: number
+          verified_area?: number | null
+          village?: string | null
+          wants_next_season_reminder?: boolean | null
+          will_sell_to_us?: boolean | null
+          work_started_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_bookings_capacity_override_by_fkey"
+            columns: ["capacity_override_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_capacity_override_by_fkey"
+            columns: ["capacity_override_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_diesel_none_by_fkey"
+            columns: ["diesel_none_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_diesel_none_by_fkey"
+            columns: ["diesel_none_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farm_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_vendor_machines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_capacity_day"
+            referencedColumns: ["machine_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_machines"
+            referencedColumns: ["machine_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_booking"
+            referencedColumns: ["machine_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_machine"
+            referencedColumns: ["machine_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_machines"
+            referencedColumns: ["machine_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_day_bookings"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_harvest_split"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_booking"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_unfinished"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_booking_settlement"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_commission"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_week"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_work_efficiency"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_machines"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_booking"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_vendor"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_booking_settlement"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_commission"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_diesel"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_location"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_machines"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_settlement"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_week"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_work"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_bookings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_vendor_holding_our_cash"
+            referencedColumns: ["vendor_id"]
+          },
+        ]
+      }
+      machinery_dispatches: {
+        Row: {
+          booking_id: string
+          closing_meter: number | null
+          created_at: string
+          created_by: string | null
+          departure_at: string
+          destination_address: string | null
+          destination_lat: number | null
+          destination_lng: number | null
+          driver_phone: string | null
+          fuel_account_id: string | null
+          fuel_amount: number | null
+          fuel_expense_id: string | null
+          fuel_litres: number | null
+          fuel_paid_by: string | null
+          id: string
+          machine_id: string | null
+          notes: string | null
+          opening_meter: number | null
+          operator_name: string | null
+          returned_at: string | null
+        }
+        Insert: {
+          booking_id: string
+          closing_meter?: number | null
+          created_at?: string
+          created_by?: string | null
+          departure_at?: string
+          destination_address?: string | null
+          destination_lat?: number | null
+          destination_lng?: number | null
+          driver_phone?: string | null
+          fuel_account_id?: string | null
+          fuel_amount?: number | null
+          fuel_expense_id?: string | null
+          fuel_litres?: number | null
+          fuel_paid_by?: string | null
+          id?: string
+          machine_id?: string | null
+          notes?: string | null
+          opening_meter?: number | null
+          operator_name?: string | null
+          returned_at?: string | null
+        }
+        Update: {
+          booking_id?: string
+          closing_meter?: number | null
+          created_at?: string
+          created_by?: string | null
+          departure_at?: string
+          destination_address?: string | null
+          destination_lat?: number | null
+          destination_lng?: number | null
+          driver_phone?: string | null
+          fuel_account_id?: string | null
+          fuel_amount?: number | null
+          fuel_expense_id?: string | null
+          fuel_litres?: number | null
+          fuel_paid_by?: string | null
+          id?: string
+          machine_id?: string | null
+          notes?: string | null
+          opening_meter?: number | null
+          operator_name?: string | null
+          returned_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_day_bookings"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_harvest_split"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_booking"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_unfinished"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_booking_settlement"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_commission"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_week"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_work_efficiency"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_fuel_account_id_fkey"
+            columns: ["fuel_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_fuel_account_id_fkey"
+            columns: ["fuel_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_fuel_account_id_fkey"
+            columns: ["fuel_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_fuel_expense_id_fkey"
+            columns: ["fuel_expense_id"]
+            isOneToOne: false
+            referencedRelation: "finance_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_vendor_machines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_capacity_day"
+            referencedColumns: ["machine_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_machines"
+            referencedColumns: ["machine_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_booking"
+            referencedColumns: ["machine_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_machine"
+            referencedColumns: ["machine_id"]
+          },
+          {
+            foreignKeyName: "machinery_dispatches_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_machines"
+            referencedColumns: ["machine_id"]
+          },
+        ]
+      }
+      machinery_fuel_logs: {
+        Row: {
+          amount: number
+          booking_id: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_reason: string | null
+          client_action_id: string | null
+          created_at: string
+          created_by: string | null
+          deducted_in_bill_id: string | null
+          expense_id: string | null
+          finance_account_id: string | null
+          id: string
+          litres: number | null
+          log_date: string
+          manager_confirmed_at: string | null
+          manager_confirmed_by: string | null
+          notes: string | null
+          paid_by: string
+          rate_per_litre: number | null
+          rejection_reason: string | null
+          source: string
+          submitted_by: string | null
+          vendor_recoverable: boolean
+          verification_status: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_reason?: string | null
+          client_action_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deducted_in_bill_id?: string | null
+          expense_id?: string | null
+          finance_account_id?: string | null
+          id?: string
+          litres?: number | null
+          log_date?: string
+          manager_confirmed_at?: string | null
+          manager_confirmed_by?: string | null
+          notes?: string | null
+          paid_by: string
+          rate_per_litre?: number | null
+          rejection_reason?: string | null
+          source?: string
+          submitted_by?: string | null
+          vendor_recoverable?: boolean
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_reason?: string | null
+          client_action_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deducted_in_bill_id?: string | null
+          expense_id?: string | null
+          finance_account_id?: string | null
+          id?: string
+          litres?: number | null
+          log_date?: string
+          manager_confirmed_at?: string | null
+          manager_confirmed_by?: string | null
+          notes?: string | null
+          paid_by?: string
+          rate_per_litre?: number | null
+          rejection_reason?: string | null
+          source?: string
+          submitted_by?: string | null
+          vendor_recoverable?: boolean
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_day_bookings"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_harvest_split"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_booking"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_unfinished"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_booking_settlement"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_commission"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_week"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_work_efficiency"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_deducted_in_bill_id_fkey"
+            columns: ["deducted_in_bill_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "finance_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "machinery_fuel_logs_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
+          },
+        ]
+      }
+      machinery_machine_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      machinery_payment_reminders: {
+        Row: {
+          amount: number | null
+          booking_id: string
+          channel: string
+          created_at: string
+          error: string | null
+          farmer_id: string | null
+          id: string
+          message: string | null
+          phone: string | null
+          promise_date: string | null
+          sent_by: string | null
+          status: string
+        }
+        Insert: {
+          amount?: number | null
+          booking_id: string
+          channel?: string
+          created_at?: string
+          error?: string | null
+          farmer_id?: string | null
+          id?: string
+          message?: string | null
+          phone?: string | null
+          promise_date?: string | null
+          sent_by?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number | null
+          booking_id?: string
+          channel?: string
+          created_at?: string
+          error?: string | null
+          farmer_id?: string | null
+          id?: string
+          message?: string | null
+          phone?: string | null
+          promise_date?: string | null
+          sent_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_day_bookings"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_harvest_split"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_booking"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_unfinished"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_booking_settlement"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_commission"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_week"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_work_efficiency"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_payment_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      machinery_payments: {
+        Row: {
+          amount: number
+          booking_id: string
+          claimed_at: string | null
+          claimed_by: string | null
+          client_action_id: string | null
+          collected_by_lifter_id: string | null
+          collected_by_vendor_id: string | null
+          created_at: string
+          custody_profile_id: string | null
+          evidence_url: string | null
+          finance_account_id: string | null
+          id: string
+          kind: string
+          manager_confirmed_at: string | null
+          manager_confirmed_by: string | null
+          method: string
+          payment_date: string
+          proof_url: string | null
+          receipt_number: string | null
+          received_by: string | null
+          received_location: string | null
+          reference: string | null
+          rejection_reason: string | null
+          vendor_settlement: string | null
+          verification_status: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          client_action_id?: string | null
+          collected_by_lifter_id?: string | null
+          collected_by_vendor_id?: string | null
+          created_at?: string
+          custody_profile_id?: string | null
+          evidence_url?: string | null
+          finance_account_id?: string | null
+          id?: string
+          kind: string
+          manager_confirmed_at?: string | null
+          manager_confirmed_by?: string | null
+          method: string
+          payment_date?: string
+          proof_url?: string | null
+          receipt_number?: string | null
+          received_by?: string | null
+          received_location?: string | null
+          reference?: string | null
+          rejection_reason?: string | null
+          vendor_settlement?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          claimed_at?: string | null
+          claimed_by?: string | null
+          client_action_id?: string | null
+          collected_by_lifter_id?: string | null
+          collected_by_vendor_id?: string | null
+          created_at?: string
+          custody_profile_id?: string | null
+          evidence_url?: string | null
+          finance_account_id?: string | null
+          id?: string
+          kind?: string
+          manager_confirmed_at?: string | null
+          manager_confirmed_by?: string | null
+          method?: string
+          payment_date?: string
+          proof_url?: string | null
+          receipt_number?: string | null
+          received_by?: string | null
+          received_location?: string | null
+          reference?: string | null
+          rejection_reason?: string | null
+          vendor_settlement?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_day_bookings"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_harvest_split"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_booking"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_unfinished"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_booking_settlement"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_commission"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_week"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_work_efficiency"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_lifter_id_fkey"
+            columns: ["collected_by_lifter_id"]
+            isOneToOne: false
+            referencedRelation: "crop_lifters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_lifter_id_fkey"
+            columns: ["collected_by_lifter_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["lifter_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_lifter_id_fkey"
+            columns: ["collected_by_lifter_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lifter_balances"
+            referencedColumns: ["lifter_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_machines"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_booking"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_vendor"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_booking_settlement"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_commission"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_diesel"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_location"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_machines"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_settlement"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_week"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_work"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_collected_by_vendor_id_fkey"
+            columns: ["collected_by_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_vendor_holding_our_cash"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_custody_profile_id_fkey"
+            columns: ["custody_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_custody_profile_id_fkey"
+            columns: ["custody_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "machinery_payments_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
+          },
+        ]
+      }
+      machinery_rate_cards: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          crop_key: string | null
+          effective_from: string
+          harvest_type: string
+          id: string
+          is_active: boolean
+          machine_type: string | null
+          notes: string | null
+          rate: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          crop_key?: string | null
+          effective_from?: string
+          harvest_type: string
+          id?: string
+          is_active?: boolean
+          machine_type?: string | null
+          notes?: string | null
+          rate: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          crop_key?: string | null
+          effective_from?: string
+          harvest_type?: string
+          id?: string
+          is_active?: boolean
+          machine_type?: string | null
+          notes?: string | null
+          rate?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_rate_cards_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_rate_cards_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "machinery_rate_cards_crop_key_fkey"
+            columns: ["crop_key"]
+            isOneToOne: false
+            referencedRelation: "crops"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      machinery_receipt_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      machinery_requests: {
+        Row: {
+          acres: number | null
+          advance_claimed_amount: number | null
+          advance_claimed_method: string | null
+          advance_claimed_reference: string | null
+          advance_proof_url: string | null
+          created_at: string
+          crop_type: string | null
+          estimated_cost: number | null
+          estimated_cost_reasoning: string | null
+          expected_date: string
+          farm_id: string | null
+          farmer_id: string
+          field_ready: string | null
+          harvest_ready: string | null
+          id: string
+          location_address: string | null
+          location_lat: number | null
+          location_lng: number | null
+          machine_type: string
+          machine_type_other: string | null
+          notes: string | null
+          requested_date: string
+          status: string
+          updated_at: string
+          wants_next_season_reminder: boolean | null
+          will_sell_to_us: boolean | null
+        }
+        Insert: {
+          acres?: number | null
+          advance_claimed_amount?: number | null
+          advance_claimed_method?: string | null
+          advance_claimed_reference?: string | null
+          advance_proof_url?: string | null
+          created_at?: string
+          crop_type?: string | null
+          estimated_cost?: number | null
+          estimated_cost_reasoning?: string | null
+          expected_date: string
+          farm_id?: string | null
+          farmer_id: string
+          field_ready?: string | null
+          harvest_ready?: string | null
+          id?: string
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          machine_type: string
+          machine_type_other?: string | null
+          notes?: string | null
+          requested_date?: string
+          status?: string
+          updated_at?: string
+          wants_next_season_reminder?: boolean | null
+          will_sell_to_us?: boolean | null
+        }
+        Update: {
+          acres?: number | null
+          advance_claimed_amount?: number | null
+          advance_claimed_method?: string | null
+          advance_claimed_reference?: string | null
+          advance_proof_url?: string | null
+          created_at?: string
+          crop_type?: string | null
+          estimated_cost?: number | null
+          estimated_cost_reasoning?: string | null
+          expected_date?: string
+          farm_id?: string | null
+          farmer_id?: string
+          field_ready?: string | null
+          harvest_ready?: string | null
+          id?: string
+          location_address?: string | null
+          location_lat?: number | null
+          location_lng?: number | null
+          machine_type?: string
+          machine_type_other?: string | null
+          notes?: string | null
+          requested_date?: string
+          status?: string
+          updated_at?: string
+          wants_next_season_reminder?: boolean | null
+          will_sell_to_us?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_requests_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farm_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "machinery_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      machinery_vendor_machines: {
+        Row: {
+          created_at: string
+          daily_capacity_acres: number | null
+          driver_name: string | null
+          driver_phone: string | null
+          id: string
+          is_available: boolean
+          last_location_at: string | null
+          last_location_lat: number | null
+          last_location_lng: number | null
+          machine_code: string | null
+          machine_type: string
+          model: string | null
+          notes: string | null
+          owner: string
+          purchased_on: string | null
+          rate_amount: number
+          rate_type: string
+          registration_number: string | null
+          status: string
+          vendor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          daily_capacity_acres?: number | null
+          driver_name?: string | null
+          driver_phone?: string | null
+          id?: string
+          is_available?: boolean
+          last_location_at?: string | null
+          last_location_lat?: number | null
+          last_location_lng?: number | null
+          machine_code?: string | null
+          machine_type: string
+          model?: string | null
+          notes?: string | null
+          owner?: string
+          purchased_on?: string | null
+          rate_amount: number
+          rate_type: string
+          registration_number?: string | null
+          status?: string
+          vendor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          daily_capacity_acres?: number | null
+          driver_name?: string | null
+          driver_phone?: string | null
+          id?: string
+          is_available?: boolean
+          last_location_at?: string | null
+          last_location_lat?: number | null
+          last_location_lng?: number | null
+          machine_code?: string | null
+          machine_type?: string
+          model?: string | null
+          notes?: string | null
+          owner?: string
+          purchased_on?: string | null
+          rate_amount?: number
+          rate_type?: string
+          registration_number?: string | null
+          status?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_machines"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_booking"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_vendor"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_booking_settlement"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_commission"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_diesel"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_location"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_machines"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_settlement"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_week"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_work"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "machinery_vendor_machines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "v_vendor_holding_our_cash"
+            referencedColumns: ["vendor_id"]
+          },
+        ]
+      }
+      machinery_vendors: {
+        Row: {
+          address: string | null
+          cnic: string | null
+          contact_person: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          phone: string | null
+          user_id: string | null
+          vendor_name: string
+        }
+        Insert: {
+          address?: string | null
+          cnic?: string | null
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          user_id?: string | null
+          vendor_name: string
+        }
+        Update: {
+          address?: string | null
+          cnic?: string | null
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          user_id?: string | null
+          vendor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_vendors_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_vendors_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      machinery_work_records: {
+        Row: {
+          actual_area: number | null
+          actual_area_acres: number | null
+          actual_area_kanal: number | null
+          booking_id: string
+          client_action_id: string | null
+          completion_photo_url: string | null
+          created_at: string
+          created_by: string | null
+          farmer_confirmation_note: string | null
+          farmer_confirmed: boolean
+          finished_at: string | null
+          id: string
+          is_final: boolean
+          kutra_area: number | null
+          location_lat: number | null
+          location_lng: number | null
+          meter_reading: number | null
+          notes: string | null
+          rejection_reason: string | null
+          sabit_area: number | null
+          source: string
+          started_at: string | null
+          submitted_by: string | null
+          verification_status: string
+          verified_at: string | null
+          verified_by: string | null
+          work_date: string
+          work_hours: number | null
+        }
+        Insert: {
+          actual_area?: number | null
+          actual_area_acres?: number | null
+          actual_area_kanal?: number | null
+          booking_id: string
+          client_action_id?: string | null
+          completion_photo_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          farmer_confirmation_note?: string | null
+          farmer_confirmed?: boolean
+          finished_at?: string | null
+          id?: string
+          is_final?: boolean
+          kutra_area?: number | null
+          location_lat?: number | null
+          location_lng?: number | null
+          meter_reading?: number | null
+          notes?: string | null
+          rejection_reason?: string | null
+          sabit_area?: number | null
+          source?: string
+          started_at?: string | null
+          submitted_by?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          work_date?: string
+          work_hours?: number | null
+        }
+        Update: {
+          actual_area?: number | null
+          actual_area_acres?: number | null
+          actual_area_kanal?: number | null
+          booking_id?: string
+          client_action_id?: string | null
+          completion_photo_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          farmer_confirmation_note?: string | null
+          farmer_confirmed?: boolean
+          finished_at?: string | null
+          id?: string
+          is_final?: boolean
+          kutra_area?: number | null
+          location_lat?: number | null
+          location_lng?: number | null
+          meter_reading?: number | null
+          notes?: string | null
+          rejection_reason?: string | null
+          sabit_area?: number | null
+          source?: string
+          started_at?: string | null
+          submitted_by?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          work_date?: string
+          work_hours?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "machinery_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_day_bookings"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_harvest_split"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_pnl_booking"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_unfinished"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_booking_settlement"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_commission"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_ledger"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_week"
+            referencedColumns: ["booking_id"]
+          },
+          {
+            foreignKeyName: "machinery_work_records_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_work_efficiency"
+            referencedColumns: ["booking_id"]
+          },
+        ]
+      }
+      maintenance_logs: {
+        Row: {
+          approve_comment: string | null
+          approved_at: string | null
+          approved_by: string | null
+          bill_image_url: string | null
+          branch_comment: string | null
+          branch_id: string | null
+          branch_verified_at: string | null
+          branch_verified_by: string | null
+          cost: number
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          km_at_service: number
+          maintenance_type: string
+          rejection_reason: string | null
+          service_date: string
+          status: string
+          vehicle_id: string
+        }
+        Insert: {
+          approve_comment?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          bill_image_url?: string | null
+          branch_comment?: string | null
+          branch_id?: string | null
+          branch_verified_at?: string | null
+          branch_verified_by?: string | null
+          cost?: number
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          km_at_service: number
+          maintenance_type?: string
+          rejection_reason?: string | null
+          service_date: string
+          status?: string
+          vehicle_id: string
+        }
+        Update: {
+          approve_comment?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          bill_image_url?: string | null
+          branch_comment?: string | null
+          branch_id?: string | null
+          branch_verified_at?: string | null
+          branch_verified_by?: string | null
+          cost?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          km_at_service?: number
+          maintenance_type?: string
+          rejection_reason?: string | null
+          service_date?: string
+          status?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_logs_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_logs_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "maintenance_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "maintenance_logs_branch_verified_by_fkey"
+            columns: ["branch_verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_logs_branch_verified_by_fkey"
+            columns: ["branch_verified_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "maintenance_logs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_logs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "maintenance_logs_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandi_rates: {
+        Row: {
+          created_at: string
+          crop_name: string
+          id: string
+          mandi_name: string
+          rate_date: string
+          rate_per_maund: number
+        }
+        Insert: {
+          created_at?: string
+          crop_name: string
+          id?: string
+          mandi_name: string
+          rate_date?: string
+          rate_per_maund: number
+        }
+        Update: {
+          created_at?: string
+          crop_name?: string
+          id?: string
+          mandi_name?: string
+          rate_date?: string
+          rate_per_maund?: number
+        }
+        Relationships: []
+      }
+      media_library: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_size_bytes: number | null
+          file_type: string | null
+          file_url: string
+          id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url: string
+          id?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      menu_items: {
+        Row: {
+          display_order: number
+          id: string
+          is_active: boolean
+          label: string
+          menu_location: string
+          parent_id: string | null
+          url: string
+        }
+        Insert: {
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          label: string
+          menu_location: string
+          parent_id?: string | null
+          url: string
+        }
+        Update: {
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          label?: string
+          menu_location?: string
+          parent_id?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      milk_collection_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      milk_dispatches: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          dispatch_date: string
+          dispatched_liters: number
+          driver_name: string | null
+          fat_percentage: number | null
+          id: string
+          notes: string | null
+          received_at: string | null
+          received_by: string | null
+          received_liters: number | null
+          shift: string
+          shortage_liters: number | null
+          shortage_percentage: number | null
+          snf_percentage: number | null
+          vehicle_name: string | null
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dispatch_date?: string
+          dispatched_liters: number
+          driver_name?: string | null
+          fat_percentage?: number | null
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          received_liters?: number | null
+          shift?: string
+          shortage_liters?: number | null
+          shortage_percentage?: number | null
+          snf_percentage?: number | null
+          vehicle_name?: string | null
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dispatch_date?: string
+          dispatched_liters?: number
+          driver_name?: string | null
+          fat_percentage?: number | null
+          id?: string
+          notes?: string | null
+          received_at?: string | null
+          received_by?: string | null
+          received_liters?: number | null
+          shift?: string
+          shortage_liters?: number | null
+          shortage_percentage?: number | null
+          snf_percentage?: number | null
+          vehicle_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milk_dispatches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_dispatches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "milk_dispatches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_dispatches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "milk_dispatches_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_dispatches_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      milk_entries: {
+        Row: {
+          adjusted_volume: number | null
+          branch_id: string | null
+          chiller_name: string | null
+          client_uuid: string | null
+          collected_at: string | null
+          collection_number: string | null
+          collection_source: string
+          created_at: string
+          created_by: string | null
+          entry_channel: string
+          entry_date: string
+          farmer_id: string
+          fat_at: string | null
+          fat_by_profile_id: string | null
+          fat_percentage: number | null
+          flags: Json
+          id: string
+          lr: number | null
+          lr_image_path: string | null
+          mca_profile_id: string | null
+          notes: string | null
+          possible_duplicate_of: string | null
+          quantity_liters: number
+          rate_per_liter: number | null
+          received_by_profile_id: string | null
+          route_name: string | null
+          shift: string
+          snf_percentage: number | null
+          status: string
+          synced_at: string | null
+          total_amount: number | null
+          ts_value: number | null
+          verified_at: string | null
+          verified_by_profile_id: string | null
+          verified_comment: string | null
+        }
+        Insert: {
+          adjusted_volume?: number | null
+          branch_id?: string | null
+          chiller_name?: string | null
+          client_uuid?: string | null
+          collected_at?: string | null
+          collection_number?: string | null
+          collection_source?: string
+          created_at?: string
+          created_by?: string | null
+          entry_channel?: string
+          entry_date?: string
+          farmer_id: string
+          fat_at?: string | null
+          fat_by_profile_id?: string | null
+          fat_percentage?: number | null
+          flags?: Json
+          id?: string
+          lr?: number | null
+          lr_image_path?: string | null
+          mca_profile_id?: string | null
+          notes?: string | null
+          possible_duplicate_of?: string | null
+          quantity_liters: number
+          rate_per_liter?: number | null
+          received_by_profile_id?: string | null
+          route_name?: string | null
+          shift?: string
+          snf_percentage?: number | null
+          status?: string
+          synced_at?: string | null
+          total_amount?: number | null
+          ts_value?: number | null
+          verified_at?: string | null
+          verified_by_profile_id?: string | null
+          verified_comment?: string | null
+        }
+        Update: {
+          adjusted_volume?: number | null
+          branch_id?: string | null
+          chiller_name?: string | null
+          client_uuid?: string | null
+          collected_at?: string | null
+          collection_number?: string | null
+          collection_source?: string
+          created_at?: string
+          created_by?: string | null
+          entry_channel?: string
+          entry_date?: string
+          farmer_id?: string
+          fat_at?: string | null
+          fat_by_profile_id?: string | null
+          fat_percentage?: number | null
+          flags?: Json
+          id?: string
+          lr?: number | null
+          lr_image_path?: string | null
+          mca_profile_id?: string | null
+          notes?: string | null
+          possible_duplicate_of?: string | null
+          quantity_liters?: number
+          rate_per_liter?: number | null
+          received_by_profile_id?: string | null
+          route_name?: string | null
+          shift?: string
+          snf_percentage?: number | null
+          status?: string
+          synced_at?: string | null
+          total_amount?: number | null
+          ts_value?: number | null
+          verified_at?: string | null
+          verified_by_profile_id?: string | null
+          verified_comment?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milk_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_entries_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_fat_by_profile_id_fkey"
+            columns: ["fat_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_entries_fat_by_profile_id_fkey"
+            columns: ["fat_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_mca_profile_id_fkey"
+            columns: ["mca_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_entries_mca_profile_id_fkey"
+            columns: ["mca_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_possible_duplicate_of_fkey"
+            columns: ["possible_duplicate_of"]
+            isOneToOne: false
+            referencedRelation: "milk_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_entries_received_by_profile_id_fkey"
+            columns: ["received_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_entries_received_by_profile_id_fkey"
+            columns: ["received_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "milk_entries_verified_by_profile_id_fkey"
+            columns: ["verified_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_entries_verified_by_profile_id_fkey"
+            columns: ["verified_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      milk_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          farmer_id: string
+          id: string
+          notes: string | null
+          payment_date: string
+          payment_method: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          farmer_id: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          farmer_id?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_payments_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      milk_rate_settings: {
+        Row: {
+          id: string
+          reference_ts: number
+          self_dropoff_incentive: number
+          shortage_alert_threshold: number
+          snf_constant: number
+          standard_rate: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          reference_ts?: number
+          self_dropoff_incentive?: number
+          shortage_alert_threshold?: number
+          snf_constant?: number
+          standard_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          reference_ts?: number
+          self_dropoff_incentive?: number
+          shortage_alert_threshold?: number
+          snf_constant?: number
+          standard_rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      milk_route_collections: {
+        Row: {
+          branch_id: string | null
+          chiller_received_volume: number | null
+          collection_date: string
+          created_at: string
+          created_by: string | null
+          field_collected_volume: number
+          id: string
+          is_red_alert: boolean
+          notes: string | null
+          rider_name: string | null
+          route_name: string
+          shift: string
+          shortage_liters: number | null
+          shortage_percentage: number | null
+        }
+        Insert: {
+          branch_id?: string | null
+          chiller_received_volume?: number | null
+          collection_date: string
+          created_at?: string
+          created_by?: string | null
+          field_collected_volume: number
+          id?: string
+          is_red_alert?: boolean
+          notes?: string | null
+          rider_name?: string | null
+          route_name: string
+          shift?: string
+          shortage_liters?: number | null
+          shortage_percentage?: number | null
+        }
+        Update: {
+          branch_id?: string | null
+          chiller_received_volume?: number | null
+          collection_date?: string
+          created_at?: string
+          created_by?: string | null
+          field_collected_volume?: number
+          id?: string
+          is_red_alert?: boolean
+          notes?: string | null
+          rider_name?: string | null
+          route_name?: string
+          shift?: string
+          shortage_liters?: number | null
+          shortage_percentage?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milk_route_collections_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_route_collections_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "milk_route_collections_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_route_collections_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      milk_type_migrations: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          farmer_id: string
+          id: string
+          new_type: string
+          old_type: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          farmer_id: string
+          id?: string
+          new_type: string
+          old_type?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          farmer_id?: string
+          id?: string
+          new_type?: string
+          old_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milk_type_migrations_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "milk_type_migrations_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      monthly_expenses: {
+        Row: {
+          amount: number
+          branch_id: string | null
+          category: string
+          created_at: string
+          created_by: string | null
+          expense_month: number
+          expense_year: number
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          amount: number
+          branch_id?: string | null
+          category: string
+          created_at?: string
+          created_by?: string | null
+          expense_month: number
+          expense_year: number
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          amount?: number
+          branch_id?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          expense_month?: number
+          expense_year?: number
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_expenses_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_expenses_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "monthly_expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      newsletter_subscribers: {
+        Row: {
+          email: string
+          id: string
+          is_active: boolean
+          subscribed_at: string
+        }
+        Insert: {
+          email: string
+          id?: string
+          is_active?: boolean
+          subscribed_at?: string
+        }
+        Update: {
+          email?: string
+          id?: string
+          is_active?: boolean
+          subscribed_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          link_url: string | null
+          message: string
+          recipient_user_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link_url?: string | null
+          message: string
+          recipient_user_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          link_url?: string | null
+          message?: string
+          recipient_user_id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      org_positions: {
+        Row: {
+          created_at: string
+          is_active: boolean
+          key: string
+          label: string
+          rank: number
+        }
+        Insert: {
+          created_at?: string
+          is_active?: boolean
+          key: string
+          label: string
+          rank: number
+        }
+        Update: {
+          created_at?: string
+          is_active?: boolean
+          key?: string
+          label?: string
+          rank?: number
+        }
+        Relationships: []
+      }
+      organizations: {
+        Row: {
+          brand_name: string | null
+          created_at: string
+          custom_domain: string | null
+          default_currency: string
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          primary_color: string
+          slug: string
+          subscription_ends_at: string | null
+          subscription_plan: string
+          subscription_status: string
+        }
+        Insert: {
+          brand_name?: string | null
+          created_at?: string
+          custom_domain?: string | null
+          default_currency?: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          primary_color?: string
+          slug: string
+          subscription_ends_at?: string | null
+          subscription_plan?: string
+          subscription_status?: string
+        }
+        Update: {
+          brand_name?: string | null
+          created_at?: string
+          custom_domain?: string | null
+          default_currency?: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          primary_color?: string
+          slug?: string
+          subscription_ends_at?: string | null
+          subscription_plan?: string
+          subscription_status?: string
+        }
+        Relationships: []
+      }
+      organization_signup_requests: {
+        Row: {
+          admin_email: string
+          admin_name: string
+          admin_phone: string | null
+          company_name: string
+          created_at: string
+          custom_domain: string | null
+          id: string
+          notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          subscription_plan: string
+        }
+        Insert: {
+          admin_email: string
+          admin_name: string
+          admin_phone?: string | null
+          company_name: string
+          created_at?: string
+          custom_domain?: string | null
+          id?: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          subscription_plan?: string
+        }
+        Update: {
+          admin_email?: string
+          admin_name?: string
+          admin_phone?: string | null
+          company_name?: string
+          created_at?: string
+          custom_domain?: string | null
+          id?: string
+          notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          subscription_plan?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_signup_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      owner_whatsapp_commands: {
+        Row: {
+          confirmed_at: string | null
+          created_at: string
+          from_phone: string
+          id: string
+          message: string
+          profile_id: string | null
+          resolved_at: string | null
+          responded_at: string | null
+          response_text: string | null
+          status: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          created_at?: string
+          from_phone: string
+          id?: string
+          message: string
+          profile_id?: string | null
+          resolved_at?: string | null
+          responded_at?: string | null
+          response_text?: string | null
+          status?: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          created_at?: string
+          from_phone?: string
+          id?: string
+          message?: string
+          profile_id?: string | null
+          resolved_at?: string | null
+          responded_at?: string | null
+          response_text?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "owner_whatsapp_commands_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "owner_whatsapp_commands_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      pack_sizes: {
+        Row: {
+          aliases: string[]
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          quantity: number | null
+          sort_order: number
+          unit_code: string | null
+        }
+        Insert: {
+          aliases?: string[]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          quantity?: number | null
+          sort_order?: number
+          unit_code?: string | null
+        }
+        Update: {
+          aliases?: string[]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          quantity?: number | null
+          sort_order?: number
+          unit_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pack_sizes_unit_code_fkey"
+            columns: ["unit_code"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      party_settlements: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          dena_khata: string
+          id: string
+          journal_entry_id: string | null
+          lena_khata: string
+          party_id: string
+          party_type: string
+          rejection_reason: string | null
+          settlement_number: string
+          status: string
+          wajah: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dena_khata: string
+          id?: string
+          journal_entry_id?: string | null
+          lena_khata: string
+          party_id: string
+          party_type: string
+          rejection_reason?: string | null
+          settlement_number: string
+          status?: string
+          wajah: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          dena_khata?: string
+          id?: string
+          journal_entry_id?: string | null
+          lena_khata?: string
+          party_id?: string
+          party_type?: string
+          rejection_reason?: string | null
+          settlement_number?: string
+          status?: string
+          wajah?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_settlements_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_settlements_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "party_settlements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_settlements_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "party_settlements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_settlements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "party_settlements_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_settlements_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "party_settlements_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["entry_id"]
+          },
+        ]
+      }
+      password_reset_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          token: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          token: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      payment_method_account_map: {
+        Row: {
+          finance_account_id: string | null
+          payment_method: string
+          updated_at: string
+        }
+        Insert: {
+          finance_account_id?: string | null
+          payment_method: string
+          updated_at?: string
+        }
+        Update: {
+          finance_account_id?: string | null
+          payment_method?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_method_account_map_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_method_account_map_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "payment_method_account_map_finance_account_id_fkey"
+            columns: ["finance_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
+          },
+        ]
+      }
+      payment_promises: {
+        Row: {
+          assigned_to: string | null
+          branch_id: string | null
+          created_at: string
+          created_by: string | null
+          fulfilled_amount: number
+          id: string
+          notes: string | null
+          organization_id: string | null
+          party_id: string
+          party_type: string
+          promise_date: string
+          promised_amount: number
+          shop_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          fulfilled_amount?: number
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          party_id: string
+          party_type: string
+          promise_date: string
+          promised_amount: number
+          shop_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          branch_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          fulfilled_amount?: number
+          id?: string
+          notes?: string | null
+          organization_id?: string | null
+          party_id?: string
+          party_type?: string
+          promise_date?: string
+          promised_amount?: number
+          shop_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_promises_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_promises_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "payment_promises_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_promises_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "payment_promises_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_promises_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      payment_reminders: {
+        Row: {
+          branch_id: string | null
+          channel: string
+          created_at: string
+          delivery_status: string
+          due_date: string | null
+          external_message_id: string | null
+          failure_reason: string | null
+          id: string
+          khata_account_id: string | null
+          organization_id: string | null
+          outstanding_amount: number
+          overdue_amount: number
+          party_id: string
+          party_type: string
+          reminder_stage: string
+          scheduled_at: string | null
+          sent_at: string | null
+          sent_by: string | null
+          shop_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          channel: string
+          created_at?: string
+          delivery_status?: string
+          due_date?: string | null
+          external_message_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          khata_account_id?: string | null
+          organization_id?: string | null
+          outstanding_amount?: number
+          overdue_amount?: number
+          party_id: string
+          party_type: string
+          reminder_stage?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          shop_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          channel?: string
+          created_at?: string
+          delivery_status?: string
+          due_date?: string | null
+          external_message_id?: string | null
+          failure_reason?: string | null
+          id?: string
+          khata_account_id?: string | null
+          organization_id?: string | null
+          outstanding_amount?: number
+          overdue_amount?: number
+          party_id?: string
+          party_type?: string
+          reminder_stage?: string
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          shop_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_reminders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_reminders_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      payment_terms: {
+        Row: {
+          created_at: string
+          days: number
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          days: number
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          days?: number
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          id: string
+          notes: string | null
+          payment_date: string
+          payment_method: string | null
+          sale_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+          sale_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+          sale_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "v_wholesale_shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      pos_collection_deposits: {
+        Row: {
+          amount: number
+          bank_account_id: string
+          branch_id: string
+          created_at: string
+          deposit_date: string
+          deposit_number: string
+          finance_entry_id: string | null
+          finance_note: string | null
+          id: string
+          outstanding_after: number | null
+          outstanding_before: number
+          shift_id: string | null
+          shop_id: string
+          slip_url: string
+          staff_id: string
+          staff_note: string | null
+          status: string
+          submitted_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          amount: number
+          bank_account_id: string
+          branch_id: string
+          created_at?: string
+          deposit_date: string
+          deposit_number: string
+          finance_entry_id?: string | null
+          finance_note?: string | null
+          id?: string
+          outstanding_after?: number | null
+          outstanding_before: number
+          shift_id?: string | null
+          shop_id: string
+          slip_url: string
+          staff_id: string
+          staff_note?: string | null
+          status?: string
+          submitted_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string
+          branch_id?: string
+          created_at?: string
+          deposit_date?: string
+          deposit_number?: string
+          finance_entry_id?: string | null
+          finance_note?: string | null
+          id?: string
+          outstanding_after?: number | null
+          outstanding_before?: number
+          shift_id?: string | null
+          shop_id?: string
+          slip_url?: string
+          staff_id?: string
+          staff_note?: string | null
+          status?: string
+          submitted_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_collection_deposits_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "finance_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_book_ledger_farq"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "v_finance_balance_check"
+            referencedColumns: ["account_id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_finance_entry_id_fkey"
+            columns: ["finance_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "pos_shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_finance_entry_id_fkey"
+            columns: ["finance_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_ledger_watch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_finance_entry_id_fkey"
+            columns: ["finance_entry_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_payments"
+            referencedColumns: ["entry_id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["shop_id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_collection_deposits_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      pos_counter_staff: {
+        Row: {
+          counter_id: string
+          created_at: string
+          granted_by: string | null
+          id: string
+          is_active: boolean
+          profile_id: string
+        }
+        Insert: {
+          counter_id: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean
+          profile_id: string
+        }
+        Update: {
+          counter_id?: string
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          is_active?: boolean
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_counter_staff_counter_id_fkey"
+            columns: ["counter_id"]
+            isOneToOne: false
+            referencedRelation: "pos_counters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counter_staff_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counter_staff_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "pos_counter_staff_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counter_staff_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      pos_counters: {
+        Row: {
+          branch_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string | null
+          shop_id: string
+          updated_at: string
+          warehouse_id: string | null
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id?: string | null
+          shop_id: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string | null
+          shop_id?: string
+          updated_at?: string
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_counters_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counters_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "pos_counters_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counters_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "pos_counters_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counters_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_counters_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["shop_id"]
+          },
+          {
+            foreignKeyName: "pos_counters_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "pos_counters_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_due"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "pos_counters_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_overdue"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "pos_counters_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_deposit_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      pos_return_code_attempts: {
+        Row: {
+          attempted_at: string
+          attempted_by: string | null
+          branch_id: string | null
+          id: string
+          sale_id: string | null
+        }
+        Insert: {
+          attempted_at?: string
+          attempted_by?: string | null
+          branch_id?: string | null
+          id?: string
+          sale_id?: string | null
+        }
+        Update: {
+          attempted_at?: string
+          attempted_by?: string | null
+          branch_id?: string | null
+          id?: string
+          sale_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_return_code_attempts_attempted_by_fkey"
+            columns: ["attempted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_code_attempts_attempted_by_fkey"
+            columns: ["attempted_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "pos_return_code_attempts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_code_attempts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "pos_return_code_attempts_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pos_sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_code_attempts_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "v_pos_returns_today"
+            referencedColumns: ["sale_id"]
+          },
+        ]
+      }
+      pos_return_counters: {
+        Row: {
+          id: boolean
+          last_number: number
+        }
+        Insert: {
+          id?: boolean
+          last_number?: number
+        }
+        Update: {
+          id?: boolean
+          last_number?: number
+        }
+        Relationships: []
+      }
+      pos_return_items: {
+        Row: {
+          condition: string
+          id: string
+          line_cogs: number
+          product_id: string
+          quantity: number
+          return_id: string
+          sale_item_id: string | null
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          condition?: string
+          id?: string
+          line_cogs?: number
+          product_id: string
+          quantity: number
+          return_id: string
+          sale_item_id?: string | null
+          subtotal: number
+          unit_price: number
+        }
+        Update: {
+          condition?: string
+          id?: string
+          line_cogs?: number
+          product_id?: string
+          quantity?: number
+          return_id?: string
+          sale_item_id?: string | null
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_return_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "pos_return_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_setup_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_missing_image"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "pos_return_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_trade_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_wholesale_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_suggestions"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "pos_return_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "pos_return_items_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "pos_returns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_items_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "v_pos_returns_today"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_items_sale_item_id_fkey"
+            columns: ["sale_item_id"]
+            isOneToOne: false
+            referencedRelation: "pos_sale_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_items_sale_item_id_fkey"
+            columns: ["sale_item_id"]
+            isOneToOne: false
+            referencedRelation: "v_pos_sale_returnable"
+            referencedColumns: ["sale_item_id"]
+          },
+        ]
+      }
+      pos_return_policy: {
+        Row: {
+          id: number
+          updated_at: string
+          updated_by: string | null
+          window_days: number
+        }
+        Insert: {
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+          window_days?: number
+        }
+        Update: {
+          id?: number
+          updated_at?: string
+          updated_by?: string | null
+          window_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_return_policy_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_policy_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      pos_returns: {
+        Row: {
+          authorized_by: string
+          branch_id: string | null
+          cash_refund: number
+          created_at: string
+          created_by: string | null
+          id: string
+          khata_refund: number
+          note: string | null
+          reason: string
+          reason_code: string | null
+          refund_method: string | null
+          return_number: string
+          sale_id: string
+          shift_id: string | null
+          total_amount: number
+        }
+        Insert: {
+          authorized_by: string
+          branch_id?: string | null
+          cash_refund?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          khata_refund?: number
+          note?: string | null
+          reason: string
+          reason_code?: string | null
+          refund_method?: string | null
+          return_number: string
+          sale_id: string
+          shift_id?: string | null
+          total_amount: number
+        }
+        Update: {
+          authorized_by?: string
+          branch_id?: string | null
+          cash_refund?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          khata_refund?: number
+          note?: string | null
+          reason?: string
+          reason_code?: string | null
+          refund_method?: string | null
+          return_number?: string
+          sale_id?: string
+          shift_id?: string | null
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_returns_authorized_by_fkey"
+            columns: ["authorized_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_returns_authorized_by_fkey"
+            columns: ["authorized_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "pos_returns_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_returns_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "pos_returns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_returns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "pos_returns_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pos_sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_returns_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "v_pos_returns_today"
+            referencedColumns: ["sale_id"]
+          },
+          {
+            foreignKeyName: "pos_returns_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "pos_shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pos_sale_items: {
+        Row: {
+          created_at: string
+          id: string
+          line_cogs: number | null
+          product_id: string
+          quantity: number
+          sale_id: string
+          subtotal: number
+          unit_cost: number | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          line_cogs?: number | null
+          product_id: string
+          quantity: number
+          sale_id: string
+          subtotal: number
+          unit_cost?: number | null
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          line_cogs?: number | null
+          product_id?: string
+          quantity?: number
+          sale_id?: string
+          subtotal?: number
+          unit_cost?: number | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "pos_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_setup_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_missing_image"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "pos_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_trade_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_wholesale_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_suggestions"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "pos_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "pos_sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "pos_sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sale_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "v_pos_returns_today"
+            referencedColumns: ["sale_id"]
+          },
+        ]
+      }
+      pos_sale_payment_details: {
+        Row: {
+          amount: number
+          bank_name: string | null
+          created_at: string
+          id: string
+          payment_method: string
+          receipt_url: string | null
+          sale_id: string
+          transaction_reference: string | null
+        }
+        Insert: {
+          amount: number
+          bank_name?: string | null
+          created_at?: string
+          id?: string
+          payment_method: string
+          receipt_url?: string | null
+          sale_id: string
+          transaction_reference?: string | null
+        }
+        Update: {
+          amount?: number
+          bank_name?: string | null
+          created_at?: string
+          id?: string
+          payment_method?: string
+          receipt_url?: string | null
+          sale_id?: string
+          transaction_reference?: string | null
+        }
+        Relationships: []
+      }
+      pos_sales: {
+        Row: {
+          branch_id: string | null
+          cash_paid: number
+          counter_id: string | null
+          created_at: string
+          created_by: string | null
+          crm_customer_id: string | null
+          customer_id: string | null
+          dealer_id: string | null
+          discount_amount: number | null
+          discount_reason: string | null
+          gross_amount: number | null
+          id: string
+          khata_amount: number
+          payment_mode: string
+          profit: number | null
+          shift_id: string | null
+          shop_id: string | null
+          status: string
+          total_amount: number
+          total_cogs: number | null
+        }
+        Insert: {
+          branch_id?: string | null
+          cash_paid?: number
+          counter_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          crm_customer_id?: string | null
+          customer_id?: string | null
+          dealer_id?: string | null
+          discount_amount?: number | null
+          discount_reason?: string | null
+          gross_amount?: number | null
+          id?: string
+          khata_amount?: number
+          payment_mode: string
+          profit?: number | null
+          shift_id?: string | null
+          shop_id?: string | null
+          status?: string
+          total_amount: number
+          total_cogs?: number | null
+        }
+        Update: {
+          branch_id?: string | null
+          cash_paid?: number
+          counter_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          crm_customer_id?: string | null
+          customer_id?: string | null
+          dealer_id?: string | null
+          discount_amount?: number | null
+          discount_reason?: string | null
+          gross_amount?: number | null
+          id?: string
+          khata_amount?: number
+          payment_mode?: string
+          profit?: number | null
+          shift_id?: string | null
+          shop_id?: string | null
+          status?: string
+          total_amount?: number
+          total_cogs?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_sales_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sales_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "pos_sales_counter_id_fkey"
+            columns: ["counter_id"]
+            isOneToOne: false
+            referencedRelation: "pos_counters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sales_crm_customer_id_fkey"
+            columns: ["crm_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sales_crm_customer_id_fkey"
+            columns: ["crm_customer_id"]
+            isOneToOne: false
+            referencedRelation: "v_wholesale_shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "dealer_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sales_dealer_id_fkey"
+            columns: ["dealer_id"]
+            isOneToOne: false
+            referencedRelation: "dealers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sales_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "pos_shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sales_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sales_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["shop_id"]
+          },
+        ]
+      }
+      pos_shift_counters: {
+        Row: {
+          last_number: number
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          year: number
+        }
+        Update: {
+          last_number?: number
+          year?: number
+        }
+        Relationships: []
+      }
+      pos_shifts: {
+        Row: {
+          cash_handover_id: string | null
+          closed_at: string | null
+          closed_by: string | null
+          closing_note: string | null
+          counted_cash: number | null
+          counter_id: string
+          created_at: string
+          difference: number | null
+          expected_cash: number | null
+          id: string
+          opened_at: string
+          opening_cash: number
+          shift_number: string
+          staff_id: string
+          status: string
+        }
+        Insert: {
+          cash_handover_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_note?: string | null
+          counted_cash?: number | null
+          counter_id: string
+          created_at?: string
+          difference?: number | null
+          expected_cash?: number | null
+          id?: string
+          opened_at?: string
+          opening_cash?: number
+          shift_number: string
+          staff_id: string
+          status?: string
+        }
+        Update: {
+          cash_handover_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_note?: string | null
+          counted_cash?: number | null
+          counter_id?: string
+          created_at?: string
+          difference?: number | null
+          expected_cash?: number | null
+          id?: string
+          opened_at?: string
+          opening_cash?: number
+          shift_number?: string
+          staff_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_shifts_cash_handover_id_fkey"
+            columns: ["cash_handover_id"]
+            isOneToOne: false
+            referencedRelation: "cash_handovers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_shifts_cash_handover_id_fkey"
+            columns: ["cash_handover_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_in_transit"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_shifts_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_shifts_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "pos_shifts_counter_id_fkey"
+            columns: ["counter_id"]
+            isOneToOne: false
+            referencedRelation: "pos_counters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_shifts_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_shifts_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      produce_listings: {
+        Row: {
+          asking_price_per_unit: number
+          created_at: string
+          crop_name: string
+          farmer_id: string
+          harvest_id: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          quality_grade: string | null
+          quantity_available: number
+          status: Database["public"]["Enums"]["listing_status"]
+          unit: string
+        }
+        Insert: {
+          asking_price_per_unit: number
+          created_at?: string
+          crop_name: string
+          farmer_id: string
+          harvest_id?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          quality_grade?: string | null
+          quantity_available: number
+          status?: Database["public"]["Enums"]["listing_status"]
+          unit?: string
+        }
+        Update: {
+          asking_price_per_unit?: number
+          created_at?: string
+          crop_name?: string
+          farmer_id?: string
+          harvest_id?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          quality_grade?: string | null
+          quantity_available?: number
+          status?: Database["public"]["Enums"]["listing_status"]
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_listings_harvest_id_fkey"
+            columns: ["harvest_id"]
+            isOneToOne: false
+            referencedRelation: "harvest_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produce_listings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produce_orders: {
+        Row: {
+          buyer_id: string
+          commission_amount: number
+          commission_rate_applied: number | null
+          created_by: string | null
+          delivered_at: string | null
+          farmer_id: string
+          farmer_payout_amount: number
+          id: string
+          listing_id: string
+          order_number: string
+          organization_id: string
+          placed_at: string
+          quantity: number
+          status: Database["public"]["Enums"]["produce_order_status"]
+          subtotal: number
+          unit_price: number
+          verified_at: string | null
+        }
+        Insert: {
+          buyer_id: string
+          commission_amount?: number
+          commission_rate_applied?: number | null
+          created_by?: string | null
+          delivered_at?: string | null
+          farmer_id: string
+          farmer_payout_amount?: number
+          id?: string
+          listing_id: string
+          order_number: string
+          organization_id?: string
+          placed_at?: string
+          quantity: number
+          status?: Database["public"]["Enums"]["produce_order_status"]
+          subtotal: number
+          unit_price: number
+          verified_at?: string | null
+        }
+        Update: {
+          buyer_id?: string
+          commission_amount?: number
+          commission_rate_applied?: number | null
+          created_by?: string | null
+          delivered_at?: string | null
+          farmer_id?: string
+          farmer_payout_amount?: number
+          id?: string
+          listing_id?: string
+          order_number?: string
+          organization_id?: string
+          placed_at?: string
+          quantity?: number
+          status?: Database["public"]["Enums"]["produce_order_status"]
+          subtotal?: number
+          unit_price?: number
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produce_orders_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "produce_orders_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "produce_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produce_orders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_costing_overrides: {
+        Row: {
+          override_average: number
+          product_id: string
+          reason: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          override_average: number
+          product_id: string
+          reason: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          override_average?: number
+          product_id?: string
+          reason?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_costing_overrides_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_costing_overrides_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_costing_overrides_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "v_product_costing_with_override"
+            referencedColumns: ["product_id"]
+          },
+        ]
+      }
+      product_edit_requests: {
+        Row: {
+          changes: Json
+          created_at: string
+          id: string
+          product_id: string
+          proposed_by: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          changes: Json
+          created_at?: string
+          id?: string
+          product_id: string
+          proposed_by?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          changes?: Json
+          created_at?: string
+          id?: string
+          product_id?: string
+          proposed_by?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_edit_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_edit_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_edit_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_setup_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_edit_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_missing_image"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_edit_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_edit_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_trade_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_edit_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_wholesale_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_edit_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_suggestions"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_edit_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["product_id"]
+          },
+        ]
+      }
+      product_image_drafts: {
+        Row: {
+          generated_at: string
+          generated_by: string | null
+          id: string
+          image_url: string
+          is_branded: boolean
+          model: string | null
+          note: string | null
+          product_id: string
+          prompt: string | null
+          replaced_image_url: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          image_url: string
+          is_branded?: boolean
+          model?: string | null
+          note?: string | null
+          product_id: string
+          prompt?: string | null
+          replaced_image_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          image_url?: string
+          is_branded?: boolean
+          model?: string | null
+          note?: string | null
+          product_id?: string
+          prompt?: string | null
+          replaced_image_url?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_image_drafts_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_image_drafts_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "product_image_drafts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_image_drafts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_image_drafts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_setup_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_image_drafts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_missing_image"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_image_drafts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_image_drafts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_trade_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_image_drafts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_wholesale_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_image_drafts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_suggestions"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_image_drafts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_image_drafts_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_image_drafts_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      product_intake_batches: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          notes: string | null
+          status: string
+          warehouse_id: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          status?: string
+          warehouse_id?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: string
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_intake_batches_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_intake_batches_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "product_intake_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_intake_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "product_intake_batches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "product_intake_batches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_due"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "product_intake_batches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_overdue"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "product_intake_batches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_intake_items: {
+        Row: {
+          ai_raw: Json | null
+          ai_read_at: string | null
+          barcode: string | null
+          barcode_image_url: string | null
+          barcode_source: string | null
+          barcode_verified: boolean | null
+          batch_id: string
+          brand_name: string | null
+          category_name: string | null
+          company_name: string | null
+          created_at: string
+          expiry_date: string | null
+          id: string
+          image_url: string | null
+          manufacture_date: string | null
+          mrp_price: number | null
+          name: string | null
+          opening_qty: number
+          pack_size: string | null
+          problem: string | null
+          product_id: string | null
+          purchase_price: number | null
+          selling_price: number | null
+          status: string
+          unit: string | null
+          updated_at: string
+          wholesale_price: number | null
+        }
+        Insert: {
+          ai_raw?: Json | null
+          ai_read_at?: string | null
+          barcode?: string | null
+          barcode_image_url?: string | null
+          barcode_source?: string | null
+          barcode_verified?: boolean | null
+          batch_id: string
+          brand_name?: string | null
+          category_name?: string | null
+          company_name?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          image_url?: string | null
+          manufacture_date?: string | null
+          mrp_price?: number | null
+          name?: string | null
+          opening_qty?: number
+          pack_size?: string | null
+          problem?: string | null
+          product_id?: string | null
+          purchase_price?: number | null
+          selling_price?: number | null
+          status?: string
+          unit?: string | null
+          updated_at?: string
+          wholesale_price?: number | null
+        }
+        Update: {
+          ai_raw?: Json | null
+          ai_read_at?: string | null
+          barcode?: string | null
+          barcode_image_url?: string | null
+          barcode_source?: string | null
+          barcode_verified?: boolean | null
+          batch_id?: string
+          brand_name?: string | null
+          category_name?: string | null
+          company_name?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          image_url?: string | null
+          manufacture_date?: string | null
+          mrp_price?: number | null
+          name?: string | null
+          opening_qty?: number
+          pack_size?: string | null
+          problem?: string | null
+          product_id?: string | null
+          purchase_price?: number | null
+          selling_price?: number | null
+          status?: string
+          unit?: string | null
+          updated_at?: string
+          wholesale_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_intake_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "product_intake_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_intake_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_intake_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_intake_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_setup_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_intake_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_missing_image"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_intake_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_intake_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_trade_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_intake_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_wholesale_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_intake_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_suggestions"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_intake_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["product_id"]
+          },
+        ]
+      }
+      product_merge_requests: {
+        Row: {
+          created_at: string
+          id: string
+          proposed_by: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_product_id: string
+          source_stock_snapshot: Json | null
+          status: string
+          target_product_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          proposed_by?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_product_id: string
+          source_stock_snapshot?: Json | null
+          status?: string
+          target_product_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          proposed_by?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_product_id?: string
+          source_stock_snapshot?: Json | null
+          status?: string
+          target_product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_merge_requests_proposed_by_fkey"
+            columns: ["proposed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_proposed_by_fkey"
+            columns: ["proposed_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_setup_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_missing_image"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_trade_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_wholesale_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_suggestions"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_target_product_id_fkey"
+            columns: ["target_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_target_product_id_fkey"
+            columns: ["target_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_target_product_id_fkey"
+            columns: ["target_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_setup_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_target_product_id_fkey"
+            columns: ["target_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_missing_image"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_target_product_id_fkey"
+            columns: ["target_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_target_product_id_fkey"
+            columns: ["target_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_trade_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_target_product_id_fkey"
+            columns: ["target_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_wholesale_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_target_product_id_fkey"
+            columns: ["target_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_suggestions"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_target_product_id_fkey"
+            columns: ["target_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["product_id"]
+          },
+        ]
+      }
+      product_name_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_name: string
+          old_name: string
+          product_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_name: string
+          old_name: string
+          product_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_name?: string
+          old_name?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_name_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_name_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_setup_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_missing_image"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_trade_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_wholesale_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_suggestions"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["product_id"]
+          },
+        ]
+      }
+      product_rate_history: {
+        Row: {
+          batch_id: string | null
+          branch_id: string | null
+          changed_at: string
+          changed_by: string | null
+          diff_amount: number | null
+          diff_pct: number | null
+          id: string
+          new_rate: number
+          old_rate: number | null
+          product_id: string
+          purchase_id: string | null
+          rate_kind: string
+          source: string | null
+          supplier_id: string | null
+        }
+        Insert: {
+          batch_id?: string | null
+          branch_id?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          diff_amount?: number | null
+          diff_pct?: number | null
+          id?: string
+          new_rate: number
+          old_rate?: number | null
+          product_id: string
+          purchase_id?: string | null
+          rate_kind: string
+          source?: string | null
+          supplier_id?: string | null
+        }
+        Update: {
+          batch_id?: string | null
+          branch_id?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          diff_amount?: number | null
+          diff_pct?: number | null
+          id?: string
+          new_rate?: number
+          old_rate?: number | null
+          product_id?: string
+          purchase_id?: string | null
+          rate_kind?: string
+          source?: string | null
+          supplier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_rate_history_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "stock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_batches"
+            referencedColumns: ["batch_id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_setup_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_missing_image"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_trade_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_wholesale_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_suggestions"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "v_purchase_discrepancies"
+            referencedColumns: ["purchase_id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_due_calendar"
+            referencedColumns: ["purchase_id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payable_check"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payable_vs_ledger"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
+      product_trade_rate_history: {
+        Row: {
+          bill_date: string | null
+          bill_line_id: string | null
+          bill_number: string | null
+          changed_at: string
+          changed_by: string | null
+          id: string
+          new_rate: number
+          old_rate: number | null
+          old_rate_was_pending: boolean
+          product_id: string
+          source: string
+          supplier_id: string | null
+        }
+        Insert: {
+          bill_date?: string | null
+          bill_line_id?: string | null
+          bill_number?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_rate: number
+          old_rate?: number | null
+          old_rate_was_pending?: boolean
+          product_id: string
+          source?: string
+          supplier_id?: string | null
+        }
+        Update: {
+          bill_date?: string | null
+          bill_line_id?: string | null
+          bill_number?: string | null
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          new_rate?: number
+          old_rate?: number | null
+          old_rate_was_pending?: boolean
+          product_id?: string
+          source?: string
+          supplier_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_trade_rate_history_bill_line_id_fkey"
+            columns: ["bill_line_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_bill_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_bill_line_id_fkey"
+            columns: ["bill_line_id"]
+            isOneToOne: false
+            referencedRelation: "v_bill_lines_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_setup_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_missing_image"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_trade_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_wholesale_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_suggestions"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payable_check"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payable_vs_ledger"
+            referencedColumns: ["supplier_id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          active_ingredient: string | null
+          barcode: string | null
+          barcode_source: string | null
+          branch_id: string | null
+          brand_id: string | null
+          brochure_pdf_url: string | null
+          category_id: string | null
+          company_id: string | null
+          composition: string | null
+          created_at: string
+          created_by: string | null
+          dose: string | null
+          expiry_date: string | null
+          id: string
+          image_source: string | null
+          image_url: string | null
+          internal_barcode: string | null
+          is_available: boolean
+          is_deleted: boolean
+          is_verified: boolean
+          latest_purchase_id: string | null
+          latest_purchase_rate_at: string | null
+          latest_supplier_id: string | null
+          manufacture_date: string | null
+          min_stock_threshold: number | null
+          mrp_price: number | null
+          name: string
+          organization_id: string
+          pack_size: string | null
+          purchase_price: number
+          safety_information: string | null
+          sale_rate_pending: boolean
+          search_keywords: string | null
+          selling_price: number
+          shop_id: string | null
+          short_name: string | null
+          show_expiry_to_customer: boolean
+          trade_rate_pending: boolean
+          unit: string | null
+          unit_code: string | null
+          units_per_pack: number | null
+          updated_at: string
+          usage_instructions: string | null
+          wholesale_price: number | null
+        }
+        Insert: {
+          active_ingredient?: string | null
+          barcode?: string | null
+          barcode_source?: string | null
+          branch_id?: string | null
+          brand_id?: string | null
+          brochure_pdf_url?: string | null
+          category_id?: string | null
+          company_id?: string | null
+          composition?: string | null
+          created_at?: string
+          created_by?: string | null
+          dose?: string | null
+          expiry_date?: string | null
+          id?: string
+          image_source?: string | null
+          image_url?: string | null
+          internal_barcode?: string | null
+          is_available?: boolean
+          is_deleted?: boolean
+          is_verified?: boolean
+          latest_purchase_id?: string | null
+          latest_purchase_rate_at?: string | null
+          latest_supplier_id?: string | null
+          manufacture_date?: string | null
+          min_stock_threshold?: number | null
+          mrp_price?: number | null
+          name: string
+          organization_id?: string
+          pack_size?: string | null
+          purchase_price?: number
+          safety_information?: string | null
+          sale_rate_pending?: boolean
+          search_keywords?: string | null
+          selling_price?: number
+          shop_id?: string | null
+          short_name?: string | null
+          show_expiry_to_customer?: boolean
+          trade_rate_pending?: boolean
+          unit?: string | null
+          unit_code?: string | null
+          units_per_pack?: number | null
+          updated_at?: string
+          usage_instructions?: string | null
+          wholesale_price?: number | null
+        }
+        Update: {
+          active_ingredient?: string | null
+          barcode?: string | null
+          barcode_source?: string | null
+          branch_id?: string | null
+          brand_id?: string | null
+          brochure_pdf_url?: string | null
+          category_id?: string | null
+          company_id?: string | null
+          composition?: string | null
+          created_at?: string
+          created_by?: string | null
+          dose?: string | null
+          expiry_date?: string | null
+          id?: string
+          image_source?: string | null
+          image_url?: string | null
+          internal_barcode?: string | null
+          is_available?: boolean
+          is_deleted?: boolean
+          is_verified?: boolean
+          latest_purchase_id?: string | null
+          latest_purchase_rate_at?: string | null
+          latest_supplier_id?: string | null
+          manufacture_date?: string | null
+          min_stock_threshold?: number | null
+          mrp_price?: number | null
+          name?: string
+          organization_id?: string
+          pack_size?: string | null
+          purchase_price?: number
+          safety_information?: string | null
+          sale_rate_pending?: boolean
+          search_keywords?: string | null
+          selling_price?: number
+          shop_id?: string | null
+          short_name?: string | null
+          show_expiry_to_customer?: boolean
+          trade_rate_pending?: boolean
+          unit?: string | null
+          unit_code?: string | null
+          units_per_pack?: number | null
+          updated_at?: string
+          usage_instructions?: string | null
+          wholesale_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "products_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "products_latest_purchase_id_fkey"
+            columns: ["latest_purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_latest_purchase_id_fkey"
+            columns: ["latest_purchase_id"]
+            isOneToOne: false
+            referencedRelation: "v_purchase_discrepancies"
+            referencedColumns: ["purchase_id"]
+          },
+          {
+            foreignKeyName: "products_latest_purchase_id_fkey"
+            columns: ["latest_purchase_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_due_calendar"
+            referencedColumns: ["purchase_id"]
+          },
+          {
+            foreignKeyName: "products_latest_supplier_id_fkey"
+            columns: ["latest_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_latest_supplier_id_fkey"
+            columns: ["latest_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payable_check"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "products_latest_supplier_id_fkey"
+            columns: ["latest_supplier_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_payable_vs_ledger"
+            referencedColumns: ["supplier_id"]
+          },
+          {
+            foreignKeyName: "products_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["shop_id"]
+          },
+          {
+            foreignKeyName: "products_unit_code_fkey"
+            columns: ["unit_code"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          allowed_pages: Json | null
+          branch_id: string | null
+          created_at: string
+          extra_roles: Database["public"]["Enums"]["user_role"][]
+          full_name: string
+          id: string
+          is_active: boolean
+          organization_id: string
+          phone_number: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          shop_id: string | null
+          status: string
+          status_changed_at: string | null
+          status_reason: string | null
+          training_mode: boolean
+          ui_mode: string
+        }
+        Insert: {
+          allowed_pages?: Json | null
+          branch_id?: string | null
+          created_at?: string
+          extra_roles?: Database["public"]["Enums"]["user_role"][]
+          full_name: string
+          id: string
+          is_active?: boolean
+          organization_id?: string
+          phone_number?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          shop_id?: string | null
+          status?: string
+          status_changed_at?: string | null
+          status_reason?: string | null
+          training_mode?: boolean
+          ui_mode?: string
+        }
+        Update: {
+          allowed_pages?: Json | null
+          branch_id?: string | null
+          created_at?: string
+          extra_roles?: Database["public"]["Enums"]["user_role"][]
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          organization_id?: string
+          phone_number?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          shop_id?: string | null
+          status?: string
+          status_changed_at?: string | null
+          status_reason?: string | null
+          training_mode?: boolean
+          ui_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_close_missing"
+            referencedColumns: ["branch_id"]
+          },
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["shop_id"]
+          },
+        ]
+      }
+      purchase_comments: {
+        Row: {
+          author_id: string | null
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          purchase_id: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          created_at?: string
+          id?: string
+          kind?: string
+          purchase_id: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          purchase_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "purchase_comments_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_comments_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "v_purchase_discrepancies"
+            referencedColumns: ["purchase_id"]
+          },
+          {
+            foreignKeyName: "purchase_comments_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_due_calendar"
+            referencedColumns: ["purchase_id"]
+          },
+        ]
+      }
+      purchase_payment_slips: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          image_url: string
+          paid_on: string
+          purchase_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url: string
+          paid_on: string
+          purchase_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url?: string
+          paid_on?: string
+          purchase_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_payment_slips_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_payment_slips_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_items: {
+        Row: {
+          batch_id: string | null
+          damaged_qty: number
+          grn_note: string | null
+          id: string
+          line_total: number
+          product_id: string
+          purchase_id: string
+          quantity: number
+          received_qty: number | null
+          short_qty: number
+          unit_cost: number
+        }
+        Insert: {
+          batch_id?: string | null
+          damaged_qty?: number
+          grn_note?: string | null
+          id?: string
+          line_total: number
+          product_id: string
+          purchase_id: string
+          quantity: number
+          received_qty?: number | null
+          short_qty?: number
+          unit_cost: number
+        }
+        Update: {
+          batch_id?: string | null
+          damaged_qty?: number
+          grn_note?: string | null
+          id?: string
+          line_total?: number
+          product_id?: string
+          purchase_id?: string
+          quantity?: number
+          received_qty?: number | null
+          short_qty?: number
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "stock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_batches"
+            referencedColumns: ["batch_id"]
+          },
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_setup_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_missing_image"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_trade_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_wholesale_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_suggestions"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "purchase_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "v_purchase_discrepancies"
+            referencedColumns: ["purchase_id"]
+          },
+          {
+            foreignKeyName: "purchase_items_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "v_supplier_due_calendar"
+            referencedColumns: ["purchase_id"]
+          },
+        ]
+      }
+      purchase_returns: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          purchase_id: string
+          quantity: number
+          reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          purchase_id: string
+          quantity: number
+          reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          purchase_id?: string
+          quantity?: number
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_returns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_returns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "purchase_returns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_setup_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_returns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_missing_image"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "purchase_returns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_returns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_trade_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_returns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_wholesale_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_returns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_suggestions"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "purchase_returns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "purchase_returns_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_returns_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "v_purchase_discrepancies"
             referencedColumns: ["purchase_id"]
           },
           {
@@ -15601,6 +25662,115 @@ export type Database = {
           },
         ]
       }
+      stock_count_command_logs: {
+        Row: {
+          command_type: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          response_started_at: string | null
+          sent_at: string
+          sent_by: string | null
+          staff_id: string | null
+          status: string
+          stock_count_id: string | null
+          warehouse_id: string
+        }
+        Insert: {
+          command_type?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          response_started_at?: string | null
+          sent_at?: string
+          sent_by?: string | null
+          staff_id?: string | null
+          status?: string
+          stock_count_id?: string | null
+          warehouse_id: string
+        }
+        Update: {
+          command_type?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          response_started_at?: string | null
+          sent_at?: string
+          sent_by?: string | null
+          staff_id?: string | null
+          status?: string
+          stock_count_id?: string | null
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_count_command_logs_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_command_logs_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "stock_count_command_logs_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_command_logs_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "stock_count_command_logs_stock_count_id_fkey"
+            columns: ["stock_count_id"]
+            isOneToOne: false
+            referencedRelation: "stock_counts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_command_logs_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_warehouse_stock"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_count_command_logs_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_due"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_count_command_logs_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_count_overdue"
+            referencedColumns: ["warehouse_id"]
+          },
+          {
+            foreignKeyName: "stock_count_command_logs_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_count_liability_requests: {
         Row: {
           branch_id: string | null
@@ -16349,6 +26519,7 @@ export type Database = {
           from_warehouse_id: string
           id: string
           notes: string | null
+          offline_item_key: string | null
           payment_slip_url: string | null
           payment_verified_at: string | null
           payment_verified_by: string | null
@@ -16376,6 +26547,7 @@ export type Database = {
           from_warehouse_id: string
           id?: string
           notes?: string | null
+          offline_item_key?: string | null
           payment_slip_url?: string | null
           payment_verified_at?: string | null
           payment_verified_by?: string | null
@@ -16403,6 +26575,7 @@ export type Database = {
           from_warehouse_id?: string
           id?: string
           notes?: string | null
+          offline_item_key?: string | null
           payment_slip_url?: string | null
           payment_verified_at?: string | null
           payment_verified_by?: string | null
@@ -22827,6 +33000,25 @@ export type Database = {
         Row: {
           last_purchase_date: string | null
           name: string | null
+          pack_size: string | null
+          product_id: string | null
+          purchase_count: number | null
+          reference_rate: number | null
+          selling_price: number | null
+          total_cost: number | null
+          total_qty: number | null
+          weighted_avg: number | null
+        }
+        Relationships: []
+      }
+      v_product_costing_with_override: {
+        Row: {
+          calculated_avg: number | null
+          last_purchase_date: string | null
+          name: string | null
+          override_average: number | null
+          override_reason: string | null
+          override_updated_at: string | null
           pack_size: string | null
           product_id: string | null
           purchase_count: number | null

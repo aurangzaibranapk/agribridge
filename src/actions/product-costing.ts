@@ -25,16 +25,23 @@ export async function saveProductCostingOverride(formData: FormData): Promise<vo
   const { data: product } = await service.from("products").select("id, name").eq("id", productId).maybeSingle();
   if (!product) throw new Error("Product not found.");
 
+  const { data: existingOverride } = await service
+    .from("product_costing_overrides")
+    .select("override_average")
+    .eq("product_id", productId)
+    .maybeSingle();
+  const previousAverage = existingOverride?.override_average ?? null;
+
   if (command === "clear") {
     const { error } = await service.from("product_costing_overrides").delete().eq("product_id", productId);
     if (error) throw new Error(error.message);
-    await logAudit({ actionType: "update", module: "products", recordId: productId, description: `Product costing override cleared: ${product.name}`, changes: { costing_average_override: { new: null } } });
+    await logAudit({ actionType: "update", module: "products", recordId: productId, description: `Product costing override cleared: ${product.name}`, changes: { costing_average_override: { pehle: previousAverage, ab: null } } });
   } else {
     if (!Number.isFinite(average) || average < 0) throw new Error("Average rate must be a valid number.");
     if (reason.length < 5) throw new Error("Correction reason is required.");
     const { error } = await service.from("product_costing_overrides").upsert({ product_id: productId, override_average: average, reason, updated_by: user.id, updated_at: new Date().toISOString() });
     if (error) throw new Error(error.message);
-    await logAudit({ actionType: "update", module: "products", recordId: productId, description: `Product costing average corrected: ${product.name}`, changes: { costing_average_override: { new: average, reason } } });
+    await logAudit({ actionType: "update", module: "products", recordId: productId, description: `Product costing average corrected: ${product.name}`, changes: { costing_average_override: { pehle: previousAverage, ab: average }, reason: { pehle: null, ab: reason } } });
   }
   revalidatePath("/admin/finance/costing");
 }
