@@ -1,6 +1,6 @@
 # Sales desk, POS closing and supplier bill release
 
-Prepared 2026-10-07. Live deployment remains pending verified database backup and migrations. Existing business data is not deleted by this release.
+Prepared 2026-10-07. Live database migrations completed; production build upload and smoke tests remain pending. Existing business data is not deleted by this release.
 
 ## Changes
 
@@ -48,3 +48,11 @@ On cPanel preserve .env.local, node_modules and user uploads. Move the previous 
 The workspace compile build has no production environment credentials and is not a deployable production archive. Current cPanel cleanup and live smoke tests are pending access/deployment. Whole purchase/GRN workflows still contain separate business writes; this release does not assert that every ERP operation is fully atomic.
 
 Bank transfer now has Sending (cash incoming, bank outgoing) and Receiving (bank incoming, cash payout less fee). Old rows default to Sending. Receipts and POS closing show directions separately; receiving is a cash exchange, not customer loan recovery.
+
+## Live migration completion — 7 October 2026
+
+Owner explicitly accepted the Supabase physical backup shown in the screenshot (6 October 20:35:31 UTC / 7 October 01:35:31 Pakistan), waiving the MB-size requirement for this deployment. Owner confirmed the Node app was stopped before the remaining five migrations. Bank-transfer table migration was applied earlier; all six migrations are now applied live.
+
+Immediately before/after the five migrations: products 344, purchases 10, purchase_items 112, load_transactions 12, journal_entries 687, journal_lines 2197, finance_transactions 331, bank_transfer_transactions 0. Counts unchanged. All eight new posting/product/source triggers enabled. Four financial RPCs grant execution to service_role only, not anon/authenticated. Keep app stopped until latest production runtime is uploaded and verified; an old build must not be restarted against these triggers. Local Windows packaging was blocked by untracked app files; identify and preserve those before rebuilding.
+
+Post-migration verification found two previously unposted finance transfer legs created at 05:22 UTC today: Bank Alfalah GL 1011 outgoing 3,000 and CBA GL 1014 incoming 3,000, same actor/note and adjacent timestamps. Exact source evidence was checked, then one balanced journal claimed both existing rows using atomic posting; no new cash-book movement was created. Unposted sources now zero. Six historical malformed journal headers/lines dated 4–24 September were identified separately (four one-sided machinery diesel/reversal entries in cancelling pairs, two empty headers); no speculative alteration was made.
