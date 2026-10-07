@@ -24,7 +24,7 @@ mkdir -p "$package_dir/.release"
 cp scripts/verify-cpanel-runtime.mjs "$package_dir/.release/verify.mjs"
 node scripts/create-cpanel-manifest.mjs "$package_dir"
 node "$package_dir/.release/verify.mjs" "$package_dir"
-archive_path="$(cd .. && pwd)/agribridge-clean-$(date +%Y%m%d-%H%M%S).tar.gz"
+archive_path="$(pwd)/agribridge-clean-$(date +%Y%m%d-%H%M%S).tar.gz"
 tar -czf "$archive_path" -C "$package_dir" .next public package.json package-lock.json next.config.js server.js .release
 cp "$package_dir/.release/manifest.json" ../agribridge-last-release.json
 printf 'Clean package: %s\n' "$archive_path"
