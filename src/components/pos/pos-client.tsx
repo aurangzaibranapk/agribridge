@@ -129,6 +129,8 @@ function rebalanceKhata(lines: PaymentLine[], amountDue: number): PaymentLine[] 
 
 export function PosClient({
   sellerName,
+  shopName = null,
+  branchName = null,
   inventory: initialInventory,
   groups = [],
   customers,
@@ -140,6 +142,8 @@ export function PosClient({
   lang,
 }: {
   sellerName: string;
+  shopName?: string | null;
+  branchName?: string | null;
   inventory: InventoryItem[];
   groups?: { name: string; count: number }[];
   customers: Customer[];
@@ -558,7 +562,7 @@ export function PosClient({
         setOfflinePending(rows.filter((r) => r.action_type === "pos.sale" && r.sync_status === "pending").length);
         setOfflineReceipt({
           receiptNo: `OFF-${new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14)}`,
-          createdAt: new Date().toISOString(), sellerName,
+          createdAt: new Date().toISOString(), sellerName, shopName, branchName,
           customerName: chosenCustomer?.businessName || chosenCustomer?.name || "Walk-in Customer",
           paymentMode: primaryMethod, total: deyRaqam, cashPaid: cashCollected, khataAmount: khataTotal,
           items: cart.map((l) => ({ name: l.name, quantity: l.quantity, unitPrice: l.unit_price, subtotal: l.quantity * l.unit_price })),

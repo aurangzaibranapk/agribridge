@@ -47,6 +47,8 @@ interface Account {
   float: number | null;
 }
 interface Txn {
+  shopName: string | null;
+  branchName: string | null;
   id: string;
   number: string;
   kind: string;
@@ -66,6 +68,8 @@ interface Txn {
   provider: string;
 }
 interface LedgerTxn {
+  shopName: string | null;
+  branchName: string | null;
   id: string;
   description: string;
   amount: number;
@@ -78,6 +82,8 @@ interface FinanceAccount {
   accountType: string;
 }
 interface BankTransferTxn {
+  shopName: string | null;
+  branchName: string | null;
   direction: "sending" | "receiving";
   id: string;
   number: string;
@@ -132,6 +138,8 @@ function rs(n: number): string {
 }
 
 type DeskSlip = {
+  shopName: string | null;
+  branchName: string | null;
   title: string;
   date: string;
   customer: string;
@@ -166,7 +174,7 @@ function printDeskSlip(slip: DeskSlip) {
   popup.document.open();
   popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safe(slip.title)}</title><style>
     *{box-sizing:border-box}body{margin:0;background:#f3f6f4;color:#17251e;font:13px Arial,sans-serif}.paper{width:80mm;min-height:120mm;margin:12px auto;background:#fff;padding:6mm 5mm}.brand{text-align:center;border-bottom:1px dashed #9aa79f;padding-bottom:10px}.brand-mark{display:inline-grid;width:34px;height:34px;place-items:center;border-radius:50%;background:#eaf5ed;color:#087a42;font-weight:700;font-size:18px}.brand h1{font-size:17px;margin:7px 0 2px}.brand p{margin:0;color:#66736b;font-size:10px}.title{text-align:center;font-weight:700;font-size:15px;margin:12px 0 3px}.status{text-align:center;color:#087a42;font-size:10px;margin-bottom:10px}.row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #edf1ee;font-size:11px}.row span{color:#627067}.row b{text-align:right;max-width:52%;overflow-wrap:anywhere}.total{margin-top:5px;padding:10px 0;border-top:1px solid #b7c7bd;border-bottom:1px dashed #9aa79f;font-size:14px}.total b{font-size:17px}.note{padding:8px 0;font-size:10px;color:#59675f;overflow-wrap:anywhere}.foot{text-align:center;margin-top:14px;padding-top:9px;border-top:1px dashed #9aa79f;color:#68756d;font-size:10px;line-height:1.5}.actions{display:flex;justify-content:center;margin:10px auto}.actions button{border:0;border-radius:7px;background:#087a42;color:white;padding:9px 18px;font-weight:700;cursor:pointer}@media print{@page{size:80mm auto;margin:3mm}body{background:#fff}.paper{width:74mm;min-height:0;margin:0 auto;padding:2mm 1mm}.actions{display:none}}
-  </style></head><body><article class="paper"><header class="brand"><span class="brand-mark">A</span><h1>AgriBridge</h1><p>Al Rana Traders · Staff Sales Desk</p></header><div class="title">${safe(slip.title)}</div><div class="status">${safe(slip.status)}</div>${row("Date & time", slip.date)}${row("Receipt no.", slip.receiptNo)}${row("Customer", slip.customer)}${row("Mobile", slip.contact)}${row("Provider / network", slip.provider)}${row("Bill type", slip.billCategory)}${row("Destination", slip.destination)}${row("Account title", slip.beneficiaryTitle)}${row("Account / IBAN / mobile", slip.beneficiaryAccount)}${row("Reference", slip.reference)}${row("Source account", slip.floatAccount)}${row(slip.title.includes("Receiving") ? "Cash paid from" : "Payment received in", slip.paymentMethod || slip.account)}${row("Amount", rs(slip.amount))}${charge}<div class="row total"><span>${slip.title.includes("Udhaar") ? "Udhaar amount" : slip.title.includes("Recovery") ? "Received" : slip.title.includes("Receiving") ? "Customer ko cash" : "Customer pays"}</span><b>${rs(slip.total)}</b></div>${slip.note ? `<div class="note"><b>Note:</b> ${safe(slip.note)}</div>` : ""}<footer class="foot">${slip.receiptNo || slip.status === "Transaction recorded" ? "Please keep this receipt for your record." : "Preview slip · transaction save hone ke baad final receipt print karein."}<br>Thank you · Shukriya</footer></article><div class="actions"><button onclick="window.print()">Print receipt</button></div></body></html>`);
+  </style></head><body><article class="paper"><header class="brand"><span class="brand-mark">A</span><h1>${safe(slip.shopName || slip.branchName || "Shop not linked")}</h1><p>${safe(slip.branchName || "")}</p></header><div class="title">${safe(slip.title)}</div><div class="status">${safe(slip.status)}</div>${row("Date & time", slip.date)}${row("Receipt no.", slip.receiptNo)}${row("Customer", slip.customer)}${row("Mobile", slip.contact)}${row("Provider / network", slip.provider)}${row("Bill type", slip.billCategory)}${row("Destination", slip.destination)}${row("Account title", slip.beneficiaryTitle)}${row("Account / IBAN / mobile", slip.beneficiaryAccount)}${row("Reference", slip.reference)}${row("Source account", slip.floatAccount)}${row(slip.title.includes("Receiving") ? "Cash paid from" : "Payment received in", slip.paymentMethod || slip.account)}${row("Amount", rs(slip.amount))}${charge}<div class="row total"><span>${slip.title.includes("Udhaar") ? "Udhaar amount" : slip.title.includes("Recovery") ? "Received" : slip.title.includes("Receiving") ? "Customer ko cash" : "Customer pays"}</span><b>${rs(slip.total)}</b></div>${slip.note ? `<div class="note"><b>Note:</b> ${safe(slip.note)}</div>` : ""}<footer class="foot">${slip.receiptNo || slip.status === "Transaction recorded" ? "Please keep this receipt for your record." : "Preview slip · transaction save hone ke baad final receipt print karein."}<br>Thank you · Shukriya</footer></article><div class="actions"><button onclick="window.print()">Print receipt</button></div></body></html>`);
   popup.document.close();
   window.setTimeout(() => { popup.focus(); popup.print(); }, 300);
 }
@@ -219,6 +227,8 @@ function Submit({ label, compact = false }: { label: string; compact?: boolean }
 export function LoadBillClient({
   shuruKind,
   shopId,
+  shopName,
+  branchName,
   providers,
   accounts,
   financeAccounts,
@@ -233,6 +243,8 @@ export function LoadBillClient({
   /** POS se aate waqt kaunsa khana khula ho — "Mobile Load" ya "Bill Payment". */
   shuruKind: "load" | "bill";
   shopId: string | null;
+  shopName: string | null;
+  branchName: string | null;
   providers: Provider[];
   accounts: Account[];
   financeAccounts: FinanceAccount[];
@@ -452,6 +464,7 @@ export function LoadBillClient({
   const bankSourceName = financeAccounts.find((account) => account.id === bankSourceAccount)?.name ?? "—";
   const serviceTitle = tab === "load" ? "Mobile Load" : tab === "bill" ? "Bill Payment" : tab === "udhaar" ? "Udhaar" : tab === "receive" ? "Recovery" : `Bank Transfer ${bankDirection === "receiving" ? "Receiving" : "Sending"}`;
   const currentSlip: DeskSlip = {
+    shopName, branchName,
     title: `${serviceTitle} Receipt`,
     date: tab === "udhaar" || tab === "receive"
       ? new Date(`${ledgerDate}T12:00:00`).toLocaleDateString("en-PK", { dateStyle: "medium" })
@@ -475,7 +488,7 @@ export function LoadBillClient({
     note: tab === "udhaar" || tab === "receive" ? ledgerNote || undefined : undefined,
   };
   const quickPhone = whatsappPhone(tab === "bank_transfer" ? bankCustomerPhone || activeParty?.phone : activeParty?.phone || (tab === "load" ? reference : ""));
-  const whatsAppHref = `https://wa.me/${quickPhone}?text=${encodeURIComponent(`${currentSlip.title}\nCustomer: ${currentSlip.customer}\nAmount: ${rs(currentSlip.amount)}${currentSlip.serviceCharge ? `\nService charge: ${rs(currentSlip.serviceCharge)}` : ""}\nTotal: ${rs(currentSlip.total)}\n${currentSlip.status}`)}`;
+  const whatsAppHref = `https://wa.me/${quickPhone}?text=${encodeURIComponent(`${currentSlip.shopName || currentSlip.branchName || "Shop not linked"}\n${currentSlip.branchName || ""}\n${currentSlip.title}\nCustomer: ${currentSlip.customer}\nAmount: ${rs(currentSlip.amount)}${currentSlip.serviceCharge ? `\nService charge: ${rs(currentSlip.serviceCharge)}` : ""}\nTotal: ${rs(currentSlip.total)}\n${currentSlip.status}`)}`;
   const [transactionFilter, setTransactionFilter] = useState<"all" | "load" | "bill" | "udhaar" | "recovery" | "bank_transfer" | "pending">("all");
   const transactions: DeskTransaction[] = [
     ...today.map((t) => ({
@@ -1009,6 +1022,8 @@ export function LoadBillClient({
                   <td>{transaction.status === "pending" ? <Badge tone="amber">Pending</Badge> : transaction.status === "wapas" ? <Badge tone="red">Reversed</Badge> : <Badge tone="green">Completed</Badge>}</td>
                   <td><div className="load-history-actions">
                     <button type="button" title="Print receipt" aria-label={`Print ${transaction.kind} receipt`} onClick={() => printDeskSlip({
+                      shopName: t?.shopName ?? bt?.shopName ?? ledgerToday.find(row => row.id === transaction.id)?.shopName ?? null,
+                      branchName: t?.branchName ?? bt?.branchName ?? ledgerToday.find(row => row.id === transaction.id)?.branchName ?? null,
                       title: `${transaction.kind === "load" ? "Mobile Load" : transaction.kind === "bill" ? "Bill Payment" : transaction.kind === "udhaar" ? "Udhaar" : transaction.kind === "recovery" ? "Recovery" : `Bank Transfer ${bt?.direction === "receiving" ? "Receiving" : "Sending"}`} Receipt`,
                       date: new Date(transaction.waqt).toLocaleString("en-PK", { dateStyle: "medium", timeStyle: "short" }),
                       customer: transaction.customer,

@@ -33,6 +33,7 @@ export default async function ShiftSlipPage({ params, searchParams }: { params: 
   const allowed = shift.staff_id === user.id || UNRESTRICTED_ROLES.includes(profile.role) || profile.role === "finance" || (profile.role === "manager" && !!counter?.branch_id && counter.branch_id === profile.branch_id);
   if (!allowed) notFound();
 
+  const { data: receiptBranch } = counter?.branch_id ? await service.from("branches").select("name").eq("id", counter.branch_id).maybeSingle() : { data: null };
   const [{ data: staff }, { data: shop }, { data: handover }, summary] = await Promise.all([
     service.from("profiles").select("full_name").eq("id", shift.staff_id).maybeSingle(),
     counter?.shop_id ? service.from("shops").select("name").eq("id", counter.shop_id).maybeSingle() : Promise.resolve({ data: null }),
@@ -72,7 +73,8 @@ export default async function ShiftSlipPage({ params, searchParams }: { params: 
         <PrintShiftSlip autoPrint={!embedded} />
       </div>
       <section className="border border-dashed border-surface-300 bg-white p-3 print:border-0 print:p-0 print:shadow-none">
-        <p className="text-center text-xs font-semibold uppercase tracking-widest">AgriBridge</p>
+        <p className="text-center text-lg font-bold uppercase tracking-wide">{shop?.name ?? receiptBranch?.name ?? "Shop not linked"}</p>
+        {receiptBranch?.name && <p className="text-center text-[11px]">{receiptBranch.name}</p>}
         <h1 className="mt-1 text-center text-base font-bold">Daily POS Cash Slip</h1>
         <p className="mt-1 text-center text-xs text-surface-500">Shift band hone par cash ke sath office jama karayein</p>
         <div className="mt-5 grid grid-cols-1 gap-y-1 border-y border-surface-300 py-3 text-xs">

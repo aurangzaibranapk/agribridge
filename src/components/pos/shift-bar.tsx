@@ -323,7 +323,8 @@ function shiftReportText({
 }) {
   const difference = countedCash - summary.expectedCash;
   return [
-    "AgriBridge — POS Shift Close Report",
+    shopName,
+    "POS Shift Close Report",
     `Shift: ${shiftNumber}`,
     `Shop: ${shopName}`,
     `Counter: ${counterName}`,

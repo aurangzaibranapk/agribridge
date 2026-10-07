@@ -7,6 +7,8 @@ export interface OfflineReceiptData {
   receiptNo: string;
   createdAt: string;
   sellerName: string;
+  shopName?: string | null;
+  branchName?: string | null;
   customerName: string;
   paymentMode: string;
   total: number;
@@ -30,7 +32,8 @@ export function OfflineReceiptModal({ receipt, onClose }: { receipt: OfflineRece
           <button onClick={onClose} className="text-surface-400" aria-label="Close"><X className="h-5 w-5" /></button>
         </div>
         <div className="text-center">
-          <p className="text-lg font-bold uppercase">{receipt.sellerName}</p>
+          <p className="text-lg font-bold uppercase">{receipt.shopName || receipt.sellerName}</p>
+          {receipt.branchName && <p className="text-[11px] uppercase">{receipt.branchName}</p>}
           <p className="text-xs">{date}</p>
           <p className="mt-1 text-xs font-bold">TEMP: {receipt.receiptNo}</p>
           <p className="text-[10px] font-bold">OFFLINE — SYNC PENDING</p>

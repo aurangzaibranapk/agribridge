@@ -80,6 +80,16 @@ export default async function LoadBillPage({
   // Migration 20260922092251 owns this table; generated database types
   // are refreshed after the migration is applied to the shared database.
   const bankDb = service as any;
+  const { data: receiptShops } = await service.from("shops").select("id, name, branch_id");
+  const { data: receiptBranches } = await service.from("branches").select("id, name");
+  const shopById = new Map((receiptShops ?? []).map(shop => [shop.id, shop]));
+  const branchById = new Map((receiptBranches ?? []).map(branch => [branch.id, branch.name]));
+  function receiptIdentity(shopId: string | null, branchId: string | null) {
+    const shop = shopId ? shopById.get(shopId) : null;
+    return { shopName: shop?.name ?? null, branchName: branchById.get(shop?.branch_id ?? branchId ?? "") ?? null };
+  }
+  const deskIdentity = receiptIdentity(effectiveShopId, me.branch_id);
+
   const aaj = aajKaKhana();
   const branchPromise = me.branch_id
     ? service.from("branches").select("name").eq("id", me.branch_id).maybeSingle()
@@ -123,7 +133,7 @@ export default async function LoadBillPage({
   const loadTransactionsQuery = service
     .from("load_transactions")
     .select(
-      "id, txn_number, kind, reference, bill_category, principal, service_charge, commission_expected, commission_confirmed, commission_status, payment_method, provider_tid, status, float_settled, customer_name, created_at, account_id, provider_id"
+      "id, txn_number, kind, reference, bill_category, principal, service_charge, commission_expected, commission_confirmed, commission_status, payment_method, provider_tid, status, float_settled, customer_name, created_at, account_id, provider_id, shop_id, branch_id"
     )
     .gte("created_at", `${aaj}T00:00:00+05:00`)
     .order("created_at", { ascending: false })
@@ -136,7 +146,7 @@ export default async function LoadBillPage({
   const bankTransfersQuery = bankDb
     .from("bank_transfer_transactions")
     .select(
-      "id, direction, txn_number, source_finance_account_id, receiving_method, receiving_finance_account_id, destination_channel, beneficiary_title, beneficiary_account, customer_name, customer_phone, principal, service_charge, provider_tid, status, created_at"
+      "id, direction, txn_number, source_finance_account_id, receiving_method, receiving_finance_account_id, destination_channel, beneficiary_title, beneficiary_account, customer_name, customer_phone, principal, service_charge, provider_tid, status, created_at, shop_id, branch_id"
     )
     .gte("created_at", `${aaj}T00:00:00+05:00`)
     .order("created_at", { ascending: false })
@@ -152,14 +162,22 @@ export default async function LoadBillPage({
   const ledgerResult = me.branch_id
     ? await service
         .from("journal_entries")
-        .select("id, description, created_at, is_reversal, reversal_of")
+        .select("id, description, created_at, is_reversal, reversal_of, pos_shift_id")
         .eq("branch_id", me.branch_id)
         .eq("source_module", "customer_udhaar")
         .eq("entry_date", aaj)
         .order("created_at", { ascending: false })
         .limit(60)
     : { data: [], error: null };
-  const ledgerRows = ledgerResult.data ?? [];
+  const ledgerRows = (ledgerResult.data ?? []) as unknown as { id: string; description: string | null; created_at: string; is_reversal: boolean; reversal_of: string | null; pos_shift_id: string | null }[];
+  const receiptShiftIds = ledgerRows.map(row => row.pos_shift_id).filter((id): id is string => !!id);
+  const { data: receiptShifts } = receiptShiftIds.length
+    ? await service.from("pos_shifts").select("id, pos_counters(shop_id)").in("id", receiptShiftIds)
+    : { data: [] };
+  const ledgerShopByShift = new Map((receiptShifts ?? []).map(row => {
+    const counter = Array.isArray(row.pos_counters) ? row.pos_counters[0] : row.pos_counters;
+    return [row.id, counter?.shop_id ?? null];
+  }));
   const ledgerIds = ledgerRows.map((row) => row.id as string);
   const ledgerLines = ledgerIds.length
     ? await service.from("journal_lines").select("entry_id, debit").in("entry_id", ledgerIds)
@@ -177,6 +195,7 @@ export default async function LoadBillPage({
       return {
         id: row.id as string,
         description,
+        ...receiptIdentity(row.pos_shift_id ? ledgerShopByShift.get(row.pos_shift_id) ?? null : null, me.branch_id),
         amount: debitByEntry.get(row.id as string) ?? 0,
         createdAt: row.created_at as string,
         kind: (isRecovery ? "recovery" : "udhaar") as "recovery" | "udhaar",
@@ -239,6 +258,8 @@ export default async function LoadBillPage({
         <LoadBillClient
           shuruKind={shuruKind}
           shopId={effectiveShopId}
+          shopName={deskIdentity.shopName}
+          branchName={deskIdentity.branchName}
           providers={(providers ?? []).map((p) => ({
             id: p.id as string,
             name: p.name as string,
@@ -276,6 +297,7 @@ export default async function LoadBillPage({
           today={(aajKiQatarein ?? []).map((t) => ({
             id: t.id as string,
             number: t.txn_number as string,
+            ...receiptIdentity(t.shop_id ?? null, t.branch_id ?? null),
             kind: t.kind as string,
             reference: t.reference as string,
             billCategory: (t.bill_category as string | null) ?? null,
@@ -297,6 +319,7 @@ export default async function LoadBillPage({
             id: t.id as string,
             direction: t.direction === "receiving" ? "receiving" : "sending",
             number: t.txn_number as string,
+            ...receiptIdentity(t.shop_id ?? null, t.branch_id ?? null),
             sourceAccountId: t.source_finance_account_id as string,
             receivingMethod: t.receiving_method as string,
             receivingAccountId: (t.receiving_finance_account_id as string | null) ?? null,

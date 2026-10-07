@@ -602,6 +602,8 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
       <PosClient
         lang={lang}
         sellerName={sellerName}
+        shopName={shopName}
+        branchName={branch?.name ?? null}
         inventory={inventory}
         groups={groups}
         customers={rawCustomers ?? []}
