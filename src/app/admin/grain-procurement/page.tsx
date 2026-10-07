@@ -40,6 +40,21 @@ export default async function AdminGrainProcurementPage() {
       .limit(200),
   ]);
 
+  const { data: grainProducts, error: grainProductError } = await supabase.from("grain_type_products").select("grain_type, product_id");
+  if (grainProductError) throw new Error(grainProductError.message);
+  const productIds = (grainProducts ?? []).map(row => row.product_id);
+  const stockByWarehouseAndType: Record<string, Record<string, number>> = {};
+  if (productIds.length) {
+    const { data: stocks, error } = await supabase.from("inventory").select("warehouse_id, product_id, quantity_on_hand").in("product_id", productIds);
+    if (error) throw new Error(error.message);
+    for (const row of stocks ?? []) {
+      const type = grainProducts?.find(product => product.product_id === row.product_id)?.grain_type;
+      if (!type) continue;
+      stockByWarehouseAndType[row.warehouse_id] ??= {};
+      stockByWarehouseAndType[row.warehouse_id][type] = (stockByWarehouseAndType[row.warehouse_id][type] ?? 0) + Number(row.quantity_on_hand);
+    }
+  }
+
   const entries = (rawEntries ?? []).map((e: any) => {
     const farmer = Array.isArray(e.farmers) ? e.farmers[0] : e.farmers;
     const party = Array.isArray(e.grain_parties) ? e.grain_parties[0] : e.grain_parties;
@@ -137,6 +152,7 @@ export default async function AdminGrainProcurementPage() {
         cutPresets={cutPresets ?? []}
         financeAccounts={financeAccounts ?? []}
         buyers={buyers ?? []}
+        stockByWarehouseAndType={stockByWarehouseAndType}
         entries={entries}
         payments={payments}
         balances={balances}

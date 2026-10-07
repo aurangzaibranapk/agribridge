@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo, type FormEvent } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import Link from "next/link";
+import { NewSaleForm } from "./sell/sell-grain-client";
 import { useFormState, useFormStatus } from "react-dom";
 import { createGrainEntry, recordGrainPayment, createGrainParty, editGrainEntry, type ActionState } from "@/actions/grain-procurement";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
@@ -81,6 +82,7 @@ export function GrainClient({
   payments,
   balances,
   byGrainType,
+  stockByWarehouseAndType,
 }: {
   farmers: Farmer[];
   parties: Party[];
@@ -92,9 +94,11 @@ export function GrainClient({
   payments: Payment[];
   balances: Balance[];
   byGrainType: GrainTypeSummary[];
+  stockByWarehouseAndType: Record<string, Record<string, number>>;
 }) {
   const lang = useLang();
   const [tab, setTab] = useState<"entry" | "balances" | "entries">("entry");
+  const [entryMode, setEntryMode] = useState<"purchase" | "sale">("purchase");
   const [payingBalance, setPayingBalance] = useState<Balance | null>(null);
   const [showNewParty, setShowNewParty] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null);
@@ -119,9 +123,20 @@ export function GrainClient({
 
       {tab === "entry" && (
         <div className="space-y-4">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Grain purchase or sale">
+            <Button type="button" variant={entryMode === "purchase" ? "primary" : "secondary"} aria-pressed={entryMode === "purchase"} onClick={() => setEntryMode("purchase")}>Purchase — Farmer / Party se khareedein</Button>
+            <Button type="button" variant={entryMode === "sale" ? "primary" : "secondary"} aria-pressed={entryMode === "sale"} onClick={() => setEntryMode("sale")}>Sale — grain bechein / receivable</Button>
+          </div>
+          <p className="text-sm text-surface-500">{entryMode === "purchase" ? "Purchase: stock aayega, payment deni hai (Payable)." : "Sale: stock jayega, payment leni hai (Receivable). Buyer ka sale khata select karein."}</p>
+          <div className={entryMode === "purchase" ? "space-y-4" : "hidden"}>
           <button onClick={() => setShowNewParty(true)} className="flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:underline">
             <Plus className="h-3.5 w-3.5" />{t("gd_new_party", lang)}</button>
           <NewEntryForm farmers={farmers} parties={parties} warehouses={warehouses} cutPresets={cutPresets} financeAccounts={financeAccounts} />
+          </div>
+          <div className={entryMode === "sale" ? "space-y-4" : "hidden"}>
+            <NewSaleForm buyers={buyers.map(b => ({ ...b, contact_person: null, phone_number: null }))} warehouses={warehouses} financeAccounts={financeAccounts} stockByWarehouseAndType={stockByWarehouseAndType} />
+            <Link href="/admin/grain-procurement/sell" className="text-sm text-brand-700 underline">Sale history aur payment recovery kholein</Link>
+          </div>
         </div>
       )}
 

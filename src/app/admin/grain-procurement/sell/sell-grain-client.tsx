@@ -103,7 +103,7 @@ export function SellGrainClient({
   );
 }
 
-function NewSaleForm({
+export function NewSaleForm({
   buyers,
   warehouses,
   financeAccounts,
