@@ -94,23 +94,26 @@ export async function approveSupplierPayment(_prev: ActionState, formData: FormD
   if (request.status === "approved") return { success: true };
   if (request.status !== "pending") return { error: "Ye request already process ho chuki hai." };
 
-  const { error: updateError } = await supabase
-    .from("supplier_payment_requests")
-    .update({ status: "approved", approved_by: user.id, approved_at: new Date().toISOString() })
-    .eq("id", requestId);
-  if (updateError) return { error: updateError.message };
-
   const paid = await payAndPost(supabase, {
     supplierId: request.supplier_id,
     amount: request.amount,
     paymentDate: aajKaKhana(),
     paymentMethod: request.payment_method,
     accountId: (request as { finance_account_id?: string | null }).finance_account_id ?? null,
+    clientActionId: requestId,
     notes: `Approved request: ${request.request_number}${request.notes ? " - " + request.notes : ""}`,
     slipUrl: request.slip_url,
     createdBy: user.id,
   });
   if ("error" in paid) return { error: paid.error };
+
+  const { error: updateError } = await supabase
+    .from("supplier_payment_requests")
+    .update({ status: "approved", approved_by: user.id, approved_at: new Date().toISOString() })
+    .eq("id", requestId);
+  if (updateError) return { error: updateError.message };
+
+
 
   // Payable yahan se NAHI ghataya jata -- upar wali supplier_payments
   // ki qatar daalte hi trigger khud kar deta hai (139). Pehle dono kaam

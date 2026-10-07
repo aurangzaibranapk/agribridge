@@ -1,7 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { postBranchCredit, failed } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -53,17 +52,7 @@ export async function recordAdvancePayment(_prev: ActionState, formData: FormDat
     .single();
   if (error) return { error: error.message };
 
-  const posted = await postBranchCredit({
-    branchId,
-    amount,
-    transactionType: "advance_payment",
-    description: notes?.trim() || `Branch ne advance bheja — Rs ${amount.toLocaleString()}`,
-    ctx: {
-      createdBy: user?.id ?? null,
-      claims: [{ table: "branch_credit_transactions", rowId: row.id }],
-    },
-  });
-  if (failed(posted)) return { error: `Advance darj hua magar ledger mein nahi gaya: ${posted.error}` };
+  // Source INSERT posts atomically in the database.
 
   revalidatePath("/admin/branch-credit");
   revalidatePath("/admin/money-trail");
@@ -96,22 +85,7 @@ export async function recordFundAdjustment(_prev: ActionState, formData: FormDat
     .single();
   if (error) return { error: error.message };
 
-  // 'adjustment' ki doosri taraf Suspense hai. Wajah ye hai ke adjustment
-  // ka matlab hi ye hai ke wajah likhi nahi gayi -- aur na maloom wajah
-  // ko kisi khate mein "theek" dikha dena wo raasta hai jahan se hisaab
-  // chup chaap ghalat hota hai. Suspense mein para paisa nazar aata hai
-  // aur poochha ja sakta hai.
-  const posted = await postBranchCredit({
-    branchId,
-    amount: Math.abs(amount),
-    transactionType: type,
-    description: notes?.trim() || `Branch ${type} — Rs ${Math.abs(amount).toLocaleString()}`,
-    ctx: {
-      createdBy: user?.id ?? null,
-      claims: [{ table: "branch_credit_transactions", rowId: row.id }],
-    },
-  });
-  if (failed(posted)) return { error: `Adjustment darj hua magar ledger mein nahi gaya: ${posted.error}` };
+  // Source INSERT posts atomically in the database.
 
   revalidatePath("/admin/branch-credit");
   revalidatePath("/admin/money-trail");

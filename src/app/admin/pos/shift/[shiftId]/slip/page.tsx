@@ -50,6 +50,9 @@ export default async function ShiftSlipPage({ params }: { params: { shiftId: str
     ["Khata", money(summary.khataTotal)],
     ["Bill payments", money(summary.billTotal)],
     ["Mobile load", money(summary.loadTotal)],
+    ["Bank Transfer", money(summary.bankTransferTotal)],
+    ["Service fees", money(summary.serviceChargeTotal)],
+    ["Recovery — sab tareeqe", money(summary.recoveryTotal)],
     ["Cash recovery", money(summary.recoveryCashTotal)],
     ["Cash udhaar diya", money(summary.udhaarGivenCashTotal)],
     ["Opening cash", money(shift.opening_cash)],
@@ -78,6 +81,12 @@ export default async function ShiftSlipPage({ params }: { params: { shiftId: str
           <div className="flex justify-between border-b pb-1 text-xs font-semibold uppercase"><span>Detail</span><span>Amount</span></div>
           {rows.map(([label, value]) => <div key={label} className={`flex justify-between gap-4 border-b border-surface-100 py-1 ${label.startsWith("Ginti") ? "font-bold" : ""}`}><span>{label}</span><span className="tabular-nums">{value}</span></div>)}
         </div>
+        {summary.accountMovements.length > 0 && <div className="mt-4">
+          <h2 className="mb-2 text-sm font-bold">Account mein aaya / gaya — isi shift ka linked record</h2>
+          <table className="w-full text-xs"><thead><tr className="border-b"><th className="py-1 text-left">Account</th><th className="text-right">Aaya</th><th className="text-right">Gaya</th><th className="text-right">Net</th></tr></thead>
+            <tbody>{summary.accountMovements.map((a) => <tr key={a.accountId} className="border-b border-surface-100"><td className="py-2">{a.name}</td><td className="text-right tabular-nums">{money(a.received)}</td><td className="text-right tabular-nums">{money(a.paid)}</td><td className="text-right tabular-nums">{money(a.net)}</td></tr>)}</tbody>
+          </table>
+        </div>}
         {shift.closing_note && <p className="mt-3 text-xs">Closing note: {shift.closing_note}</p>}
         <p className="mt-4 rounded border border-surface-300 p-2 text-xs font-semibold">Cash handover: {handoverStatus}</p>
         <p className="mt-2 text-[11px] text-surface-500">Ye shift closing slip hai. Cash ki office receiving alag se tasdeeq hogi.</p>

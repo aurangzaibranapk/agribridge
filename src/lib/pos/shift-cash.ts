@@ -26,6 +26,11 @@ export interface ShiftCashSummary {
   recoveryCashTotal: number;
   /** opening_cash + cashSalesTotal + loadBillCashTotal + recoveryCashTotal − cashReturnsTotal − udhaarGivenCashTotal. */
   expectedCash: number;
+  bankTransferTotal: number;
+  serviceChargeTotal: number;
+  recoveryTotal: number;
+  udhaarGivenTotal: number;
+  accountMovements: { accountId: string; name: string; received: number; paid: number; net: number }[];
 }
 
 /**
@@ -33,18 +38,12 @@ export interface ShiftCashSummary {
  * ka jhoota "sab theek hai" nahi -- caller ko pata hai ke is shift mein
  * abhi tak koi sale/return record nahi mila.
  */
-function emptySummary(openingCash: number): ShiftCashSummary {
-  return {
-    saleCount: 0, totalSales: 0, cashSalesTotal: 0, khataTotal: 0, returnsTotal: 0, digitalTotal: 0, cashReturnsTotal: 0,
-    billTotal: 0, loadTotal: 0, loadBillCashTotal: 0, udhaarGivenCashTotal: 0, recoveryCashTotal: 0,
-    expectedCash: openingCash,
-  };
-}
 
 interface LoadBillRow {
   kind: string;
   payment_method: string | null;
   principal: number | string | null;
+  service_charge?: number | string | null;
 }
 
 /** journal_lines ki qatar, account_code = ACC.cash (1000) wali, customer_udhaar se. */
@@ -78,7 +77,8 @@ export function aggregateShiftCash(
   payments: { payment_method: string | null; amount: number | string | null }[],
   returns: { total_amount: number | string | null; refund_method?: string | null; cash_refund?: number | string | null }[],
   loadBillRows: LoadBillRow[] = [],
-  udhaarCashRows: UdhaarCashLegRow[] = []
+  udhaarCashRows: UdhaarCashLegRow[] = [],
+  deskCashRows?: UdhaarCashLegRow[]
 ): ShiftCashSummary {
   const totalSales = sales.reduce((s, r) => s + Number(r.total_amount ?? 0), 0);
   const khataTotal = sales.reduce((s, r) => s + Number(r.khata_amount ?? 0), 0);
@@ -118,7 +118,7 @@ export function aggregateShiftCash(
     const amt = Number(l.principal ?? 0);
     if (l.kind === "bill") billTotal += amt;
     else if (l.kind === "load") loadTotal += amt;
-    if (l.payment_method === "cash") loadBillCashTotal += amt;
+    if (l.payment_method === "cash") loadBillCashTotal += amt + Number(l.service_charge ?? 0);
   }
 
   // customer-udhaar.ts ka posting: Udhaar DENA cash (asset) account ko
@@ -134,7 +134,13 @@ export function aggregateShiftCash(
     recoveryCashTotal += Number(u.debit ?? 0);
   }
 
+  // Use posted cash legs for desk services: includes charges, bank transfers,
+  // settlements and reversals, rather than guessing from principal amounts.
+  if (deskCashRows) loadBillCashTotal = deskCashRows.reduce((sum, row) => sum + Number(row.debit ?? 0) - Number(row.credit ?? 0), 0);
+
   return {
+    bankTransferTotal: 0, serviceChargeTotal: loadBillRows.reduce((sum, row) => sum + Number(row.service_charge ?? 0), 0),
+    recoveryTotal: recoveryCashTotal, udhaarGivenTotal: udhaarGivenCashTotal, accountMovements: [],
     saleCount: sales.length,
     totalSales,
     cashSalesTotal,
@@ -168,11 +174,12 @@ export function aggregateShiftCash(
 export async function computeShiftCash(shiftId: string, openingCash: number): Promise<ShiftCashSummary> {
   const service = createServiceClient();
 
-  const { data: shift } = await service
+  const { data: shift, error: shiftError } = await service
     .from("pos_shifts")
     .select("staff_id, opened_at, closed_at, pos_counters(shop_id, branch_id)")
     .eq("id", shiftId)
     .maybeSingle();
+  if (shiftError || !shift) throw new Error("Shift cash could not be verified: shift unavailable.");
   const counter = shift?.pos_counters as { shop_id: string | null; branch_id: string | null } | { shop_id: string | null; branch_id: string | null }[] | null;
   const counterRow = Array.isArray(counter) ? counter[0] : counter;
   const shopId = counterRow?.shop_id ?? null;
@@ -186,45 +193,121 @@ export async function computeShiftCash(shiftId: string, openingCash: number): Pr
   // hai. `sale_id IN (isi shift ki sales)` wala purana tareeqa aisi
   // wapsiyan bilkul chhoR deta tha, aur shift "kam" nazar aati bina
   // wajah bataye.
-  const [{ data: shiftSales }, { data: returns }, { data: loadBillRows }, { data: udhaarCashRows }] = await Promise.all([
-    service.from("pos_sales").select("id, total_amount, khata_amount").eq("shift_id", shiftId),
-    service.from("pos_returns").select("total_amount, refund_method, cash_refund").eq("shift_id", shiftId),
+  async function fetchAll(factory: () => any, orderColumn = "id"): Promise<{ data: any[]; error: null }> {
+    const data: any[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const page = await factory().order(orderColumn).range(offset, offset + 999);
+      if (page.error) throw new Error("Shift cash could not be verified: " + page.error.message);
+      data.push(...(page.data ?? []));
+      if ((page.data?.length ?? 0) < 1000) return { data, error: null };
+    }
+  }
+  const results = await Promise.all([
+    fetchAll(() => service.from("pos_sales").select("id, total_amount, khata_amount").eq("shift_id", shiftId)),
+    fetchAll(() => service.from("pos_returns").select("total_amount, refund_method, cash_refund").eq("shift_id", shiftId)),
     shopId && staffId && fromTs
-      ? service
+      ? fetchAll(() => service
           .from("load_transactions")
-          .select("kind, payment_method, principal")
+          .select("kind, payment_method, principal, service_charge")
           .eq("shop_id", shopId)
           .eq("created_by", staffId)
           .in("kind", ["load", "bill"])
           .neq("status", "wapas")
           .gte("created_at", fromTs)
-          .lte("created_at", toTs)
+          .lte("created_at", toTs))
       : Promise.resolve({ data: [] as LoadBillRow[] }),
     branchId && staffId && fromTs
-      ? service
+      ? fetchAll(() => service
           .from("journal_lines")
-          .select("debit, credit, journal_entries!inner(source_module, branch_id, created_by, created_at)")
+          .select("debit, credit, journal_entries!inner(description, source_module, branch_id, created_by, created_at, pos_shift_id)")
           .eq("account_code", ACC.cash)
           .eq("journal_entries.source_module", "customer_udhaar")
           .eq("journal_entries.branch_id", branchId)
+          .or(`pos_shift_id.is.null,pos_shift_id.eq.${shiftId}`, { foreignTable: "journal_entries" })
           .eq("journal_entries.created_by", staffId)
           .gte("journal_entries.created_at", fromTs)
-          .lte("journal_entries.created_at", toTs)
+          .lte("journal_entries.created_at", toTs))
       : Promise.resolve({ data: [] as UdhaarCashLegRow[] }),
+    branchId && staffId && fromTs
+      ? fetchAll(() => service.from("journal_lines")
+          .select("debit, credit, journal_entries!inner(description, source_module, branch_id, created_by, created_at, pos_shift_id)")
+          .eq("account_code", ACC.cash)
+          .in("journal_entries.source_module", ["load_bill", "bank_transfer", "load_bill_settle", "load_float", "load_reversal"])
+          .eq("journal_entries.branch_id", branchId)
+          .or(`pos_shift_id.is.null,pos_shift_id.eq.${shiftId}`, { foreignTable: "journal_entries" })
+          .eq("journal_entries.created_by", staffId)
+          .gte("journal_entries.created_at", fromTs)
+          .lte("journal_entries.created_at", toTs))
+      : Promise.resolve({ data: [] as UdhaarCashLegRow[], error: null }),
   ]);
+  const [salesResult, returnsResult, loadsResult, udhaarResult, deskResult] = results;
+  const shiftSales = salesResult.data as { id: string; total_amount: number; khata_amount: number }[] | null;
+  const returns = returnsResult.data as { total_amount: number; refund_method: string | null; cash_refund: number }[] | null;
+  const loadBillRows = loadsResult.data as LoadBillRow[] | null;
+  const udhaarCashRows = udhaarResult.data as UdhaarCashLegRow[] | null;
+  const deskCashRows = deskResult.data as UdhaarCashLegRow[] | null;
   const rows = shiftSales ?? [];
   const returnRows = returns ?? [];
   const loadBill = loadBillRows ?? [];
   const udhaarCash = udhaarCashRows ?? [];
-  if (rows.length === 0 && returnRows.length === 0 && loadBill.length === 0 && udhaarCash.length === 0) {
-    return emptySummary(openingCash);
-  }
-
   const saleIds = rows.map((r) => r.id);
   const { data: payments } =
     saleIds.length > 0
-      ? await service.from("pos_sale_payment_details").select("payment_method, amount").in("sale_id", saleIds)
+      ? await fetchAll(() => service.from("pos_sale_payment_details").select("payment_method, amount").in("sale_id", saleIds))
       : { data: [] as { payment_method: string | null; amount: number | string | null }[] };
 
-  return aggregateShiftCash(openingCash, rows, payments ?? [], returnRows, loadBill, udhaarCash);
+  const summary = aggregateShiftCash(openingCash, rows, payments ?? [], returnRows, loadBill, udhaarCash, deskCashRows ?? []);
+  if (!staffId || !branchId || !fromTs) throw new Error("Shift staff/branch/time missing; cash verification required.");
+  const [bank, partyLegs, claims] = await Promise.all([
+    fetchAll(() => (service as any).from("bank_transfer_transactions")
+      .select("principal, service_charge").eq("created_by", staffId).eq("shop_id", shopId)
+      .neq("status", "wapas").gte("created_at", fromTs).lte("created_at", toTs)),
+    fetchAll(() => service.from("journal_lines")
+      .select("debit, credit, journal_entries!inner(description, source_module, branch_id, created_by, created_at, pos_shift_id)")
+      .in("account_code", ["1100", "1150"]).eq("journal_entries.source_module", "customer_udhaar")
+      .or(`pos_shift_id.is.null,pos_shift_id.eq.${shiftId}`, { foreignTable: "journal_entries" })
+          .eq("journal_entries.created_by", staffId).eq("journal_entries.branch_id", branchId)
+      .gte("journal_entries.created_at", fromTs).lte("journal_entries.created_at", toTs)),
+    fetchAll(() => service.from("journal_entry_sources")
+      .select("source_row_id, journal_entries!inner(description, source_module, branch_id, created_by, created_at, pos_shift_id)")
+      .eq("source_table", "finance_transactions")
+      .in("journal_entries.source_module", ["pos", "pos_return", "load_bill", "bank_transfer", "customer_udhaar", "load_bill_settle", "load_float"])
+      .or(`pos_shift_id.is.null,pos_shift_id.eq.${shiftId}`, { foreignTable: "journal_entries" })
+          .eq("journal_entries.created_by", staffId).eq("journal_entries.branch_id", branchId)
+      .gte("journal_entries.created_at", fromTs).lte("journal_entries.created_at", toTs), "source_row_id"),
+  ]);
+  summary.bankTransferTotal = bank.data.reduce((sum, r) => sum + Number(r.principal ?? 0), 0);
+  summary.serviceChargeTotal += bank.data.reduce((sum, r) => sum + Number(r.service_charge ?? 0), 0);
+  summary.udhaarGivenCashTotal = 0; summary.recoveryCashTotal = 0;
+  for (const r of udhaarResult.data ?? []) {
+    const entry = Array.isArray(r.journal_entries) ? r.journal_entries[0] : r.journal_entries;
+    const description = String(entry?.description ?? "").replace(/^Reversal:\s*/i, "");
+    if (/^Udhaar (ki wapsi|wapas aaya)/i.test(description)) summary.recoveryCashTotal += Number(r.debit) - Number(r.credit);
+    else summary.udhaarGivenCashTotal += Number(r.credit) - Number(r.debit);
+  }
+  summary.udhaarGivenTotal = 0; summary.recoveryTotal = 0;
+  for (const r of partyLegs.data) {
+    const entry = Array.isArray(r.journal_entries) ? r.journal_entries[0] : r.journal_entries;
+    const description = String(entry?.description ?? "").replace(/^Reversal:\s*/i, "");
+    if (/^Udhaar (ki wapsi|wapas aaya)/i.test(description)) summary.recoveryTotal += Number(r.credit) - Number(r.debit);
+    else summary.udhaarGivenTotal += Number(r.debit) - Number(r.credit);
+  }
+  const accounts = new Map<string, ShiftCashSummary["accountMovements"][number]>();
+  const cashbookIds = [...new Set(claims.data.map((r) => r.source_row_id as string))];
+  for (let offset = 0; offset < cashbookIds.length; offset += 500) {
+    const { data, error } = await service.from("finance_transactions")
+      .select("account_id, transaction_type, amount, finance_accounts(name)")
+      .in("id", cashbookIds.slice(offset, offset + 500));
+    if (error) throw new Error("Shift account receipts could not be verified: " + error.message);
+    for (const r of data ?? []) {
+      const account = Array.isArray(r.finance_accounts) ? r.finance_accounts[0] : r.finance_accounts;
+      const movement = accounts.get(r.account_id) ?? { accountId: r.account_id, name: account?.name ?? "Account", received: 0, paid: 0, net: 0 };
+      if (r.transaction_type === "income") movement.received += Number(r.amount);
+      else if (r.transaction_type === "expense") movement.paid += Number(r.amount);
+      movement.net = movement.received - movement.paid;
+      accounts.set(r.account_id, movement);
+    }
+  }
+  summary.accountMovements = [...accounts.values()].sort((a, b) => a.name.localeCompare(b.name));
+  return summary;
 }

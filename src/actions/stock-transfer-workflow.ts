@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 
 export interface ActionState {
   error?: string;
@@ -229,21 +230,12 @@ async function moveStock(
     supabase.from("warehouses").select("branch_id, shop_id").eq("id", toWarehouseId).maybeSingle(),
   ]);
 
-  if (fromWarehouse?.shop_id && toWarehouse?.shop_id) {
-    await supabase.from("branch_credit_transactions").insert({
-      branch_id: toWarehouse.branch_id,
-      transaction_type: "order_charge",
-      amount: totalValue,
-      notes: `Internal transfer ${transferNumber} - stock received (Khata charge moved with stock)`,
-      created_by: userId,
+  if (fromWarehouse?.shop_id && toWarehouse?.shop_id && totalValue > 0) {
+    const { error: creditError } = await (createServiceClient() as any).rpc("post_branch_transfer_atomic", {
+      p_from: fromWarehouse.branch_id, p_to: toWarehouse.branch_id,
+      p_amount: totalValue, p_reference: `${transferId}:${productId}`, p_by: userId,
     });
-    await supabase.from("branch_credit_transactions").insert({
-      branch_id: fromWarehouse.branch_id,
-      transaction_type: "advance_payment",
-      amount: totalValue,
-      notes: `Internal transfer ${transferNumber} - stock sent out (Khata credit moved with stock)`,
-      created_by: userId,
-    });
+    if (creditError) throw new Error(`Transfer ledger posting fail hui: ${creditError.message}`);
   }
 
   let remaining = qty;
@@ -346,7 +338,8 @@ export async function matchAndAcceptTransfer(_prev: ActionState, formData: FormD
   if (transfer.status !== "in_transit") return { error: "This transfer is not out for delivery." };
 
   if (confirmedQuantity >= Number(transfer.quantity)) {
-    await moveStock(
+    try {
+      await moveStock(
       supabase,
       transferId,
       transfer.transfer_number,
@@ -356,7 +349,10 @@ export async function matchAndAcceptTransfer(_prev: ActionState, formData: FormD
       Number(transfer.quantity),
       Number(transfer.unit_price ?? 0),
       user.id
-    );
+      );
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : "Transfer ledger posting fail hui." };
+    }
     const { error } = await supabase
       .from("stock_transfers")
       .update({
@@ -431,7 +427,8 @@ export async function finalizeDiscrepancyAccept(_prev: ActionState, formData: Fo
   if (transfer.status !== "discrepancy" || !transfer.discrepancy_resolved_at) {
     return { error: "This discrepancy has not been resolved yet." };
   }
-  await moveStock(
+  try {
+    await moveStock(
     supabase,
     transferId,
     transfer.transfer_number,
@@ -441,7 +438,10 @@ export async function finalizeDiscrepancyAccept(_prev: ActionState, formData: Fo
     Number(transfer.confirmed_quantity),
     Number(transfer.unit_price ?? 0),
     user.id
-  );
+    );
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Transfer ledger posting fail hui." };
+  }
   const { error } = await supabase
     .from("stock_transfers")
     .update({

@@ -4,17 +4,27 @@ import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { postDeskTransaction } from "@/lib/ledger/desk";
 import { postJournal, reverseJournal, type JournalLine } from "@/lib/ledger/post";
 import { ACC, glForFinanceAccount } from "@/lib/ledger/rules";
-import { cashBookLikhein, cashBookUlti, type CashBookQatar } from "@/lib/ledger/cash-book";
+import { cashBookLikhein, type CashBookQatar } from "@/lib/ledger/cash-book";
 import { recordError } from "@/lib/errors/record";
 import { notifyUser } from "@/lib/notifications";
+import { requireAction } from "@/lib/access/guard";
 
 export interface LoadState {
   error?: string;
   success?: boolean;
   notice?: string;
   txnNumber?: string;
+}
+
+async function staffShop(supabase: ReturnType<typeof createClient>, userId: string, assigned: string | null): Promise<string | null> {
+  if (assigned) return assigned;
+  const { data, error } = await supabase.from("pos_shifts").select("pos_counters!inner(shop_id)").eq("staff_id", userId).eq("status", "open");
+  if (error || data?.length !== 1) return null;
+  const counter = Array.isArray(data[0].pos_counters) ? data[0].pos_counters[0] : data[0].pos_counters;
+  return counter?.shop_id ?? null;
 }
 
 /** Wo log jo float mein paisa daal sakte hain aur farq manzoor karte hain. */
@@ -143,6 +153,8 @@ async function commissionGuess(providerId: string, kind: string, principal: numb
  * se `darj` banati hai.
  */
 export async function createLoadTransaction(_prev: LoadState, formData: FormData): Promise<LoadState> {
+  const permission = await requireAction("load-bill", "create");
+  if ("error" in permission) return { error: permission.error };
   const supabase = createClient();
   const {
     data: { user },
@@ -158,6 +170,10 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
 
   const shopId = String(formData.get("shop_id") ?? "").trim();
   if (!shopId) return { error: "Shop chunein — shaam ka hisaab isi se banta hai." };
+  if (!permission.caller.unrestricted && (permission.caller.scope === "own_shop" || permission.caller.scope === "own_records")) {
+    const ownShop = await staffShop(supabase, user.id, me.shop_id);
+    if (!ownShop || ownShop !== shopId) return { error: "Sirf apni assigned shop ya active POS counter par entry karein." };
+  }
 
   const accountId = String(formData.get("account_id") ?? "").trim();
   const kind = String(formData.get("kind") ?? "load").trim();
@@ -190,6 +206,10 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
   }
 
   const service = createServiceClient();
+  const { data: shop } = await service.from("shops").select("id, branch_id, is_active").eq("id", shopId).maybeSingle();
+  if (!shop?.is_active) return { error: "Shop active nahi ya record nahi mila." };
+  if (!permission.caller.unrestricted && me.branch_id && shop.branch_id !== me.branch_id) return { error: "Sirf apni branch ki shop par entry karein." };
+
 
   const { data: account } = await service
     .from("load_accounts")
@@ -226,7 +246,7 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
     }
   }
 
-  const branchId = me.branch_id ?? account.branch_id ?? null;
+  const branchId = shop.branch_id ?? me.branch_id ?? account.branch_id ?? null;
   const total = Math.round((principal + (serviceCharge ?? 0)) * 100) / 100;
 
   const received = await receivingLine(
@@ -260,9 +280,7 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
 
   const guess = await commissionGuess(providerId, kind, principal);
 
-  const { data: row, error: insErr } = await service
-    .from("load_transactions")
-    .insert({
+  const sourceRow = {
       txn_number: number,
       account_id: accountId,
       provider_id: providerId,
@@ -286,27 +304,12 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
       branch_id: branchId,
       shop_id: shopId,
       created_by: user.id,
-    })
-    .select("id")
-    .single();
-
-  if (insErr || !row) {
-    await recordError({
-      module: "load-bill",
-      route: "/admin/load-bill",
-      message: insErr?.message ?? "Load qatar nahi bani",
-      severity: "rukawat",
-      actorId: user.id,
-    });
-    return { error: `Qatar nahi bani: ${insErr?.message ?? "wajah maloom nahi"}` };
-  }
-
+  };
   // Asal raqam AAMDANI NAHI hai -- wo customer ka paisa hai jo provider
   // tak ja raha hai. Aamdani sirf service charge hai. Commission yahan
   // nahi aati: wo statement ki tasdeeq ke baad aati hai.
   const floatGl = await loadAccountGl(accountId);
   if (settled && !floatGl) {
-    await service.from("load_transactions").delete().eq("id", row.id);
     return {
       error: "Is provider account ke saath koi asal khata juRa nahi (jaise CBA Account). Pehle 'Float aur account' par ja kar us ka khata chunein.",
     };
@@ -332,37 +335,6 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
     lines.push({ account: ACC.loadServiceCharge, credit: serviceCharge, memo: `${number} service charge` });
   }
 
-  const posted = await postJournal({
-    description: `${kind === "bill" ? "Bill payment" : "Mobile load"} ${number} — ${reference}`,
-    sourceModule: "load_bill",
-    sourceId: row.id,
-    branchId,
-    createdBy: user.id,
-    lines,
-    claims: [{ table: "load_transactions", rowId: row.id }],
-  });
-
-  if ("error" in posted) {
-    // Ledger mein na ja saki to qatar bhi nahi rehni chahiye -- warna
-    // safha ek aisa kaam dikhata rahega jo hisaab mein hai hi nahi.
-    await service.from("load_transactions").delete().eq("id", row.id);
-    return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
-  }
-
-  await service.from("load_transactions").update({ journal_entry_id: posted.id }).eq("id", row.id);
-
-  // Cash Book bhi -- ledger ke sath, us ke baad nahi.
-  //
-  // 6 September ko LD-2026-00001 ne yehi masla khola: ledger mein qatar
-  // bani, magar Finance ke safhe par CBA ka balance wahin ka wahin raha,
-  // kyunki `current_balance` sirf `finance_transactions` se nikalta hai
-  // (127). Do taraf hilti hain:
-  //
-  //   * jahan customer ka paisa aaya (cash ya koi bank/wallet khata)
-  //   * jis khate se load gaya (provider account ka juRa hua khata)
-  //
-  // Wallet aur khata par pehli qatar nahi banti -- wahan paisa kisi
-  // khate mein aaya hi nahi.
   const cashBook: CashBookQatar[] = [];
   const aayaKahan = receivingCashBook(method, financeAccountId);
   if (aayaKahan) {
@@ -373,7 +345,6 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
       category: kind === "bill" ? "bill_payment" : "mobile_load",
       notes: `${number} — ${reference}`,
       createdBy: user.id,
-      entryId: posted.id,
     });
   }
   if (settled) {
@@ -386,23 +357,18 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
         category: kind === "bill" ? "bill_payment" : "mobile_load",
         notes: `${number} — ${reference} (float se gaya)`,
         createdBy: user.id,
-        entryId: posted.id,
-      });
+        });
     }
   }
-  const cb = await cashBookLikhein(cashBook);
-  if (cb.error) {
-    // Ledger mein qatar ja chuki hai aur wo mitai nahi ja sakti. Chup
-    // rehna sab se bura hota: safha ek balance dikhata rehta jo ledger
-    // se mel nahi khata, aur kisi ko pata na chalta.
-    await recordError({
-      module: "load-bill",
-      route: "/admin/load-bill",
-      message: `${number}: ledger mein darj ho gaya magar Cash Book mein nahi — ${cb.error}`,
-      severity: "rukawat",
-      actorId: user.id,
-    });
-  }
+  const posted = await postDeskTransaction({
+    description: `${kind === "bill" ? "Bill payment" : "Mobile load"} ${number} — ${reference}`,
+    sourceModule: "load_bill",
+    branchId,
+    createdBy: user.id,
+    lines,
+    clientActionId: String(formData.get("client_action_id") ?? "").trim() || null,
+  }, cashBook, { table: "load_transactions", row: sourceRow });
+  if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
 
   // Staff apne dashboard (ghanti) par yehi transaction foran dekhe --
   // Malik ka Staff Sales Desk ka usool (16 September): "transaction
@@ -416,6 +382,8 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
 
   revalidatePath("/admin/load-bill");
   revalidatePath("/admin/finance");
+  revalidatePath("/admin/pos");
+  revalidatePath("/admin/crm");
   return {
     success: true,
     txnNumber: number,
@@ -431,6 +399,8 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
  * movement hai; aamdani sirf service charge hai.
  */
 export async function createBankTransfer(_prev: LoadState, formData: FormData): Promise<LoadState> {
+  const permission = await requireAction("load-bill", "create");
+  if ("error" in permission) return { error: permission.error };
   const supabase = createClient();
   const {
     data: { user },
@@ -457,7 +427,8 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
   const rawPartyType = String(formData.get("party_type") ?? "").trim();
   const partyId = String(formData.get("party_id") ?? "").trim() || null;
 
-  if (!me.shop_id) return { error: "Aap ke profile ke saath koi shop assigned nahi. Pehle Admin se shop assign karwayein." };
+  const shopId = await staffShop(supabase, user.id, me.shop_id);
+  if (!shopId) return { error: "Assigned shop ya ek active POS counter zaroori hai." };
   if (!sourceId) return { error: "Hamara source bank/wallet account chunein." };
   if (!['bank', 'jazzcash', 'easypaisa', 'other_wallet'].includes(destinationChannel)) {
     return { error: "Customer ka receiving bank ya wallet chunein." };
@@ -476,6 +447,11 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
   }
 
   const service = createServiceClient();
+  const { data: shop } = await service.from("shops").select("id, branch_id, is_active").eq("id", shopId).maybeSingle();
+  if (!shop?.is_active) return { error: "Shop active nahi ya record nahi mila." };
+  const branchId = shop.branch_id ?? me.branch_id ?? null;
+  if (!permission.caller.unrestricted && me.branch_id && branchId !== me.branch_id) return { error: "Sirf apni branch ki shop par entry karein." };
+
   // Migration 20260922092251 adds this table/function. Generated types
   // are refreshed after the migration reaches the shared database.
   const bankDb = service as any;
@@ -510,9 +486,7 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
   if (!number) return { error: "Bank Transfer ka receipt number nahi ban saka." };
 
   const total = Math.round((principal + (serviceCharge ?? 0)) * 100) / 100;
-  const { data: row, error: insertError } = await bankDb
-    .from("bank_transfer_transactions")
-    .insert({
+  const sourceRow = {
       txn_number: number,
       source_finance_account_id: sourceId,
       receiving_method: receivingMethod,
@@ -528,16 +502,10 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
       service_charge: serviceCharge,
       provider_tid: providerTid,
       status: providerTid ? "darj" : "saboot_baqi",
-      branch_id: me.branch_id ?? null,
-      shop_id: me.shop_id,
+      branch_id: branchId,
+      shop_id: shopId,
       created_by: user.id,
-    })
-    .select("id")
-    .single();
-
-  if (insertError || !row) {
-    return { error: `Bank Transfer darj nahi hua: ${insertError?.message ?? "wajah maloom nahi"}` };
-  }
+  };
 
   const lines: JournalLine[] = [
     { account: receivedGl, debit: total, memo: `${number} — customer se received` },
@@ -547,37 +515,20 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
     lines.push({ account: ACC.bankTransferServiceCharge, credit: serviceCharge, memo: `${number} service charge` });
   }
 
-  const posted = await postJournal({
-    description: `Bank Transfer ${number} — ${beneficiaryTitle} (${beneficiaryAccount})`,
-    sourceModule: "bank_transfer",
-    sourceId: row.id,
-    branchId: me.branch_id ?? null,
-    createdBy: user.id,
-    lines,
-    claims: [{ table: "bank_transfer_transactions", rowId: row.id }],
-  });
-  if ("error" in posted) {
-    await bankDb.from("bank_transfer_transactions").delete().eq("id", row.id);
-    return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
-  }
-
-  await bankDb.from("bank_transfer_transactions").update({ journal_entry_id: posted.id }).eq("id", row.id);
-
   const receivedCashBook = receivingCashBook(receivingMethod, receivingAccountId);
   const cashBook: CashBookQatar[] = [
-    ...(receivedCashBook ? [{ ...receivedCashBook, amount: total, rukh: "aaya" as const, category: "bank_transfer_service", notes: `${number} — customer se received`, createdBy: user.id, entryId: posted.id }] : []),
-    { accountId: sourceId, amount: principal, rukh: "gaya", category: "bank_transfer_service", notes: `${number} — ${beneficiaryTitle}`, createdBy: user.id, entryId: posted.id },
+    ...(receivedCashBook ? [{ ...receivedCashBook, amount: total, rukh: "aaya" as const, category: "bank_transfer_service", notes: `${number} — customer se received`, createdBy: user.id }] : []),
+    { accountId: sourceId, amount: principal, rukh: "gaya", category: "bank_transfer_service", notes: `${number} — ${beneficiaryTitle}`, createdBy: user.id },
   ];
-  const cashBookResult = await cashBookLikhein(cashBook);
-  if (cashBookResult.error) {
-    await recordError({
-      module: "load-bill",
-      route: "/admin/load-bill",
-      message: `${number}: ledger mein darj hua magar Cash Book mein nahi — ${cashBookResult.error}`,
-      severity: "rukawat",
-      actorId: user.id,
-    });
-  }
+  const posted = await postDeskTransaction({
+    description: `Bank Transfer ${number} — ${beneficiaryTitle} (${beneficiaryAccount})`,
+    sourceModule: "bank_transfer",
+    branchId,
+    createdBy: user.id,
+    lines,
+    clientActionId: String(formData.get("client_action_id") ?? "").trim() || null,
+  }, cashBook, { table: "bank_transfer_transactions", row: sourceRow });
+  if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
 
   await notifyUser(
     user.id,
@@ -587,6 +538,8 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
   );
   revalidatePath("/admin/load-bill");
   revalidatePath("/admin/finance");
+  revalidatePath("/admin/pos");
+  revalidatePath("/admin/crm");
   return {
     success: true,
     txnNumber: number,
@@ -650,30 +603,11 @@ export async function reverseBankTransfer(_prev: LoadState, formData: FormData):
   const reversed = await reverseJournal(txn.journal_entry_id as string, reason, user.id);
   if ("error" in reversed) return { error: reversed.error };
 
-  const principal = Number(txn.principal);
-  const total = Math.round((principal + Number(txn.service_charge ?? 0)) * 100) / 100;
-  const receivedCashBook = receivingCashBook(
-    String(txn.receiving_method),
-    (txn.receiving_finance_account_id as string | null) ?? null
-  );
-  const originalRows: CashBookQatar[] = [
-    ...(receivedCashBook ? [{ ...receivedCashBook, amount: total, rukh: "aaya" as const, category: "bank_transfer_wapas", notes: `${txn.txn_number} wapas — ${reason}`, createdBy: user.id, entryId: reversed.id }] : []),
-    { accountId: txn.source_finance_account_id as string, amount: principal, rukh: "gaya", category: "bank_transfer_wapas", notes: `${txn.txn_number} wapas — ${reason}`, createdBy: user.id, entryId: reversed.id },
-  ];
-  const cb = await cashBookUlti(originalRows);
-  if (cb.error) {
-    await recordError({
-      module: "load-bill",
-      route: "/admin/load-bill",
-      message: `${txn.txn_number} wapas hua magar Cash Book ulta nahi ho saka — ${cb.error}`,
-      severity: "rukawat",
-      actorId: user.id,
-    });
-  }
-
-  await bankDb.from("bank_transfer_transactions").update({ status: "wapas" }).eq("id", id);
+  // Atomic reversal also reverses claimed cash-book rows and source status.
   revalidatePath("/admin/load-bill");
   revalidatePath("/admin/finance");
+  revalidatePath("/admin/pos");
+  revalidatePath("/admin/crm");
   return { success: true, notice: `${txn.txn_number} wapas ho gaya (${reversed.entryNumber}).` };
 }
 
@@ -835,6 +769,8 @@ export async function rechargeFloat(_prev: LoadState, formData: FormData): Promi
   revalidatePath("/admin/load-bill");
   revalidatePath("/admin/load-bill/accounts");
   revalidatePath("/admin/finance");
+  revalidatePath("/admin/pos");
+  revalidatePath("/admin/crm");
   return { success: true, notice: `Rs ${amount.toLocaleString()} float mein chala gaya.` };
 }
 
@@ -924,6 +860,8 @@ export async function settleBill(_prev: LoadState, formData: FormData): Promise<
 
   revalidatePath("/admin/load-bill");
   revalidatePath("/admin/finance");
+  revalidatePath("/admin/pos");
+  revalidatePath("/admin/crm");
   return { success: true, notice: `${txn.txn_number} provider tak pahunch gaya.` };
 }
 
@@ -967,54 +905,12 @@ export async function reverseLoadTransaction(_prev: LoadState, formData: FormDat
   const reversed = await reverseJournal(txn.journal_entry_id as string, reason, user.id);
   if ("error" in reversed) return { error: reversed.error };
 
-  // Ledger ulta ho gaya to Cash Book bhi ulta hona chahiye -- warna
-  // khate ka balance us paise ko ginta rahega jo wapas ho chuka hai.
-  // (Yehi baat 127 ke waqt reversal par bhi theek ki gayi thi.)
-  const principal = Number(txn.principal);
-  const totalWapas = Math.round((principal + Number(txn.service_charge ?? 0)) * 100) / 100;
-  const ulti: CashBookQatar[] = [];
-  const aayaKahan = receivingCashBook(
-    String(txn.payment_method ?? ""),
-    (txn.finance_account_id as string | null) ?? null
-  );
-  if (aayaKahan) {
-    ulti.push({
-      ...aayaKahan,
-      amount: totalWapas,
-      rukh: "aaya",
-      category: "load_wapas",
-      notes: `${txn.txn_number} wapas — ${reason}`,
-      createdBy: user.id,
-    });
-  }
-  if (txn.float_settled) {
-    const floatKhata = await loadAccountFinanceId(txn.account_id as string);
-    if (floatKhata) {
-      ulti.push({
-        accountId: floatKhata,
-        amount: principal,
-        rukh: "gaya",
-        category: "load_wapas",
-        notes: `${txn.txn_number} wapas — float mein wapas`,
-        createdBy: user.id,
-      });
-    }
-  }
-  const cb = await cashBookUlti(ulti);
-  if (cb.error) {
-    await recordError({
-      module: "load-bill",
-      route: "/admin/load-bill",
-      message: `${txn.txn_number} wapas hua magar Cash Book ulta nahi ho saka — ${cb.error}`,
-      severity: "rukawat",
-      actorId: user.id,
-    });
-  }
-
-  await service.from("load_transactions").update({ status: "wapas" }).eq("id", id);
+  // Atomic reversal handles cash book, settlement/commission and source status once.
 
   revalidatePath("/admin/load-bill");
   revalidatePath("/admin/finance");
+  revalidatePath("/admin/pos");
+  revalidatePath("/admin/crm");
   return { success: true, notice: `${txn.txn_number} wapas ho gaya (${reversed.entryNumber}).` };
 }
 
@@ -1165,6 +1061,8 @@ export async function confirmLoadCommission(_prev: LoadState, formData: FormData
 
   revalidatePath("/admin/load-bill");
   revalidatePath("/admin/finance");
+  revalidatePath("/admin/pos");
+  revalidatePath("/admin/crm");
   return {
     success: true,
     notice: `${txn.txn_number} par Rs ${rakam.toLocaleString()} commission darj ho gayi (${posted.entryNumber}).`,

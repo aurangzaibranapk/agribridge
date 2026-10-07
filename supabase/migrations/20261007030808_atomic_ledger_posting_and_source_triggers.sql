@@ -2,6 +2,9 @@
 create schema if not exists ledger_internal;
 revoke all on schema ledger_internal from public, anon, authenticated;
 
+alter table public.journal_entries add column if not exists pos_shift_id uuid references public.pos_shifts(id);
+create index if not exists idx_journal_pos_shift on public.journal_entries(pos_shift_id) where pos_shift_id is not null;
+
 create or replace function public.post_journal_atomic(p_input jsonb)
 returns jsonb language plpgsql security invoker set search_path = public, pg_temp as $$
 declare e uuid; existing uuid; c jsonb; n text; d numeric; cr numeric; dt date;
@@ -35,7 +38,7 @@ begin
   dt:=coalesce((p_input->>'entryDate')::date,(now() at time zone 'Asia/Karachi')::date);
   if dt<(now() at time zone 'Asia/Karachi')::date and nullif(p_input->>'backdateReason','') is null then raise exception 'Backdate reason required'; end if;
   n:='TXN-'||to_char(now() at time zone 'Asia/Karachi','YY')||'-'||lpad(next_txn_number(extract(year from now() at time zone 'Asia/Karachi')::int%100)::text,6,'0');
-  insert into journal_entries(entry_number,entry_date,description,source_module,source_id,branch_id,created_by,is_backdated,backdate_reason,client_action_id) values(n,dt,p_input->>'description',p_input->>'sourceModule',nullif(p_input->>'sourceId','')::uuid,nullif(p_input->>'branchId','')::uuid,nullif(p_input->>'createdBy','')::uuid,dt<(now() at time zone 'Asia/Karachi')::date,p_input->>'backdateReason',nullif(p_input->>'clientActionId','')::uuid) returning id into e;
+  insert into journal_entries(entry_number,entry_date,description,source_module,source_id,branch_id,created_by,is_backdated,backdate_reason,client_action_id,pos_shift_id) values(n,dt,p_input->>'description',p_input->>'sourceModule',nullif(p_input->>'sourceId','')::uuid,nullif(p_input->>'branchId','')::uuid,nullif(p_input->>'createdBy','')::uuid,dt<(now() at time zone 'Asia/Karachi')::date,p_input->>'backdateReason',nullif(p_input->>'clientActionId','')::uuid,nullif(p_input->>'posShiftId','')::uuid) returning id into e;
   insert into journal_lines(entry_id,account_code,debit,credit,party_type,party_id,memo,line_order) select e,l->>'account',round(coalesce((l->>'debit')::numeric,0),2),round(coalesce((l->>'credit')::numeric,0),2),l->>'partyType',nullif(l->>'partyId','')::uuid,l->>'memo',ord::int from jsonb_array_elements(p_input->'lines') with ordinality x(l,ord);
   insert into journal_entry_sources(entry_id,source_table,source_row_id) select e,q.value->>'table',(q.value->>'rowId')::uuid from jsonb_array_elements(coalesce(p_input->'claims','[]')) q(value);
   return jsonb_build_object('id',e,'entryNumber',n,'total',d);
@@ -105,7 +108,7 @@ begin
   if coalesce(s.discount_amount,0)>0 then lines:=lines||jsonb_build_array(jsonb_build_object('account','4099','debit',s.discount_amount)); end if;
   lines:=lines||jsonb_build_array(jsonb_build_object('account','4000','credit',coalesce(s.gross_amount,s.total_amount)));
   if s.total_cogs>0 then lines:=lines||jsonb_build_array(jsonb_build_object('account','5000','debit',s.total_cogs),jsonb_build_object('account','1200','credit',s.total_cogs)); end if;
-  result:=post_journal_atomic(jsonb_build_object('description','POS bikri','sourceModule','pos','sourceId',s.id,'branchId',s.branch_id,'createdBy',s.created_by,'lines',lines,'claims',claims));
+  result:=post_journal_atomic(jsonb_build_object('description','POS bikri','sourceModule','pos','posShiftId',s.shift_id,'sourceId',s.id,'branchId',s.branch_id,'createdBy',s.created_by,'lines',lines,'claims',claims));
   if s.crm_customer_id is not null then update customers set current_balance=(select coalesce(sum(debit-credit),0) from journal_lines where account_code='1100' and party_type='customer' and party_id=s.crm_customer_id) where id=s.crm_customer_id; end if;
   return new;
 end $$;

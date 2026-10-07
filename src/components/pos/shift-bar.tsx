@@ -335,11 +335,15 @@ function shiftReportText({
     `Khata: ${rs(summary.khataTotal)}`,
     `Bill Payment: ${rs(summary.billTotal)}`,
     `Mobile Load: ${rs(summary.loadTotal)}`,
+    `Bank Transfer: ${rs(summary.bankTransferTotal)}`,
+    `Service Fees: ${rs(summary.serviceChargeTotal)}`,
+    `Recovery (All): ${rs(summary.recoveryTotal)}`,
     `Recovery (Cash): ${rs(summary.recoveryCashTotal)}`,
     `Udhaar Given (Cash): ${rs(summary.udhaarGivenCashTotal)}`,
     `Expected Cash: ${rs(summary.expectedCash)}`,
     `Counted Cash: ${rs(countedCash)}`,
     `Difference: ${rs(difference)}`,
+    ...summary.accountMovements.map((a) => `${a.name}: Aaya ${rs(a.received)} | Gaya ${rs(a.paid)} | Net ${rs(a.net)}`),
   ].join("\n");
 }
 
@@ -601,7 +605,11 @@ export function ShiftBar({
                         <span className="font-semibold text-surface-900 dark:text-white">Rs {Math.round(s.amount).toLocaleString()}</span>
                       </div>
                     ))}
-                    <div className="mt-1.5 flex items-center justify-between border-t border-amber-200 pt-1.5 text-xs dark:border-amber-800/50">
+                    {(summary?.bankTransferTotal ?? 0) !== 0 && <div className="flex justify-between text-surface-500"><span>Bank Transfer</span><span>{rs(summary!.bankTransferTotal)}</span></div>}
+                  {(summary?.serviceChargeTotal ?? 0) !== 0 && <div className="flex justify-between text-surface-500"><span>Service Fees</span><span>{rs(summary!.serviceChargeTotal)}</span></div>}
+                  {(summary?.recoveryTotal ?? 0) !== 0 && <div className="flex justify-between text-surface-500"><span>Recovery — Cash + Bank</span><span>{rs(summary!.recoveryTotal)}</span></div>}
+                  {summary?.accountMovements.map((a) => <div key={a.accountId} className="rounded border border-surface-200 p-2 text-xs"><strong>{a.name}</strong><div className="mt-1 flex justify-between"><span>Aaya: {rs(a.received)}</span><span>Gaya: {rs(a.paid)}</span></div></div>)}
+                  <div className="mt-1.5 flex items-center justify-between border-t border-amber-200 pt-1.5 text-xs dark:border-amber-800/50">
                       <span className="font-semibold text-amber-800 dark:text-amber-400">Total</span>
                       <span className="font-bold text-amber-800 dark:text-amber-400">Rs {Math.round(pendingHandover.countedCash).toLocaleString()}</span>
                     </div>

@@ -125,7 +125,7 @@ export default async function LoadBillPage({
     .select(
       "id, txn_number, kind, reference, bill_category, principal, service_charge, commission_expected, commission_confirmed, commission_status, payment_method, provider_tid, status, float_settled, customer_name, created_at, account_id, provider_id"
     )
-    .gte("created_at", `${aaj}T00:00:00`)
+    .gte("created_at", `${aaj}T00:00:00+05:00`)
     .order("created_at", { ascending: false })
     .limit(60);
   const loadTransactionsResult = me.branch_id
@@ -138,7 +138,7 @@ export default async function LoadBillPage({
     .select(
       "id, txn_number, source_finance_account_id, receiving_method, receiving_finance_account_id, destination_channel, beneficiary_title, beneficiary_account, customer_name, customer_phone, principal, service_charge, provider_tid, status, created_at"
     )
-    .gte("created_at", `${aaj}T00:00:00`)
+    .gte("created_at", `${aaj}T00:00:00+05:00`)
     .order("created_at", { ascending: false })
     .limit(60);
   const bankTransfersResult = me.branch_id
@@ -217,6 +217,9 @@ export default async function LoadBillPage({
         }
       />
 
+      {(loadTransactionsResult.error || bankTransfersResult.error || ledgerResult.error || ledgerLines.error) && (
+        <Card><p role="alert" className="text-sm text-red-700">Desk ka poora hisaab nahi mil saka. Payment dobara darj karne se pehle Manager se record check karwayein.</p></Card>
+      )}
       {(accounts ?? []).length === 0 ? (
         <Card>
           <p className="text-sm font-medium text-surface-900 dark:text-white">Abhi koi provider account nahi bana.</p>

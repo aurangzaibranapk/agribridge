@@ -204,13 +204,14 @@ export async function receiveReturn(_prev: ActionState, formData: FormData): Pro
   // Maal wapas aa gaya, is liye us ki value shop ke zimme nahi rahi.
   // 'refund' branch-credit page ke hisaab mein outstanding ghata deta hai.
   if (Number(ret.total_amount) > 0) {
-    await supabase.from("branch_credit_transactions").insert({
+    const { error: refundError } = await supabase.from("branch_credit_transactions").insert({
       branch_id: ret.branch_id,
       transaction_type: "refund",
       amount: Number(ret.total_amount),
       notes: `Return HQ ko wapas mila: ${ret.return_number}`,
       created_by: user?.id ?? null,
     });
+    if (refundError) return { error: `Return credit/ledger save nahi hua: ${refundError.message}` };
   }
 
   const { error } = await supabase

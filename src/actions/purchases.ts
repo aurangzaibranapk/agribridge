@@ -4,6 +4,7 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { payAndPost } from "@/lib/ledger/supplier-money";
+import { purchaseBillTotals, parseBillNumber, purchaseLineTotal } from "@/lib/purchases/bill-math";
 import { postGoodsReceived, failed } from "@/lib/ledger/rules";
 import { parsePaymentTerms } from "@/lib/purchase-terms";
 import { logAudit } from "@/lib/audit";
@@ -103,7 +104,11 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
   if (items.some((i) => !i || typeof i !== "object" || !i.product_id || !Number.isFinite(i.quantity) || i.quantity <= 0 || !Number.isFinite(i.unit_cost) || i.unit_cost < 0)) {
     return { error: "Har bill line mein product, sahi quantity aur purchase rate zaroor bharein." };
   }
-  const totalAmount = items.reduce((sum, i) => sum + i.quantity * i.unit_cost, 0);
+  if (supplierBillWorkspace && Number(formData.get("expected_row_count")) !== items.length) return { error: "Bill ki kuch lines missing/unmapped hain. Draft khol kar har CSV row Product Master se link karein." };
+  const productIds = [...new Set(items.map((i) => i.product_id))];
+  const { data: linkedProducts, error: productError } = await supabase.from("products").select("id").in("id", productIds).eq("is_deleted", false);
+  if (productError || linkedProducts?.length !== productIds.length) return { error: "Bill ke products verify nahi hue. Existing Product Master se dobara link karein." };
+  const totalAmount = purchaseBillTotals(items).subtotal;
 
   const readMoney = (key: string) => {
     const raw = String(formData.get(key) ?? "").replace(/,/g, "").trim();
@@ -117,11 +122,24 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
     return { error: "Discount aur tax ki raqam durust likhein." };
   }
   if (discountAmount > totalAmount) return { error: "Discount bill ke subtotal se zyada nahi ho sakta." };
-  const invoiceTotal = Math.max(0, totalAmount - discountAmount + taxAmount);
+  const recalculated = purchaseBillTotals(items, discountAmount, taxAmount);
+  if (recalculated.errors.length) return { error: recalculated.errors[0] };
+  const invoiceTotal = recalculated.total;
+  if (supplierBillWorkspace && formData.has("invoice_total")) {
+    const preview = parseBillNumber(formData.get("invoice_total"));
+    if (preview === null || Math.abs(preview - invoiceTotal) > 0.005) return { error: "Bill preview aur saved total match nahi. Quantity/rate dobara check karein." };
+  }
 
   // Adaigi ki shartein (255): poora / kuch / udhaar, aur kab tak.
   const terms = parsePaymentTerms(formData, supplierBillWorkspace ? invoiceTotal : totalAmount, purchaseDate);
   if ("error" in terms) return { error: terms.error };
+  if (terms.paidNow > 0) {
+    const accountId = String(formData.get("finance_account_id") ?? "").trim();
+    if (!accountId) return { error: "Paid From Account chunein — payment record banne se pehle zaroori hai." };
+    const { data: account, error: accountError } = await supabase.from("finance_accounts").select("id, is_active, gl_code").eq("id", accountId).maybeSingle();
+    if (accountError || !account?.is_active || !account.gl_code || account.gl_code === "9999") return { error: "Payment account active aur ledger se mapped hona chahiye." };
+  }
+
 
   const purchaseNumber = `PO-${Date.now()}`;
   const supplierBillNo = supplierBillWorkspace ? String(formData.get("supplier_bill_no") ?? "").trim() || null : null;
@@ -248,7 +266,7 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
       batch_id: batch.id,
       quantity: item.quantity,
       unit_cost: item.unit_cost,
-      line_total: item.quantity * item.unit_cost,
+      line_total: purchaseLineTotal(item.quantity, item.unit_cost)!,
     });
     if (itemError) {
       return { error: `Failed to save a purchase line: ${itemError.message}` };
@@ -401,7 +419,10 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     return { error: "Kuch toota ya kam hai -- note likhein: kya aur kyun. Baad mein supplier se yehi baat hogi." };
   }
 
+  const invoiceGoodsSubtotal = rows.reduce((sum, r) => sum + r.quantity * r.unit_cost, 0);
+  const inventoryDiscountRatio = invoiceGoodsSubtotal > 0 ? Math.min(1, Math.max(0, Number(purchase.discount_amount ?? 0) / invoiceGoodsSubtotal)) : 0;
   for (const row of rows) {
+    const stockUnitCost = Math.round(row.unit_cost * (1 - inventoryDiscountRatio) * 10000) / 10000;
     // Ginti ke adad pehle likhe jate hain, stock baad mein. Agar rok
     // (received + damaged + short = quantity) yahan tooti to stock
     // chhua hi nahi gaya.
@@ -420,7 +441,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     if (row.received <= 0) {
       // Kuch aaya hi nahi: batch khali, stock mein koi harkat nahi.
       if (row.batch_id) {
-        await supabase.from("stock_batches").update({ initial_quantity: 0, remaining_quantity: 0, unit_cost: row.unit_cost }).eq("id", row.batch_id);
+        await supabase.from("stock_batches").update({ initial_quantity: 0, remaining_quantity: 0, unit_cost: stockUnitCost }).eq("id", row.batch_id);
       }
       continue;
     }
@@ -462,7 +483,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     if (batchId) {
       await supabase
         .from("stock_batches")
-        .update({ warehouse_id: warehouseId, initial_quantity: row.received, remaining_quantity: row.received, unit_cost: row.unit_cost })
+        .update({ warehouse_id: warehouseId, initial_quantity: row.received, remaining_quantity: row.received, unit_cost: stockUnitCost })
         .eq("id", batchId);
     } else {
       const { data: newBatch, error: batchErr } = await supabase
@@ -473,7 +494,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
           batch_number: `${purchase.purchase_number}-${row.id.slice(0, 8)}`,
           initial_quantity: row.received,
           remaining_quantity: row.received,
-          unit_cost: row.unit_cost,
+          unit_cost: stockUnitCost,
         })
         .select("id")
         .single();
@@ -991,7 +1012,7 @@ export async function updatePurchaseItem(_prev: ActionState, formData: FormData)
 
   const { error: itemErr } = await supabase
     .from("purchase_items")
-    .update({ quantity, unit_cost: unitCost, line_total: quantity * unitCost })
+    .update({ quantity, unit_cost: unitCost, line_total: purchaseLineTotal(quantity, unitCost)! })
     .eq("id", itemId);
   if (itemErr) return { error: itemErr.message };
 
@@ -999,8 +1020,12 @@ export async function updatePurchaseItem(_prev: ActionState, formData: FormData)
   // -- sirf is line ka farq jama karna kisi din rounding se alag ho
   // sakta tha.
   const { data: allItems } = await supabase.from("purchase_items").select("quantity, unit_cost").eq("purchase_id", purchaseId);
-  const newTotal = (allItems ?? []).reduce((s, i) => s + Number(i.quantity) * Number(i.unit_cost), 0);
-  await supabase.from("purchases").update({ total_amount: newTotal }).eq("id", purchaseId);
+  const { data: header, error: headerError } = await supabase.from("purchases").select("invoice_total, discount_amount, tax_amount").eq("id", purchaseId).single();
+  if (headerError) return { error: headerError.message };
+  const totals = purchaseBillTotals(allItems ?? [], header.discount_amount ?? 0, header.tax_amount ?? 0);
+  if (totals.errors.length) return { error: totals.errors[0] };
+  const { error: totalError } = await supabase.from("purchases").update({ total_amount: totals.total, ...(header.invoice_total !== null ? { invoice_total: totals.total } : {}) }).eq("id", purchaseId);
+  if (totalError) return { error: totalError.message };
 
   const changes: string[] = [];
   if (oldQuantity !== quantity) changes.push(`quantity ${oldQuantity} → ${quantity}`);

@@ -262,6 +262,10 @@ export function LoadBillClient({
   const [tab, setTab] = useState<ServiceTab>(shuruKind);
   const kind: "load" | "bill" = tab === "load" || tab === "bill" ? tab : "load";
   const [state, action] = useFormState(createLoadTransaction, initial);
+  const [loadActionId, setLoadActionId] = useState("");
+  const [bankActionId, setBankActionId] = useState("");
+  useEffect(() => { setLoadActionId(crypto.randomUUID()); setBankActionId(crypto.randomUUID()); }, []);
+  useEffect(() => { if (state.success) setLoadActionId(crypto.randomUUID()); }, [state]);
   const [tidState, tidAction] = useFormState(attachProviderTid, initial);
   const [settleState, settleAction] = useFormState(settleBill, initial);
   const [revState, revAction] = useFormState(reverseLoadTransaction, initial);
@@ -269,6 +273,7 @@ export function LoadBillClient({
   const [loanState, loanAction] = useFormState(giveCustomerLoan, udhaarInitial);
   const [wapsiState, wapsiAction] = useFormState(takeCustomerRepayment, udhaarInitial);
   const [bankState, bankAction] = useFormState(createBankTransfer, initial);
+  useEffect(() => { if (bankState.success) setBankActionId(crypto.randomUUID()); }, [bankState]);
   const [bankTidState, bankTidAction] = useFormState(attachBankTransferTid, initial);
   const [bankReverseState, bankReverseAction] = useFormState(reverseBankTransfer, initial);
   const [offlineUdhaarPending, setOfflineUdhaarPending] = useState(0);
@@ -620,6 +625,7 @@ export function LoadBillClient({
           ) : tab === "bank_transfer" ? (
             <BankTransferForm
               action={bankAction}
+              clientActionId={bankActionId}
               people={udhaarPeople}
               financeAccounts={financeAccounts}
               selectedPerson={mainParty}
@@ -653,6 +659,7 @@ export function LoadBillClient({
             />
           ) : (
           <form action={action} onSubmit={() => { submittedTabRef.current = tab; setLastSavedTab(null); }} className={`load-form load-form-entry ${kind === "bill" ? "load-form-bill" : "load-form-mobile"} space-y-3`}>
+            <input type="hidden" name="client_action_id" value={loadActionId} />
             <input type="hidden" name="kind" value={kind} />
             <input type="hidden" name="shop_id" value={shopId ?? ""} />
 
@@ -1054,6 +1061,7 @@ export function LoadBillClient({
 
 function BankTransferForm({
   action,
+  clientActionId,
   people,
   financeAccounts,
   selectedPerson,
@@ -1081,6 +1089,7 @@ function BankTransferForm({
   onSubmit,
 }: {
   action: (formData: FormData) => void;
+  clientActionId: string;
   people: PersonOption[];
   financeAccounts: FinanceAccount[];
   selectedPerson: PersonOption | null;
@@ -1113,6 +1122,7 @@ function BankTransferForm({
 
   return (
     <form action={action} onSubmit={onSubmit} className="load-form load-form-bank-transfer space-y-3">
+      <input type="hidden" name="client_action_id" value={clientActionId} />
       <div className="load-field-account">
         <Label htmlFor="bank_source_account">Transfer hamare kis account se</Label>
         <Select id="bank_source_account" name="source_finance_account_id" value={sourceAccount} onChange={(event) => onSourceAccountChange(event.target.value)} required>

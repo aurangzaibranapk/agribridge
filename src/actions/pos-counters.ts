@@ -263,7 +263,8 @@ export async function getShiftSummary(shiftId: string): Promise<ShiftCashSummary
   if (!shift) return { error: "Shift nahi mila." };
   if (shift.staff_id !== who.userId && !who.unrestricted) return { error: "Sirf apna shift dekh sakte hain." };
 
-  return computeShiftCash(shiftId, Number(shift.opening_cash));
+  try { return await computeShiftCash(shiftId, Number(shift.opening_cash)); }
+  catch (error) { return { error: error instanceof Error ? error.message : "Shift ka cash verify nahi hua." }; }
 }
 
 /**
@@ -293,7 +294,9 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
   if (shift.status !== "open") return { error: "Ye shift pehle hi band ho chuka hai." };
   if (shift.staff_id !== who.userId && !who.unrestricted) return { error: "Sirf apna shift band kar sakte hain." };
 
-  const { expectedCash } = await computeShiftCash(shiftId, Number(shift.opening_cash));
+  let expectedCash: number;
+  try { ({ expectedCash } = await computeShiftCash(shiftId, Number(shift.opening_cash))); }
+  catch (error) { return { error: error instanceof Error ? error.message : "Shift ka cash verify nahi hua." }; }
   const difference = Math.round((countedCash - expectedCash) * 100) / 100;
 
   const { error } = await service

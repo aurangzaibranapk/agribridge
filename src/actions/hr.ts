@@ -320,7 +320,7 @@ export async function selfCheckOut(_prev: ActionState, formData: FormData): Prom
   const basicSalary = Number(staffDetails?.basic_salary ?? 0);
   if (basicSalary > 0) {
     const dailyWage = Math.round((basicSalary / 30) * 100) / 100;
-    const { data: wageRow } = await supabase
+    const { data: wageRow, error: wageError } = await supabase
       .from("staff_credit_ledger")
       .insert({
         profile_id: user.id,
@@ -333,11 +333,13 @@ export async function selfCheckOut(_prev: ActionState, formData: FormData): Prom
       .select("id")
       .single();
 
+    if (wageError) return { error: `Dihari/ledger posting fail hui: ${wageError.message}` };
+
     // Dihari us din kharcha ban jati hai jis din kaam hua, na ke jis din
     // paisa diya gaya. Sirf dene par likhein to mahine ke beech mein ye
     // nazar nahi aata ke kitni tankhwah ban chuki hai.
     if (wageRow?.id) {
-      await postStaffLedger({
+      const wagePosted = await postStaffLedger({
         profileId: user.id,
         amount: dailyWage,
         ledgerType: "credit",
@@ -345,6 +347,7 @@ export async function selfCheckOut(_prev: ActionState, formData: FormData): Prom
         description: `Dihari — ${today}`,
         ctx: { createdBy: user.id, claims: [{ table: "staff_credit_ledger", rowId: wageRow.id }] },
       });
+      if ("error" in wagePosted) return { error: wagePosted.error };
     }
   }
 

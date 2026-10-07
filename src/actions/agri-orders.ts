@@ -605,51 +605,13 @@ export async function verifyOrderPayment(_prev: ActionState, formData: FormData)
       verified_at: new Date().toISOString(),
     })
     .eq("id", paymentId)
+    .eq("order_id", orderId)
     .select("payment_method, paid_amount")
     .single();
   if (error) return { error: error.message };
 
-  // A verified payment becomes an advance/credit against this branch's
-  // account. GRN completion later charges the actual payable amount —
-  // if the branch has paid more than what's been charged, the
-  // difference sits as an available advance balance for future orders
-  // (see branch-credit page: outstanding = charges - advance_payments).
-  if (branchId && payment) {
-    await supabase.from("branch_credit_transactions").insert({
-      branch_id: branchId,
-      transaction_type: "advance_payment",
-      amount: Number(payment.paid_amount),
-      order_id: orderId,
-      payment_method: payment.payment_method,
-      notes: "Payment verify hone par advance/credit mein jama hua.",
-      created_by: user?.id ?? null,
-    });
-
-    // This is also real cash/bank actually received by the company (per
-    // the payment_method_account_map configured by Finance) — post it
-    // into Finance now, same moment it becomes real money, mirroring
-    // how POS sales post automatically on checkout.
-    const { data: mapping } = await supabase
-      .from("payment_method_account_map")
-      .select("finance_account_id")
-      .eq("payment_method", payment.payment_method)
-      .maybeSingle();
-    if (mapping?.finance_account_id) {
-      await supabase.from("finance_transactions").insert({
-        account_id: mapping.finance_account_id,
-        transaction_type: "income",
-        category: "agri_order_payment",
-        amount: Number(payment.paid_amount),
-        transaction_date: aajKaKhana(),
-        notes: `AgriBridge order payment verified (${payment.payment_method})`,
-        created_by: user?.id ?? null,
-      });
-      // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
-      // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane
-      // aur badalne par bhi). Pehle yahan dobara bhi hilaya jata tha,
-      // yani Rs 1,000 ka asar Rs 2,000 hota tha.
-    }
-  }
+  // Database trigger writes the branch credit, cash book and journal in
+  // the verification transaction. A failed posting rejects verification.
 
   await logTimeline(orderId, "payment_verified", `Payment Verify hui${partial ? " (partial)" : ""}.`);
   await logAudit({ actionType: "approve", module: "agri_order_payments", recordId: paymentId, description: "Payment verify hui." });

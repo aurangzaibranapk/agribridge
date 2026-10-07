@@ -1,6 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
 
-import { aajKaKhana } from "@/lib/utils/format";
 /**
  * Double-entry ka darwaza -- har rupya yahin se guzarta hai.
  *
@@ -57,6 +56,8 @@ export interface JournalInput {
   sourceId?: string | null;
   entryDate?: string;
   branchId?: string | null;
+  posShiftId?: string | null;
+  shopId?: string | null;
   createdBy: string | null;
   lines: JournalLine[];
   /** Purani tareekh ki entry -- wajah lazmi. */
@@ -78,14 +79,6 @@ function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-
-async function nextEntryNumber(): Promise<string> {
-  const service = createServiceClient();
-  const year = new Date().getFullYear() % 100;
-  const { data, error } = await (service as any).rpc("next_txn_number", { p_year: year });
-  if (error || !Number.isFinite(Number(data))) throw new Error(error?.message ?? "Journal number nahi mila.");
-  return `TXN-${year}-${String(data).padStart(6, "0")}`;
-}
 
 /**
  * Entry post karta hai.
@@ -146,126 +139,9 @@ export async function reverseJournal(
 ): Promise<PostedEntry | { error: string }> {
   if (reason.trim().length < 5) return { error: "Reversal ki wajah likhna zaroori hai." };
 
-  const service = createServiceClient();
-
-  const { data: original } = await service
-    .from("journal_entries")
-    .select("id, entry_number, description, source_module, source_id, branch_id, is_reversal")
-    .eq("id", entryId)
-    .maybeSingle();
-  if (!original) return { error: "Entry nahi mili." };
-  if (original.is_reversal) return { error: "Reversal ka reversal nahi hota." };
-
-  const { data: already } = await service
-    .from("journal_entries")
-    .select("entry_number")
-    .eq("reversal_of", entryId)
-    .maybeSingle();
-  if (already) return { error: `Ye entry pehle hi ulat di gayi thi (${already.entry_number}).` };
-
-  const { data: lines } = await service
-    .from("journal_lines")
-    .select("account_code, debit, credit, party_type, party_id, memo")
-    .eq("entry_id", entryId)
-    .order("line_order");
-  if (!lines || lines.length === 0) return { error: "Entry ki qataren nahi milin." };
-
-  const entryNumber = await nextEntryNumber();
-
-  const { data: entry, error: entryError } = await service
-    .from("journal_entries")
-    .insert({
-      entry_number: entryNumber,
-      description: `Reversal: ${original.description}`,
-      source_module: original.source_module,
-      source_id: original.source_id,
-      branch_id: original.branch_id,
-      is_reversal: true,
-      reversal_of: entryId,
-      reversal_reason: reason.trim(),
-      created_by: byProfileId,
-    })
-    .select("id, entry_number")
-    .single();
-  if (entryError) return { error: entryError.message };
-
-  // Debit aur credit ulat jate hain -- yahi reversal hai.
-  const { error: lineError } = await service.from("journal_lines").insert(
-    lines.map((line, index) => ({
-      entry_id: entry.id,
-      account_code: line.account_code,
-      debit: Number(line.credit),
-      credit: Number(line.debit),
-      party_type: line.party_type,
-      party_id: line.party_id,
-      memo: `Reversal of ${original.entry_number}`,
-      line_order: index + 1,
-    }))
-  );
-  if (lineError) return { error: lineError.message };
-
-  // ---------------------------------------------------------------
-  // Cash book bhi ulti karni paRti hai
-  // ---------------------------------------------------------------
-  // Ye hissa pehle tha hi nahi, aur us ki wajah se reversal aadha kaam
-  // karta tha: ledger keh deta ke paisa wapas aa gaya, jabke cash book
-  // par wo abhi bhi gaya hua likha rehta. Do kitabein alag ho jatin --
-  // aur poore Zero-Rupee nizam ka maqsad hi ye hai ke wo kabhi alag na
-  // hon.
-  //
-  // Kaun si qatarein ulti karni hain, ye andaze se nahi maloom hota:
-  // journal_entry_sources mein pehle se likha hai ke is entry ne kis
-  // qatar par daawa kiya tha.
-  const { data: claimed } = await service
-    .from("journal_entry_sources")
-    .select("source_row_id")
-    .eq("entry_id", entryId)
-    .eq("source_table", "finance_transactions");
-
-  const claimedIds = (claimed ?? []).map((c) => c.source_row_id).filter(Boolean) as string[];
-
-  if (claimedIds.length > 0) {
-    const { data: cashRows } = await service
-      .from("finance_transactions")
-      .select("account_id, transaction_type, category, amount, notes")
-      .in("id", claimedIds);
-
-    // Qatar mitai ja chuki ho to kuch ulta karne ko bacha hi nahi.
-    for (const row of cashRows ?? []) {
-      const { data: back } = await service
-        .from("finance_transactions")
-        .insert({
-          account_id: row.account_id,
-          transaction_type: OPPOSITE[row.transaction_type],
-          category: row.category,
-          amount: row.amount,
-          transaction_date: aajKaKhana(),
-          notes: `Reversal of ${original.entry_number}${row.notes ? ` — ${row.notes}` : ""}`,
-          created_by: byProfileId,
-        })
-        .select("id")
-        .single();
-
-      // Nayi qatar par nayi entry ka daawa. Bina daawe ke wo qatar
-      // "ledger mein nahi gayi" ki fehrist mein aa kar khaRi ho jati.
-      if (back?.id) {
-        await service.from("journal_entry_sources").insert({
-          entry_id: entry.id,
-          source_table: "finance_transactions",
-          source_row_id: back.id,
-        });
-      }
-    }
-  }
-
-  const total = lines.reduce((sum, l) => sum + Number(l.debit), 0);
-  return { id: entry.id, entryNumber: entry.entry_number, total: round2(total) };
+  const { data, error } = await (createServiceClient() as any).rpc("reverse_journal_atomic", {
+    p_id: entryId, p_reason: reason.trim(), p_by: byProfileId,
+  });
+  if (error || !data?.id) return { error: error?.message ?? "Reversal save nahi hui." };
+  return data as PostedEntry;
 }
-
-/** Cash book ki har harkat ka ulat. */
-const OPPOSITE: Record<string, "income" | "expense" | "transfer_in" | "transfer_out"> = {
-  income: "expense",
-  expense: "income",
-  transfer_in: "transfer_out",
-  transfer_out: "transfer_in",
-};

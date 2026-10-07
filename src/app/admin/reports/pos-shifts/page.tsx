@@ -111,6 +111,27 @@ export default async function PosShiftReportPage({
     returnsByShift.set(r.shift_id, arr);
   });
 
+  // The same desk cash legs used at shift closing must also reach reports.
+  const deskLegs: any[] = [];
+  const fromDesk = shifts.length ? shifts.map((s) => String(s.opened_at)).sort()[0] : null;
+  const toDesk = new Date().toISOString();
+  if (fromDesk && staffIds.length) {
+    for (let offset = 0; ; offset += 1000) {
+      let query = service.from("journal_lines")
+        .select("debit, credit, journal_entries!inner(source_module, branch_id, created_by, created_at, pos_shift_id)")
+        .eq("account_code", "1000")
+        .in("journal_entries.source_module", ["customer_udhaar", "load_bill", "bank_transfer", "load_bill_settle", "load_float"])
+        .in("journal_entries.created_by", staffIds as string[])
+        .gte("journal_entries.created_at", fromDesk).lte("journal_entries.created_at", toDesk)
+        .order("id").range(offset, offset + 999);
+      if (branchId) query = query.eq("journal_entries.branch_id", branchId);
+      const { data, error } = await query;
+      if (error) throw new Error("POS desk cash report could not be verified: " + error.message);
+      deskLegs.push(...(data ?? []));
+      if ((data?.length ?? 0) < 1000) break;
+    }
+  }
+
   const rows = shifts.map((s) => {
     const counter = Array.isArray(s.pos_counters) ? s.pos_counters[0] : s.pos_counters;
     const branch = Array.isArray(counter?.branches) ? counter.branches[0] : counter?.branches;
@@ -118,7 +139,14 @@ export default async function PosShiftReportPage({
     const mySales = (salesByShift.get(s.id) ?? []) as { id: string; total_amount: number; khata_amount: number }[];
     const myPayments = mySales.flatMap((sale) => paymentsBySale.get(sale.id) ?? []);
     const myReturns = returnsByShift.get(s.id) ?? [];
-    const live = aggregateShiftCash(Number(s.opening_cash), mySales, myPayments, myReturns);
+    const myDeskLegs = deskLegs.filter((r) => {
+      const entry = Array.isArray(r.journal_entries) ? r.journal_entries[0] : r.journal_entries;
+      return (!entry?.pos_shift_id || entry.pos_shift_id === s.id) && entry?.created_by === s.staff_id && entry?.branch_id === counter?.branch_id && entry.created_at >= s.opened_at && entry.created_at <= (s.closed_at ?? toDesk);
+    });
+    const moduleOf = (r: any) => (Array.isArray(r.journal_entries) ? r.journal_entries[0] : r.journal_entries)?.source_module;
+    const live = aggregateShiftCash(Number(s.opening_cash), mySales, myPayments, myReturns, [],
+      myDeskLegs.filter((r) => moduleOf(r) === "customer_udhaar"),
+      myDeskLegs.filter((r) => moduleOf(r) !== "customer_udhaar"));
 
     const isClosed = s.status === "closed";
     return {

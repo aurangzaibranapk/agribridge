@@ -4,9 +4,8 @@ import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { postJournal } from "@/lib/ledger/post";
+import { postDeskTransaction } from "@/lib/ledger/desk";
 import { ACC, glForFinanceAccount } from "@/lib/ledger/rules";
-import { cashBookLikhein } from "@/lib/ledger/cash-book";
 import { logAudit } from "@/lib/audit";
 import { notifyUser } from "@/lib/notifications";
 import { requireAction } from "@/lib/access/guard";
@@ -109,7 +108,7 @@ async function darwaza() {
   const guard = await requireAction("load-bill", "create");
   if ("error" in guard) return { ok: false as const, error: guard.error };
   const supabase = createClient();
-  return { ok: true as const, userId: guard.caller.userId, branchId: guard.caller.branchId, supabase };
+  return { ok: true as const, userId: guard.caller.userId, branchId: guard.caller.branchId, shopId: guard.caller.shopId, supabase };
 }
 
 /**
@@ -255,12 +254,13 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
 
   const tafseel = `Naqad udhaar — ${name}${wajah ? ` (${wajah})` : ""}${reference ? ` · Ref: ${reference}` : ""}`;
 
-  const posted = await postJournal({
+  const posted = await postDeskTransaction({
     description: tafseel,
     sourceModule: "customer_udhaar",
     sourceId: partyId,
     entryDate: tareekh,
     branchId: g.branchId,
+    shopId: g.shopId,
     createdBy: g.userId,
     lines: [
       {
@@ -273,10 +273,7 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
       { account: gl, credit: rakam, memo: tafseel },
     ],
     clientActionId,
-  });
-  if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
-
-  const cb = await cashBookLikhein([
+  }, [
     {
       ...(naqad ? { glCode: ACC.cash } : { accountId: kahanSe }),
       amount: rakam,
@@ -285,23 +282,9 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
       notes: tafseel,
       tareekh,
       createdBy: g.userId,
-      entryId: posted.id,
     },
   ]);
-  if (cb.error) {
-    return {
-      error: `Entry ${posted.entryNumber} ledger mein ban gayi, magar Cash Book mein qatar nahi bani: ${cb.error}. Ye farq theek karwa lein — warna khate ka balance ghalat rahega.`,
-    };
-  }
-
-  // Kisan ka koi alag "balance" column nahi -- us ka baqi hamesha
-  // ledger se ginta hai, is liye yahan update karne ko kuch nahi.
-  if (partyType === "customer") {
-    await service
-      .from("customers")
-      .update({ current_balance: Math.round((abTak + rakam) * 100) / 100 })
-      .eq("id", partyId);
-  }
+  if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
 
   await logAudit({
     actionType: "create",
@@ -317,10 +300,11 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
   revalidatePath("/admin/crm");
   revalidatePath("/admin/finance");
   revalidatePath("/admin/farmer-credit");
+  revalidatePath("/admin/pos");
   // Agar is bande ke paas pehle se credit tha (zyada wapsi se), to naya
   // udhaar khud usi credit mein se katta hai -- ledger ka apna hisaab,
   // alag se kuch adjust nahi karna parta.
-  const abTakBaad = Math.round((abTak + rakam) * 100) / 100;
+  const abTakBaad = partyType === "customer" ? Number(posted.balances[partyId]) : Math.round((abTak + rakam) * 100) / 100;
   return {
     success: true,
     notice:
@@ -416,12 +400,13 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
 
   const tafseel = `Udhaar ki wapsi — ${name}${wajah ? ` (${wajah})` : ""}${reference ? ` · Ref: ${reference}` : ""}`;
 
-  const posted = await postJournal({
+  const posted = await postDeskTransaction({
     description: tafseel,
     sourceModule: "customer_udhaar",
     sourceId: partyId,
     entryDate: tareekh,
     branchId: g.branchId,
+    shopId: g.shopId,
     createdBy: g.userId,
     lines: [
       { account: gl, debit: rakam, memo: tafseel },
@@ -434,10 +419,7 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
       },
     ],
     clientActionId,
-  });
-  if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
-
-  const cb = await cashBookLikhein([
+  }, [
     {
       ...(naqad ? { glCode: ACC.cash } : { accountId: kahanAaya }),
       amount: rakam,
@@ -446,23 +428,9 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
       notes: tafseel,
       tareekh,
       createdBy: g.userId,
-      entryId: posted.id,
     },
   ]);
-  if (cb.error) {
-    return {
-      error: `Entry ${posted.entryNumber} ledger mein ban gayi, magar Cash Book mein qatar nahi bani: ${cb.error}. Ye farq theek karwa lein.`,
-    };
-  }
-
-  // Kisan ka koi alag "balance" column nahi -- us ka baqi hamesha
-  // ledger se ginta hai.
-  if (partyType === "customer") {
-    await service
-      .from("customers")
-      .update({ current_balance: Math.round((abTak - rakam) * 100) / 100 })
-      .eq("id", partyId);
-  }
+  if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
 
   await logAudit({
     actionType: "create",
@@ -478,7 +446,8 @@ export async function takeCustomerRepayment(_prev: UdhaarState, formData: FormDa
   revalidatePath("/admin/crm");
   revalidatePath("/admin/finance");
   revalidatePath("/admin/farmer-credit");
-  const bacha = Math.round((abTak - rakam) * 100) / 100;
+  revalidatePath("/admin/pos");
+  const bacha = partyType === "customer" ? Number(posted.balances[partyId]) : Math.round((abTak - rakam) * 100) / 100;
   return {
     success: true,
     notice:

@@ -12,6 +12,7 @@ import { createPurchase, type ActionState } from "@/actions/purchases";
 import { quickCreateProduct } from "@/actions/products";
 import { aajKaKhana } from "@/lib/utils/format";
 import { looksBinary, parseDelimited } from "@/lib/csv";
+import { parseBillNumber, purchaseLineTotal, purchaseBillTotals, matchBillProduct, patchBillRow } from "@/lib/purchases/bill-math";
 
 type Category = { id: string; name: string; parent_category_id: string | null; category_kind: string };
 type Product = {
@@ -20,6 +21,7 @@ type Product = {
   product_code: string | null;
 };
 type Line = {
+  row_id: string;
   product_id: string; query: string; quantity: string; unit_cost: string;
   sale_rate: string; mrp_rate: string; wholesale_rate: string;
   batch_number: string; manufacture_date: string; expiry_date: string; pickerOpen: boolean;
@@ -32,7 +34,8 @@ const GROUPS: { id: StockGroup; label: string; roots: string[] }[] = [
   { id: "wanda", label: "Wanda", roots: ["wanda", "animal feed", "animal feed (wanda)"] },
   { id: "pesticide", label: "Pesticide", roots: ["pesticide", "pesticides"] },
 ];
-const emptyLine = (): Line => ({ product_id: "", query: "", quantity: "", unit_cost: "", sale_rate: "", mrp_rate: "", wholesale_rate: "", batch_number: "", manufacture_date: "", expiry_date: "", pickerOpen: false, pack_override: "", units_per_pack_override: "" });
+let nextRowId = 0;
+const emptyLine = (): Line => ({ row_id: `bill-row-${++nextRowId}`, product_id: "", query: "", quantity: "", unit_cost: "", sale_rate: "", mrp_rate: "", wholesale_rate: "", batch_number: "", manufacture_date: "", expiry_date: "", pickerOpen: false, pack_override: "", units_per_pack_override: "" });
 const initialState: ActionState = {};
 const inputClass = "h-10 w-full rounded-lg border border-surface-200 bg-white px-3 text-sm text-surface-900 outline-none transition placeholder:text-surface-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100 dark:focus:ring-brand-900/30";
 const labelClass = "mb-1.5 block text-xs font-medium text-surface-600 dark:text-surface-300";
@@ -54,10 +57,9 @@ function groupForCategory(categoryId: string | null, categories: Category[]): St
 }
 
 const normalizeCsvHeader = (value: string) => value.trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
-const normalizeProductName = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, " ").replace(/\s+/g, " ");
 const csvNumber = (value: string | undefined) => {
-  const cleaned = String(value ?? "").replace(/[^0-9.]/g, "");
-  return cleaned && Number.isFinite(Number(cleaned)) ? String(Number(cleaned)) : "";
+  const parsed = parseBillNumber(value);
+  return parsed === null ? String(value ?? "").trim() : String(parsed);
 };
 const CSV_ALIASES = {
   product: ["product", "product name", "item", "item name", "name", "naam", "cheez"],
@@ -91,6 +93,14 @@ export function SupplierBillClient({
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const [terms, setTerms] = useState<"paid" | "partial" | "credit">("credit");
   const [paidNow, setPaidNow] = useState("");
+  const [discount, setDiscount] = useState("");
+  const [tax, setTax] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [financeAccountId, setFinanceAccountId] = useState(accounts.find((a) => a.account_type === "cash")?.id ?? "");
+  const [creditDays, setCreditDays] = useState("30");
+  const [dueDate, setDueDate] = useState("");
+  const [billNotes, setBillNotes] = useState("");
+  const [newProductRowId, setNewProductRowId] = useState<string | null>(null);
   const [productModal, setProductModal] = useState(false);
   const [newProductError, setNewProductError] = useState("");
   const [newProductBusy, setNewProductBusy] = useState(false);
@@ -105,6 +115,7 @@ export function SupplierBillClient({
   const [newProductMrp, setNewProductMrp] = useState("");
   const [newProductWholesale, setNewProductWholesale] = useState("");
   const [csvNotice, setCsvNotice] = useState("");
+  const [validationError, setValidationError] = useState("");
   const [billNo, setBillNo] = useState("");
   const [billNoGenerating, setBillNoGenerating] = useState(false);
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -159,6 +170,13 @@ export function SupplierBillClient({
 
   // Intercept form submit — show review modal first (online), or queue offline
   function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
+    const active = lines.filter((l) => l.query.trim() || l.product_id || l.quantity.trim() || l.unit_cost.trim());
+    const unmapped = active.findIndex((l) => !l.product_id);
+    const totals = purchaseBillTotals(active, discount, tax, paidAmount);
+    const error = unmapped >= 0 ? `Line ${unmapped + 1}: Product Master se link karein. Koi CSV row save se chhori nahi jayegi.` : totals.errors[0];
+    if (error) { e.preventDefault(); setValidationError(error); return; }
+    setValidationError("");
+
     if (isOnline && !reviewApprovedRef.current) {
       e.preventDefault();
       setReviewOpen(true);
@@ -194,7 +212,15 @@ export function SupplierBillClient({
       if (d.billNo) setBillNo(d.billNo);
       if (d.terms) setTerms(d.terms);
       if (d.paidNow) setPaidNow(d.paidNow);
-      if (Array.isArray(d.lines) && d.lines.length > 0) setLines(d.lines.map((l: Line) => ({ ...emptyLine(), ...l, pickerOpen: false })));
+      if (d.discount !== undefined) setDiscount(d.discount);
+      if (d.tax !== undefined) setTax(d.tax);
+      if (d.paymentMethod) setPaymentMethod(d.paymentMethod);
+      if (d.financeAccountId) setFinanceAccountId(d.financeAccountId);
+      if (d.creditDays !== undefined) setCreditDays(d.creditDays);
+      if (d.dueDate !== undefined) setDueDate(d.dueDate);
+      if (d.billNotes !== undefined) setBillNotes(d.billNotes);
+      if (d.paymentProofUrl) setPaymentProofUrl(d.paymentProofUrl);
+      if (Array.isArray(d.lines) && d.lines.length > 0) setLines(d.lines.map((l: Line) => ({ ...emptyLine(), ...l, row_id: emptyLine().row_id, query: String(l.query ?? ""), quantity: csvNumber(String(l.quantity ?? "")), unit_cost: csvNumber(String(l.unit_cost ?? "")), pack_override: String(l.pack_override ?? ""), units_per_pack_override: String(l.units_per_pack_override ?? ""), pickerOpen: false })));
     } catch { /* ignore */ }
   }, []);
 
@@ -202,13 +228,13 @@ export function SupplierBillClient({
   useEffect(() => {
     const t = setTimeout(() => {
       try {
-        const hasData = lines.some((l) => l.product_id) || supplierId;
+        const hasData = lines.some((l) => l.product_id || l.query.trim() || l.quantity.trim() || l.unit_cost.trim()) || supplierId;
         if (!hasData) { localStorage.removeItem("supplier_bill_draft"); return; }
-        localStorage.setItem("supplier_bill_draft", JSON.stringify({ supplierId, warehouseId, billDate, billNo, terms, paidNow, lines }));
+        localStorage.setItem("supplier_bill_draft", JSON.stringify({ version: 2, supplierId, warehouseId, billDate, billNo, terms, paidNow, lines, discount, tax, paymentMethod, financeAccountId, creditDays, dueDate, billNotes, paymentProofUrl }));
       } catch { /* quota ignore */ }
     }, 800);
     return () => clearTimeout(t);
-  }, [supplierId, warehouseId, billDate, billNo, terms, paidNow, lines]);
+  }, [supplierId, warehouseId, billDate, billNo, terms, paidNow, lines, discount, tax, paymentMethod, financeAccountId, creditDays, dueDate, billNotes, paymentProofUrl]);
 
   const selectedSupplier = suppliers.find((s) => s.id === supplierId) ?? null;
 
@@ -277,21 +303,19 @@ export function SupplierBillClient({
     });
   }, [categories]);
 
-  const subtotal = useMemo(() => lines.reduce((sum, line) => sum + (Number(line.quantity) || 0) * (Number(line.unit_cost) || 0), 0), [lines]);
+  const subtotal = useMemo(() => purchaseBillTotals(lines).subtotal, [lines]);
   const existingMatches = useMemo(() => {
     const q = newProductName.trim().toLowerCase();
     if (q.length < 2) return [];
     return products.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 5);
   }, [newProductName, products]);
-  const [discount, setDiscount] = useState("");
-  const [tax, setTax] = useState("");
-  const grandTotal = Math.max(0, subtotal - (Number(discount) || 0) + (Number(tax) || 0));
+  const grandTotal = purchaseBillTotals(lines, discount, tax).total;
   const paidAmount = terms === "paid" ? grandTotal : terms === "partial" ? Number(paidNow) || 0 : 0;
-  const amountDue = Math.max(0, grandTotal - paidAmount);
+  const amountDue = purchaseBillTotals(lines, discount, tax, paidAmount).due;
   const discountRatio = subtotal > 0 && Number(discount) > 0 ? Number(discount) / subtotal : 0;
   const itemPayload = JSON.stringify(lines.filter((line) => line.product_id && Number(line.quantity) > 0 && line.unit_cost.trim() !== "" && Number(line.unit_cost) >= 0).map((line) => {
     const rawCost = Number(line.unit_cost);
-    const effectiveCost = discountRatio > 0 ? Math.round(rawCost * (1 - discountRatio) * 10000) / 10000 : rawCost;
+    const effectiveCost = rawCost;
     return {
       product_id: line.product_id, quantity: Number(line.quantity), unit_cost: effectiveCost,
       sale_rate: Number(line.sale_rate) > 0 ? Number(line.sale_rate) : undefined,
@@ -302,17 +326,18 @@ export function SupplierBillClient({
       units_per_pack: Number(line.units_per_pack_override) > 1 ? Number(line.units_per_pack_override) : undefined,
     };
   }));
-  // Discount already baked into item unit_costs above; pass 0 so backend doesn't subtract again.
-  const backendDiscount = discountRatio > 0 ? 0 : Number(discount) || 0;
+  // Invoice rows retain trade rates; the header discount is applied once.
+  const backendDiscount = parseBillNumber(discount) ?? 0;
 
   function updateLine(index: number, patch: Partial<Line>) {
-    setLines((previous) => previous.map((line, i) => i === index ? { ...line, ...patch } : line));
+    const rowId = lines[index]?.row_id;
+    if (rowId) setLines((previous) => patchBillRow(previous, rowId, patch));
   }
   function selectProduct(index: number, product: Product) {
     updateLine(index, {
       product_id: product.id,
       query: `${product.name}${product.pack_size ? ` · ${product.pack_size}` : ""}`,
-      unit_cost: product.trade_rate_pending ? "" : String(product.purchase_price),
+      unit_cost: !lines[index]?.product_id && lines[index]?.unit_cost.trim() ? lines[index].unit_cost : product.trade_rate_pending ? "" : String(product.purchase_price),
       sale_rate: product.selling_price > 0 ? String(product.selling_price) : "",
       mrp_rate: product.mrp_price != null && product.mrp_price > 0 ? String(product.mrp_price) : "",
       wholesale_rate: product.wholesale_price != null && product.wholesale_price > 0 ? String(product.wholesale_price) : "",
@@ -321,7 +346,12 @@ export function SupplierBillClient({
       units_per_pack_override: "",
     });
   }
-  function openNewProduct() {
+  function openNewProduct(rowId?: string) {
+    setNewProductRowId(rowId ?? null);
+    const row = rowId ? lines.find((l) => l.row_id === rowId) : null;
+    setNewProductName(row?.query ?? "");
+    setNewProductPack(row?.pack_override ?? "");
+    setNewProductPurchase(row?.unit_cost ?? "");
     const group = activeGroup === "all" ? "khaad" : activeGroup;
     setNewProductGroup(group);
     const root = rootForGroup(group);
@@ -350,16 +380,16 @@ export function SupplierBillClient({
       mrp_price: Number(newProductMrp) || null, wholesale_price: Number(newProductWholesale) || null,
       trade_rate_pending: false, product_code: null,
     };
-    setProducts((previous) => [...previous, created].sort((a, b) => a.name.localeCompare(b.name)));
+    setProducts((previous) => [...previous.filter((p) => p.id !== created.id), created].sort((a, b) => a.name.localeCompare(b.name)));
     setLines((previous) => {
-      const index = previous.findIndex((line) => !line.product_id);
+      const index = previous.findIndex((line) => newProductRowId ? line.row_id === newProductRowId : !line.product_id && !line.query.trim());
       const selectedRates = {
         sale_rate: created.selling_price > 0 ? String(created.selling_price) : "",
         mrp_rate: created.mrp_price ? String(created.mrp_price) : "",
         wholesale_rate: created.wholesale_price ? String(created.wholesale_price) : "",
       };
       if (index < 0) return [...previous, { ...newLineWithDefaults(), product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: String(created.purchase_price), ...selectedRates, pickerOpen: false, pack_override: created.pack_size ?? "" }];
-      return previous.map((line, i) => i === index ? { ...line, product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: String(created.purchase_price), ...selectedRates, pickerOpen: false, pack_override: created.pack_size ?? "" } : line);
+      return previous.map((line, i) => i === index ? { ...line, product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: line.unit_cost.trim() || String(created.purchase_price), ...selectedRates, pickerOpen: false, pack_override: created.pack_size ?? "" } : line);
     });
     setProductModal(false);
     setNewProductName(""); setNewProductPack(""); setNewProductUnit(""); setNewProductCompany("");
@@ -368,7 +398,7 @@ export function SupplierBillClient({
 
   function addExistingToLine(product: Product) {
     setLines((previous) => {
-      const index = previous.findIndex((line) => !line.product_id);
+      const index = previous.findIndex((line) => newProductRowId ? line.row_id === newProductRowId : !line.product_id && !line.query.trim());
       const entry = {
         ...newLineWithDefaults(),
         product_id: product.id,
@@ -381,7 +411,7 @@ export function SupplierBillClient({
         pack_override: product.pack_size ?? product.unit ?? "",
       };
       if (index < 0) return [...previous, entry];
-      return previous.map((line, i) => (i === index ? entry : line));
+      return previous.map((line, i) => (i === index ? { ...line, ...entry, row_id: line.row_id, quantity: line.quantity, unit_cost: line.unit_cost.trim() || entry.unit_cost } : line));
     });
     setProductModal(false);
     setNewProductName("");
@@ -410,6 +440,7 @@ export function SupplierBillClient({
     const packColumn = column(CSV_ALIASES.pack);
     const qtyColumn = column(CSV_ALIASES.qty);
     const purchaseColumn = column(CSV_ALIASES.purchase);
+    if (qtyColumn < 0 || purchaseColumn < 0) { setCsvNotice("CSV mein Quantity aur Trade Rate ke columns zaroori hain. Purana rate reuse nahi hoga."); return; }
     const saleColumn = column(CSV_ALIASES.sale);
     const mrpColumn = column(CSV_ALIASES.mrp);
     const wholesaleColumn = column(CSV_ALIASES.wholesale);
@@ -419,18 +450,15 @@ export function SupplierBillClient({
     for (const row of rows.slice(1)) {
       const rawName = String(row[productColumn] ?? "").trim();
       if (!rawName) continue;
-      const wantedName = normalizeProductName(rawName);
-      const wantedPack = packColumn >= 0 ? normalizeProductName(row[packColumn] ?? "") : "";
-      const candidates = products.filter((product) => normalizeProductName(product.name) === wantedName);
-      const product = (wantedPack
-        ? candidates.find((candidate) => normalizeProductName(candidate.pack_size ?? candidate.unit ?? "") === wantedPack)
-        : null) ?? candidates[0];
+      const wantedPack = packColumn >= 0 ? String(row[packColumn] ?? "").trim() : "";
+      const product = matchBillProduct(products, rawName, wantedPack);
       if (!product) {
         missing.push(rawName);
         // Line add karo — data saved rahega, user search se link kar sakta hai
         imported.push({
           ...newLineWithDefaults(),
           query: rawName,
+          pack_override: wantedPack,
           quantity: qtyColumn >= 0 ? csvNumber(row[qtyColumn]) : "",
           unit_cost: purchaseColumn >= 0 ? csvNumber(row[purchaseColumn]) : "",
           sale_rate: saleColumn >= 0 ? csvNumber(row[saleColumn]) : "",
@@ -481,11 +509,13 @@ export function SupplierBillClient({
       {syncStatus === "synced" && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"><span className="flex items-center gap-2"><Check className="h-4 w-4" /> Offline bill auto-submit ho gaya! Stock GRN ke baad charhega.</span><Link href="/admin/purchases" className="font-semibold underline">Purchase kholein</Link></div>}
       {syncStatus === "sync_error" && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">Auto-sync mein masla aaya. Dobara submit karein.</p>}
       {state.success && syncStatus !== "synced" && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"><span className="flex items-center gap-2"><Check className="h-4 w-4" /> Bill save ho gaya. Stock tab charhega jab GRN par maal receive/count hoga.</span><Link href="/admin/purchases" className="font-semibold underline">Purchase kholein</Link></div>}
+      {validationError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{validationError}</p>}
       {state.error && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">{state.error}</p>}
 
       <form ref={formRef} action={formAction} onSubmit={handleFormSubmit} className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_330px]">
         <input type="hidden" name="supplier_bill_workspace" value="on" />
         <input type="hidden" name="items_json" value={itemPayload} />
+        <input type="hidden" name="expected_row_count" value={lines.filter((l) => l.query.trim() || l.product_id || l.quantity.trim() || l.unit_cost.trim()).length} />
         <input type="hidden" name="purchase_date" value={billDate} />
         <input type="hidden" name="branch_id" value={warehouses.find((item) => item.id === warehouseId)?.branchId ?? ""} />
         <input type="hidden" name="warehouse_id" value={warehouseId} />
@@ -532,7 +562,7 @@ export function SupplierBillClient({
               <div className="flex flex-wrap items-center gap-2">
                 <input ref={csvInputRef} type="file" accept=".csv,text/csv,text/plain" className="hidden" onChange={(event) => void loadBillCsv(event.target.files?.[0] ?? null)} />
                 <button type="button" onClick={() => csvInputRef.current?.click()} className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-surface-700 hover:border-brand-300 hover:text-brand-800 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200"><FileUp className="h-4 w-4" /> CSV Bill Upload</button>
-                <button type="button" onClick={openNewProduct} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-800 hover:bg-brand-100 dark:border-brand-900 dark:bg-brand-950/40 dark:text-brand-200"><PackagePlus className="h-4 w-4" /> New Product</button>
+                <button type="button" onClick={() => openNewProduct()} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-800 hover:bg-brand-100 dark:border-brand-900 dark:bg-brand-950/40 dark:text-brand-200"><PackagePlus className="h-4 w-4" /> New Product</button>
               </div>
             </div>
             {csvNotice && <p className={`mb-3 rounded-lg px-3 py-2 text-xs ${csvNotice.includes("nahi") || csvNotice.includes("mila") ? "bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200" : "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200"}`}>{csvNotice}</p>}
@@ -581,7 +611,7 @@ export function SupplierBillClient({
                 <tbody>
                   {lines.map((line, index) => {
                     const selected = products.find((product) => product.id === line.product_id);
-                    const lineTotal = (Number(line.quantity) || 0) * (Number(line.unit_cost) || 0);
+                    const lineTotal = purchaseLineTotal(line.quantity, line.unit_cost);
                     const normalizedQuery = line.query.trim().toLowerCase();
                     const matches = products.filter((product) => {
                       const group = groupForCategory(product.category_id, categories);
@@ -603,7 +633,7 @@ export function SupplierBillClient({
                     const bStr = `${selected?.unit ?? ""} ${selected?.pack_size ?? ""} ${line.pack_override}`.toLowerCase();
                     const isBt = bStr.includes("botal") || bStr.includes("liter") || bStr.includes("litr");
                     const itemLabel = isBt ? "botal" : "item";
-                    return <Fragment key={index}><tr onFocus={(e) => { if (e.target === e.currentTarget) return; const tr = e.currentTarget; const container = tr.closest('.overflow-y-auto') as HTMLElement | null; if (container) { const trRect = tr.getBoundingClientRect(); const cRect = container.getBoundingClientRect(); if (trRect.bottom > cRect.bottom - 80) { tr.scrollIntoView({ behavior: "smooth", block: "start" }); } else if (trRect.top < cRect.top) { tr.scrollIntoView({ behavior: "smooth", block: "nearest" }); } } else { tr.scrollIntoView({ behavior: "smooth", block: "nearest" }); } }} className={`border-t border-surface-100 align-top dark:border-surface-800 ${csvUnmatched ? "bg-amber-50 dark:bg-amber-950/20" : ""}`}>
+                    return <Fragment key={line.row_id}><tr onFocus={(e) => { if (e.target === e.currentTarget) return; const tr = e.currentTarget; const container = tr.closest('.overflow-y-auto') as HTMLElement | null; if (container) { const trRect = tr.getBoundingClientRect(); const cRect = container.getBoundingClientRect(); if (trRect.bottom > cRect.bottom - 80) { tr.scrollIntoView({ behavior: "smooth", block: "start" }); } else if (trRect.top < cRect.top) { tr.scrollIntoView({ behavior: "smooth", block: "nearest" }); } } else { tr.scrollIntoView({ behavior: "smooth", block: "nearest" }); } }} className={`border-t border-surface-100 align-top dark:border-surface-800 ${csvUnmatched ? "bg-amber-50 dark:bg-amber-950/20" : ""}`}>
                       <td className="px-3 py-3 text-xs text-surface-400">{index + 1}</td>
                       {/* Product column — search + category hint + batch/expiry */}
                       <td className="relative px-3 py-2.5">
@@ -615,7 +645,7 @@ export function SupplierBillClient({
                             <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-20 max-h-64 overflow-auto rounded-xl border border-surface-200 bg-white p-1 shadow-xl dark:border-surface-700 dark:bg-surface-900">
                               {matches.map((product) => <button key={product.id} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => selectProduct(index, product)} className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-brand-50 dark:hover:bg-brand-950/40"><span className="flex min-w-0 items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-100 text-brand-700 dark:bg-surface-800"><FileText className="h-4 w-4" /></span><span className="min-w-0"><span className="flex items-center gap-1.5"><span className="truncate font-medium text-surface-800 dark:text-surface-100">{product.name}</span>{product.product_code && <span className="shrink-0 rounded bg-brand-100 px-1 py-0.5 font-mono text-[10px] font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">{product.product_code}</span>}</span><span className="block text-[11px] text-surface-400">{product.pack_size || product.unit || "Unit set nahi"}</span></span></span><span className="shrink-0 text-[11px] text-surface-500">{GROUPS.find((group) => group.id === groupForCategory(product.category_id, categories))?.label ?? "Other"}</span></button>)}
                               {matches.length === 0 && <p className="px-3 py-4 text-center text-xs text-surface-500">Product nahi mila. New Product se master mein add karein.</p>}
-                              <button type="button" onClick={() => { updateLine(index, { pickerOpen: false }); openNewProduct(); }} className="flex w-full items-center gap-2 rounded-lg border-t border-surface-100 px-3 py-2.5 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:border-surface-800 dark:text-brand-300"><Plus className="h-4 w-4" /> New Product Master</button>
+                              <button type="button" onClick={() => { updateLine(index, { pickerOpen: false }); openNewProduct(line.row_id); }} className="flex w-full items-center gap-2 rounded-lg border-t border-surface-100 px-3 py-2.5 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:border-surface-800 dark:text-brand-300"><Plus className="h-4 w-4" /> New Product Master</button>
                             </div>
                           </>}
                         </div>
@@ -651,7 +681,7 @@ export function SupplierBillClient({
                       </td>
                       {/* Qty */}
                       <td className="px-3 py-2.5">
-                        <input aria-label="Quantity" className={inputClass} type="number" min="0.001" step="0.001" value={line.quantity} required={Boolean(line.product_id)} onChange={(event) => updateLine(index, { quantity: event.target.value })} />
+                        <input aria-label="Quantity" className={inputClass} type="number" min="0.001" step="0.001" value={line.quantity} required={Boolean(line.product_id)} onInput={(event) => updateLine(index, { quantity: event.currentTarget.value })} />
                         {(() => {
                           const q = Number(line.quantity);
                           if (!q || !selected) return null;
@@ -661,14 +691,14 @@ export function SupplierBillClient({
                       </td>
                       {/* Purchase Rate (per pack) */}
                       <td className="px-3 py-2.5">
-                        <div className="relative"><span className="absolute left-2.5 top-2.5 text-xs text-surface-400">Rs</span><input aria-label="Purchase rate" className={`${inputClass} pl-8`} type="number" min="0" step="0.01" value={line.unit_cost} required={Boolean(line.product_id)} onChange={(event) => updateLine(index, { unit_cost: event.target.value })} /></div>
+                        <div className="relative"><span className="absolute left-2.5 top-2.5 text-xs text-surface-400">Rs</span><input aria-label="Purchase rate" className={`${inputClass} pl-8`} type="number" min="0" step="0.01" value={line.unit_cost} required={Boolean(line.product_id)} onInput={(event) => updateLine(index, { unit_cost: event.currentTarget.value })} /></div>
                         {(() => {
                           const r = Number(line.unit_cost);
                           if (!r || !uEff) return null;
                           return <span className="mt-1 block text-[10px] font-medium text-brand-700">1 {itemLabel}: Rs {(Math.round((r / uEff) * 100) / 100).toLocaleString()}</span>;
                         })()}
                       </td>
-                      <td className="px-3 py-3 text-right font-semibold tabular-nums text-surface-800 dark:text-surface-100">Rs {lineTotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</td>
+                      <td className="px-3 py-3 text-right font-semibold tabular-nums text-surface-800 dark:text-surface-100">{lineTotal === null ? "—" : `Rs ${lineTotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}`}</td>
                       <td className="px-3 py-2.5"><button type="button" onClick={() => setLines((previous) => { const next = previous.filter((_, i) => i !== index); return next.length > 0 ? next : [emptyLine()]; })} className="rounded-lg p-2 text-surface-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4" /></button></td>
                     </tr>
                     {selected && <tr className={csvUnmatched ? "bg-amber-50 dark:bg-amber-950/20" : ""}>
@@ -736,8 +766,8 @@ export function SupplierBillClient({
             <div className="mb-4 flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"><FileText className="h-5 w-5" /></span><div><h2 className="font-display font-semibold text-surface-900 dark:text-white">Bill Summary</h2><p className="text-[11px] text-surface-400">Supplier invoice ka hisaab</p></div></div>
             <div className="space-y-3 border-b border-surface-100 pb-4 dark:border-surface-800"><SummaryLine label="Subtotal" value={subtotal} /><div className="grid grid-cols-[1fr_112px] items-center gap-3"><label htmlFor="discount" className="text-sm text-surface-500">Discount</label><input id="discount" type="number" min="0" max={subtotal} step="0.01" value={discount} onChange={(event) => setDiscount(event.target.value)} className={`${inputClass} text-right`} placeholder="0" /></div><div className="grid grid-cols-[1fr_112px] items-center gap-3"><label htmlFor="tax" className="text-sm text-surface-500">Tax</label><input id="tax" type="number" min="0" step="0.01" value={tax} onChange={(event) => setTax(event.target.value)} className={`${inputClass} text-right`} placeholder="0" /></div></div>
             <div className="my-4 rounded-xl bg-brand-50 px-3.5 py-3 dark:bg-brand-950/30"><SummaryLine label="Total Amount" value={grandTotal} strong /></div>
-            <div className="space-y-3 border-b border-surface-100 pb-4 dark:border-surface-800"><div><label className={labelClass}>Payment Status</label><select name="payment_terms" value={terms} onChange={(event) => { setTerms(event.target.value as typeof terms); setPaidNow(""); }} className={inputClass}><option value="credit">Credit / Udhaar</option><option value="partial">Partial Payment</option><option value="paid">Fully Paid</option></select></div>{terms === "partial" && <div><label className={labelClass}>Paid Now</label><input name="paid_now" type="number" min="0.01" max={Math.max(0, grandTotal - 0.01)} step="0.01" value={paidNow} onChange={(event) => setPaidNow(event.target.value)} className={inputClass} placeholder="Paid amount" required /></div>}{terms !== "paid" && <div className="grid grid-cols-2 gap-2"><div><label className={labelClass}>Credit Days</label><input name="credit_days" type="number" min="0" step="1" defaultValue="30" className={inputClass} /></div><div><label className={labelClass}>Due Date</label><input name="due_date" type="date" className={inputClass} /></div></div>}<div className="flex items-center justify-between text-sm"><span className="text-surface-500">Paid</span><span className="font-semibold text-surface-800 dark:text-surface-100">Rs {Math.min(grandTotal, Math.max(0, paidAmount)).toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div><div className="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2 text-sm dark:bg-emerald-950/30"><span className="font-medium text-emerald-800 dark:text-emerald-200">Due</span><span className="font-bold tabular-nums text-emerald-800 dark:text-emerald-200">Rs {amountDue.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div></div>
-            <div className="mt-4 space-y-3"><div><label className={labelClass}>Payment Method</label><select name="payment_method" className={inputClass}><option value="cash">Cash</option><option value="bank_transfer">Bank Transfer</option><option value="cheque">Cheque</option><option value="easypaisa">Easypaisa</option><option value="jazzcash">JazzCash</option></select></div><div><label className={labelClass}>Paid From Account</label><select name="finance_account_id" defaultValue={accounts.find((account) => account.account_type === "cash")?.id ?? ""} className={inputClass}><option value="">Default cash account</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></div><div><label className={labelClass}>Reference / Note</label><textarea name="notes" rows={3} className="w-full resize-y rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100" placeholder="Payment ref, bill remarks..." /></div>
+            <div className="space-y-3 border-b border-surface-100 pb-4 dark:border-surface-800"><div><label className={labelClass}>Payment Status</label><select name="payment_terms" value={terms} onChange={(event) => { setTerms(event.target.value as typeof terms); setPaidNow(""); }} className={inputClass}><option value="credit">Credit / Udhaar</option><option value="partial">Partial Payment</option><option value="paid">Fully Paid</option></select></div>{terms === "partial" && <div><label className={labelClass}>Paid Now</label><input name="paid_now" type="number" min="0.01" max={Math.max(0, grandTotal - 0.01)} step="0.01" value={paidNow} onChange={(event) => setPaidNow(event.target.value)} className={inputClass} placeholder="Paid amount" required /></div>}{terms !== "paid" && <div className="grid grid-cols-2 gap-2"><div><label className={labelClass}>Credit Days</label><input name="credit_days" type="number" min="0" step="1" value={creditDays} onChange={(e) => setCreditDays(e.target.value)} className={inputClass} /></div><div><label className={labelClass}>Due Date</label><input name="due_date" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={inputClass} /></div></div>}<div className="flex items-center justify-between text-sm"><span className="text-surface-500">Paid</span><span className="font-semibold text-surface-800 dark:text-surface-100">Rs {Math.min(grandTotal, Math.max(0, paidAmount)).toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div><div className="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2 text-sm dark:bg-emerald-950/30"><span className="font-medium text-emerald-800 dark:text-emerald-200">Due</span><span className="font-bold tabular-nums text-emerald-800 dark:text-emerald-200">Rs {amountDue.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</span></div></div>
+            <div className="mt-4 space-y-3"><div><label className={labelClass}>Payment Method</label><select name="payment_method" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} className={inputClass}><option value="cash">Cash</option><option value="bank_transfer">Bank Transfer</option><option value="cheque">Cheque</option><option value="easypaisa">Easypaisa</option><option value="jazzcash">JazzCash</option></select></div><div><label className={labelClass}>Paid From Account</label><select name="finance_account_id" value={financeAccountId} onChange={(e) => setFinanceAccountId(e.target.value)} className={inputClass}><option value="">Default cash account</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></div><div><label className={labelClass}>Reference / Note</label><textarea name="notes" value={billNotes} onChange={(e) => setBillNotes(e.target.value)} rows={3} className="w-full resize-y rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-surface-700 dark:bg-surface-950 dark:text-surface-100" placeholder="Payment ref, bill remarks..." /></div>
               {terms !== "credit" && (
                 <div>
                   <label className={labelClass}>Payment Screenshot <span className="font-normal text-surface-400">(optional)</span></label>
@@ -794,9 +824,9 @@ export function SupplierBillClient({
                       const qty = Number(line.quantity);
                       const cost = Number(line.unit_cost);
                       const effCost = discountRatio > 0 ? Math.round(cost * (1 - discountRatio) * 100) / 100 : cost;
-                      const lineTotal = qty * (discountRatio > 0 ? effCost : cost);
+                      const lineTotal = purchaseLineTotal(line.quantity, line.unit_cost);
                       return (
-                        <tr key={i} className="border-t border-surface-100 dark:border-surface-800">
+                        <tr key={line.row_id} className="border-t border-surface-100 dark:border-surface-800">
                           <td className="px-4 py-3 text-xs text-surface-400">{i + 1}</td>
                           <td className="px-4 py-3">
                             <div className="font-medium text-surface-800 dark:text-surface-100">{prod?.name ?? line.query}</div>
@@ -811,7 +841,7 @@ export function SupplierBillClient({
                           <td className="px-4 py-3 text-right tabular-nums">{qty.toLocaleString()}</td>
                           <td className="px-4 py-3 text-right tabular-nums">Rs {cost.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</td>
                           {discountRatio > 0 && <td className="px-4 py-3 text-right tabular-nums font-medium text-emerald-700 dark:text-emerald-400">Rs {effCost.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</td>}
-                          <td className="px-4 py-3 text-right tabular-nums font-semibold text-surface-800 dark:text-surface-100">Rs {lineTotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}</td>
+                          <td className="px-4 py-3 text-right tabular-nums font-semibold text-surface-800 dark:text-surface-100">{lineTotal === null ? "—" : `Rs ${lineTotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}`}</td>
                         </tr>
                       );
                     })}
@@ -828,7 +858,7 @@ export function SupplierBillClient({
               {discountRatio > 0 && (
                 <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-200">
                   <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <span><strong>Bach apply hogi:</strong> Rs {Number(discount).toLocaleString("en-PK", { maximumFractionDigits: 2 })} ki bach proportion ke hisab se har product ke unit cost mein distribute ho chuki hai — "Effective Rate" column mein hasil rate dikh rahi hai.</span>
+                  <span><strong>Bach apply hogi:</strong> Rs {Number(discount).toLocaleString("en-PK", { maximumFractionDigits: 2 })} ki bach bill total se ek baar minus hogi. Trade rate aur line total asal invoice ke mutabiq rahenge; stock receiving par net lagat lagegi.</span>
                 </div>
               )}
               {state.error && (
