@@ -1,4 +1,5 @@
 "use client";
+import { billCsvDate } from "@/lib/purchases/bill-csv-date";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -68,6 +69,9 @@ const CSV_ALIASES = {
   purchase: ["purchase rate", "purchase price", "trade rate", "trade", "cost", "lagat"],
   sale: ["sale rate", "sale price", "selling rate", "selling price", "retail", "retail rate"],
   mrp: ["mrp", "mrp rate", "mrp price", "printed price"],
+  expiry: ["expiry", "expiry date", "expiration date", "exp date"],
+  batch: ["batch", "batch no", "batch number"],
+  manufacture: ["manufacture date", "manufacturing date", "mfg date"],
   wholesale: ["wholesale", "wholesale rate", "wholesale price", "thok", "thok rate"],
 } as const;
 
@@ -338,9 +342,9 @@ export function SupplierBillClient({
       product_id: product.id,
       query: `${product.name}${product.pack_size ? ` · ${product.pack_size}` : ""}`,
       unit_cost: !lines[index]?.product_id && lines[index]?.unit_cost.trim() ? lines[index].unit_cost : product.trade_rate_pending ? "" : String(product.purchase_price),
-      sale_rate: product.selling_price > 0 ? String(product.selling_price) : "",
-      mrp_rate: product.mrp_price != null && product.mrp_price > 0 ? String(product.mrp_price) : "",
-      wholesale_rate: product.wholesale_price != null && product.wholesale_price > 0 ? String(product.wholesale_price) : "",
+      sale_rate: !lines[index]?.product_id && lines[index]?.sale_rate.trim() ? lines[index].sale_rate : product.selling_price > 0 ? String(product.selling_price) : "",
+      mrp_rate: !lines[index]?.product_id && lines[index]?.mrp_rate.trim() ? lines[index].mrp_rate : product.mrp_price != null && product.mrp_price > 0 ? String(product.mrp_price) : "",
+      wholesale_rate: !lines[index]?.product_id && lines[index]?.wholesale_rate.trim() ? lines[index].wholesale_rate : product.wholesale_price != null && product.wholesale_price > 0 ? String(product.wholesale_price) : "",
       pickerOpen: false,
       pack_override: product.pack_size ?? product.unit ?? "",
       units_per_pack_override: "",
@@ -444,12 +448,20 @@ export function SupplierBillClient({
     const saleColumn = column(CSV_ALIASES.sale);
     const mrpColumn = column(CSV_ALIASES.mrp);
     const wholesaleColumn = column(CSV_ALIASES.wholesale);
+    const expiryColumn = column(CSV_ALIASES.expiry);
+    const batchColumn = column(CSV_ALIASES.batch);
+    const manufactureColumn = column(CSV_ALIASES.manufacture);
     const imported: Line[] = [];
     const missing: string[] = [];
 
     for (const row of rows.slice(1)) {
       const rawName = String(row[productColumn] ?? "").trim();
       if (!rawName) continue;
+      const importedDates = {
+        expiry_date: expiryColumn >= 0 ? billCsvDate(row[expiryColumn]) : "",
+        manufacture_date: manufactureColumn >= 0 ? billCsvDate(row[manufactureColumn]) : "",
+        batch_number: batchColumn >= 0 ? String(row[batchColumn] ?? "").trim() : "",
+      };
       const wantedPack = packColumn >= 0 ? String(row[packColumn] ?? "").trim() : "";
       const product = matchBillProduct(products, rawName, wantedPack);
       if (!product) {
@@ -457,6 +469,7 @@ export function SupplierBillClient({
         // Line add karo — data saved rahega, user search se link kar sakta hai
         imported.push({
           ...newLineWithDefaults(),
+          ...importedDates,
           query: rawName,
           pack_override: wantedPack,
           quantity: qtyColumn >= 0 ? csvNumber(row[qtyColumn]) : "",
@@ -469,6 +482,7 @@ export function SupplierBillClient({
       }
       imported.push({
         ...newLineWithDefaults(),
+        ...importedDates,
         product_id: product.id,
         query: `${product.name}${product.pack_size ? ` · ${product.pack_size}` : ""}`,
         quantity: qtyColumn >= 0 ? csvNumber(row[qtyColumn]) : "",
@@ -701,7 +715,7 @@ export function SupplierBillClient({
                       <td className="px-3 py-3 text-right font-semibold tabular-nums text-surface-800 dark:text-surface-100">{lineTotal === null ? "—" : `Rs ${lineTotal.toLocaleString("en-PK", { maximumFractionDigits: 2 })}`}</td>
                       <td className="px-3 py-2.5"><button type="button" onClick={() => setLines((previous) => { const next = previous.filter((_, i) => i !== index); return next.length > 0 ? next : [emptyLine()]; })} className="rounded-lg p-2 text-surface-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4" /></button></td>
                     </tr>
-                    {selected && <tr className={csvUnmatched ? "bg-amber-50 dark:bg-amber-950/20" : ""}>
+                    {(selected || line.query.trim()) && <tr className={csvUnmatched ? "bg-amber-50 dark:bg-amber-950/20" : ""}>
                       <td />
                       <td colSpan={5} className="px-3 pb-3 pt-0">
                         <div className="flex flex-wrap items-start gap-3">

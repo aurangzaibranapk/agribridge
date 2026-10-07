@@ -1,0 +1,16 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const ts = require('typescript');
+const mod={exports:{}};
+new Function('module','exports',ts.transpileModule(fs.readFileSync('src/lib/purchases/bill-csv-date.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(mod,mod.exports);
+const {billCsvDate}=mod.exports;
+assert.equal(billCsvDate('2027-12-07'),'2027-12-07');
+assert.equal(billCsvDate('07/12/2027'),'2027-12-07');
+assert.equal(billCsvDate('29/02/2028'),'2028-02-29');
+assert.equal(billCsvDate('31/02/2027'),'');
+assert.equal(billCsvDate(''),'');
+const source=fs.readFileSync('src/app/admin/purchases/supplier-bill/supplier-bill-client.tsx','utf8');
+assert.ok(source.includes('(selected || line.query.trim()) && <tr'));
+assert.ok(source.includes('expiryColumn >= 0 ? billCsvDate'));
+for (const field of ['sale_rate','mrp_rate','wholesale_rate']) assert.ok(source.includes(`lines[index]?.${field}.trim() ? lines[index].${field}`));
+console.log('PASS: unmatched row fields visible, rates retained on mapping, CSV batch/expiry dates');
