@@ -1,0 +1,16 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const ts = require('typescript');
+const moduleObject = { exports: {} };
+const source = ts.transpileModule(fs.readFileSync('src/lib/inventory/statement-review.ts','utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
+new Function('module','exports',source)(moduleObject,moduleObject.exports);
+const { reversedCorrectionIds } = moduleObject.exports;
+const original = { id:'d358cfef-b64c-4dc7-8f8b-c0b28bc8bcf9', inventory_id:'shop',movement_type:'adjustment_increase',quantity:'310',reference_type:'data_correction',notes:null};
+const reversal = {id:'reversal',inventory_id:'shop',movement_type:'adjustment_decrease',quantity:'310',reference_type:'duplicate_data_correction_reversal',notes:`Original movement IDs: ${original.id}`};
+assert.ok(reversedCorrectionIds([original,reversal]).has(original.id));
+assert.equal(reversedCorrectionIds([original,{...reversal,inventory_id:'hq'}]).size,0);
+assert.equal(reversedCorrectionIds([original,{...reversal,quantity:309}]).size,0);
+assert.equal(reversedCorrectionIds([original,{...reversal,notes:'same amount but no proof'}]).size,0);
+assert.equal(reversedCorrectionIds([original,{...reversal,movement_type:'adjustment_increase'}]).size,0);
+assert.equal(reversedCorrectionIds([original,{...reversal,quantity:410,reference_type:'pack_conversion_duplicate_fix'}]).size,0);
+console.log('PASS: Coke 310 reversal recognised; warehouse, amount, direction and explicit source proof required');

@@ -1,3 +1,5 @@
+import { StatementReviewButton } from "@/components/pos/statement-review-button";
+import { reversedCorrectionIds } from "@/lib/inventory/statement-review";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Download, FileText, AlertTriangle } from "lucide-react";
@@ -21,7 +23,7 @@ function label(type: string) {
 }
 
 function dateLabel(value: string) {
-  return new Date(value).toLocaleString("en-PK", { dateStyle: "medium", timeStyle: "short" });
+  return new Date(value).toLocaleString("en-PK", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Karachi" });
 }
 
 export default async function ProductStatementPage({
@@ -37,10 +39,11 @@ export default async function ProductStatementPage({
   const selectedMovement = searchParams?.movement ?? "";
   const selectedSupplier = searchParams?.supplier ?? "";
 
-  const [{ data: product }, { data: inventoryRows }] = await Promise.all([
+  const [{ data: product, error: productError }, { data: inventoryRows, error: inventoryError }] = await Promise.all([
     supabase.from("products").select("id, name, pack_size, units_per_pack, purchase_price, selling_price").eq("id", params.productId).maybeSingle(),
-    supabase.from("inventory").select("id, warehouse_id, quantity_on_hand").eq("product_id", params.productId),
+    completeRows(supabase.from("inventory").select("id, warehouse_id, quantity_on_hand").eq("product_id", params.productId).order("id")).then(data => ({ data, error: null })),
   ]);
+  if (productError || inventoryError) throw new Error("Product statement could not be loaded; retry without treating missing records as zero.");
   if (!product) notFound();
 
   const inventoryIds = (inventoryRows ?? []).map((r: any) => r.id);
@@ -48,17 +51,42 @@ export default async function ProductStatementPage({
     return <EmptyStatement productName={product.name} productId={product.id} />;
   }
 
-  let movementQuery = supabase
-    .from("stock_movements")
-    .select("id, inventory_id, movement_type, quantity, balance_after, reference_type, reference_id, notes, created_at, created_by")
-    .in("inventory_id", inventoryIds)
-    .order("created_at", { ascending: true });
-  const { data: rawMoves } = await movementQuery.limit(5000);
-  const moves = rawMoves ?? [];
+  const moves: any[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase.from("stock_movements")
+      .select("id, inventory_id, movement_type, quantity, balance_after, reference_type, reference_id, notes, created_at, created_by")
+      .in("inventory_id", inventoryIds).order("created_at", { ascending: true }).order("id", { ascending: true }).range(offset, offset + 999);
+    if (error) throw new Error("Complete stock movement history could not be loaded. Please retry.");
+    moves.push(...(data ?? []));
+    if ((data ?? []).length < 1000) break;
+  }
+  const batches = await completeRows(supabase.from("stock_batches").select("id, batch_number, warehouse_id, initial_quantity, remaining_quantity, unit_cost").eq("product_id", params.productId).order("id"));
+  const reversedIds = reversedCorrectionIds(moves);
+  async function completeRows(query: any) {
+    const records: any[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await query.range(offset, offset + 999);
+      if (error) throw new Error("Statement source records could not be verified. Please retry.");
+      records.push(...(data ?? []));
+      if ((data ?? []).length < 1000) return records;
+    }
+  }
+  const [purchaseItems, saleItems, returnItems] = await Promise.all([
+    completeRows(supabase.from("purchase_items").select("id, purchase_id, batch_id, quantity, unit_cost, line_total, received_qty, damaged_qty, short_qty").eq("product_id", product.id).order("id")),
+    completeRows(supabase.from("pos_sale_items").select("id, sale_id, quantity, unit_price, subtotal").eq("product_id", product.id).order("id")),
+    completeRows(supabase.from("pos_return_items").select("id, return_id, quantity, unit_price, subtotal, sale_item_id, condition").eq("product_id", product.id).order("id")),
+  ]);
 
+  async function byIds(table: string, selection: string, ids: string[]) {
+    const data: any[] = [];
+    for (let offset = 0; offset < ids.length; offset += 100) {
+      data.push(...await completeRows((supabase as any).from(table).select(selection).in("id", ids.slice(offset, offset + 100)).order("id")));
+    }
+    return { data };
+  }
   const warehouseIds = [...new Set((inventoryRows ?? []).map((row: any) => row.warehouse_id).filter(Boolean))];
   const { data: warehouseRows } = warehouseIds.length
-    ? await supabase.from("warehouses").select("id, name").in("id", warehouseIds)
+    ? await byIds("warehouses", "id, name", warehouseIds)
     : { data: [] as any[] };
   const warehouseNameById = new Map((warehouseRows ?? []).map((row: any) => [row.id, row.name]));
   const warehouseMap = new Map<string, string>();
@@ -68,25 +96,25 @@ export default async function ProductStatementPage({
     warehouseMap.set((row as any).warehouse_id, warehouseNameById.get((row as any).warehouse_id) ?? "Unknown warehouse");
   }
 
-  const purchaseIds = [...new Set(moves.filter((m: any) => m.reference_type === "purchase" && m.reference_id).map((m: any) => m.reference_id))];
-  const saleIds = [...new Set(moves.filter((m: any) => m.reference_type === "pos_sale" && m.reference_id).map((m: any) => m.reference_id))];
+  const purchaseIds = [...new Set([...moves.filter((m: any) => m.reference_type === "purchase" && m.reference_id).map((m: any) => m.reference_id), ...purchaseItems.map(item => item.purchase_id)])];
+  const saleIds = [...new Set([...moves.filter((m: any) => m.reference_type === "pos_sale" && m.reference_id).map((m: any) => m.reference_id), ...saleItems.map(item => item.sale_id)])];
   const transferIds = [...new Set(moves.filter((m: any) => m.reference_type === "stock_transfer" && m.reference_id).map((m: any) => m.reference_id))];
   const countIds = [...new Set(moves.filter((m: any) => m.reference_type === "stock_count" && m.reference_id).map((m: any) => m.reference_id))];
 
   const [{ data: purchases }, { data: sales }, { data: transfers }, { data: counts }] = await Promise.all([
-    purchaseIds.length ? supabase.from("purchases").select("id, purchase_number, supplier_bill_no, supplier_id, purchase_date, total_amount, invoice_total, suppliers(name)").in("id", purchaseIds) : Promise.resolve({ data: [] as any[] }),
-    saleIds.length ? supabase.from("pos_sales").select("id, payment_mode, cash_paid, khata_amount, crm_customer_id, customer_id, shop_id").in("id", saleIds) : Promise.resolve({ data: [] as any[] }),
-    transferIds.length ? supabase.from("stock_transfers").select("id, transfer_number, from_warehouse_id, to_warehouse_id").in("id", transferIds) : Promise.resolve({ data: [] as any[] }),
-    countIds.length ? supabase.from("stock_counts").select("id, count_date, status, notes").in("id", countIds) : Promise.resolve({ data: [] as any[] }),
+    purchaseIds.length ? byIds("purchases", "id, purchase_number, supplier_bill_no, supplier_id, purchase_date, total_amount, invoice_total, suppliers(name)", purchaseIds) : Promise.resolve({ data: [] as any[] }),
+    saleIds.length ? byIds("pos_sales", "id, payment_mode, cash_paid, khata_amount, crm_customer_id, customer_id, shop_id", saleIds) : Promise.resolve({ data: [] as any[] }),
+    transferIds.length ? byIds("stock_transfers", "id, transfer_number, from_warehouse_id, to_warehouse_id", transferIds) : Promise.resolve({ data: [] as any[] }),
+    countIds.length ? byIds("stock_counts", "id, count_date, status, notes", countIds) : Promise.resolve({ data: [] as any[] }),
   ]);
 
   const crmIds = [...new Set((sales ?? []).map((r: any) => r.crm_customer_id).filter(Boolean))];
   const dealerCustomerIds = [...new Set((sales ?? []).map((r: any) => r.customer_id).filter(Boolean))];
   const shopIds = [...new Set((sales ?? []).map((r: any) => r.shop_id).filter(Boolean))];
   const [{ data: crmCustomers }, { data: dealerCustomers }, { data: shops }] = await Promise.all([
-    crmIds.length ? supabase.from("customers").select("id, name").in("id", crmIds) : Promise.resolve({ data: [] as any[] }),
-    dealerCustomerIds.length ? supabase.from("dealer_customers").select("id, name").in("id", dealerCustomerIds) : Promise.resolve({ data: [] as any[] }),
-    shopIds.length ? supabase.from("shops").select("id, name").in("id", shopIds) : Promise.resolve({ data: [] as any[] }),
+    crmIds.length ? byIds("customers", "id, name", crmIds) : Promise.resolve({ data: [] as any[] }),
+    dealerCustomerIds.length ? byIds("dealer_customers", "id, name", dealerCustomerIds) : Promise.resolve({ data: [] as any[] }),
+    shopIds.length ? byIds("shops", "id, name", shopIds) : Promise.resolve({ data: [] as any[] }),
   ]);
 
   const purchaseMap = new Map((purchases ?? []).map((r: any) => [r.id, r]));
@@ -139,7 +167,8 @@ export default async function ProductStatementPage({
       detail = `Stock Adjustment · ${m.reference_type}`;
       party = m.notes ?? "Manual adjustment";
       // A recorded reversal is history, not another pending candidate.
-      warning = m.reference_type !== "duplicate_data_correction_reversal";
+      warning = m.reference_type !== "duplicate_data_correction_reversal" && !reversedIds.has(m.id);
+      if (reversedIds.has(m.id)) detail += " · Reversed (history)";
     }
     return { ...m, warehouseId, warehouse: warehouseMap.get(warehouseId) ?? "Unknown", qty, delta, balance, detail, party, reference, payment, warning, supplierId: m.reference_type === "purchase" ? purchaseMap.get(m.reference_id)?.supplier_id ?? "" : "" };
   }).reverse();
@@ -149,8 +178,8 @@ export default async function ProductStatementPage({
     if (selectedWarehouse && r.warehouseId !== selectedWarehouse) return false;
     if (selectedMovement && r.movement_type !== selectedMovement) return false;
     if (selectedSupplier && r.supplierId !== selectedSupplier) return false;
-    if (from && new Date(r.created_at) < new Date(`${from}T00:00:00`)) return false;
-    if (to && new Date(r.created_at) > new Date(`${to}T23:59:59.999`)) return false;
+    if (from && new Date(r.created_at) < new Date(`${from}T00:00:00+05:00`)) return false;
+    if (to && new Date(r.created_at) > new Date(`${to}T23:59:59.999+05:00`)) return false;
     return true;
   });
   const totalIn = visibleRows.filter((r: any) => r.delta > 0).reduce((s: number, r: any) => s + r.qty, 0);
@@ -167,6 +196,15 @@ export default async function ProductStatementPage({
     return [p.supplier_id, supplier?.name ?? "Supplier not linked"];
   }))];
 
+  const reviewSnapshot = {
+    product, capturedAt: new Date().toISOString(), historyComplete: true,
+    filters: { warehouse: selectedWarehouse, from, to, movement: selectedMovement, supplier: selectedSupplier },
+    totals: { allIn: rows.filter(r => r.delta > 0).reduce((sum, r) => sum + r.qty, 0), allOut: rows.filter(r => r.delta < 0).reduce((sum, r) => sum + r.qty, 0), currentStock: currentTotal, filteredIn: totalIn, filteredOut: totalOut },
+    warehouses: [...currentByWarehouse].map(([id, stock]) => ({ id, name: warehouseMap.get(id), stock, ledgerBalance: runningByWarehouse.get(id) ?? 0 })),
+    inventory: inventoryRows, batches, purchases, purchaseItems, sales, saleItems, returnItems, transfers, stockCounts: counts,
+    pendingReviewIds: issueRows.map(r => r.id), reversedCorrectionIds: [...reversedIds],
+    movements: rows.map(({ created_by, ...row }: any) => row),
+  };
   return (
     <div className="space-y-4">
       <PageHeader title={`${product.name} — Product Statement`} description="Bank statement jaisa complete stock movement aur running balance" actions={<Link href={`/admin/inventory/product/${product.id}`} className="inline-flex items-center gap-1 text-sm text-brand-600 hover:underline"><ArrowLeft className="h-4 w-4" /> Product detail</Link>} />
@@ -192,11 +230,11 @@ export default async function ProductStatementPage({
         <Summary label="Issue Entries" value={issueRows.length} tone={issueRows.length ? "amber" : "green"} />
       </div>
 
-      {issueRows.length > 0 && <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span><strong>Review required:</strong> {issueRows.length} manual/data-correction entries ledger ke top par dikh rahi hain. Reference aur asli transaction check kar ke reversal karein; original history mehfooz rahe.</span></div>}
+      {issueRows.length > 0 && <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /><span><strong>Review required:</strong> {issueRows.length} manual/data-correction entries ledger ke top par dikh rahi hain. AI se statement check karayein aur asli transaction ka saboot milayein; sirf warning ki bunyaad par reversal na karein.</span></div>}
 
       <Card className="overflow-x-auto">
-        <div className="mb-3 flex items-center justify-between"><h2 className="font-semibold text-surface-900 dark:text-white">Statement Ledger</h2><div className="flex gap-2"><button className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs"><FileText className="h-3.5 w-3.5" /> Print</button><button className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs"><Download className="h-3.5 w-3.5" /> Export</button></div></div>
-        <table className="w-full min-w-[1150px] text-sm"><thead><tr className="border-b border-surface-200 bg-surface-50 text-left text-xs text-surface-500 dark:border-surface-800 dark:bg-surface-800"><th className="px-3 py-2">Date</th><th className="px-3 py-2">Reference</th><th className="px-3 py-2">Details</th><th className="px-3 py-2">Customer / Supplier</th><th className="px-3 py-2">Location</th><th className="px-3 py-2 text-right text-emerald-700">Credit / In</th><th className="px-3 py-2 text-right text-red-600">Debit / Out</th><th className="px-3 py-2 text-right">Balance</th><th className="px-3 py-2">Payment / Note</th><th className="px-3 py-2">Bill</th></tr></thead><tbody>{displayRows.map((r: any) => <tr key={r.id} className={`border-b border-surface-100 dark:border-surface-800 ${r.warning ? "bg-amber-50/60 dark:bg-amber-950/10" : ""}`}><td className="whitespace-nowrap px-3 py-2 text-xs text-surface-500">{dateLabel(r.created_at)}</td><td className="px-3 py-2 font-mono text-xs">{r.reference}</td><td className="px-3 py-2"><span className="font-medium">{r.detail}</span>{r.notes && <span className="block max-w-[260px] truncate text-[11px] text-surface-400">{r.notes}</span>}</td><td className="px-3 py-2">{r.party}</td><td className="px-3 py-2 text-xs text-surface-500">{r.warehouse}</td><td className="px-3 py-2 text-right font-semibold text-emerald-700">{r.delta > 0 ? `+${r.qty}` : "—"}</td><td className="px-3 py-2 text-right font-semibold text-red-600">{r.delta < 0 ? `−${r.qty}` : "—"}</td><td className="px-3 py-2 text-right font-semibold tabular-nums">{r.balance}</td><td className="px-3 py-2 text-xs text-surface-500">{r.payment}</td><td className="px-3 py-2">{r.reference_type === "purchase" ? <Link className="text-xs font-medium text-brand-600 hover:underline" href={`/admin/inventory/product/${product.id}/statement/purchase/${r.reference_id}`}>View bill</Link> : "—"}</td></tr>)}</tbody></table>
+        <div className="mb-3 flex items-center justify-between"><h2 className="font-semibold text-surface-900 dark:text-white">Statement Ledger</h2><div className="flex flex-wrap gap-2"><StatementReviewButton snapshot={reviewSnapshot} /><button className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs"><FileText className="h-3.5 w-3.5" /> Print</button><button className="inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs"><Download className="h-3.5 w-3.5" /> Export</button></div></div>
+        <table className="w-full min-w-[1150px] text-sm"><thead><tr className="border-b border-surface-200 bg-surface-50 text-left text-xs text-surface-500 dark:border-surface-800 dark:bg-surface-800"><th className="px-3 py-2">Date</th><th className="px-3 py-2">Reference</th><th className="px-3 py-2">Details</th><th className="px-3 py-2">Customer / Supplier</th><th className="px-3 py-2">Location</th><th className="px-3 py-2 text-right text-emerald-700">Credit / In</th><th className="px-3 py-2 text-right text-red-600">Debit / Out</th><th className="px-3 py-2 text-right">Location Balance</th><th className="px-3 py-2">Payment / Note</th><th className="px-3 py-2">Bill</th></tr></thead><tbody>{displayRows.map((r: any) => <tr key={r.id} className={`border-b border-surface-100 dark:border-surface-800 ${r.warning ? "bg-amber-50/60 dark:bg-amber-950/10" : ""}`}><td className="whitespace-nowrap px-3 py-2 text-xs text-surface-500">{dateLabel(r.created_at)}</td><td className="px-3 py-2 font-mono text-xs">{r.reference}</td><td className="px-3 py-2"><span className="font-medium">{r.detail}</span>{r.notes && <span className="block max-w-[260px] truncate text-[11px] text-surface-400">{r.notes}</span>}</td><td className="px-3 py-2">{r.party}</td><td className="px-3 py-2 text-xs text-surface-500">{r.warehouse}</td><td className="px-3 py-2 text-right font-semibold text-emerald-700">{r.delta > 0 ? `+${r.qty}` : "—"}</td><td className="px-3 py-2 text-right font-semibold text-red-600">{r.delta < 0 ? `−${r.qty}` : "—"}</td><td className="px-3 py-2 text-right font-semibold tabular-nums">{r.balance}</td><td className="px-3 py-2 text-xs text-surface-500">{r.payment}</td><td className="px-3 py-2">{r.reference_type === "purchase" ? <Link className="text-xs font-medium text-brand-600 hover:underline" href={`/admin/inventory/product/${product.id}/statement/purchase/${r.reference_id}`}>View bill</Link> : "—"}</td></tr>)}</tbody></table>
         {visibleRows.length === 0 && <p className="py-8 text-center text-sm text-surface-500">Is filter ke liye koi movement nahi.</p>}
       </Card>
 
@@ -211,5 +249,5 @@ function Summary({ label, value, tone }: { label: string; value: number; tone: "
 }
 
 function EmptyStatement({ productName, productId }: { productName: string; productId: string }) {
-  return <div className="space-y-4"><PageHeader title={`${productName} — Product Statement`} description="Complete stock movement statement" actions={<Link href={`/admin/inventory/product/${productId}`} className="text-sm text-brand-600">Back</Link>} /><Card><p className="text-sm text-surface-500">Is product ka abhi koi inventory record nahi mila.</p></Card></div>;
+  return <div className="space-y-4"><PageHeader title={`${productName} — Product Statement`} description="Complete stock movement statement" actions={<Link href={`/admin/inventory/product/${productId}`} className="text-sm text-brand-600">Back</Link>} /><Card><p className="mb-3 text-sm text-surface-500">Is product ka abhi koi inventory record nahi mila.</p><StatementReviewButton snapshot={{ product: { id: productId, name: productName }, inventory: [], historyComplete: false, limitation: "No accessible inventory record found. This does not prove that all purchase/sale records are empty." }} /></Card></div>;
 }

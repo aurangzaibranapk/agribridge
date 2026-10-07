@@ -65,6 +65,7 @@ export function AssistantPanel() {
   // teen hisson ka ban jata hai -- navigation, kaam, aur AI. Chhoti
   // screen par wo jagah cheen leta, is liye wahan band. Banda band kar
   // de to yaad rakha jata hai.
+  const [reviewRequest, setReviewRequest] = useState<{ id: string; message: string } | null>(null);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("ai");
 
@@ -133,6 +134,16 @@ export function AssistantPanel() {
   //   panel kholne par.
   useEffect(() => {
     loadAll();
+  }, []);
+
+  useEffect(() => {
+    function review(event: Event) {
+      const request = (event as CustomEvent).detail;
+      if (typeof request?.id !== "string" || typeof request?.message !== "string") return;
+      setReviewRequest(request); setOpen(true); setTab("ai");
+    }
+    document.addEventListener("agribridge:review-statement", review);
+    return () => document.removeEventListener("agribridge:review-statement", review);
   }, []);
 
   // Sidebar ka "AI Assistant" wala button isi panel ko kholta hai --
@@ -253,7 +264,7 @@ export function AssistantPanel() {
             ))}
           </div>
 
-          {tab === "ai" && <AssistantTab pathname={pathname} />}
+          {tab === "ai" && <AssistantTab pathname={pathname} reviewRequest={reviewRequest} onReviewStarted={() => setReviewRequest(null)} />}
 
           {tab === "sug" && <SuggestionsTab onAsk={() => setTab("ai")} />}
 
@@ -306,7 +317,7 @@ export function AssistantPanel() {
 /* Assistant -- Work Coach ki baat cheet                               */
 /* ------------------------------------------------------------------ */
 
-function AssistantTab({ pathname }: { pathname: string }) {
+function AssistantTab({ pathname, reviewRequest, onReviewStarted }: { pathname: string; reviewRequest: { id: string; message: string } | null; onReviewStarted: () => void }) {
   const lang = useLang();
   const [turns, setTurns] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
@@ -337,10 +348,24 @@ function AssistantTab({ pathname }: { pathname: string }) {
     reader.readAsDataURL(file);
   }
 
-  async function send(text?: string) {
+  const lastReviewId = useRef<string | null>(null);
+  const statementContext = useRef<string | null>(null);
+  useEffect(() => { statementContext.current = null; }, [pathname]);
+  useEffect(() => {
+    if (reviewRequest && reviewRequest.id !== lastReviewId.current && !loading) {
+      lastReviewId.current = reviewRequest.id;
+      void send(reviewRequest.message, true);
+      onReviewStarted();
+    }
+  }, [reviewRequest, loading]);
+
+  async function send(text?: string, statementReview = false) {
     const q = (text ?? input).trim();
+    if (statementReview) statementContext.current = q;
+    const auditMode = statementReview || !!statementContext.current;
+    const auditMessage = !statementReview && statementContext.current ? `${q}\n\nOriginal statement records:\n${statementContext.current}` : q;
     if ((!q && !image) || loading) return;
-    setTurns((tt) => [...tt, { role: "user", text: q || t("wc_explain_shot", lang), image: image?.preview }]);
+    setTurns((tt) => [...tt, { role: "user", text: statementReview ? "Product statement verification — complete records attached" : q || t("wc_explain_shot", lang), image: image?.preview }]);
     setInput("");
     const img = image;
     setImage(null);
@@ -350,7 +375,8 @@ function AssistantTab({ pathname }: { pathname: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: q,
+          message: auditMessage,
+          statementReview: auditMode,
           image: img ? { mimeType: img.mimeType, data: img.data } : undefined,
           history: turns.slice(-8).map((x) => ({ role: x.role, text: x.text })),
         }),
