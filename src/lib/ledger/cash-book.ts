@@ -135,7 +135,8 @@ export async function cashBookLikhein(
     // Jorr na ban sake to qatar phir bhi khari rehti hai -- paisa darj
     // ho chuka; sirf v_ledger_unposted par surkh dikhega, jo jhoot
     // nahi, ehtiyat hai.
-    await service.from("journal_entry_sources").insert(links);
+    const { error: linkError } = await service.from("journal_entry_sources").insert(links);
+    if (linkError) return { likhi: rows.length, error: `Cash book saved, ledger link failed: ${linkError.message}` };
   }
   return { likhi: rows.length };
 }

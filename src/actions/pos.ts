@@ -372,6 +372,11 @@ async function checkCredit(input: {
  */
 async function postSaleToLedger(saleId: string, userId: string | null, overpayment = 0): Promise<string | null> {
   const service = createServiceClient();
+  const { data: existing, error: existingError } = await service
+    .from("journal_entry_sources").select("entry_id")
+    .eq("source_table", "pos_sales").eq("source_row_id", saleId).maybeSingle();
+  if (existingError) return `Ledger link check failed: ${existingError.message}`;
+  if (existing) return null; // Source transaction already posted and updated the balance.
 
   const [{ data: sale }, { data: payments }, { data: waselaSettingRow }] = await Promise.all([
     service
@@ -436,7 +441,7 @@ async function postSaleToLedger(saleId: string, userId: string | null, overpayme
   const waselaEnabled = (waselaSettingRow as { value: string } | null)?.value === "true";
 
   const lines: JournalLine[] = [];
-  const claims: SourceClaim[] = [];
+  const claims: SourceClaim[] = [{ table: "pos_sales", rowId: saleId }];
 
   // Har adaigi ke tareeqe ka apna khata. Ye Finance ke apne naqshe se
   // aata hai (payment_method_account_map), wohi jo cash book bharte waqt

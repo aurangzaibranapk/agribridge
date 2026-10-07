@@ -56,7 +56,7 @@ interface GrnItemInput {
   rejection_reason: string;
 }
 
-async function chargeAndComplete(orderId: string, grnId: string, grnNumber: string, payableAmount: number) {
+async function chargeAndComplete(orderId: string, grnId: string, grnNumber: string, payableAmount: number): Promise<string | null> {
   const supabase = createClient();
   const {
     data: { user },
@@ -71,7 +71,7 @@ async function chargeAndComplete(orderId: string, grnId: string, grnNumber: stri
   if (order?.order_to_branch_id) {
     const isAdvancePaid = order.payment_terms === "Advance Payment";
     if (!isAdvancePaid && payableAmount > 0) {
-      await supabase.from("branch_credit_transactions").insert({
+      const { error: chargeError } = await supabase.from("branch_credit_transactions").insert({
         branch_id: order.order_to_branch_id,
         transaction_type: "order_charge",
         amount: payableAmount,
@@ -79,6 +79,7 @@ async function chargeAndComplete(orderId: string, grnId: string, grnNumber: stri
         notes: `GRN complete hone par charge hua: ${grnNumber}`,
         created_by: user?.id ?? null,
       });
+      if (chargeError) return `GRN charge/ledger save nahi hua: ${chargeError.message}`;
     }
   }
 
@@ -119,6 +120,7 @@ async function chargeAndComplete(orderId: string, grnId: string, grnNumber: stri
   await logTimeline(orderId, "completed", paymentNote);
   revalidatePath(`/admin/agri-orders/${orderId}`);
   revalidatePath("/admin/branch-credit");
+  return null;
 }
 
 export async function createGRN(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -321,7 +323,8 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
   }
 
   // No discrepancy — proceed exactly as before, charge and complete immediately.
-  await chargeAndComplete(orderId, grn.id, grnNumber, payableAmount);
+  const chargeError = await chargeAndComplete(orderId, grn.id, grnNumber, payableAmount);
+  if (chargeError) return { error: chargeError };
   revalidatePath("/admin/inventory");
   return { success: true };
 }
@@ -392,7 +395,8 @@ export async function finalizeGrnDiscrepancy(_prev: ActionState, formData: FormD
     .eq("id", grnId);
 
   await logTimeline(orderId, "grn_review", `Finance ne finalize kiya: Rs ${finalPayableAmount.toLocaleString()}${financeNotes ? ` - ${financeNotes}` : ""}`);
-  await chargeAndComplete(orderId, grnId, grn.grn_number, finalPayableAmount);
+  const chargeError = await chargeAndComplete(orderId, grnId, grn.grn_number, finalPayableAmount);
+  if (chargeError) return { error: chargeError };
 
   return { success: true };
 }

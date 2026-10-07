@@ -78,15 +78,13 @@ function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+
 async function nextEntryNumber(): Promise<string> {
   const service = createServiceClient();
   const year = new Date().getFullYear() % 100;
-  // Atomic increment: INSERT ... ON CONFLICT DO UPDATE ... RETURNING
-  // Race condition khatam — do concurrent sales ek hi number nahi le sakten.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (service as any).rpc("next_txn_number", { p_year: year });
-  const next = (data as number) ?? 1;
-  return `TXN-${year}-${String(next).padStart(6, "0")}`;
+  const { data, error } = await (service as any).rpc("next_txn_number", { p_year: year });
+  if (error || !Number.isFinite(Number(data))) throw new Error(error?.message ?? "Journal number nahi mila.");
+  return `TXN-${year}-${String(data).padStart(6, "0")}`;
 }
 
 /**
@@ -108,6 +106,7 @@ export async function postJournal(input: JournalInput): Promise<PostedEntry | { 
   for (const line of input.lines) {
     const d = round2(line.debit ?? 0);
     const c = round2(line.credit ?? 0);
+    if (!Number.isFinite(d) || !Number.isFinite(c)) return { error: "Raqam valid number honi chahiye." };
     if (d < 0 || c < 0) return { error: "Raqam manfi nahi ho sakti." };
     if (d > 0 && c > 0) return { error: "Ek qatar mein debit aur credit dono nahi ho sakte." };
     if (d === 0 && c === 0) return { error: "Har qatar mein raqam honi chahiye." };
@@ -126,83 +125,10 @@ export async function postJournal(input: JournalInput): Promise<PostedEntry | { 
   }
 
   const service = createServiceClient();
-  if (input.clientActionId) {
-    const { data: alreadyPosted } = await (service as any)
-      .from("journal_entries")
-      .select("id, entry_number")
-      .eq("client_action_id", input.clientActionId)
-      .maybeSingle();
-    if (alreadyPosted) return { id: alreadyPosted.id, entryNumber: alreadyPosted.entry_number, total: debit };
-  }
-  const entryNumber = await nextEntryNumber();
-  const today = aajKaKhana();
-  const entryDate = input.entryDate ?? today;
-  const backdated = entryDate < today;
-
-  if (backdated && !input.backdateReason) {
-    return { error: "Purani tareekh ki entry ke liye wajah likhna zaroori hai." };
-  }
-
-  const { data: entry, error: entryError } = await (service as any)
-    .from("journal_entries")
-    .insert({
-      entry_number: entryNumber,
-      entry_date: entryDate,
-      description: input.description,
-      source_module: input.sourceModule,
-      source_id: input.sourceId ?? null,
-      branch_id: input.branchId ?? null,
-      is_backdated: backdated,
-      backdate_reason: backdated ? (input.backdateReason ?? null) : null,
-      created_by: input.createdBy,
-      ...(input.clientActionId ? { client_action_id: input.clientActionId } : {}),
-    })
-    .select("id, entry_number")
-    .single();
-
-  if (entryError) return { error: entryError.message };
-
-  const { error: lineError } = await service.from("journal_lines").insert(
-    input.lines.map((line, index) => ({
-      entry_id: entry.id,
-      account_code: line.account,
-      debit: round2(line.debit ?? 0),
-      credit: round2(line.credit ?? 0),
-      party_type: line.partyType ?? null,
-      party_id: line.partyId ?? null,
-      memo: line.memo ?? null,
-      line_order: index + 1,
-    }))
-  );
-
-  if (lineError) {
-    // Qataren na banein to sirf sarnama reh jata hai -- ek khali entry
-    // jo kisi report mein nazar nahi aati. Us se behtar hai ke bulane
-    // wala ghalti dekh le.
-    return { error: `Qataren mahfooz nahi ho sakin: ${lineError.message}` };
-  }
-
-  if (input.claims && input.claims.length > 0) {
-    const { error: claimError } = await service.from("journal_entry_sources").insert(
-      input.claims.map((c) => ({
-        entry_id: entry.id,
-        source_table: c.table,
-        source_row_id: c.rowId,
-      }))
-    );
-    // Daawa na lag saka -- yani ye row pehle hi kisi aur entry mein gin
-    // li gayi hai. Entry ban chuki hai (mitai nahi ja sakti), is liye
-    // bulane wale ko saaf batana zaroori hai ke ab do entries mein wahi
-    // raqam hai. Chup rehne ka matlab hoga: hisaab dugna, aur kitab phir
-    // bhi barabar.
-    if (claimError) {
-      return {
-        error: `Entry ${entry.entry_number} ban gayi magar us ka daawa nahi lag saka -- ye raqam shayad pehle hi gin li gayi hai. Money Trail par jaanch lein. (${claimError.message})`,
-      };
-    }
-  }
-
-  return { id: entry.id, entryNumber: entry.entry_number, total: debit };
+  const { data, error } = await (service as any).rpc("post_journal_atomic", { p_input: input });
+  if (error) return { error: `Ledger posting nahi hui: ${error.message}` };
+  if (!data?.id || !data?.entryNumber) return { error: "Ledger posting ka jawab nahi mila." };
+  return data as PostedEntry;
 }
 
 /**

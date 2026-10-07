@@ -377,7 +377,7 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
   // Cash ki kami staff ke khate mein — aaj ka farq, kal ki salary se katega.
   if (difference < 0 && shift.staff_id) {
     const shortage = Math.round(Math.abs(difference) * 100) / 100;
-    await service.from("staff_credit_ledger").insert({
+    const { error: shortageError } = await service.from("staff_credit_ledger").insert({
       profile_id: shift.staff_id,
       ledger_type: "debit",
       source_type: "shift_shortage",
@@ -385,6 +385,7 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
       notes: `Shift ${shift.shift_number} — expected Rs ${expectedCash.toLocaleString()}, ginti Rs ${countedCash.toLocaleString()}, kami Rs ${shortage.toLocaleString()}`,
       created_by: who.userId,
     });
+    if (shortageError) return { error: `Shift band hui, magar shortage/ledger posting fail hui: ${shortageError.message}`, shiftId, countedCash };
   }
 
   revalidatePath("/admin/pos");

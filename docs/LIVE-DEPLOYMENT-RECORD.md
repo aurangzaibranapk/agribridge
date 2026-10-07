@@ -3961,3 +3961,35 @@ git pull origin feature/supplier-bill-final-v2 && npm run build > build.log 2>&1
 ```
 ls -l .next/BUILD_ID && rm -f deploy.tar.gz && tar --exclude='.next/cache' -czf deploy.tar.gz .next && ls -lh deploy.tar.gz
 ```
+
+## 7 October 2026 — Atomic posting (LIVE PENDING)
+
+Migration: `20261007030808_atomic_ledger_posting_and_source_triggers.sql`.
+Testing project applied and rollback tests passed. LIVE NOT applied: CLAUDE.md
+requires verified backup file size before live schema changes. Do not upload
+this build until the migration and backup requirement are complete.
+
+- Journal header, lines and source claims use one service-only database RPC.
+- Source claims/action IDs serialize retries; mismatched retry amounts fail.
+- Branch order charges and automatic staff shortage/rewards post inside their
+  source INSERT transaction. Shortages also create the linked cash-book row.
+- Company POS source rows post at transaction commit, after payment/cash-book
+  rows exist; missing account/link rolls back the sale. Dealer sales retain the
+  existing exclusion from company accounting.
+- POS checks the source claim before the legacy fallback and balance update.
+- Cash-book linking errors and GRN/shortage insertion errors are surfaced.
+
+Validated on testing with all writes rolled back: duplicate replay, invalid GL
+rollback, GRN-style branch charge, staff bonus, staff shortage/cash-book link,
+POS cash, mixed khata, overpayment, discount, split payments, failed POS source
+rollback, private trigger/RPC permission checks. No historical rows backfilled
+by this migration. Existing testing unposted rows remain unchanged.
+
+Scope limitation: other source workflows that save via separate HTTP calls
+still need individual transaction consolidation; this does not claim all ERP
+modules can never produce an unposted source record. Reconciliation view must
+continue monitoring them. In particular order payment verification, branch
+settlement/return writers and generic cash-book writes need a separate review.
+
+Required deployment order: verified backup -> live migration -> verification
+-> matching application build upload/restart -> POS/GRN/staff smoke tests.
