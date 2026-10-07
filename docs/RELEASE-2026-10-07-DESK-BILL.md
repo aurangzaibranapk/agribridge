@@ -31,6 +31,7 @@ Apply these migrations in this exact order, after backup verification:
 3. `20261007040027_complete_branch_staff_and_order_payment_posting.sql`
 4. `20261007040800_atomic_sales_desk_cash_and_party_linkage.sql`
 5. `20261007043456_prevent_duplicate_product_master_identity.sql`
+6. `20261007055526_bank_transfer_sending_receiving.sql`
 
 Verify database counts and service-only RPC permissions, then build using the existing production .env.local:
 
@@ -45,3 +46,5 @@ The command installs locked dependencies, validates production project settings,
 On cPanel preserve .env.local, node_modules and user uploads. Move the previous .next to a recoverable backup; do not merge old and new .next contents. Extract the new runtime archive and run `node .release/verify.mjs` before restarting. The verifier rejects missing, changed and unexpected old build files. Smoke-test POS sale/return/closing slip, all five desk services and reversals, customer statement, supplier CSV editing, subtotal/discount/tax/payment/due and product linking. Accept live only after these checks. Identify old backups/debug files before moving them to Trash; no blanket directory deletion.
 
 The workspace compile build has no production environment credentials and is not a deployable production archive. Current cPanel cleanup and live smoke tests are pending access/deployment. Whole purchase/GRN workflows still contain separate business writes; this release does not assert that every ERP operation is fully atomic.
+
+Bank transfer now has Sending (cash incoming, bank outgoing) and Receiving (bank incoming, cash payout less fee). Old rows default to Sending. Receipts and POS closing show directions separately; receiving is a cash exchange, not customer loan recovery.

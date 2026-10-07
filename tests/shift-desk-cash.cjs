@@ -63,3 +63,6 @@ mockService={from:(table)=>new Query(table)};
  await assert.rejects(()=>mod.exports.computeShiftCash('shift',200),/test query failed/,'missing records must block misleading close');
  console.log('PASS: closing/slip account movements, bank recovery and fail-closed query errors');
 })().catch(error=>{console.error(error);process.exitCode=1;});
+
+assert.equal(calc(10000,[],[],[],[],[],[{debit:0,credit:9900}]).expectedCash,100,'receiving reduces till by payout after fee');
+console.log('PASS: receiving cash payout reflected in POS closing');

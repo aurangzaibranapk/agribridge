@@ -414,6 +414,9 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
     .maybeSingle();
   if (!me?.is_active) return { error: "Aap ka khata band hai." };
 
+  const direction = String(formData.get("direction") ?? "sending");
+  if (!["sending", "receiving"].includes(direction)) return { error: "Sending ya Receiving chunein." };
+  const isReceiving = direction === "receiving";
   const sourceId = String(formData.get("source_finance_account_id") ?? "").trim();
   const receivedIn = String(formData.get("received_in") ?? "cash").trim();
   const destinationChannel = String(formData.get("destination_channel") ?? "").trim();
@@ -462,7 +465,7 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
     .maybeSingle();
   if (!source?.is_active) return { error: "Source account active nahi hai." };
   if (source.account_type === "cash") return { error: "Bank Transfer ke liye source bank ya mobile wallet hona chahiye, cash nahi." };
-  if (Number(source.current_balance ?? 0) < principal) {
+  if (!isReceiving && Number(source.current_balance ?? 0) < principal) {
     return { error: `${source.name} mein sirf Rs ${Number(source.current_balance ?? 0).toLocaleString()} balance hai.` };
   }
 
@@ -485,9 +488,14 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
   const number = String(numberResult.data ?? "");
   if (!number) return { error: "Bank Transfer ka receipt number nahi ban saka." };
 
-  const total = Math.round((principal + (serviceCharge ?? 0)) * 100) / 100;
+  const fee = serviceCharge ?? 0;
+  if (isReceiving && fee >= principal) return { error: "Service charge received raqam se kam hona chahiye." };
+  if (isReceiving && receivedIn !== "cash") return { error: "Receiving par customer ko shop se cash diya jata hai." };
+  if (!isReceiving && receivingAccountId === sourceId) return { error: "Sending aur payment receive account alag chunein." };
+  const total = Math.round((principal + (isReceiving ? -fee : fee)) * 100) / 100;
   const sourceRow = {
       txn_number: number,
+      direction,
       source_finance_account_id: sourceId,
       receiving_method: receivingMethod,
       receiving_finance_account_id: receivingAccountId,
@@ -508,8 +516,13 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
   };
 
   const lines: JournalLine[] = [
-    { account: receivedGl, debit: total, memo: `${number} — customer se received` },
-    { account: sourceGl, credit: principal, memo: `${number} — ${beneficiaryTitle}` },
+    ...(isReceiving ? [
+      { account: sourceGl, debit: principal, memo: `${number} — bank/wallet mein received` },
+      { account: ACC.cash, credit: total, memo: `${number} — customer ko cash diya` },
+    ] : [
+      { account: receivedGl, debit: total, memo: `${number} — customer se received` },
+      { account: sourceGl, credit: principal, memo: `${number} — ${beneficiaryTitle}` },
+    ]),
   ];
   if (serviceCharge) {
     lines.push({ account: ACC.bankTransferServiceCharge, credit: serviceCharge, memo: `${number} service charge` });
@@ -517,11 +530,11 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
 
   const receivedCashBook = receivingCashBook(receivingMethod, receivingAccountId);
   const cashBook: CashBookQatar[] = [
-    ...(receivedCashBook ? [{ ...receivedCashBook, amount: total, rukh: "aaya" as const, category: "bank_transfer_service", notes: `${number} — customer se received`, createdBy: user.id }] : []),
-    { accountId: sourceId, amount: principal, rukh: "gaya", category: "bank_transfer_service", notes: `${number} — ${beneficiaryTitle}`, createdBy: user.id },
+    ...(receivedCashBook ? [{ ...receivedCashBook, amount: total, rukh: isReceiving ? "gaya" as const : "aaya" as const, category: "bank_transfer_service", notes: `${number} — ${isReceiving ? "customer ko cash diya" : "customer se received"}`, createdBy: user.id }] : []),
+    { accountId: sourceId, amount: principal, rukh: isReceiving ? "aaya" : "gaya", category: "bank_transfer_service", notes: `${number} — ${beneficiaryTitle}`, createdBy: user.id },
   ];
   const posted = await postDeskTransaction({
-    description: `Bank Transfer ${number} — ${beneficiaryTitle} (${beneficiaryAccount})`,
+    description: `Bank Transfer ${isReceiving ? "Receiving" : "Sending"} ${number} — ${beneficiaryTitle} (${beneficiaryAccount})`,
     sourceModule: "bank_transfer",
     branchId,
     createdBy: user.id,

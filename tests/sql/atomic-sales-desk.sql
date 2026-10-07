@@ -36,6 +36,20 @@ begin
  if not exists(select 1 from bank_transfer_transactions where journal_entry_id=(r->>'id')::uuid and status='wapas') then raise exception 'Bank source not reversed'; end if;
  perform reverse_journal_atomic((r->>'id')::uuid,'Replay same reversal',actor);
  if (select count(*) from finance_transactions)<>before_count+2 then raise exception 'Replay duplicated bank cash refund'; end if;
+ -- Receiving: Rs 100 arrives in bank; Rs 95 cash payout; Rs 5 fee.
+ input:=jsonb_build_object('description','Bank Transfer Receiving rollback test','sourceModule','bank_transfer','createdBy',actor,'branchId',bid,'clientActionId',gen_random_uuid(),'lines',jsonb_build_array(jsonb_build_object('account',bank_gl,'debit',100),jsonb_build_object('account','1000','credit',95),jsonb_build_object('account','4060','credit',5)));
+ cb:=jsonb_build_array(jsonb_build_object('accountId',bank_id,'amount',100,'rukh','aaya','category','bank_transfer_service'),jsonb_build_object('glCode','1000','amount',95,'rukh','gaya','category','bank_transfer_service'));
+ row:=row||jsonb_build_object('txn_number','TEST-RECEIVING-'||key,'direction','receiving');
+ r:=post_desk_transaction_atomic(input,cb,'bank_transfer_transactions',row);
+ again:=post_desk_transaction_atomic(input,cb,'bank_transfer_transactions',row);
+ if r->>'id'<>again->>'id' then raise exception 'Receiving replay duplicated'; end if;
+ if (select sum(debit-credit) from journal_lines where entry_id=(r->>'id')::uuid and account_code='1000')<>-95 then raise exception 'Receiving cash direction wrong'; end if;
+ if (select sum(debit-credit) from journal_lines where entry_id=(r->>'id')::uuid and account_code=bank_gl)<>100 then raise exception 'Receiving bank direction wrong'; end if;
+ set constraints trg_require_bank_posting immediate;
+ select count(*) into before_count from finance_transactions;
+ perform reverse_journal_atomic((r->>'id')::uuid,'Receiving reversal test',actor);
+ perform reverse_journal_atomic((r->>'id')::uuid,'Receiving replay reversal',actor);
+ if (select count(*) from finance_transactions)<>before_count+2 then raise exception 'Receiving reversal duplicated'; end if;
  input:=jsonb_build_object('description','Udhaar rollback test','sourceModule','customer_udhaar','createdBy',actor,'branchId',bid,'clientActionId',gen_random_uuid(),'lines',jsonb_build_array(jsonb_build_object('account','1100','debit',73,'partyType','customer','partyId',customer),jsonb_build_object('account','1000','credit',73)));
  cb:=jsonb_build_array(jsonb_build_object('glCode','1000','amount',73,'rukh','gaya','category','customer_udhaar','notes','rollback test'));
  r:=post_desk_transaction_atomic(input,cb); again:=post_desk_transaction_atomic(input,cb);

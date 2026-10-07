@@ -27,6 +27,8 @@ export interface ShiftCashSummary {
   /** opening_cash + cashSalesTotal + loadBillCashTotal + recoveryCashTotal − cashReturnsTotal − udhaarGivenCashTotal. */
   expectedCash: number;
   bankTransferTotal: number;
+  bankSendingTotal: number;
+  bankReceivingTotal: number;
   serviceChargeTotal: number;
   recoveryTotal: number;
   udhaarGivenTotal: number;
@@ -139,7 +141,7 @@ export function aggregateShiftCash(
   if (deskCashRows) loadBillCashTotal = deskCashRows.reduce((sum, row) => sum + Number(row.debit ?? 0) - Number(row.credit ?? 0), 0);
 
   return {
-    bankTransferTotal: 0, serviceChargeTotal: loadBillRows.reduce((sum, row) => sum + Number(row.service_charge ?? 0), 0),
+    bankTransferTotal: 0, bankSendingTotal: 0, bankReceivingTotal: 0, serviceChargeTotal: loadBillRows.reduce((sum, row) => sum + Number(row.service_charge ?? 0), 0),
     recoveryTotal: recoveryCashTotal, udhaarGivenTotal: udhaarGivenCashTotal, accountMovements: [],
     saleCount: sales.length,
     totalSales,
@@ -260,7 +262,7 @@ export async function computeShiftCash(shiftId: string, openingCash: number): Pr
   if (!staffId || !branchId || !fromTs) throw new Error("Shift staff/branch/time missing; cash verification required.");
   const [bank, partyLegs, claims] = await Promise.all([
     fetchAll(() => (service as any).from("bank_transfer_transactions")
-      .select("principal, service_charge").eq("created_by", staffId).eq("shop_id", shopId)
+      .select("principal, service_charge, direction").eq("created_by", staffId).eq("shop_id", shopId)
       .neq("status", "wapas").gte("created_at", fromTs).lte("created_at", toTs)),
     fetchAll(() => service.from("journal_lines")
       .select("debit, credit, journal_entries!inner(description, source_module, branch_id, created_by, created_at, pos_shift_id)")
@@ -277,6 +279,8 @@ export async function computeShiftCash(shiftId: string, openingCash: number): Pr
       .gte("journal_entries.created_at", fromTs).lte("journal_entries.created_at", toTs), "source_row_id"),
   ]);
   summary.bankTransferTotal = bank.data.reduce((sum, r) => sum + Number(r.principal ?? 0), 0);
+  summary.bankSendingTotal = bank.data.filter(r => r.direction !== "receiving").reduce((sum, r) => sum + Number(r.principal ?? 0), 0);
+  summary.bankReceivingTotal = bank.data.filter(r => r.direction === "receiving").reduce((sum, r) => sum + Number(r.principal ?? 0), 0);
   summary.serviceChargeTotal += bank.data.reduce((sum, r) => sum + Number(r.service_charge ?? 0), 0);
   summary.udhaarGivenCashTotal = 0; summary.recoveryCashTotal = 0;
   for (const r of udhaarResult.data ?? []) {

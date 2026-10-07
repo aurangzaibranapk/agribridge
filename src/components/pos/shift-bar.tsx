@@ -335,7 +335,8 @@ function shiftReportText({
     `Khata: ${rs(summary.khataTotal)}`,
     `Bill Payment: ${rs(summary.billTotal)}`,
     `Mobile Load: ${rs(summary.loadTotal)}`,
-    `Bank Transfer: ${rs(summary.bankTransferTotal)}`,
+    `Bank Sending: ${rs(summary.bankSendingTotal)}`,
+    `Bank Receiving: ${rs(summary.bankReceivingTotal)}`,
     `Service Fees: ${rs(summary.serviceChargeTotal)}`,
     `Recovery (All): ${rs(summary.recoveryTotal)}`,
     `Recovery (Cash): ${rs(summary.recoveryCashTotal)}`,
@@ -605,7 +606,7 @@ export function ShiftBar({
                         <span className="font-semibold text-surface-900 dark:text-white">Rs {Math.round(s.amount).toLocaleString()}</span>
                       </div>
                     ))}
-                    {(summary?.bankTransferTotal ?? 0) !== 0 && <div className="flex justify-between text-surface-500"><span>Bank Transfer</span><span>{rs(summary!.bankTransferTotal)}</span></div>}
+                    {(summary?.bankTransferTotal ?? 0) !== 0 && <div className="flex justify-between text-surface-500"><span>Bank Sending / Receiving</span><span>{rs(summary!.bankSendingTotal)} / {rs(summary!.bankReceivingTotal)}</span></div>}
                   {(summary?.serviceChargeTotal ?? 0) !== 0 && <div className="flex justify-between text-surface-500"><span>Service Fees</span><span>{rs(summary!.serviceChargeTotal)}</span></div>}
                   {(summary?.recoveryTotal ?? 0) !== 0 && <div className="flex justify-between text-surface-500"><span>Recovery — Cash + Bank</span><span>{rs(summary!.recoveryTotal)}</span></div>}
                   {summary?.accountMovements.map((a) => <div key={a.accountId} className="rounded border border-surface-200 p-2 text-xs"><strong>{a.name}</strong><div className="mt-1 flex justify-between"><span>Aaya: {rs(a.received)}</span><span>Gaya: {rs(a.paid)}</span></div></div>)}

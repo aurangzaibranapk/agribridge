@@ -136,7 +136,7 @@ export default async function LoadBillPage({
   const bankTransfersQuery = bankDb
     .from("bank_transfer_transactions")
     .select(
-      "id, txn_number, source_finance_account_id, receiving_method, receiving_finance_account_id, destination_channel, beneficiary_title, beneficiary_account, customer_name, customer_phone, principal, service_charge, provider_tid, status, created_at"
+      "id, direction, txn_number, source_finance_account_id, receiving_method, receiving_finance_account_id, destination_channel, beneficiary_title, beneficiary_account, customer_name, customer_phone, principal, service_charge, provider_tid, status, created_at"
     )
     .gte("created_at", `${aaj}T00:00:00+05:00`)
     .order("created_at", { ascending: false })
@@ -295,6 +295,7 @@ export default async function LoadBillPage({
           ledgerToday={ledgerToday}
           bankTransfers={(aajKeBankTransfers ?? []).map((t: any) => ({
             id: t.id as string,
+            direction: t.direction === "receiving" ? "receiving" : "sending",
             number: t.txn_number as string,
             sourceAccountId: t.source_finance_account_id as string,
             receivingMethod: t.receiving_method as string,
@@ -317,7 +318,7 @@ export default async function LoadBillPage({
             cashReceived: !me.branch_id || loadTransactionsResult.error || bankTransfersResult.error ? null :
               (aajKiQatarein ?? []).filter((row: any) => row.payment_method === "cash" && row.status !== "wapas")
                 .reduce((sum: number, row: any) => sum + Number(row.principal ?? 0) + Number(row.service_charge ?? 0), 0)
-              + (aajKeBankTransfers ?? []).filter((row: any) => row.receiving_method === "cash" && row.status !== "wapas")
+              + (aajKeBankTransfers ?? []).filter((row: any) => row.receiving_method === "cash" && row.direction !== "receiving" && row.status !== "wapas")
                 .reduce((sum: number, row: any) => sum + Number(row.principal ?? 0) + Number(row.service_charge ?? 0), 0),
             volume: !me.branch_id || loadTransactionsResult.error ? null : (aajKiQatarein ?? []).filter((row) => row.status !== "wapas")
               .reduce((sum, row) => sum + Number(row.principal ?? 0), 0),

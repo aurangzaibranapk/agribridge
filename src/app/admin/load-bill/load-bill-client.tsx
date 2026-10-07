@@ -78,6 +78,7 @@ interface FinanceAccount {
   accountType: string;
 }
 interface BankTransferTxn {
+  direction: "sending" | "receiving";
   id: string;
   number: string;
   sourceAccountId: string;
@@ -165,7 +166,7 @@ function printDeskSlip(slip: DeskSlip) {
   popup.document.open();
   popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safe(slip.title)}</title><style>
     *{box-sizing:border-box}body{margin:0;background:#f3f6f4;color:#17251e;font:13px Arial,sans-serif}.paper{width:80mm;min-height:120mm;margin:12px auto;background:#fff;padding:6mm 5mm}.brand{text-align:center;border-bottom:1px dashed #9aa79f;padding-bottom:10px}.brand-mark{display:inline-grid;width:34px;height:34px;place-items:center;border-radius:50%;background:#eaf5ed;color:#087a42;font-weight:700;font-size:18px}.brand h1{font-size:17px;margin:7px 0 2px}.brand p{margin:0;color:#66736b;font-size:10px}.title{text-align:center;font-weight:700;font-size:15px;margin:12px 0 3px}.status{text-align:center;color:#087a42;font-size:10px;margin-bottom:10px}.row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid #edf1ee;font-size:11px}.row span{color:#627067}.row b{text-align:right;max-width:52%;overflow-wrap:anywhere}.total{margin-top:5px;padding:10px 0;border-top:1px solid #b7c7bd;border-bottom:1px dashed #9aa79f;font-size:14px}.total b{font-size:17px}.note{padding:8px 0;font-size:10px;color:#59675f;overflow-wrap:anywhere}.foot{text-align:center;margin-top:14px;padding-top:9px;border-top:1px dashed #9aa79f;color:#68756d;font-size:10px;line-height:1.5}.actions{display:flex;justify-content:center;margin:10px auto}.actions button{border:0;border-radius:7px;background:#087a42;color:white;padding:9px 18px;font-weight:700;cursor:pointer}@media print{@page{size:80mm auto;margin:3mm}body{background:#fff}.paper{width:74mm;min-height:0;margin:0 auto;padding:2mm 1mm}.actions{display:none}}
-  </style></head><body><article class="paper"><header class="brand"><span class="brand-mark">A</span><h1>AgriBridge</h1><p>Al Rana Traders · Staff Sales Desk</p></header><div class="title">${safe(slip.title)}</div><div class="status">${safe(slip.status)}</div>${row("Date & time", slip.date)}${row("Receipt no.", slip.receiptNo)}${row("Customer", slip.customer)}${row("Mobile", slip.contact)}${row("Provider / network", slip.provider)}${row("Bill type", slip.billCategory)}${row("Destination", slip.destination)}${row("Account title", slip.beneficiaryTitle)}${row("Account / IBAN / mobile", slip.beneficiaryAccount)}${row("Reference", slip.reference)}${row("Source account", slip.floatAccount)}${row("Payment received in", slip.paymentMethod || slip.account)}${row("Amount", rs(slip.amount))}${charge}<div class="row total"><span>${slip.title.includes("Udhaar") ? "Udhaar amount" : slip.title.includes("Recovery") ? "Received" : "Customer pays"}</span><b>${rs(slip.total)}</b></div>${slip.note ? `<div class="note"><b>Note:</b> ${safe(slip.note)}</div>` : ""}<footer class="foot">${slip.receiptNo || slip.status === "Transaction recorded" ? "Please keep this receipt for your record." : "Preview slip · transaction save hone ke baad final receipt print karein."}<br>Thank you · Shukriya</footer></article><div class="actions"><button onclick="window.print()">Print receipt</button></div></body></html>`);
+  </style></head><body><article class="paper"><header class="brand"><span class="brand-mark">A</span><h1>AgriBridge</h1><p>Al Rana Traders · Staff Sales Desk</p></header><div class="title">${safe(slip.title)}</div><div class="status">${safe(slip.status)}</div>${row("Date & time", slip.date)}${row("Receipt no.", slip.receiptNo)}${row("Customer", slip.customer)}${row("Mobile", slip.contact)}${row("Provider / network", slip.provider)}${row("Bill type", slip.billCategory)}${row("Destination", slip.destination)}${row("Account title", slip.beneficiaryTitle)}${row("Account / IBAN / mobile", slip.beneficiaryAccount)}${row("Reference", slip.reference)}${row("Source account", slip.floatAccount)}${row(slip.title.includes("Receiving") ? "Cash paid from" : "Payment received in", slip.paymentMethod || slip.account)}${row("Amount", rs(slip.amount))}${charge}<div class="row total"><span>${slip.title.includes("Udhaar") ? "Udhaar amount" : slip.title.includes("Recovery") ? "Received" : slip.title.includes("Receiving") ? "Customer ko cash" : "Customer pays"}</span><b>${rs(slip.total)}</b></div>${slip.note ? `<div class="note"><b>Note:</b> ${safe(slip.note)}</div>` : ""}<footer class="foot">${slip.receiptNo || slip.status === "Transaction recorded" ? "Please keep this receipt for your record." : "Preview slip · transaction save hone ke baad final receipt print karein."}<br>Thank you · Shukriya</footer></article><div class="actions"><button onclick="window.print()">Print receipt</button></div></body></html>`);
   popup.document.close();
   window.setTimeout(() => { popup.focus(); popup.print(); }, 300);
 }
@@ -314,6 +315,7 @@ export function LoadBillClient({
   const [ledgerNote, setLedgerNote] = useState("");
   const [ledgerDate, setLedgerDate] = useState(aajKaKhana());
   const digitalAccounts = financeAccounts.filter((account) => account.accountType !== "cash");
+  const [bankDirection, setBankDirection] = useState<"sending" | "receiving">("sending");
   const [bankSourceAccount, setBankSourceAccount] = useState(digitalAccounts[0]?.id ?? "");
   const [bankReceivedIn, setBankReceivedIn] = useState("cash");
   const [bankDestination, setBankDestination] = useState("bank");
@@ -448,7 +450,7 @@ export function LoadBillClient({
   const ledgerAccountName = ledgerAccount === "cash" ? "Cash" : financeAccounts.find((account) => account.id === ledgerAccount)?.name ?? "—";
   const bankReceivedName = bankReceivedIn === "cash" ? "Cash" : financeAccounts.find((account) => account.id === bankReceivedIn.slice(5))?.name ?? "—";
   const bankSourceName = financeAccounts.find((account) => account.id === bankSourceAccount)?.name ?? "—";
-  const serviceTitle = tab === "load" ? "Mobile Load" : tab === "bill" ? "Bill Payment" : tab === "udhaar" ? "Udhaar" : tab === "receive" ? "Recovery" : "Bank Transfer";
+  const serviceTitle = tab === "load" ? "Mobile Load" : tab === "bill" ? "Bill Payment" : tab === "udhaar" ? "Udhaar" : tab === "receive" ? "Recovery" : `Bank Transfer ${bankDirection === "receiving" ? "Receiving" : "Sending"}`;
   const currentSlip: DeskSlip = {
     title: `${serviceTitle} Receipt`,
     date: tab === "udhaar" || tab === "receive"
@@ -460,7 +462,7 @@ export function LoadBillClient({
     reference: tab === "bank_transfer" ? bankTid || undefined : tab === "load" || tab === "bill" ? reference || undefined : undefined,
     amount: amountForSlip,
     serviceCharge: chargeForSlip,
-    total: amountForSlip + chargeForSlip,
+    total: amountForSlip + (tab === "bank_transfer" && bankDirection === "receiving" ? -chargeForSlip : chargeForSlip),
     account: tab === "bank_transfer" ? bankReceivedName : tab === "load" || tab === "bill" ? receivedIn : ledgerAccountName,
     floatAccount: tab === "bank_transfer" ? bankSourceName : tab === "load" || tab === "bill" ? chunaHua?.title : undefined,
     paymentMethod: tab === "bank_transfer" ? bankReceivedName : tab === "load" || tab === "bill" ? receivedIn : ledgerAccountName,
@@ -578,7 +580,7 @@ export function LoadBillClient({
                 { key: "bill", title: "Bill Payment", sub: "Bijli, gas, internet", Icon: FileText },
                 { key: "udhaar", title: "Udhaar", sub: "Dukan se naqad gaya", Icon: HandCoins },
                 { key: "receive", title: "Recovery", sub: "Payment receive / udhaar wapsi", Icon: Banknote },
-                { key: "bank_transfer", title: "Bank Transfer", sub: "Customer ke account mein bhejein", Icon: Landmark },
+                { key: "bank_transfer", title: "Bank Transfer", sub: "Sending / Receiving — cash ke badlay", Icon: Landmark },
               ] as const
             ).map(({ key, title, sub, Icon }) => (
               <button
@@ -635,6 +637,8 @@ export function LoadBillClient({
                 setBankCustomerPhone(person?.phone ?? "");
                 setLastSavedTab(null);
               }}
+              direction={bankDirection}
+              onDirectionChange={(value) => { setBankDirection(value); setBankReceivedIn("cash"); setBankActionId(crypto.randomUUID()); }}
               sourceAccount={bankSourceAccount}
               onSourceAccountChange={(value) => { setBankSourceAccount(value); setLastSavedTab(null); }}
               receivedIn={bankReceivedIn}
@@ -948,14 +952,14 @@ export function LoadBillClient({
               <div className="load-summary-total"><dt>Customer pays</dt><dd>{rs(customerPays)}</dd></div>
               <div className="load-summary-income"><dt>Staff income</dt><dd>{charge ? rs(charge) : "—"}</dd></div>
             </> : tab === "bank_transfer" ? <>
-              <div><dt>Transfer from</dt><dd>{bankSourceName}</dd></div>
+              <div><dt>{bankDirection === "receiving" ? "Received in" : "Transfer from"}</dt><dd>{bankSourceName}</dd></div>
               <div><dt>Transfer to</dt><dd>{TRANSFER_CHANNEL_LABELS[bankDestination] || "—"}</dd></div>
               <div><dt>Account title</dt><dd>{bankBeneficiaryTitle || "—"}</dd></div>
               <div><dt>Account / IBAN / mobile</dt><dd>{bankBeneficiaryAccount || "—"}</dd></div>
-              <div><dt>Payment received in</dt><dd>{bankReceivedName}</dd></div>
+              <div><dt>{bankDirection === "receiving" ? "Cash paid from" : "Payment received in"}</dt><dd>{bankReceivedName}</dd></div>
               <div><dt>Transfer amount</dt><dd>{rs(bankRaqam)}</dd></div>
               <div><dt>Service charge</dt><dd>{rs(bankServiceCharge)}</dd></div>
-              <div className="load-summary-total"><dt>Customer pays</dt><dd>{rs(bankRaqam + bankServiceCharge)}</dd></div>
+              <div className="load-summary-total"><dt>{bankDirection === "receiving" ? "Customer ko cash" : "Customer pays"}</dt><dd>{rs(bankRaqam + (bankDirection === "receiving" ? -bankServiceCharge : bankServiceCharge))}</dd></div>
               <div className="load-summary-income"><dt>Service income</dt><dd>{bankServiceCharge ? rs(bankServiceCharge) : "—"}</dd></div>
             </> : <>
               <div><dt>Accounting</dt><dd>{tab === "udhaar" ? "Customer balance increases" : "Customer balance decreases"}</dd></div>
@@ -1005,7 +1009,7 @@ export function LoadBillClient({
                   <td>{transaction.status === "pending" ? <Badge tone="amber">Pending</Badge> : transaction.status === "wapas" ? <Badge tone="red">Reversed</Badge> : <Badge tone="green">Completed</Badge>}</td>
                   <td><div className="load-history-actions">
                     <button type="button" title="Print receipt" aria-label={`Print ${transaction.kind} receipt`} onClick={() => printDeskSlip({
-                      title: `${transaction.kind === "load" ? "Mobile Load" : transaction.kind === "bill" ? "Bill Payment" : transaction.kind === "udhaar" ? "Udhaar" : transaction.kind === "recovery" ? "Recovery" : "Bank Transfer"} Receipt`,
+                      title: `${transaction.kind === "load" ? "Mobile Load" : transaction.kind === "bill" ? "Bill Payment" : transaction.kind === "udhaar" ? "Udhaar" : transaction.kind === "recovery" ? "Recovery" : `Bank Transfer ${bt?.direction === "receiving" ? "Receiving" : "Sending"}`} Receipt`,
                       date: new Date(transaction.waqt).toLocaleString("en-PK", { dateStyle: "medium", timeStyle: "short" }),
                       customer: transaction.customer,
                       contact: transaction.kind === "load" ? transaction.reference : bt?.customerPhone ?? undefined,
@@ -1017,7 +1021,7 @@ export function LoadBillClient({
                       reference: transaction.reference === "—" ? undefined : transaction.reference,
                       amount: transaction.amount,
                       serviceCharge: transaction.serviceCharge,
-                      total: transaction.amount + transaction.serviceCharge,
+                      total: transaction.amount + (bt?.direction === "receiving" ? -transaction.serviceCharge : transaction.serviceCharge),
                       account: bt ? (bt.receivingMethod === "cash" ? "Cash" : financeAccounts.find((account) => account.id === bt.receivingAccountId)?.name) : t?.method,
                       paymentMethod: bt ? (bt.receivingMethod === "cash" ? "Cash" : financeAccounts.find((account) => account.id === bt.receivingAccountId)?.name) : t?.method,
                       floatAccount: bt ? financeAccounts.find((account) => account.id === bt.sourceAccountId)?.name : undefined,
@@ -1066,6 +1070,8 @@ function BankTransferForm({
   financeAccounts,
   selectedPerson,
   onPersonChange,
+  direction,
+  onDirectionChange,
   sourceAccount,
   onSourceAccountChange,
   receivedIn,
@@ -1094,6 +1100,8 @@ function BankTransferForm({
   financeAccounts: FinanceAccount[];
   selectedPerson: PersonOption | null;
   onPersonChange: (person: PersonOption | null) => void;
+  direction: "sending" | "receiving";
+  onDirectionChange: (value: "sending" | "receiving") => void;
   sourceAccount: string;
   onSourceAccountChange: (value: string) => void;
   receivedIn: string;
@@ -1123,8 +1131,12 @@ function BankTransferForm({
   return (
     <form action={action} onSubmit={onSubmit} className="load-form load-form-bank-transfer space-y-3">
       <input type="hidden" name="client_action_id" value={clientActionId} />
+      <input type="hidden" name="direction" value={direction} />
+      <div className="col-span-full flex gap-2" role="group" aria-label="Bank transfer direction">
+        {(["sending", "receiving"] as const).map((value) => <Button key={value} type="button" variant={direction === value ? "primary" : "secondary"} aria-pressed={direction === value} onClick={() => onDirectionChange(value)}>{value === "sending" ? "Sending — cash lein, transfer bhejein" : "Receiving — transfer aaye, cash dein"}</Button>)}
+      </div>
       <div className="load-field-account">
-        <Label htmlFor="bank_source_account">Transfer hamare kis account se</Label>
+        <Label htmlFor="bank_source_account">{direction === "receiving" ? "Paisa hamare kis account mein aaya" : "Transfer hamare kis account se"}</Label>
         <Select id="bank_source_account" name="source_finance_account_id" value={sourceAccount} onChange={(event) => onSourceAccountChange(event.target.value)} required>
           <option value="">— bank/wallet chunein —</option>
           {digitalAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
@@ -1138,7 +1150,7 @@ function BankTransferForm({
       </div>
 
       <div className="load-field-destination">
-        <Label htmlFor="destination_channel">Customer ko kahan bhejna hai</Label>
+        <Label htmlFor="destination_channel">{direction === "receiving" ? "Paisa kis bank/wallet se aaya" : "Customer ko kahan bhejna hai"}</Label>
         <Select id="destination_channel" name="destination_channel" value={destination} onChange={(event) => onDestinationChange(event.target.value)} required>
           <option value="bank">Bank Account</option>
           <option value="jazzcash">JazzCash</option>
@@ -1148,7 +1160,7 @@ function BankTransferForm({
       </div>
 
       <div className="load-field-beneficiary-title">
-        <Label htmlFor="beneficiary_title">Receiving account title</Label>
+        <Label htmlFor="beneficiary_title">{direction === "receiving" ? "Bhejne wale ka account title" : "Receiving account title"}</Label>
         <Input id="beneficiary_title" name="beneficiary_title" value={beneficiaryTitle} onChange={(event) => onBeneficiaryTitleChange(event.target.value)} placeholder="Muhammad Ali" required />
       </div>
 
@@ -1163,10 +1175,10 @@ function BankTransferForm({
       </div>
 
       <div className="load-field-payment">
-        <Label htmlFor="bank_received_in">Customer ki payment kahan aayi</Label>
+        <Label htmlFor="bank_received_in">{direction === "receiving" ? "Customer ko cash kahan se diya" : "Customer ki payment kahan aayi"}</Label>
         <Select id="bank_received_in" name="received_in" value={receivedIn} onChange={(event) => onReceivedInChange(event.target.value)}>
           <option value="cash">Cash — golak mein</option>
-          {financeAccounts.map((account) => <option key={account.id} value={`acct:${account.id}`}>{account.name}</option>)}
+          {(direction === "receiving" ? [] : financeAccounts).map((account) => <option key={account.id} value={`acct:${account.id}`}>{account.name}</option>)}
         </Select>
       </div>
 
@@ -1194,12 +1206,13 @@ function BankTransferForm({
       </div>
 
       <div className="load-form-total rounded-lg bg-surface-50 p-3 text-sm dark:bg-surface-800/50">
-        <div className="flex justify-between"><span className="text-surface-500">Customer dega</span><b>{rs(principal + serviceCharge)}</b></div>
-        <div className="mt-1 flex justify-between text-xs"><span className="text-surface-400">Customer account mein</span><span>{rs(principal)}</span></div>
+        <div className="flex justify-between"><span className="text-surface-500">{direction === "receiving" ? "Customer ko cash dein" : "Customer dega"}</span><b>{rs(principal + (direction === "receiving" ? -serviceCharge : serviceCharge))}</b></div>
+        <div className="mt-1 flex justify-between text-xs"><span className="text-surface-400">{direction === "receiving" ? "Hamare account mein received" : "Customer account mein"}</span><span>{rs(principal)}</span></div>
         <div className="mt-1 flex justify-between text-xs"><span className="text-surface-400">Service income</span><span>{serviceCharge ? rs(serviceCharge) : "—"}</span></div>
       </div>
 
-      <Submit compact label="Transfer ho gaya — slip darj karein" />
+      {direction === "receiving" && <p className="text-xs">Service charge received raqam se kaat kar baqi cash customer ko dein.</p>}
+      <Submit compact label={direction === "receiving" ? "Paisa aaya, cash diya — slip darj karein" : "Transfer ho gaya — slip darj karein"} />
     </form>
   );
 }

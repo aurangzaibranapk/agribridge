@@ -94,14 +94,14 @@ export async function CustomerStatementPage({
     .select("id, txn_number, kind, principal, service_charge, payment_method, status, created_at, journal_entry_id")
     .eq("customer_id", id).order("created_at", { ascending: false }).limit(100);
   let bankHistoryQuery = (supabase as any).from("bank_transfer_transactions")
-    .select("id, txn_number, principal, service_charge, receiving_method, status, created_at, journal_entry_id")
+    .select("id, direction, txn_number, principal, service_charge, receiving_method, status, created_at, journal_entry_id")
     .eq("customer_id", id).order("created_at", { ascending: false }).limit(100);
   if (sp.start) { loadHistoryQuery = loadHistoryQuery.gte("created_at", `${sp.start}T00:00:00+05:00`); bankHistoryQuery = bankHistoryQuery.gte("created_at", `${sp.start}T00:00:00+05:00`); }
   if (sp.end) { loadHistoryQuery = loadHistoryQuery.lte("created_at", `${sp.end}T23:59:59.999999+05:00`); bankHistoryQuery = bankHistoryQuery.lte("created_at", `${sp.end}T23:59:59.999999+05:00`); }
   const [loadHistory, bankHistory] = await Promise.all([loadHistoryQuery, bankHistoryQuery]);
   const serviceHistory = [
     ...(loadHistory.data ?? []).map((r) => ({ ...r, method: r.payment_method, service: r.kind === "bill" ? "Bill" : "Mobile Load" })),
-    ...(bankHistory.data ?? []).map((r: any) => ({ ...r, method: r.receiving_method, service: "Bank Transfer" })),
+    ...(bankHistory.data ?? []).map((r: any) => ({ ...r, method: r.receiving_method, service: r.direction === "receiving" ? "Bank Receiving — cash payout" : "Bank Sending" })),
   ].sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   return (
@@ -214,7 +214,7 @@ export async function CustomerStatementPage({
           <thead><tr><th className="p-2 text-left">Tareekh / Receipt</th><th className="p-2 text-left">Service</th><th className="p-2 text-right">Raqam + fee</th><th className="p-2 text-left">Payment</th><th className="p-2 text-left">Ledger</th></tr></thead>
           <tbody>{serviceHistory.map((r) => <tr key={r.id} className="border-t border-surface-200">
             <td className="p-2">{formatDate(r.created_at)} · {r.txn_number}</td><td className="p-2">{r.service}{r.status === "wapas" ? " (wapas)" : ""}</td>
-            <td className="p-2 text-right">{rs(Number(r.principal) + Number(r.service_charge ?? 0))}</td><td className="p-2">{r.method}</td>
+            <td className="p-2 text-right">{rs(Number(r.principal) + (r.direction === "receiving" ? -Number(r.service_charge ?? 0) : Number(r.service_charge ?? 0)))}</td><td className="p-2">{r.method}</td>
             <td className="p-2">{r.journal_entry_id ? "Posted" : "Posting check zaroori"}</td>
           </tr>)}</tbody>
         </table>{!serviceHistory.length && !loadHistory.error && !bankHistory.error && <p className="p-2 text-sm text-surface-500">Is period mein service record nahi.</p>}</div>
