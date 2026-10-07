@@ -1,0 +1,17 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const ts = require('typescript');
+const mod = { exports: {} };
+new Function('module', 'exports', ts.transpileModule(fs.readFileSync('src/lib/finance/desk-fee.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText)(mod, mod.exports);
+const {deskFee} = mod.exports;
+assert.deepEqual(deskFee('1823', '1850'), {fee:27, valid:true});
+assert.equal(deskFee('100', '110').fee,10);
+assert.equal(deskFee('10,000', '10,100').fee,100);
+assert.equal(deskFee('10000','9900','receiving').fee,100);
+assert.equal(deskFee('1823','').fee,0);
+assert.equal(deskFee('100.10','100.30').fee,0.2);
+assert.equal(deskFee('1824','1850').fee,26);
+assert.equal(deskFee('100','90').valid,false);
+assert.equal(deskFee('100','110','receiving').valid,false);
+assert.equal(deskFee('100','bad').valid,false);
+console.log('PASS: bill/load/sending/receiving fees, decimals, amount edits and invalid totals');

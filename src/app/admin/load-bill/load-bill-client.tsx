@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { deskFee } from "@/lib/finance/desk-fee";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
@@ -334,7 +335,8 @@ export function LoadBillClient({
   const [bankBeneficiaryTitle, setBankBeneficiaryTitle] = useState("");
   const [bankBeneficiaryAccount, setBankBeneficiaryAccount] = useState("");
   const [bankAmount, setBankAmount] = useState("");
-  const [bankCharge, setBankCharge] = useState("");
+  const [bankCashTotal, setBankCashTotal] = useState("");
+  const bankCharge = String(deskFee(bankAmount, bankCashTotal, bankDirection).fee);
   const [bankCustomerName, setBankCustomerName] = useState("");
   const [bankCustomerPhone, setBankCustomerPhone] = useState("");
   const [bankTid, setBankTid] = useState("");
@@ -391,7 +393,8 @@ export function LoadBillClient({
 
   const [accountId, setAccountId] = useState(kaamKeAccounts[0]?.id ?? accounts[0]?.id ?? "");
   const [principal, setPrincipal] = useState("");
-  const [serviceCharge, setServiceCharge] = useState("");
+  const [customerTotal, setCustomerTotal] = useState("");
+  const serviceCharge = String(deskFee(principal, customerTotal).fee);
   const [reference, setReference] = useState("");
   const [billCategory, setBillCategory] = useState("");
 
@@ -651,7 +654,7 @@ export function LoadBillClient({
                 setLastSavedTab(null);
               }}
               direction={bankDirection}
-              onDirectionChange={(value) => { setBankDirection(value); setBankReceivedIn("cash"); setBankActionId(crypto.randomUUID()); }}
+              onDirectionChange={(value) => { setBankDirection(value); setBankCashTotal(""); setBankReceivedIn("cash"); setBankActionId(crypto.randomUUID()); }}
               sourceAccount={bankSourceAccount}
               onSourceAccountChange={(value) => { setBankSourceAccount(value); setLastSavedTab(null); }}
               receivedIn={bankReceivedIn}
@@ -664,8 +667,8 @@ export function LoadBillClient({
               onBeneficiaryAccountChange={(value) => { setBankBeneficiaryAccount(value); setLastSavedTab(null); }}
               amount={bankAmount}
               onAmountChange={(value) => { setBankAmount(value); setLastSavedTab(null); }}
-              charge={bankCharge}
-              onChargeChange={(value) => { setBankCharge(value); setLastSavedTab(null); }}
+              cashTotal={bankCashTotal}
+              onCashTotalChange={(value) => { setBankCashTotal(value); setLastSavedTab(null); }}
               customerName={bankCustomerName}
               onCustomerNameChange={(value) => { setBankCustomerName(value); setLastSavedTab(null); }}
               customerPhone={bankCustomerPhone}
@@ -869,18 +872,10 @@ export function LoadBillClient({
             </div>
 
             <div className="load-field-charge">
-              <Label htmlFor="service_charge">Customer se extra (service charge)</Label>
-              <Input
-                id="service_charge"
-                name="service_charge"
-                inputMode="decimal"
-                value={serviceCharge}
-                onChange={(e) => { setServiceCharge(e.target.value); setLastSavedTab(null); }}
-                placeholder="khali chhor dein agar extra nahi liya"
-              />
-              <p className="mt-1 text-[11px] text-surface-500">
-                Khali = customer se kuch extra nahi liya. Sifar likhne ki zaroorat nahi.
-              </p>
+              <Label htmlFor="customer_total">Customer se kul raqam li / leni hai</Label>
+              <Input id="customer_total" inputMode="decimal" type="number" step="0.01" min={raqam} value={customerTotal} onChange={(e) => { setCustomerTotal(e.target.value); setLastSavedTab(null); }} placeholder={String(raqam || "")} />
+              <input type="hidden" name="service_charge" value={serviceCharge} />
+              <p className="mt-1 text-[11px] text-surface-500">Fee khud niklegi: {rs(charge)}. Khali chhorein to asal raqam, fee zero.</p>
             </div>
 
             {/* Khata par likhna hai to KIS ka khata -- ye ab upar
@@ -1099,8 +1094,8 @@ function BankTransferForm({
   onBeneficiaryAccountChange,
   amount,
   onAmountChange,
-  charge,
-  onChargeChange,
+  cashTotal,
+  onCashTotalChange,
   customerName,
   onCustomerNameChange,
   customerPhone,
@@ -1129,8 +1124,8 @@ function BankTransferForm({
   onBeneficiaryAccountChange: (value: string) => void;
   amount: string;
   onAmountChange: (value: string) => void;
-  charge: string;
-  onChargeChange: (value: string) => void;
+  cashTotal: string;
+  onCashTotalChange: (value: string) => void;
   customerName: string;
   onCustomerNameChange: (value: string) => void;
   customerPhone: string;
@@ -1141,7 +1136,7 @@ function BankTransferForm({
 }) {
   const digitalAccounts = financeAccounts.filter((account) => account.accountType !== "cash");
   const principal = Number(amount.replace(/,/g, "")) || 0;
-  const serviceCharge = Number(charge.replace(/,/g, "")) || 0;
+  const serviceCharge = deskFee(amount, cashTotal, direction).fee;
 
   return (
     <form action={action} onSubmit={onSubmit} className="load-form load-form-bank-transfer space-y-3">
@@ -1198,8 +1193,10 @@ function BankTransferForm({
       </div>
 
       <div className="load-field-charge">
-        <Label htmlFor="bank_service_charge">Service charge</Label>
-        <Input id="bank_service_charge" name="service_charge" inputMode="decimal" value={charge} onChange={(event) => onChargeChange(event.target.value)} placeholder="100" />
+        <Label htmlFor="bank_cash_total">{direction === "receiving" ? "Customer ko cash kitna diya" : "Customer se kul cash kitna liya"}</Label>
+        <Input id="bank_cash_total" type="number" step="0.01" min={direction === "receiving" ? 0 : principal} max={direction === "receiving" ? principal : undefined} inputMode="decimal" value={cashTotal} onChange={(event) => onCashTotalChange(event.target.value)} placeholder={String(principal || "")} />
+        <input type="hidden" name="service_charge" value={serviceCharge} />
+        <p className="mt-1 text-[11px] text-surface-500">Farq se fee khud niklegi: {rs(serviceCharge)}. Khali = fee zero.</p>
       </div>
 
       <div className="load-field-customer-name">
