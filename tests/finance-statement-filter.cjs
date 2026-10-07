@@ -1,0 +1,15 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const ts = require('typescript');
+const mod = {exports:{}};
+new Function('module','exports',ts.transpileModule(fs.readFileSync('src/lib/finance/statement-filter.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText)(mod,mod.exports);
+const {financeStatement} = mod.exports;
+const rows=[{transaction_date:'2026-10-07',transaction_type:'income',amount:100},{transaction_date:'2026-10-01',transaction_type:'expense',amount:30},{transaction_date:'2026-09-30',transaction_type:'transfer_in',amount:50}];
+let s=financeStatement(rows,220,'2026-10-01','2026-10-01');
+assert.equal(s.rows.length,1);assert.equal(s.rows[0].balanceAfter,120);assert.equal(s.opening,150);assert.equal(s.closing,120);assert.equal(s.debit,30);
+s=financeStatement(rows,220,'2026-10-01','2026-10-31');assert.equal(s.credit,100);assert.equal(s.debit,30);assert.equal(s.opening,150);assert.equal(s.closing,220);
+s=financeStatement(rows,220,'2026-01-01','2026-12-31');assert.equal(s.rows.length,3);assert.equal(s.opening,100);
+s=financeStatement(rows,220,'','2026-09-29');assert.equal(s.rows.length,0);assert.equal(s.closing,100);
+s=financeStatement(rows,220,'2026-10-02','2026-10-06');assert.equal(s.opening,120);assert.equal(s.closing,120);
+assert.equal(financeStatement(rows,220,'2026-11-01','2026-10-01').rows.length,0);
+console.log('PASS: day/month/year/custom inclusive dates, filtered totals, historical balances and empty periods');

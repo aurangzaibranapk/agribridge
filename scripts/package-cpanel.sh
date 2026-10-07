@@ -10,6 +10,7 @@ node scripts/check-cpanel-env.cjs
 node tests/shift-desk-cash.cjs
 node tests/supplier-bill-math.cjs
 node tests/desk-fee.cjs
+node tests/finance-statement-filter.cjs
 ./node_modules/.bin/tsc --noEmit --incremental
 npm run build
 [[ -s .next/BUILD_ID ]] || { echo "Production build missing; run npm run build first." >&2; exit 1; }

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { financeStatement } from "@/lib/finance/statement-filter";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormState, useFormStatus } from "react-dom";
 import {
@@ -51,7 +52,25 @@ function AccountIcon({ name, size = 16 }: { name: string; size?: number }) {
 export function FinanceClient({ accounts, transactions }: { accounts: Account[]; transactions: Transaction[] }) {
   const lang = useLang();
   const [selectedAccountId, setSelectedAccountId] = useState<string>(accounts[0]?.id ?? "");
+  const [filterMode, setFilterMode] = useState("all");
+  const [filterValue, setFilterValue] = useState(aajKaKhana());
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [showNewAccount, setShowNewAccount] = useState(false);
+
+  function applyPeriod(mode: string, value: string) {
+    setFilterMode(mode);
+    setFilterValue(value);
+    if (mode === "all") { setDateFrom(""); setDateTo(""); return; }
+    if (mode === "custom") return;
+    if (mode === "day") { setDateFrom(value); setDateTo(value); }
+    if (mode === "month" && /^\d{4}-\d{2}$/.test(value)) {
+      const [year, month] = value.split("-").map(Number);
+      const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+      setDateFrom(`${value}-01`); setDateTo(`${value}-${last}`);
+    }
+    if (mode === "year" && /^\d{4}$/.test(value)) { setDateFrom(`${value}-01-01`); setDateTo(`${value}-12-31`); }
+  }
 
   const totalBalance = useMemo(() => accounts.reduce((sum, a) => sum + a.current_balance, 0), [accounts]);
 
@@ -64,13 +83,9 @@ export function FinanceClient({ accounts, transactions }: { accounts: Account[];
   }, [transactions, selectedAccountId]);
 
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
-  let runningBalance = selectedAccount?.current_balance ?? 0;
-  const rowsWithBalance = filteredTxns.map((row) => {
-    const balanceAtThisRow = runningBalance;
-    const isCredit = row.transaction_type === "income" || row.transaction_type === "transfer_in";
-    runningBalance = isCredit ? runningBalance - row.amount : runningBalance + row.amount;
-    return { ...row, balanceAfter: balanceAtThisRow, isCredit };
-  });
+  const statement = financeStatement(filteredTxns, selectedAccount?.current_balance ?? 0, dateFrom, dateTo);
+  const rowsWithBalance = statement.rows;
+  const invalidDates = Boolean(dateFrom && dateTo && dateFrom > dateTo);
 
   return (
     <div>
@@ -153,6 +168,31 @@ export function FinanceClient({ accounts, transactions }: { accounts: Account[];
             >
               <Plus className="h-3.5 w-3.5" /> {t("fn_new_account", lang)}
             </button>
+          </div>
+
+          <div className="mb-3 rounded-lg border border-surface-200 p-3">
+            <div className="flex flex-wrap items-end gap-3">
+              <div><Label htmlFor="statement_period">Filter</Label><Select id="statement_period" value={filterMode} onChange={e => { const mode = e.target.value; const today = aajKaKhana(); applyPeriod(mode, mode === "month" ? today.slice(0,7) : mode === "year" ? today.slice(0,4) : today); }}>
+                <option value="all">Sari dates</option><option value="day">Din / Date</option><option value="month">Mahina</option><option value="year">Saal</option><option value="custom">Custom dates</option>
+              </Select></div>
+              {filterMode === "day" && <div><Label htmlFor="statement_day">Date</Label><Input id="statement_day" type="date" value={filterValue} onChange={e => applyPeriod("day", e.target.value)} /></div>}
+              {filterMode === "month" && <div><Label htmlFor="statement_month">Mahina</Label><Input id="statement_month" type="month" value={filterValue} onChange={e => applyPeriod("month", e.target.value)} /></div>}
+              {filterMode === "year" && <div><Label htmlFor="statement_year">Saal</Label><Input id="statement_year" type="number" min="1900" max="9999" value={filterValue} onChange={e => applyPeriod("year", e.target.value)} /></div>}
+              {filterMode === "custom" && <>
+                <div><Label htmlFor="statement_from">Date se</Label><Input id="statement_from" type="date" value={dateFrom} max={dateTo || undefined} onChange={e => setDateFrom(e.target.value)} /></div>
+                <div><Label htmlFor="statement_to">Date tak</Label><Input id="statement_to" type="date" value={dateTo} min={dateFrom || undefined} onChange={e => setDateTo(e.target.value)} /></div>
+              </>}
+              <Button type="button" variant="secondary" onClick={() => applyPeriod("all", aajKaKhana())}>Reset</Button>
+            </div>
+            <p className="mt-2 text-xs text-surface-500">{dateFrom || "Shuru se"} — {dateTo || "Aaj tak"}</p>
+
+            {invalidDates ? <p className="mt-2 text-sm text-red-600">Date tak, Date se ke baad honi chahiye.</p> : <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+              <span>Records: <b>{statement.rows.length}</b></span>
+              <span>Shuru: <b>Rs {statement.opening.toLocaleString()}</b></span>
+              <span>Total Credit: <b>Rs {statement.credit.toLocaleString()}</b></span>
+              <span>Total Debit: <b>Rs {statement.debit.toLocaleString()}</b></span>
+              <span>Aakhir: <b>Rs {statement.closing.toLocaleString()}</b></span>
+            </div>}
           </div>
 
           <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">

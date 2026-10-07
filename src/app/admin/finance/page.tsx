@@ -44,12 +44,19 @@ export default async function AdminFinancePage() {
     .eq("category", "Shuruati balance");
   const openingDone = new Set((openingRows ?? []).map((r) => r.account_id as string));
 
-  const { data: rawTransactions } = await supabase
-    .from("finance_transactions")
-    .select("id, account_id, transaction_type, category, amount, transaction_date, notes")
-    .order("transaction_date", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(200);
+  // Fetch every accessible cash-book row; date filters must not silently lose older history.
+  const rawTransactions: { id: string; account_id: string; transaction_type: string; category: string | null; amount: number; transaction_date: string; notes: string | null }[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase.from("finance_transactions")
+      .select("id, account_id, transaction_type, category, amount, transaction_date, notes")
+      .order("transaction_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(offset, offset + 999);
+    if (error) throw new Error(`Finance statement could not load: ${error.message}`);
+    rawTransactions.push(...(data ?? []).map(row => ({ ...row, amount: Number(row.amount) })));
+    if (!data || data.length < 1000) break;
+  }
 
   // Balance ab seedha ledger se -- `current_balance` sirf un raqmon se
   // hilta hai jo `finance_transactions` (purani cash book) se guzarti
