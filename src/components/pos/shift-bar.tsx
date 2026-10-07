@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { ArrowLeft, Clock, Lock, X, CheckCircle2, AlertTriangle, Receipt, Send, Repeat, ChevronDown, Landmark, User, Printer, MessageCircle, Mail } from "lucide-react";
@@ -354,27 +356,16 @@ function ShiftCloseActions({
   counterName,
   summary,
   countedCash,
+  onPrint,
 }: {
   shiftNumber: string;
   shopName: string;
   counterName: string;
   summary: ShiftCashSummary;
   countedCash: number;
+  onPrint: () => void;
 }) {
   const text = shiftReportText({ shiftNumber, shopName, counterName, summary, countedCash });
-
-  function printReport() {
-    const printWindow = window.open("", "_blank", "width=720,height=820");
-    if (!printWindow) return;
-    const lines = text
-      .split("\n")
-      .map((line) => `<div>${line.replace(/&/g, "&amp;").replace(/</g, "&lt;") || "&nbsp;"}</div>`)
-      .join("");
-    printWindow.document.write(`<!doctype html><html><head><title>${shiftNumber} — Shift Close</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#17201d}h1{font-size:20px;margin:0 0 6px}p{color:#66736f;margin:0 0 20px;font-size:12px}div{font-size:14px;line-height:1.8;border-bottom:1px solid #edf0ef;padding:2px 0}</style></head><body><h1>AgriBridge — POS Shift Close Report</h1><p>${shopName} · ${counterName} · ${shiftNumber}</p>${lines}</body></html>`);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-  }
 
   function shareWhatsApp() {
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
@@ -388,7 +379,7 @@ function ShiftCloseActions({
     <div className="mt-4 border-t border-surface-100 pt-4 dark:border-surface-800">
       <p className="mb-2 text-center text-[11px] font-medium uppercase tracking-wide text-surface-400">Shift report share karein</p>
       <div className="grid grid-cols-3 gap-2">
-        <button type="button" onClick={printReport} className="flex items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-2 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-950/30 dark:text-brand-300">
+        <button type="button" onClick={onPrint} className="flex items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-2 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-950/30 dark:text-brand-300">
           <Printer className="h-3.5 w-3.5" /> Print
         </button>
         <button type="button" onClick={shareWhatsApp} className="flex items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
@@ -496,13 +487,12 @@ export function ShiftBar({
   const [state, action] = useFormState(closeShift, KHALI);
   const [summary, setSummary] = useState<ShiftCashSummary | null>(null);
 
-  // A successful close has a permanent, reprintable slip. Navigate only
-  // after the server confirms the shift was closed; failed closes stay here.
+  const router = useRouter();
+  const [receiptOpen, setReceiptOpen] = useState(false);
   useEffect(() => {
-    if (state.success && state.shiftId) {
-      window.location.assign(`/admin/pos/shift/${state.shiftId}/slip`);
-    }
+    if (state.success && state.shiftId) setReceiptOpen(true);
   }, [state.success, state.shiftId]);
+
 
   const openedTime = new Date(openedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
@@ -641,6 +631,14 @@ export function ShiftBar({
         </div>
       )}
 
+      {receiptOpen && state.shiftId && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-3" role="dialog" aria-modal="true" aria-label="Saved shift closing receipt">
+          <div className="flex h-[90vh] w-full max-w-sm flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+            <div className="flex justify-between border-b p-3 text-sm font-semibold text-black"><span>Shift Closing Slip</span><button type="button" onClick={() => setReceiptOpen(false)} aria-label="Close receipt"><X className="h-5 w-5" /></button></div>
+            <iframe title="Saved POS closing slip" src={`/admin/pos/shift/${state.shiftId}/slip?embed=1`} className="min-h-0 flex-1 border-0" />
+          </div>
+        </div>, document.body)}
+
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-surface-900">
@@ -652,7 +650,7 @@ export function ShiftBar({
                 </p>
               </div>
               <button
-                onClick={() => setModalOpen(false)}
+                onClick={() => { setModalOpen(false); if (state.success) router.refresh(); }}
                 className="flex h-7 w-7 items-center justify-center rounded-full text-surface-400 hover:bg-surface-100 hover:text-surface-600 dark:hover:bg-surface-800"
                 aria-label="Band karein"
               >
@@ -669,9 +667,9 @@ export function ShiftBar({
                   <p className="text-sm font-medium text-surface-900 dark:text-white">{state.message}</p>
                 </div>
                 {state.shiftId && (
-                  <Link href={`/admin/pos/shift/${state.shiftId}/slip`} className="mt-3 flex items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white">
+                  <button type="button" onClick={() => setReceiptOpen(true)} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white">
                     <Printer className="h-4 w-4" /> Daily Cash Slip kholen
-                  </Link>
+                  </button>
                 )}
                 {state.countedCash != null && state.countedCash > 0 && (
                   <div className="mt-3">
@@ -685,6 +683,7 @@ export function ShiftBar({
                     counterName={counterName}
                     summary={summary}
                     countedCash={state.countedCash}
+                    onPrint={() => setReceiptOpen(true)}
                   />
                 )}
                 <p className="mt-3 text-center text-xs text-surface-400">Band karein — safha refresh ho jayega.</p>

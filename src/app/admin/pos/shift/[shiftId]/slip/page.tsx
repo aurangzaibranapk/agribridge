@@ -16,7 +16,8 @@ function localTime(value: string | null) {
   return value ? new Date(value).toLocaleString("en-PK", { timeZone: "Asia/Karachi", dateStyle: "medium", timeStyle: "short" }) : "—";
 }
 
-export default async function ShiftSlipPage({ params }: { params: { shiftId: string } }) {
+export default async function ShiftSlipPage({ params, searchParams }: { params: { shiftId: string }; searchParams: { embed?: string } }) {
+  const embedded = searchParams.embed === "1";
   const auth = createClient();
   const { data: { user } } = await auth.auth.getUser();
   if (!user) redirect("/login");
@@ -64,26 +65,27 @@ export default async function ShiftSlipPage({ params }: { params: { shiftId: str
   const handoverStatus = handover?.status === "received" ? "Office/Finance ne tasdeeq kar di" : handover ? "Bheja gaya — receiving tasdeeq baqi" : "Office receiving baqi";
 
   return (
-    <main className="mx-auto max-w-xl p-4 text-surface-900 print:max-w-none print:p-0">
+    <main id="shift-cash-receipt" className="mx-auto w-full max-w-sm bg-white p-3 font-mono text-black print:w-[74mm] print:max-w-[74mm] print:p-0">
+      <style>{`@media print { @page { size: 80mm auto; margin: 3mm; } body * { visibility: hidden; } #shift-cash-receipt, #shift-cash-receipt * { visibility: visible; } #shift-cash-receipt { position: absolute; top: 0; left: 0; color: black; } } ${embedded ? 'body * { visibility: hidden; } #shift-cash-receipt, #shift-cash-receipt * { visibility: visible; } #shift-cash-receipt { position: absolute; top: 0; left: 0; right: 0; min-height: 100vh; z-index: 9999; }' : ''}`}</style>
       <div className="mb-4 flex items-center justify-between gap-3 print:hidden">
-        <Link href="/admin/pos" className="text-sm font-medium text-brand-700">← POS par wapas</Link>
-        <PrintShiftSlip />
+        {!embedded && <Link href="/admin/pos" className="text-xs font-medium text-brand-700">← POS par wapas</Link>}
+        <PrintShiftSlip autoPrint={!embedded} />
       </div>
-      <section className="rounded-xl border border-surface-300 bg-white p-6 shadow-sm print:border-0 print:p-0 print:shadow-none">
+      <section className="border border-dashed border-surface-300 bg-white p-3 print:border-0 print:p-0 print:shadow-none">
         <p className="text-center text-xs font-semibold uppercase tracking-widest">AgriBridge</p>
-        <h1 className="mt-1 text-center text-xl font-bold">Daily POS Cash Slip</h1>
+        <h1 className="mt-1 text-center text-base font-bold">Daily POS Cash Slip</h1>
         <p className="mt-1 text-center text-xs text-surface-500">Shift band hone par cash ke sath office jama karayein</p>
-        <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-1 border-y border-surface-300 py-3 text-sm">
+        <div className="mt-5 grid grid-cols-1 gap-y-1 border-y border-surface-300 py-3 text-xs">
           <span>Shift: <strong>{shift.shift_number}</strong></span><span>Staff: <strong>{staff?.full_name ?? "—"}</strong></span>
           <span>Shop: <strong>{shop?.name ?? "—"}</strong></span><span>Counter: <strong>{counter?.name ?? "—"}</strong></span>
           <span>Khuli: <strong>{localTime(shift.opened_at)}</strong></span><span>Band: <strong>{localTime(shift.closed_at)}</strong></span>
         </div>
-        <div className="mt-3 space-y-1 text-sm">
+        <div className="mt-3 space-y-1 text-xs">
           <div className="flex justify-between border-b pb-1 text-xs font-semibold uppercase"><span>Detail</span><span>Amount</span></div>
-          {rows.map(([label, value]) => <div key={label} className={`flex justify-between gap-4 border-b border-surface-100 py-1 ${label.startsWith("Ginti") ? "font-bold" : ""}`}><span>{label}</span><span className="tabular-nums">{value}</span></div>)}
+          {rows.map(([label, value]) => <div key={label} className={`flex justify-between gap-4 border-b border-surface-100 py-1 ${label.startsWith("Ginti") ? "font-bold" : ""}`}><span>{label}</span><span className="shrink-0 tabular-nums">{value}</span></div>)}
         </div>
         {summary.accountMovements.length > 0 && <div className="mt-4">
-          <h2 className="mb-2 text-sm font-bold">Account mein aaya / gaya — isi shift ka linked record</h2>
+          <h2 className="mb-2 text-xs font-bold">Account mein aaya / gaya — isi shift ka linked record</h2>
           <table className="w-full text-xs"><thead><tr className="border-b"><th className="py-1 text-left">Account</th><th className="text-right">Aaya</th><th className="text-right">Gaya</th><th className="text-right">Net</th></tr></thead>
             <tbody>{summary.accountMovements.map((a) => <tr key={a.accountId} className="border-b border-surface-100"><td className="py-2">{a.name}</td><td className="text-right tabular-nums">{money(a.received)}</td><td className="text-right tabular-nums">{money(a.paid)}</td><td className="text-right tabular-nums">{money(a.net)}</td></tr>)}</tbody>
           </table>
