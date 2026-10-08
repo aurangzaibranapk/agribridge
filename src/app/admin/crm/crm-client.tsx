@@ -95,6 +95,7 @@ export function CrmClient({
   // button bhi add karein." Fehrist pehle se poori load ho chuki hai,
   // is liye seedha yahin chhan lena kaafi hai -- koi nayi query nahi.
   const [customerSearch, setCustomerSearch] = useState("");
+  const [customerSearchDraft, setCustomerSearchDraft] = useState("");
   const filteredCustomers = useMemo(() => {
     const q = customerSearch.trim().toLowerCase();
     if (!q) return customers;
@@ -108,6 +109,7 @@ export function CrmClient({
   }, [customers, customerSearch]);
 
   const [farmerSearch, setFarmerSearch] = useState("");
+  const [farmerSearchDraft, setFarmerSearchDraft] = useState("");
   const filteredFarmers = useMemo(() => {
     const q = farmerSearch.trim().toLowerCase();
     if (!q) return farmers;
@@ -115,6 +117,7 @@ export function CrmClient({
   }, [farmers, farmerSearch]);
 
   const [supplierSearch, setSupplierSearch] = useState("");
+  const [supplierSearchDraft, setSupplierSearchDraft] = useState("");
   const filteredSuppliers = useMemo(() => {
     const q = supplierSearch.trim().toLowerCase();
     if (!q) return suppliers;
@@ -159,15 +162,16 @@ export function CrmClient({
   if (customerLedgerMode) {
     return (
       <div>
-        <div className="mb-3 relative max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+        <form onSubmit={(event) => { event.preventDefault(); setCustomerSearch(customerSearchDraft); }} className="mb-3 flex max-w-lg items-center gap-2">
+          <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
           <Input
-            value={customerSearch}
-            onChange={(e) => setCustomerSearch(e.target.value)}
+            value={customerSearchDraft}
+            onChange={(e) => setCustomerSearchDraft(e.target.value)}
             placeholder="Naam, mobile ya CNIC se dhoondein"
             className="pl-9"
           />
-        </div>
+          </div><button type="submit" className="h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Apply</button>
+        </form>
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>
@@ -231,15 +235,16 @@ export function CrmClient({
       </div>
 
       {activeTab === "customers" && (
-        <div className="mb-3 relative max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+        <form onSubmit={(event) => { event.preventDefault(); setCustomerSearch(customerSearchDraft); }} className="mb-3 flex max-w-lg items-center gap-2">
+          <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
           <Input
-            value={customerSearch}
-            onChange={(e) => setCustomerSearch(e.target.value)}
+            value={customerSearchDraft}
+            onChange={(e) => setCustomerSearchDraft(e.target.value)}
             placeholder="Naam, mobile ya CNIC se dhoondein"
             className="pl-9"
           />
-        </div>
+          </div><button type="submit" className="h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Apply</button>
+        </form>
       )}
 
       {activeTab === "customers" && (
@@ -315,10 +320,10 @@ export function CrmClient({
 
       {activeTab === "farmers" && (
         <>
-          <div className="mb-3 relative max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
-            <Input value={farmerSearch} onChange={(e) => setFarmerSearch(e.target.value)} placeholder="Naam, mobile, code ya gaon se dhoondein" className="pl-9" />
-          </div>
+          <form onSubmit={(event) => { event.preventDefault(); setFarmerSearch(farmerSearchDraft); }} className="mb-3 flex max-w-lg items-center gap-2">
+            <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" /><Input value={farmerSearchDraft} onChange={(e) => setFarmerSearchDraft(e.target.value)} placeholder="Naam, mobile, code ya gaon se dhoondein" className="pl-9" /></div>
+            <button type="submit" className="h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Apply</button>
+          </form>
           <div className="mb-2 text-xs text-surface-500">Farmers: {farmers.length} · Is list mein balance zero honay par bhi tamam registered farmers shamil hain.</div>
           <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
             <table className="w-full text-sm">
@@ -338,15 +343,16 @@ export function CrmClient({
 
       {activeTab === "suppliers" && (
         <>
-        <div className="mb-3 relative max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+        <form onSubmit={(event) => { event.preventDefault(); setSupplierSearch(supplierSearchDraft); }} className="mb-3 flex max-w-lg items-center gap-2">
+          <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
           <Input
-            value={supplierSearch}
-            onChange={(e) => setSupplierSearch(e.target.value)}
+            value={supplierSearchDraft}
+            onChange={(e) => setSupplierSearchDraft(e.target.value)}
             placeholder="Naam, phone ya contact se dhoondein"
             className="pl-9"
           />
-        </div>
+          </div><button type="submit" className="h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Apply</button>
+        </form>
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
             <thead>

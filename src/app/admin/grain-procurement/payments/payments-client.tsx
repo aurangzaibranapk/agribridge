@@ -33,6 +33,7 @@ export function GrainPaymentsClient({
 }) {
   const lang = useLang();
   const [query, setQuery] = useState("");
+  const [draftQuery, setDraftQuery] = useState("");
   const [paying, setPaying] = useState<Row | null>(null);
   const [offlinePending, setOfflinePending] = useState(0);
 
@@ -98,15 +99,18 @@ export function GrainPaymentsClient({
       </div>
       {offlinePending > 0 && <p className="text-xs text-amber-700 dark:text-amber-400">{offlinePending} grain payments sync ka intezar kar rahi hain.</p>}
 
-      <div className="relative">
+      <form onSubmit={(event) => { event.preventDefault(); setQuery(draftQuery); }} className="flex items-center gap-2">
+        <div className="relative min-w-0 flex-1">
         <Search className="absolute left-3 top-2.5 h-4 w-4 text-surface-400" />
         <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          value={draftQuery}
+          onChange={(e) => setDraftQuery(e.target.value)}
           placeholder={t("gp_search", lang)}
           className="w-full rounded-lg border border-surface-200 p-2 pl-9 text-sm dark:border-surface-800 dark:bg-surface-900"
         />
-      </div>
+        </div>
+        <button type="submit" className="h-10 shrink-0 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Apply</button>
+      </form>
 
       {matches.length === 0 ? (
         <Card className="p-8 text-center text-sm text-surface-400">{t("gp_none", lang)}</Card>

@@ -61,6 +61,7 @@ export function FarmersListClient({
 }) {
   const lang = useLang();
   const [query, setQuery] = useState("");
+  const [draftQuery, setDraftQuery] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const koiBulkKaam = tasdeeqKarSakta || mitaSakta;
   const visibleFarmers = farmers.filter((f) => {
@@ -85,17 +86,18 @@ export function FarmersListClient({
         <BulkActionBar selectedIds={selected} onDone={() => setSelected([])} mitaSakta={mitaSakta} />
       )}
 
-      <div className="mb-3 flex items-center gap-2 rounded-card border border-surface-200 bg-white px-3 py-2 shadow-sm dark:border-surface-800 dark:bg-surface-900">
+      <form onSubmit={(event) => { event.preventDefault(); setQuery(draftQuery); }} className="mb-3 flex items-center gap-2 rounded-card border border-surface-200 bg-white px-3 py-2 shadow-sm dark:border-surface-800 dark:bg-surface-900">
         <Search className="h-4 w-4 shrink-0 text-surface-400" />
         <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          value={draftQuery}
+          onChange={(e) => setDraftQuery(e.target.value)}
           placeholder="Member / farmer ka naam, code, mobile ya CNIC search karein..."
           className="w-full bg-transparent text-sm text-surface-800 outline-none placeholder:text-surface-400 dark:text-surface-100"
           aria-label="Search members and farmers"
         />
         {query && <span className="shrink-0 text-xs text-surface-400">{visibleFarmers.length} record</span>}
-      </div>
+        <button type="submit" className="shrink-0 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700">Apply</button>
+      </form>
 
       <div className="rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">

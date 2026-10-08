@@ -109,6 +109,10 @@ export function MachineryListClient({ rows, farmers }: { rows: Row[]; farmers: F
   const [machine, setMachine] = useState("");
   const [crop, setCrop] = useState("");
   const [village, setVillage] = useState("");
+  const [draftQuery, setDraftQuery] = useState("");
+  const [draftMachine, setDraftMachine] = useState("");
+  const [draftCrop, setDraftCrop] = useState("");
+  const [draftVillage, setDraftVillage] = useState("");
 
   const machines = useMemo(
     () => [...new Set(rows.map((r) => r.machineType).filter(Boolean))] as string[],
@@ -215,20 +219,21 @@ export function MachineryListClient({ rows, farmers }: { rows: Row[]; farmers: F
 
       {/* Chhaanti. Aath bookings par ye zaroori nahi lagti; aath hazar
           par ye poore safhe ko kaam ka banati hai. */}
-      <div className="mb-4 flex flex-wrap gap-2 print:hidden">
+      <form onSubmit={(event) => { event.preventDefault(); setQuery(draftQuery); setMachine(draftMachine); setCrop(draftCrop); setVillage(draftVillage); }} className="mb-4 flex flex-wrap gap-2 print:hidden">
         <div className="relative min-w-[200px] flex-1">
           <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-surface-400" />
           <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={draftQuery}
+            onChange={(e) => setDraftQuery(e.target.value)}
             placeholder={t("mc_search_hint", lang)}
             className="w-full rounded-lg border border-surface-200 py-2 pl-8 pr-2 text-sm dark:border-surface-700 dark:bg-surface-900"
           />
         </div>
-        <Picker value={machine} onChange={setMachine} options={machines} label={t("mc_machine", lang)} />
-        <Picker value={crop} onChange={setCrop} options={crops} label={t("mc_crop", lang)} />
-        <Picker value={village} onChange={setVillage} options={villages} label={t("mc_village", lang)} />
-      </div>
+        <Picker value={draftMachine} onChange={setDraftMachine} options={machines} label={t("mc_machine", lang)} />
+        <Picker value={draftCrop} onChange={setDraftCrop} options={crops} label={t("mc_crop", lang)} />
+        <Picker value={draftVillage} onChange={setDraftVillage} options={villages} label={t("mc_village", lang)} />
+        <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">Apply</button>
+      </form>
 
       <div className="mb-4 overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900 print:border-0 print:shadow-none">
         <div className="border-b border-surface-200 px-4 py-3 dark:border-surface-800">

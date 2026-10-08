@@ -217,7 +217,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
         ))}
       </div>
       <div className="mb-4">
-        <ProductSearchBox initialQuery={q ?? ""} cat={cat} placeholder={t("pd_search", lang)} />
+        <ProductSearchBox initialQuery={q ?? ""} cat={cat} filter={filterParam} placeholder={t("pd_search", lang)} />
       </div>
       <DataTable columns={cols} rows={(products ?? []) as unknown as ProductRow[]} keyFor={(p) => p.id} emptyTitle="No products yet" />
       <Pagination page={page} pageSize={PAGE_SIZE} totalCount={count ?? 0} basePath={`/admin/products?${cat ? `cat=${cat}&` : ""}${q ? `q=${q}&` : ""}`} />

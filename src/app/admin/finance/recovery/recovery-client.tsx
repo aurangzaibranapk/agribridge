@@ -147,6 +147,11 @@ export function RecoveryClient({
   const [typeFilter, setTypeFilter] = useState<"all" | string>("all");
   const [dueFrom, setDueFrom] = useState("");
   const [dueTo, setDueTo] = useState("");
+  const [draftSearch, setDraftSearch] = useState("");
+  const [draftStatus, setDraftStatus] = useState<"all" | RecoveryParty["status"]>("all");
+  const [draftType, setDraftType] = useState<"all" | string>("all");
+  const [draftDueFrom, setDraftDueFrom] = useState("");
+  const [draftDueTo, setDraftDueTo] = useState("");
   const [page, setPage] = useState(0);
   const [mode, setMode] = useState<"schedule" | "promise" | "payment" | null>(null);
   const [busy, setBusy] = useState(false);
@@ -338,25 +343,19 @@ export function RecoveryClient({
           </div>
 
           {/* ---- Filters ---- */}
-          <div className="flex flex-wrap items-center gap-2 border-b border-surface-100 p-3 dark:border-surface-800">
+          <form onSubmit={(event) => { event.preventDefault(); setSearch(draftSearch); setStatusFilter(draftStatus); setTypeFilter(draftType); setDueFrom(draftDueFrom); setDueTo(draftDueTo); setPage(0); }} className="flex flex-wrap items-center gap-2 border-b border-surface-100 p-3 dark:border-surface-800">
             <div className="relative min-w-52 flex-1">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
               <input
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(0);
-                }}
+                value={draftSearch}
+                onChange={(e) => setDraftSearch(e.target.value)}
                 placeholder="Naam, mobile ya CNIC se dhoondein"
                 className="w-full rounded-lg border border-surface-200 bg-transparent py-2 pl-8 pr-3 text-sm dark:border-surface-700"
               />
             </div>
             <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value as typeof statusFilter);
-                setPage(0);
-              }}
+              value={draftStatus}
+              onChange={(e) => setDraftStatus(e.target.value as typeof draftStatus)}
               className="rounded-lg border border-surface-200 bg-transparent px-3 py-2 text-sm dark:border-surface-700"
             >
               <option value="all">All Status</option>
@@ -365,11 +364,8 @@ export function RecoveryClient({
               <option value="upcoming">Upcoming</option>
             </select>
             <select
-              value={typeFilter}
-              onChange={(e) => {
-                setTypeFilter(e.target.value);
-                setPage(0);
-              }}
+              value={draftType}
+              onChange={(e) => setDraftType(e.target.value)}
               className="rounded-lg border border-surface-200 bg-transparent px-3 py-2 text-sm capitalize dark:border-surface-700"
             >
               <option value="all">All Customers</option>
@@ -382,25 +378,20 @@ export function RecoveryClient({
               <CalendarClock className="h-4 w-4 text-surface-400" />
               <input
                 type="date"
-                value={dueFrom}
-                onChange={(e) => {
-                  setDueFrom(e.target.value);
-                  setPage(0);
-                }}
+                value={draftDueFrom}
+                onChange={(e) => setDraftDueFrom(e.target.value)}
                 className="bg-transparent text-xs text-surface-600 dark:text-surface-300"
               />
               <span className="text-surface-400">–</span>
               <input
                 type="date"
-                value={dueTo}
-                onChange={(e) => {
-                  setDueTo(e.target.value);
-                  setPage(0);
-                }}
+                value={draftDueTo}
+                onChange={(e) => setDraftDueTo(e.target.value)}
                 className="bg-transparent text-xs text-surface-600 dark:text-surface-300"
               />
             </div>
-          </div>
+            <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700">Apply</button>
+          </form>
 
           {/* ---- Bulk action buttons ---- */}
           <div className="flex flex-wrap items-center gap-2 border-b border-surface-100 p-3 dark:border-surface-800">

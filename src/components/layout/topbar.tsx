@@ -51,6 +51,9 @@ export async function Topbar({
             placeholder={searchPlaceholder}
             className="w-full bg-transparent py-2 text-sm text-surface-800 placeholder:text-surface-400 focus:outline-none dark:text-surface-100"
           />
+          <button type="submit" className="-mr-2 rounded-md bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700">
+            Apply
+          </button>
         </form>
       </div>
       <div className="flex items-center gap-1 sm:gap-3">

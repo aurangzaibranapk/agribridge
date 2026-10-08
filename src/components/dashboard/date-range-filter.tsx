@@ -16,6 +16,11 @@ export function DateRangeFilter({ current, from, to }: { current: DateRangeKey; 
     setLoading(false);
   }, [pathname, searchParams]);
 
+  useEffect(() => {
+    setCustomFrom(from ?? "");
+    setCustomTo(to ?? "");
+  }, [from, to]);
+
   // 19 September, malik: "Today/Yesterday/Month koi bhi select karein
   // to select nahi hota, na hi data milta hai." `router.push` akele
   // Next.js ke client-side route cache ki wajah se purana (cached)
@@ -98,10 +103,7 @@ export function DateRangeFilter({ current, from, to }: { current: DateRangeKey; 
             type="date"
             value={customFrom}
             max={customTo || undefined}
-            onChange={(e) => {
-              setCustomFrom(e.target.value);
-              applyCustom(e.target.value, customTo);
-            }}
+            onChange={(e) => setCustomFrom(e.target.value)}
             className="rounded-lg border border-surface-200 bg-white px-2 py-1 text-xs text-surface-700 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-200"
           />
           <span className="text-xs text-surface-400">se</span>
@@ -109,12 +111,17 @@ export function DateRangeFilter({ current, from, to }: { current: DateRangeKey; 
             type="date"
             value={customTo}
             min={customFrom || undefined}
-            onChange={(e) => {
-              setCustomTo(e.target.value);
-              applyCustom(customFrom, e.target.value);
-            }}
+            onChange={(e) => setCustomTo(e.target.value)}
             className="rounded-lg border border-surface-200 bg-white px-2 py-1 text-xs text-surface-700 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-200"
           />
+          <button
+            type="button"
+            disabled={!customFrom || !customTo || loading}
+            onClick={() => applyCustom(customFrom, customTo)}
+            className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Apply
+          </button>
         </div>
       )}
     </div>
