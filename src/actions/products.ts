@@ -138,7 +138,7 @@ export async function quickCreateProduct(input: {
   sellingPrice?: number | null;
   wholesalePrice?: number | null;
   mrpPrice?: number | null;
-}): Promise<{ id: string } | { error: string }> {
+}): Promise<{ id: string; productCode: string | null } | { error: string }> {
   const supabase = createClient();
   const { userId, isUnrestricted, permission } = await getPermissionContext(supabase);
   if (!isUnrestricted && !permission?.can_add) {
@@ -167,7 +167,7 @@ export async function quickCreateProduct(input: {
       is_verified: isUnrestricted || permission?.add_needs_approval === false,
       created_by: userId,
     })
-    .select("id")
+    .select("id, product_code")
     .single();
   if (error || !data) return { error: error?.message ?? "Product nahi ban saka." };
 
@@ -181,7 +181,7 @@ export async function quickCreateProduct(input: {
   revalidatePath("/admin/products");
   revalidatePath("/admin/products/bill-rates");
 
-  return { id: data.id };
+  return { id: data.id, productCode: data.product_code ?? null };
 }
 
 export async function updateProduct(_prev: FormState, formData: FormData): Promise<FormState> {

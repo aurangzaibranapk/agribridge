@@ -3,11 +3,12 @@ import { billCsvDate } from "./bill-csv-date";
 import { matchBillProduct, normalizeBillProduct, parseBillNumber, purchaseLineTotal } from "./bill-math";
 
 const aliases = {
+  code: ["code", "product code", "item code", "sku", "sku code"],
   product: ["product", "product name", "item", "item name", "name", "naam", "cheez"],
-  pack: ["pack", "pack size", "unit", "size"],
+  pack: ["pack", "pack size", "pack/quanti", "pack/quenti", "pack/quantity", "unit", "size"],
   qty: ["qty", "quantity", "tadad", "stock", "quantity bottles", "bottle quantity", "quantity packs", "pack quantity"],
   purchase: ["purchase rate", "purchase price", "trade rate", "trade", "cost", "lagat", "trade rate pack", "trade rate per pack", "purchase rate pack"],
-  sale: ["sale rate", "sale price", "selling rate", "selling price", "retail", "retail rate", "retail rate bottle", "retail rate per bottle"],
+  sale: ["sale rate", "sale price", "selling rate", "selling price", "retail", "retail rate", "retail rate bottle", "retail rate botal", "retail rate per bottle"],
   wholesale: ["wholesale", "wholesale rate", "wholesale price", "thok", "thok rate", "wholesale rate pack", "wholesale rate per pack"],
   mrp: ["mrp", "mrp rate", "mrp price", "printed price"],
   expiry: ["expiry", "expiry date", "expiration date", "exp date"],
@@ -17,7 +18,7 @@ const aliases = {
 } as const;
 type Master = { id: string; name: string; product_code?: string | null; pack_size?: string | null; unit?: string | null; units_per_pack?: number | null };
 export type BillCsvRow = {
-  sourceRow: number; name: string; product_id: string; quantity: string; unit_cost: string;
+  sourceRow: number; sourceCode: string; systemCode: string; name: string; product_id: string; quantity: string; unit_cost: string;
   sale_rate: string; wholesale_rate: string; mrp_rate: string; expiry_date: string;
   manufacture_date: string; batch_number: string; units_per_pack_override: string;
   pack_override: string; sourceQuantity: string; sourcePack: string; lineTotal: number | null;
@@ -39,6 +40,7 @@ export function importBillCsv(text: string, products: Master[]) {
     const sourceRow = index + 2;
     const get = (key: keyof typeof aliases) => String(cells[col(key)] ?? "").trim();
     const name = get("product");
+    const sourceCode = get("code");
     if (!name) { errors.push(`CSV row ${sourceRow}: product name khali hai.`); continue; }
     const pack = get("pack");
     const expression = /^(\d+)\s*[×xX*]\s*(\d+)$/.exec(pack);
@@ -60,7 +62,10 @@ export function importBillCsv(text: string, products: Master[]) {
     const key = normalizeBillProduct(name);
     if (names.has(key)) warnings.push(`CSV rows ${names.get(key)} aur ${sourceRow}: ${name} dobara hai; product aur pack verify karein.`);
     else names.set(key, sourceRow);
-    let product = matchBillProduct(products, name, expression && packRate ? "" : pack);
+    let product = matchBillProduct(products, name, expression && packRate ? "" : pack, sourceCode);
+    if (sourceCode && product && normalizeBillProduct(product.product_code ?? "") !== normalizeBillProduct(sourceCode)) {
+      warnings.push(`CSV row ${sourceRow}: code ${sourceCode} Product Master mein nahi mila; name/pack se ${product.name} link hua.`);
+    }
     if (product && units && product.units_per_pack && product.units_per_pack > 1 && units !== product.units_per_pack) {
       warnings.push(`CSV row ${sourceRow}: ${name} ke master pack mein ${product.units_per_pack} items hain, CSV mein ${units}; pehle sahi product/pack chunein.`);
       product = null;
@@ -69,7 +74,7 @@ export function importBillCsv(text: string, products: Master[]) {
     for (const dateKey of ["expiry", "manufacture"] as const) if (get(dateKey) && !billCsvDate(get(dateKey))) errors.push(`CSV row ${sourceRow}: ${dateKey} date DD-MM-YYYY ya YYYY-MM-DD mein likhein.`);
     for (const rateKey of ["sale", "wholesale", "mrp"] as const) if (get(rateKey) && parseBillNumber(get(rateKey)) === null) errors.push(`CSV row ${sourceRow}: ${rateKey} rate invalid hai.`);
     const numeric = (key: "sale" | "wholesale" | "mrp") => get(key) ? String(parseBillNumber(get(key)) ?? get(key)) : "";
-    rows.push({ sourceRow, name, product_id: product?.id ?? "", quantity: quantity === null ? get("qty") : String(quantity),
+    rows.push({ sourceRow, sourceCode, systemCode: product?.product_code ?? "", name, product_id: product?.id ?? "", quantity: quantity === null ? get("qty") : String(quantity),
       unit_cost: String(parseBillNumber(unit_cost) ?? unit_cost), sale_rate: numeric("sale"), wholesale_rate: numeric("wholesale"), mrp_rate: numeric("mrp"),
       expiry_date: billCsvDate(get("expiry")), manufacture_date: billCsvDate(get("manufacture")), batch_number: get("batch"),
       units_per_pack_override: packRate && units ? String(units) : "", pack_override: product?.pack_size ?? product?.unit ?? (expression && packRate ? "" : pack),

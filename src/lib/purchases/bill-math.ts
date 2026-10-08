@@ -40,8 +40,13 @@ export function normalizeBillProduct(value: string): string {
 
 /** A duplicate name or wrong pack must be resolved by the user, never guessed. */
 export function matchBillProduct<T extends { id: string; name: string; product_code?: string | null; pack_size?: string | null; unit?: string | null }>(
-  products: T[], name: string, pack = ""
+  products: T[], name: string, pack = "", productCode = ""
 ): T | null {
+  const wantedCode = normalizeBillProduct(productCode);
+  if (wantedCode) {
+    const codeMatches = products.filter((p) => p.product_code && normalizeBillProduct(p.product_code) === wantedCode);
+    if (codeMatches.length === 1) return codeMatches[0];
+  }
   const wanted = normalizeBillProduct(name), wantedPack = normalizeBillProduct(pack);
   let matches = products.filter((p) => normalizeBillProduct(p.name) === wanted || (p.product_code && normalizeBillProduct(p.product_code) === wanted));
   if (wantedPack) matches = matches.filter((p) => normalizeBillProduct(p.pack_size ?? p.unit ?? "") === wantedPack);

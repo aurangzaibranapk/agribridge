@@ -377,7 +377,7 @@ export function SupplierBillClient({
       pack_size: newProductPack.trim() || null, units_per_pack: null, unit: units.find((unit) => unit.code === newProductUnit)?.label ?? null,
       purchase_price: purchaseRate, selling_price: Number(newProductSale) || 0,
       mrp_price: Number(newProductMrp) || null, wholesale_price: Number(newProductWholesale) || null,
-      trade_rate_pending: false, product_code: null,
+      trade_rate_pending: false, product_code: result.productCode,
     };
     setProducts((previous) => [...previous.filter((p) => p.id !== created.id), created].sort((a, b) => a.name.localeCompare(b.name)));
     setLines((previous) => {
@@ -427,22 +427,32 @@ export function SupplierBillClient({
       if (csvInputRef.current) csvInputRef.current.value = "";
       return;
     }
-    setCsvPreview(importBillCsv(text, products));
+    const imported = importBillCsv(text, products);
+    const draftHasData = lines.some((line) => line.product_id || line.query.trim() || line.quantity.trim() || line.unit_cost.trim());
+    if (!imported.errors.length && imported.rows.length > 0 && !draftHasData) {
+      applyCsv(imported, false);
+    } else {
+      setCsvPreview(imported);
+    }
     if (csvInputRef.current) csvInputRef.current.value = "";
   }
 
-  function acceptCsv(append: boolean) {
-    if (!csvPreview || csvPreview.errors.length) return;
-    const imported = csvPreview.rows.map(row => ({
+  function applyCsv(csv: ReturnType<typeof importBillCsv>, append: boolean) {
+    const imported = csv.rows.map(row => ({
       ...newLineWithDefaults(), ...row, row_id: emptyLine().row_id,
       query: row.name, pickerOpen: false,
       batch_number: row.batch_number || billNo,
       manufacture_date: row.manufacture_date || billDate,
     }));
     setLines(previous => append ? [...previous.filter(row => row.query.trim() || row.product_id || row.quantity.trim()), ...imported] : imported);
-    setCsvNotice(`${imported.length} CSV lines import ho gayin. Qty packs mein hai; sale/MRP per item. ${csvPreview.warnings.join(" ")}`);
+    setCsvNotice(`${imported.length} CSV lines auto-fill ho gayin. Code, pack, quantity aur tamam rates CSV se aa gaye. Qty packs mein hai; sale/MRP per item. ${csv.warnings.join(" ")}`);
     setValidationError("");
     setCsvPreview(null);
+  }
+
+  function acceptCsv(append: boolean) {
+    if (!csvPreview || csvPreview.errors.length) return;
+    applyCsv(csvPreview, append);
   }
 
   return (
@@ -472,11 +482,11 @@ export function SupplierBillClient({
 
       {csvPreview && <section role="dialog" aria-label="CSV Import Preview" className="rounded-2xl border border-brand-200 bg-white p-4 shadow-sm dark:bg-surface-900">
         <h2 className="text-lg font-semibold">CSV Import Preview — {csvPreview.rows.length} lines</h2>
-        <p className="my-2 text-sm text-surface-600">Bill quantity packs mein hai. Pack 10×6 aur Quantity 60 bottles ho to 10 packs × trade rate calculate hoga. Amount column purana total overwrite nahi karega.</p>
+        <p className="my-2 text-sm text-surface-600">Bill quantity packs mein hai. Pack 10×6 aur Quantity 60 bottles ho to 10 packs × trade rate calculate hoga. Product Code se exact master link hoga. Amount column purana total overwrite nahi karega.</p>
         {csvPreview.errors.map((message, i) => <p key={`error-${i}`} role="alert" className="my-1 text-xs text-red-700">{message}</p>)}
         {csvPreview.warnings.map((message, i) => <p key={`warning-${i}`} className="my-1 text-xs text-amber-800">{message}</p>)}
-        <div className="my-3 max-h-80 overflow-auto"><table className="w-full text-left text-xs"><thead><tr><th className="p-2">Product / Master link</th><th className="p-2">CSV pack / Qty</th><th className="p-2">Bill Qty (packs)</th><th className="p-2">Trade / pack</th><th className="p-2">Calculated total</th><th className="p-2">Expiry</th></tr></thead><tbody>
-          {csvPreview.rows.map(row => <tr key={row.sourceRow} className="border-t"><td className="p-2">{row.name}<span className="block text-surface-500">{row.product_id ? "Existing product linked" : "Search se link karna hai"}</span></td><td className="p-2">{row.sourcePack} / {row.sourceQuantity}</td><td className="p-2">{row.quantity}</td><td className="p-2">Rs {row.unit_cost}</td><td className="p-2">{row.lineTotal === null ? "Invalid" : `Rs ${row.lineTotal.toLocaleString("en-PK")}`}</td><td className="p-2">{row.expiry_date || "—"}</td></tr>)}
+        <div className="my-3 max-h-80 overflow-auto"><table className="w-full min-w-[1180px] text-left text-xs"><thead><tr><th className="p-2">Code</th><th className="p-2">Product / Master link</th><th className="p-2">Pack</th><th className="p-2">Total items</th><th className="p-2">Bill Qty</th><th className="p-2">Trade / pack</th><th className="p-2">Wholesale / pack</th><th className="p-2">Retail / item</th><th className="p-2">MRP / item</th><th className="p-2">Calculated amount</th><th className="p-2">Expiry</th></tr></thead><tbody>
+          {csvPreview.rows.map(row => <tr key={row.sourceRow} className="border-t"><td className="p-2 font-mono">{row.systemCode || <span className="font-sans text-surface-500">Auto on create</span>}</td><td className="p-2">{row.name}<span className="block text-surface-500">{row.product_id ? "Existing product linked" : "Search se link karna hai"}</span>{row.sourceCode && row.sourceCode !== row.systemCode && <span className="block text-[10px] text-surface-400">CSV reference: {row.sourceCode}</span>}</td><td className="p-2">{row.sourcePack || "—"}</td><td className="p-2">{row.sourceQuantity}</td><td className="p-2">{row.quantity} packs</td><td className="p-2">Rs {row.unit_cost}</td><td className="p-2">{row.wholesale_rate ? `Rs ${row.wholesale_rate}` : "—"}</td><td className="p-2">{row.sale_rate ? `Rs ${row.sale_rate}` : "—"}</td><td className="p-2">{row.mrp_rate ? `Rs ${row.mrp_rate}` : "—"}</td><td className="p-2">{row.lineTotal === null ? "Invalid" : `Rs ${row.lineTotal.toLocaleString("en-PK")}`}</td><td className="p-2">{row.expiry_date || "—"}</td></tr>)}
         </tbody></table></div>
         <p className="mb-3 font-semibold">CSV Subtotal: Rs {purchaseBillTotals(csvPreview.rows).subtotal.toLocaleString("en-PK")}</p>
         <div className="flex flex-wrap gap-2">

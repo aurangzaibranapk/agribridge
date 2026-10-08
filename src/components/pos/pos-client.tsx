@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { BINA_QISM } from "@/lib/pos/constants";
 import Link from "next/link";
@@ -156,6 +157,7 @@ export function PosClient({
   lang: Lang;
 }) {
   const supabase = createClient();
+  const router = useRouter();
   // Sale ke baad stock ka badge foran kam dikhna chahiye -- warna banda
   // dekhta hai "29" wahin ka wahin, jab ke bottle bik chuki hai (malik,
   // 16 September). Godam se asal deduction server par ho chuki hoti hai
@@ -208,6 +210,10 @@ export function PosClient({
   useEffect(() => {
     barcodeRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    setInventory(initialInventory);
+  }, [initialInventory]);
 
   useEffect(() => {
     registerSender("pos.sale", async (action) => {
@@ -455,6 +461,18 @@ export function PosClient({
     setDiscountReason("");
     setReceivedBy("");
     barcodeRef.current?.focus();
+  }
+
+  function closeReceiptAndRefreshProducts() {
+    setCompletedSaleId(null);
+    setOfflineReceipt(null);
+    setSearch("");
+    setGroup("");
+    setSortBy("");
+    setBarcodeError(null);
+    setMessage(null);
+    router.refresh();
+    requestAnimationFrame(() => barcodeRef.current?.focus());
   }
 
   function addPaymentLine() {
@@ -820,8 +838,8 @@ export function PosClient({
         {message && <div className={`rounded-lg px-3 py-2 text-sm ${message.type === "success" ? "bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-300" : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"}`}>{message.text}</div>}
         <div className="flex gap-2"><button type="button" onClick={resetSale} disabled={submitting || cart.length === 0} className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-500 hover:bg-surface-50 disabled:opacity-40 dark:border-surface-700 dark:text-surface-400 dark:hover:bg-surface-800">{t("pos_clear_cart", lang)}</button><Button data-guide="pos-checkout" className="flex-1 py-3 text-base" onClick={handleCheckout} disabled={submitting || cart.length === 0}>{submitting ? "Processing..." : "Checkout"}</Button></div>
       </Card>
-      {completedSaleId && <ReceiptModal saleId={completedSaleId} onClose={() => setCompletedSaleId(null)} lang={lang} />}
-      {offlineReceipt && <OfflineReceiptModal receipt={offlineReceipt} onClose={() => setOfflineReceipt(null)} />}
+      {completedSaleId && <ReceiptModal saleId={completedSaleId} onClose={closeReceiptAndRefreshProducts} lang={lang} />}
+      {offlineReceipt && <OfflineReceiptModal receipt={offlineReceipt} onClose={closeReceiptAndRefreshProducts} />}
       {showCameraModal && <BarcodeCameraModal onDetected={handleCameraDetected} onClose={() => setShowCameraModal(false)} lang={lang} />}
     </div>
   );

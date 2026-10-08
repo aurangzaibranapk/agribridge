@@ -22,6 +22,11 @@ export function OfflineReceiptModal({ receipt, onClose }: { receipt: OfflineRece
     day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
 
+  function handlePrint() {
+    window.print();
+    onClose();
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 print:static print:block print:bg-transparent print:p-0">
       <style>{`@media print { @page { size:80mm auto; margin:0; } html,body { width:80mm; height:auto!important; min-height:0!important; margin:0!important; padding:0!important; overflow:visible!important; background:#fff; } body * { visibility:hidden; } #offline-receipt-print, #offline-receipt-print * { visibility:visible; } #offline-receipt-print { position:relative!important; left:auto!important; top:auto!important; width:74mm!important; max-width:74mm!important; height:auto!important; max-height:none!important; margin:0!important; padding:2mm!important; box-sizing:border-box; overflow:visible!important; color:#000!important; } #offline-receipt-print tr, #offline-receipt-print .offline-totals, #offline-receipt-print .offline-footer { break-inside:avoid!important; page-break-inside:avoid!important; } #offline-receipt-print .offline-watermark img { display:block!important; } } .offline-watermark { position:absolute; inset:0; z-index:0; pointer-events:none; opacity:.18; background-image:linear-gradient(45deg,transparent 49.5%,rgba(242,139,36,.18) 49.8%,rgba(242,139,36,.18) 50.2%,transparent 50.5%),linear-gradient(-45deg,transparent 49.5%,rgba(242,139,36,.18) 49.8%,rgba(242,139,36,.18) 50.2%,transparent 50.5%); background-size:180px 180px; } .offline-watermark img { position:absolute; left:50%; top:50%; width:82%; transform:translate(-50%,-50%); opacity:.62; } #offline-receipt-print { position:relative; overflow:hidden; } #offline-receipt-print > *:not(.offline-watermark) { position:relative; z-index:1; }`}</style>
@@ -54,7 +59,7 @@ export function OfflineReceiptModal({ receipt, onClose }: { receipt: OfflineRece
           <div className="my-3 border-t-2 border-dashed border-black" />
           <p className="text-center text-xs">Official sale number sync ke baad milega.</p>
         </div>
-        <div className="mt-4 print:hidden"><Button className="w-full" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print Slip</Button></div>
+        <div className="mt-4 print:hidden"><Button className="w-full" onClick={handlePrint}><Printer className="h-4 w-4" /> Print Slip</Button></div>
       </div>
     </div>
   );

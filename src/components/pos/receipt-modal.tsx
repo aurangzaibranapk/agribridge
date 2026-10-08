@@ -126,6 +126,7 @@ export function ReceiptModal({
 
   function handlePrint() {
     window.print();
+    onClose();
   }
 
   return (
