@@ -4,7 +4,7 @@ import { CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { AlertTriangle } from "lucide-react";
-import { RecoveryClient, type RecoveryParty, type ReminderTemplate } from "./recovery-client";
+import { RecoveryClient, type CollectedPayment, type RecoveryParty, type ReminderTemplate } from "./recovery-client";
 
 export const dynamic = "force-dynamic";
 
@@ -93,12 +93,23 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
   // yahan gin jati hai.
   const { data: collectedRows } = await loose
     .from("journal_lines")
-    .select("credit, journal_entries!inner(entry_date)")
+    .select("id,credit,account_code,party_type,party_id,memo,journal_entries!inner(entry_date,entry_number,description,source_module)")
     .in("account_code", ["1100", "1150"])
     .gt("credit", 0)
     .eq("journal_entries.entry_date", today);
   const collectedToday = (collectedRows ?? []).reduce((s: number, r: any) => s + Number(r.credit || 0), 0);
   const collectedTodayCount = (collectedRows ?? []).length;
+  const collectedPayments: CollectedPayment[] = (collectedRows ?? []).map((row: any) => ({
+    id: row.id,
+    entryNumber: row.journal_entries?.entry_number ?? "—",
+    description: row.journal_entries?.description ?? "Received payment",
+    sourceModule: row.journal_entries?.source_module ?? "ledger",
+    accountCode: row.account_code,
+    amount: Number(row.credit || 0),
+    partyType: row.party_type ?? null,
+    partyId: row.party_id ?? null,
+    memo: row.memo ?? null,
+  }));
 
   const reminderTemplates: ReminderTemplate[] = (templates ?? []).map((t: any) => ({
     id: t.id,
@@ -171,6 +182,7 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
         overdueCount={overdueParties.length}
         collectedToday={collectedToday}
         collectedTodayCount={collectedTodayCount}
+        collectedPayments={collectedPayments}
         failedCount={failedCount}
       />
     </div>

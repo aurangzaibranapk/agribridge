@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -47,6 +47,18 @@ export type ReminderTemplate = {
   channel: string;
   body: string;
   stage: string;
+};
+
+export type CollectedPayment = {
+  id: string;
+  entryNumber: string;
+  description: string;
+  sourceModule: string;
+  accountCode: string;
+  amount: number;
+  partyType: string | null;
+  partyId: string | null;
+  memo: string | null;
 };
 
 const PAGE_SIZE = 8;
@@ -106,6 +118,7 @@ export function RecoveryClient({
   overdueCount,
   collectedToday,
   collectedTodayCount,
+  collectedPayments,
   failedCount,
 }: {
   parties: RecoveryParty[];
@@ -117,6 +130,7 @@ export function RecoveryClient({
   overdueCount: number;
   collectedToday: number;
   collectedTodayCount: number;
+  collectedPayments: CollectedPayment[];
   failedCount: number;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -159,6 +173,30 @@ export function RecoveryClient({
   const [notice, setNotice] = useState("");
   const [channel, setChannel] = useState<(typeof CHANNELS)[number]["key"]>("whatsapp");
   const [previewKey, setPreviewKey] = useState<string | null>(null);
+  const [summaryView, setSummaryView] = useState<"receivable" | "due_today" | "overdue" | "collected">("receivable");
+  const recordsRef = useRef<HTMLDivElement>(null);
+  const collectedRef = useRef<HTMLDivElement>(null);
+
+  function openReceivableSummary(nextStatus: "all" | "due_today" | "overdue") {
+    setSummaryView(nextStatus === "all" ? "receivable" : nextStatus);
+    setSearch("");
+    setDraftSearch("");
+    setStatusFilter(nextStatus);
+    setDraftStatus(nextStatus);
+    setTypeFilter("all");
+    setDraftType("all");
+    setDueFrom("");
+    setDraftDueFrom("");
+    setDueTo("");
+    setDraftDueTo("");
+    setPage(0);
+    requestAnimationFrame(() => recordsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
+
+  function openCollectedSummary() {
+    setSummaryView("collected");
+    requestAnimationFrame(() => collectedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }
 
   const key = (p: RecoveryParty) => `${p.type}:${p.id}`;
 
@@ -284,7 +322,7 @@ export function RecoveryClient({
       <div className="flex min-h-0 flex-col gap-4">
         {/* ---- Stat cards ---- */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="flex items-start gap-3 rounded-card border border-emerald-100 bg-emerald-50 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+          <button type="button" onClick={() => openReceivableSummary("all")} className={`flex w-full items-start gap-3 rounded-card border bg-emerald-50 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-emerald-950/20 ${summaryView === "receivable" ? "border-emerald-500 ring-1 ring-emerald-400" : "border-emerald-100 dark:border-emerald-900/40"}`}>
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white">
               <Wallet className="h-5 w-5" />
             </span>
@@ -293,8 +331,8 @@ export function RecoveryClient({
               <p className="font-display text-xl font-semibold text-emerald-900 dark:text-emerald-100">{rs(totalReceivable)}</p>
               <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80">Across {parties.length} customers</p>
             </div>
-          </div>
-          <div className="flex items-start gap-3 rounded-card border border-amber-100 bg-amber-50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20">
+          </button>
+          <button type="button" onClick={() => openReceivableSummary("due_today")} className={`flex w-full items-start gap-3 rounded-card border bg-amber-50 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-500 dark:bg-amber-950/20 ${summaryView === "due_today" ? "border-amber-500 ring-1 ring-amber-400" : "border-amber-100 dark:border-amber-900/40"}`}>
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white">
               <CalendarClock className="h-5 w-5" />
             </span>
@@ -305,8 +343,8 @@ export function RecoveryClient({
                 {dueTodayCount} customer{dueTodayCount === 1 ? "" : "s"}
               </p>
             </div>
-          </div>
-          <div className="flex items-start gap-3 rounded-card border border-red-100 bg-red-50 p-4 dark:border-red-900/40 dark:bg-red-950/20">
+          </button>
+          <button type="button" onClick={() => openReceivableSummary("overdue")} className={`flex w-full items-start gap-3 rounded-card border bg-red-50 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-red-950/20 ${summaryView === "overdue" ? "border-red-500 ring-1 ring-red-400" : "border-red-100 dark:border-red-900/40"}`}>
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-600 text-white">
               <AlertTriangle className="h-5 w-5" />
             </span>
@@ -317,8 +355,8 @@ export function RecoveryClient({
                 {overdueCount} customer{overdueCount === 1 ? "" : "s"}
               </p>
             </div>
-          </div>
-          <div className="flex items-start gap-3 rounded-card border border-emerald-100 bg-emerald-50 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+          </button>
+          <button type="button" onClick={openCollectedSummary} className={`flex w-full items-start gap-3 rounded-card border bg-emerald-50 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:bg-emerald-950/20 ${summaryView === "collected" ? "border-emerald-500 ring-1 ring-emerald-400" : "border-emerald-100 dark:border-emerald-900/40"}`}>
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white">
               <CheckCircle2 className="h-5 w-5" />
             </span>
@@ -329,10 +367,28 @@ export function RecoveryClient({
                 {collectedTodayCount} payment{collectedTodayCount === 1 ? "" : "s"}
               </p>
             </div>
-          </div>
+          </button>
         </div>
 
-        <div className="rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
+        {summaryView === "collected" && (
+          <div ref={collectedRef} className="scroll-mt-20 rounded-card border border-emerald-200 bg-white shadow-card dark:border-emerald-900/50 dark:bg-surface-900">
+            <div className="border-b border-surface-100 p-4 dark:border-surface-800">
+              <h2 className="font-display text-sm font-semibold text-surface-900 dark:text-white">Collected Today — Payment Details</h2>
+              <p className="mt-1 text-xs text-surface-500">Aaj receivable accounts 1100/1150 mein post hui tamam recovery entries.</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead className="bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800"><tr><th className="px-4 py-2">Entry</th><th className="px-4 py-2">Detail</th><th className="px-4 py-2">Party</th><th className="px-4 py-2">Source</th><th className="px-4 py-2 text-right">Received</th></tr></thead>
+                <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
+                  {collectedPayments.map((payment) => <tr key={payment.id}><td className="px-4 py-2 font-mono text-xs">{payment.entryNumber}</td><td className="px-4 py-2">{payment.memo || payment.description}</td><td className="px-4 py-2 capitalize">{payment.partyType ?? "—"}</td><td className="px-4 py-2"><span className="capitalize">{payment.sourceModule.replaceAll("_", " ")}</span><span className="ml-2 text-xs text-surface-400">{payment.accountCode}</span></td><td className="px-4 py-2 text-right font-semibold tabular-nums">{rs(payment.amount)}</td></tr>)}
+                  {collectedPayments.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-surface-400">Aaj koi received payment post nahi hui.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        <div ref={recordsRef} className="scroll-mt-20 rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-surface-100 p-4 dark:border-surface-800">
             <h2 className="flex items-center gap-1.5 font-display text-sm font-semibold text-surface-900 dark:text-white">
               <Users className="h-4 w-4 text-surface-400" /> Outstanding Customers &amp; Farmers
