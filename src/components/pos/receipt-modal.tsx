@@ -149,7 +149,15 @@ export function ReceiptModal({
       <style>{`
         @media print {
           @page { size: 80mm auto; margin: 0; }
-          html, body { width: 80mm; margin: 0 !important; padding: 0 !important; background: #fff; }
+          html, body {
+            width: 80mm;
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            background: #fff;
+          }
           /* 18 September, malik: print par receipt ke upar/neeche
              peeche wale safhe ka content (jaise Khata ki table, Sold/
              Can Return button) bhi chhap raha tha -- receipt ka koi
@@ -160,15 +168,24 @@ export function ReceiptModal({
           body * { visibility: hidden; }
           #receipt-print-area, #receipt-print-area * { visibility: visible; }
           #receipt-print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
+            position: relative !important;
+            left: auto !important;
+            top: auto !important;
             width: 74mm !important;
             max-width: 74mm !important;
+            height: auto !important;
+            max-height: none !important;
             margin: 0 !important;
             padding: 2mm !important;
             box-sizing: border-box;
-            overflow: hidden !important;
+            overflow: visible !important;
+          }
+          #receipt-print-area tr,
+          #receipt-print-area .receipt-totals,
+          #receipt-print-area .receipt-balances,
+          #receipt-print-area .receipt-footer {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
           }
           /* Halka grey thermal printer par mit jata hai -- print ke
              liye sab kuch pakka siyah, aur dashed lines mota. */
@@ -264,7 +281,7 @@ export function ReceiptModal({
 
             <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400 dark:border-surface-700" />
 
-            <div className="space-y-1 text-xs">
+            <div className="receipt-totals space-y-1 text-xs">
               <ReceiptRow label={t("pos_grand_total", lang)} value={`Rs ${receipt.total_amount.toLocaleString()}`} strong />
               {receipt.cash_paid > 0 && (
                 <ReceiptRow label={t("pos_cash_paid", lang)} value={`Rs ${receipt.cash_paid.toLocaleString()}`} />
@@ -277,7 +294,7 @@ export function ReceiptModal({
             {receipt.customer_name && (
               <>
                 <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400 dark:border-surface-700" />
-                <div className="space-y-1 text-xs">
+                <div className="receipt-balances space-y-1 text-xs">
                   <ReceiptRow
                     label="Saqba Balance"
                     value={`Rs ${Math.max(0, receipt.outstanding_balance - receipt.khata_amount).toLocaleString()}`}
@@ -297,10 +314,12 @@ export function ReceiptModal({
               </>
             )}
 
-            <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400 dark:border-surface-700" />
-            <p className="text-center text-xs font-medium text-surface-600 dark:text-surface-400">{t("pos_thank_you", lang)}</p>
-            <p className="text-center text-[11px] text-surface-500">{t("at_pos_by", lang)}</p>
-            <p className="text-center text-[11px] text-surface-500">📞 0312-6513294</p>
+            <div className="receipt-footer">
+              <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400 dark:border-surface-700" />
+              <p className="text-center text-xs font-medium text-surface-600 dark:text-surface-400">{t("pos_thank_you", lang)}</p>
+              <p className="text-center text-[11px] text-surface-500">{t("at_pos_by", lang)}</p>
+              <p className="text-center text-[11px] text-surface-500">📞 0312-6513294</p>
+            </div>
 
             <div className="mt-4 flex gap-2 print:hidden">
               <Button variant="secondary" className="flex-1" onClick={handlePrint}>
