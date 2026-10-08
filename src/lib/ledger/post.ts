@@ -118,6 +118,30 @@ export async function postJournal(input: JournalInput): Promise<PostedEntry | { 
   }
 
   const service = createServiceClient();
+  // Purani source row dobara claim nahi ho sakti. Database pehli entry
+  // ko wapas de deta hai, is liye caller ko success nazar aata tha.
+  // Offline replay jismein wahi clientActionId ho, pehli entry rehti hai.
+  if (input.claims?.length) {
+    for (const claim of input.claims) {
+      const { data: prior } = await service
+        .from("journal_entry_sources")
+        .select("entry_id")
+        .eq("source_table", claim.table)
+        .eq("source_row_id", claim.rowId)
+        .limit(1)
+        .maybeSingle();
+      if (!prior?.entry_id) continue;
+      if (input.clientActionId) {
+        const { data: entry } = await service
+          .from("journal_entries")
+          .select("client_action_id")
+          .eq("id", prior.entry_id)
+          .maybeSingle();
+        if (entry?.client_action_id === input.clientActionId) continue;
+      }
+      return { error: "Ye qatar pehle se ledger mein darj hai. Dobara daawa nahi ho sakta." };
+    }
+  }
   const { data, error } = await (service as any).rpc("post_journal_atomic", { p_input: input });
   if (error) return { error: `Ledger posting nahi hui: ${error.message}` };
   if (!data?.id || !data?.entryNumber) return { error: "Ledger posting ka jawab nahi mila." };
