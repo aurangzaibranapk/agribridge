@@ -1,0 +1,38 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const ts = require('typescript');
+const cache = new Map();
+function load(file) {
+  file = path.resolve(file); if(cache.has(file)) return cache.get(file).exports;
+  const mod = {exports:{}}; cache.set(file,mod);
+  const req = name => load(name.startsWith('@/') ? `src/${name.slice(2)}.ts` : path.resolve(path.dirname(file),`${name}.ts`));
+  new Function('module','exports','require',ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText)(mod,mod.exports,req);
+  return mod.exports;
+}
+const {importBillCsv}=load('src/lib/purchases/bill-csv-import.ts');
+const {purchaseBillTotals}=load('src/lib/purchases/bill-math.ts');
+const header='Product Name,Expiry Date,Pack,Quantity,Trade Rate Pack,Wholesale Rate Pack,Retail Rate Bottle,MRP Rate,Amount';
+const csv=header+'\nCoke 2L,08-04-2027,10×6,60,1065.37,1090,220,230,10653.70';
+const master=[{id:'coke',name:'Coke 2L',pack_size:'2L',units_per_pack:6}];
+const parsed=importBillCsv(csv,master);
+assert.deepEqual(parsed.errors,[]); assert.equal(parsed.rows[0].quantity,'10');
+assert.equal(parsed.rows[0].product_id,'coke');assert.equal(parsed.rows[0].lineTotal,10653.7);
+assert.equal(parsed.rows[0].units_per_pack_override,'6');assert.equal(parsed.rows[0].expiry_date,'2027-04-08');
+assert.equal(parsed.rows[0].sale_rate,'220');assert.equal(parsed.rows[0].wholesale_rate,'1090');
+assert.equal(importBillCsv(csv,[]).rows[0].lineTotal,10653.7,'mapping not needed for math');
+assert.equal(importBillCsv(csv,[...master,{...master[0],id:'other'}]).rows[0].product_id,'','ambiguous names not auto-linked');
+assert.equal(importBillCsv(csv,[{...master[0],units_per_pack:12}]).rows[0].product_id,'','wrong pack blocked');
+assert.ok(importBillCsv(csv.replace(',60,',',59,'),master).errors.length,'bottle/pack mismatch must block import');
+assert.ok(importBillCsv(csv.replace('08-04-2027','31-02-2027'),master).errors.length,'invalid date retained as explicit error');
+assert.ok(importBillCsv(csv.replace('10653.70','99999'),master).warnings.some(w=>w.includes('calculated total')));
+assert.equal(importBillCsv('Product,Quantity,Trade Rate\nTilth,20,1970',[]).rows[0].lineTotal,39400);
+assert.equal(importBillCsv('Product,Pack,Quantity Packs,Trade Rate Pack\nCoke 2L,10x6,10,1065.37',master).rows[0].quantity,'10','explicit pack qty not converted twice');
+const rates=[1065.37,1030.05,753.41,753.41,980.06,1000.62,784.08,1000.62,451.44,534.60,1171.30,1171.30,753.41];
+const packs=[10,10,5,5,3,4,4,5,10,4,2,1,2];
+const totals=purchaseBillTotals(rates.map((r,i)=>({quantity:packs[i],unit_cost:r})),916.44,276.22,0);
+assert.equal(totals.subtotal,55243.9);assert.equal(totals.total,54603.68);assert.equal(totals.due,54603.68);
+assert.equal(purchaseBillTotals(rates.map((r,i)=>({quantity:packs[i],unit_cost:r})),916.44,276.22,54603.68).due,0);
+const duplicate=importBillCsv(header+'\nCoke 350ML,08-04-2027,4x12,48,784.08,798,80,90,3136.32\nCoke 350ML,08-04-2027,5x6,30,1000.62,1050,110,120,5003.10',[]);
+assert.ok(duplicate.warnings.some(w=>w.includes('dobara')));assert.equal(duplicate.rows.length,2,'never silently delete a duplicate row');
+console.log('PASS: CSV pack/bottle conversion, master matching, duplicate/date/amount validation, actual Coke invoice totals');

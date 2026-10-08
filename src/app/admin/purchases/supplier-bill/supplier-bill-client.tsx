@@ -1,5 +1,5 @@
 "use client";
-import { billCsvDate } from "@/lib/purchases/bill-csv-date";
+import { importBillCsv } from "@/lib/purchases/bill-csv-import";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,8 +12,8 @@ import {
 import { createPurchase, type ActionState } from "@/actions/purchases";
 import { quickCreateProduct } from "@/actions/products";
 import { aajKaKhana } from "@/lib/utils/format";
-import { looksBinary, parseDelimited } from "@/lib/csv";
-import { parseBillNumber, purchaseLineTotal, purchaseBillTotals, matchBillProduct, patchBillRow } from "@/lib/purchases/bill-math";
+import { looksBinary } from "@/lib/csv";
+import { parseBillNumber, purchaseLineTotal, purchaseBillTotals, patchBillRow } from "@/lib/purchases/bill-math";
 
 type Category = { id: string; name: string; parent_category_id: string | null; category_kind: string };
 type Product = {
@@ -57,23 +57,10 @@ function groupForCategory(categoryId: string | null, categories: Category[]): St
   return null;
 }
 
-const normalizeCsvHeader = (value: string) => value.trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
 const csvNumber = (value: string | undefined) => {
   const parsed = parseBillNumber(value);
   return parsed === null ? String(value ?? "").trim() : String(parsed);
 };
-const CSV_ALIASES = {
-  product: ["product", "product name", "item", "item name", "name", "naam", "cheez"],
-  pack: ["pack", "pack size", "unit", "size"],
-  qty: ["qty", "quantity", "tadad", "stock"],
-  purchase: ["purchase rate", "purchase price", "trade rate", "trade", "cost", "lagat"],
-  sale: ["sale rate", "sale price", "selling rate", "selling price", "retail", "retail rate"],
-  mrp: ["mrp", "mrp rate", "mrp price", "printed price"],
-  expiry: ["expiry", "expiry date", "expiration date", "exp date"],
-  batch: ["batch", "batch no", "batch number"],
-  manufacture: ["manufacture date", "manufacturing date", "mfg date"],
-  wholesale: ["wholesale", "wholesale rate", "wholesale price", "thok", "thok rate"],
-} as const;
 
 export function SupplierBillClient({
   suppliers, products: initialProducts, categories, companies, warehouses, accounts, units,
@@ -119,6 +106,7 @@ export function SupplierBillClient({
   const [newProductMrp, setNewProductMrp] = useState("");
   const [newProductWholesale, setNewProductWholesale] = useState("");
   const [csvNotice, setCsvNotice] = useState("");
+  const [csvPreview, setCsvPreview] = useState<ReturnType<typeof importBillCsv> | null>(null);
   const [validationError, setValidationError] = useState("");
   const [billNo, setBillNo] = useState("");
   const [billNoGenerating, setBillNoGenerating] = useState(false);
@@ -174,6 +162,7 @@ export function SupplierBillClient({
 
   // Intercept form submit — show review modal first (online), or queue offline
   function handleFormSubmit(e: React.FormEvent<HTMLFormElement>) {
+    if (csvPreview) { e.preventDefault(); setValidationError("Pehle CSV preview mein import ya cancel chunein. Purana draft galti se submit nahi hoga."); return; }
     const active = lines.filter((l) => l.query.trim() || l.product_id || l.quantity.trim() || l.unit_cost.trim());
     const unmapped = active.findIndex((l) => !l.product_id);
     const totals = purchaseBillTotals(active, discount, tax, paidAmount);
@@ -338,6 +327,12 @@ export function SupplierBillClient({
     if (rowId) setLines((previous) => patchBillRow(previous, rowId, patch));
   }
   function selectProduct(index: number, product: Product) {
+    const importedUnits = Number(lines[index]?.units_per_pack_override);
+    if (!lines[index]?.product_id && importedUnits > 1 && product.units_per_pack && product.units_per_pack > 1 && importedUnits !== product.units_per_pack) {
+      setValidationError(`Is CSV row mein ${importedUnits} items/pack hain, ${product.name} mein ${product.units_per_pack}. Sahi pack wala product chunein; stock ki ginti khud se nahi badlegi.`);
+      return;
+    }
+    setValidationError("");
     updateLine(index, {
       product_id: product.id,
       query: `${product.name}${product.pack_size ? ` · ${product.pack_size}` : ""}`,
@@ -347,7 +342,7 @@ export function SupplierBillClient({
       wholesale_rate: !lines[index]?.product_id && lines[index]?.wholesale_rate.trim() ? lines[index].wholesale_rate : product.wholesale_price != null && product.wholesale_price > 0 ? String(product.wholesale_price) : "",
       pickerOpen: false,
       pack_override: product.pack_size ?? product.unit ?? "",
-      units_per_pack_override: "",
+      units_per_pack_override: !lines[index]?.product_id ? lines[index]?.units_per_pack_override || "" : "",
     });
   }
   function openNewProduct(rowId?: string) {
@@ -424,81 +419,30 @@ export function SupplierBillClient({
   async function loadBillCsv(file: File | null) {
     if (!file) return;
     setCsvNotice("");
-    const text = await file.text();
+    let text: string;
+    try { text = await file.text(); }
+    catch { setCsvNotice("CSV file parhi nahi ja saki. Dobara file chunein; bill draft mehfooz hai."); if (csvInputRef.current) csvInputRef.current.value = ""; return; }
     if (looksBinary(text)) {
       setCsvNotice("Excel .xlsx file nahi chalegi. Excel se File → Save As → CSV bana kar upload karein.");
+      if (csvInputRef.current) csvInputRef.current.value = "";
       return;
     }
-    const rows = parseDelimited(text);
-    if (rows.length < 2) {
-      setCsvNotice("CSV mein heading aur kam az kam ek product line honi chahiye.");
-      return;
-    }
-    const headers = rows[0].map(normalizeCsvHeader);
-    const column = (aliases: readonly string[]) => headers.findIndex((header) => aliases.includes(header));
-    const productColumn = column(CSV_ALIASES.product);
-    if (productColumn < 0) {
-      setCsvNotice("CSV mein Product ya Product Name ka column nahi mila.");
-      return;
-    }
-    const packColumn = column(CSV_ALIASES.pack);
-    const qtyColumn = column(CSV_ALIASES.qty);
-    const purchaseColumn = column(CSV_ALIASES.purchase);
-    if (qtyColumn < 0 || purchaseColumn < 0) { setCsvNotice("CSV mein Quantity aur Trade Rate ke columns zaroori hain. Purana rate reuse nahi hoga."); return; }
-    const saleColumn = column(CSV_ALIASES.sale);
-    const mrpColumn = column(CSV_ALIASES.mrp);
-    const wholesaleColumn = column(CSV_ALIASES.wholesale);
-    const expiryColumn = column(CSV_ALIASES.expiry);
-    const batchColumn = column(CSV_ALIASES.batch);
-    const manufactureColumn = column(CSV_ALIASES.manufacture);
-    const imported: Line[] = [];
-    const missing: string[] = [];
-
-    for (const row of rows.slice(1)) {
-      const rawName = String(row[productColumn] ?? "").trim();
-      if (!rawName) continue;
-      const importedDates = {
-        expiry_date: expiryColumn >= 0 ? billCsvDate(row[expiryColumn]) : "",
-        manufacture_date: manufactureColumn >= 0 ? billCsvDate(row[manufactureColumn]) : "",
-        batch_number: batchColumn >= 0 ? String(row[batchColumn] ?? "").trim() : "",
-      };
-      const wantedPack = packColumn >= 0 ? String(row[packColumn] ?? "").trim() : "";
-      const product = matchBillProduct(products, rawName, wantedPack);
-      if (!product) {
-        missing.push(rawName);
-        // Line add karo — data saved rahega, user search se link kar sakta hai
-        imported.push({
-          ...newLineWithDefaults(),
-          ...importedDates,
-          query: rawName,
-          pack_override: wantedPack,
-          quantity: qtyColumn >= 0 ? csvNumber(row[qtyColumn]) : "",
-          unit_cost: purchaseColumn >= 0 ? csvNumber(row[purchaseColumn]) : "",
-          sale_rate: saleColumn >= 0 ? csvNumber(row[saleColumn]) : "",
-          mrp_rate: mrpColumn >= 0 ? csvNumber(row[mrpColumn]) : "",
-          wholesale_rate: wholesaleColumn >= 0 ? csvNumber(row[wholesaleColumn]) : "",
-        });
-        continue;
-      }
-      imported.push({
-        ...newLineWithDefaults(),
-        ...importedDates,
-        product_id: product.id,
-        query: `${product.name}${product.pack_size ? ` · ${product.pack_size}` : ""}`,
-        quantity: qtyColumn >= 0 ? csvNumber(row[qtyColumn]) : "",
-        unit_cost: purchaseColumn >= 0 ? csvNumber(row[purchaseColumn]) : (product.trade_rate_pending ? "" : String(product.purchase_price)),
-        sale_rate: saleColumn >= 0 ? csvNumber(row[saleColumn]) : (product.selling_price > 0 ? String(product.selling_price) : ""),
-        mrp_rate: mrpColumn >= 0 ? csvNumber(row[mrpColumn]) : (product.mrp_price ? String(product.mrp_price) : ""),
-        wholesale_rate: wholesaleColumn >= 0 ? csvNumber(row[wholesaleColumn]) : (product.wholesale_price ? String(product.wholesale_price) : ""),
-        pack_override: product.pack_size ?? product.unit ?? "",
-      });
-    }
-
-    if (imported.length) setLines(imported);
-    const parts = [`${imported.length} product lines CSV se bill mein aa gayin.`];
-    if (missing.length) parts.push(`${missing.length} naam Product Master mein nahi mile: ${missing.slice(0, 5).join(", ")}${missing.length > 5 ? "…" : ""} — amber lines mein search kar ke link karein.`);
-    setCsvNotice(parts.join(" "));
+    setCsvPreview(importBillCsv(text, products));
     if (csvInputRef.current) csvInputRef.current.value = "";
+  }
+
+  function acceptCsv(append: boolean) {
+    if (!csvPreview || csvPreview.errors.length) return;
+    const imported = csvPreview.rows.map(row => ({
+      ...newLineWithDefaults(), ...row, row_id: emptyLine().row_id,
+      query: row.name, pickerOpen: false,
+      batch_number: row.batch_number || billNo,
+      manufacture_date: row.manufacture_date || billDate,
+    }));
+    setLines(previous => append ? [...previous.filter(row => row.query.trim() || row.product_id || row.quantity.trim()), ...imported] : imported);
+    setCsvNotice(`${imported.length} CSV lines import ho gayin. Qty packs mein hai; sale/MRP per item. ${csvPreview.warnings.join(" ")}`);
+    setValidationError("");
+    setCsvPreview(null);
   }
 
   return (
@@ -525,6 +469,22 @@ export function SupplierBillClient({
       {state.success && syncStatus !== "synced" && <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200"><span className="flex items-center gap-2"><Check className="h-4 w-4" /> Bill save ho gaya. Stock tab charhega jab GRN par maal receive/count hoga.</span><Link href="/admin/purchases" className="font-semibold underline">Purchase kholein</Link></div>}
       {validationError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{validationError}</p>}
       {state.error && <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">{state.error}</p>}
+
+      {csvPreview && <section role="dialog" aria-label="CSV Import Preview" className="rounded-2xl border border-brand-200 bg-white p-4 shadow-sm dark:bg-surface-900">
+        <h2 className="text-lg font-semibold">CSV Import Preview — {csvPreview.rows.length} lines</h2>
+        <p className="my-2 text-sm text-surface-600">Bill quantity packs mein hai. Pack 10×6 aur Quantity 60 bottles ho to 10 packs × trade rate calculate hoga. Amount column purana total overwrite nahi karega.</p>
+        {csvPreview.errors.map((message, i) => <p key={`error-${i}`} role="alert" className="my-1 text-xs text-red-700">{message}</p>)}
+        {csvPreview.warnings.map((message, i) => <p key={`warning-${i}`} className="my-1 text-xs text-amber-800">{message}</p>)}
+        <div className="my-3 max-h-80 overflow-auto"><table className="w-full text-left text-xs"><thead><tr><th className="p-2">Product / Master link</th><th className="p-2">CSV pack / Qty</th><th className="p-2">Bill Qty (packs)</th><th className="p-2">Trade / pack</th><th className="p-2">Calculated total</th><th className="p-2">Expiry</th></tr></thead><tbody>
+          {csvPreview.rows.map(row => <tr key={row.sourceRow} className="border-t"><td className="p-2">{row.name}<span className="block text-surface-500">{row.product_id ? "Existing product linked" : "Search se link karna hai"}</span></td><td className="p-2">{row.sourcePack} / {row.sourceQuantity}</td><td className="p-2">{row.quantity}</td><td className="p-2">Rs {row.unit_cost}</td><td className="p-2">{row.lineTotal === null ? "Invalid" : `Rs ${row.lineTotal.toLocaleString("en-PK")}`}</td><td className="p-2">{row.expiry_date || "—"}</td></tr>)}
+        </tbody></table></div>
+        <p className="mb-3 font-semibold">CSV Subtotal: Rs {purchaseBillTotals(csvPreview.rows).subtotal.toLocaleString("en-PK")}</p>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" disabled={Boolean(csvPreview.errors.length) || !csvPreview.rows.length} onClick={() => acceptCsv(true)} className="rounded-lg bg-brand-700 px-4 py-2 text-sm text-white disabled:opacity-40">Bill mein add karein</button>
+          <button type="button" disabled={Boolean(csvPreview.errors.length) || !csvPreview.rows.length} onClick={() => acceptCsv(false)} className="rounded-lg border px-4 py-2 text-sm disabled:opacity-40">Draft lines replace karein</button>
+          <button type="button" onClick={() => setCsvPreview(null)} className="rounded-lg border px-4 py-2 text-sm">Cancel — draft rakhein</button>
+        </div>
+      </section>}
 
       <form ref={formRef} action={formAction} onSubmit={handleFormSubmit} className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_330px]">
         <input type="hidden" name="supplier_bill_workspace" value="on" />

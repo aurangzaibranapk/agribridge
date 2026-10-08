@@ -10,6 +10,7 @@ node scripts/check-cpanel-env.cjs
 node tests/shift-desk-cash.cjs
 node tests/supplier-bill-math.cjs
 node tests/supplier-bill-fields.cjs
+node tests/supplier-bill-csv.cjs
 node tests/desk-fee.cjs
 node tests/finance-statement-filter.cjs
 ./node_modules/.bin/tsc --noEmit --incremental
