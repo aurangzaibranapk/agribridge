@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import Link from "next/link";
 import { TrendingUp, PackageOpen, Boxes, ArrowDownCircle, Tag, ShoppingCart, Wrench } from "lucide-react";
+import { stockHoldingValue } from "@/lib/inventory/stock-math";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Stock Value Report" };
@@ -40,6 +41,22 @@ export default async function StockValueReportPage({
     .gt("quantity_on_hand", 0);
   if (warehouseId) invQ = invQ.eq("warehouse_id", warehouseId);
   const { data: inventoryRows } = await invQ;
+  const productIds = [...new Set((inventoryRows ?? []).map((row: any) => row.product_id).filter(Boolean))];
+  const { data: batchRows } = productIds.length
+    ? await supabase.from("stock_batches").select("product_id, warehouse_id, remaining_quantity, unit_cost").in("product_id", productIds).gt("remaining_quantity", 0)
+    : { data: [] as { product_id: string; warehouse_id: string; remaining_quantity: number; unit_cost: number }[] };
+  const batchesByKey = new Map<string, { remaining: number; unitCost: number }[]>();
+  for (const batch of batchRows ?? []) {
+    const key = `${batch.product_id}:${batch.warehouse_id}`;
+    const list = batchesByKey.get(key) ?? [];
+    list.push({ remaining: Number(batch.remaining_quantity ?? 0), unitCost: Number(batch.unit_cost ?? 0) });
+    batchesByKey.set(key, list);
+  }
+  const holdingValue = (row: any) => stockHoldingValue(
+    Number(row.quantity_on_hand ?? 0),
+    batchesByKey.get(`${row.product_id}:${row.warehouse_id}`) ?? [],
+    Number(row.products?.purchase_price ?? 0)
+  ).value;
 
   // Resolve root category name for a given category_id
   const catMap = new Map<string, { id: string; name: string; parent_category_id: string | null }>();
@@ -104,7 +121,7 @@ export default async function StockValueReportPage({
     if (productMap.has(key)) {
       const e = productMap.get(key)!;
       e.total_qty += qty;
-      e.purchase_value += qty * purchaseRate;
+      e.purchase_value += holdingValue(row);
       e.sale_value += qty * saleRate;
     } else {
       productMap.set(key, {
@@ -114,7 +131,7 @@ export default async function StockValueReportPage({
         category: getCategoryName(catId),
         root_category: getRootCategoryName(catId),
         total_qty: qty,
-        purchase_value: qty * purchaseRate,
+        purchase_value: holdingValue(row),
         sale_value: qty * saleRate,
         location,
       });
@@ -147,7 +164,7 @@ export default async function StockValueReportPage({
     const qty = Number(row.quantity_on_hand ?? 0);
     const cur = warehouseMap.get(row.warehouse_id) ?? { name: wh.name, qty: 0, purchase_value: 0, sale_value: 0 };
     cur.qty += qty;
-    cur.purchase_value += qty * Number(p.purchase_price ?? 0);
+    cur.purchase_value += holdingValue(row);
     cur.sale_value += qty * Number(p.selling_price ?? 0);
     warehouseMap.set(row.warehouse_id, cur);
   });

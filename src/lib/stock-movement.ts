@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { stockOutPlan } from "@/lib/inventory/stock-math";
 import { postJournal } from "@/lib/ledger/post";
 import { ACC } from "@/lib/ledger/rules";
 
@@ -53,59 +54,50 @@ async function deductStock(
   referenceType: string,
   referenceId: string,
   userId: string | null
-): Promise<number> {
+): Promise<{ cost: number; error?: string }> {
   const supabase = createClient();
-
-  let remaining = qty;
-  let totalCost = 0;
   const { data: batches } = await supabase
     .from("stock_batches")
     .select("id, remaining_quantity, unit_cost")
     .eq("warehouse_id", warehouseId)
     .eq("product_id", productId)
     .gt("remaining_quantity", 0)
-    // Pehle wo jo pehle kharab hoga (FEFO, 257); miyaad na likhi ho to
-    // wo aakhir mein, aur un mein purana pehle.
+    // Pehle wo jo pehle kharab hoga (FEFO). Miyaad na ho to purana pehle.
     .order("expiry_date", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
-  for (const batch of batches ?? []) {
-    if (remaining <= 0) break;
-    const take = Math.min(remaining, Number(batch.remaining_quantity));
-    await supabase.from("stock_batches").update({ remaining_quantity: Number(batch.remaining_quantity) - take }).eq("id", batch.id);
-    totalCost += take * Number(batch.unit_cost ?? 0);
-    remaining -= take;
-  }
-
   const { data: inv } = await supabase
     .from("inventory")
     .select("id, quantity_on_hand")
     .eq("warehouse_id", warehouseId)
     .eq("product_id", productId)
     .maybeSingle();
-  if (!inv) return totalCost;
+  const plan = stockOutPlan(
+    qty,
+    Number(inv?.quantity_on_hand ?? 0),
+    (batches ?? []).map((batch) => ({ remaining: Number(batch.remaining_quantity), unitCost: Number(batch.unit_cost ?? 0) }))
+  );
+  if (!plan.ok || !inv) return { cost: 0, error: plan.error ?? "Stock record nahi mila." };
 
-  // Stock manfi nahi hone dete — agar record se zyada nikalne ki koshish
-  // ho to utna hi nikalte hain jitna maujood hai, warna ginti ulti par
-  // chali jati hai aur baad mein pata bhi nahi chalta.
-  const deduct = Math.min(qty, Number(inv.quantity_on_hand));
+  let remaining = qty;
+  for (const batch of batches ?? []) {
+    if (remaining <= 0) break;
+    const take = Math.min(remaining, Number(batch.remaining_quantity));
+    const { error } = await supabase.from("stock_batches").update({ remaining_quantity: Number(batch.remaining_quantity) - take }).eq("id", batch.id);
+    if (error) return { cost: 0, error: error.message };
+    remaining -= take;
+  }
 
-  // Sirf HARKAT. Ginti khud nahi badalte -- wo is qatar par trigger
-  // karta hai (129). Pehle yahan dono kaam hote the, is liye har transfer,
-  // GRN aur dispatch par maal DUGNA hilta tha.
-  //
-  // balance_after bhi nahi bhejte: wo bhi trigger likhta hai, aur yahan
-  // se bheja gaya adad us waqt purana ho chuka hota hai jab do kaam ek
-  // sath ho rahe hon.
-  await supabase.from("stock_movements").insert({
+  // Sirf HARKAT. Ginti trigger badalta hai. Miqdar aur batch cost ab ek hi qty hain.
+  const { error: movementError } = await supabase.from("stock_movements").insert({
     inventory_id: inv.id,
     movement_type: movementType,
-    quantity: deduct,
+    quantity: qty,
     reference_type: referenceType,
     reference_id: referenceId,
     created_by: userId,
   });
-
-  return totalCost;
+  if (movementError) return { cost: 0, error: movementError.message };
+  return { cost: plan.cost };
 }
 
 async function addStock(
@@ -175,12 +167,15 @@ export interface StockMoveOptions {
  * ho sakti hai — jaise dispatch ke waqt sirf nikalna hota hai (aana GRN
  * par hota hai jab maal waqai pahunch jaye).
  */
-export async function moveStock(opts: StockMoveOptions) {
+export async function moveStock(opts: StockMoveOptions): Promise<{ error?: string; cost?: number }> {
   const { fromWarehouseId, toWarehouseId, productId, qty, referenceType, referenceId, userId } = opts;
-  if (qty <= 0 || !productId) return;
+  if (qty <= 0 || !productId) return { error: "Miqdar ya product adhoora hai." };
 
+  let cost = 0;
   if (fromWarehouseId) {
-    const cost = await deductStock(fromWarehouseId, productId, qty, opts.outType ?? "transfer_out", referenceType, referenceId, userId);
+    const deducted = await deductStock(fromWarehouseId, productId, qty, opts.outType ?? "transfer_out", referenceType, referenceId, userId);
+    if (deducted.error) return { error: deducted.error };
+    cost = deducted.cost;
     // Jab maal company se bahar jaye (jaise agri dispatch), tab ledger mein
     // stock ka asset kam hota hai: Dr COGS (5000), Cr Stock (1200).
     if (opts.journalDescription && cost > 0) {
@@ -200,4 +195,5 @@ export async function moveStock(opts: StockMoveOptions) {
   if (toWarehouseId) {
     await addStock(toWarehouseId, productId, qty, opts.inType ?? "transfer_in", referenceType, referenceId, userId);
   }
+  return { cost };
 }

@@ -37,6 +37,10 @@ export async function consumeFifoStock(
     return { success: false, totalCost: 0, consumedQty: 0, shortfall: quantityNeeded, batchesUsed: [], error: error.message };
   }
 
+  const availableQty = (batches ?? []).reduce((sum, batch) => sum + Number(batch.remaining_quantity), 0);
+  if (availableQty < quantityNeeded) {
+    return { success: false, totalCost: 0, consumedQty: 0, shortfall: quantityNeeded - availableQty, batchesUsed: [], error: "Batch stock kam hai. Kuch nahi katta." };
+  }
   let remaining = quantityNeeded;
   let totalCost = 0;
   const batchesUsed: FifoConsumeResult["batchesUsed"] = [];

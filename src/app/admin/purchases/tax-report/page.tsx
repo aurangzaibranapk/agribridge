@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { aajKaKhana } from "@/lib/utils/format";
+import { taxReportTotals } from "@/lib/purchases/tax-report-math";
 
 export const dynamic = "force-dynamic";
 
@@ -66,12 +67,11 @@ export default async function PurchaseTaxReportPage({
   }[];
 
   // Totals
-  const totalDiscount = purchases.reduce((s, r) => s + (Number(r.discount_amount) || 0), 0);
-  const totalTax = purchases.reduce((s, r) => s + (Number(r.tax_amount) || 0), 0);
-  // invoice_total original bill value hai; total_amount GRN ke baad adjust
-  // hota hai. Tax/discount original invoice par hota hai, is liye yahan
-  // invoice_total prefer karein taake teen columns reconcile hon.
-  const totalPurchase = purchases.reduce((s, r) => s + (Number(r.invoice_total ?? r.total_amount) || 0), 0);
+  const totals = taxReportTotals(purchases);
+  const totalDiscount = totals.discount;
+  const totalTax = totals.tax;
+  // invoice_total pehle hi subtotal - discount + tax hai. Dobara discount na katein.
+  const totalPurchase = totals.payable;
 
   // Tax grouped by label
   const taxByLabel = new Map<string, number>();
@@ -150,11 +150,11 @@ export default async function PurchaseTaxReportPage({
           <p className="text-xs text-surface-400">Tax filing mein claim hoga</p>
         </Card>
         <Card>
-          <p className="text-xs uppercase tracking-wide text-surface-500">Net Kharid (Tax + Disc baad)</p>
+          <p className="text-xs uppercase tracking-wide text-surface-500">Bill payable</p>
           <p className="mt-1 font-display text-lg font-bold tabular-nums text-surface-900 dark:text-white">
-            Rs {(totalPurchase - totalDiscount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            Rs {totalPurchase.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </p>
-          <p className="text-xs text-surface-400">Actual paid (approx)</p>
+          <p className="text-xs text-surface-400">Discount aur tax ke baad, dobara discount nahi kata</p>
         </Card>
       </div>
 
@@ -244,7 +244,7 @@ export default async function PurchaseTaxReportPage({
                   Rs {totalTax.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </td>
                 <td className="px-4 py-2 text-right tabular-nums">
-                  Rs {(totalPurchase - totalDiscount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  Rs {totalPurchase.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </td>
               </tr>
             </tfoot>

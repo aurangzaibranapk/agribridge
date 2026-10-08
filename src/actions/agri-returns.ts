@@ -188,7 +188,7 @@ export async function receiveReturn(_prev: ActionState, formData: FormData): Pro
 
   for (const item of items ?? []) {
     if (!item.product_id) continue;
-    await moveStock({
+    const moved = await moveStock({
       fromWarehouseId: shopWarehouse,
       toWarehouseId: hqWarehouse,
       productId: item.product_id,
@@ -199,6 +199,7 @@ export async function receiveReturn(_prev: ActionState, formData: FormData): Pro
       outType: "transfer_out",
       inType: "return_in",
     });
+    if (moved.error) return { error: moved.error };
   }
 
   // Maal wapas aa gaya, is liye us ki value shop ke zimme nahi rahi.
