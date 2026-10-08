@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminGrainProcurementPage() {
   const supabase = createClient();
   const lang = getLanguageFromCookies("rm");
+  const { data: { user } } = await supabase.auth.getUser();
   const [
     { data: farmers },
     { data: parties },
@@ -18,6 +19,8 @@ export default async function AdminGrainProcurementPage() {
     { data: buyers },
     { data: rawEntries },
     { data: rawPayments },
+    { data: grainRules },
+    { data: profile },
   ] = await Promise.all([
     supabase.from("farmers").select("id, full_name, farmer_code, phone_number, cnic").eq("is_deleted", false).order("full_name"),
     supabase.from("grain_parties").select("id, party_name, contact_person, phone").eq("is_active", true).order("party_name"),
@@ -27,7 +30,7 @@ export default async function AdminGrainProcurementPage() {
     supabase.from("buyers").select("id, business_name").eq("is_active", true).order("business_name"),
     supabase
       .from("grain_procurement_entries")
-      .select("id, entry_date, grain_type, gross_weight_kg, cut_percentage, cut_kg, weight_kg, moisture_percentage, quality_grade, rate_per_kg, total_amount, farmer_id, party_id, farmers(full_name), grain_parties(party_name)")
+      .select("id, entry_date, grain_type, gross_weight_kg, cut_percentage, cut_kg, weight_kg, moisture_percentage, quality_grade, rate_per_kg, total_amount, chungi_amount, farmer_id, party_id, farmers(full_name), grain_parties(party_name)")
       .is("reclassified_as_sale_id", null)
       .order("entry_date", { ascending: false })
       .order("created_at", { ascending: false })
@@ -38,6 +41,8 @@ export default async function AdminGrainProcurementPage() {
       .is("reclassified_as_sale_payment_id", null)
       .order("created_at", { ascending: false })
       .limit(200),
+    (supabase as any).from("grain_pack_rules").select("grain_type,is_bag_based,bag_weight_kg,default_cut_kg,default_cut_grams,default_chungi_kg").order("grain_type"),
+    supabase.from("profiles").select("role,is_active").eq("id", user?.id ?? "").maybeSingle(),
   ]);
 
   const { data: grainProducts, error: grainProductError } = await supabase.from("grain_type_products").select("grain_type, product_id");
@@ -70,6 +75,7 @@ export default async function AdminGrainProcurementPage() {
       quality_grade: e.quality_grade,
       rate_per_kg: Number(e.rate_per_kg),
       total_amount: Number(e.total_amount),
+      payable_amount: Number(e.total_amount) - Number(e.chungi_amount ?? 0),
       seller_id: e.farmer_id ?? e.party_id,
       seller_type: e.farmer_id ? "farmer" : "party",
       seller_name: farmer?.full_name ?? party?.party_name ?? "-",
@@ -95,7 +101,7 @@ export default async function AdminGrainProcurementPage() {
   entries.forEach((e) => {
     const key = `${e.seller_type}-${e.seller_id}`;
     if (!balanceMap[key]) balanceMap[key] = { seller_id: e.seller_id, seller_type: e.seller_type, seller_name: e.seller_name, total_supplied: 0, total_paid: 0, entry_count: 0 };
-    balanceMap[key].total_supplied += e.total_amount;
+    balanceMap[key].total_supplied += e.payable_amount;
     balanceMap[key].entry_count += 1;
   });
   payments.forEach((p) => {
@@ -108,7 +114,7 @@ export default async function AdminGrainProcurementPage() {
     .sort((a, b) => b.balance_due - a.balance_due);
 
   const totalPurchasedKg = entries.reduce((s, e) => s + e.weight_kg, 0);
-  const totalSpent = entries.reduce((s, e) => s + e.total_amount, 0);
+  const totalSpent = entries.reduce((s, e) => s + e.payable_amount, 0);
   const totalPaidOut = payments.reduce((s, p) => s + p.amount, 0);
   const totalOutstanding = totalSpent - totalPaidOut;
 
@@ -150,6 +156,13 @@ export default async function AdminGrainProcurementPage() {
         parties={parties ?? []}
         warehouses={warehouses ?? []}
         cutPresets={cutPresets ?? []}
+        grainRules={(grainRules ?? []).map((rule: any) => ({
+          grain_type: String(rule.grain_type), is_bag_based: Boolean(rule.is_bag_based),
+          bag_weight_kg: rule.bag_weight_kg == null ? null : Number(rule.bag_weight_kg),
+          default_cut_kg: Number(rule.default_cut_kg ?? 0), default_cut_grams: Number(rule.default_cut_grams ?? 0),
+          default_chungi_kg: Number(rule.default_chungi_kg ?? 0),
+        }))}
+        canManageRules={Boolean(profile?.is_active && ["owner","super_admin","admin"].includes(profile.role ?? ""))}
         financeAccounts={financeAccounts ?? []}
         buyers={buyers ?? []}
         stockByWarehouseAndType={stockByWarehouseAndType}

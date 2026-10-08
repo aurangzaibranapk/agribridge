@@ -3,6 +3,7 @@ import { Printer, Download, MessageCircle, Mail, ArrowLeft } from "lucide-react"
 import Link from "next/link";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { grainBagWeight, grainKgGrams } from "@/lib/grain/bag-calculation";
 
 interface Bill {
   id: string;
@@ -12,6 +13,13 @@ interface Bill {
   cut_percentage: number;
   cut_kg: number;
   weight_kg: number;
+  chungi_type: string;
+  chungi_kg: number;
+  chungi_amount: number;
+  bag_weight_kg: number | null;
+  bag_count: number | null;
+  cut_per_bag_kg: number | null;
+  chungi_per_bag_kg: number | null;
   moisture_percentage: number | null;
   quality_grade: string | null;
   rate_per_kg: number;
@@ -29,7 +37,10 @@ const GRAIN_LABELS: Record<string, string> = { wheat: "Wheat (Gandum)", rice: "R
 export function GrainBillClient({ bill }: { bill: Bill }) {
   const billNumber = `GRN-BILL-${bill.id.slice(0, 8).toUpperCase()}`;
   const lang = useLang();
-  const shareText = `AgriBridge Grain Bill ${billNumber}\n${bill.seller_name} - ${GRAIN_LABELS[bill.grain_type]}\nNet Weight: ${bill.weight_kg} kg @ Rs ${bill.rate_per_kg}/kg\nTotal: Rs ${bill.total_amount.toLocaleString()}\n\nDekhein: ${typeof window !== "undefined" ? window.location.href : ""}`;
+  const bagKg = bill.bag_weight_kg ?? grainBagWeight(bill.grain_type);
+  const bagCount = bill.bag_count ?? (bagKg ? bill.gross_weight_kg / bagKg : null);
+  const payable = bill.total_amount - bill.chungi_amount;
+  const shareText = `AgriBridge Grain Bill ${billNumber}\n${bill.seller_name} - ${GRAIN_LABELS[bill.grain_type]}\n${bagKg ? `Bori: ${bagKg} kg × ${bagCount?.toFixed(3)}\n` : ""}Net Weight: ${grainKgGrams(bill.weight_kg)} @ Rs ${bill.rate_per_kg}/maund\nChungi: Rs ${bill.chungi_amount.toLocaleString()}\nPayable: Rs ${payable.toLocaleString()}\n\nDekhein: ${typeof window !== "undefined" ? window.location.href : ""}`;
 
   function handlePrint() {
     window.print();
@@ -109,6 +120,14 @@ export function GrainBillClient({ bill }: { bill: Bill }) {
           </tbody>
         </table>
 
+        {bagKg && <div className="mb-4 grid grid-cols-3 gap-3 rounded-lg bg-surface-50 p-3 text-xs text-surface-600">
+          <span><b>1 bori:</b> {bagKg} kg</span>
+          <span><b>Total boriyan:</b> {bagCount?.toLocaleString(undefined, {maximumFractionDigits: 4})}</span>
+          <span><b>Wazan:</b> {Math.floor(bagCount ?? 0)} poori + {(bill.gross_weight_kg % bagKg).toFixed(3)} kg</span>
+          {bill.cut_per_bag_kg != null && <span><b>Cut / bori:</b> {grainKgGrams(bill.cut_per_bag_kg)}</span>}
+          {bill.chungi_per_bag_kg != null && <span><b>Chungi / bori:</b> {grainKgGrams(bill.chungi_per_bag_kg)}</span>}
+        </div>}
+
         {(bill.moisture_percentage || bill.quality_grade) && (
           <div className="mb-4 flex gap-6 text-xs text-surface-500">
             {bill.moisture_percentage && <span>Moisture: {bill.moisture_percentage}%</span>}
@@ -118,9 +137,11 @@ export function GrainBillClient({ bill }: { bill: Bill }) {
 
         <div className="flex justify-end border-t border-surface-200 pt-4">
           <div className="w-56 space-y-1 text-sm">
+            <div className="flex justify-between text-surface-600"><span>Grain value</span><span>Rs {bill.total_amount.toLocaleString()}</span></div>
+            <div className="flex justify-between text-red-600"><span>Chungi{bill.chungi_type === "grain" ? ` (${grainKgGrams(bill.chungi_kg)})` : ""}</span><span>- Rs {bill.chungi_amount.toLocaleString()}</span></div>
             <div className="flex justify-between font-bold text-surface-900">
               <span>{t("c_total_payable", lang)}</span>
-              <span>Rs {bill.total_amount.toLocaleString()}</span>
+              <span>Rs {payable.toLocaleString()}</span>
             </div>
           </div>
         </div>

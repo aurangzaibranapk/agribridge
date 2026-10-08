@@ -23,6 +23,7 @@ export default async function GrainBillPage({ params }: { params: Promise<{ id: 
   const farmer = Array.isArray(entry.farmers) ? entry.farmers[0] : entry.farmers;
   const party = Array.isArray(entry.grain_parties) ? entry.grain_parties[0] : entry.grain_parties;
   const warehouse = Array.isArray(entry.warehouses) ? entry.warehouses[0] : entry.warehouses;
+  const entryRule = entry as typeof entry & { bag_weight_kg?: number | null; bag_count?: number | null; cut_per_bag_kg?: number | null; chungi_per_bag_kg?: number | null };
 
   const bill = {
     id: entry.id,
@@ -32,6 +33,13 @@ export default async function GrainBillPage({ params }: { params: Promise<{ id: 
     cut_percentage: Number(entry.cut_percentage ?? 0),
     cut_kg: Number(entry.cut_kg ?? 0),
     weight_kg: Number(entry.weight_kg),
+    chungi_type: String(entry.chungi_type ?? "cash"),
+    chungi_kg: Number(entry.chungi_kg ?? 0),
+    chungi_amount: Number(entry.chungi_amount ?? 0),
+    bag_weight_kg: entryRule.bag_weight_kg == null ? null : Number(entryRule.bag_weight_kg),
+    bag_count: entryRule.bag_count == null ? null : Number(entryRule.bag_count),
+    cut_per_bag_kg: entryRule.cut_per_bag_kg == null ? null : Number(entryRule.cut_per_bag_kg),
+    chungi_per_bag_kg: entryRule.chungi_per_bag_kg == null ? null : Number(entryRule.chungi_per_bag_kg),
     moisture_percentage: entry.moisture_percentage,
     quality_grade: entry.quality_grade,
     rate_per_kg: Number(entry.rate_per_kg),

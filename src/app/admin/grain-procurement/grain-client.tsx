@@ -1,10 +1,11 @@
 "use client";
+import { grainBagCalculation, grainKgGrams } from "@/lib/grain/bag-calculation";
 import { useEffect, useState, useMemo, type FormEvent } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import Link from "next/link";
 import { NewSaleForm } from "./sell/sell-grain-client";
 import { useFormState, useFormStatus } from "react-dom";
-import { createGrainEntry, recordGrainPayment, createGrainParty, editGrainEntry, type ActionState } from "@/actions/grain-procurement";
+import { createGrainEntry, recordGrainPayment, createGrainParty, editGrainEntry, updateGrainPackRule, type ActionState } from "@/actions/grain-procurement";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { X, Plus, FileText, AlertTriangle, Trash2 } from "lucide-react";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
@@ -18,6 +19,7 @@ interface Farmer { id: string; full_name: string; farmer_code: string; }
 interface Party { id: string; party_name: string; contact_person: string | null; phone: string | null; }
 interface Warehouse { id: string; name: string; }
 interface CutPreset { id: string; grain_type: string; label: string; cut_percentage: number; }
+interface GrainRule { grain_type: string; is_bag_based: boolean; bag_weight_kg: number | null; default_cut_kg: number; default_cut_grams: number; default_chungi_kg: number; }
 interface FinanceAccount { id: string; name: string; account_type: string; }
 interface Entry {
   id: string;
@@ -76,6 +78,8 @@ export function GrainClient({
   parties,
   warehouses,
   cutPresets,
+  grainRules,
+  canManageRules,
   financeAccounts,
   buyers,
   entries,
@@ -88,6 +92,8 @@ export function GrainClient({
   parties: Party[];
   warehouses: Warehouse[];
   cutPresets: CutPreset[];
+  grainRules: GrainRule[];
+  canManageRules: boolean;
   financeAccounts: FinanceAccount[];
   buyers: Buyer[];
   entries: Entry[];
@@ -97,7 +103,7 @@ export function GrainClient({
   stockByWarehouseAndType: Record<string, Record<string, number>>;
 }) {
   const lang = useLang();
-  const [tab, setTab] = useState<"entry" | "balances" | "entries">("entry");
+  const [tab, setTab] = useState<"entry" | "balances" | "entries" | "rules">("entry");
   const [entryMode, setEntryMode] = useState<"purchase" | "sale">("purchase");
   const [payingBalance, setPayingBalance] = useState<Balance | null>(null);
   const [showNewParty, setShowNewParty] = useState(false);
@@ -119,6 +125,7 @@ export function GrainClient({
         <TabButton active={tab === "entry"} onClick={() => setTab("entry")}>{t("gr_new_entry", lang)}</TabButton>
         <TabButton active={tab === "balances"} onClick={() => setTab("balances")}>{t("gr_balances", lang)}</TabButton>
         <TabButton active={tab === "entries"} onClick={() => setTab("entries")}>{t("gr_full_history", lang)}</TabButton>
+        {canManageRules && <TabButton active={tab === "rules"} onClick={() => setTab("rules")}>Bori, Cut & Chungi Rules</TabButton>}
       </div>
 
       {tab === "entry" && (
@@ -131,7 +138,7 @@ export function GrainClient({
           <div className={entryMode === "purchase" ? "space-y-4" : "hidden"}>
           <button onClick={() => setShowNewParty(true)} className="flex items-center gap-1.5 text-xs font-medium text-brand-600 hover:underline">
             <Plus className="h-3.5 w-3.5" />{t("gd_new_party", lang)}</button>
-          <NewEntryForm farmers={farmers} parties={parties} warehouses={warehouses} cutPresets={cutPresets} financeAccounts={financeAccounts} />
+          <NewEntryForm farmers={farmers} parties={parties} warehouses={warehouses} cutPresets={cutPresets} grainRules={grainRules} financeAccounts={financeAccounts} />
           </div>
           <div className={entryMode === "sale" ? "space-y-4" : "hidden"}>
             <NewSaleForm buyers={buyers.map(b => ({ ...b, contact_person: null, phone_number: null }))} warehouses={warehouses} financeAccounts={financeAccounts} stockByWarehouseAndType={stockByWarehouseAndType} />
@@ -221,6 +228,7 @@ export function GrainClient({
           </table>
         </div>
       )}
+      {tab === "rules" && canManageRules && <GrainRulesManager rules={grainRules} />}
 
       {payingBalance && (
         <PaymentModal balance={payingBalance} financeAccounts={financeAccounts} onClose={() => setPayingBalance(null)} />
@@ -240,6 +248,30 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
       {children}
     </button>
   );
+}
+
+function GrainRuleForm({ rule }: { rule: GrainRule }) {
+  const [state, action] = useFormState(updateGrainPackRule, initialState);
+  const [bagBased, setBagBased] = useState(rule.is_bag_based);
+  return <form action={action} className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
+    <input type="hidden" name="grain_type" value={rule.grain_type} />
+    <input type="hidden" name="is_bag_based" value={bagBased ? "yes" : "no"} />
+    <div className="mb-3 flex items-center justify-between gap-3"><div><h3 className="font-semibold capitalize">{rule.grain_type === "wheat" ? "Gandum" : rule.grain_type === "rice" ? "Rice / Dhan" : "Maize / Makai"}</h3><p className="text-xs text-surface-500">Nayi entries ka default rule</p></div><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={bagBased} onChange={e => setBagBased(e.target.checked)} /> Bori ka hisaab</label></div>
+    <div className="grid gap-3 sm:grid-cols-2">
+      <label className="text-xs text-surface-600">1 bori kitne kg<Input name="bag_weight_kg" type="number" min="0.001" max="1000" step="0.001" required={bagBased} disabled={!bagBased} defaultValue={rule.bag_weight_kg ?? ""} /></label>
+      <label className="text-xs text-surface-600">Default cut kg / bori<Input name="default_cut_kg" type="number" min="0" step="1" defaultValue={rule.default_cut_kg} /></label>
+      <label className="text-xs text-surface-600">Default cut gram / bori<Input name="default_cut_grams" type="number" min="0" max="999" step="1" defaultValue={rule.default_cut_grams} /></label>
+      <label className="text-xs text-surface-600">Default chungi kg / bori<Input name="default_chungi_kg" type="number" min="0" step="0.001" defaultValue={rule.default_chungi_kg} /></label>
+    </div>
+    {state.error && <p className="mt-2 text-xs text-red-600">{state.error}</p>}
+    {state.success && <p className="mt-2 text-xs text-emerald-700">{state.notice}</p>}
+    <Button type="submit" className="mt-3">Rule Save Karein</Button>
+  </form>;
+}
+
+function GrainRulesManager({ rules }: { rules: GrainRule[] }) {
+  const defaults: GrainRule[] = ["wheat","rice","maize"].map(grain_type => rules.find(rule => rule.grain_type === grain_type) ?? ({grain_type,is_bag_based:false,bag_weight_kg:null,default_cut_kg:0,default_cut_grams:0,default_chungi_kg:0}));
+  return <section className="space-y-4"><div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900"><b>Yahan se coding ke baghair rules badlein.</b> Rule sirf nayi entry par default aayega. Entry screen par staff zarurat ke mutabiq us entry ka rule edit kar sakta hai. Purana bill apne saved rule par rahega.</div><div className="grid gap-4 lg:grid-cols-3">{defaults.map(rule => <GrainRuleForm key={rule.grain_type} rule={rule} />)}</div></section>;
 }
 
 
@@ -268,15 +300,18 @@ function NewEntryForm({
   parties,
   warehouses,
   cutPresets,
+  grainRules,
   financeAccounts,
 }: {
   farmers: Farmer[];
   parties: Party[];
   warehouses: Warehouse[];
   cutPresets: CutPreset[];
+  grainRules: GrainRule[];
   financeAccounts: FinanceAccount[];
 }) {
   const lang = useLang();
+  const initialRule = grainRules.find(rule => rule.grain_type === "wheat");
   const [state, formAction] = useFormState(createGrainEntry, initialState);
   const [offlineNotice, setOfflineNotice] = useState("");
   const [offlinePending, setOfflinePending] = useState(0);
@@ -284,9 +319,12 @@ function NewEntryForm({
   const [grainType, setGrainType] = useState("wheat");
   const [grossWeight, setGrossWeight] = useState("");
   const [grossMaund, setGrossMaund] = useState("");
-  const [cutMode, setCutMode] = useState<"preset" | "manual">("preset");
+  const [cutMode, setCutMode] = useState<"preset" | "manual">("manual");
   const [selectedPresetId, setSelectedPresetId] = useState("");
-  const [manualCut, setManualCut] = useState("0");
+  const [bagWeight, setBagWeight] = useState(initialRule?.is_bag_based && initialRule.bag_weight_kg ? String(initialRule.bag_weight_kg) : "");
+  const [manualCut, setManualCut] = useState(String(initialRule?.default_cut_kg ?? 0));
+  const [manualCutGrams, setManualCutGrams] = useState(String(initialRule?.default_cut_grams ?? 0));
+  const [chungiBasis, setChungiBasis] = useState<"per_bag" | "total">("per_bag");
   const [rate, setRate] = useState("");
 
   function handleKgChange(value: string) {
@@ -299,15 +337,28 @@ function NewEntryForm({
     const maund = parseFloat(value);
     setGrossWeight(maund ? (maund * 40).toFixed(2) : "");
   }
+  function applyGrainRule(nextType: string) {
+    const next = grainRules.find(rule => rule.grain_type === nextType);
+    setGrainType(nextType);
+    setSelectedPresetId("");
+    setCutMode("manual");
+    setBagWeight(next?.is_bag_based && next.bag_weight_kg ? String(next.bag_weight_kg) : "");
+    setManualCut(String(next?.default_cut_kg ?? 0));
+    setManualCutGrams(String(next?.default_cut_grams ?? 0));
+    setChungiType("grain");
+    setChungiBasis(next?.is_bag_based ? "per_bag" : "total");
+    setChungiKg(String(next?.default_chungi_kg ?? 0));
+    setChungiCash("0");
+  }
 
   const [hasExpense, setHasExpense] = useState<"" | "yes" | "no">("");
   const [expenseRows, setExpenseRows] = useState<{ category: string; description: string; amount: string; account_id: string }[]>([
     { category: "diesel_fuel", description: "", amount: "", account_id: "" },
   ]);
 
-  const [chungiType, setChungiType] = useState<"cash" | "grain">("cash");
+  const [chungiType, setChungiType] = useState<"cash" | "grain">("grain");
   const [chungiCash, setChungiCash] = useState("0");
-  const [chungiKg, setChungiKg] = useState("0");
+  const [chungiKg, setChungiKg] = useState(String(initialRule?.default_chungi_kg ?? 0));
 
   const [makePayment, setMakePayment] = useState<"" | "yes" | "no">("");
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -345,15 +396,21 @@ function NewEntryForm({
 
   const relevantPresets = useMemo(() => cutPresets.filter((p) => p.grain_type === grainType), [cutPresets, grainType]);
   const selectedPreset = relevantPresets.find((p) => p.id === selectedPresetId);
-  const effectiveCutPercentage = cutMode === "preset" ? (selectedPreset?.cut_percentage ?? 0) : parseFloat(manualCut) || 0;
-
-  const gross = parseFloat(grossWeight) || 0;
-  const cutKg = gross * (effectiveCutPercentage / 100);
-  const netWeight = gross - cutKg;
-  const rateNum = parseFloat(rate) || 0; // per-maund rate hai (user yahi enter karta hai)
-  const total = (netWeight / 40) * rateNum;
-  const chungiAmount = chungiType === "grain" ? ((parseFloat(chungiKg) || 0) / 40) * rateNum : parseFloat(chungiCash) || 0;
-  const payableToSeller = total - chungiAmount;
+  const currentRule = grainRules.find(rule => rule.grain_type === grainType);
+  const gross = Number(grossWeight) || 0;
+  const rateNum = Number(rate) || 0;
+  const bagKg = currentRule?.is_bag_based ? Number(bagWeight) || null : null;
+  const calculation = grainBagCalculation({grainType, grossKg: gross, ratePerMaund: rateNum, bagWeightKg: bagKg,
+    cutBasis: cutMode === "preset" ? "percentage" : bagKg ? "per_bag" : "total_weight",
+    cutKg: Number(manualCut), cutGrams: Number(manualCutGrams), cutPercentage: selectedPreset?.cut_percentage ?? 0,
+    chungiBasis: bagKg ? chungiBasis : "total", chungiType,
+    chungiValue: Number(chungiType === "grain" ? chungiKg : chungiCash)});
+  const effectiveCutPercentage = calculation.cutPercentage;
+  const cutKg = calculation.cutKg;
+  const netWeight = calculation.netKg;
+  const total = calculation.total;
+  const chungiAmount = calculation.chungiAmount;
+  const payableToSeller = calculation.payable;
 
   const expensesJson = JSON.stringify(
     expenseRows
@@ -409,6 +466,7 @@ function NewEntryForm({
         action={formAction}
         encType="multipart/form-data"
         onSubmit={async (event: FormEvent<HTMLFormElement>) => {
+          if (calculation.errors.length) { event.preventDefault(); setOfflineNotice(calculation.errors[0]); return; }
           if (typeof navigator === "undefined" || navigator.onLine !== false) return;
           event.preventDefault();
           try {
@@ -434,11 +492,19 @@ function NewEntryForm({
           <div className="space-y-5">
         <input type="hidden" name="seller_type" value={sellerType} />
         <input type="hidden" name="cut_percentage" value={effectiveCutPercentage} />
+        <input type="hidden" name="bag_calculation" value="on" />
+        <input type="hidden" name="bag_weight_kg" value={bagKg ?? ""} />
+        <input type="hidden" name="cut_basis" value={cutMode === "preset" ? "percentage" : bagKg ? "per_bag" : "total_weight"} />
+        <input type="hidden" name="cut_kg_input" value={manualCut} />
+        <input type="hidden" name="cut_grams_input" value={manualCutGrams} />
+        <input type="hidden" name="preset_cut_percentage" value={selectedPreset?.cut_percentage ?? 0} />
+        <input type="hidden" name="chungi_basis" value={bagKg ? chungiBasis : "total"} />
+        <input type="hidden" name="chungi_value" value={chungiType === "grain" ? chungiKg : chungiCash} />
         <input type="hidden" name="has_expense" value={hasExpense} />
         <input type="hidden" name="expenses_json" value={expensesJson} />
         <input type="hidden" name="chungi_type" value={chungiType} />
-        <input type="hidden" name="chungi_kg" value={chungiKg} />
-        <input type="hidden" name="chungi_amount" value={chungiCash} />
+        <input type="hidden" name="chungi_kg" value={calculation.chungiKg} />
+        <input type="hidden" name="chungi_amount" value={chungiAmount} />
         <input type="hidden" name="make_payment" value={makePayment} />
 
         <div>
@@ -472,7 +538,7 @@ function NewEntryForm({
 
         <div>
           <Label>{t("gr_grain_type_req", lang)}</Label>
-          <Select name="grain_type" value={grainType} onChange={(e) => { setGrainType(e.target.value); setSelectedPresetId(""); }}>
+          <Select name="grain_type" value={grainType} onChange={(e) => applyGrainRule(e.target.value)}>
             <option value="wheat">{t("gs_wheat", lang)}</option>
             <option value="rice">{t("gs_rice", lang)}</option>
             <option value="maize">{t("gs_maize", lang)}</option>
@@ -486,16 +552,18 @@ function NewEntryForm({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>{t("gr_gross_kg_req", lang)}</Label>
-            <Input type="number" step="0.1" name="gross_weight_kg" value={grossWeight} onChange={(e) => handleKgChange(e.target.value)} required />
+            <Input type="number" min="0.001" step="0.001" name="gross_weight_kg" value={grossWeight} onChange={(e) => handleKgChange(e.target.value)} required />
           </div>
           <div>
             <Label>{t("gr_gross_maund", lang)}</Label>
             <Input type="number" step="0.01" value={grossMaund} onChange={(e) => handleMaundChange(e.target.value)} placeholder={t("gr_auto", lang)} />
           </div>
         </div>
+        {currentRule?.is_bag_based && <div className="rounded-lg bg-brand-50 p-3 text-sm text-brand-800"><div className="mb-2 max-w-52"><Label>Is entry mein 1 bori kitne kg</Label><Input aria-label="Entry bag weight" type="number" min="0.001" max="1000" step="0.001" value={bagWeight} onChange={e => setBagWeight(e.target.value)} /></div>{bagKg ? <span>1 bori = {bagKg} kg · {calculation.fullBags} poori boriyan + {calculation.remainingKg} kg · Hisaab: {calculation.bags.toLocaleString(undefined, {maximumFractionDigits: 4})} boriyan. Adhoori bori proportional count hogi.</span> : <span>Bori ka weight likhein.</span>}</div>}
         <div>
           <Label>{t("gr_rate_per_kg_req", lang)}</Label>
           <Input type="number" step="0.01" name="rate_per_kg" value={rate} onChange={(e) => setRate(e.target.value)} required />
+          <p className="mt-1 text-xs text-surface-500">Rs {rateNum ? (rateNum / 40).toLocaleString(undefined, {maximumFractionDigits: 4}) : 0} per kg</p>
         </div>
 
         <div className="rounded-xl border border-surface-200 bg-surface-50/60 p-4 dark:border-surface-700 dark:bg-surface-800/40">
@@ -512,26 +580,31 @@ function NewEntryForm({
               ))}
             </select>
           ) : (
-            <Input type="number" step="0.01" placeholder={t("gr_cut_pc_ph", lang)} value={manualCut} onChange={(e) => setManualCut(e.target.value)} className="mt-2" />
+            <div className="mt-2 grid grid-cols-2 gap-3">
+              <div><Label>Cut kg {bagKg ? "/ bori" : "total"}</Label><Input aria-label="Cut kg" type="number" min="0" step="1" value={manualCut} onChange={(e) => setManualCut(e.target.value)} /></div>
+              <div><Label>Cut gram {bagKg ? "/ bori" : "total"}</Label><Input aria-label="Cut grams" type="number" min="0" max="999" step="1" value={manualCutGrams} onChange={(e) => setManualCutGrams(e.target.value)} /></div>
+            </div>
           )}
           <div className="mt-2 space-y-0.5 text-xs">
-            <div className="flex justify-between text-surface-500"><span>{t("gr_cut", lang)}</span><span>{cutKg.toFixed(2)} kg ({effectiveCutPercentage}%)</span></div>
-            <div className="flex justify-between font-semibold text-surface-700 dark:text-surface-300"><span>{t("gr_net_weight", lang)}</span><span>{netWeight.toFixed(2)} kg</span></div>
+            <div className="flex justify-between text-surface-500"><span>{t("gr_cut", lang)}</span><span>{grainKgGrams(cutKg)} ({effectiveCutPercentage.toFixed(3)}%)</span></div>
+            <div className="flex justify-between font-semibold text-surface-700 dark:text-surface-300"><span>{t("gr_net_weight", lang)}</span><span>{grainKgGrams(netWeight)}</span></div>
           </div>
         </div>
 
         <div className="rounded-xl border border-surface-200 bg-surface-50/60 p-4 dark:border-surface-700 dark:bg-surface-800/40">
           <Label>{t("gr_chungi", lang)}</Label>
+          {bagKg && <div className="mb-2"><Label>Chungi basis</Label><Select aria-label="Chungi basis" value={chungiBasis} onChange={e => setChungiBasis(e.target.value as "per_bag" | "total")}><option value="per_bag">Har bori par</option><option value="total">Poori entry ka total</option></Select></div>}
+          <p className="mb-2 text-xs text-surface-500">{bagKg && chungiBasis === "per_bag" ? "Neeche raqam ya kg har bori ke liye likhein." : "Neeche raqam ya kg poori entry ka total likhein."}</p>
           <div className="mt-1 flex gap-2">
             <button type="button" onClick={() => setChungiType("cash")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiType === "cash" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_cash_rs", lang)}</button>
             <button type="button" onClick={() => setChungiType("grain")} className={`flex-1 rounded-lg border py-1.5 text-xs font-medium ${chungiType === "grain" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>{t("gr_grain_kg", lang)}</button>
           </div>
           {chungiType === "cash" ? (
-            <Input type="number" step="0.01" value={chungiCash} onChange={(e) => setChungiCash(e.target.value)} placeholder={t("gr_rs_amount", lang)} className="mt-2" />
+            <Input type="number" min="0" step="0.01" value={chungiCash} onChange={(e) => setChungiCash(e.target.value)} placeholder={t("gr_rs_amount", lang)} className="mt-2" />
           ) : (
             <div className="mt-2">
-              <Input type="number" step="0.01" value={chungiKg} onChange={(e) => setChungiKg(e.target.value)} placeholder={t("gr_how_many_kg", lang)} />
-              <p className="mt-1 text-[11px] text-surface-400">Rate se khud calculate hoga: {(parseFloat(chungiKg) || 0)} kg ÷ 40 = {((parseFloat(chungiKg) || 0) / 40).toFixed(2)} maund × Rs {rateNum.toLocaleString()} = Rs {chungiAmount.toLocaleString()}</p>
+              <Input type="number" min="0" step="0.001" value={chungiKg} onChange={(e) => setChungiKg(e.target.value)} placeholder={t("gr_how_many_kg", lang)} />
+              <p className="mt-1 text-[11px] text-surface-400">Rate se khud calculate hoga: {calculation.chungiKg} kg ÷ 40 = {(calculation.chungiKg / 40).toFixed(3)} maund × Rs {rateNum.toLocaleString()} = Rs {chungiAmount.toLocaleString()}</p>
             </div>
           )}
         </div>
@@ -659,12 +732,12 @@ function NewEntryForm({
             </div>
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between"><span className="text-surface-500">Gross Weight</span><span className="font-semibold text-surface-900 dark:text-white">{gross.toLocaleString()} kg</span></div>
-              <div className="flex items-center justify-between"><span className="text-surface-500">Cut / Deduction</span><span className="font-semibold text-amber-700">{cutKg.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg</span></div>
-              <div className="flex items-center justify-between border-b border-brand-200 pb-3 dark:border-brand-900/50"><span className="text-surface-500">Net Weight</span><span className="font-semibold text-surface-900 dark:text-white">{netWeight.toLocaleString(undefined, { maximumFractionDigits: 2 })} kg</span></div>
+              <div className="flex items-center justify-between"><span className="text-surface-500">Cut / Deduction</span><span className="font-semibold text-amber-700">{grainKgGrams(cutKg)}</span></div>
+              <div className="flex items-center justify-between border-b border-brand-200 pb-3 dark:border-brand-900/50"><span className="text-surface-500">Net Weight</span><span className="font-semibold text-surface-900 dark:text-white">{grainKgGrams(netWeight)}</span></div>
               <div className="flex items-center justify-between"><span className="text-surface-500">Rate</span><span className="font-semibold text-surface-900 dark:text-white">Rs {rateNum.toLocaleString()}/maund</span></div>
-              <div className="flex items-center justify-between"><span className="text-surface-500">Gandum Value</span><span className="font-display text-lg font-bold text-brand-700 dark:text-brand-300">Rs {total.toLocaleString()}</span></div>
+              <div className="flex items-center justify-between"><span className="text-surface-500">Grain Value</span><span className="font-display text-lg font-bold text-brand-700 dark:text-brand-300">Rs {total.toLocaleString()}</span></div>
               <div className="flex items-center justify-between border-b border-brand-200 pb-3 dark:border-brand-900/50"><span className="text-surface-500">Chungi / Bardana</span><span className="font-semibold text-amber-700">- Rs {chungiAmount.toLocaleString()}</span></div>
-              <div className="flex items-center justify-between pt-1"><span className="font-semibold text-surface-800 dark:text-surface-200">Payable to Farmer</span><span className="font-display text-xl font-bold text-brand-700 dark:text-brand-300">Rs {payableToSeller.toLocaleString()}</span></div>
+              <div className="flex items-center justify-between pt-1"><span className="font-semibold text-surface-800 dark:text-surface-200">Payable to {sellerType === "farmer" ? "Farmer" : "Party"}</span><span className="font-display text-xl font-bold text-brand-700 dark:text-brand-300">Rs {payableToSeller.toLocaleString()}</span></div>
             </div>
             <div className="mt-5 rounded-xl border border-brand-200 bg-white/70 p-3 text-xs text-surface-500 dark:border-brand-900/50 dark:bg-surface-900/40">
               <p className="font-semibold text-surface-700 dark:text-surface-200">After this:</p>

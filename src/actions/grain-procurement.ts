@@ -1,4 +1,5 @@
 "use server";
+import { grainBagCalculation } from "@/lib/grain/bag-calculation";
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
@@ -37,11 +38,11 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
   const grainType = String(formData.get("grain_type") ?? "");
   const entryDate = String(formData.get("entry_date") ?? aajKaKhana());
   const grossWeight = Number(formData.get("gross_weight_kg") ?? 0);
-  const cutPercentage = Number(formData.get("cut_percentage") ?? 0);
+  let cutPercentage = Number(formData.get("cut_percentage") ?? 0);
   const rate = Number(formData.get("rate_per_kg") ?? 0);
   const chungiType = String(formData.get("chungi_type") ?? "cash");
-  const chungiKg = Number(formData.get("chungi_kg") ?? 0);
-  const chungiAmountInput = Number(formData.get("chungi_amount") ?? 0);
+  let chungiKg = Number(formData.get("chungi_kg") ?? 0);
+  let chungiAmountInput = Number(formData.get("chungi_amount") ?? 0);
   const moisture = formData.get("moisture_percentage") ? Number(formData.get("moisture_percentage")) : null;
   const quality = (formData.get("quality_grade") as string) || null;
   const warehouseId = (formData.get("warehouse_id") as string) || null;
@@ -66,6 +67,24 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
     }
   }
 
+  let bagResult: ReturnType<typeof grainBagCalculation> | null = null;
+  if (formData.get("bag_calculation") === "on") {
+    const cutBasis = String(formData.get("cut_basis"));
+    const chungiBasis = String(formData.get("chungi_basis"));
+    if (cutBasis !== "per_bag" && cutBasis !== "total_weight" && cutBasis !== "percentage") return {error: "Cut basis sahi select karein."};
+    if (chungiBasis !== "per_bag" && chungiBasis !== "total") return {error: "Chungi basis sahi select karein."};
+    if (chungiType !== "cash" && chungiType !== "grain") return {error: "Chungi type sahi select karein."};
+    bagResult = grainBagCalculation({grainType, grossKg: grossWeight, ratePerMaund: rate, cutBasis,
+      bagWeightKg: Number(formData.get("bag_weight_kg") ?? 0) || null,
+      cutKg: Number(formData.get("cut_kg_input") ?? 0), cutGrams: Number(formData.get("cut_grams_input") ?? 0),
+      cutPercentage: Number(formData.get("preset_cut_percentage") ?? 0), chungiBasis, chungiType,
+      chungiValue: Number(formData.get("chungi_value") ?? 0)});
+    if (bagResult.errors.length) return {error: bagResult.errors[0]};
+    cutPercentage = bagResult.cutPercentage;
+    chungiKg = bagResult.chungiKg;
+    chungiAmountInput = bagResult.chungiAmount;
+  }
+  if (![grossWeight, cutPercentage, rate, chungiKg, chungiAmountInput].every(Number.isFinite)) return {error: "Weight, rate, cut aur chungi valid numbers mein likhein."};
   if (sellerType === "farmer" && !farmerId) return { error: "Farmer select karein." };
   if (sellerType === "party" && !partyId) return { error: "Party select karein." };
   if (!["wheat", "rice", "maize"].includes(grainType)) return { error: "Invalid grain type." };
@@ -75,14 +94,14 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
   if (!warehouseId) return { error: "Warehouse select karein (stock yahan add hoga)." };
   if (!["cash", "grain"].includes(chungiType)) return { error: "Chungi type sahi select karein." };
 
-  const cutKg = grossWeight * (cutPercentage / 100);
-  const netWeight = grossWeight - cutKg;
+  const cutKg = bagResult?.cutKg ?? grossWeight * (cutPercentage / 100);
+  const netWeight = bagResult?.netKg ?? grossWeight - cutKg;
   // rate field mein per-maund rate aata hai -- kg mein convert: rate/40
-  const totalAmount = (netWeight / 40) * rate;
-  const chungiAmount = chungiType === "grain" ? (chungiKg / 40) * rate : chungiAmountInput;
+  const totalAmount = bagResult?.total ?? (netWeight / 40) * rate;
+  const chungiAmount = bagResult?.chungiAmount ?? (chungiType === "grain" ? (chungiKg / 40) * rate : chungiAmountInput);
   if (chungiAmount < 0) return { error: "Chungi amount sahi likhein." };
   if (chungiAmount > totalAmount) return { error: "Chungi amount total value se zyada nahi ho sakta." };
-  const payableToSeller = totalAmount - chungiAmount;
+  const payableToSeller = bagResult?.payable ?? totalAmount - chungiAmount;
 
   const makePayment = String(formData.get("make_payment") ?? "");
   if (makePayment !== "yes" && makePayment !== "no") {
@@ -126,6 +145,11 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
       chungi_type: chungiType,
       chungi_kg: chungiType === "grain" ? chungiKg : 0,
       chungi_amount: chungiAmount,
+      bag_weight_kg: bagResult?.bagKg ?? null,
+      bag_count: bagResult?.bags ?? null,
+      cut_per_bag_kg: bagResult && bagResult.bagKg && String(formData.get("cut_basis")) === "per_bag" ? bagResult.unitCutKg : null,
+      chungi_per_bag_kg: bagResult && bagResult.bagKg && chungiType === "grain" && String(formData.get("chungi_basis")) === "per_bag" ? Number(formData.get("chungi_value") ?? 0) : null,
+      bag_calculation_basis: bagResult ? String(formData.get("cut_basis")) : null,
       moisture_percentage: moisture,
       quality_grade: quality,
       rate_per_kg: rate,
@@ -707,6 +731,31 @@ export async function createGrainParty(_prev: ActionState, formData: FormData): 
   if (error) return { error: error.message };
   revalidatePath("/admin/grain-procurement");
   return { success: true };
+}
+
+export async function updateGrainPackRule(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Login required." };
+  const { data: profile } = await supabase.from("profiles").select("role,is_active").eq("id", user.id).maybeSingle();
+  if (!profile?.is_active || !["owner","super_admin","admin"].includes(profile.role ?? "")) return { error: "Sirf Owner/Admin grain rules edit kar sakta hai." };
+  const grainType = String(formData.get("grain_type") ?? "");
+  const isBagBased = String(formData.get("is_bag_based") ?? "") === "yes";
+  const bagWeightKg = isBagBased ? Number(formData.get("bag_weight_kg") ?? 0) : null;
+  const defaultCutKg = Number(formData.get("default_cut_kg") ?? 0);
+  const defaultCutGrams = Number(formData.get("default_cut_grams") ?? 0);
+  const defaultChungiKg = Number(formData.get("default_chungi_kg") ?? 0);
+  if (!["wheat","rice","maize"].includes(grainType)) return { error: "Grain type sahi nahi." };
+  if (isBagBased && (!Number.isFinite(bagWeightKg) || !bagWeightKg || bagWeightKg <= 0 || bagWeightKg > 1000)) return { error: "Bori ka weight 0 se zyada aur 1000kg tak likhein." };
+  if (![defaultCutKg,defaultCutGrams,defaultChungiKg].every(Number.isFinite) || defaultCutKg < 0 || defaultCutGrams < 0 || defaultCutGrams > 999 || defaultChungiKg < 0) return { error: "Cut aur chungi values sahi likhein; gram 0-999 hon." };
+  const { error } = await (supabase as any).from("grain_pack_rules").upsert({
+    grain_type: grainType, is_bag_based: isBagBased, bag_weight_kg: bagWeightKg,
+    default_cut_kg: defaultCutKg, default_cut_grams: defaultCutGrams,
+    default_chungi_kg: defaultChungiKg, updated_at: new Date().toISOString(), updated_by: user.id,
+  }, { onConflict: "grain_type" });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/grain-procurement");
+  return { success: true, notice: "Grain rule save ho gaya. Nayi entries par apply hoga; purane records nahi badlenge." };
 }
 
 export async function createCutPreset(_prev: ActionState, formData: FormData): Promise<ActionState> {
