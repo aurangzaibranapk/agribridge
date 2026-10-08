@@ -323,6 +323,8 @@
     gap:8px;
     overflow:hidden;
   }
+}
+/* Shared staff dashboard presentation also applies to phone and tablet. */
   .staff-desk-header {
     min-height:88px;
     flex:0 0 88px;
@@ -447,7 +449,6 @@
   .staff-desk-focus-row > span:nth-child(2) { flex:1; }
   .staff-desk-focus-row > span:last-child { color:#137346; font-size:10px; }
   .staff-desk-panel-tasks,.staff-desk-panel-notifications { grid-template-columns:1fr; }
-}
 @media (max-height:820px) and (min-width:1024px) {
   .desk-workspace.desk-my-work { gap:5px; }
   .staff-desk-header { min-height:76px; flex-basis:76px; gap:6px; }
@@ -484,9 +485,55 @@
   .staff-desk-method-strip { flex-wrap:wrap; overflow:auto; }
   .staff-desk-methods { min-width:100%; grid-template-columns:repeat(4,minmax(100px,1fr)); overflow:auto; }
   .staff-desk-bottom { display:grid; grid-template-columns:1fr; overflow:visible; }
-  .staff-desk-bottom > .desk-card { min-height:220px; }
+  .staff-desk-bottom > .desk-card { min-height:0; overflow:visible; padding:14px; }
+  .desk-workspace.desk-my-work { height:auto; min-height:0; gap:12px; overflow:visible; }
+  .staff-desk-header { flex:none; min-height:0; gap:8px; }
+  .staff-desk-header > section { padding:12px 14px; }
+  .staff-desk-identity h1 { font-size:22px; white-space:normal; }
+  .staff-desk-identity p,.staff-desk-location p,.staff-desk-location strong { white-space:normal; font-size:12px; line-height:1.4; }
+  .staff-desk-location { justify-content:flex-start; }
+  .staff-desk-eyebrow { font-size:10px; }
+  .staff-desk-performance-scale { font-size:9px; gap:6px; line-height:1.4; }
+  .staff-desk-screen { flex:none; gap:12px; overflow:visible; }
+  .staff-desk-top-grid { grid-template-columns:1fr; }
+  .staff-desk-top-grid > .desk-card { padding:14px; overflow:visible; }
+  .staff-desk-card-title { flex-wrap:wrap; font-size:12px; }
+  .staff-desk-top-grid h2 { font-size:14px; }
+  .staff-desk-ledger-total { flex-wrap:wrap; margin-top:12px; }
+  .staff-desk-ledger-total span { font-size:11px; }
+  .staff-desk-ledger-split { gap:8px; margin-top:12px; }
+  .staff-desk-ledger-split strong { white-space:normal; overflow-wrap:anywhere; font-size:13px; }
+  .staff-desk-sparkline { flex:none; height:70px; min-height:70px; margin-top:14px; }
+  .staff-desk-sparkline > div { height:100%; }
+  .staff-desk-sparkline i { display:block; flex-shrink:0; max-height:52px; }
+  .staff-desk-sparkline span { font-size:10px; }
+  .staff-desk-funnel,.staff-desk-health { gap:8px; }
+  .staff-desk-health strong { font-size:18px; overflow-wrap:anywhere; }
+  .staff-desk-funnel span,.staff-desk-health span { font-size:11px; }
+  .staff-desk-note,.staff-desk-muted { font-size:12px; line-height:1.5; }
+  .staff-desk-method-strip { display:grid; grid-template-columns:44px minmax(0,1fr); padding:14px; gap:12px; overflow:visible; }
+  .staff-desk-tabs { grid-column:1 / -1; min-width:0; flex-wrap:wrap; }
+  .staff-desk-tabs button { min-height:44px; font-size:12px; padding:6px 10px; }
+  .staff-desk-methods { min-width:0; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; overflow:visible; }
+  .staff-desk-method-name { white-space:normal; font-size:11px; }
+  .staff-desk-method-percent { font-size:11px; }
+  .staff-desk-bottom { gap:12px; }
+  .staff-desk-task-columns { flex:none; }
+  .staff-desk-task-columns a,.staff-desk-task-columns h3 { font-size:12px; }
+  .staff-desk-notifications.is-compact { max-height:300px; overflow:auto; }
+  .staff-desk-notice h3 { font-size:12px; white-space:normal; }
+  .staff-desk-notice p { font-size:11px; }
+  .staff-desk-farmers .staff-desk-card-title a { font-size:11px; }
+  .staff-desk-reconcile { display:block; padding:10px 12px; font-size:11px; line-height:1.5; overflow:visible; }
+  .staff-desk-focus-row { flex-wrap:wrap; }
   .staff-desk-reconcile { white-space:normal; }
 }
 @media print {
   main.desk-main,.desk-workspace,.desk-tab-panel { height:auto!important; overflow:visible!important; }
 }
+
+.staff-desk-quickview-kpis { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:10px; }
+.staff-desk-quickview-kpi { display:flex; flex-direction:column; gap:4px; min-width:0; border:1px solid #e5ece7; border-radius:8px; padding:8px; }
+.staff-desk-quickview-kpi strong { font-size:16px; color:#176b40; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+.staff-desk-quickview-kpi span { font-size:11px; color:#607067; line-height:1.4; }
+@media (min-width:1024px) { .staff-desk-quickview { overflow:auto!important; } .staff-desk-quickview-kpi { padding:5px; } .staff-desk-quickview-kpi strong { font-size:13px; } .staff-desk-quickview-kpi span { font-size:9px; } }
