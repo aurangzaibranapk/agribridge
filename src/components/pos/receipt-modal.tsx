@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { createClient } from "@/lib/supabase/client";
+import { receiptBalances } from "@/lib/pos/receipt-math";
 import { Button, Input } from "@/components/ui/form";
 import { X, MessageCircle, Mail, Printer } from "lucide-react";
 
@@ -19,6 +20,8 @@ interface ReceiptData {
   total_amount: number;
   cash_paid: number;
   khata_amount: number;
+  discount_amount?: number;
+  payment_lines?: { method: string; amount: number }[];
   outstanding_balance: number;
   seller_name: string;
   shop_name: string | null;
@@ -50,7 +53,14 @@ export function ReceiptModal({
   useEffect(() => {
     (async () => {
       const { data } = await supabase.rpc("get_sale_receipt", { p_sale_id: saleId });
-      setReceipt(data as unknown as ReceiptData);
+      const receipt = (data ?? {}) as ReceiptData;
+      const [{ data: sale }, { data: lines }] = await Promise.all([
+        supabase.from("pos_sales").select("discount_amount").eq("id", saleId).maybeSingle(),
+        supabase.from("pos_sale_payment_details").select("payment_method, amount").eq("sale_id", saleId),
+      ]);
+      receipt.discount_amount = Number(sale?.discount_amount ?? receipt.discount_amount ?? 0);
+      receipt.payment_lines = (lines ?? []).map((line) => ({ method: line.payment_method, amount: Number(line.amount) || 0 }));
+      setReceipt(receipt);
       setLoading(false);
     })();
   }, [saleId]);
@@ -66,8 +76,9 @@ export function ReceiptModal({
   }
 
   function buildReceiptText(r: ReceiptData) {
-    const previousBalance = Math.max(0, r.outstanding_balance - r.khata_amount);
-    const currentBalance = Math.max(0, r.khata_amount);
+    const balances = receiptBalances(r.outstanding_balance, r.khata_amount);
+    const previousBalance = balances.previous;
+    const currentBalance = balances.current;
     const lines = [
       r.shop_name ? `${r.shop_name}` : `${r.seller_name}`,
       r.shop_name ? `${r.seller_name}` : "",
@@ -81,7 +92,10 @@ export function ReceiptModal({
       "",
       `${t("pos_grand_total", lang)}: Rs ${r.total_amount.toLocaleString()}`,
     ];
-    if (r.cash_paid > 0) lines.push(`Cash Paid: Rs ${r.cash_paid.toLocaleString()}`);
+    if ((r.discount_amount ?? 0) > 0) lines.push(`Discount: Rs ${Number(r.discount_amount).toLocaleString()}`);
+    if (r.payment_lines?.length) {
+      for (const line of r.payment_lines) lines.push(`${line.method}: Rs ${line.amount.toLocaleString()}`);
+    } else if (r.cash_paid > 0) lines.push(`Cash Paid: Rs ${r.cash_paid.toLocaleString()}`);
     if (r.khata_amount > 0) lines.push(`Khata (Credit): Rs ${r.khata_amount.toLocaleString()}`);
     if (r.customer_name) {
       lines.push(`Saqba Balance: Rs ${previousBalance.toLocaleString()}`);
@@ -283,8 +297,13 @@ export function ReceiptModal({
             <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400 dark:border-surface-700" />
 
             <div className="receipt-totals space-y-1 text-xs">
+              {(receipt.discount_amount ?? 0) > 0 && (
+                <ReceiptRow label="Discount" value={`Rs ${Number(receipt.discount_amount).toLocaleString()}`} />
+              )}
               <ReceiptRow label={t("pos_grand_total", lang)} value={`Rs ${receipt.total_amount.toLocaleString()}`} strong />
-              {receipt.cash_paid > 0 && (
+              {receipt.payment_lines?.length ? receipt.payment_lines.map((line) => (
+                <ReceiptRow key={`${line.method}-${line.amount}`} label={line.method} value={`Rs ${line.amount.toLocaleString()}`} />
+              )) : receipt.cash_paid > 0 && (
                 <ReceiptRow label={t("pos_cash_paid", lang)} value={`Rs ${receipt.cash_paid.toLocaleString()}`} />
               )}
               {receipt.khata_amount > 0 && (
@@ -298,11 +317,11 @@ export function ReceiptModal({
                 <div className="receipt-balances space-y-1 text-xs">
                   <ReceiptRow
                     label="Saqba Balance"
-                    value={`Rs ${Math.max(0, receipt.outstanding_balance - receipt.khata_amount).toLocaleString()}`}
+                    value={`Rs ${receiptBalances(receipt.outstanding_balance, receipt.khata_amount).previous.toLocaleString()}`}
                   />
                   <ReceiptRow
                     label="Current Balance"
-                    value={`Rs ${Math.max(0, receipt.khata_amount).toLocaleString()}`}
+                    value={`Rs ${receiptBalances(receipt.outstanding_balance, receipt.khata_amount).current.toLocaleString()}`}
                     tone="red"
                   />
                   <ReceiptRow

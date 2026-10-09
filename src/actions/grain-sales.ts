@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { postCashIn, postCashOut, ACC, failed } from "@/lib/ledger/rules";
+import { stockOutPlan } from "@/lib/inventory/stock-math";
 
 export interface ActionState {
   error?: string;
@@ -74,11 +75,14 @@ export async function createGrainSale(_prev: ActionState, formData: FormData): P
     .eq("product_id", productId)
     .gt("remaining_quantity", 0)
     .order("created_at", { ascending: true });
+  const plan = stockOutPlan(quantity, available, (batches ?? []).map((batch) => ({ remaining: Number(batch.remaining_quantity), unitCost: Number(batch.unit_cost ?? 0) })));
+  if (!plan.ok) return { error: plan.error };
+  totalCogs = plan.cost;
   for (const batch of batches ?? []) {
     if (remaining <= 0) break;
     const take = Math.min(remaining, Number(batch.remaining_quantity));
-    await supabase.from("stock_batches").update({ remaining_quantity: Number(batch.remaining_quantity) - take }).eq("id", batch.id);
-    totalCogs += take * Number(batch.unit_cost ?? 0);
+    const { error: batchError } = await supabase.from("stock_batches").update({ remaining_quantity: Number(batch.remaining_quantity) - take }).eq("id", batch.id);
+    if (batchError) return { error: batchError.message };
     remaining -= take;
   }
 

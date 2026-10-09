@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { aajKaKhana } from "@/lib/utils/format";
+import { taxReportPayable, taxReportTotals } from "@/lib/purchases/tax-report-math";
 
 export const dynamic = "force-dynamic";
 
@@ -66,12 +67,10 @@ export default async function PurchaseTaxReportPage({
   }[];
 
   // Totals
-  const totalDiscount = purchases.reduce((s, r) => s + (Number(r.discount_amount) || 0), 0);
-  const totalTax = purchases.reduce((s, r) => s + (Number(r.tax_amount) || 0), 0);
-  // invoice_total original bill value hai; total_amount GRN ke baad adjust
-  // hota hai. Tax/discount original invoice par hota hai, is liye yahan
-  // invoice_total prefer karein taake teen columns reconcile hon.
-  const totalPurchase = purchases.reduce((s, r) => s + (Number(r.invoice_total ?? r.total_amount) || 0), 0);
+  const totals = taxReportTotals(purchases);
+  const totalDiscount = totals.discount;
+  const totalTax = totals.tax;
+  const totalPurchase = totals.payable;
 
   // Tax grouped by label
   const taxByLabel = new Map<string, number>();
@@ -203,7 +202,7 @@ export default async function PurchaseTaxReportPage({
               {purchases.map((p) => {
                 const disc = Number(p.discount_amount) || 0;
                 const tax = Number(p.tax_amount) || 0;
-                const net = Number(p.total_amount) - disc;
+                const net = taxReportPayable(p.invoice_total, p.total_amount, disc, tax);
                 return (
                   <tr key={p.id} className="hover:bg-surface-50 dark:hover:bg-surface-800/40">
                     <td className="px-4 py-2 whitespace-nowrap text-surface-600 dark:text-surface-300">{p.purchase_date}</td>

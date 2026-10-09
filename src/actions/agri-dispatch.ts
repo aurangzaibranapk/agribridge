@@ -162,7 +162,7 @@ export async function createDispatch(_prev: ActionState, formData: FormData): Pr
     for (const item of items) {
       const productId = productByOrderItem.get(item.order_item_id);
       if (!productId || item.dispatched_qty <= 0) continue;
-      await moveStock({
+      const moved = await moveStock({
         fromWarehouseId: sourceWarehouseId,
         toWarehouseId: null,
         productId,
@@ -174,6 +174,7 @@ export async function createDispatch(_prev: ActionState, formData: FormData): Pr
         journalDescription: `${dispatchNumber}: ${item.product_name}`,
         journalSourceModule: "agri_dispatch",
       });
+      if (moved.error) return { error: `${item.product_name}: ${moved.error}` };
     }
   }
 

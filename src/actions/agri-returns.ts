@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { getCurrentSeller } from "@/lib/current-seller";
 import { notifyRoles, notifyBranch } from "@/lib/notifications";
 import { moveStock, mainWarehouseId, hqWarehouseId } from "@/lib/stock-movement";
+import { returnPriceCheck } from "@/lib/orders/return-math";
 import { requireAction } from "@/lib/access/guard";
 
 /**
@@ -79,8 +80,29 @@ export async function createReturn(_prev: ActionState, formData: FormData): Prom
     return { error: "Products sahi tarah select nahi huye." };
   }
   if (items.length === 0) return { error: "Kam az kam ek product add karein." };
+  if (!orderId) return { error: "Return order se link honi chahiye. Qeemat form se nahi li ja sakti." };
+  const { data: orderItems } = await supabase
+    .from("agri_order_items")
+    .select("product_id, order_qty, unit_price, line_total")
+    .eq("order_id", orderId);
+  const { data: priorReturns } = await supabase
+    .from("agri_order_returns")
+    .select("id, agri_order_return_items(product_id, return_qty)")
+    .eq("order_id", orderId)
+    .neq("status", "rejected");
+  const already = new Map<string, number>();
+  for (const prior of priorReturns ?? []) {
+    for (const line of prior.agri_order_return_items ?? []) {
+      if (!line.product_id) continue;
+      already.set(line.product_id, (already.get(line.product_id) ?? 0) + Number(line.return_qty ?? 0));
+    }
+  }
   for (const item of items) {
     if (!item.return_qty || item.return_qty <= 0) return { error: `${item.product_name}: quantity sahi likhein.` };
+    const orderLine = (orderItems ?? []).find((line) => line.product_id === item.product_id);
+    const check = returnPriceCheck(item.unit_price, item.return_qty, orderLine ?? null, already.get(item.product_id ?? "") ?? 0);
+    if (!check.ok) return { error: `${item.product_name}: ${check.error}` };
+    item.unit_price = check.unitPrice;
   }
 
   const totalAmount = items.reduce((sum, i) => sum + i.return_qty * i.unit_price, 0);
@@ -188,7 +210,7 @@ export async function receiveReturn(_prev: ActionState, formData: FormData): Pro
 
   for (const item of items ?? []) {
     if (!item.product_id) continue;
-    await moveStock({
+    const moved = await moveStock({
       fromWarehouseId: shopWarehouse,
       toWarehouseId: hqWarehouse,
       productId: item.product_id,
@@ -199,6 +221,7 @@ export async function receiveReturn(_prev: ActionState, formData: FormData): Pro
       outType: "transfer_out",
       inType: "return_in",
     });
+    if (moved.error) return { error: moved.error };
   }
 
   // Maal wapas aa gaya, is liye us ki value shop ke zimme nahi rahi.
