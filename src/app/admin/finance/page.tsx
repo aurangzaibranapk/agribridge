@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -80,7 +81,18 @@ export default async function AdminFinancePage() {
 
   return (
     <div>
-      <PageHeader title={t("fn_title", lang)} description={t("fn_subtitle", lang)} />
+      <PageHeader
+        title={t("fn_title", lang)}
+        description={t("fn_subtitle", lang)}
+        actions={
+          <Link
+            href="/admin/finance/statement-of-account"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
+          >
+            Statement Of Account
+          </Link>
+        }
+      />
       {/* Supplier ki adaigi ka calendar -- finance ko supplier se phone
           par poochhna na paRe (255). */}
       <div className="mb-4">

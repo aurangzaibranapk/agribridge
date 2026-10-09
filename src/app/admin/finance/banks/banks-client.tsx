@@ -74,6 +74,10 @@ export function BanksClient({ banks }: { banks: Bank[] }) {
                   href={`/admin/finance/banks/${bank.id}/statement`}
                   className="block w-full rounded-lg border border-surface-200 py-2 text-center text-sm font-medium text-surface-600 hover:bg-surface-50"
                 >{t("at_view_statement", lang)}</Link>
+                <Link
+                  href={`/admin/finance/statement-of-account?account=fa:${bank.id}`}
+                  className="block w-full rounded-lg border border-brand-200 py-2 text-center text-sm font-medium text-brand-700 hover:bg-brand-50"
+                >Statement Of Account (bank jaisa)</Link>
               </div>
             </div>
           ))}
