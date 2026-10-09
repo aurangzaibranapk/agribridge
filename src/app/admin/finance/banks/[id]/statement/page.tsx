@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { StatementClient } from "./statement-client";
@@ -76,7 +77,18 @@ export default async function BankStatementPage({
 
   return (
     <div>
-      <PageHeader title={`${bank?.name ?? "Bank"} - Statement`} description="Date range se transaction history dekhein" />
+      <PageHeader
+        title={`${bank?.name ?? "Bank"} - Statement`}
+        description="Date range se transaction history dekhein"
+        actions={
+          <Link
+            href={`/admin/finance/statement-of-account?account=fa:${bankId}&from=${startDate}&to=${endDate}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50"
+          >
+            Statement Of Account
+          </Link>
+        }
+      />
       <StatementClient
         bankName={bank?.name ?? "Bank"}
         accountNumber={bank?.account_number ?? null}

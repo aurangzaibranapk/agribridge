@@ -72,12 +72,20 @@ export default async function AccountLedgerPage({
         title={t("led_title", lang)}
         description={t("led_desc", lang)}
         actions={
+          <div className="flex flex-wrap gap-2">
+          <Link
+            href={code ? `/admin/finance/statement-of-account?account=gl:${code}&from=${from}&to=${to}` : "/admin/finance/statement-of-account"}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
+          >
+            Statement Of Account
+          </Link>
           <Link
             href="/admin/finance/accounts"
             className="inline-flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
           >
             <ArrowLeft className="h-4 w-4" /> {t("led_back", lang)}
           </Link>
+          </div>
         }
       />
 
