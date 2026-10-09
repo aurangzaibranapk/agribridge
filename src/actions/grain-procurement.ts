@@ -33,6 +33,9 @@ export interface GrainEntrySummary {
   grossWeight: number;
   cutKg: number;
   netWeight: number;
+  /** Godam (stock) mein kitne kg jayenge: normal = saaf wazan; "poora wazan" option par = kul wazan. */
+  stockQty: number;
+  stockFullGross: boolean;
   bags: number | null;
   totalAmount: number;
   chungiAmount: number;
@@ -198,6 +201,12 @@ async function postGrainEntry(formData: FormData, opts: GrainPostOptions): Promi
   const netWeight = bagResult?.netKg ?? grossWeight - cutKg;
   // rate field mein per-maund rate aata hai -- kg mein convert: rate/40
   const totalAmount = bagResult?.total ?? (netWeight / 40) * rate;
+  // "Stock mein poora (gross) wazan daalein; katoti sirf kisan ki adaigi se"
+  // (default band). On ho to godam mein kul wazan jata hai, magar kisan ki
+  // raqam aur stock ki kul lagat wohi (saaf wazan x rate) rehti hai -- yani
+  // fi kg lagat kul wazan par bant jati hai.
+  const stockFullGross = String(formData.get("stock_full_gross") ?? "") === "on";
+  const stockQty = stockFullGross ? grossWeight : netWeight;
   const chungiAmount = bagResult?.chungiAmount ?? (chungiType === "grain" ? (chungiKg / 40) * rate : chungiAmountInput);
   if (chungiAmount < 0) return { error: "Chungi amount sahi likhein." };
   if (chungiAmount > totalAmount) return { error: "Chungi amount total value se zyada nahi ho sakta." };
@@ -239,6 +248,8 @@ async function postGrainEntry(formData: FormData, opts: GrainPostOptions): Promi
         grossWeight,
         cutKg,
         netWeight,
+        stockQty,
+        stockFullGross,
         bags: bagResult?.bagKg ? bagResult.bags : null,
         totalAmount,
         chungiAmount,
@@ -268,6 +279,7 @@ async function postGrainEntry(formData: FormData, opts: GrainPostOptions): Promi
       cut_percentage: cutPercentage,
       cut_kg: cutKg,
       weight_kg: netWeight,
+      ...(stockFullGross ? { stock_weight_kg: stockQty } : {}),
       chungi_type: chungiType,
       chungi_kg: chungiType === "grain" ? chungiKg : 0,
       chungi_amount: chungiAmount,
@@ -363,7 +375,7 @@ async function postGrainEntry(formData: FormData, opts: GrainPostOptions): Promi
       const { error: movementError } = await supabase.from("stock_movements").insert({
         inventory_id: inventoryId,
         movement_type: "purchase_in",
-        quantity: netWeight,
+        quantity: stockQty,
         reference_type: "grain_procurement",
         reference_id: entry.id,
         created_by: user?.id ?? null,
@@ -378,18 +390,20 @@ async function postGrainEntry(formData: FormData, opts: GrainPostOptions): Promi
     // ka gandum batch mein tha magar khata 1200/1220 mein sifar.)
     // Form ka rate per-maund hota hai; stock_batches ka unit_cost per-kg
     // hona chahiye (Rs 4,500 per maund = Rs 112.50/kg).
-    const unitCost = netWeight > 0 ? totalAmount / netWeight : 0;
+    const unitCost = stockQty > 0 ? totalAmount / stockQty : 0;
     const batch = await createBatch(supabase, {
       productId,
       warehouseId,
-      qty: netWeight,
+      qty: stockQty,
       unitCost,
       batchNumber: `GRAIN-${entry.id.slice(0, 8)}`,
     });
     if (batch.error) return { error: `Anaj ka batch nahi bana: ${batch.error}` };
     if (totalAmount > 0) {
       const posted = await postJournal({
-        description: `Anaj godam mein -- ${netWeight}kg ${grainType}`,
+        description: stockFullGross
+          ? `Anaj godam mein -- ${stockQty}kg ${grainType} (kul wazan; kisan ko ${netWeight}kg ki adaigi)`
+          : `Anaj godam mein -- ${netWeight}kg ${grainType}`,
         sourceModule: "grain_procurement",
         sourceId: entry.id,
         entryDate,
@@ -1087,6 +1101,10 @@ export async function editGrainPendingEntry(_prev: ActionState, formData: FormDa
   }
   const warehouse = formData.get("warehouse_id");
   if (typeof warehouse === "string" && warehouse) next.warehouse_id = warehouse;
+  const stockFullGross = formData.get("stock_full_gross");
+  if (typeof stockFullGross === "string" && (stockFullGross === "on" || before.stock_full_gross !== undefined)) {
+    next.stock_full_gross = stockFullGross === "on" ? "on" : "";
+  }
 
   const rawExpenses = formData.get("expenses_json");
   if (typeof rawExpenses === "string") {

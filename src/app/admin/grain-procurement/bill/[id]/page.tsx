@@ -50,6 +50,7 @@ export default async function GrainBillPage({ params }: { params: Promise<{ id: 
     seller_phone: farmer?.phone_number ?? party?.phone ?? null,
     seller_type: farmer ? "Farmer" : "Party",
     notes: entry.notes,
+    stock_weight_kg: (entry as { stock_weight_kg?: number | null }).stock_weight_kg == null ? null : Number((entry as { stock_weight_kg?: number | null }).stock_weight_kg),
   };
 
   return <GrainBillClient bill={bill} />;

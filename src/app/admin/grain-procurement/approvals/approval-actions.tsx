@@ -102,6 +102,13 @@ export function GrainApprovalActions({
               </div>
             ))}
             <div>
+              <Label>Stock mein kitna wazan</Label>
+              <Select name="stock_full_gross" defaultValue={payload.stock_full_gross === "on" ? "on" : ""}>
+                <option value="">Saaf wazan (normal)</option>
+                <option value="on">Poora (gross) wazan; katoti sirf kisan ki adaigi se</option>
+              </Select>
+            </div>
+            <div>
               <Label>Godam</Label>
               <Select name="warehouse_id" defaultValue={payload.warehouse_id ?? ""}>
                 {warehouses.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}

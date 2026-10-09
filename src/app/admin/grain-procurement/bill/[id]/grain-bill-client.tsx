@@ -30,6 +30,8 @@ interface Bill {
   seller_phone: string | null;
   seller_type: string;
   notes: string | null;
+  /** Godam mein gaya wazan agar "poora wazan" option laga tha (warna null = saaf wazan). */
+  stock_weight_kg?: number | null;
 }
 
 const GRAIN_LABELS: Record<string, string> = { wheat: "Wheat (Gandum)", rice: "Rice (Chawal)", maize: "Maize (Makai)" };
@@ -146,6 +148,11 @@ export function GrainBillClient({ bill }: { bill: Bill }) {
           </div>
         </div>
 
+        {bill.stock_weight_kg != null && (
+          <p className="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">
+            Godam (stock) mein kul wazan {grainKgGrams(bill.stock_weight_kg)} gaya; katoti sirf kisan ki adaigi se kati (adaigi {grainKgGrams(bill.weight_kg)} par).
+          </p>
+        )}
         {bill.notes && (
           <div className="mt-4 border-t border-surface-100 pt-2 text-xs text-surface-500">
             <p className="font-medium">{t("ps_notes_label", lang)}</p>

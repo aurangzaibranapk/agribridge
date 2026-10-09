@@ -105,7 +105,11 @@ export default async function GrainApprovalsPage() {
                 {bagMode && calc.bagKg && <Line k="Boriyan" v={`${calc.bags.toLocaleString(undefined, { maximumFractionDigits: 3 })} (1 bori = ${calc.bagKg} kg)`} />}
                 {bagMode && <Line k="Cut ka tareeqa" v={calc.cutBasis === "per_bag" ? `Fi bori ${calc.unitCutKg} kg` : calc.cutBasis === "percentage" ? `Preset ${Number(p.preset_cut_percentage ?? 0)}%` : `Kul ${calc.unitCutKg} kg`} />}
                 <Line k="Kul cut" v={kg(Number(r.gross_weight_kg ?? 0) - Number(r.net_weight_kg ?? 0))} />
-                <Line k="Saaf wazan" v={`${kg(r.net_weight_kg)} (${(Number(r.net_weight_kg ?? 0) / 40).toFixed(3)} mand)`} strong />
+                <Line k="Saaf wazan (adaigi is par)" v={`${kg(r.net_weight_kg)} (${(Number(r.net_weight_kg ?? 0) / 40).toFixed(3)} mand)`} strong />
+                <Line
+                  k={p.stock_full_gross === "on" ? "Stock mein (kul wazan -- option on)" : "Stock mein (saaf wazan)"}
+                  v={`${kg(p.stock_full_gross === "on" ? r.gross_weight_kg : r.net_weight_kg)} · lagat ${rs(r.total_amount)} (${rs(Number(r.total_amount ?? 0) / Math.max(Number(p.stock_full_gross === "on" ? r.gross_weight_kg : r.net_weight_kg) || 1, 1))}/kg)`}
+                />
                 {p.moisture_percentage && <Line k="Nami" v={`${p.moisture_percentage}%`} />}
                 {p.quality_grade && <Line k="Quality" v={p.quality_grade} />}
               </div>

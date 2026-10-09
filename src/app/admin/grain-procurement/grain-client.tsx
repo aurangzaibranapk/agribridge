@@ -437,6 +437,8 @@ function NewEntryForm({
   const [paymentAccountId, setPaymentAccountId] = useState("");
   // "post" = purana rawaiya (foran darj). "pending" = Admin approval ke baad.
   const [saveMode, setSaveMode] = useState<"post" | "pending">("post");
+  // Default band: stock mein saaf wazan. On: stock mein kul wazan, katoti sirf adaigi se.
+  const [stockFullGross, setStockFullGross] = useState(false);
 
   useEffect(() => {
     registerSender("grain.entry", async (action: QueuedAction, evidence) => {
@@ -588,6 +590,7 @@ function NewEntryForm({
         <input type="hidden" name="chungi_amount" value={chungiAmount} />
         <input type="hidden" name="make_payment" value={makePayment} />
         <input type="hidden" name="save_mode" value={saveMode} />
+        <input type="hidden" name="stock_full_gross" value={stockFullGross ? "on" : ""} />
 
         <div>
           <Label>{t("gr_who_brought", lang)}</Label>
@@ -671,6 +674,13 @@ function NewEntryForm({
             <div className="flex justify-between text-surface-500"><span>{t("gr_cut", lang)}</span><span>{grainKgGrams(cutKg)} ({effectiveCutPercentage.toFixed(3)}%)</span></div>
             <div className="flex justify-between font-semibold text-surface-700 dark:text-surface-300"><span>{t("gr_net_weight", lang)}</span><span>{grainKgGrams(netWeight)}</span></div>
           </div>
+          <label className="mt-3 flex items-start gap-2 rounded-lg border border-surface-200 bg-white p-2 text-xs text-surface-700 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-300">
+            <input type="checkbox" className="mt-0.5" checked={stockFullGross} onChange={(e) => setStockFullGross(e.target.checked)} />
+            <span>
+              <b>Stock mein poora (gross) wazan daalein; katoti sirf kisan ki adaigi se</b>
+              <span className="block text-[11px] text-surface-500">Godam mein {grainKgGrams(stockFullGross ? gross : netWeight)} jayega. Kisan ko raqam saaf wazan ({grainKgGrams(netWeight)}) par hi milegi; stock ki kul lagat wohi rehti hai, fi kg lagat kul wazan par bant jati hai.</span>
+            </span>
+          </label>
         </div>
 
         <div className="rounded-xl border border-surface-200 bg-surface-50/60 p-4 dark:border-surface-700 dark:bg-surface-800/40">
@@ -824,6 +834,7 @@ function NewEntryForm({
               <div className="flex items-center justify-between"><span className="text-surface-500">Gross Weight</span><span className="font-semibold text-surface-900 dark:text-white">{gross.toLocaleString()} kg</span></div>
               <div className="flex items-center justify-between"><span className="text-surface-500">Cut / Deduction</span><span className="font-semibold text-amber-700">{grainKgGrams(cutKg)}</span></div>
               <div className="flex items-center justify-between border-b border-brand-200 pb-3 dark:border-brand-900/50"><span className="text-surface-500">Net Weight</span><span className="font-semibold text-surface-900 dark:text-white">{grainKgGrams(netWeight)}</span></div>
+              <div className="flex items-center justify-between"><span className="text-surface-500">Stock mein jayega</span><span className="font-semibold text-surface-900 dark:text-white">{grainKgGrams(stockFullGross ? gross : netWeight)}</span></div>
               <div className="flex items-center justify-between"><span className="text-surface-500">Rate</span><span className="font-semibold text-surface-900 dark:text-white">Rs {rateNum.toLocaleString()}/maund</span></div>
               <div className="flex items-center justify-between"><span className="text-surface-500">Grain Value</span><span className="font-display text-lg font-bold text-brand-700 dark:text-brand-300">Rs {total.toLocaleString()}</span></div>
               <div className="flex items-center justify-between border-b border-brand-200 pb-3 dark:border-brand-900/50"><span className="text-surface-500">Chungi / Bardana</span><span className="font-semibold text-amber-700">- Rs {chungiAmount.toLocaleString()}</span></div>
