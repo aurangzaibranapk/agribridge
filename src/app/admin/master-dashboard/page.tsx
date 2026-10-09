@@ -52,10 +52,23 @@ export default async function MasterDashboardPage({
         .sort((a, b) => b.payable - a.payable)
         .map((r) => ({ name: r.name ?? "—", value: r.payable }));
 
-  const { data: batchRows } = await supabase.from("stock_batches").select("remaining_quantity, unit_cost, products(categories(name))");
+  // Paging: Supabase ek dafa mein 1,000 qataren deta hai. Batches us se
+  // barh jayen to Stock Value chup chaap kam dikhti (adhoori jama).
+  const batchRows: any[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data: page, error: batchErr } = await supabase
+      .from("stock_batches")
+      .select("remaining_quantity, unit_cost, products(categories(name))")
+      .gt("remaining_quantity", 0)
+      .order("id")
+      .range(from, from + 999);
+    if (batchErr || !page) break;
+    batchRows.push(...page);
+    if (page.length < 1000) break;
+  }
   let totalInventoryValue = 0;
   const inventoryByCategory: Record<string, number> = {};
-  (batchRows ?? []).forEach((r: any) => {
+  batchRows.forEach((r: any) => {
     const product = Array.isArray(r.products) ? r.products[0] : r.products;
     const value = Number(r.remaining_quantity ?? 0) * Number(r.unit_cost ?? 0);
     totalInventoryValue += value;

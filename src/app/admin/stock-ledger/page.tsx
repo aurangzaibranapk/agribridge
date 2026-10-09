@@ -78,6 +78,9 @@ export default async function StockLedgerPage() {
               {movements.map((m) => {
                 const info = inventoryMap.get(m.inventory_id);
                 const upp = Number(info?.product?.units_per_pack ?? 1);
+                // stock_movements ki miqdar pehle se BOTTLE (base unit) mein hai.
+                // Pehle yahan qty x upp ko "bottles" likha jata tha -- 24 bottle
+                // "288 bottles" dikhte the. Ab bottle asal adad, aur carton hisaab.
                 const hasBottles = upp > 1;
                 const qty = Number(m.quantity);
                 const bal = Number(m.balance_after);
@@ -96,13 +99,13 @@ export default async function StockLedgerPage() {
                     <td className="px-4 py-3 text-right text-surface-700 dark:text-surface-300">
                       <span>{qty.toLocaleString()}</span>
                       {hasBottles && (
-                        <span className="block text-[11px] text-brand-600 dark:text-brand-400">{(qty * upp).toLocaleString()} bottles</span>
+                        <span className="block text-[11px] text-brand-600 dark:text-brand-400">{cartons(qty, upp)}</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right text-surface-700 dark:text-surface-300">
                       <span>{bal.toLocaleString()}</span>
                       {hasBottles && (
-                        <span className="block text-[11px] text-brand-600 dark:text-brand-400">{(bal * upp).toLocaleString()} bottles</span>
+                        <span className="block text-[11px] text-brand-600 dark:text-brand-400">{cartons(bal, upp)}</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-surface-500">{new Date(m.created_at).toLocaleString()}</td>
@@ -115,4 +118,10 @@ export default async function StockLedgerPage() {
       )}
     </div>
   );
+}
+
+function cartons(bottles: number, upp: number): string {
+  const full = Math.trunc(bottles / upp);
+  const loose = Math.round((bottles - full * upp) * 1000) / 1000;
+  return `= ${full.toLocaleString()} ctn${loose ? ` + ${loose.toLocaleString()} btl` : ""}`;
 }

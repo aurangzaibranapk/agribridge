@@ -18,6 +18,11 @@ export interface PosCartItem {
   product_id: string;
   quantity: number;
   unit_price: number;
+  /**
+   * Server tay karta hai (browser nahi): "carton" ho to create_pos_sale
+   * quantity x units_per_pack bottle stock se ghatata hai (513).
+   */
+  sale_unit?: "carton" | "unit";
 }
 
 export interface PosPaymentLine {
@@ -149,12 +154,17 @@ export async function posCheckout(input: {
     }
   }
 
+  // Carton ya bottle? Wholesale counter par quantity carton mein hoti hai
+  // (rate = wholesale_price), magar stock bottle mein. Pehle 1 carton par
+  // 1 bottle ghatta tha -- stock zyada aur nafa phoola hua dikhta tha.
+  const itemsWithUnit = await markSaleUnits(input.items);
+
   const rpcArgs = {
     p_customer_id: input.customerId as string,
     p_payment_mode: input.paymentMode,
     p_cash_paid: input.cashPaid,
     p_khata_amount: input.khataAmount,
-    p_items: input.items as unknown as Json,
+    p_items: itemsWithUnit as unknown as Json,
     p_payment_lines: input.paymentLines as unknown as Json,
     p_discount: discount,
     p_discount_reason: discount > 0 ? discountReason : undefined,
@@ -260,6 +270,28 @@ async function resolveFarmerCustomerId(farmerId: string): Promise<string | null>
  * Ek paisa tak ka farq nahi pakaRa jata (0.01), warna gol karne se hi
  * bikri ruk jati.
  */
+/**
+ * Har line par sale_unit lagao: units_per_pack > 1 aur rate wholesale
+ * (carton) rate ke barabar ho to "carton", warna "unit".
+ */
+async function markSaleUnits(items: PosCartItem[]): Promise<PosCartItem[]> {
+  if (items.length === 0) return items;
+  const service = createServiceClient();
+  const ids = Array.from(new Set(items.map((i) => i.product_id)));
+  const { data: products } = await service
+    .from("products")
+    .select("id, units_per_pack, wholesale_price, selling_price")
+    .in("id", ids);
+  const byId = new Map((products ?? []).map((p: any) => [p.id as string, p]));
+  return items.map((item) => {
+    const p: any = byId.get(item.product_id);
+    const upp = Number(p?.units_per_pack ?? 0);
+    const wholesale = p?.wholesale_price != null ? Number(p.wholesale_price) : null;
+    const isCarton = upp > 1 && wholesale != null && wholesale > 0 && Math.abs(Number(item.unit_price) - wholesale) < 0.01;
+    return isCarton ? { ...item, sale_unit: "carton" as const } : item;
+  });
+}
+
 async function checkRates(
   input: { customerId: string | null; items: PosCartItem[] },
   userId: string | null

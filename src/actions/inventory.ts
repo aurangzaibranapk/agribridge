@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { consumeBatches, createBatch, postStockValueChange, unbatchedQty } from "@/lib/inventory/batch-ledger";
 
 export interface ActionState {
   error?: string;
@@ -76,36 +77,71 @@ export async function adjustStock(_prev: ActionState, formData: FormData): Promi
 
   const notesText = [billNo ? `Bill: ${billNo}` : null, notes].filter(Boolean).join(" | ") || null;
 
-  const { error } = await supabase.from("stock_movements").insert({
-    inventory_id: inventoryId,
-    movement_type: direction === "increase" ? "adjustment_increase" : "adjustment_decrease",
-    quantity,
-    reference_type: "manual_adjustment",
-    notes: notesText,
-    created_by: user?.id ?? null,
-    ...(clientActionId ? { client_action_id: clientActionId } : {}),
-  });
+  // Batch + ledger ke liye product/godam aur lagat pehle se tay karo --
+  // stock IN par lagat ke baghair adjustment manzoor nahi (warna ginti
+  // barhti hai magar Stock Value aur khata 1200 nahi; 9 Oct ka farq).
+  const { data: invRow } = await supabase.from("inventory").select("product_id, warehouse_id").eq("id", inventoryId).single();
+  if (!invRow?.product_id) return { error: "Inventory row ka product nahi mila." };
+  let inCost = 0;
+  if (direction === "increase") {
+    if (rate && rate > 0) {
+      inCost = rate;
+    } else {
+      const { data: prod } = await supabase.from("products").select("purchase_price").eq("id", invRow.product_id).maybeSingle();
+      inCost = Number(prod?.purchase_price ?? 0);
+    }
+    if (!(inCost > 0)) return { error: "Stock barhane ke liye khareed rate (lagat) likhein -- warna Stock Value aur ledger nahi milenge." };
+  }
+
+  const { data: movement, error } = await supabase
+    .from("stock_movements")
+    .insert({
+      inventory_id: inventoryId,
+      movement_type: direction === "increase" ? "adjustment_increase" : "adjustment_decrease",
+      quantity,
+      reference_type: "manual_adjustment",
+      notes: notesText,
+      created_by: user?.id ?? null,
+      ...(clientActionId ? { client_action_id: clientActionId } : {}),
+    })
+    .select("id")
+    .single();
 
   if (error) {
     if (clientActionId && error.code === "23505") return { success: true };
     return { error: error.message };
   }
 
-  // Stock IN par batch bhi banta hai — is se Stock Value ka FIFO hisaab sahi hota hai
-  if (direction === "increase" && rate && rate > 0) {
-    const { data: invRow } = await supabase.from("inventory").select("product_id, warehouse_id").eq("id", inventoryId).single();
-    if (invRow?.product_id && invRow?.warehouse_id) {
-      const batchNum = `ADJ-${new Date().toISOString().replace(/[-:T.]/g, "").slice(0, 14)}`;
-      await supabase.from("stock_batches").insert({
-        product_id: invRow.product_id,
-        warehouse_id: invRow.warehouse_id,
-        unit_cost: rate,
-        initial_quantity: quantity,
-        remaining_quantity: quantity,
-        batch_number: batchNum,
-      });
-    }
+  // Batch aur ledger -- ginti ke sath hi. IN: naya batch + Dr Stock / Cr 6110.
+  // OUT: FIFO se batch ghatao + Dr 6110 / Cr Stock (lagat par).
+  let value = 0;
+  if (direction === "increase") {
+    const batchNum = `ADJ-${new Date().toISOString().replace(/[-:T.]/g, "").slice(0, 14)}`;
+    const created = await createBatch(supabase, {
+      productId: invRow.product_id,
+      warehouseId: invRow.warehouse_id,
+      qty: quantity,
+      unitCost: inCost,
+      batchNumber: batchNum,
+    });
+    if (created.error) return { error: `Ginti barh gayi magar batch nahi bana: ${created.error}` };
+    value = quantity * inCost;
+  } else if (invRow.warehouse_id) {
+    const consumed = await consumeBatches(supabase, invRow.warehouse_id, invRow.product_id, quantity);
+    if (consumed.error) return { error: `Ginti ghat gayi magar batch nahi ghata: ${consumed.error}` };
+    value = consumed.cost;
   }
+  const posted = await postStockValueChange({
+    db: supabase,
+    productId: invRow.product_id,
+    amount: value,
+    direction: direction as "increase" | "decrease",
+    description: `Stock adjustment (${direction === "increase" ? "barha" : "ghata"}) ${quantity}${notesText ? ` -- ${notesText}` : ""}`,
+    sourceModule: "stock_adjustment",
+    sourceId: movement?.id ?? null,
+    createdBy: user?.id ?? null,
+  });
+  if (posted.error) return { error: `Stock badal gaya magar ledger mein nahi gaya: ${posted.error}` };
 
   revalidatePath("/admin/inventory");
   if (productId) revalidatePath(`/admin/inventory/product/${productId}`);
@@ -280,48 +316,66 @@ export async function fixUnbatchedInventory(_prev: ActionState, formData: FormDa
 
   const service = createServiceClient();
 
+  // Pehle yahan har us inventory row ke liye jis ka batch_id khali ho, POORI
+  // ginti ka naya batch banta tha -- chahe PO ke batch pehle se us maal ko
+  // cover kar rahe hon. Is se FIX-20261006-* jaise dugne batch bane aur
+  // Stock Value phool gayi. Ab sirf (ginti - maujood batch) ka batch banta
+  // hai, godam ke hisaab se, aur us ki qeemat ledger mein bhi jati hai.
   const { data: rows, error: fetchErr } = await service
     .from("inventory")
-    .select("id, quantity_on_hand, warehouse_id")
+    .select("id, quantity_on_hand, warehouse_id, batch_id")
     .eq("product_id", productId)
-    .is("batch_id", null)
     .gt("quantity_on_hand", 0);
   if (fetchErr) return { error: fetchErr.message };
-  if (!rows || rows.length === 0) return { error: "Is product ki koi batch-less inventory nahi mili." };
+  if (!rows || rows.length === 0) return { error: "Is product ki koi inventory nahi mili." };
 
+  const warehouses = Array.from(new Set(rows.map((r) => r.warehouse_id ?? null)));
   const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
   let fixed = 0;
-  for (const row of rows) {
-    const batchNumber = `FIX-${today}-${row.id.slice(0, 6).toUpperCase()}`;
-    const { data: batch, error: batchErr } = await service
-      .from("stock_batches")
-      .insert({
-        product_id: productId,
-        batch_number: batchNumber,
-        initial_quantity: Number(row.quantity_on_hand),
-        remaining_quantity: Number(row.quantity_on_hand),
-        unit_cost: unitCostRaw,
-        warehouse_id: row.warehouse_id ?? null,
-      })
-      .select("id")
-      .single();
-    if (batchErr || !batch) continue;
-    const { error: updateErr } = await service.from("inventory").update({ batch_id: batch.id }).eq("id", row.id);
-    if (updateErr) {
-      // Adhoora/orphan batch na chhorein: inventory link na ho to naya
-      // batch bhi wapas hata dein aur baqi rows ki koshish jaari rakhein.
-      await service.from("stock_batches").delete().eq("id", batch.id);
+  let failedCount = 0;
+  for (const warehouseId of warehouses) {
+    const gap = await unbatchedQty(service, warehouseId, productId);
+    if (gap <= 0) continue;
+    const firstRow = rows.find((r) => (r.warehouse_id ?? null) === warehouseId)!;
+    const created = await createBatch(service, {
+      productId,
+      warehouseId,
+      qty: gap,
+      unitCost: unitCostRaw,
+      batchNumber: `FIX-${today}-${firstRow.id.slice(0, 6).toUpperCase()}`,
+    });
+    if (created.error || !created.id) {
+      failedCount++;
       continue;
     }
+    const posted = await postStockValueChange({
+      db: service,
+      productId,
+      amount: gap * unitCostRaw,
+      direction: "increase",
+      description: `Batch theek-kari: ${gap} bina-batch maal ka batch (Rs ${unitCostRaw}/unit)`,
+      sourceModule: "batch_fix",
+      sourceId: created.id,
+      createdBy: user.id,
+    });
+    if (posted.error) {
+      // Ledger na chale to batch bhi wapas -- adhoora kaam na chhorein.
+      await service.from("stock_batches").delete().eq("id", created.id);
+      failedCount++;
+      continue;
+    }
+    const unlinked = rows.filter((r) => (r.warehouse_id ?? null) === warehouseId && !r.batch_id).map((r) => r.id);
+    if (unlinked.length) await service.from("inventory").update({ batch_id: created.id }).in("id", unlinked);
     fixed++;
   }
 
   revalidatePath(`/admin/inventory/product/${productId}`);
   revalidatePath("/admin/inventory");
   revalidatePath("/admin/master-dashboard");
+  if (fixed === 0 && failedCount === 0) return { error: "Is product ka saara stock pehle se batch mein hai -- naya batch nahi chahiye." };
   if (fixed === 0) return { error: "Koi bhi fix nahi ho saka — dobara check karein." };
-  if (fixed < rows.length) {
-    return { error: `${fixed} batch theek hue, lekin ${rows.length - fixed} abhi baqi hain — dobara approve karein.`, fixed };
+  if (failedCount > 0) {
+    return { error: `${fixed} godam theek hue, lekin ${failedCount} abhi baqi hain — dobara approve karein.`, fixed };
   }
   return { success: true, fixed };
 }
