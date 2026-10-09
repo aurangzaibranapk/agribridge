@@ -100,5 +100,18 @@ export function grainPendingCalc(payload: GrainPendingPayload) {
     chungiType,
     chungiValue: num("chungi_value"),
   });
-  return { ...calc, cutBasis, chungiBasis, chungiType, ratePerMaund: num("rate_per_kg"), grossKg: num("gross_weight_kg") };
+  const stockFullGross = payload?.stock_full_gross === "on";
+  const grossKg = num("gross_weight_kg");
+  const stockQty = stockFullGross ? grossKg : calc.netKg;
+  return {
+    ...calc,
+    cutBasis,
+    chungiBasis,
+    chungiType,
+    ratePerMaund: num("rate_per_kg"),
+    grossKg,
+    stockFullGross,
+    stockQty,
+    stockUnitCost: stockQty > 0 ? calc.total / stockQty : 0,
+  };
 }
