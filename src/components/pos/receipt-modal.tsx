@@ -53,7 +53,7 @@ export function ReceiptModal({
   useEffect(() => {
     (async () => {
       const { data } = await supabase.rpc("get_sale_receipt", { p_sale_id: saleId });
-      const receipt = (data ?? {}) as ReceiptData;
+      const receipt = (data ?? {}) as unknown as ReceiptData;
       const [{ data: sale }, { data: lines }] = await Promise.all([
         supabase.from("pos_sales").select("discount_amount").eq("id", saleId).maybeSingle(),
         supabase.from("pos_sale_payment_details").select("payment_method, amount").eq("sale_id", saleId),
