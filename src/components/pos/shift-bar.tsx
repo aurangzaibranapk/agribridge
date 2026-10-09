@@ -108,7 +108,7 @@ export function ShiftCashHandoverForm({
         </p>
         {handoverState.handoverId && (
           <a
-            href={`/admin/cash-handover/slip/${handoverState.handoverId}`}
+            href={`/admin/cash-handover/slip/${handoverState.handoverId}?print=1`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-white px-3 py-2 text-xs font-medium text-brand-700 hover:bg-brand-50 dark:border-brand-800 dark:bg-surface-900 dark:text-brand-300"
