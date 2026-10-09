@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { orderLineAmounts } from "@/lib/orders/line-math";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
 import { getCurrentSeller } from "@/lib/current-seller";
@@ -198,8 +199,8 @@ export async function createAgriOrder(_prev: ActionState, formData: FormData): P
     unit_price: i.unit_price,
     discount: i.discount ?? 0,
     tax: i.tax ?? 0,
-    net_price: i.unit_price - (i.discount ?? 0) + (i.tax ?? 0),
-    line_total: i.order_qty * (i.unit_price - (i.discount ?? 0) + (i.tax ?? 0)),
+    net_price: orderLineAmounts(i.order_qty, i.unit_price, i.discount ?? 0, i.tax ?? 0).netPrice,
+    line_total: orderLineAmounts(i.order_qty, i.unit_price, i.discount ?? 0, i.tax ?? 0).lineTotal,
     active_ingredient: i.active_ingredient ?? null,
     formulation: i.formulation ?? null,
     registration_no: i.registration_no ?? null,
@@ -307,8 +308,8 @@ export async function createBranchAgriOrder(_prev: ActionState, formData: FormDa
     unit_price: i.unit_price,
     discount: i.discount ?? 0,
     tax: i.tax ?? 0,
-    net_price: i.unit_price - (i.discount ?? 0) + (i.tax ?? 0),
-    line_total: i.order_qty * (i.unit_price - (i.discount ?? 0) + (i.tax ?? 0)),
+    net_price: orderLineAmounts(i.order_qty, i.unit_price, i.discount ?? 0, i.tax ?? 0).netPrice,
+    line_total: orderLineAmounts(i.order_qty, i.unit_price, i.discount ?? 0, i.tax ?? 0).lineTotal,
   }));
 
   const { error: itemsError } = await supabase.from("agri_order_items").insert(itemRows);

@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   const service = createServiceClient();
   let q = service
     .from("purchases")
-    .select("purchase_number, purchase_date, supplier_bill_no, total_amount, discount_amount, tax_amount, tax_label, suppliers(name)")
+    .select("purchase_number, purchase_date, supplier_bill_no, total_amount, invoice_total, discount_amount, tax_amount, tax_label, suppliers(name)")
     .gte("purchase_date", from)
     .lte("purchase_date", to)
     .or("discount_amount.not.is.null,tax_amount.not.is.null")
@@ -39,14 +39,15 @@ export async function GET(req: NextRequest) {
   const { data: rows } = await q;
   const purchases = (rows ?? []) as any[];
 
-  const totalDiscount = purchases.reduce((s: number, r: any) => s + (Number(r.discount_amount) || 0), 0);
-  const totalTax = purchases.reduce((s: number, r: any) => s + (Number(r.tax_amount) || 0), 0);
-  const totalAmount = purchases.reduce((s: number, r: any) => s + (Number(r.total_amount) || 0), 0);
+  const totals = taxReportTotals(purchases);
+  const totalDiscount = totals.discount;
+  const totalTax = totals.tax;
+  const totalAmount = totals.payable;
 
   const header = ["Tareekh", "Bill No.", "PO Number", "Supplier", "Kul Raqam", "Trade Discount", "Advance Tax", "Tax Label", "Net Amount"];
   const dataRows = purchases.map((p: any) => {
     const disc = Number(p.discount_amount) || 0;
-    const net = Number(p.total_amount) - disc;
+    const net = taxReportPayable(p.invoice_total, p.total_amount, disc, p.tax_amount);
     return [
       csv(p.purchase_date),
       csv(p.supplier_bill_no ?? ""),
@@ -60,12 +61,13 @@ export async function GET(req: NextRequest) {
     ];
   });
 
+  const goodsTotal = purchases.reduce((sum: number, row: any) => sum + (Number(row.total_amount) || 0), 0);
   const totalRow = ["", "", "", "KUL TOTAL",
-    csv(totalAmount.toFixed(2)),
+    csv(goodsTotal.toFixed(2)),
     csv(totalDiscount.toFixed(2)),
     csv(totalTax.toFixed(2)),
     "",
-    csv((totalAmount - totalDiscount).toFixed(2)),
+    csv(totalAmount.toFixed(2)),
   ];
 
   const allRows = [header, ...dataRows, [], totalRow];
