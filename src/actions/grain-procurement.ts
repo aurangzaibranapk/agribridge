@@ -9,6 +9,8 @@ import { createBatch } from "@/lib/inventory/batch-ledger";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles } from "@/lib/notifications";
 import { sendDeptMail, mailWrapper } from "@/lib/mailer";
+import { requireGrainApprover } from "@/lib/grain/approval-guard";
+import { grainPayloadFromForm, formDataFromGrainPayload, GRAIN_PENDING_EDITABLE, type GrainPendingPayload } from "@/lib/grain/pending-payload";
 
 export interface ActionState {
   error?: string;
@@ -17,6 +19,45 @@ export interface ActionState {
   paymentId?: string;
   /** Kaam ho gaya -- aur kya hua, wo staff ko batane wala jumla. */
   notice?: string;
+  /** "Pending (Admin approval)" par save hui entry ki id (grain_pending_entries). */
+  pendingId?: string;
+}
+
+/** Entry ka hisaab -- Pending save aur Admin review dono yahi dikhate hain. */
+export interface GrainEntrySummary {
+  entryDate: string;
+  grainType: string;
+  farmerId: string | null;
+  partyId: string | null;
+  warehouseId: string | null;
+  grossWeight: number;
+  cutKg: number;
+  netWeight: number;
+  bags: number | null;
+  totalAmount: number;
+  chungiAmount: number;
+  payableToSeller: number;
+  expensesTotal: number;
+  paymentAmount: number;
+  notes: string | null;
+}
+
+/**
+ * Asal posting ka raasta (createGrainEntry) -- Admin approval ke liye chand
+ * ikhtiyari cheezen. Normal save par koi bhi nahi hoti, yani purana rawaiya
+ * bilkul wohi rehta hai.
+ */
+interface GrainPostOptions {
+  /** Sirf jaanch aur hisaab -- kuch bhi darj nahi hota. */
+  validateOnly?: boolean;
+  /** Approve: asal entry is pending entry se judti hai (UNIQUE -- dobara nahi banti). */
+  pendingEntryId?: string;
+  /** Purani tareekh ki wajah jo ledger/cash book mein jayegi. */
+  backdateReason?: string;
+  /** Pending save ke waqt upload hui raseed. */
+  receiptPhotoUrl?: string | null;
+  /** Entry kis ne banayi thi (approve karne wala nahi, asal staff). */
+  entryCreatedBy?: string | null;
 }
 
 interface InlineExpense {
@@ -82,6 +123,13 @@ function validClientActionId(raw: FormDataEntryValue | null): string | null {
 }
 
 export async function createGrainEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  // "Pending (Admin approval)" -- sirf tab jab staff khud chune. Warna purana
+  // raasta: foran stock, ledger, cash book, kharche aur payment.
+  if (String(formData.get("save_mode") ?? "") === "pending") return saveGrainEntryAsPending(formData);
+  return postGrainEntry(formData, {});
+}
+
+async function postGrainEntry(formData: FormData, opts: GrainPostOptions): Promise<ActionState & { summary?: GrainEntrySummary }> {
   const supabase = createClient();
   const serviceClient = createServiceClient();
   const sellerType = String(formData.get("seller_type") ?? "farmer");
@@ -171,13 +219,39 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
     if (paymentAmount > payableToSeller) return { error: `Payment, Payable Amount (Rs ${payableToSeller.toLocaleString()}) se zyada nahi ho sakti.` };
     if (!paymentAccountId) return { error: "Konsa account se paisa gaya, wo select karein." };
     const photoField = formData.get("receipt_photo");
-    if (paymentMethod === "cash") {
+    if (paymentMethod === "cash" && !opts.receiptPhotoUrl) {
       if (!(photoField instanceof File) || photoField.size === 0) {
         return { error: "Cash payment ke liye Farmer ki signed Receiving ki photo attach karna zaroori hai." };
       }
     }
     if (photoField instanceof File && photoField.size > 0) receiptPhoto = photoField;
   }
+
+  if (opts.validateOnly) {
+    return {
+      success: true,
+      summary: {
+        entryDate,
+        grainType,
+        farmerId,
+        partyId,
+        warehouseId,
+        grossWeight,
+        cutKg,
+        netWeight,
+        bags: bagResult?.bagKg ? bagResult.bags : null,
+        totalAmount,
+        chungiAmount,
+        payableToSeller,
+        expensesTotal: inlineExpenses.reduce((sum, exp) => sum + Number(exp.amount || 0), 0),
+        paymentAmount,
+        notes,
+      },
+    };
+  }
+  // Admin approval par wajah "Admin approved backdated entry"; warna purani wajah.
+  const backdateReason = (what: string) =>
+    opts.backdateReason && entryDate < aajKaKhana() ? opts.backdateReason : grainBackdateReason(entryDate, what);
 
   const {
     data: { user },
@@ -208,11 +282,15 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
       total_amount: totalAmount,
       warehouse_id: warehouseId,
       notes,
-      created_by: user?.id ?? null,
+      created_by: opts.entryCreatedBy ?? user?.id ?? null,
+      ...(opts.pendingEntryId ? { pending_entry_id: opts.pendingEntryId } : {}),
     })
     .select("id")
     .single();
-  if (error) return { error: error.message };
+  if (error) {
+    if (opts.pendingEntryId && error.code === "23505") return { error: "Ye pending entry pehle hi approve ho kar asal entry ban chuki hai." };
+    return { error: error.message };
+  }
 
   if (farmerId) {
     const { data: grainWallet } = await supabase.from("wallets").select("id").eq("owner_type", "farmer").eq("owner_id", farmerId).single();
@@ -247,7 +325,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
           ctx: {
             createdBy: user?.id ?? null,
             entryDate,
-            backdateReason: grainBackdateReason(entryDate, "Grain entry"),
+            backdateReason: backdateReason("Grain entry"),
             claims: [{ table: "wallet_transactions", rowId: grainWalletRow.id }],
           },
         });
@@ -315,7 +393,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
         sourceModule: "grain_procurement",
         sourceId: entry.id,
         entryDate,
-        backdateReason: grainBackdateReason(entryDate, "Grain entry"),
+        backdateReason: backdateReason("Grain entry"),
         createdBy: user?.id ?? null,
         lines: [
           { account: ACC.stockGrain, debit: Math.round(totalAmount * 100) / 100 },
@@ -359,7 +437,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
         ctx: {
           createdBy: user?.id ?? null,
           entryDate,
-          backdateReason: grainBackdateReason(entryDate, "Grain entry ka kharcha"),
+          backdateReason: backdateReason("Grain entry ka kharcha"),
           claims: [{ table: "finance_transactions", rowId: opExpRow.id }],
         },
       });
@@ -373,7 +451,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
   let paymentId: string | undefined;
   let paymentNotice: string | undefined;
   if (makePayment === "yes" && paymentAccountId) {
-    let receiptPhotoUrl: string | null = null;
+    let receiptPhotoUrl: string | null = opts.receiptPhotoUrl ?? null;
     if (receiptPhoto) {
       const uploaded = await uploadGrainReceipt(serviceClient, receiptPhoto);
       if ("error" in uploaded) return { error: `Entry save ho gayi, magar payment nahi hui: ${uploaded.error}`, entryId: entry.id };
@@ -394,7 +472,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
         notes: "Entry ke sath payment hui",
         context: "entry",
         client_action_id: validClientActionId(formData.get("client_action_id")),
-        backdate_reason: grainBackdateReason(entryDate, "Grain entry ki payment"),
+        backdate_reason: backdateReason("Grain entry ki payment"),
       },
     });
     if (payError || !paid?.payment_id) {
@@ -791,4 +869,269 @@ export async function emailGrainPaymentSlip(_prev: ActionState, formData: FormDa
   });
   if (!sent.sent) return { error: sent.error };
   return { success: true, notice: `Slip ${toEmail} par bhej di gayi (${sent.from} se).` };
+}
+
+// ===========================================================================
+// Pending (Admin approval) -- migration 518
+// ===========================================================================
+
+const GRAIN_APPROVAL_BACKDATE_REASON = "Admin approved backdated entry";
+/** Approve beech mein ruk jaye (server band) to itni der baad dobara koshish ho sakti hai. */
+const GRAIN_APPROVAL_STALE_MS = 10 * 60 * 1000;
+
+function pendingDateCheck(raw: string): { date: string } | { error: string } {
+  const value = raw.trim() || aajKaKhana();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return { error: "Tareekh sahi likhein." };
+  if (value > aajKaKhana()) return { error: "Entry ki tareekh aage ki nahi ho sakti." };
+  return { date: value };
+}
+
+function pendingSummaryColumns(summary: GrainEntrySummary) {
+  return {
+    entry_date: summary.entryDate,
+    grain_type: summary.grainType,
+    farmer_id: summary.farmerId || null,
+    party_id: summary.partyId || null,
+    warehouse_id: summary.warehouseId || null,
+    gross_weight_kg: summary.grossWeight,
+    net_weight_kg: summary.netWeight,
+    bag_count: summary.bags,
+    total_amount: summary.totalAmount,
+    payable_amount: summary.payableToSeller,
+    expenses_total: summary.expensesTotal,
+    payment_amount: summary.paymentAmount,
+    notes: summary.notes,
+  };
+}
+
+/**
+ * Staff ne "Pending (Admin approval)" chuna: form ki poori jaanch wohi jo
+ * normal save par hoti hai, magar stock, batch, journal, wallet, kharche aur
+ * payment -- KUCH bhi darj nahi hota. Sirf grain_pending_entries mein qatar.
+ */
+async function saveGrainEntryAsPending(formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+
+  const date = pendingDateCheck(String(formData.get("entry_date") ?? ""));
+  if ("error" in date) return { error: date.error };
+  formData.set("entry_date", date.date);
+
+  const checked = await postGrainEntry(formData, { validateOnly: true });
+  if (checked.error || !checked.summary) return { error: checked.error ?? "Entry ki jaanch nahi ho saki." };
+
+  let receiptPhotoUrl: string | null = null;
+  const photo = formData.get("receipt_photo");
+  if (photo instanceof File && photo.size > 0) {
+    const uploaded = await uploadGrainReceipt(createServiceClient(), photo);
+    if ("error" in uploaded) return { error: uploaded.error };
+    receiptPhotoUrl = uploaded.url;
+  }
+
+  const payload = grainPayloadFromForm(formData);
+  const { data: row, error } = await (supabase as any)
+    .from("grain_pending_entries")
+    .insert({
+      status: "pending",
+      payload,
+      receipt_photo_url: receiptPhotoUrl,
+      created_by: user.id,
+      ...pendingSummaryColumns(checked.summary),
+    })
+    .select("id")
+    .single();
+  if (error || !row) return { error: `Pending entry save nahi hui: ${error?.message ?? "jawab nahi mila"}` };
+
+  await notifyRoles(
+    ["owner", "super_admin", "admin"],
+    "Grain entry -- Admin approval ka intezar",
+    `${checked.summary.grainType} ${checked.summary.netWeight.toLocaleString()} kg · Rs ${checked.summary.payableToSeller.toLocaleString()} · tareekh ${checked.summary.entryDate}`,
+    "/admin/grain-procurement/approvals"
+  );
+
+  revalidatePath("/admin/grain-procurement");
+  revalidatePath("/admin/grain-procurement/approvals");
+  return {
+    success: true,
+    pendingId: row.id,
+    notice: "Entry \"Pending (Admin approval)\" par save ho gayi. Stock, ledger, cash book, kharche aur payment abhi darj NAHI hue -- Admin ke Approve karne par honge.",
+  };
+}
+
+/**
+ * Approve: wohi asal posting (createGrainEntry ka raasta) entry ki asal
+ * tareekh par, wajah "Admin approved backdated entry".
+ *
+ * Dobara click se bachao: (1) qatar pehle "approving" par claim hoti hai --
+ * sirf ek request jeet sakti hai; (2) asal entry par pending_entry_id UNIQUE
+ * hai, is liye dusri entry database bana hi nahi sakta; (3) payment ka
+ * client_action_id payload mein mehfooz hai, is liye payment bhi dobara nahi.
+ */
+export async function approveGrainPendingEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireGrainApprover();
+  if ("error" in guard) return { error: guard.error };
+  const pendingId = String(formData.get("pending_id") ?? "").trim();
+  if (!pendingId) return { error: "Pending entry nahi mili." };
+  const service = createServiceClient() as any;
+  const now = new Date().toISOString();
+  const staleBefore = new Date(Date.now() - GRAIN_APPROVAL_STALE_MS).toISOString();
+
+  const { data: claimed, error: claimError } = await service
+    .from("grain_pending_entries")
+    .update({ status: "approving", approval_claimed_at: now, approval_claimed_by: guard.userId, last_error: null })
+    .eq("id", pendingId)
+    .is("approved_entry_id", null)
+    .or(`status.eq.pending,and(status.eq.approving,approval_claimed_at.lt."${staleBefore}")`)
+    .select("id, payload, receipt_photo_url, created_by")
+    .maybeSingle();
+  if (claimError) return { error: claimError.message };
+
+  if (!claimed) {
+    const { data: current } = await service.from("grain_pending_entries").select("status, approved_entry_id").eq("id", pendingId).maybeSingle();
+    if (!current) return { error: "Pending entry nahi mili." };
+    if (current.status === "approved") return { success: true, entryId: current.approved_entry_id ?? undefined, notice: "Ye entry pehle hi Approve ho chuki hai -- dobara kuch darj nahi hua." };
+    if (current.status === "approving") return { error: "Ye entry abhi Approve ho rahi hai -- thori der baad safha taaza karein." };
+    if (current.status === "rejected") return { error: "Ye entry Reject ho chuki hai -- Approve nahi ho sakti." };
+    return { error: "Entry claim nahi ho saki, dobara koshish karein." };
+  }
+
+  const finish = async (entryId: string, lastError: string | null) => {
+    await service
+      .from("grain_pending_entries")
+      .update({ status: "approved", approved_entry_id: entryId, reviewed_by: guard.userId, reviewed_at: new Date().toISOString(), last_error: lastError })
+      .eq("id", pendingId);
+  };
+
+  // Pichli adhoori koshish mein entry ban chuki ho to dobara mat banao.
+  const { data: already } = await service.from("grain_procurement_entries").select("id").eq("pending_entry_id", pendingId).maybeSingle();
+  if (already?.id) {
+    await finish(already.id, "Pichli Approve koshish mein entry ban gayi thi; dobara posting nahi ki gayi -- bill aur ledger check karein.");
+    revalidatePath("/admin/grain-procurement/approvals");
+    return { success: true, entryId: already.id, notice: "Asal entry pehle hi ban chuki thi -- dobara kuch darj nahi hua." };
+  }
+
+  const result = await postGrainEntry(formDataFromGrainPayload(claimed.payload as GrainPendingPayload), {
+    pendingEntryId: pendingId,
+    backdateReason: GRAIN_APPROVAL_BACKDATE_REASON,
+    receiptPhotoUrl: claimed.receipt_photo_url ?? null,
+    entryCreatedBy: claimed.created_by ?? null,
+  });
+
+  const { data: created } = await service.from("grain_procurement_entries").select("id").eq("pending_entry_id", pendingId).maybeSingle();
+  if (!created?.id) {
+    // Asal entry bani hi nahi -- kuch darj nahi hua, wapas Pending.
+    await service.from("grain_pending_entries").update({ status: "pending", approval_claimed_at: null, approval_claimed_by: null, last_error: result.error ?? "Entry nahi bani." }).eq("id", pendingId);
+    revalidatePath("/admin/grain-procurement/approvals");
+    return { error: `Approve nahi hui (kuch darj nahi hua, entry Pending hi hai): ${result.error ?? "jawab nahi mila"}` };
+  }
+
+  await finish(created.id, result.error ?? null);
+  revalidatePath("/admin/grain-procurement");
+  revalidatePath("/admin/grain-procurement/approvals");
+  revalidatePath("/admin/finance");
+  if (result.error) {
+    return { error: `Entry ban gayi magar ek hissa darj nahi hua: ${result.error}. Bill kholein aur ye hissa haath se theek karein.`, entryId: created.id };
+  }
+  return { success: true, entryId: created.id, paymentId: result.paymentId, notice: result.notice ?? "Approve ho gayi: stock, ledger, cash book aur khaata entry ki asal tareekh par darj ho gaye." };
+}
+
+/** Reject: record mitta nahi, wajah ke sath history mein rehta hai. Kuch darj nahi hota. */
+export async function rejectGrainPendingEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireGrainApprover();
+  if ("error" in guard) return { error: guard.error };
+  const pendingId = String(formData.get("pending_id") ?? "").trim();
+  const reason = String(formData.get("reject_reason") ?? "").trim();
+  if (!pendingId) return { error: "Pending entry nahi mili." };
+  if (reason.length < 3) return { error: "Reject ki wajah likhein." };
+  const service = createServiceClient() as any;
+  const { data, error } = await service
+    .from("grain_pending_entries")
+    .update({ status: "rejected", reject_reason: reason, reviewed_by: guard.userId, reviewed_at: new Date().toISOString() })
+    .eq("id", pendingId)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+  if (error) return { error: error.message };
+  if (!data) return { error: "Sirf Pending entry Reject ho sakti hai (ye pehle hi Approve/Reject ho chuki hai)." };
+  revalidatePath("/admin/grain-procurement");
+  revalidatePath("/admin/grain-procurement/approvals");
+  return { success: true, notice: "Entry Reject ho gayi. Record wajah ke sath history mein mehfooz hai; kuch darj nahi hua." };
+}
+
+/** Edit: Admin pending entry ke khaane badal sakta hai -- hisaab dobara jaanch ke baad save. Kuch darj nahi hota. */
+export async function editGrainPendingEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireGrainApprover();
+  if ("error" in guard) return { error: guard.error };
+  const pendingId = String(formData.get("pending_id") ?? "").trim();
+  if (!pendingId) return { error: "Pending entry nahi mili." };
+  const service = createServiceClient() as any;
+  const { data: row } = await service
+    .from("grain_pending_entries")
+    .select("id, status, payload, receipt_photo_url, edit_history")
+    .eq("id", pendingId)
+    .maybeSingle();
+  if (!row) return { error: "Pending entry nahi mili." };
+  if (row.status !== "pending") return { error: "Sirf Pending entry Edit ho sakti hai." };
+
+  const before = (row.payload ?? {}) as GrainPendingPayload;
+  const next: GrainPendingPayload = { ...before };
+  for (const field of GRAIN_PENDING_EDITABLE) {
+    const value = formData.get(field.key);
+    if (typeof value !== "string") continue;
+    if (field.key === "payment_amount" && next.make_payment !== "yes") continue;
+    if (before[field.key] === undefined && value.trim() === "") continue;
+    next[field.key] = value.trim();
+  }
+  const warehouse = formData.get("warehouse_id");
+  if (typeof warehouse === "string" && warehouse) next.warehouse_id = warehouse;
+
+  const rawExpenses = formData.get("expenses_json");
+  if (typeof rawExpenses === "string") {
+    let rows: unknown;
+    try {
+      rows = JSON.parse(rawExpenses);
+    } catch {
+      return { error: "Kharche sahi tarah nahi mile." };
+    }
+    const clean = (Array.isArray(rows) ? rows : [])
+      .map((r: any) => ({ category: String(r?.category ?? ""), description: String(r?.description ?? ""), amount: Number(r?.amount ?? 0), account_id: String(r?.account_id ?? "") }))
+      .filter((r) => r.amount > 0);
+    next.expenses_json = JSON.stringify(clean);
+    next.has_expense = clean.length > 0 ? "yes" : "no";
+  }
+
+  const date = pendingDateCheck(next.entry_date ?? "");
+  if ("error" in date) return { error: date.error };
+  next.entry_date = date.date;
+
+  const checked = await postGrainEntry(formDataFromGrainPayload(next), { validateOnly: true, receiptPhotoUrl: row.receipt_photo_url ?? null });
+  if (checked.error || !checked.summary) return { error: checked.error ?? "Hisaab ki jaanch nahi ho saki." };
+
+  const changes: Record<string, [string | null, string | null]> = {};
+  for (const key of new Set([...Object.keys(before), ...Object.keys(next)])) {
+    if ((before[key] ?? null) !== (next[key] ?? null)) changes[key] = [before[key] ?? null, next[key] ?? null];
+  }
+  if (Object.keys(changes).length === 0) return { success: true, notice: "Koi tabdeeli nahi thi." };
+
+  const history = Array.isArray(row.edit_history) ? row.edit_history : [];
+  const { data: saved, error } = await service
+    .from("grain_pending_entries")
+    .update({
+      payload: next,
+      ...pendingSummaryColumns(checked.summary),
+      updated_by: guard.userId,
+      updated_at: new Date().toISOString(),
+      edit_history: [...history, { at: new Date().toISOString(), by: guard.userId, changes }],
+    })
+    .eq("id", pendingId)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+  if (error) return { error: error.message };
+  if (!saved) return { error: "Entry is dauran Approve/Reject ho gayi -- Edit save nahi hua." };
+  revalidatePath("/admin/grain-procurement/approvals");
+  return { success: true, notice: `Edit save ho gaya (${Object.keys(changes).length} khaane badle). Ab bhi Pending hai -- kuch darj nahi hua.` };
 }

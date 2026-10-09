@@ -53,6 +53,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/purchases", label: "Kharid", icon: ClipboardList },
       { href: "/admin/grain-procurement/dashboard", label: "Anaj ka Dashboard", icon: LineChart },
       { href: "/admin/grain-procurement", label: "Anaj ki Kharid", icon: Wheat },
+      { href: "/admin/grain-procurement/approvals", label: "Anaj Entry -- Admin Approval", icon: ClipboardCheck },
       { href: "/admin/grain-procurement/sell", label: "Grain Bechein (Sell)", icon: HandCoins },
       { href: "/admin/grain-procurement/payments", label: "Kisan ki Adaigi", icon: Wallet },
       { href: "/admin/grain-procurement/warehouse", label: "Anaj ka Godam", icon: Building2 },

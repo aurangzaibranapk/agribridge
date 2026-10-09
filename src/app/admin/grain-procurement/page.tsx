@@ -21,6 +21,7 @@ export default async function AdminGrainProcurementPage() {
     { data: rawPayments },
     { data: grainRules },
     { data: profile },
+    { data: rawPending },
   ] = await Promise.all([
     supabase.from("farmers").select("id, full_name, farmer_code, phone_number, cnic").eq("is_deleted", false).order("full_name"),
     supabase.from("grain_parties").select("id, party_name, contact_person, phone").eq("is_active", true).order("party_name"),
@@ -30,7 +31,7 @@ export default async function AdminGrainProcurementPage() {
     supabase.from("buyers").select("id, business_name").eq("is_active", true).order("business_name"),
     supabase
       .from("grain_procurement_entries")
-      .select("id, entry_date, grain_type, gross_weight_kg, cut_percentage, cut_kg, weight_kg, moisture_percentage, quality_grade, rate_per_kg, total_amount, chungi_amount, farmer_id, party_id, farmers(full_name), grain_parties(party_name)")
+      .select("id, entry_date, grain_type, gross_weight_kg, cut_percentage, cut_kg, weight_kg, moisture_percentage, quality_grade, rate_per_kg, total_amount, chungi_amount, farmer_id, party_id, pending_entry_id, farmers(full_name), grain_parties(party_name)")
       .is("reclassified_as_sale_id", null)
       .order("entry_date", { ascending: false })
       .order("created_at", { ascending: false })
@@ -43,6 +44,13 @@ export default async function AdminGrainProcurementPage() {
       .limit(200),
     (supabase as any).from("grain_pack_rules").select("grain_type,is_bag_based,bag_weight_kg,default_cut_kg,default_cut_grams,default_chungi_kg").order("grain_type"),
     supabase.from("profiles").select("role,is_active").eq("id", user?.id ?? "").maybeSingle(),
+    // Pending (Admin approval) -- migration 518. Ye hisaab mein shamil NAHI.
+    (supabase as any)
+      .from("grain_pending_entries")
+      .select("id, status, entry_date, grain_type, gross_weight_kg, net_weight_kg, payable_amount, reject_reason, approved_entry_id, farmers(full_name), grain_parties(party_name)")
+      .in("status", ["pending", "approving", "rejected"])
+      .order("created_at", { ascending: false })
+      .limit(100),
   ]);
 
   const { data: grainProducts, error: grainProductError } = await supabase.from("grain_type_products").select("grain_type, product_id");
@@ -79,8 +87,27 @@ export default async function AdminGrainProcurementPage() {
       seller_id: e.farmer_id ?? e.party_id,
       seller_type: e.farmer_id ? "farmer" : "party",
       seller_name: farmer?.full_name ?? party?.party_name ?? "-",
+      pending_entry_id: e.pending_entry_id ?? null,
     };
   });
+
+  const pendingRows = (rawPending ?? []).map((r: any) => {
+    const farmer = Array.isArray(r.farmers) ? r.farmers[0] : r.farmers;
+    const party = Array.isArray(r.grain_parties) ? r.grain_parties[0] : r.grain_parties;
+    return {
+      id: r.id as string,
+      status: r.status,
+      entry_date: r.entry_date,
+      grain_type: r.grain_type,
+      seller_name: farmer?.full_name ?? party?.party_name ?? "-",
+      gross_weight_kg: Number(r.gross_weight_kg ?? 0),
+      net_weight_kg: Number(r.net_weight_kg ?? 0),
+      payable_amount: Number(r.payable_amount ?? 0),
+      reject_reason: r.reject_reason ?? null,
+      approved_entry_id: r.approved_entry_id ?? null,
+    };
+  });
+  const canApprove = Boolean(profile?.is_active && ["owner", "super_admin", "admin"].includes(profile.role ?? ""));
 
   const payments = (rawPayments ?? []).map((p: any) => {
     const farmer = Array.isArray(p.farmers) ? p.farmers[0] : p.farmers;
@@ -170,6 +197,8 @@ export default async function AdminGrainProcurementPage() {
         payments={payments}
         balances={balances}
         byGrainType={byGrainType}
+        pendingRows={pendingRows}
+        canApprove={canApprove}
       />
     </div>
   );

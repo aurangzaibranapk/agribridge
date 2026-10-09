@@ -43,6 +43,21 @@ interface Entry {
   seller_id: string;
   seller_type: string;
   seller_name: string;
+  /** Admin approval se bani entry (migration 518). */
+  pending_entry_id?: string | null;
+}
+/** "Pending (Admin approval)" wali entry -- abhi kuch darj nahi hua. */
+export interface PendingGrainRow {
+  id: string;
+  status: "pending" | "approving" | "approved" | "rejected";
+  entry_date: string;
+  grain_type: string;
+  seller_name: string;
+  gross_weight_kg: number;
+  net_weight_kg: number;
+  payable_amount: number;
+  reject_reason: string | null;
+  approved_entry_id: string | null;
 }
 interface Payment {
   id: string;
@@ -94,6 +109,8 @@ export function GrainClient({
   balances,
   byGrainType,
   stockByWarehouseAndType,
+  pendingRows = [],
+  canApprove = false,
 }: {
   farmers: Farmer[];
   parties: Party[];
@@ -108,8 +125,11 @@ export function GrainClient({
   balances: Balance[];
   byGrainType: GrainTypeSummary[];
   stockByWarehouseAndType: Record<string, Record<string, number>>;
+  pendingRows?: PendingGrainRow[];
+  canApprove?: boolean;
 }) {
   const lang = useLang();
+  const pendingCount = pendingRows.filter((r) => r.status === "pending" || r.status === "approving").length;
   const [tab, setTab] = useState<"entry" | "balances" | "entries" | "rules">("entry");
   const [entryMode, setEntryMode] = useState<"purchase" | "sale">("purchase");
   const [payingBalance, setPayingBalance] = useState<Balance | null>(null);
@@ -127,6 +147,17 @@ export function GrainClient({
           </div>
         ))}
       </div>
+
+      {pendingCount > 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-200">
+          <span><b>{pendingCount}</b> grain {pendingCount === 1 ? "entry" : "entries"} Admin approval ka intezar kar rahi hain. In ka stock, ledger, cash book aur payment abhi darj NAHI hua.</span>
+          {canApprove ? (
+            <Link href="/admin/grain-procurement/approvals" className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">Approval ke liye kholein</Link>
+          ) : (
+            <span className="text-xs">Owner / Admin approve karenge.</span>
+          )}
+        </div>
+      )}
 
       <div className="mb-5 flex flex-wrap gap-2 border-b border-surface-200 dark:border-surface-800">
         <TabButton active={tab === "entry"} onClick={() => setTab("entry")}>{t("gr_new_entry", lang)}</TabButton>
@@ -213,10 +244,32 @@ export function GrainClient({
               </tr>
             </thead>
             <tbody>
+              {pendingRows.filter((r) => r.status !== "approved").map((r) => (
+                <tr key={`pending-${r.id}`} className={`border-b border-surface-100 last:border-0 dark:border-surface-800 ${r.status === "rejected" ? "bg-red-50/40 dark:bg-red-950/10" : "bg-amber-50/50 dark:bg-amber-950/10"}`}>
+                  <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{r.entry_date}</td>
+                  <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">
+                    {r.seller_name} <GrainStatusBadge status={r.status} />
+                    {r.status === "rejected" && r.reject_reason && <p className="text-[11px] font-normal text-red-700">Wajah: {r.reject_reason}</p>}
+                  </td>
+                  <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{t(GRAIN_LABELS[r.grain_type] ?? "gr_grain", lang)}</td>
+                  <td className="px-3 py-2 text-right text-surface-500">{r.gross_weight_kg} kg</td>
+                  <td className="px-3 py-2 text-right text-surface-400">—</td>
+                  <td className="px-3 py-2 text-right font-medium text-surface-800 dark:text-surface-200">{r.net_weight_kg.toFixed(1)} kg</td>
+                  <td className="px-3 py-2 text-right text-surface-400">—</td>
+                  <td className="px-3 py-2 text-right font-semibold text-surface-500">Rs {r.payable_amount.toLocaleString()}</td>
+                  <td className="px-3 py-2">
+                    {canApprove && r.status !== "rejected" ? (
+                      <Link href={`/admin/grain-procurement/approvals#p-${r.id}`} className="text-xs font-medium text-amber-700 hover:underline">Review</Link>
+                    ) : (
+                      <span className="text-[11px] text-surface-400">{r.status === "rejected" ? "Darj nahi hui" : "Hisaab mein nahi"}</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
               {entries.map((e) => (
                 <tr key={e.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                   <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{e.entry_date}</td>
-                  <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{e.seller_name}</td>
+                  <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{e.seller_name}{e.pending_entry_id && <> <GrainStatusBadge status="approved" /></>}</td>
                   <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{t(GRAIN_LABELS[e.grain_type] ?? "gr_grain", lang)}</td>
                   <td className="px-3 py-2 text-right text-surface-500">{e.gross_weight_kg} kg</td>
                   <td className="px-3 py-2 text-right text-red-500">-{e.cut_kg.toFixed(1)} kg ({e.cut_percentage}%)</td>
@@ -244,6 +297,17 @@ export function GrainClient({
       {editingEntry && <EditEntryModal entry={editingEntry} buyers={buyers} onClose={() => setEditingEntry(null)} />}
     </div>
   );
+}
+
+export function GrainStatusBadge({ status }: { status: PendingGrainRow["status"] }) {
+  const map: Record<PendingGrainRow["status"], { label: string; cls: string }> = {
+    pending: { label: "Pending (Admin approval)", cls: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" },
+    approving: { label: "Approve ho rahi hai", cls: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" },
+    approved: { label: "Approved (Admin)", cls: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" },
+    rejected: { label: "Rejected", cls: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300" },
+  };
+  const item = map[status] ?? map.pending;
+  return <span className={`ml-1 inline-block rounded-full px-2 py-0.5 align-middle text-[10px] font-semibold ${item.cls}`}>{item.label}</span>;
 }
 
 function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
@@ -371,6 +435,8 @@ function NewEntryForm({
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [paymentAccountId, setPaymentAccountId] = useState("");
+  // "post" = purana rawaiya (foran darj). "pending" = Admin approval ke baad.
+  const [saveMode, setSaveMode] = useState<"post" | "pending">("post");
 
   useEffect(() => {
     registerSender("grain.entry", async (action: QueuedAction, evidence) => {
@@ -437,7 +503,7 @@ function NewEntryForm({
 
   if (state.success) {
     // Ledger TXN aur cash book ka paighaam parhne ka waqt.
-    setTimeout(() => window.location.reload(), state.paymentId ? 6000 : 1200);
+    setTimeout(() => window.location.reload(), state.paymentId || state.pendingId ? 6000 : 1200);
   }
 
   return (
@@ -452,7 +518,13 @@ function NewEntryForm({
       {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
       {offlineNotice && <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
       {offlinePending > 0 && <p className="mb-3 text-xs text-amber-700 dark:text-amber-400">{offlinePending} grain entries sync ka intezar kar rahi hain.</p>}
-      {state.success && (
+      {state.success && state.pendingId && (
+        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200">
+          <p className="font-semibold">Pending (Admin approval) par save ho gayi.</p>
+          <p className="mt-1 text-xs">{state.notice}</p>
+        </div>
+      )}
+      {state.success && !state.pendingId && (
         <div className="mb-4 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm text-brand-800 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-200">
           <p className="font-semibold">Entry record ho gayi, stock add ho gaya.</p>
           <p className="mt-1 text-xs opacity-80">Ab purchase bill aur payment receipt alag se print ya share karein.</p>
@@ -515,6 +587,7 @@ function NewEntryForm({
         <input type="hidden" name="chungi_kg" value={calculation.chungiKg} />
         <input type="hidden" name="chungi_amount" value={chungiAmount} />
         <input type="hidden" name="make_payment" value={makePayment} />
+        <input type="hidden" name="save_mode" value={saveMode} />
 
         <div>
           <Label>{t("gr_who_brought", lang)}</Label>
@@ -768,7 +841,21 @@ function NewEntryForm({
 
         </div>
 
-        <SubmitButton label={t("gr_record_entry", lang)} disabled={hasExpense === "" || makePayment === ""} />
+        <div className={`rounded-lg border-2 p-3 ${saveMode === "pending" ? "border-amber-400 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20" : "border-surface-200 dark:border-surface-700"}`}>
+          <Label>Entry kaise save karni hai?</Label>
+          <div className="mt-1 grid gap-2 sm:grid-cols-2">
+            <button type="button" aria-pressed={saveMode === "post"} onClick={() => setSaveMode("post")} className={`rounded-lg border px-3 py-2 text-left text-sm ${saveMode === "post" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>
+              <span className="block font-medium">Abhi darj karein (Normal)</span>
+              <span className="block text-[11px]">Stock, ledger, cash book, kharche aur payment foran darj.</span>
+            </button>
+            <button type="button" aria-pressed={saveMode === "pending"} onClick={() => setSaveMode("pending")} className={`rounded-lg border px-3 py-2 text-left text-sm ${saveMode === "pending" ? "border-amber-500 bg-amber-100 text-amber-900" : "border-surface-200 text-surface-500"}`}>
+              <span className="block font-medium">Pending (Admin approval)</span>
+              <span className="block text-[11px]">Abhi kuch darj nahi hoga. Admin parh kar Approve karega, tab entry ki tareekh par sab darj hoga.</span>
+            </button>
+          </div>
+        </div>
+
+        <SubmitButton label={saveMode === "pending" ? "Pending (Admin approval) par save karein" : t("gr_record_entry", lang)} disabled={hasExpense === "" || makePayment === ""} />
       </form>
     </div>
   );

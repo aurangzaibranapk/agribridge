@@ -53,6 +53,7 @@ const ALL_FEATURES: Feature[] = [
   { section: "Purchases", label: "Kharid (Purchases)", href: "/admin/purchases", description: "Tamam purchase orders ki fehrist — draft, received, aur approved.", who: "Admin / Purchase Staff" },
   { section: "Purchases", label: "Anaj ka Dashboard", href: "/admin/grain-procurement/dashboard", description: "Anaj kharid ka overview — total aaya, becha, baqi, aur nafa.", who: "Malik / Admin" },
   { section: "Purchases", label: "Anaj ki Kharid", href: "/admin/grain-procurement", description: "Kisanon se anaj (grain) khareedna — rates, miqdar, aur payment.", who: "Procurement Staff" },
+  { section: "Purchases", label: "Anaj Entry -- Admin Approval", href: "/admin/grain-procurement/approvals", description: "Pending (Admin approval) par save hui anaj ki khareed -- poora hisaab parh kar Approve, Edit ya Reject. Approve se pehle stock/ledger/payment kuch darj nahi hota.", who: "Owner / Admin", addedDate: "2026-10-09" },
   { section: "Purchases", label: "Grain Bechein (Sell)", href: "/admin/grain-procurement/sell", description: "Khareda hua anaj bechna — buyer, rate, aur delivery.", who: "Admin / Procurement" },
   { section: "Purchases", label: "Kisan ki Adaigi", href: "/admin/grain-procurement/payments", description: "Kisanon ko anaj ki adaigi — pending payments aur history.", who: "Finance / Admin" },
   { section: "Purchases", label: "Anaj ka Godam", href: "/admin/grain-procurement/warehouse", description: "Anaj ka godam — kaunsa anaj kitna hai, kahan hai.", who: "Warehouse Staff" },
