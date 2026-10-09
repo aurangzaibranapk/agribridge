@@ -9,12 +9,27 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: "Login required." }, { status: 401 });
   const { data: isStaff } = await (auth as any).rpc("fn_is_any_staff");
   if (!isStaff) return NextResponse.json({ error: "Staff permission required." }, { status: 403 });
-  const body = await req.json().catch(() => ({}));
-  if (!body.fields || typeof body.fields !== "object") return NextResponse.json({ error: "Grain payment ki maloomat durust nahi." }, { status: 400 });
+  // Do shaklen: JSON (purani, bina slip) ya multipart (slip ki photo ke sath).
+  let fields: unknown = null;
+  let photo: FormDataEntryValue | null = null;
+  if ((req.headers.get("content-type") ?? "").includes("multipart/form-data")) {
+    const incoming = await req.formData();
+    try {
+      fields = JSON.parse(String(incoming.get("fields") ?? ""));
+    } catch {
+      fields = null;
+    }
+    photo = incoming.get("receipt_photo");
+  } else {
+    const body = await req.json().catch(() => ({}));
+    fields = body.fields;
+  }
+  if (!fields || typeof fields !== "object") return NextResponse.json({ error: "Grain payment ki maloomat durust nahi." }, { status: 400 });
   const formData = new FormData();
-  for (const [key, value] of Object.entries(body.fields as Record<string, unknown>)) {
+  for (const [key, value] of Object.entries(fields as Record<string, unknown>)) {
     if (typeof value === "string") formData.set(key, value);
   }
+  if (photo instanceof File && photo.size > 0) formData.set("receipt_photo", photo);
   const result = await recordGrainSalePayment({}, formData);
   if (result.error) return NextResponse.json({ error: result.error }, { status: 400 });
   return NextResponse.json({ success: true });

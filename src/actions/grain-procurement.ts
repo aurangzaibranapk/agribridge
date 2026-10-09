@@ -31,6 +31,56 @@ async function getGrainProductId(supabase: ReturnType<typeof createClient>, grai
   return data?.product_id ?? null;
 }
 
+/**
+ * Purani tareekh ki entry ki wajah. post_journal_atomic purani tareekh par
+ * wajah ke baghair journal rad kar deta hai -- pehle yahan wajah di hi nahi
+ * jati thi, is liye pichli tareekh ki grain entry ka stock journal chup chaap
+ * reh jata tha.
+ */
+function grainBackdateReason(date: string, what: string): string | null {
+  return date < aajKaKhana() ? `${what} ki asal tareekh ${date} (form par darj)` : null;
+}
+
+/** Payment form ki tareekh: khali = aaj, aage ki tareekh mana. */
+function grainPaymentDate(raw: FormDataEntryValue | null): { date: string } | { error: string } {
+  const value = String(raw ?? "").trim();
+  if (!value) return { date: aajKaKhana() };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return { error: "Payment ki tareekh sahi likhein." };
+  if (value > aajKaKhana()) return { error: "Payment ki tareekh aage ki nahi ho sakti." };
+  return { date: value };
+}
+
+/** Raseed/saboot ki photo -- upload na ho to payment bhi nahi (aadha kaam nahi). */
+async function uploadGrainReceipt(serviceClient: ReturnType<typeof createServiceClient>, file: File): Promise<{ url: string } | { error: string }> {
+  if (!file.type.startsWith("image/") && file.type !== "application/pdf") return { error: "Raseed sirf photo (ya PDF) ho sakti hai." };
+  if (file.size > 10 * 1024 * 1024) return { error: "Raseed ki file 10MB se choti honi chahiye." };
+  const path = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+  const { error: uploadError } = await serviceClient.storage.from("grain-payment-receipts").upload(path, file);
+  if (uploadError) return { error: `Raseed upload nahi hui: ${uploadError.message}` };
+  const { data } = serviceClient.storage.from("grain-payment-receipts").getPublicUrl(path);
+  return { url: data.publicUrl };
+}
+
+/** Kamyabi par saaf batao ke paisa kahan darj hua. */
+async function grainPostedNotice(
+  supabase: ReturnType<typeof createClient>,
+  accountId: string,
+  entryNumber: string | null | undefined,
+  date: string,
+  verb: "jama" | "nikal",
+  creditDeduction = 0
+): Promise<string> {
+  const { data: acc } = await supabase.from("finance_accounts").select("name").eq("id", accountId).maybeSingle();
+  const [y, m, d] = date.split("-");
+  const credit = creditDeduction > 0 ? ` · Rs ${creditDeduction.toLocaleString()} kisan ke purane udhaar se kata` : "";
+  return `Ledger: ${entryNumber ?? "—"} · Cash book: ${acc?.name ?? "account"} (${verb}) · Tareekh: ${d}-${m}-${y}${credit}`;
+}
+
+function validClientActionId(raw: FormDataEntryValue | null): string | null {
+  const value = String(raw ?? "").trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value) ? value : null;
+}
+
 export async function createGrainEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const serviceClient = createServiceClient();
@@ -197,6 +247,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
           ctx: {
             createdBy: user?.id ?? null,
             entryDate,
+            backdateReason: grainBackdateReason(entryDate, "Grain entry"),
             claims: [{ table: "wallet_transactions", rowId: grainWalletRow.id }],
           },
         });
@@ -264,6 +315,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
         sourceModule: "grain_procurement",
         sourceId: entry.id,
         entryDate,
+        backdateReason: grainBackdateReason(entryDate, "Grain entry"),
         createdBy: user?.id ?? null,
         lines: [
           { account: ACC.stockGrain, debit: Math.round(totalAmount * 100) / 100 },
@@ -307,6 +359,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
         ctx: {
           createdBy: user?.id ?? null,
           entryDate,
+          backdateReason: grainBackdateReason(entryDate, "Grain entry ka kharcha"),
           claims: [{ table: "finance_transactions", rowId: opExpRow.id }],
         },
       });
@@ -318,98 +371,37 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
   }
 
   let paymentId: string | undefined;
+  let paymentNotice: string | undefined;
   if (makePayment === "yes" && paymentAccountId) {
     let receiptPhotoUrl: string | null = null;
     if (receiptPhoto) {
-      const path = `${Date.now()}-${receiptPhoto.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-      const { error: uploadError } = await serviceClient.storage.from("grain-payment-receipts").upload(path, receiptPhoto);
-      if (!uploadError) {
-        const { data } = serviceClient.storage.from("grain-payment-receipts").getPublicUrl(path);
-        receiptPhotoUrl = data.publicUrl;
-      }
+      const uploaded = await uploadGrainReceipt(serviceClient, receiptPhoto);
+      if ("error" in uploaded) return { error: `Entry save ho gayi, magar payment nahi hui: ${uploaded.error}`, entryId: entry.id };
+      receiptPhotoUrl = uploaded.url;
     }
-
-    let creditDeduction = 0;
-    if (farmerId) {
-      const { data: creditRows } = await supabase.from("farmer_credit_ledger").select("ledger_type, amount").eq("farmer_id", farmerId);
-      const outstandingCredit = (creditRows ?? []).reduce((sum, r) => {
-        return r.ledger_type === "debit" ? sum + Number(r.amount) : sum - Number(r.amount);
-      }, 0);
-      creditDeduction = Math.min(Math.max(outstandingCredit, 0), paymentAmount);
-    }
-    const actualCashOut = paymentAmount - creditDeduction;
-
-    const { data: payment } = await supabase
-      .from("grain_procurement_payments")
-      .insert({
+    // Payment row, kisan udhaar ki katauti, cash book, wallet aur journal --
+    // sab EK transaction mein (migration 516). Kuch bhi fail ho to payment
+    // ka koi hissa darj nahi hota.
+    const { data: paid, error: payError } = await (supabase as any).rpc("fn_record_grain_procurement_payment_atomic", {
+      p: {
         farmer_id: farmerId,
         party_id: partyId,
         amount: paymentAmount,
         payment_method: paymentMethod,
-        receipt_photo_url: receiptPhotoUrl,
-        notes: `Entry ke sath payment hui${creditDeduction > 0 ? ` (Rs ${creditDeduction.toLocaleString()} pehle ke credit se kaata gaya)` : ""}`,
-        created_by: user?.id ?? null,
-      })
-      .select("id")
-      .single();
-    paymentId = payment?.id;
-
-    if (creditDeduction > 0 && farmerId) {
-      const { data: lastRow } = await supabase
-        .from("farmer_credit_ledger")
-        .select("balance_after")
-        .eq("farmer_id", farmerId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const prevBalance = Number(lastRow?.balance_after ?? 0);
-      const { error: creditError } = await supabase.from("farmer_credit_ledger").insert({
-        farmer_id: farmerId,
-        source_type: "grain_procurement",
-        ledger_type: "credit",
-        amount: creditDeduction,
-        balance_after: prevBalance - creditDeduction,
-        notes: "Grain payment se automatically kaata gaya",
-        created_by: user?.id ?? null,
-      });
-      // Ye chup chaap fail nahi hona chahiye. Naqad to kam diya ja chuka
-      // hai; agar katauti ledger mein na chare to kisan ka udhaar utna
-      // ka utna khara reh jata hai -- ek hi udhaar do dafa wasool hone
-      // ka raasta.
-      if (creditError) return { error: `Udhaar ki katauti darj nahi ho saki: ${creditError.message}` };
-    }
-
-    if (actualCashOut > 0) {
-      await supabase.from("finance_transactions").insert({
         account_id: paymentAccountId,
-        transaction_type: "expense",
-        category: "Grain Procurement Payment",
-        amount: actualCashOut,
-        transaction_date: entryDate,
-        notes: `Grain payment (${paymentMethod ?? "cash"}) - Entry ke sath`,
-        created_by: user?.id ?? null,
-      });
-      // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
-      // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
-      // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
-      // 1,000 ka asar Rs 2,000 hota tha.
-      if (farmerId) {
-        const { data: payWallet } = await supabase.from("wallets").select("id").eq("owner_type", "farmer").eq("owner_id", farmerId).single();
-        if (payWallet) {
-          await supabase.from("wallet_transactions").insert({
-            wallet_id: payWallet.id,
-            type: "grain_cash_payment",
-            direction: "debit",
-            amount: actualCashOut,
-            balance_after: 0,
-            reference_type: "grain_procurement_payment",
-            reference_id: paymentId,
-            notes: `Grain cash payment (${paymentMethod ?? "cash"})`,
-            created_by: user?.id ?? null,
-          });
-        }
-      }
+        payment_date: entryDate,
+        receipt_photo_url: receiptPhotoUrl,
+        notes: "Entry ke sath payment hui",
+        context: "entry",
+        client_action_id: validClientActionId(formData.get("client_action_id")),
+        backdate_reason: grainBackdateReason(entryDate, "Grain entry ki payment"),
+      },
+    });
+    if (payError || !paid?.payment_id) {
+      return { error: `Entry save ho gayi, magar payment darj nahi hui: ${payError?.message ?? "jawab nahi mila"}`, entryId: entry.id };
     }
+    paymentId = paid.payment_id;
+    paymentNotice = await grainPostedNotice(supabase, paymentAccountId, paid.entry_number, entryDate, "nikal", Number(paid.credit_deduction ?? 0));
   }
 
   await notifyRoles(
@@ -423,7 +415,7 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
   revalidatePath("/admin/grain-procurement/dashboard");
   revalidatePath("/admin/inventory");
   revalidatePath("/admin/finance");
-  return { success: true, entryId: entry.id, paymentId };
+  return { success: true, entryId: entry.id, paymentId, notice: paymentNotice };
 }
 
 export async function recordGrainPayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -443,6 +435,9 @@ export async function recordGrainPayment(_prev: ActionState, formData: FormData)
   if (!amount || amount <= 0) return { error: "Amount must be greater than zero." };
   if (!accountId) return { error: isPartyReceipt ? "Paisa kis account mein receive hua, wo select karein." : "Konsa account se paisa gaya, wo select karein." };
 
+  const paymentDate = grainPaymentDate(formData.get("payment_date"));
+  if ("error" in paymentDate) return { error: paymentDate.error };
+
   let receiptPhotoUrl: string | null = null;
   const receiptPhoto = formData.get("receipt_photo");
   if (paymentMethod === "cash" && !isPartyReceipt) {
@@ -451,130 +446,45 @@ export async function recordGrainPayment(_prev: ActionState, formData: FormData)
     }
   }
   if (receiptPhoto instanceof File && receiptPhoto.size > 0) {
-    const path = `${Date.now()}-${receiptPhoto.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-    const { error: uploadError } = await serviceClient.storage.from("grain-payment-receipts").upload(path, receiptPhoto);
-    if (!uploadError) {
-      const { data } = serviceClient.storage.from("grain-payment-receipts").getPublicUrl(path);
-      receiptPhotoUrl = data.publicUrl;
-    }
+    // Upload pehle -- fail ho to kuch bhi darj nahi hota.
+    const uploaded = await uploadGrainReceipt(serviceClient, receiptPhoto);
+    if ("error" in uploaded) return { error: uploaded.error };
+    receiptPhotoUrl = uploaded.url;
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  let creditDeduction = 0;
-  if (farmerId) {
-    const { data: creditRows } = await supabase.from("farmer_credit_ledger").select("ledger_type, amount").eq("farmer_id", farmerId);
-    const outstandingCredit = (creditRows ?? []).reduce((sum, r) => {
-      return r.ledger_type === "debit" ? sum + Number(r.amount) : sum - Number(r.amount);
-    }, 0);
-    creditDeduction = Math.min(Math.max(outstandingCredit, 0), amount);
-  }
-  const actualCashOut = amount - creditDeduction;
-
-  const { data: payment, error } = await supabase
-    .from("grain_procurement_payments")
-    .insert({
+  // Payment row, kisan udhaar ki katauti, cash book (finance_transactions),
+  // wallet aur journal (Dr 5020 / Cr bank, ya party receipt par Dr bank /
+  // Cr 4010) -- sab EK database transaction mein (migration 516). Pehle ye
+  // alag alag qadam the aur farmer payment ka journal banta hi nahi tha.
+  const { data: paid, error } = await (supabase as any).rpc("fn_record_grain_procurement_payment_atomic", {
+    p: {
       farmer_id: farmerId,
       party_id: partyId,
+      is_party_receipt: isPartyReceipt,
       amount,
       payment_method: paymentMethod,
-      receipt_photo_url: receiptPhotoUrl,
-      notes: creditDeduction > 0 ? `${notes ?? ""} (Rs ${creditDeduction.toLocaleString()} pehle ke credit se kaata gaya)`.trim() : notes,
-      created_by: user?.id ?? null,
-    })
-    .select("id")
-    .single();
-  if (error) return { error: error.message };
-
-  if (creditDeduction > 0 && farmerId) {
-    const { data: lastRow } = await supabase
-      .from("farmer_credit_ledger")
-      .select("balance_after")
-      .eq("farmer_id", farmerId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const prevBalance = Number(lastRow?.balance_after ?? 0);
-    const { error: creditError } = await supabase.from("farmer_credit_ledger").insert({
-      farmer_id: farmerId,
-      source_type: "grain_procurement",
-      ledger_type: "credit",
-      amount: creditDeduction,
-      balance_after: prevBalance - creditDeduction,
-      notes: "Grain payment se automatically kaata gaya",
-      created_by: user?.id ?? null,
-    });
-    // Upar wali wajah hi yahan bhi lagti hai -- katauti darj na ho to
-    // kisan ka udhaar khamoshi se khara reh jata hai.
-    if (creditError) return { error: `Udhaar ki katauti darj nahi ho saki: ${creditError.message}` };
-  }
-
-  if (isPartyReceipt) {
-    const { data: saleReceiptRow, error: receiptError } = await supabase
-      .from("finance_transactions")
-      .insert({
-        account_id: accountId,
-        transaction_type: "income",
-        category: "Grain Sale Receipt",
-        amount,
-        transaction_date: aajKaKhana(),
-        notes: `Grain sale receipt from party (${paymentMethod ?? "cash"})`,
-        created_by: user?.id ?? null,
-      })
-      .select("id")
-      .single();
-    if (receiptError) return { error: receiptError.message };
-    if (saleReceiptRow?.id) {
-      const posted = await postCashIn({
-        accountId,
-        amount,
-        description: `Grain sale ki received payment (${paymentMethod ?? "cash"})`,
-        againstAccount: ACC.salesGrain,
-        ctx: {
-          createdBy: user?.id ?? null,
-          entryDate: aajKaKhana(),
-          claims: [{ table: "finance_transactions", rowId: saleReceiptRow.id }],
-        },
-      });
-      if (failed(posted)) return { error: `Received payment ledger mein post nahi ho saki: ${posted.error}` };
-    }
-  } else if (actualCashOut > 0) {
-    await supabase.from("finance_transactions").insert({
       account_id: accountId,
-      transaction_type: "expense",
-      category: "Grain Procurement Payment",
-      amount: actualCashOut,
-      transaction_date: aajKaKhana(),
-      notes: `Grain payment (${paymentMethod ?? "cash"})`,
-      created_by: user?.id ?? null,
-    });
-    // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
-    // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
-    // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
-    // 1,000 ka asar Rs 2,000 hota tha.
-    if (farmerId) {
-      const { data: payWallet } = await supabase.from("wallets").select("id").eq("owner_type", "farmer").eq("owner_id", farmerId).single();
-      if (payWallet) {
-        await supabase.from("wallet_transactions").insert({
-          wallet_id: payWallet.id,
-          type: "grain_cash_payment",
-          direction: "debit",
-          amount: actualCashOut,
-          balance_after: 0,
-          reference_type: "grain_procurement_payment",
-          reference_id: payment?.id,
-          notes: `Grain cash payment (${paymentMethod ?? "cash"})`,
-          created_by: user?.id ?? null,
-        });
-      }
-    }
-  }
+      payment_date: paymentDate.date,
+      receipt_photo_url: receiptPhotoUrl,
+      notes,
+      context: "payment",
+      client_action_id: validClientActionId(formData.get("client_action_id")),
+      backdate_reason: String(formData.get("backdate_reason") ?? "").trim() || grainBackdateReason(paymentDate.date, "Grain payment"),
+    },
+  });
+  if (error) return { error: error.message };
+  if (!paid?.payment_id) return { error: "Payment ka jawab nahi mila." };
 
   revalidatePath("/admin/grain-procurement");
+  revalidatePath("/admin/grain-procurement/payments");
   revalidatePath("/admin/finance");
-  return { success: true, entryId: payment?.id, paymentId: payment?.id };
+  return {
+    success: true,
+    entryId: paid.payment_id,
+    paymentId: paid.payment_id,
+    notice: await grainPostedNotice(supabase, accountId, paid.entry_number, paymentDate.date, isPartyReceipt ? "jama" : "nikal",
+      Number(paid.credit_deduction ?? 0)),
+  };
 }
 
 /**

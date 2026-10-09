@@ -9,6 +9,15 @@ import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { enqueue, allActions, type QueuedAction } from "@/lib/offline/queue";
 import { registerSender, syncQueue } from "@/lib/offline/sync";
+import {
+  GrainPaymentActionId,
+  GrainPaymentAccountField,
+  GrainPaymentDateField,
+  GrainPaymentSlipField,
+  GrainPaymentSuccess,
+} from "@/components/grain/grain-payment-fields";
+import { GrainBillSummary, GrainPaymentHistory, type GrainPaymentHistoryRow } from "@/components/grain/grain-payment-history";
+import { Fragment } from "react";
 
 const initialState: ActionState = {};
 
@@ -37,15 +46,18 @@ export function SellGrainClient({
   warehouses,
   financeAccounts,
   sales,
+  paymentsBySale = {},
   stockByWarehouseAndType,
 }: {
   buyers: Buyer[];
   warehouses: Warehouse[];
   financeAccounts: FinanceAccount[];
   sales: Sale[];
+  paymentsBySale?: Record<string, GrainPaymentHistoryRow[]>;
   stockByWarehouseAndType: Record<string, Record<string, number>>;
 }) {
   const [payingSale, setPayingSale] = useState<Sale | null>(null);
+  const [openSale, setOpenSale] = useState<string | null>(null);
   const lang = useLang();
 
   return (
@@ -71,8 +83,11 @@ export function SellGrainClient({
             <tbody>
               {sales.map((s) => {
                 const remaining = s.total_amount - s.amount_received;
+                const history = paymentsBySale[s.id] ?? [];
+                const missingSlips = history.filter((h) => !h.receipt_photo_url).length;
                 return (
-                  <tr key={s.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
+                  <Fragment key={s.id}>
+                  <tr className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                     <td className="px-3 py-2 font-mono text-xs text-surface-500">{s.sale_number}</td>
                     <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{s.buyer_name}</td>
                     <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{GRAIN_LABELS[s.grain_type]}</td>
@@ -82,10 +97,28 @@ export function SellGrainClient({
                     <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">Rs {s.amount_received.toLocaleString()}</td>
                     <td className="px-3 py-2">
                       {remaining > 0 && (
-                        <button onClick={() => setPayingSale(s)} className="text-xs font-medium text-brand-600 hover:underline">{t("c_payment_word", lang)}</button>
+                        <button onClick={() => setPayingSale(s)} className="mr-2 text-xs font-medium text-brand-600 hover:underline">{t("c_payment_word", lang)}</button>
                       )}
+                      <button
+                        onClick={() => setOpenSale(openSale === s.id ? null : s.id)}
+                        className="text-xs font-medium text-surface-600 hover:underline dark:text-surface-300"
+                      >
+                        History ({history.length}){missingSlips > 0 ? " ⚠" : ""}
+                      </button>
                     </td>
                   </tr>
+                  {openSale === s.id && (
+                    <tr className="border-b border-surface-100 bg-surface-50/60 dark:border-surface-800 dark:bg-surface-800/40">
+                      <td colSpan={8} className="space-y-3 px-3 py-3">
+                        <p className="text-xs font-semibold text-surface-700 dark:text-surface-200">
+                          {s.sale_number} — {s.buyer_name} · Bill ki tareekh {s.sale_date}
+                        </p>
+                        <GrainBillSummary total={s.total_amount} paid={s.amount_received} labelPaid="Wasool hua" />
+                        <GrainPaymentHistory rows={history} emptyText="Is bill par abhi koi wasooli darj nahi hui." />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })}
               {sales.length === 0 && (
@@ -274,13 +307,23 @@ function SalePaymentModal({ sale, financeAccounts, onClose }: { sale: Sale; fina
   const [offlineNotice, setOfflineNotice] = useState("");
   const [offlinePending, setOfflinePending] = useState(0);
   useEffect(() => {
-    registerSender("grain.sale.payment", async (action: QueuedAction) => {
+    registerSender("grain.sale.payment", async (action: QueuedAction, evidence) => {
       try {
-        const res = await fetch("/api/grain-sales/payment", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ fields: action.payload.fields ?? {} }),
-        });
+        const photo = (evidence ?? []).find((item) => item.slot === "receipt_photo");
+        let res: Response;
+        if (photo) {
+          // Slip ke sath: multipart (route dono shaklen leta hai).
+          const body = new FormData();
+          body.set("fields", JSON.stringify(action.payload.fields ?? {}));
+          body.set("receipt_photo", photo.blob, "grain-sale-slip.jpg");
+          res = await fetch("/api/grain-sales/payment", { method: "POST", body });
+        } else {
+          res = await fetch("/api/grain-sales/payment", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ fields: action.payload.fields ?? {} }),
+          });
+        }
         const json = await res.json().catch(() => ({}));
         if (!res.ok) return { ok: false, retryable: res.status >= 500, error: json.error || "Grain sale payment sync fail ho gayi." };
         return { ok: true };
@@ -301,7 +344,13 @@ function SalePaymentModal({ sale, financeAccounts, onClose }: { sale: Sale; fina
       window.removeEventListener("agribridge:offline-queue-changed", refresh);
     };
   }, []);
-  if (state.success) setTimeout(onClose, 900);
+  // Kamyabi ka paighaam (ledger TXN, bank/cash book) parhne ka waqt dein.
+  useEffect(() => {
+    if (!state.success) return;
+    const timer = setTimeout(onClose, 6000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.success]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -312,20 +361,27 @@ function SalePaymentModal({ sale, financeAccounts, onClose }: { sale: Sale; fina
         </div>
         <p className="mb-3 text-sm text-surface-500">{sale.buyer_name} - Baaqi: Rs {remaining.toLocaleString()}</p>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
-        {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("gs_payment_recorded", lang)}</p>}
+        {state.success && <GrainPaymentSuccess fallback={t("gs_payment_recorded", lang)} notice={state.notice} />}
+        <div className="mb-3"><GrainBillSummary total={sale.total_amount} paid={sale.amount_received} labelPaid="Wasool hua" /></div>
         {offlineNotice && <p className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
         {offlinePending > 0 && <p className="mb-2 text-[11px] text-amber-700 dark:text-amber-400">{offlinePending} grain payment sync ka intezar kar rahi hai.</p>}
-        <form action={formAction} className="space-y-3" onSubmit={async (event: FormEvent<HTMLFormElement>) => {
+        <form action={formAction} encType="multipart/form-data" className="space-y-3" onSubmit={async (event: FormEvent<HTMLFormElement>) => {
           if (typeof navigator === "undefined" || navigator.onLine !== false) return;
           event.preventDefault();
-          const fields = Object.fromEntries(new FormData(event.currentTarget).entries());
-          await enqueue({ actionType: "grain.sale.payment", entityType: "grain_sale_payments", payload: { fields } });
+          const formData = new FormData(event.currentTarget);
+          const photo = formData.get("receipt_photo");
+          const fields = Object.fromEntries(formData.entries());
+          delete (fields as Record<string, FormDataEntryValue>).receipt_photo;
+          const evidence = photo instanceof File && photo.size > 0 ? [{ blob: photo, slot: "receipt_photo" }] : undefined;
+          await enqueue({ actionType: "grain.sale.payment", entityType: "grain_sale_payments", payload: { fields }, evidence });
           setOfflineNotice("Internet band hai. Payment device par save ho gayi; connection aate hi sync ho jayegi.");
         }}>
           <input type="hidden" name="sale_id" value={sale.id} />
+          <GrainPaymentActionId />
           <div>
             <Label>{t("gd_amount_req", lang)}</Label>
-            <Input type="number" step="0.01" name="amount" max={remaining} defaultValue={remaining} required />
+            <Input type="number" step="0.01" name="amount" max={remaining} defaultValue={Math.round(remaining * 100) / 100} required />
+            <p className="mt-1 text-[11px] text-surface-500">Jitna paisa asal mein mila, utna likhein (jaise 100000). Baqi raqam bill par baqi rahegi.</p>
           </div>
           <div>
             <Label>{t("c_payment_method", lang)}</Label>
@@ -336,20 +392,14 @@ function SalePaymentModal({ sale, financeAccounts, onClose }: { sale: Sale; fina
               <option value="jazzcash">JazzCash</option>
             </Select>
           </div>
-          <div>
-            <Label>{t("gd_which_account_in", lang)}</Label>
-            <Select name="account_id" required>
-              <option value="">- select -</option>
-              {financeAccounts.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </Select>
-          </div>
+          <GrainPaymentDateField direction="in" />
+          <GrainPaymentAccountField accounts={financeAccounts} direction="in" />
+          <GrainPaymentSlipField />
           <div>
             <Label>{t("c_notes", lang)}</Label>
             <Textarea name="notes" rows={2} />
           </div>
-          <SubmitButton label={t("c_record_payment", lang)} />
+          <SubmitButton label="Wasooli darj karein" />
         </form>
       </div>
     </div>

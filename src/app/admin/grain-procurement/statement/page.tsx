@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { GrainStatementClient } from "./grain-statement-client";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { loadGrainPaymentHistory } from "@/lib/grain/payment-history";
+import { GrainBillSummary, GrainPaymentHistory } from "@/components/grain/grain-payment-history";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +67,8 @@ export default async function GrainStatementPage({
 
   const payments = (rawPayments ?? []).map((p: any) => ({
     id: p.id,
-    date: p.created_at,
+    // Asal tareekh (form wali); purani rows par created_at.
+    date: p.payment_date ?? p.created_at,
     type: "payment" as const,
     payment_method: p.payment_method,
     notes: p.notes,
@@ -101,7 +104,15 @@ export default async function GrainStatementPage({
     };
   }).filter((g) => g.totalKg > 0);
 
+  const paymentHistory = await loadGrainPaymentHistory(
+    supabase,
+    "grain_procurement_payments",
+    rawPayments ?? [],
+    (id) => `/admin/grain-procurement/payment-slip/${id}`
+  );
+
   return (
+    <>
     <GrainStatementClient
       sellerName={sellerName}
       sellerType={sellerType}
@@ -113,5 +124,14 @@ export default async function GrainStatementPage({
       balanceDue={balanceDue}
       byGrainType={byGrainType}
     />
+    {/* Har payment kahan gayi: tareekh, account, slip, ledger TXN. */}
+    <section className="mx-auto mt-6 max-w-4xl space-y-3 rounded-card border border-surface-200 bg-white p-4 shadow-card print:hidden dark:border-surface-800 dark:bg-surface-900">
+      <h3 className="text-sm font-semibold text-surface-900 dark:text-white">
+        Payments ki tafseel — {sellerType === "party" ? "party" : "kisan"}: {sellerName}
+      </h3>
+      <GrainBillSummary total={totalSupplied} paid={totalPaid} labelPaid={sellerType === "party" ? "Len-den (payments)" : "Ada kiya"} />
+      <GrainPaymentHistory rows={[...paymentHistory].reverse()} />
+    </section>
+    </>
   );
 }
