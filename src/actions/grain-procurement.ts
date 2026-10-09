@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { postCashIn, postCashOut, postWalletMovement, ACC, failed } from "@/lib/ledger/rules";
+import { postJournal } from "@/lib/ledger/post";
+import { createBatch } from "@/lib/inventory/batch-ledger";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles } from "@/lib/notifications";
 import { sendDeptMail, mailWrapper } from "@/lib/mailer";
@@ -239,17 +241,37 @@ export async function createGrainEntry(_prev: ActionState, formData: FormData): 
       });
       if (movementError) return { error: `Anaj ka stock darj nahi hua: ${movementError.message}` };
     }
-    await supabase.from("stock_batches").insert({
-      product_id: productId,
-      warehouse_id: warehouseId,
-      batch_number: `GRAIN-${entry.id.slice(0, 8)}`,
-      initial_quantity: netWeight,
-      remaining_quantity: netWeight,
-      // Form ka rate per-maund hota hai; stock_batches ka unit_cost per-kg
-      // hona chahiye. Seedha `rate` rakhne se Rs 4,500/kg ka jhoota stock
-      // value ban raha tha (actual Rs 4,500 per maund = Rs 112.50/kg).
-      unit_cost: netWeight > 0 ? totalAmount / netWeight : 0,
+    // Batch ka error ab chhupaya nahi jata, aur anaj ki qeemat ledger mein
+    // bhi jati hai: khareed 5020 (expense) mein likhi jati hai, is liye
+    // godam mein para anaj us se nikal kar Stock -- Grain (1220) mein:
+    // Dr 1220 / Cr 5020. Bechne par grain-sales ulta karta hai.
+    // (Pehle ye batch ledger mein kabhi nahi gaya -- 9 Oct ko Rs 57 lakh
+    // ka gandum batch mein tha magar khata 1200/1220 mein sifar.)
+    // Form ka rate per-maund hota hai; stock_batches ka unit_cost per-kg
+    // hona chahiye (Rs 4,500 per maund = Rs 112.50/kg).
+    const unitCost = netWeight > 0 ? totalAmount / netWeight : 0;
+    const batch = await createBatch(supabase, {
+      productId,
+      warehouseId,
+      qty: netWeight,
+      unitCost,
+      batchNumber: `GRAIN-${entry.id.slice(0, 8)}`,
     });
+    if (batch.error) return { error: `Anaj ka batch nahi bana: ${batch.error}` };
+    if (totalAmount > 0) {
+      const posted = await postJournal({
+        description: `Anaj godam mein -- ${netWeight}kg ${grainType}`,
+        sourceModule: "grain_procurement",
+        sourceId: entry.id,
+        entryDate,
+        createdBy: user?.id ?? null,
+        lines: [
+          { account: ACC.stockGrain, debit: Math.round(totalAmount * 100) / 100 },
+          { account: ACC.grainPurchase, credit: Math.round(totalAmount * 100) / 100 },
+        ],
+      });
+      if ("error" in posted) return { error: `Anaj ka stock ledger mein nahi gaya: ${posted.error}` };
+    }
   }
 
   for (const exp of inlineExpenses) {

@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { postCashIn, postCashOut, ACC, failed } from "@/lib/ledger/rules";
+import { postJournal } from "@/lib/ledger/post";
 import { stockOutPlan } from "@/lib/inventory/stock-math";
 
 export interface ActionState {
@@ -125,6 +126,23 @@ export async function createGrainSale(_prev: ActionState, formData: FormData): P
       reference_id: sale.id,
       created_by: user?.id ?? null,
     });
+  }
+
+  // Bika hua anaj Stock -- Grain (1220) se nikal kar lagat (5020) mein --
+  // procurement ne Dr 1220 / Cr 5020 kiya tha, yahan ulta.
+  if (totalCogs > 0) {
+    const cogsPosted = await postJournal({
+      description: `Anaj bika -- ${quantity}kg ${grainType} (${saleNumber}) ki lagat`,
+      sourceModule: "grain_sale_cogs",
+      sourceId: sale.id,
+      entryDate: saleDate,
+      createdBy: user?.id ?? null,
+      lines: [
+        { account: ACC.grainPurchase, debit: Math.round(totalCogs * 100) / 100 },
+        { account: ACC.stockGrain, credit: Math.round(totalCogs * 100) / 100 },
+      ],
+    });
+    if ("error" in cogsPosted) return { error: `Bikri ho gayi magar anaj ki lagat ledger mein nahi gayi: ${cogsPosted.error}` };
   }
 
   if ((bardanaCost > 0 || mazdooriCost > 0) && costAccountId) {

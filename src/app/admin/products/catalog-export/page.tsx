@@ -24,22 +24,70 @@ export default async function CatalogExportPage() {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
 
-  const [{ data: rawProducts }, { data: allCategories }, { data: inventoryRows }, { data: warehouses }, { data: shops }, { data: saleItems }, { data: companiesRaw }] = await Promise.all([
-    supabase
-      .from("products")
-      .select("id, name, category_id, company_id, pack_size, purchase_price, selling_price, wholesale_price, mrp_price, unit, barcode, product_code, manufacture_date, expiry_date, categories(name), companies(name)")
-      .eq("is_deleted", false)
-      .order("name"),
-    supabase.from("categories").select("id, name, parent_category_id"),
-    supabase.from("inventory").select("product_id, quantity_on_hand, warehouse_id"),
+  // Pehle har jawab ka `error` chhor diya jata tha aur khali jawab par
+  // stock/bikri SIFAR likh di jati thi -- export mein "0 stock" jhoot hota
+  // tha. Ab koi bhi qatar na aa sake to safha saaf bata deta hai. Bari
+  // tables (inventory, pos_sale_items) 1,000 ki hadd se aage paging se aati hain.
+  async function fetchAll<T>(build: (from: number, to: number) => any): Promise<{ data: T[]; error: string | null }> {
+    const all: T[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await build(from, from + 999);
+      if (error) return { data: all, error: error.message as string };
+      all.push(...((data ?? []) as T[]));
+      if (!data || data.length < 1000) break;
+    }
+    return { data: all, error: null };
+  }
+
+  const [productsRes, categoriesRes, inventoryRes, warehousesRes, shopsRes, saleItemsRes, companiesRes] = await Promise.all([
+    fetchAll<any>((from, to) =>
+      supabase
+        .from("products")
+        .select("id, name, category_id, company_id, pack_size, purchase_price, selling_price, wholesale_price, mrp_price, unit, barcode, product_code, manufacture_date, expiry_date, categories(name), companies(name)")
+        .eq("is_deleted", false)
+        .order("name")
+        .range(from, to)
+    ),
+    fetchAll<any>((from, to) => supabase.from("categories").select("id, name, parent_category_id").order("id").range(from, to)),
+    fetchAll<any>((from, to) => supabase.from("inventory").select("product_id, quantity_on_hand, warehouse_id").order("id").range(from, to)),
     supabase.from("warehouses").select("id, name, shop_id").eq("is_active", true).order("name"),
     supabase.from("shops").select("id, name").eq("is_active", true).order("name"),
-    supabase.from("pos_sale_items").select("product_id, quantity, subtotal").limit(100000),
+    fetchAll<any>((from, to) => supabase.from("pos_sale_items").select("product_id, quantity, subtotal").order("id").range(from, to)),
     supabase.from("companies").select("id, name").order("name"),
   ]);
 
-  const categories = (allCategories ?? []).map((c) => ({ id: c.id, name: c.name }));
-  const catNodes = (allCategories ?? []).map((c) => ({ id: c.id, name: c.name, parent_category_id: c.parent_category_id as string | null }));
+  const loadErrors = [
+    productsRes.error && `Products: ${productsRes.error}`,
+    categoriesRes.error && `Categories: ${categoriesRes.error}`,
+    inventoryRes.error && `Stock: ${inventoryRes.error}`,
+    warehousesRes.error && `Godam: ${warehousesRes.error.message}`,
+    shopsRes.error && `Shops: ${shopsRes.error.message}`,
+    saleItemsRes.error && `Bikri: ${saleItemsRes.error}`,
+    companiesRes.error && `Companies: ${companiesRes.error.message}`,
+  ].filter(Boolean) as string[];
+  if (loadErrors.length > 0) {
+    return (
+      <div>
+        <PageHeader title={t("pd_catalog_export", lang)} description="Category select karein, fields choose karein, Print/Download/WhatsApp/Email karein" />
+        <ProductSetupTabs current="export" lang={lang} />
+        <div className="rounded-card border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <p className="font-semibold">Data poora nahi aa saka -- export abhi na karein (adad ghalat honge).</p>
+          <ul className="mt-2 list-disc pl-5">{loadErrors.map((e) => <li key={e}>{e}</li>)}</ul>
+        </div>
+      </div>
+    );
+  }
+
+  const rawProducts = productsRes.data;
+  const allCategories = categoriesRes.data;
+  const inventoryRows = inventoryRes.data;
+  const warehouses = warehousesRes.data;
+  const shops = shopsRes.data;
+  const saleItems = saleItemsRes.data;
+  const companiesRaw = companiesRes.data;
+
+  const categories = (allCategories ?? []).map((c: any) => ({ id: c.id, name: c.name }));
+  const catNodes = (allCategories ?? []).map((c: any) => ({ id: c.id, name: c.name, parent_category_id: c.parent_category_id as string | null }));
 
   // Karyana/Agri Inputs/Dairy = category ID ka set (jaR + saari aulaad).
   const groupCategoryIds = new Map(SHOP_GROUPS.map((g) => [g.key, categoriesForShop(g.key, catNodes)]));
