@@ -19,8 +19,9 @@ const ALWAYS_OPEN = [
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const isBridgeAiApi = pathname === "/api/bridge-ai";
   let response = NextResponse.next({ request: { headers: request.headers } });
-  if (!pathname.startsWith("/admin") && !pathname.startsWith("/portal")) return response;
+  if (!pathname.startsWith("/admin") && !pathname.startsWith("/portal") && !isBridgeAiApi) return response;
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -43,6 +44,11 @@ export async function middleware(request: NextRequest) {
     }
   );
   const { data: { user } } = await supabase.auth.getUser();
+  // Bridge AI apni staff/role rok route ke andar khud lagata hai. Yahan
+  // sirf Supabase session refresh kar ke nayi cookies response ke sath
+  // bhejni hain. Pehle /api yahan se foran bahar nikalti thi; admin page
+  // khula hone ke bawajood expiry ke baad AI "Login zaroori hai" kehti.
+  if (isBridgeAiApi) return response;
   if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";

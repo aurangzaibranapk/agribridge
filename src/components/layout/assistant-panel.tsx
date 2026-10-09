@@ -371,16 +371,27 @@ function AssistantTab({ pathname, reviewRequest, onReviewStarted }: { pathname: 
     setImage(null);
     setLoading(true);
     try {
-      const res = await fetch("/api/bridge-ai", {
+      const requestBody = JSON.stringify({
+        message: auditMessage,
+        statementReview: auditMode,
+        image: img ? { mimeType: img.mimeType, data: img.data } : undefined,
+        history: turns.slice(-8).map((x) => ({ role: x.role, text: x.text })),
+      });
+      const ask = () => fetch("/api/bridge-ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: auditMessage,
-          statementReview: auditMode,
-          image: img ? { mimeType: img.mimeType, data: img.data } : undefined,
-          history: turns.slice(-8).map((x) => ({ role: x.role, text: x.text })),
-        }),
+        credentials: "same-origin",
+        body: requestBody,
       });
+      let res = await ask();
+      // Shared hosting par kabhi access token isi lamhe expire hota hai.
+      // ERP mein login maujood ho to refresh token se session taaza kar
+      // ke wahi audit ek dafa khud retry ho -- user se login na mangwaye.
+      if (res.status === 401) {
+        const browser = createClient();
+        const { error: refreshError } = await browser.auth.refreshSession();
+        if (!refreshError) res = await ask();
+      }
       const data = await res.json();
       setTurns((tt) => [...tt, { role: "assistant", text: data.answer ?? data.error ?? t("wc_error", lang) }]);
     } catch {
