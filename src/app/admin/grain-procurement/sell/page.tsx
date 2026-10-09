@@ -5,6 +5,7 @@ import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { SellGrainClient } from "./sell-grain-client";
 import { loadGrainPaymentHistory } from "@/lib/grain/payment-history";
 import type { GrainPaymentHistoryRow } from "@/components/grain/grain-payment-history";
+import type { SaleDraftRow } from "./sell-grain-client";
 
 export const dynamic = "force-dynamic";
 
@@ -53,8 +54,36 @@ export default async function SellGrainPage() {
       profit: Number(s.profit),
       amount_received: Number(s.amount_received),
       sale_date: s.sale_date,
+      draft_id: s.draft_id ?? null,
     };
   });
+
+  // "Draft (Admin approval)" bikri (migration 520) -- hisaab mein shamil nahi.
+  const { data: rawDrafts } = await (supabase as any)
+    .from("grain_sale_drafts")
+    .select("id, status, sale_date, grain_type, quantity_kg, rate_per_kg, total_amount, reject_reason, buyers(business_name)")
+    .in("status", ["pending", "approving", "rejected"])
+    .order("created_at", { ascending: false })
+    .limit(50);
+  const draftRows: SaleDraftRow[] = (rawDrafts ?? []).map((d: any) => {
+    const buyer = Array.isArray(d.buyers) ? d.buyers[0] : d.buyers;
+    return {
+      id: d.id,
+      status: d.status,
+      sale_date: d.sale_date,
+      buyer_name: buyer?.business_name ?? "-",
+      grain_type: d.grain_type,
+      quantity_kg: Number(d.quantity_kg),
+      rate_per_kg: Number(d.rate_per_kg),
+      total_amount: Number(d.total_amount),
+      reject_reason: d.reject_reason ?? null,
+    };
+  });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").maybeSingle();
+  const canApprove = ["owner", "super_admin", "admin"].includes(String(me?.role ?? ""));
 
   // Har bill ki payments: tareekh, account, slip aur ledger TXN.
   const saleIds = sales.map((s) => s.id);
@@ -103,6 +132,8 @@ export default async function SellGrainPage() {
         sales={sales}
         paymentsBySale={paymentsBySale}
         stockByWarehouseAndType={stockByWarehouseAndType}
+        draftRows={draftRows}
+        canApprove={canApprove}
       />
     </div>
   );

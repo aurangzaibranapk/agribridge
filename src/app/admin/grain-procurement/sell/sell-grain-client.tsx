@@ -18,6 +18,7 @@ import {
 } from "@/components/grain/grain-payment-fields";
 import { GrainBillSummary, GrainPaymentHistory, type GrainPaymentHistoryRow } from "@/components/grain/grain-payment-history";
 import { Fragment } from "react";
+import Link from "next/link";
 
 const initialState: ActionState = {};
 
@@ -37,6 +38,32 @@ interface Sale {
   profit: number;
   amount_received: number;
   sale_date: string;
+  /** Admin approval se bani bikri (migration 520). */
+  draft_id?: string | null;
+}
+
+/** "Draft (Admin approval)" bikri -- abhi stock/ledger mein nahi. */
+export interface SaleDraftRow {
+  id: string;
+  status: "pending" | "approving" | "approved" | "rejected";
+  sale_date: string;
+  buyer_name: string;
+  grain_type: string;
+  quantity_kg: number;
+  rate_per_kg: number;
+  total_amount: number;
+  reject_reason: string | null;
+}
+
+export function SaleDraftBadge({ status }: { status: SaleDraftRow["status"] }) {
+  const map: Record<SaleDraftRow["status"], { label: string; cls: string }> = {
+    pending: { label: "Draft (Admin approval)", cls: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" },
+    approving: { label: "Approve ho rahi hai", cls: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300" },
+    approved: { label: "Approved (Admin)", cls: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300" },
+    rejected: { label: "Rejected", cls: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300" },
+  };
+  const item = map[status] ?? map.pending;
+  return <span className={`ml-1 inline-block rounded-full px-2 py-0.5 align-middle text-[10px] font-semibold ${item.cls}`}>{item.label}</span>;
 }
 
 const GRAIN_LABELS: Record<string, string> = { wheat: "Wheat (Gandum)", rice: "Rice (Chawal)", maize: "Maize (Makai)" };
@@ -48,6 +75,8 @@ export function SellGrainClient({
   sales,
   paymentsBySale = {},
   stockByWarehouseAndType,
+  draftRows = [],
+  canApprove = false,
 }: {
   buyers: Buyer[];
   warehouses: Warehouse[];
@@ -55,13 +84,22 @@ export function SellGrainClient({
   sales: Sale[];
   paymentsBySale?: Record<string, GrainPaymentHistoryRow[]>;
   stockByWarehouseAndType: Record<string, Record<string, number>>;
+  draftRows?: SaleDraftRow[];
+  canApprove?: boolean;
 }) {
   const [payingSale, setPayingSale] = useState<Sale | null>(null);
   const [openSale, setOpenSale] = useState<string | null>(null);
   const lang = useLang();
+  const openDrafts = draftRows.filter((d) => d.status === "pending" || d.status === "approving");
 
   return (
     <div className="space-y-6">
+      {openDrafts.length > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+          {openDrafts.length} bikri &quot;Draft (Admin approval)&quot; mein hain -- in ka stock, lagat aur kharcha abhi darj nahi hua.{" "}
+          {canApprove && <Link href="/admin/grain-procurement/sale-approvals" className="font-semibold underline">Review karein</Link>}
+        </div>
+      )}
       <NewSaleForm buyers={buyers} warehouses={warehouses} financeAccounts={financeAccounts} stockByWarehouseAndType={stockByWarehouseAndType} />
 
       <div>
@@ -81,6 +119,27 @@ export function SellGrainClient({
               </tr>
             </thead>
             <tbody>
+              {draftRows.filter((d) => d.status !== "approved").map((d) => (
+                <tr key={`draft-${d.id}`} className="border-b border-surface-100 bg-amber-50/50 last:border-0 dark:border-surface-800 dark:bg-amber-950/10">
+                  <td className="px-3 py-2 font-mono text-xs text-surface-400">{d.sale_date}</td>
+                  <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">
+                    {d.buyer_name} <SaleDraftBadge status={d.status} />
+                    {d.status === "rejected" && d.reject_reason && <p className="text-[11px] font-normal text-red-700">Wajah: {d.reject_reason}</p>}
+                  </td>
+                  <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{GRAIN_LABELS[d.grain_type]}</td>
+                  <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">{d.quantity_kg} kg</td>
+                  <td className="px-3 py-2 text-right font-medium text-surface-500">Rs {d.total_amount.toLocaleString()}</td>
+                  <td className="px-3 py-2 text-right text-surface-400">—</td>
+                  <td className="px-3 py-2 text-right text-surface-400">—</td>
+                  <td className="px-3 py-2">
+                    {canApprove && d.status !== "rejected" ? (
+                      <Link href={`/admin/grain-procurement/sale-approvals#d-${d.id}`} className="text-xs font-medium text-amber-700 hover:underline">Review</Link>
+                    ) : (
+                      <span className="text-[11px] text-surface-400">{d.status === "rejected" ? "Darj nahi hui" : "Hisaab mein nahi"}</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
               {sales.map((s) => {
                 const remaining = s.total_amount - s.amount_received;
                 const history = paymentsBySale[s.id] ?? [];
@@ -89,7 +148,7 @@ export function SellGrainClient({
                   <Fragment key={s.id}>
                   <tr className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                     <td className="px-3 py-2 font-mono text-xs text-surface-500">{s.sale_number}</td>
-                    <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{s.buyer_name}</td>
+                    <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{s.buyer_name}{s.draft_id && <> <SaleDraftBadge status="approved" /></>}</td>
                     <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{GRAIN_LABELS[s.grain_type]}</td>
                     <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">{s.quantity_kg} kg</td>
                     <td className="px-3 py-2 text-right font-medium text-surface-900 dark:text-white">Rs {s.total_amount.toLocaleString()}</td>
@@ -156,6 +215,7 @@ export function NewSaleForm({
   const [deliveryTerm, setDeliveryTerm] = useState("load_deliver");
   const [bardanaCost, setBardanaCost] = useState("0");
   const [mazdooriCost, setMazdooriCost] = useState("0");
+  const [saveMode, setSaveMode] = useState<"post" | "draft">("post");
   const [offlineNotice, setOfflineNotice] = useState("");
   const [offlinePending, setOfflinePending] = useState(0);
 
@@ -198,7 +258,7 @@ export function NewSaleForm({
     <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
       <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("gs_new_sale", lang)}</h2>
       {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
-      {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("gs_sale_done", lang)}</p>}
+      {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{state.draftId ? state.notice : t("gs_sale_done", lang)}</p>}
       {offlineNotice && <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
       {offlinePending > 0 && <p className="mb-3 text-xs text-amber-700 dark:text-amber-400">{offlinePending} grain sales sync ka intezar kar rahi hain.</p>}
       <form action={formAction} className="space-y-3" onSubmit={async (event: FormEvent<HTMLFormElement>) => {
@@ -208,6 +268,7 @@ export function NewSaleForm({
         await enqueue({ actionType: "grain.sale", entityType: "grain_sales", payload: { fields } });
         setOfflineNotice("Internet band hai. Grain sale device par save ho gayi; connection aate hi sync ho jayegi.");
       }}>
+        <input type="hidden" name="save_mode" value={saveMode} />
         <div>
           <Label>{t("gd_buyer_req", lang)}</Label>
           <Select name="buyer_id" required>
@@ -246,7 +307,7 @@ export function NewSaleForm({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>{t("gd_qty_kg_req", lang)}</Label>
-            <Input type="number" step="0.1" name="quantity_kg" value={quantity} onChange={(e) => setQuantity(e.target.value)} max={availableStock} required />
+            <Input type="number" step="0.1" name="quantity_kg" value={quantity} onChange={(e) => setQuantity(e.target.value)} max={saveMode === "draft" ? undefined : availableStock} required />
           </div>
           <div>
             <Label>{t("gd_rate_kg_req", lang)}</Label>
@@ -294,7 +355,20 @@ export function NewSaleForm({
             <div className="flex justify-between text-xs text-red-600"><span>{t("gs_bardana_labour", lang)}</span><span>- Rs {combinedCost.toLocaleString()}</span></div>
           )}
         </div>
-        <SubmitButton label={t("gs_record_sale", lang)} />
+        <div className={`rounded-lg border-2 p-3 ${saveMode === "draft" ? "border-amber-400 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20" : "border-surface-200 dark:border-surface-700"}`}>
+          <Label>Bikri kaise save karni hai?</Label>
+          <div className="mt-1 grid gap-2 sm:grid-cols-2">
+            <button type="button" aria-pressed={saveMode === "post"} onClick={() => setSaveMode("post")} className={`rounded-lg border px-3 py-2 text-left text-sm ${saveMode === "post" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>
+              <span className="block font-medium">Abhi darj karein (Normal)</span>
+              <span className="block text-[11px]">Stock foran niklega, lagat ledger aur kharcha darj.</span>
+            </button>
+            <button type="button" aria-pressed={saveMode === "draft"} onClick={() => setSaveMode("draft")} className={`rounded-lg border px-3 py-2 text-left text-sm ${saveMode === "draft" ? "border-amber-500 bg-amber-100 text-amber-900" : "border-surface-200 text-surface-500"}`}>
+              <span className="block font-medium">Draft (Admin approval)</span>
+              <span className="block text-[11px]">Abhi kuch darj nahi hoga. Admin Approve karega, tab bikri ki tareekh par stock aur hisaab darj hoga.</span>
+            </button>
+          </div>
+        </div>
+        <SubmitButton label={saveMode === "draft" ? "Draft (Admin approval) par save karein" : t("gs_record_sale", lang)} />
       </form>
     </div>
   );
