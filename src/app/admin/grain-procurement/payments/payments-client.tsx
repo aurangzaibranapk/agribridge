@@ -9,6 +9,14 @@ import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { enqueue, allActions, type QueuedAction } from "@/lib/offline/queue";
 import { registerSender, syncQueue } from "@/lib/offline/sync";
+import Link from "next/link";
+import {
+  GrainPaymentActionId,
+  GrainPaymentAccountField,
+  GrainPaymentDateField,
+  GrainPaymentSlipField,
+  GrainPaymentSuccess,
+} from "@/components/grain/grain-payment-fields";
 
 const initialState: ActionState = {};
 
@@ -160,6 +168,12 @@ export function GrainPaymentsClient({
                     )}
                   </td>
                   <td className="px-4 py-2 text-right">
+                    <Link
+                      href={`/admin/grain-procurement/statement?seller_type=${r.seller_type}&seller_id=${r.id}`}
+                      className="mr-2 text-xs font-medium text-brand-600 hover:underline"
+                    >
+                      History
+                    </Link>
                     {r.due > 0 && (
                       <button
                         onClick={() => setPaying(r)}
@@ -194,7 +208,12 @@ function PayModal({
   const [state, formAction] = useFormState(recordGrainPayment, initialState);
   const [method, setMethod] = useState("cash");
   const [offlineNotice, setOfflineNotice] = useState("");
-  if (state.success) setTimeout(() => window.location.reload(), 800);
+  // Kamyabi ka paighaam parhne ka waqt dein (kahan darj hua), phir taaza karein.
+  useEffect(() => {
+    if (!state.success) return;
+    const timer = setTimeout(() => window.location.reload(), 5000);
+    return () => clearTimeout(timer);
+  }, [state.success]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -213,6 +232,19 @@ function PayModal({
         </p>
 
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
+        {state.success && (
+          <GrainPaymentSuccess
+            fallback={row.seller_type === "party" ? "Wasooli darj ho gayi." : "Payment darj ho gayi."}
+            notice={state.notice}
+          />
+        )}
+        {state.success && state.paymentId && (
+          <p className="mb-2 text-xs">
+            <Link href={`/admin/grain-procurement/payment-slip/${state.paymentId}`} className="text-brand-600 underline">Payment slip dekhein</Link>
+            {" · "}
+            <Link href={`/admin/grain-procurement/statement?seller_type=${row.seller_type}&seller_id=${row.id}`} className="text-brand-600 underline">Poori history</Link>
+          </p>
+        )}
 
         <form
           action={formAction}
@@ -241,10 +273,16 @@ function PayModal({
         >
           <input type="hidden" name="seller_type" value={row.seller_type} />
           <input type="hidden" name={row.seller_type === "party" ? "party_id" : "farmer_id"} value={row.id} />
+          <GrainPaymentActionId />
 
           <div>
             <Label>{t("gp_amount", lang)}</Label>
             <Input type="number" step="0.01" name="amount" max={row.due} defaultValue={Math.round(row.due)} required />
+            <p className="mt-1 text-[11px] text-surface-500">
+              {row.seller_type === "party"
+                ? "Jitna paisa asal mein mila, utna likhein. Baqi raqam khate mein baqi rahegi."
+                : "Jitna paisa asal mein diya, utna likhein. Kisan ka purana udhaar ho to wo khud is mein se kat jata hai."}
+            </p>
           </div>
 
           <div>
@@ -255,29 +293,20 @@ function PayModal({
             </Select>
           </div>
 
-          <div>
-            <Label>{row.seller_type === "party" ? "Which account received the money? *" : t("gr_which_account_req", lang)}</Label>
-            <Select name="account_id" required defaultValue="">
-              <option value="">{row.seller_type === "party" ? "Select receiving account" : t("gr_which_account_from_req", lang)}</option>
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </Select>
-          </div>
+          <GrainPaymentDateField direction={row.seller_type === "party" ? "in" : "out"} />
 
-          {/* Naqad par raseed ki photo lazmi hai -- ye rok server par bhi
-              hai, yahan sirf is liye ke wajah pehle se saamne rahe. */}
-          {method === "cash" && row.seller_type === "farmer" && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/20">
-              <Label>{t("gr_receiving_photo_req", lang)}</Label>
-              <input type="file" name="receipt_photo" accept="image/*" capture="environment" className="mt-1 w-full text-xs" />
-              <p className="mt-1 flex items-start gap-1 text-xs text-amber-800 dark:text-amber-300">
-                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-                {t("gr_receiving_note", lang)}
-              </p>
-            </div>
+          <GrainPaymentAccountField accounts={accounts} direction={row.seller_type === "party" ? "in" : "out"} />
+
+          {/* Naqad par kisan ki signed raseed lazmi hai -- ye rok server par
+              bhi hai. Baqi har payment par slip optional hai. */}
+          {method === "cash" && row.seller_type === "farmer" ? (
+            <GrainPaymentSlipField
+              required
+              requiredNote={`${t("gr_receiving_note", lang)} (Cash payment par Kisan ki signed raseed ki photo zaroori hai.)`}
+            />
+          ) : (
+            <GrainPaymentSlipField />
           )}
-
           <div>
             <Label>{t("gr_notes", lang)}</Label>
             <Textarea name="notes" rows={2} />
@@ -285,19 +314,19 @@ function PayModal({
 
           {offlineNotice && <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
 
-          <SubmitButton />
+          <SubmitButton label={row.seller_type === "party" ? "Wasooli darj karein" : "Payment darj karein"} />
         </form>
       </div>
     </div>
   );
 }
 
-function SubmitButton() {
+function SubmitButton({ label = "Record Received Payment" }: { label?: string }) {
   const lang = useLang();
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} className="w-full">
-      {pending ? t("gr_saving", lang) : "Record Received Payment"}
+      {pending ? t("gr_saving", lang) : label}
     </Button>
   );
 }

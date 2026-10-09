@@ -3,6 +3,8 @@ import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { SellGrainClient } from "./sell-grain-client";
+import { loadGrainPaymentHistory } from "@/lib/grain/payment-history";
+import type { GrainPaymentHistoryRow } from "@/components/grain/grain-payment-history";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +56,17 @@ export default async function SellGrainPage() {
     };
   });
 
+  // Har bill ki payments: tareekh, account, slip aur ledger TXN.
+  const saleIds = sales.map((s) => s.id);
+  const { data: rawSalePayments } = saleIds.length > 0
+    ? await (supabase as any).from("grain_sale_payments").select("*").in("sale_id", saleIds).order("created_at", { ascending: true })
+    : { data: [] as any[] };
+  const historyRows = await loadGrainPaymentHistory(supabase, "grain_sale_payments", rawSalePayments ?? []);
+  const paymentsBySale: Record<string, GrainPaymentHistoryRow[]> = {};
+  (rawSalePayments ?? []).forEach((p: any, i: number) => {
+    (paymentsBySale[p.sale_id] ??= []).push(historyRows[i]);
+  });
+
   const totalRevenue = sales.reduce((s, r) => s + r.total_amount, 0);
   const totalCogs = sales.reduce((s, r) => s + r.total_cogs, 0);
   const totalProfit = sales.reduce((s, r) => s + r.profit, 0);
@@ -88,6 +101,7 @@ export default async function SellGrainPage() {
         warehouses={warehouses ?? []}
         financeAccounts={financeAccounts ?? []}
         sales={sales}
+        paymentsBySale={paymentsBySale}
         stockByWarehouseAndType={stockByWarehouseAndType}
       />
     </div>

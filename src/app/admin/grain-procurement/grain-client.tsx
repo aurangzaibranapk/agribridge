@@ -6,6 +6,13 @@ import Link from "next/link";
 import { NewSaleForm } from "./sell/sell-grain-client";
 import { useFormState, useFormStatus } from "react-dom";
 import { createGrainEntry, recordGrainPayment, createGrainParty, editGrainEntry, updateGrainPackRule, type ActionState } from "@/actions/grain-procurement";
+import {
+  GrainPaymentActionId,
+  GrainPaymentAccountField,
+  GrainPaymentDateField,
+  GrainPaymentSlipField,
+  GrainPaymentSuccess,
+} from "@/components/grain/grain-payment-fields";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { X, Plus, FileText, AlertTriangle, Trash2 } from "lucide-react";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
@@ -429,7 +436,8 @@ function NewEntryForm({
   }
 
   if (state.success) {
-    setTimeout(() => window.location.reload(), 1200);
+    // Ledger TXN aur cash book ka paighaam parhne ka waqt.
+    setTimeout(() => window.location.reload(), state.paymentId ? 6000 : 1200);
   }
 
   return (
@@ -448,6 +456,7 @@ function NewEntryForm({
         <div className="mb-4 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm text-brand-800 dark:border-brand-900/40 dark:bg-brand-950/20 dark:text-brand-200">
           <p className="font-semibold">Entry record ho gayi, stock add ho gaya.</p>
           <p className="mt-1 text-xs opacity-80">Ab purchase bill aur payment receipt alag se print ya share karein.</p>
+          {state.paymentId && state.notice && <p className="mt-1 text-xs font-medium">Payment: {state.notice}</p>}
           <div className="mt-3 flex flex-wrap gap-2">
             {state.entryId && (
               <Link href={`/admin/grain-procurement/bill/${state.entryId}`} className="inline-flex items-center rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-700">
@@ -711,13 +720,21 @@ function NewEntryForm({
                     <option key={a.id} value={a.id}>{a.name}</option>
                   ))}
                 </select>
+                <p className="mt-1 text-[11px] text-surface-500">
+                  {paymentAccountId
+                    ? `Ye raqam "${financeAccounts.find((a) => a.id === paymentAccountId)?.name ?? ""}" ki cash book aur ledger se entry ki tareekh par nikal kar darj hogi.`
+                    : "Naqad diya to \"Cash in Hand\", bank se diya to wohi bank chunein. Payment ki tareekh entry wali tareekh hi hogi."}
+                </p>
               </div>
-              {paymentMethod === "cash" && (
+              <GrainPaymentActionId />
+              {paymentMethod === "cash" ? (
                 <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-2 dark:border-amber-900/50 dark:bg-amber-950/20">
                   <Label>{t("gr_receiving_photo_req", lang)}</Label>
                   <input type="file" name="receipt_photo" accept="image/*" required className="mt-1 w-full text-xs" />
                   <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-500">{t("gr_receiving_note_short", lang)}</p>
                 </div>
+              ) : (
+                <GrainPaymentSlipField />
               )}
             </div>
           )}
@@ -761,7 +778,13 @@ function PaymentModal({ balance, financeAccounts, onClose }: { balance: Balance;
   const lang = useLang();
   const [state, formAction] = useFormState(recordGrainPayment, initialState);
   const [paymentMethod, setPaymentMethod] = useState("cash");
-  if (state.success) setTimeout(onClose, 900);
+  // Kamyabi ka paighaam (ledger TXN, bank/cash book) parhne ka waqt dein.
+  useEffect(() => {
+    if (!state.success) return;
+    const timer = setTimeout(onClose, 6000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.success]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -773,12 +796,16 @@ function PaymentModal({ balance, financeAccounts, onClose }: { balance: Balance;
         <p className="mb-3 text-sm text-surface-500">{balance.seller_name} - Baaqi: Rs {balance.balance_due.toLocaleString()}</p>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
         {state.success && (
-          <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("gd_payment_recorded", lang)}<Link href={`/admin/grain-procurement/payment-slip/${state.entryId}`} className="underline">{t("gr_view_slip", lang)}</Link>
-          </p>
+          <>
+            <GrainPaymentSuccess fallback={balance.seller_type === "party" ? "Wasooli darj ho gayi." : "Payment darj ho gayi."} notice={state.notice} />
+            <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("gd_payment_recorded", lang)}<Link href={`/admin/grain-procurement/payment-slip/${state.entryId}`} className="underline">{t("gr_view_slip", lang)}</Link>
+            </p>
+          </>
         )}
         <form action={formAction} encType="multipart/form-data" className="space-y-5">
           <input type="hidden" name="seller_type" value={balance.seller_type} />
           <input type="hidden" name={balance.seller_type === "farmer" ? "farmer_id" : "party_id"} value={balance.seller_id} />
+          <GrainPaymentActionId />
           <div>
             <Label>{t("gr_amount_req", lang)}</Label>
             <Input type="number" step="0.01" name="amount" max={balance.balance_due} defaultValue={balance.balance_due} required />
@@ -792,21 +819,12 @@ function PaymentModal({ balance, financeAccounts, onClose }: { balance: Balance;
               <option value="jazzcash">JazzCash</option>
             </Select>
           </div>
-          <div>
-            <Label>{t("gr_which_account_from_req", lang)}</Label>
-            <Select name="account_id" required>
-              <option value="">- select -</option>
-              {financeAccounts.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </Select>
-          </div>
-          {paymentMethod === "cash" && (
-            <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-2 dark:border-amber-900/50 dark:bg-amber-950/20">
-              <Label>{t("gr_receiving_photo_req", lang)}</Label>
-              <input type="file" name="receipt_photo" accept="image/*" required className="mt-1 w-full text-xs" />
-              <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-500">{t("gr_receiving_note", lang)}</p>
-            </div>
+          <GrainPaymentDateField direction={balance.seller_type === "party" ? "in" : "out"} />
+          <GrainPaymentAccountField accounts={financeAccounts} direction={balance.seller_type === "party" ? "in" : "out"} />
+          {paymentMethod === "cash" && balance.seller_type === "farmer" ? (
+            <GrainPaymentSlipField required requiredNote={`${t("gr_receiving_note", lang)} (Cash payment par Kisan ki signed raseed ki photo zaroori hai.)`} />
+          ) : (
+            <GrainPaymentSlipField />
           )}
           <div>
             <Label>{t("gr_notes", lang)}</Label>

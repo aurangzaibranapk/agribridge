@@ -20,6 +20,11 @@ interface Slip {
   seller_phone: string | null;
   seller_type: string;
   receipt_photo_url: string | null;
+  /** Asal payment ki tareekh (migration 516); purani rows par khali. */
+  payment_date?: string | null;
+  /** Ledger TXN number aur account (kahan darj hua). */
+  entry_number?: string | null;
+  account_name?: string | null;
   is_edited: boolean;
   original_amount: number | null;
   edited_at: string | null;
@@ -65,7 +70,7 @@ export function PaymentSlipClient({ slip, financeAccounts }: { slip: Slip; finan
           </div>
           <div className="text-right">
             <p className="font-mono text-sm font-semibold text-surface-700">{slipNumber}</p>
-            <p className="text-xs text-surface-400">{new Date(slip.created_at).toLocaleDateString()}</p>
+            <p className="text-xs text-surface-400">{slip.payment_date ? slip.payment_date.split("-").reverse().join("-") : new Date(slip.created_at).toLocaleDateString()}</p>
           </div>
         </div>
 
@@ -94,6 +99,22 @@ export function PaymentSlipClient({ slip, financeAccounts }: { slip: Slip; finan
             </div>
           </div>
         </div>
+
+        {(slip.entry_number || slip.account_name) && (
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-lg bg-surface-50 p-2">
+              <p className="text-surface-500">Account (cash book)</p>
+              <p className="font-semibold text-surface-800">{slip.account_name ?? "—"}</p>
+            </div>
+            <div className="rounded-lg bg-surface-50 p-2">
+              <p className="text-surface-500">Ledger entry</p>
+              <p className="font-mono font-semibold text-surface-800">{slip.entry_number ?? "—"}</p>
+            </div>
+          </div>
+        )}
+        {!slip.receipt_photo_url && (
+          <p className="mt-3 inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800 print:hidden">Slip nahi lagi</p>
+        )}
 
         {slip.receipt_photo_url && (
           <div className="mt-4">

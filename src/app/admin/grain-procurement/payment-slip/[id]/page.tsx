@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PaymentSlipClient } from "./payment-slip-client";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { loadGrainPaymentHistory } from "@/lib/grain/payment-history";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,8 @@ export default async function PaymentSlipPage({ params }: { params: Promise<{ id
   const farmer = Array.isArray(payment.farmers) ? payment.farmers[0] : payment.farmers;
   const party = Array.isArray(payment.grain_parties) ? payment.grain_parties[0] : payment.grain_parties;
 
+  const [history] = await loadGrainPaymentHistory(supabase, "grain_procurement_payments", [payment]);
+
   const slip = {
     id: payment.id,
     amount: Number(payment.amount),
@@ -39,6 +42,9 @@ export default async function PaymentSlipPage({ params }: { params: Promise<{ id
     is_edited: payment.is_edited ?? false,
     original_amount: payment.original_amount ? Number(payment.original_amount) : null,
     edited_at: payment.edited_at ?? null,
+    payment_date: (payment as any).payment_date ?? null,
+    entry_number: history?.entry_number ?? null,
+    account_name: history?.account_name ?? null,
   };
 
   return <PaymentSlipClient slip={slip} financeAccounts={financeAccounts ?? []} />;
