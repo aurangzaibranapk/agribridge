@@ -1,4 +1,5 @@
 "use server";
+import { grnPayable } from "@/lib/inventory/grn-payable";
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
@@ -186,7 +187,9 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
     };
   });
 
-  const payableAmount = receivedValue - shortageAmount - damageAmount - discountAdjustment + additionalCharges;
+  // received_qty mein short/damaged pehle hi shamil nahi -- unhein dobara
+  // ghatana dohri katoti thi. Payable = mila hua maal - discount + kharche, ek dafa.
+  const payableAmount = grnPayable(items, discountAdjustment, additionalCharges);
   const hasDiscrepancy = shortageAmount > 0 || damageAmount > 0;
   // When charges (freight etc.) are entered, spread them across items
   // proportional to their received value, so stock_batches.unit_cost
