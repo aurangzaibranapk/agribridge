@@ -128,6 +128,12 @@ class MobileRepository {
     return result.toString();
   }
 
+  Future<List<Map<String, dynamic>>> myMachineryBookings() async {
+    if (!AppConfig.hasSupabase) throw StateError('Supabase configured nahi.');
+    final result = await _client.rpc('mobile_my_machinery_bookings');
+    return List<Map<String, dynamic>>.from(result as List);
+  }
+
   Future<Map<String, dynamic>> myFarmerSummary() async {
     if (!AppConfig.hasSupabase) return const {};
     final result = await _client.rpc('mobile_my_farmer_summary');
