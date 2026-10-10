@@ -3,8 +3,9 @@ import { grainBagCalculation } from "@/lib/grain/bag-calculation";
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
-import { postCashIn, postCashOut, postWalletMovement, ACC, failed } from "@/lib/ledger/rules";
+import { postCashIn, postCashOut, ACC, failed } from "@/lib/ledger/rules";
 import { postJournal } from "@/lib/ledger/post";
+import { grainPayableJournalLines } from "@/lib/grain/payable-journal";
 import { createBatch } from "@/lib/inventory/batch-ledger";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles } from "@/lib/notifications";
@@ -304,13 +305,19 @@ async function postGrainEntry(formData: FormData, opts: GrainPostOptions): Promi
     return { error: error.message };
   }
 
+  // 524: khareed ki payable HAMESHA ledger mein jati hai -- Dr 5020 / Cr 2040
+  // (kisan ya grain party ke naam), purani tareekh par bhi, aur wallet ho ya na
+  // ho. Pehle ye sirf tab hoti thi jab kisan ka wallet maujood ho; warna chup
+  // chaap reh jati thi (Riaz ki munji, 7 Oct, bill ab07ea2c). Ab fail ho to
+  // error wapas jata hai.
+  let grainWalletRowId: string | null = null;
   if (farmerId) {
-    const { data: grainWallet } = await supabase.from("wallets").select("id").eq("owner_type", "farmer").eq("owner_id", farmerId).single();
+    const { data: grainWallet } = await supabase.from("wallets").select("id").eq("owner_type", "farmer").eq("owner_id", farmerId).maybeSingle();
     if (grainWallet) {
       // Pehle yahan type "grain_income" likha tha jo wallet ki fehrist
       // mein hai hi nahi -- is liye ye entry chup chaap nakaam ho jati
       // thi aur kisan ka wallet khali reh jata tha.
-      const { data: grainWalletRow } = await supabase
+      const { data: grainWalletRow, error: walletError } = await supabase
         .from("wallet_transactions")
         .insert({
           wallet_id: grainWallet.id,
@@ -325,23 +332,29 @@ async function postGrainEntry(formData: FormData, opts: GrainPostOptions): Promi
         })
         .select("id")
         .single();
-
-      if (grainWalletRow?.id) {
-        await postWalletMovement({
-          ownerType: "farmer",
-          ownerId: farmerId,
-          amount: payableToSeller,
-          direction: "credit",
-          against: ACC.grainPurchase,
-          description: `Grain khareed — ${netWeight}kg ${grainType}`,
-          ctx: {
-            createdBy: user?.id ?? null,
-            entryDate,
-            backdateReason: backdateReason("Grain entry"),
-            claims: [{ table: "wallet_transactions", rowId: grainWalletRow.id }],
-          },
-        });
-      }
+      if (walletError) return { error: `Entry save ho gayi, magar kisan ka wallet darj nahi hua: ${walletError.message}`, entryId: entry.id };
+      grainWalletRowId = grainWalletRow?.id ?? null;
+    }
+  }
+  const payableLines = grainPayableJournalLines({
+    farmerId,
+    partyId,
+    amount: payableToSeller,
+    memo: `Grain khareed — ${netWeight}kg ${grainType}`,
+  });
+  if (payableLines.length) {
+    const payablePosted = await postJournal({
+      description: `Grain khareed — ${netWeight}kg ${grainType}`,
+      sourceModule: "grain_procurement",
+      sourceId: entry.id,
+      entryDate,
+      backdateReason: backdateReason("Grain entry"),
+      createdBy: user?.id ?? null,
+      claims: grainWalletRowId ? [{ table: "wallet_transactions", rowId: grainWalletRowId }] : undefined,
+      lines: payableLines,
+    });
+    if ("error" in payablePosted) {
+      return { error: `Entry save ho gayi, magar kisan/party ka khata (Dr 5020 / Cr 2040) ledger mein nahi gaya: ${payablePosted.error}`, entryId: entry.id };
     }
   }
 
