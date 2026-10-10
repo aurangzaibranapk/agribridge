@@ -96,6 +96,7 @@ function ActionCommentModal({ orderId, action, label, onClose }: { orderId: stri
         <form action={formAction} className="space-y-2">
           <input type="hidden" name="order_id" value={orderId} />
           <textarea name="comment" rows={3} placeholder={t("ac_comment_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="credit_override_reason" placeholder="30 din rok ka override -- wajah (sirf Admin/Owner, warna khali chhorein)" className="w-full rounded-lg border border-surface-200 p-2 text-xs" />
           <ConfirmButton label={label} />
         </form>
       </div>

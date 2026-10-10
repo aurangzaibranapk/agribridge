@@ -151,3 +151,41 @@ export function blockMessage(name: string, overdue: number, days: number): strin
     `Sirf Admin/Owner wajah likh kar ijazat de sakta hai.`
   );
 }
+
+// ---------------------------------------------------------------------
+// Branch (dealer/agri order) udhaar ki aging -- branch_credit_transactions
+// se. Wohi formula jo getBranchCreditCheck / branch-credit safha istemal
+// karta hai: outstanding = order_charge - advance_payment - adjustment -
+// refund. order_charge = udhaar (debit); baqi teeno = wapsi (credit).
+// Manfi (negative) raqam ulti taraf ginti hai. Phir wohi FIFO.
+// ---------------------------------------------------------------------
+
+export interface BranchCreditTxn {
+  transaction_type: string;
+  amount: number;
+  created_at: string; // ISO timestamp
+}
+
+/** UTC timestamp -> Asia/Karachi (UTC+5) ki tareekh YYYY-MM-DD. */
+export function pkDate(ts: string): string {
+  return new Date(Date.parse(ts) + 5 * 3_600_000).toISOString().slice(0, 10);
+}
+
+export function branchTxnsToLedger(txns: BranchCreditTxn[]): LedgerLine[] {
+  const out: LedgerLine[] = [];
+  for (const t of txns) {
+    const amt = Number(t.amount) || 0;
+    if (!amt) continue;
+    const date = pkDate(t.created_at);
+    const isCharge = t.transaction_type === "order_charge";
+    const isPayback = ["advance_payment", "adjustment", "refund"].includes(t.transaction_type);
+    if (!isCharge && !isPayback) continue;
+    const debitSide = isCharge ? amt > 0 : amt < 0;
+    out.push(debitSide ? { date, debit: Math.abs(amt), credit: 0 } : { date, debit: 0, credit: Math.abs(amt) });
+  }
+  return out;
+}
+
+export function computeBranchAging(txns: BranchCreditTxn[], asOf: string, dueDays = 30): AgingResult {
+  return computeAging(branchTxnsToLedger(txns), asOf, dueDays);
+}

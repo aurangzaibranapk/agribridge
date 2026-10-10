@@ -9,6 +9,7 @@ import { logAudit } from "@/lib/audit";
 import { getCurrentSeller } from "@/lib/current-seller";
 import { getOrderPermissions } from "@/lib/order-permissions";
 import { getBranchCreditCheck, creditLimitMessage, isAdvanceOrder } from "@/lib/order-payment-gate";
+import { checkOverdueBranchCreditBlock } from "@/lib/recovery/credit-block";
 import { notifyRole, notifyRoles, notifyBranch, notifyUser } from "@/lib/notifications";
 
 const HQ_ROLES = ["super_admin", "admin", "owner"];
@@ -138,6 +139,17 @@ export async function createAgriOrder(_prev: ActionState, formData: FormData): P
   const availableCredit = creditLimit - existingOutstanding;
   const projectedOutstanding = existingOutstanding + grandTotal;
 
+  // 30 din ki hadd (malik, 10 October): branch ka udhaar 30 din se purana ho to naya udhaar order band.
+  if (orderToBranchId && !isAdvanceOrder(paymentTerms)) {
+    const purana = await checkOverdueBranchCreditBlock({
+      branchId: orderToBranchId,
+      orderAmount: grandTotal,
+      context: "agri_order_create",
+      overrideReason: (formData.get("credit_override_reason") as string) || null,
+    });
+    if (purana) return { error: purana };
+  }
+
   const orderNumber = await generateOrderNumber();
 
   const {
@@ -264,6 +276,17 @@ export async function createBranchAgriOrder(_prev: ActionState, formData: FormDa
   const totalTax = items.reduce((sum, i) => sum + (i.tax ?? 0), 0);
   const grandTotal = subtotal - totalDiscount + totalTax;
 
+  // 30 din ki hadd: branch ka purana udhaar ho to naya udhaar order band.
+  if (!isAdvanceOrder(paymentTerms)) {
+    const purana = await checkOverdueBranchCreditBlock({
+      branchId: seller.id,
+      orderAmount: grandTotal,
+      context: "branch_agri_order_create",
+      overrideReason: (formData.get("credit_override_reason") as string) || null,
+    });
+    if (purana) return { error: purana };
+  }
+
   const orderNumber = await generateOrderNumber();
 
   const { data: order, error } = await supabase
@@ -387,6 +410,13 @@ export async function financeVerifyOrder(_prev: ActionState, formData: FormData)
   if (!isAdvanceOrder(orderForCredit?.payment_terms)) {
     const credit = await getBranchCreditCheck(branchId, Number(orderForCredit?.grand_total ?? 0));
     if (!credit.isWithinLimit) return { error: creditLimitMessage(credit) };
+    const purana = await checkOverdueBranchCreditBlock({
+      branchId,
+      orderAmount: Number(orderForCredit?.grand_total ?? 0),
+      context: "agri_order_finance_verify",
+      overrideReason: (formData.get("credit_override_reason") as string) || null,
+    });
+    if (purana) return { error: purana };
   }
 
   const comment = String(formData.get("comment") ?? "").trim();
@@ -453,12 +483,23 @@ export async function adminApproveAllStages(_prev: ActionState, formData: FormDa
 
   const { data: order } = await supabase
     .from("agri_orders")
-    .select("status, order_number, grand_total")
+    .select("status, order_number, grand_total, payment_terms")
     .eq("id", orderId)
     .maybeSingle();
   if (!order) return { error: "Order nahi mila." };
   if (!["submitted", "sales_verified", "finance_verified"].includes(order.status)) {
     return { error: "Order already approve ho chuka hai ya is stage par nahi hai." };
+  }
+
+  // Bypass bhi 30 din wali rok se nahi guzar sakta -- sirf wajah likh kar override.
+  if (order.status !== "finance_verified" && !isAdvanceOrder((order as any).payment_terms)) {
+    const purana = await checkOverdueBranchCreditBlock({
+      branchId,
+      orderAmount: Number(order.grand_total ?? 0),
+      context: "agri_order_admin_approve_all",
+      overrideReason: (formData.get("credit_override_reason") as string) || null,
+    });
+    if (purana) return { error: purana };
   }
 
   const { data: { user } } = await supabase.auth.getUser();

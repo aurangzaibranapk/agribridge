@@ -169,6 +169,83 @@ comment on function public.fn_customer_receivable_aging(date, uuid) is
 
 grant execute on function public.fn_customer_receivable_aging(date, uuid) to authenticated, service_role;
 
+-- 5b) Branch (dealer/agri order) udhaar: wohi 30 din wali rok.
+--     Override log mein branch_id (customer_id tab NULL).
+alter table public.credit_block_overrides add column if not exists branch_id uuid references public.branches(id);
+create index if not exists idx_credit_block_overrides_branch on public.credit_block_overrides(branch_id, created_at);
+
+-- Branch aging: branch_credit_transactions se, FIFO. order_charge = udhaar
+-- (debit); advance_payment/adjustment/refund = wapsi (credit). Manfi raqam
+-- ulti taraf. Tareekh = created_at (Asia/Karachi). Wohi formula jo
+-- getBranchCreditCheck (outstanding) aur computeBranchAging (TS) ka hai.
+create or replace function public.fn_branch_credit_aging(
+  p_as_of date default null,
+  p_branch uuid default null
+)
+returns table (
+  branch_id uuid,
+  balance numeric,
+  oldest_unpaid_date date,
+  oldest_days integer,
+  due_date date,
+  bucket_0_15 numeric,
+  bucket_15_30 numeric,
+  bucket_30_plus numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with asof as (
+    select coalesce(p_as_of, (now() at time zone 'Asia/Karachi')::date) as d
+  ),
+  lines as (
+    select t.branch_id as bid, t.id, t.created_at,
+           (t.created_at at time zone 'Asia/Karachi')::date as tdate,
+           case when (t.transaction_type = 'order_charge') = (t.amount > 0) then abs(t.amount) else 0 end as dr,
+           case when (t.transaction_type = 'order_charge') = (t.amount > 0) then 0 else abs(t.amount) end as cr
+      from branch_credit_transactions t
+     where t.transaction_type in ('order_charge','advance_payment','adjustment','refund')
+       and t.amount <> 0
+       and (p_branch is null or t.branch_id = p_branch)
+       and (t.created_at at time zone 'Asia/Karachi')::date <= (select d from asof)
+  ),
+  credits as (select bid, sum(cr) as total_cr from lines group by bid),
+  debits as (
+    select d.bid, d.tdate, d.dr,
+           sum(d.dr) over (partition by d.bid order by d.tdate, d.created_at, d.id
+                           rows between unbounded preceding and current row) as cum
+      from lines d where d.dr > 0
+  ),
+  open_debits as (
+    select d.bid, d.tdate,
+           greatest(0, least(d.dr, d.cum - coalesce(c.total_cr,0))) as open_amt
+      from debits d left join credits c on c.bid = d.bid
+  ),
+  agg as (
+    select o.bid,
+           min(o.tdate) filter (where o.open_amt > 0.009) as oldest,
+           sum(o.open_amt) filter (where (select d from asof) - o.tdate < 15) as b1,
+           sum(o.open_amt) filter (where (select d from asof) - o.tdate between 15 and 29) as b2,
+           sum(o.open_amt) filter (where (select d from asof) - o.tdate >= 30) as b3
+      from open_debits o group by o.bid
+  ),
+  bal as (select bid, round(sum(dr - cr), 2) as balance from lines group by bid)
+  select b.bid, b.balance, a.oldest,
+         ((select d from asof) - a.oldest)::integer,
+         a.oldest + (select due_days from receivable_recovery_settings where id),
+         round(coalesce(a.b1,0),2), round(coalesce(a.b2,0),2), round(coalesce(a.b3,0),2)
+    from bal b join agg a on a.bid = b.bid
+   where (fn_is_any_staff() or auth.role() = 'service_role')
+     and b.balance > 0.009
+     and a.oldest is not null;
+$$;
+
+comment on function public.fn_branch_credit_aging(date, uuid) is
+  'Branch udhaar FIFO aging (0-15, 15-30, 30+) branch_credit_transactions se; dealer/agri order par 30 din wali rok (523).';
+grant execute on function public.fn_branch_credit_aging(date, uuid) to authenticated, service_role;
+
 -- 6) Admin safhaat
 insert into features (key, label, label_en, label_ur, route, icon, is_sensitive, description, is_active)
 values
