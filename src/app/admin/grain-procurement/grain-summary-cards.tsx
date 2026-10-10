@@ -1,5 +1,13 @@
+import Link from "next/link";
 import { Card } from "@/components/ui/layout-primitives";
-import type { GrainSummary } from "@/lib/grain/ledger-summary";
+import { WASELA_AMANAT_ACCOUNT, type GrainSummary } from "@/lib/grain/ledger-summary";
+import { drillHref, type DrillView } from "@/lib/grain/drilldown";
+
+/** Har card kis tafseel par khulta hai. */
+export const GRAIN_SUMMARY_DRILL: Record<keyof GrainSummary, DrillView> = {
+  receivable: "receivable", payable: "payable", farmerPayable: "payable", waselaAmanat: "payable", sales: "sales", cogs: "profit",
+  grossProfit: "profit", expenses: "expenses", netProfit: "profit", stockValue: "stock",
+};
 
 const fmt = (n: number) => `Rs ${Math.round(n).toLocaleString("en-PK")}`;
 
@@ -29,13 +37,14 @@ export function GrainSummaryCards({ summary, from, to, error }: { summary: Grain
       {error ? <p className="mb-2 text-sm text-red-600">Ledger summary load nahi hui: {error}</p> : null}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
         {GRAIN_SUMMARY_LABELS.map(c => (
-          <Card key={c.key}>
+          <Card key={c.key} className="relative transition hover:ring-2 hover:ring-brand-300">
+            <Link href={drillHref(GRAIN_SUMMARY_DRILL[c.key], { from, to })} className="absolute inset-0" aria-label={`${c.en} tafseel / details`} />
             <p className="text-xs font-medium text-surface-500">{c.ur}<br /><span className="uppercase tracking-wide">{c.en}</span></p>
             <p className={`mt-2 font-display text-lg font-semibold ${c.tone}`}>{summary ? fmt(summary[c.key]) : "-"}</p>
             {c.key === "payable" && summary ? (
               <div className="mt-1 space-y-0.5 text-xs text-surface-500">
-                <p>Kisan / farmers: {fmt(summary.farmerPayable)}</p>
-                <p>Wasela amanat (2062): {fmt(summary.waselaAmanat)}</p>
+                <p><Link href={drillHref("payable", { from, to })} className="relative z-10 hover:underline">Kisan / farmers: {fmt(summary.farmerPayable)}</Link></p>
+                <p><Link href={`/admin/finance/ledger?account=${WASELA_AMANAT_ACCOUNT}${from ? `&from=${from}` : ""}&to=${to}`} className="relative z-10 hover:underline">Wasela amanat ({WASELA_AMANAT_ACCOUNT}): {fmt(summary.waselaAmanat)}</Link></p>
               </div>
             ) : null}
           </Card>
