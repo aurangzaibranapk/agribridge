@@ -13,6 +13,17 @@ function parseNotes(notes: string | null): { gross: number | null; cut: number |
   return { gross: num(g?.[1]), cut: num(c?.[1]) };
 }
 
+/** Notes se deal ke figures: gross kg, katoti fi 60 kg, rate fi mand. */
+function parseDeal(notes: string | null): { gross_kg: number; cut_per_60kg: number; rate_per_mand: number } | null {
+  if (!notes) return null;
+  const num = (x?: string) => (x ? Number(x.replace(/,/g, "")) : NaN);
+  const g = num((notes.match(/gross[^()]*\(([\d,.]+)\s*kg\)/i) ?? notes.match(/gross[^\d]*([\d,.]+)\s*kg/i))?.[1]);
+  const c = num(notes.match(/katoti\s*([\d.]+)\s*kg\s*(?:fi|per|\/)\s*60\s*kg/i)?.[1]);
+  const r = num(notes.match(/rate\s*(?:rs\.?)?\s*([\d,.]+)\s*(?:fi|per|\/)\s*mand/i)?.[1]);
+  if (![g, c, r].every((v) => Number.isFinite(v) && v >= 0) || g <= 0 || r <= 0) return null;
+  return { gross_kg: g, cut_per_60kg: c, rate_per_mand: r };
+}
+
 export default async function GrainSaleBillPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = createClient();
@@ -61,6 +72,7 @@ export default async function GrainSaleBillPage({ params }: { params: Promise<{ 
       address: buyer?.address ?? null,
     },
     notes: s.notes ?? null,
+    deal: parseDeal(s.notes ?? null),
   };
 
   return <GrainSaleBillClient bill={bill} payments={payments} isAdmin={isAdmin} />;
