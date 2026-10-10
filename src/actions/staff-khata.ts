@@ -8,20 +8,36 @@ export interface ActionState {
   success?: boolean;
 }
 
+const PAY_WRITERS = ["hr", "admin", "owner", "super_admin"];
+
+async function requirePayWriter(targetId?: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active || !PAY_WRITERS.includes(String(me.role))) {
+    return { error: "Staff khata sirf HR, Admin ya Owner likh sakta hai." };
+  }
+  if (targetId && targetId === user.id) {
+    return { error: "Apna khata ya apni tankhwah khud process nahi ki ja sakti." };
+  }
+  return { supabase, user };
+}
+
 // Admin logs a spend against a staff member's Khata (e.g. they bought
 // groceries) - a debit, same pattern as Farmer Credit Ledger.
 export async function recordStaffKhataDebit(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
   const profileId = String(formData.get("profile_id") ?? "");
   const amount = Number(formData.get("amount") ?? 0);
   const sourceType = String(formData.get("source_type") ?? "purchase");
   const notes = (formData.get("notes") as string) || null;
   if (!profileId) return { error: "Staff select karein." };
   if (!amount || amount <= 0) return { error: "Amount sahi likhein." };
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const who = await requirePayWriter(profileId);
+  if ("error" in who) return { error: who.error };
+  const supabase = who.supabase;
 
   const { data: row, error } = await supabase
     .from("staff_credit_ledger")
@@ -31,7 +47,7 @@ export async function recordStaffKhataDebit(_prev: ActionState, formData: FormDa
       source_type: sourceType,
       amount,
       notes,
-      created_by: user?.id ?? null,
+      created_by: who.user.id,
     })
     .select("id")
     .single();
@@ -44,7 +60,7 @@ export async function recordStaffKhataDebit(_prev: ActionState, formData: FormDa
     sourceType,
     description: notes?.trim() || `Staff khata — ${sourceType} Rs ${amount.toLocaleString()}`,
     ctx: {
-      createdBy: user?.id ?? null,
+      createdBy: who.user.id,
       claims: [{ table: "staff_credit_ledger", rowId: row.id }],
     },
   });
@@ -60,11 +76,13 @@ export async function recordStaffKhataDebit(_prev: ActionState, formData: FormDa
 // salary_payments row, then zeroes the Khata with an offsetting debit
 // so next month starts fresh.
 export async function processMonthEndSalary(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
   const profileId = String(formData.get("profile_id") ?? "");
   const payMonth = Number(formData.get("pay_month") ?? 0);
   const payYear = Number(formData.get("pay_year") ?? 0);
   if (!profileId || !payMonth || !payYear) return { error: "Staff, month aur year zaroori hain." };
+  const who = await requirePayWriter(profileId);
+  if ("error" in who) return { error: who.error };
+  const supabase = who.supabase;
 
   const { data: ledgerRows } = await supabase.from("staff_credit_ledger").select("ledger_type, amount").eq("profile_id", profileId);
   const balance = (ledgerRows ?? []).reduce((sum, r) => sum + (r.ledger_type === "credit" ? Number(r.amount) : -Number(r.amount)), 0);
@@ -87,10 +105,6 @@ export async function processMonthEndSalary(_prev: ActionState, formData: FormDa
   );
   if (salaryError) return { error: salaryError.message };
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const { data: shiftRow } = await supabase
     .from("staff_credit_ledger")
     .insert({
@@ -99,14 +113,11 @@ export async function processMonthEndSalary(_prev: ActionState, formData: FormDa
       source_type: "month_end_processed",
       amount: balance,
       notes: `Salary Due mein shift hua - ${payMonth}/${payYear}`,
-      created_by: user?.id ?? null,
+      created_by: who.user.id,
     })
     .select("id")
     .single();
 
-  // Yahan paisa nahi hila -- bojh khate se nikal kar "tankhwah baqi"
-  // mein chala gaya. Ise kharcha ginna us mahine ka kharcha dugna dikha
-  // deta, kyunki dihari pehle hi kharcha gin li gayi thi.
   if (shiftRow?.id) {
     const posted = await postStaffLedger({
       profileId,
@@ -115,7 +126,7 @@ export async function processMonthEndSalary(_prev: ActionState, formData: FormDa
       sourceType: "month_end_processed",
       description: `Khata se Salary Due mein — ${payMonth}/${payYear}`,
       ctx: {
-        createdBy: user?.id ?? null,
+        createdBy: who.user.id,
         claims: [{ table: "staff_credit_ledger", rowId: shiftRow.id }],
       },
     });
