@@ -37,7 +37,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       final id = await ref.read(mobileRepositoryProvider).submitOrder(lines: lines, paymentMethod: payment);
       ref.read(cartProvider.notifier).clear();
       if (!mounted) return;
-      await showDialog(context: context, builder: (_) => AlertDialog(title: const Text('undefined'), content: Text('Reference: $id. Staff stock aur payment verify karega. Abhi koi payment ya khata entry nahi hui.'), actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Theek hai'))]));
+      await showDialog(context: context, builder: (_) => AlertDialog(title: const Text('Request Mil Gayi'), content: Text('Reference: $id. Staff stock aur payment verify karega. Abhi koi payment ya khata entry nahi hui.'), actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Theek hai'))]));
       if (mounted) Navigator.pop(context);
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Order submit nahi hua. Products aur internet check karke dobara koshish karein.')));
