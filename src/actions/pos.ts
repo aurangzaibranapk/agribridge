@@ -1,4 +1,5 @@
 "use server";
+import { validateCheckoutTotals } from "@/lib/pos/checkout-guards";
 import { createClient } from "@/lib/supabase/server";
 import { checkOverdueCreditBlock } from "@/lib/recovery/credit-block";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -142,16 +143,18 @@ export async function posCheckout(input: {
   // rok ki hai. Jis ke paas rate girane ki ijazat nahi, us ke haath
   // mein discount dena bhi wohi taqat hai: maal us qeemat par chala
   // jata hai jo malik ne tay nahi ki.
-  const discount = Math.round((input.discount ?? 0) * 100) / 100;
-  const serverDue = Math.round(
-    (input.items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0) - discount) * 100
-  ) / 100;
-  const serverReceived = Math.round(
-    input.paymentLines.reduce((sum, line) => sum + Number(line.amount || 0), 0) * 100
-  ) / 100;
-  // Overpayment browser ke bheje hue number par nahi, server ke asal bill/payment
-  // totals par calculate hoti hai.
-  const overpayment = Math.max(0, Math.round((serverReceived - serverDue) * 100) / 100);
+  // Paise ki jaanch RPC se PEHLE: cash + khata + overpayment = net bill,
+  // discount <= gross, aur dono adad paymentLines se mile hue.
+  const totals = validateCheckoutTotals({
+    items: input.items,
+    discount: input.discount,
+    cashPaid: input.cashPaid,
+    khataAmount: input.khataAmount,
+    paymentLines: input.paymentLines,
+  });
+  if (!totals.ok) return { error: totals.error };
+  const discount = totals.discount;
+  const overpayment = totals.overpayment;
   if (overpayment > 0 && !input.customerId) {
     return { error: "Zyada payment ko customer ke Jama/Advance mein dalne ke liye customer select karein." };
   }
@@ -175,8 +178,8 @@ export async function posCheckout(input: {
   const rpcArgs = {
     p_customer_id: input.customerId as string,
     p_payment_mode: input.paymentMode,
-    p_cash_paid: input.cashPaid,
-    p_khata_amount: input.khataAmount,
+    p_cash_paid: totals.nonKhataPaid,
+    p_khata_amount: totals.khata,
     p_items: itemsWithUnit as unknown as Json,
     p_payment_lines: input.paymentLines as unknown as Json,
     p_discount: discount,
@@ -191,7 +194,12 @@ export async function posCheckout(input: {
 
   const receivedBy = (input.receivedBy ?? "").trim();
   if (receivedBy) {
-    await supabase.from("sales").update({ notes: `Wasol kiya: ${receivedBy}` }).eq("id", saleId);
+    // pos_sales par -- pehle ghalti se `sales` table par likha jata tha.
+    const { error: rbError } = await (supabase as any)
+      .from("pos_sales")
+      .update({ received_by_name: receivedBy.slice(0, 120) })
+      .eq("id", saleId);
+    if (rbError) console.error("[posCheckout] received_by_name save nahi hua:", rbError.message);
   }
 
   const posted = await postSaleToLedger(saleId, user?.id ?? null, overpayment);
@@ -202,7 +210,7 @@ export async function posCheckout(input: {
   // aati thi." Load & Bill wale isi pattern ke barabar.
   // await nahi karte -- notification cosmetic hai, bill aane mein delay
   // nahi karna chahiye.
-  const saleTotal = input.items.reduce((s, i) => s + i.quantity * i.unit_price, 0) - discount;
+  const saleTotal = totals.net;
   void notifyUser(user?.id ?? null, "POS Sale darj", `Rs ${saleTotal.toLocaleString()}`, "/admin/pos");
 
   // Bikri ho chuki hai aur maal gahak ke haath mein ja chuka hai. Usay
@@ -519,13 +527,16 @@ async function postSaleToLedger(saleId: string, userId: string | null, overpayme
       // daawa. Bina daawe ke wo qatar hamesha "ledger mein nahi gayi" ki
       // fehrist mein khaRi rehti.
       if (map?.finance_account_id) {
-        const { data: txn } = await service
+        // Daawa asal source row par: create_pos_sale (525) har cash-book
+        // qatar par source_row_id = sale id likhta hai. Amount + time se
+        // andaza ab nahi -- wo kisi aur bikri ki qatar utha sakta tha.
+        const { data: txn } = await (service as any)
           .from("finance_transactions")
           .select("id")
+          .eq("source_table", "pos_sales")
+          .eq("source_row_id", saleId)
           .eq("account_id", map.finance_account_id)
-          .eq("category", "pos_sale")
           .eq("amount", amount)
-          .gte("created_at", sale.created_at)
           .order("created_at", { ascending: true })
           .limit(1)
           .maybeSingle();

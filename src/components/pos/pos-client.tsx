@@ -1,4 +1,5 @@
 "use client";
+import { canAddToCart, isOutOfStock, sortInStockFirst, POS_DEMAND_HREF } from "@/lib/pos/stock-availability";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { t, type Lang } from "@/lib/i18n/translations";
@@ -276,9 +277,9 @@ export function PosClient({
         p?.internal_barcode?.toLowerCase().includes(q)
       );
     });
-    if (sortBy === "price_asc") return [...filtered].sort((a, b) => a.selling_price - b.selling_price);
-    if (sortBy === "price_desc") return [...filtered].sort((a, b) => b.selling_price - a.selling_price);
-    return filtered;
+    if (sortBy === "price_asc") return sortInStockFirst([...filtered].sort((a, b) => a.selling_price - b.selling_price));
+    if (sortBy === "price_desc") return sortInStockFirst([...filtered].sort((a, b) => b.selling_price - a.selling_price));
+    return sortInStockFirst(filtered);
   }, [inventory, search, group, sortBy]);
 
   const custMatches = useMemo(() => {
@@ -362,6 +363,10 @@ export function PosClient({
 
   function addToCart(item: InventoryItem) {
     if (!item.products) return;
+    if (!canAddToCart(item)) {
+      setBarcodeError(`"${item.products.name}" ka stock khatam hai (Out of stock) -- Demand bana dein.`);
+      return;
+    }
     setCart((prev) => {
       const existing = prev.find((l) => l.product_id === item.product_id);
       if (existing) {
@@ -554,7 +559,10 @@ export function PosClient({
     }
 
     const cashCollected = paymentLines
-      .filter((l) => l.method === "cash")
+      // Sab ghair-khata adaigi (cash + bank + wallet) -- server bhi yahi
+      // paymentLines se nikalta hai; sirf "cash" bhejna receipt/ledger ko
+      // adhoora dikhata tha.
+      .filter((l) => l.method !== "khata")
       .reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0);
     const primaryMethod = paymentLines.length === 1 ? paymentLines[0].method : "split";
 
@@ -697,11 +705,14 @@ export function PosClient({
               const inCart = !!cartLine;
               const p = item.products;
               const upc = p?.units_per_pack ?? 0;
+              const oos = isOutOfStock(item);
               return (
-                <button key={item.id} onClick={() => addToCart(item)} className={`overflow-hidden rounded-card border bg-white text-left shadow-card transition hover:shadow-md dark:bg-surface-900 ${inCart ? "border-brand-500 ring-1 ring-brand-200 dark:ring-brand-900/50" : "border-surface-200 hover:border-brand-400 dark:border-surface-800"}`}>
+                <div key={item.id} className="relative">
+                <button onClick={() => addToCart(item)} aria-disabled={oos && !canAddToCart(item)} title={oos ? "Out of stock / Stock khatam" : undefined} className={`w-full ${oos ? "opacity-50 grayscale " : ""}overflow-hidden rounded-card border bg-white text-left shadow-card transition hover:shadow-md dark:bg-surface-900 ${inCart ? "border-brand-500 ring-1 ring-brand-200 dark:ring-brand-900/50" : "border-surface-200 hover:border-brand-400 dark:border-surface-800"}`}>
                   <div className="relative aspect-square bg-surface-50 dark:bg-surface-800">
                     {p?.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-2" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center text-surface-300 dark:text-surface-600"><Package className="h-8 w-8" strokeWidth={1.25} /></div>}
                     <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-surface-700 shadow-sm dark:bg-surface-900/90 dark:text-surface-200"><span className={`h-1.5 w-1.5 rounded-full ${stockTone(item.stock_quantity)}`} />{item.stock_quantity}</span>
+                    {oos && <span data-testid="pos-oos-badge" className="absolute bottom-1.5 left-1.5 rounded-md bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">Out of stock / Stock khatam</span>}
                     {inCart && cartLine && (
                       <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-brand-600 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
                         {wholesaleOn && upc > 1
@@ -725,6 +736,8 @@ export function PosClient({
                     )}
                   </div>
                 </button>
+                {oos && <Link href={`${POS_DEMAND_HREF}?product=${item.product_id}`} className="absolute bottom-2 right-2 rounded-md border border-brand-500 bg-white px-2 py-0.5 text-[11px] font-semibold text-brand-700 shadow-sm hover:bg-brand-50 dark:bg-surface-900">Demand</Link>}
+                </div>
               );
             })}
             {filteredInventory.length === 0 && <p className="col-span-full py-10 text-center text-sm text-surface-400">{t("pos_no_products", lang)}</p>}

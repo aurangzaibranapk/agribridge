@@ -22,6 +22,8 @@ import { ACC } from "@/lib/ledger/rules";
  */
 
 const ROLES = ["owner", "super_admin", "admin", "finance"];
+/** Saal band karna aur band mahina kholna -- sirf Admin darje ke log (finance review #3). */
+const ADMIN_ROLES = ["owner", "super_admin", "admin"];
 
 export interface PeriodState {
   error?: string;
@@ -29,7 +31,7 @@ export interface PeriodState {
   message?: string;
 }
 
-async function gate(): Promise<{ ok: true; userId: string } | { ok: false; error: string }> {
+async function gate(adminOnly = false): Promise<{ ok: true; userId: string } | { ok: false; error: string }> {
   const supabase = createClient();
   const {
     data: { user },
@@ -38,6 +40,9 @@ async function gate(): Promise<{ ok: true; userId: string } | { ok: false; error
   const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
   if (!me?.is_active || !ROLES.includes(me.role)) {
     return { ok: false, error: "Mahina band ya khol sakne ki ijazat sirf Owner, Admin ya Finance ke paas hai." };
+  }
+  if (adminOnly && !ADMIN_ROLES.includes(me.role)) {
+    return { ok: false, error: "Ye kaam sirf Owner, Super Admin ya Admin kar sakte hain — Finance akela nahi." };
   }
   return { ok: true, userId: user.id };
 }
@@ -107,7 +112,7 @@ export async function closePeriod(_prev: PeriodState, formData: FormData): Promi
 }
 
 export async function reopenPeriod(_prev: PeriodState, formData: FormData): Promise<PeriodState> {
-  const g = await gate();
+  const g = await gate(true);
   if (!g.ok) return { error: g.error };
 
   const period = String(formData.get("period") ?? "").trim();
@@ -127,7 +132,8 @@ export async function reopenPeriod(_prev: PeriodState, formData: FormData): Prom
       reopened_at: new Date().toISOString(),
       reopen_reason: reason,
     })
-    .eq("period", `${period}-01`);
+    .eq("period", `${period}-01`)
+    .eq("status", "closed");
   if (error) return { error: error.message };
 
   await logAudit({
@@ -154,7 +160,7 @@ export async function reopenPeriod(_prev: PeriodState, formData: FormData): Prom
  * ka khata credit, aur farq "Pichhla nafa" (3200) mein.
  */
 export async function closeYear(_prev: PeriodState, formData: FormData): Promise<PeriodState> {
-  const g = await gate();
+  const g = await gate(true);
   if (!g.ok) return { error: g.error };
 
   const saal = Number(formData.get("year") ?? 0);
@@ -175,6 +181,12 @@ export async function closeYear(_prev: PeriodState, formData: FormData): Promise
 
   const tb = await trialBalance(shuru, khatam);
   if (tb.error) return { error: `Goshara nahi mila: ${tb.error}` };
+  // closePeriod wali barabri ki jaanch yahan bhi (finance review #3).
+  if (Math.abs(tb.farq) > 0.009) {
+    return {
+      error: `Saal ${saal} ka Trial Balance barabar nahi (farq Rs ${Math.abs(tb.farq).toLocaleString()}). Pehle wo farq dekha jaye — barabar hue baghair saal band nahi hota.`,
+    };
+  }
 
   const lines: JournalLine[] = [];
   let nafa = 0;

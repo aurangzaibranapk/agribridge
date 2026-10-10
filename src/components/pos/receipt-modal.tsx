@@ -1,4 +1,5 @@
 ﻿"use client";
+import { normalizePkPhone, receiptFigures } from "@/lib/pos/checkout-guards";
 import { useEffect, useState } from "react";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { createClient } from "@/lib/supabase/client";
@@ -21,6 +22,7 @@ interface ReceiptData {
   cash_paid: number;
   khata_amount: number;
   discount_amount?: number;
+  gross_amount?: number | null;
   payment_lines?: { method: string; amount: number }[];
   outstanding_balance: number;
   seller_name: string;
@@ -55,10 +57,11 @@ export function ReceiptModal({
       const { data } = await supabase.rpc("get_sale_receipt", { p_sale_id: saleId });
       const receipt = (data ?? {}) as unknown as ReceiptData;
       const [{ data: sale }, { data: lines }] = await Promise.all([
-        supabase.from("pos_sales").select("discount_amount").eq("id", saleId).maybeSingle(),
+        supabase.from("pos_sales").select("discount_amount, gross_amount").eq("id", saleId).maybeSingle(),
         supabase.from("pos_sale_payment_details").select("payment_method, amount").eq("sale_id", saleId),
       ]);
       receipt.discount_amount = Number(sale?.discount_amount ?? receipt.discount_amount ?? 0);
+      receipt.gross_amount = sale?.gross_amount == null ? null : Number(sale.gross_amount);
       receipt.payment_lines = (lines ?? []).map((line) => ({ method: line.payment_method, amount: Number(line.amount) || 0 }));
       setReceipt(receipt);
       setLoading(false);
@@ -92,7 +95,10 @@ export function ReceiptModal({
       "",
       `${t("pos_grand_total", lang)}: Rs ${r.total_amount.toLocaleString()}`,
     ];
-    if ((r.discount_amount ?? 0) > 0) lines.push(`Discount: Rs ${Number(r.discount_amount).toLocaleString()}`);
+    if ((r.discount_amount ?? 0) > 0) {
+      const f = receiptFigures(r);
+      lines.push(`Gross: Rs ${f.gross.toLocaleString()}`, `Discount: Rs ${f.discount.toLocaleString()}`, `Net: Rs ${f.net.toLocaleString()}`);
+    }
     if (r.payment_lines?.length) {
       for (const line of r.payment_lines) lines.push(`${line.method}: Rs ${line.amount.toLocaleString()}`);
     } else if (r.cash_paid > 0) lines.push(`Cash Paid: Rs ${r.cash_paid.toLocaleString()}`);
@@ -109,8 +115,9 @@ export function ReceiptModal({
   function handleWhatsApp() {
     if (!receipt) return;
     const text = encodeURIComponent(buildReceiptText(receipt));
-    const phone = receipt.customer_phone ? receipt.customer_phone.replace(/\D/g, "") : "";
-    const base = phone ? `https://wa.me/92${phone.replace(/^0/, "")}` : `https://wa.me/`;
+    // 92 sirf ek dafa -- "923001234567" par pehle "9292..." banta tha.
+    const phone = normalizePkPhone(receipt.customer_phone);
+    const base = phone ? `https://wa.me/${phone}` : `https://wa.me/`;
     window.open(`${base}?text=${text}`, "_blank");
   }
 
@@ -139,8 +146,14 @@ export function ReceiptModal({
   }
 
   function handlePrint() {
+    // Modal print khatam hone tak khula rahe -- pehle onClose foran chal
+    // jata tha aur kuch browsers khaali safha print karte the.
+    const done = () => {
+      window.removeEventListener("afterprint", done);
+      onClose();
+    };
+    window.addEventListener("afterprint", done);
     window.print();
-    onClose();
   }
 
   return (
@@ -298,7 +311,10 @@ export function ReceiptModal({
 
             <div className="receipt-totals space-y-1 text-xs">
               {(receipt.discount_amount ?? 0) > 0 && (
-                <ReceiptRow label="Discount" value={`Rs ${Number(receipt.discount_amount).toLocaleString()}`} />
+                <>
+                  <ReceiptRow label="Gross" value={`Rs ${receiptFigures(receipt).gross.toLocaleString()}`} />
+                  <ReceiptRow label="Discount" value={`Rs ${receiptFigures(receipt).discount.toLocaleString()}`} />
+                </>
               )}
               <ReceiptRow label={t("pos_grand_total", lang)} value={`Rs ${receipt.total_amount.toLocaleString()}`} strong />
               {receipt.payment_lines?.length ? receipt.payment_lines.map((line) => (

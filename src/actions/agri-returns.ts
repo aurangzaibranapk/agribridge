@@ -5,7 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
 import { getCurrentSeller } from "@/lib/current-seller";
 import { notifyRoles, notifyBranch } from "@/lib/notifications";
-import { moveStock, mainWarehouseId, hqWarehouseId } from "@/lib/stock-movement";
+import { mainWarehouseId, hqWarehouseId } from "@/lib/stock-movement";
 import { returnPriceCheck } from "@/lib/orders/return-math";
 import { requireAction } from "@/lib/access/guard";
 
@@ -194,54 +194,33 @@ export async function receiveReturn(_prev: ActionState, formData: FormData): Pro
 
   const { data: ret } = await supabase
     .from("agri_order_returns")
-    .select("id, return_number, branch_id, status, total_amount")
+    .select("id, return_number, branch_id, status, total_amount, created_by")
     .eq("id", returnId)
     .maybeSingle();
   if (!ret) return { error: "Return nahi mila." };
   if (ret.status !== "pending") return { error: "Ye return pehle hi process ho chuka hai." };
-
-  const { data: items } = await supabase
-    .from("agri_order_return_items")
-    .select("product_id, product_name, return_qty, line_total")
-    .eq("return_id", returnId);
+  // Banane wala khud receive (aur apna credit manzoor) nahi kar sakta.
+  if (ret.created_by && ret.created_by === user?.id) {
+    return { error: "Jis ne return banaya wo khud receive nahi kar sakta. Kisi aur HQ user se receive karwayein." };
+  }
 
   const hqWarehouse = await hqWarehouseId();
   const shopWarehouse = await mainWarehouseId(ret.branch_id);
+  if (!hqWarehouse || !shopWarehouse) return { error: "Shop ya HQ ka MAIN godam nahi mila." };
 
-  for (const item of items ?? []) {
-    if (!item.product_id) continue;
-    const moved = await moveStock({
-      fromWarehouseId: shopWarehouse,
-      toWarehouseId: hqWarehouse,
-      productId: item.product_id,
-      qty: Number(item.return_qty),
-      referenceType: "agri_order_return",
-      referenceId: returnId,
-      userId: user?.id ?? null,
-      outType: "transfer_out",
-      inType: "return_in",
-    });
-    if (moved.error) return { error: moved.error };
-  }
-
-  // Maal wapas aa gaya, is liye us ki value shop ke zimme nahi rahi.
-  // 'refund' branch-credit page ke hisaab mein outstanding ghata deta hai.
-  if (Number(ret.total_amount) > 0) {
-    const { error: refundError } = await supabase.from("branch_credit_transactions").insert({
-      branch_id: ret.branch_id,
-      transaction_type: "refund",
-      amount: Number(ret.total_amount),
-      notes: `Return HQ ko wapas mila: ${ret.return_number}`,
-      created_by: user?.id ?? null,
-    });
-    if (refundError) return { error: `Return credit/ledger save nahi hua: ${refundError.message}` };
-  }
-
-  const { error } = await supabase
-    .from("agri_order_returns")
-    .update({ status: "received", received_by: user?.id ?? null, received_at: new Date().toISOString() })
-    .eq("id", returnId);
-  if (error) return { error: error.message };
+  // Stock, credit aur 'received' status EK transaction mein (525:
+  // fn_receive_agri_return). Function return row ko lock karta hai,
+  // original order ki qty/rate dobara jaanchta hai, shop ka on-hand aur
+  // batch coverage dekhta hai -- kuch bhi kam ho to kuch nahi hilta.
+  // Retry par status 'pending' nahi rehta, is liye stock dobara nahi hilta.
+  const { data: received, error: rpcError } = await (supabase as any).rpc("fn_receive_agri_return", {
+    p_return_id: returnId,
+    p_shop_warehouse: shopWarehouse,
+    p_hq_warehouse: hqWarehouse,
+  });
+  if (rpcError) return { error: `Return receive nahi hua: ${rpcError.message}` };
+  const total = Number((received as { total?: number } | null)?.total ?? ret.total_amount);
+  ret.total_amount = total;
 
   await logAudit({
     actionType: "approve",

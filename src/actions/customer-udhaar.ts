@@ -109,7 +109,7 @@ async function darwaza() {
   const guard = await requireAction("load-bill", "create");
   if ("error" in guard) return { ok: false as const, error: guard.error };
   const supabase = createClient();
-  return { ok: true as const, userId: guard.caller.userId, branchId: guard.caller.branchId, shopId: guard.caller.shopId, supabase };
+  return { ok: true as const, unrestricted: guard.caller.unrestricted, userId: guard.caller.userId, branchId: guard.caller.branchId, shopId: guard.caller.shopId, supabase };
 }
 
 /**
@@ -241,6 +241,13 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
   // `credit_limit` NULL ka matlab hai "hadd tay hi nahi hui", "hadd
   // sifar hai" nahi. Us ko sifar samajh kar rok laga dena har banday
   // ko udhaar se rok deta, aur wo faisla kisi ne kiya hi nahi.
+  // Finance review #7: hadd tay na ho to staff akela till se naqad
+  // udhaar nahi de sakta -- pehle Admin hadd tay kare, ya Admin khud de.
+  if (hadd === null && !g.unrestricted) {
+    return {
+      error: `${name} ki udhaar ki hadd (credit limit) tay nahi. Hadd tay hue baghair naqad udhaar sirf Owner/Admin de sakte hain — Admin se hadd lagwayein.`,
+    };
+  }
   if (hadd !== null && abTak + rakam > hadd) {
     return {
       error: `${name} ki udhaar ki hadd Rs ${hadd.toLocaleString()} hai. Abhi Rs ${abTak.toLocaleString()} chal raha hai — Rs ${rakam.toLocaleString()} aur dene se hadd toot jayegi.`,

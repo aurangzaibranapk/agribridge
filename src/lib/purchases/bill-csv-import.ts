@@ -8,12 +8,15 @@ const aliases = {
   pack: ["pack", "pack size", "pack/quanti", "pack/quenti", "pack/quantity", "unit", "size"],
   qty: ["qty", "quantity", "tadad", "stock", "quantity bottles", "bottle quantity", "quantity packs", "pack quantity"],
   purchase: ["purchase rate", "purchase price", "trade rate", "trade", "cost", "lagat", "trade rate pack", "trade rate per pack", "purchase rate pack"],
-  sale: ["sale rate", "sale price", "selling rate", "selling price", "retail", "retail rate", "retail rate bottle", "retail rate botal", "retail rate per bottle"],
-  wholesale: ["wholesale", "wholesale rate", "wholesale price", "thok", "thok rate", "wholesale rate pack", "wholesale rate per pack"],
-  mrp: ["mrp", "mrp rate", "mrp price", "printed price"],
+  sale: ["sale rate", "sale price", "selling rate", "selling price", "retail", "retail rate", "retail rate bottle", "retail rate botal", "retail rate per bottle", "sale rate bottle", "sale rate per bottle", "sale rate item", "retail price", "s rate", "s.rate"],
+  wholesale: ["wholesale", "wholesale rate", "wholesale price", "thok", "thok rate", "wholesale rate pack", "wholesale rate per pack", "wholesale rate bottle", "w rate", "w.rate"],
+  mrp: ["mrp", "mrp rate", "mrp price", "printed price", "mrp rate bottle", "mrp per bottle", "mrp rate per bottle", "retail mrp"],
   expiry: ["expiry", "expiry date", "expiration date", "exp date"],
   batch: ["batch", "batch no", "batch number"],
   manufacture: ["manufacture date", "manufacturing date", "mfg date"],
+  company: ["company", "company name", "brand", "manufacturer", "make"],
+  category: ["category", "product category", "item category"],
+  group: ["stock group", "group", "department", "type"],
   amount: ["amount", "line total", "total amount", "total"],
 } as const;
 type Master = { id: string; name: string; product_code?: string | null; pack_size?: string | null; unit?: string | null; units_per_pack?: number | null };
@@ -22,6 +25,7 @@ export type BillCsvRow = {
   sale_rate: string; wholesale_rate: string; mrp_rate: string; expiry_date: string;
   manufacture_date: string; batch_number: string; units_per_pack_override: string;
   pack_override: string; sourceQuantity: string; sourcePack: string; lineTotal: number | null;
+  source_pack: string; source_company: string; source_category: string; source_group: string;
 };
 
 /** Explicit pack-rate files use NxU as pack count × bottles/pack, never a product size. */
@@ -38,7 +42,7 @@ export function importBillCsv(text: string, products: Master[]) {
   const names = new Map<string, number>();
   for (const [index, cells] of table.slice(1).entries()) {
     const sourceRow = index + 2;
-    const get = (key: keyof typeof aliases) => String(cells[col(key)] ?? "").trim();
+    const get = (key: keyof typeof aliases) => { const i = col(key); return i < 0 ? "" : String(cells[i] ?? "").trim(); };
     const name = get("product");
     const sourceCode = get("code");
     if (!name) { errors.push(`CSV row ${sourceRow}: product name khali hai.`); continue; }
@@ -78,7 +82,8 @@ export function importBillCsv(text: string, products: Master[]) {
       unit_cost: String(parseBillNumber(unit_cost) ?? unit_cost), sale_rate: numeric("sale"), wholesale_rate: numeric("wholesale"), mrp_rate: numeric("mrp"),
       expiry_date: billCsvDate(get("expiry")), manufacture_date: billCsvDate(get("manufacture")), batch_number: get("batch"),
       units_per_pack_override: packRate && units ? String(units) : "", pack_override: product?.pack_size ?? product?.unit ?? (expression && packRate ? "" : pack),
-      sourceQuantity: get("qty"), sourcePack: pack, lineTotal });
+      sourceQuantity: get("qty"), sourcePack: pack, lineTotal,
+      source_pack: pack, source_company: get("company"), source_category: get("category"), source_group: get("group") });
   }
   return { rows, errors, warnings };
 }

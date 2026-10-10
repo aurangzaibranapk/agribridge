@@ -1,5 +1,6 @@
 "use client";
 import { importBillCsv } from "@/lib/purchases/bill-csv-import";
+import { buildNewProductPrefill, pickPrefillLine } from "@/lib/purchases/new-product-prefill";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -27,6 +28,7 @@ type Line = {
   sale_rate: string; mrp_rate: string; wholesale_rate: string;
   batch_number: string; manufacture_date: string; expiry_date: string; pickerOpen: boolean;
   pack_override: string; units_per_pack_override: string;
+  source_pack?: string; source_company?: string; source_category?: string; source_group?: string;
 };
 type StockGroup = "karyana" | "khaad" | "wanda" | "pesticide";
 const GROUPS: { id: StockGroup; label: string; roots: string[] }[] = [
@@ -347,39 +349,24 @@ export function SupplierBillClient({
     });
   }
   function openNewProduct(rowId?: string) {
-    setNewProductRowId(rowId ?? null);
-    const row = rowId ? lines.find((l) => l.row_id === rowId) : null;
-    setNewProductName(row?.query ?? "");
-    setNewProductPack(row?.pack_override ?? "");
-    setNewProductPurchase(row?.unit_cost ?? "");
-    // Prefill every value the CSV line already carries, so nothing is typed twice.
-    setNewProductSale(row?.sale_rate ?? "");
-    setNewProductMrp(row?.mrp_rate ?? "");
-    setNewProductWholesale(row?.wholesale_rate ?? "");
-    setNewProductUnitsPerPack(Number(row?.units_per_pack_override) > 1 ? String(row?.units_per_pack_override) : "");
-    // Guess category/company from the closest existing product (shared leading words), then from the supplier's company.
-    const words = (row?.query ?? "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 2);
-    let similar: Product | null = null;
-    let bestScore = 0;
-    if (words.length) {
-      for (const product of products) {
-        const pw = product.name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
-        let score = 0;
-        for (let i = 0; i < Math.min(words.length, pw.length) && words[i] === pw[i]; i++) score += 2;
-        if (!score && pw.includes(words[0])) score = 1;
-        if (score > bestScore) { bestScore = score; similar = product; }
-      }
-    }
-    const similarGroup = similar ? groupForCategory(similar.category_id, categories) : null;
-    const group = similarGroup ?? (activeGroup === "all" ? "khaad" : activeGroup);
-    setNewProductGroup(group);
-    const root = rootForGroup(group);
-    setNewProductCategory(similar?.category_id && categories.some((c) => c.id === similar?.category_id) ? similar.category_id : root?.id ?? "");
-    const supplierCompany = selectedSupplier?.companyName?.trim().toLowerCase();
-    const companyGuess = (similar?.company_id && companies.some((c) => c.id === similar?.company_id) ? similar.company_id : null)
-      ?? (supplierCompany ? companies.find((c) => c.name.trim().toLowerCase() === supplierCompany)?.id ?? null : null)
-      ?? companies.find((c) => words.length > 0 && c.name.toLowerCase().split(/[^a-z0-9]+/)[0] === words[0])?.id ?? null;
-    if (companyGuess) setNewProductCompany(companyGuess);
+    // Every entry path (CSV warning row, row search "New Product Master", top "New Product") prefills from the CSV line.
+    const row = pickPrefillLine(lines, rowId);
+    const prefill = buildNewProductPrefill({
+      line: row, products, categories, companies, supplierCompany: selectedSupplier?.companyName,
+      fallbackGroup: activeGroup === "all" ? "khaad" : activeGroup,
+      groupForCategory: (id) => groupForCategory(id, categories), rootForGroup,
+    });
+    setNewProductRowId(prefill.rowId);
+    setNewProductName(prefill.name);
+    setNewProductPack(prefill.pack);
+    setNewProductPurchase(prefill.purchase);
+    setNewProductSale(prefill.sale);
+    setNewProductMrp(prefill.mrp);
+    setNewProductWholesale(prefill.wholesale);
+    setNewProductUnitsPerPack(prefill.unitsPerPack);
+    setNewProductGroup(prefill.group);
+    setNewProductCategory(prefill.categoryId);
+    setNewProductCompany(prefill.companyId);
     setNewProductError("");
     setProductModal(true);
   }
@@ -659,7 +646,7 @@ export function SupplierBillClient({
                             </div>
                           </>}
                         </div>
-                        {csvUnmatched && <span className="mt-1 block text-[11px] text-amber-600 dark:text-amber-400">CSV se aaya — product search kar ke link karein ya New Product banayein</span>}
+                        {csvUnmatched && <span className="mt-1 block text-[11px] text-amber-600 dark:text-amber-400">CSV se aaya — product search kar ke link karein ya <button type="button" onClick={() => openNewProduct(line.row_id)} className="font-semibold underline">New Product banayein</button></span>}
                         {selected && <span className="mt-1 flex items-center gap-1.5 text-[11px] text-surface-400">{GROUPS.find((group) => group.id === groupForCategory(selected.category_id, categories))?.label ?? "Other"}{selected.product_code && <span className="rounded bg-brand-100 px-1 py-0.5 font-mono text-[10px] font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">{selected.product_code}</span>}</span>}
                       </td>
                       {/* Pack / Unit + items per pack */}

@@ -10,7 +10,8 @@
     "test:finance": "npx --yes tsx scripts/test-finance.ts",
     "test:supplier-csv": "npx --yes tsx scripts/test-supplier-bill-csv.ts",
     "test:recovery": "npx --yes tsx scripts/test-receivable-recovery.ts && npx --yes tsx scripts/test-branch-credit-recovery.ts",
-    "check:i18n": "node scripts/check-i18n.mjs"
+    "check:i18n": "node scripts/check-i18n.mjs",
+    "test:sales": "npx --yes tsx scripts/test-sales-guards.ts"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",

@@ -89,6 +89,56 @@ function round2(value: number): number {
  * jumla milta hai. Yahan se saaf jumla jata hai: kitna farq hai aur kis
  * taraf.
  */
+/**
+ * postJournal wali saari jaanch (barabri, manfi raqam, purana daawa) --
+ * magar post nahi karta. Jo RPC journal ke saath koi aur kaam bhi EK
+ * transaction mein karti hai (jaise fn_post_pos_return_ledger, 525), wo
+ * isi se tayyar input leti hai.
+ */
+export async function prepareJournal(input: JournalInput): Promise<{ input: JournalInput } | { error: string }> {
+  if (input.lines.length < 2) {
+    return { error: "Entry mein kam az kam do qataren honi chahiyen — ek debit, ek credit." };
+  }
+
+  let debit = 0;
+  let credit = 0;
+  for (const line of input.lines) {
+    const d = round2(line.debit ?? 0);
+    const c = round2(line.credit ?? 0);
+    if (!Number.isFinite(d) || !Number.isFinite(c)) return { error: "Raqam valid number honi chahiye." };
+    if (d < 0 || c < 0) return { error: "Raqam manfi nahi ho sakti." };
+    if (d > 0 && c > 0) return { error: "Ek qatar mein debit aur credit dono nahi ho sakte." };
+    if (d === 0 && c === 0) return { error: "Har qatar mein raqam honi chahiye." };
+    debit += d;
+    credit += c;
+  }
+
+  debit = round2(debit);
+  credit = round2(credit);
+
+  if (debit !== credit) {
+    const gap = round2(Math.abs(debit - credit));
+    return {
+      error: `Debit aur Credit barabar nahi — farq Rs ${gap.toLocaleString()}. Jab tak dono taraf barabar nahi hotin, entry post nahi hogi.`,
+    };
+  }
+
+  const service = createServiceClient();
+  if (input.claims?.length) {
+    for (const claim of input.claims) {
+      const { data: prior } = await service
+        .from("journal_entry_sources")
+        .select("entry_id")
+        .eq("source_table", claim.table)
+        .eq("source_row_id", claim.rowId)
+        .limit(1)
+        .maybeSingle();
+      if (prior?.entry_id) return { error: "Ye qatar pehle se ledger mein darj hai. Dobara daawa nahi ho sakta." };
+    }
+  }
+  return { input };
+}
+
 export async function postJournal(input: JournalInput): Promise<PostedEntry | { error: string }> {
   if (input.lines.length < 2) {
     return { error: "Entry mein kam az kam do qataren honi chahiyen — ek debit, ek credit." };
