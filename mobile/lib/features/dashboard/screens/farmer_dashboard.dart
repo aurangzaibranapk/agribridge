@@ -42,9 +42,9 @@ class FarmerDashboard extends ConsumerWidget {
           ])),
           const SizedBox(height: 14),
           GridView.count(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 2.1, children: [
-            QuickAction(label: 'Milk Payment', icon: Icons.water_drop_outlined, onTap: () => _open(context, const FarmerKhataScreen())),
+            QuickAction(label: 'Milk Payment', icon: Icons.water_drop_outlined, onTap: () => _open(context, const FarmerKhataScreen(initialFilter: 'Milk'))),
             QuickAction(label: 'Kisan Dukan', icon: Icons.storefront_outlined, onTap: () => _open(context, const ProductCatalogScreen())),
-            QuickAction(label: 'Karyana Khata', icon: Icons.receipt_long_outlined, onTap: () => _open(context, const FarmerKhataScreen())),
+            QuickAction(label: 'Karyana Khata', icon: Icons.receipt_long_outlined, onTap: () => _open(context, const FarmerKhataScreen(initialFilter: 'FMCG'))),
             QuickAction(label: 'Machinery Booking', icon: Icons.agriculture_outlined, onTap: () => _open(context, const FarmerServicesScreen())),
             QuickAction(label: 'Grain Sale', icon: Icons.grass_outlined, onTap: () => _open(context, const FarmerServicesScreen())),
             QuickAction(label: 'Veterinary', icon: Icons.pets_outlined, onTap: () => _open(context, const FarmerServicesScreen())),
