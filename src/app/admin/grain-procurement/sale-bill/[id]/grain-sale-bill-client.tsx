@@ -25,16 +25,22 @@ export interface SaleBill {
   warehouse_name: string;
   buyer: { name: string; code: string | null; owner: string | null; phone: string | null; ntn: string | null; address: string | null };
   notes: string | null;
+  /** Tay shuda deal (notes se). Mojood ho to bill par yehi figures dikhte hain. */
+  deal?: { gross_kg: number; cut_per_60kg: number; rate_per_mand: number } | null;
 }
 
 const rs = (n: number) => `Rs ${Math.round(n).toLocaleString("en-PK")}`;
 const kg = (n: number) => `${n.toLocaleString("en-PK", { maximumFractionDigits: 3 })} kg`;
+const mand2 = (n: number) => `${(n / MAND_KG).toLocaleString("en-PK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} mand`;
 const mand = (n: number) => `${(n / MAND_KG).toLocaleString("en-PK", { maximumFractionDigits: 2 })} mand`;
 
 export function GrainSaleBillClient({ bill, payments, isAdmin }: { bill: SaleBill; payments: GrainPaymentHistoryRow[]; isAdmin: boolean }) {
   const lang = useLang();
   const balance = bill.total_amount - bill.amount_received;
   const ratePerMand = bill.rate_per_kg * MAND_KG;
+  const deal = bill.deal ?? null;
+  const dealCut = deal ? Math.round(deal.gross_kg * deal.cut_per_60kg / 60 * 1000) / 1000 : 0;
+  const dealNet = deal ? deal.gross_kg - dealCut : 0;
   const shareText = `AgriBridge Grain Sale Bill ${bill.sale_number}\n${bill.buyer.name} - ${GRAIN_LABELS[bill.grain_type] ?? bill.grain_type}\nSaaf wazan: ${kg(bill.quantity_kg)} (${mand(bill.quantity_kg)})\nKul: ${rs(bill.total_amount)}\nWasool: ${rs(bill.amount_received)}\nBaqi: ${rs(balance)}`;
 
   return (
@@ -80,6 +86,16 @@ export function GrainSaleBillClient({ bill, payments, isAdmin }: { bill: SaleBil
           </div>
         </div>
 
+        {deal ? (
+          <table className="mb-6 w-full text-sm">
+            <tbody>
+              <tr className="border-b border-surface-100"><td className="py-1.5 text-surface-600">Kul wazan (Gross)</td><td className="py-1.5 text-right">{kg(deal.gross_kg)} · {mand2(deal.gross_kg)}</td></tr>
+              <tr className="border-b border-surface-100"><td className="py-1.5 text-surface-600">Katoti ({deal.cut_per_60kg} kg fi 60 kg)</td><td className="py-1.5 text-right text-red-600">-{kg(dealCut)} · {mand2(dealCut)}</td></tr>
+              <tr className="border-b border-surface-100"><td className="py-1.5 font-medium text-surface-800">Saaf wazan</td><td className="py-1.5 text-right font-medium">{mand2(dealNet)} · {kg(dealNet)}</td></tr>
+              <tr className="border-b border-surface-100"><td className="py-1.5 text-surface-600">Rate</td><td className="py-1.5 text-right">{rs(deal.rate_per_mand)} / mand</td></tr>
+            </tbody>
+          </table>
+        ) : (
         <table className="mb-6 w-full text-sm">
           <tbody>
             {bill.gross_weight_kg != null && <tr className="border-b border-surface-100"><td className="py-1.5 text-surface-600">Kul wazan (Gross)</td><td className="py-1.5 text-right">{kg(bill.gross_weight_kg)} · {mand(bill.gross_weight_kg)}</td></tr>}
@@ -88,6 +104,7 @@ export function GrainSaleBillClient({ bill, payments, isAdmin }: { bill: SaleBil
             <tr className="border-b border-surface-100"><td className="py-1.5 text-surface-600">Rate</td><td className="py-1.5 text-right">{rs(ratePerMand)} / mand · Rs {bill.rate_per_kg.toLocaleString("en-PK", { maximumFractionDigits: 3 })} / kg</td></tr>
           </tbody>
         </table>
+        )}
 
         <div className="flex justify-end border-t border-surface-200 pt-4">
           <div className="w-64 space-y-1 text-sm">
@@ -101,6 +118,7 @@ export function GrainSaleBillClient({ bill, payments, isAdmin }: { bill: SaleBil
           <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-surface-50 p-3 text-xs text-surface-600 print:hidden">
             <span><b>Lagat (cost):</b> {rs(bill.total_cogs)}</span>
             <span className="text-green-700"><b>Munafa:</b> {rs(bill.profit)}</span>
+            {deal && <span className="col-span-2"><b>System note:</b> stock/ledger mein {kg(bill.quantity_kg)} ({mand(bill.quantity_kg)}) @ Rs {bill.rate_per_kg.toLocaleString("en-PK", { maximumFractionDigits: 3 })}/kg darj hai. Deal ka saaf wazan {kg(dealNet)}; farq {kg(dealNet - bill.quantity_kg)} katoti ka munafa.</span>}
           </div>
         )}
 
