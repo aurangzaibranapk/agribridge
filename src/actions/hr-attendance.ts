@@ -647,7 +647,9 @@ export async function managerSetAttendance(_prev: AttState, formData: FormData):
   if (reason.length < 5) {
     return { error: "Wajah likhein — kam az kam paanch harf. Haath se lagayi hazri bina wajah ke darj nahi hoti." };
   }
-  if (profileId === user.id && !HR_ROLES.includes(role)) {
+  // Apni hazri koi bhi khud nahi lagata — HR, Admin, Owner bhi nahi.
+  // Tankhwah isi record par banti hai, is liye ye khud-manzoori hai.
+  if (profileId === user.id) {
     return { error: "Apni hazri khud nahi lagai ja sakti. Darkhwast dein — faisla aap ka afsar karega." };
   }
 
