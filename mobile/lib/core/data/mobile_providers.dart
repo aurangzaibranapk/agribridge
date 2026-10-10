@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/commerce/product.dart';
+import '../models/app_role.dart';
 import '../auth/session_controller.dart';
 import '../config/app_config.dart';
 import '../permissions/permission_repository.dart';
@@ -30,6 +31,14 @@ final ordersProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final profile = ref.watch(sessionProvider).valueOrNull;
   if (profile == null || !AppConfig.hasSupabase) return const [];
   return ref.read(mobileRepositoryProvider).myOrders(profile.id);
+});
+
+final officeServiceRequestsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  if (AppConfig.demoMode) return const [];
+  if (!AppConfig.hasSupabase) throw StateError('App environment configured nahi.');
+  final profile = ref.watch(sessionProvider).valueOrNull;
+  if (profile == null || profile.role != AppRole.admin) return const [];
+  return ref.read(mobileRepositoryProvider).officeServiceRequests();
 });
 
 final serviceRequestsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
