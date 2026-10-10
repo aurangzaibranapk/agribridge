@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
+import { requireMoneyAdmin } from "@/lib/access/money-gate";
 import { postCashIn, postCashOut, ACC, failed } from "@/lib/ledger/rules";
 
 export interface ActionState {
@@ -10,6 +11,8 @@ export interface ActionState {
 }
 
 export async function createGrainExpense(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireMoneyAdmin("Grain ka kharcha (cash out) post karna");
+  if (!gate.ok) return { error: gate.error };
   const supabase = createClient();
   const category = String(formData.get("category") ?? "");
   const description = String(formData.get("description") ?? "").trim();

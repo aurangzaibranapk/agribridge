@@ -126,38 +126,67 @@ export async function reverseEntry(_prev: ActionState, formData: FormData): Prom
     .eq("id", entryId)
     .maybeSingle();
 
-  // Journal reverse ke sath CRM ka customer balance bhi ulta hona chahiye.
-  // Warna ledger theek hota hai magar POS/CRM mein Rs40 jaisi credit chhup
-  // jati hai. Original customer line ka net record pehle le rahe hain.
-  const { data: customerLines } = await service
+  // Finance review #4: reversal journal ki HAR party line ulti karta hai
+  // (reverse_journal_atomic party_type/party_id samait qataren copy karta
+  // hai), is liye supplier, kisan, staff, vendor ke khate -- jo ledger se
+  // hi bante hain -- khud barabar ho jate hain. Sirf customer ka ek
+  // alag rakha hua adad (customers.current_balance) hai; us ko ab
+  // "pehle minus farq" se nahi, ledger (1100) se dobara gin kar likhte
+  // hain -- RPC pehle hi likh de to bhi dobara minus nahi hota.
+  const { data: partyLines, error: partyErr } = await service
     .from("journal_lines")
-    .select("party_id, debit, credit")
+    .select("party_type, party_id")
     .eq("entry_id", entryId)
-    .eq("party_type", "customer")
     .not("party_id", "is", null);
+  if (partyErr) return { error: `Entry ki party qataren nahi parhi ja sakin, reversal nahi kiya: ${partyErr.message}` };
 
   const result = await reverseJournal(entryId, reason, user.id);
   if ("error" in result) return { error: result.error };
 
-  const customerNet = new Map<string, number>();
-  for (const line of customerLines ?? []) {
-    const customerId = String(line.party_id ?? "");
-    if (!customerId) continue;
-    customerNet.set(customerId, (customerNet.get(customerId) ?? 0) + Number(line.debit ?? 0) - Number(line.credit ?? 0));
+  const parties = new Map<string, Set<string>>();
+  for (const line of partyLines ?? []) {
+    const t = String(line.party_type ?? "");
+    const id = String(line.party_id ?? "");
+    if (!t || !id) continue;
+    if (!parties.has(t)) parties.set(t, new Set());
+    parties.get(t)!.add(id);
   }
-  for (const [customerId, originalNet] of customerNet) {
-    if (!originalNet) continue;
-    const { data: customer } = await service.from("customers").select("current_balance").eq("id", customerId).maybeSingle();
-    if (!customer) continue;
+
+  const balanceErrors: string[] = [];
+  for (const customerId of parties.get("customer") ?? []) {
+    const { data: customer, error: readErr } = await service
+      .from("customers")
+      .select("current_balance")
+      .eq("id", customerId)
+      .maybeSingle();
+    if (readErr || !customer) {
+      balanceErrors.push(`customer ${customerId}: ${readErr?.message ?? "nahi mila"}`);
+      continue;
+    }
+    const { data: rows, error: sumErr } = await service
+      .from("journal_lines")
+      .select("debit, credit")
+      .eq("account_code", ACC.customerDue)
+      .eq("party_type", "customer")
+      .eq("party_id", customerId);
+    if (sumErr) {
+      balanceErrors.push(`customer ${customerId}: ${sumErr.message}`);
+      continue;
+    }
     const before = Number(customer.current_balance ?? 0);
-    const after = Math.round((before - originalNet) * 100) / 100;
-    await service.from("customers").update({ current_balance: after }).eq("id", customerId);
+    const after = Math.round((rows ?? []).reduce((t, r) => t + Number(r.debit ?? 0) - Number(r.credit ?? 0), 0) * 100) / 100;
+    if (Math.abs(after - before) < 0.005) continue;
+    const { error: updErr } = await service.from("customers").update({ current_balance: after }).eq("id", customerId);
+    if (updErr) {
+      balanceErrors.push(`customer ${customerId}: ${updErr.message}`);
+      continue;
+    }
     await logAudit({
       actionType: "update",
       module: "customer_balance_reversal",
       recordId: customerId,
       recordLabel: entry?.entry_number,
-      description: `Customer balance reversal ke sath update hua: ${entry?.entry_number ?? entryId}`,
+      description: `Customer balance reversal ke sath ledger se dobara gina gaya: ${entry?.entry_number ?? entryId}`,
       changes: { current_balance: { pehle: before, ab: after } },
     });
   }
@@ -176,8 +205,15 @@ export async function reverseEntry(_prev: ActionState, formData: FormData): Prom
   // Stock/maal ki physical ginti aur cash refund ka operational kaam
   // apni jagah verify karna hota hai; reversal ledger aur linked customer
   // balance ko theek karta hai.
+  if (balanceErrors.length > 0) {
+    return {
+      error: `Reversal ban gaya (${result.entryNumber}) magar kuch customer balance update nahi hue — Admin dekhe: ${balanceErrors.join("; ")}`,
+    };
+  }
+
+  const partySummary = [...parties.entries()].map(([t, ids]) => `${t} ${ids.size}`).join(", ");
   return {
     success: true,
-    message: `Reversal ban gaya (${result.entryNumber}) — Rs ${result.total.toLocaleString()}. Ledger aur linked customer balance update hua; stock aur cash refund ko alag verify karein.`,
+    message: `Reversal ban gaya (${result.entryNumber}) — Rs ${result.total.toLocaleString()}. Ledger aur har linked party ka khata ulta hua${partySummary ? ` (${partySummary})` : ""}; stock aur cash refund ko alag verify karein.`,
   };
 }

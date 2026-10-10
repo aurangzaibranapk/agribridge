@@ -40,7 +40,8 @@ export interface JvState {
   entryNumber?: string;
 }
 
-const ROLES = ["owner", "super_admin", "admin", "finance"];
+// Finance review #10: Finance role ab akela koi bhi GL post nahi kar sakta.
+const ROLES = ["owner", "super_admin", "admin"];
 
 export async function postManualJournal(_prev: JvState, formData: FormData): Promise<JvState> {
   const supabase = createClient();
@@ -51,7 +52,7 @@ export async function postManualJournal(_prev: JvState, formData: FormData): Pro
 
   const { data: me } = await supabase.from("profiles").select("role, is_active, branch_id").eq("id", user.id).maybeSingle();
   if (!me?.is_active || !ROLES.includes(me.role)) {
-    return { error: "Haath se entry daalne ki ijazat sirf Owner, Admin ya Finance ke paas hai." };
+    return { error: "Haath se journal entry sirf Owner, Super Admin ya Admin post kar sakte hain. Finance entry tayyar kar ke Admin se post karwaye." };
   }
 
   const description = String(formData.get("description") ?? "").trim();

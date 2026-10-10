@@ -5,6 +5,7 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { DueSoon } from "@/components/purchases/due-soon";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { FinanceClient } from "@/app/admin/finance/finance-client";
+import { PendingTransfers } from "@/app/admin/finance/pending-transfers";
 import { trialBalance } from "@/lib/ledger/statements";
 import { aajKaKhana } from "@/lib/utils/format";
 
@@ -98,6 +99,7 @@ export default async function AdminFinancePage() {
       <div className="mb-4">
         <DueSoon lang={lang} compact />
       </div>
+      <PendingTransfers />
       <FinanceClient
         accounts={accounts.map((a) => ({
           id: a.id,
