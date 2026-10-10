@@ -12,7 +12,8 @@
     "test:recovery": "npx --yes tsx scripts/test-receivable-recovery.ts && npx --yes tsx scripts/test-branch-credit-recovery.ts",
     "check:i18n": "node scripts/check-i18n.mjs",
     "test:sales": "npx --yes tsx scripts/test-sales-guards.ts",
-    "test:pnl": "npx --yes tsx scripts/test-pnl.ts"
+    "test:pnl": "npx --yes tsx scripts/test-pnl.ts",
+    "test:grain-summary": "npx --yes tsx scripts/test-grain-summary.ts"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",
