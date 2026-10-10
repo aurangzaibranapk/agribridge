@@ -40,7 +40,7 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
             _NavItem('Home', Icons.home_rounded), _NavItem('Shop', Icons.shopping_cart_outlined), _NavItem('Orders', Icons.receipt_long_outlined), _NavItem('Profile', Icons.person_outline),
           ],
         _ => const [
-            _NavItem('Home', Icons.home_rounded), _NavItem('Khata', Icons.account_balance_wallet_outlined), _NavItem('Services', Icons.handyman_outlined), _NavItem('Orders', Icons.shopping_cart_outlined), _NavItem('Profile', Icons.person_outline),
+            _NavItem('Home', Icons.home_rounded), _NavItem('Khata', Icons.account_balance_wallet_outlined), _NavItem('Shop', Icons.storefront_outlined), _NavItem('Services', Icons.handyman_outlined), _NavItem('Profile', Icons.person_outline),
           ],
       };
 
