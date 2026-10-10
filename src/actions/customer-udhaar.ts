@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { checkOverdueCreditBlock } from "@/lib/recovery/credit-block";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -244,6 +245,16 @@ export async function giveCustomerLoan(_prev: UdhaarState, formData: FormData): 
     return {
       error: `${name} ki udhaar ki hadd Rs ${hadd.toLocaleString()} hai. Abhi Rs ${abTak.toLocaleString()} chal raha hai — Rs ${rakam.toLocaleString()} aur dene se hadd toot jayegi.`,
     };
+  }
+
+  if (partyType === "customer") {
+    const purana = await checkOverdueCreditBlock({
+      customerId: partyId,
+      khataAmount: rakam,
+      context: "customer_udhaar",
+      overrideReason: String(formData.get("credit_override_reason") ?? "").trim() || null,
+    });
+    if (purana) return { error: purana };
   }
 
   const naqad = kahanSe === "cash";

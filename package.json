@@ -9,6 +9,7 @@
     "lint": "next lint",
     "test:finance": "npx --yes tsx scripts/test-finance.ts",
     "test:supplier-csv": "npx --yes tsx scripts/test-supplier-bill-csv.ts",
+    "test:recovery": "npx --yes tsx scripts/test-receivable-recovery.ts",
     "check:i18n": "node scripts/check-i18n.mjs"
   },
   "dependencies": {
