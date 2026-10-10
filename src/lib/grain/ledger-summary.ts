@@ -8,6 +8,7 @@
  *  - Expenses (6xxx)       = debit - credit on grain entries (mazdoori, bardana, chungi, kiraya, nuqsan)
  *  - Receivable (1100)     = debit - credit on grain entries that touch 4010 or are grain_sale* modules
  *  - Payable (2010/2040)   = credit - debit on grain entries
+ *  - Wasela amanat (2062)  = credit - debit on ANY entry (wheat advance held in trust), added to payable
  *  - Stock value (1220)    = debit - credit, cumulative up to the "to" date
  * Sales/COGS/Expenses are period figures; receivable, payable, stock are balances as of "to".
  */
@@ -22,7 +23,9 @@ export type GrainLedgerLine = {
 
 export type GrainSummary = {
   receivable: number;
-  payable: number;
+  payable: number; // farmerPayable + waselaAmanat
+  farmerPayable: number;
+  waselaAmanat: number;
   sales: number;
   cogs: number;
   grossProfit: number;
@@ -32,6 +35,7 @@ export type GrainSummary = {
 };
 
 export const GRAIN_ONLY_ACCOUNTS = ["1220", "4010", "5020"] as const;
+export const WASELA_AMANAT_ACCOUNT = "2062";
 const PAYABLE_ACCOUNTS = new Set(["2010", "2040"]);
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -50,11 +54,12 @@ export function summarizeGrainLedger(lines: GrainLedgerLine[], range: { from?: s
     arr.push(l);
     byEntry.set(l.entry_id, arr);
   }
-  const s = { receivable: 0, payable: 0, sales: 0, cogs: 0, expenses: 0, stockValue: 0 };
+  const s = { receivable: 0, payable: 0, wasela: 0, sales: 0, cogs: 0, expenses: 0, stockValue: 0 };
   for (const entryLines of Array.from(byEntry.values())) {
     const first = entryLines[0];
     const date = first.entry_date;
     if (to && date > to) continue;
+    for (const l of entryLines) if (l.account_code === WASELA_AMANAT_ACCOUNT) s.wasela += num(l.credit) - num(l.debit);
     const touchesGrain = entryLines.some(l => (GRAIN_ONLY_ACCOUNTS as readonly string[]).includes(l.account_code));
     const grainModule = isGrainModule(first.source_module);
     if (!touchesGrain && !grainModule) continue;
@@ -73,7 +78,7 @@ export function summarizeGrainLedger(lines: GrainLedgerLine[], range: { from?: s
   }
   const grossProfit = s.sales - s.cogs;
   return {
-    receivable: r2(s.receivable), payable: r2(s.payable), sales: r2(s.sales), cogs: r2(s.cogs),
+    receivable: r2(s.receivable), payable: r2(s.payable + s.wasela), farmerPayable: r2(s.payable), waselaAmanat: r2(s.wasela), sales: r2(s.sales), cogs: r2(s.cogs),
     grossProfit: r2(grossProfit), expenses: r2(s.expenses), netProfit: r2(grossProfit - s.expenses), stockValue: r2(s.stockValue),
   };
 }

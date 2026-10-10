@@ -18,6 +18,7 @@ const live: GrainLedgerLine[] = [
   L("s", "2026-10-07", "grain_sale_correction", "1100", 1695817.51, 0), L("s", "2026-10-07", "grain_sale_correction", "4010", 0, 1695817.51),
   L("sp", "2026-10-07", "grain_sale_correction", "1011", 100000, 0), L("sp", "2026-10-07", "grain_sale_correction", "1100", 0, 100000),
   L("k", "2026-10-10", "grain_khata_correction", "2040", 1813000, 0), L("k", "2026-10-10", "grain_khata_correction", "1100", 0, 1813000),
+  L("wa", "2026-04-20", "wallet", "1011", 1900000, 0), L("wa", "2026-04-20", "wallet", "2062", 0, 1900000),
   L("pos", "2026-10-07", "pos", "1100", 500, 0), L("pos", "2026-10-07", "pos", "4000", 0, 500),
 ];
 
@@ -30,7 +31,9 @@ test("live figures", () => {
   assert.equal(s.expenses, 0);
   assert.equal(s.netProfit, 73094.63);
   assert.equal(s.receivable, 1595817.51, "khata set-off and POS 1100 are not grain receivable");
-  assert.equal(s.payable, 1597722.88);
+  assert.equal(s.farmerPayable, 1597722.88);
+  assert.equal(s.waselaAmanat, 1900000);
+  assert.equal(s.payable, 3497722.88, "Dena includes Wasela amanat");
   assert.equal(s.stockValue, 1813000, "wheat in stock is inventory, not COGS");
 });
 test("expenses reduce net profit", () => {
@@ -44,7 +47,11 @@ test("date filter: period vs balance", () => {
   assert.equal(s.cogs, -25000);
   assert.equal(s.stockValue, 1813000);
   const early = summarizeGrainLedger(live, { to: "2026-05-01" });
-  assert.equal(early.payable, 1813000);
+  assert.equal(early.payable, 3713000);
+  assert.equal(early.waselaAmanat, 1900000);
+  const beforeWasela = summarizeGrainLedger(live, { to: "2026-04-16" });
+  assert.equal(beforeWasela.waselaAmanat, 0);
+  assert.equal(beforeWasela.payable, 1813000);
   assert.equal(early.receivable, 0);
 });
 console.log(`\n${n} tests passed`);

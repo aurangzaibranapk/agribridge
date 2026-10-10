@@ -32,6 +32,12 @@ export function GrainSummaryCards({ summary, from, to, error }: { summary: Grain
           <Card key={c.key}>
             <p className="text-xs font-medium text-surface-500">{c.ur}<br /><span className="uppercase tracking-wide">{c.en}</span></p>
             <p className={`mt-2 font-display text-lg font-semibold ${c.tone}`}>{summary ? fmt(summary[c.key]) : "-"}</p>
+            {c.key === "payable" && summary ? (
+              <div className="mt-1 space-y-0.5 text-xs text-surface-500">
+                <p>Kisan / farmers: {fmt(summary.farmerPayable)}</p>
+                <p>Wasela amanat (2062): {fmt(summary.waselaAmanat)}</p>
+              </div>
+            ) : null}
           </Card>
         ))}
       </div>

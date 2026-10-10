@@ -4,7 +4,7 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { GrainClient } from "@/app/admin/grain-procurement/grain-client";
 import { GrainSummaryCards } from "@/app/admin/grain-procurement/grain-summary-cards";
-import { summarizeGrainLedger, GRAIN_ONLY_ACCOUNTS, type GrainLedgerLine, type GrainSummary } from "@/lib/grain/ledger-summary";
+import { summarizeGrainLedger, GRAIN_ONLY_ACCOUNTS, WASELA_AMANAT_ACCOUNT, type GrainLedgerLine, type GrainSummary } from "@/lib/grain/ledger-summary";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -12,7 +12,7 @@ async function loadGrainSummary(supabase: any, from: string, to: string): Promis
   try {
     const [mods, accs] = await Promise.all([
       supabase.from("journal_entries").select("id").ilike("source_module", "grain%").lte("entry_date", to).limit(10000),
-      supabase.from("journal_lines").select("entry_id").in("account_code", [...GRAIN_ONLY_ACCOUNTS]).limit(10000),
+      supabase.from("journal_lines").select("entry_id").in("account_code", [...GRAIN_ONLY_ACCOUNTS, WASELA_AMANAT_ACCOUNT]).limit(10000),
     ]);
     if (mods.error) throw mods.error;
     if (accs.error) throw accs.error;
