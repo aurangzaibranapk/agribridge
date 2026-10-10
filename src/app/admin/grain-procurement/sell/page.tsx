@@ -25,6 +25,15 @@ export default async function SellGrainPage() {
     supabase.from("grain_type_products").select("grain_type, product_id"),
   ]);
 
+  // 527: grain buyer ka gahak khata (1100) -- picker ke liye.
+  const { data: customers } = await (supabase as any)
+    .from("customers")
+    .select("id, name, business_name, phone_number")
+    .eq("is_active", true)
+    .eq("is_deleted", false)
+    .order("name")
+    .limit(2000);
+
   const productIds = (rawStock ?? []).map((r) => r.product_id);
   const { data: invRows } = productIds.length > 0
     ? await supabase.from("inventory").select("warehouse_id, product_id, quantity_on_hand").in("product_id", productIds)
@@ -127,6 +136,7 @@ export default async function SellGrainPage() {
 
       <SellGrainClient
         buyers={buyers ?? []}
+        customers={customers ?? []}
         warehouses={warehouses ?? []}
         financeAccounts={financeAccounts ?? []}
         sales={sales}

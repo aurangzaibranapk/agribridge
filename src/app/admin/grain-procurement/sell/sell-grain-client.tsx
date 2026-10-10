@@ -24,6 +24,7 @@ const initialState: ActionState = {};
 
 interface Buyer { id: string; business_name: string; contact_person: string | null; phone_number: string | null; }
 interface Warehouse { id: string; name: string; }
+export interface GrainSaleCustomerOption { id: string; name: string; business_name: string | null; phone_number: string | null; }
 interface FinanceAccount { id: string; name: string; account_type: string; }
 interface Sale {
   id: string;
@@ -70,6 +71,7 @@ const GRAIN_LABELS: Record<string, string> = { wheat: "Wheat (Gandum)", rice: "R
 
 export function SellGrainClient({
   buyers,
+  customers = [],
   warehouses,
   financeAccounts,
   sales,
@@ -79,6 +81,7 @@ export function SellGrainClient({
   canApprove = false,
 }: {
   buyers: Buyer[];
+  customers?: GrainSaleCustomerOption[];
   warehouses: Warehouse[];
   financeAccounts: FinanceAccount[];
   sales: Sale[];
@@ -100,7 +103,7 @@ export function SellGrainClient({
           {canApprove && <Link href="/admin/grain-procurement/sale-approvals" className="font-semibold underline">Review karein</Link>}
         </div>
       )}
-      <NewSaleForm buyers={buyers} warehouses={warehouses} financeAccounts={financeAccounts} stockByWarehouseAndType={stockByWarehouseAndType} />
+      <NewSaleForm buyers={buyers} customers={customers} warehouses={warehouses} financeAccounts={financeAccounts} stockByWarehouseAndType={stockByWarehouseAndType} />
 
       <div>
         <h3 className="mb-2 text-sm font-semibold text-surface-900 dark:text-white">{t("gs_sales_history", lang)}</h3>
@@ -198,11 +201,13 @@ export function SellGrainClient({
 
 export function NewSaleForm({
   buyers,
+  customers = [],
   warehouses,
   financeAccounts,
   stockByWarehouseAndType,
 }: {
   buyers: Buyer[];
+  customers?: GrainSaleCustomerOption[];
   warehouses: Warehouse[];
   financeAccounts: FinanceAccount[];
   stockByWarehouseAndType: Record<string, Record<string, number>>;
@@ -216,6 +221,7 @@ export function NewSaleForm({
   const [deliveryTerm, setDeliveryTerm] = useState("load_deliver");
   const [bardanaCost, setBardanaCost] = useState("0");
   const [mazdooriCost, setMazdooriCost] = useState("0");
+  const [customerId, setCustomerId] = useState("");
   const [saveMode, setSaveMode] = useState<"post" | "draft">("post");
   const [offlineNotice, setOfflineNotice] = useState("");
   const [offlinePending, setOfflinePending] = useState(0);
@@ -279,6 +285,22 @@ export function NewSaleForm({
               <option key={b.id} value={b.id}>{b.business_name}{b.contact_person ? ` - ${b.contact_person}` : ""}</option>
             ))}
           </Select>
+        </div>
+        <div>
+          <Label>Gahak khata (udhaar yahan jayega)</Label>
+          <Select name="customer_id" value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+            <option value="">Buyer wala gahak (na ho to khud ban jayega)</option>
+            <option value="__new__">+ Naya gahak banayein</option>
+            {customers.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}{c.business_name && c.business_name !== c.name ? ` (${c.business_name})` : ""}{c.phone_number ? ` - ${c.phone_number}` : ""}</option>
+            ))}
+          </Select>
+          {customerId === "__new__" && (
+            <div className="mt-2 grid grid-cols-2 gap-3">
+              <Input name="new_customer_name" placeholder="Gahak ka naam" required />
+              <Input name="new_customer_phone" placeholder="Phone" />
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
