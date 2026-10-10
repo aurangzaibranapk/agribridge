@@ -15,6 +15,14 @@ create table if not exists public.mobile_service_requests (
 
 alter table public.mobile_service_requests enable row level security;
 
+drop policy if exists mobile_service_requests_own_read on public.mobile_service_requests;
+drop policy if exists mobile_service_requests_own_insert on public.mobile_service_requests;
+drop policy if exists mobile_service_requests_admin_manage on public.mobile_service_requests;
+drop policy if exists mobile_service_requests_owner_select on public.mobile_service_requests;
+drop policy if exists mobile_service_requests_owner_insert on public.mobile_service_requests;
+drop policy if exists mobile_service_requests_admin_select on public.mobile_service_requests;
+drop policy if exists mobile_service_requests_admin_update on public.mobile_service_requests;
+
 create policy mobile_service_requests_owner_select
   on public.mobile_service_requests for select to authenticated
   using (profile_id = (select auth.uid()));
