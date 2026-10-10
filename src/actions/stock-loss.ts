@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
-import { ACC } from "@/lib/ledger/rules";
+import { ACC, failed } from "@/lib/ledger/rules";
 
 export interface ActionState {
   error?: string;
@@ -152,7 +152,8 @@ export async function verifyLossRecord(_prev: ActionState, formData: FormData): 
     // Nuqsan ka maal company se nikal gaya: Dr Stock Loss (6110), Cr Stock (1200).
     const lossValue = Number(loss.loss_value ?? 0);
     if (lossValue > 0) {
-      await postJournal({
+      // Pehle nateeja nazar-andaz hota tha: maal kam ho jata, ledger chup.
+      const posted = await postJournal({
         description: `Stock loss ${loss.loss_number}: ${loss.loss_type} — ${loss.reason}`,
         sourceModule: "stock_loss",
         sourceId: lossId,
@@ -162,6 +163,10 @@ export async function verifyLossRecord(_prev: ActionState, formData: FormData): 
           { account: ACC.stockGoods, credit: lossValue },
         ],
       });
+      if (failed(posted)) {
+        revalidatePath("/admin/inventory");
+        return { error: `Nuqsan manzoor ho gaya magar ledger mein nahi gaya: ${posted.error}` };
+      }
     }
   } else {
     if (!reducedRate || reducedRate < 0) return { error: "Kam rate sahi likhein." };
@@ -194,6 +199,25 @@ export async function verifyLossRecord(_prev: ActionState, formData: FormData): 
       })
       .eq("id", lossId);
     if (error) return { error: error.message };
+
+    // Kam rate par nikala: stock ki qeemat ghati -> Dr Stock Loss, Cr Stock.
+    // Pehle ye ledger mein jata hi nahi tha (1200 asal maal se zyada rehta).
+    if (markdownLoss > 0) {
+      const posted = await postJournal({
+        description: `Stock markdown ${loss.loss_number}: Rs ${loss.unit_cost} -> Rs ${reducedRate}`,
+        sourceModule: "stock_loss",
+        sourceId: lossId,
+        createdBy: user.id,
+        lines: [
+          { account: ACC.stockLoss, debit: markdownLoss },
+          { account: ACC.stockGoods, credit: markdownLoss },
+        ],
+      });
+      if (failed(posted)) {
+        revalidatePath("/admin/inventory");
+        return { error: `Kam rate manzoor ho gaya magar ledger mein nahi gaya: ${posted.error}` };
+      }
+    }
   }
 
   revalidatePath("/admin/reports/audit");
