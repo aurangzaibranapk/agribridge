@@ -58,3 +58,34 @@ assert.ok(!/stock_movements/.test(extra), "extra item must not move stock immedi
 assert.ok(/isSelfApproval\(count\.started_by, user\.id\)/.test(sc), "forceClose self guard");
 
 console.log("Approval guard tests passed.");
+
+// ---- fix/approval-queue-gaps ----
+// purchase approve: staff purchase needs verify; verifier != approver; no re-approve
+assert.equal(g.purchaseApproveCheck({ review_status: "submitted" }, "warehouse", "b").ok, false);
+assert.equal(g.purchaseApproveCheck({ review_status: "submitted" }, "admin", "b").ok, true);
+assert.equal(g.purchaseApproveCheck({ review_status: "verified", verified_by: "m" }, "warehouse", "m").ok, false);
+assert.equal(g.purchaseApproveCheck({ review_status: "verified", verified_by: "m" }, "warehouse", "a").ok, true);
+assert.equal(g.purchaseApproveCheck({ review_status: "approved" }, "admin", "a").ok, false);
+assert.equal(g.purchaseApproveCheck({ review_status: "sent_back" }, "admin", "a").ok, false);
+// partial count poster
+assert.equal(g.partialCountPosterCheck(3, "x", "x").ok, false);
+assert.equal(g.partialCountPosterCheck(3, "x", "y").ok, true);
+assert.equal(g.partialCountPosterCheck(0, "x", "x").ok, true);
+// agri return finalize
+assert.equal(g.canFinalizeAgriReturn("warehouse"), false);
+assert.equal(g.canFinalizeAgriReturn("manager"), false);
+assert.equal(g.canFinalizeAgriReturn("admin"), true);
+// pos return review
+assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "admin", "m").ok, false);
+assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "admin", "c").ok, false);
+assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "manager", "z").ok, false);
+assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m", admin_review_status: "approved" }, "admin", "z").ok, false);
+assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "owner", "z").ok, true);
+// wiring
+assert.match(read("src/actions/purchases.ts"), /purchaseApproveCheck\(/);
+assert.match(read("src/actions/stock-count.ts"), /partialCountPosterCheck\(/);
+assert.doesNotMatch(read("src/actions/stock-count.ts").split("export async function forceCloseCount")[1].split("export async function postCount")[0], /update\(\{ counted_qty: sysQty/);
+assert.match(read("src/actions/agri-returns.ts"), /canFinalizeAgriReturn\(role\)/);
+assert.match(read("src/actions/pos-returns.ts"), /export async function reviewPosReturn/);
+assert.match(read("supabase/migrations/528_approval_queue_gaps.sql"), /authorized_by = new.created_by/);
+console.log("approval-queue-gaps tests ok");

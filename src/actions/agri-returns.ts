@@ -1,4 +1,5 @@
 "use server";
+import { canFinalizeAgriReturn } from "@/lib/approval/guards";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -187,6 +188,12 @@ export async function receiveReturn(_prev: ActionState, formData: FormData): Pro
     }
   }
 
+  // Maker-checker (fix/approval-queue-gaps): receive par shop ka credit/ledger
+  // post hota hai, is liye final receive sirf Owner/Admin. Warehouse/Manager
+  // maal check kar ke Admin ko batayein; akela receive nahi.
+  if (!canFinalizeAgriReturn(role)) {
+    return { error: "Return ka final receive (credit) sirf Owner/Admin kar sakta hai. Maal check kar ke Admin se receive karwayein." };
+  }
   // Receive hote hi stock hilta hai aur shop ka khata kam hota hai --
   // is liye ye 'verify' ki ijazat mangta hai.
   const gate = await requireAction("agri-returns", "verify");
