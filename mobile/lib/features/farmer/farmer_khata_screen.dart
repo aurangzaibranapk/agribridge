@@ -6,12 +6,13 @@ import '../../core/data/mobile_providers.dart';
 import '../../core/theme/app_theme.dart';
 
 class FarmerKhataScreen extends ConsumerStatefulWidget {
-  const FarmerKhataScreen({super.key});
+  const FarmerKhataScreen({super.key, this.initialFilter = 'All'});
+  final String initialFilter;
   @override ConsumerState<FarmerKhataScreen> createState() => _FarmerKhataScreenState();
 }
 
 class _FarmerKhataScreenState extends ConsumerState<FarmerKhataScreen> {
-  String filter = 'All';
+  late String filter = widget.initialFilter;
 
   @override Widget build(BuildContext context) {
     final state = ref.watch(farmerSummaryProvider);
