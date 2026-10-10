@@ -218,20 +218,34 @@ async function postReturnToLedger(returnId: string, userId: string): Promise<str
   // ledger mein Rs 200 chala jata -- aur golak har wapsi par utna hi
   // "kam" nazar aata. Is liye ab wo qatarein parhi jati hain jo isi
   // wapsi ne banayi hain.
+  //
+  // Note ka milaan ab exact prefix hai: "POS wapsi RET-... (".
+  // ILIKE %number% RET-...-00001 ko RET-...-00010 ke andar bhi pakar
+  // leta tha, ya koi doosri note jisme number likha ho usay bhi.
+  const notePrefix = `POS wapsi ${ret.return_number} (`;
   const { data: txns } = await service
     .from("finance_transactions")
-    .select("id, account_id, amount")
+    .select("id, account_id, amount, notes")
     .eq("category", "pos_return")
-    .ilike("notes", `%${ret.return_number}%`);
+    .like("notes", `${notePrefix}%`);
 
+  let cashMatched = 0;
   for (const txn of txns ?? []) {
+    const notes = String(txn.notes ?? "");
+    if (!notes.startsWith(notePrefix)) continue;
     const amount = Number(txn.amount);
     if (amount <= 0) continue;
+    cashMatched = Math.round((cashMatched + amount) * 100) / 100;
     const gl = txn.account_id ? await glForFinanceAccount(txn.account_id) : ACC.suspense;
     lines.push({ account: gl, credit: amount, memo: `Wapsi ${ret.return_number}` });
     // Cash book ki us qatar par is entry ka daawa. Bina daawe ke wo
     // hamesha "ledger mein nahi gayi" ki fehrist mein khaRi rehti.
     claims.push({ table: "finance_transactions", rowId: txn.id });
+  }
+
+  const expectedCash = Number(ret.cash_refund ?? 0);
+  if (expectedCash > 0 && Math.abs(cashMatched - expectedCash) > 0.01) {
+    return `wapsi ho gayi magar cash book ki qatarein is return number se match nahi huin (cash Rs ${expectedCash}, mili Rs ${cashMatched}). Ledger nahi likha.`;
   }
 
   const khata = Number(ret.khata_refund ?? 0);
