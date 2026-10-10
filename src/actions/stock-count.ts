@@ -1,5 +1,5 @@
 "use server";
-import { isSelfApproval, stockCountPostCheck, extraItemCountLine } from "@/lib/approval/guards";
+import { isSelfApproval, stockCountPostCheck, extraItemCountLine, partialCountPosterCheck } from "@/lib/approval/guards";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -545,31 +545,9 @@ export async function forceCloseCount(_prev: ActionState, formData: FormData): P
     return { error: "Ye ginti aap ne shuru ki hai — force-close doosra Admin/Owner karega." };
   }
 
-  // Jo lines abhi tak gini nahi gayin un ko current inventory se fill karo
-  const { data: lines } = await service
-    .from("stock_count_lines")
-    .select("id, product_id, counted_qty")
-    .eq("count_id", countId)
-    .is("counted_qty", null);
-
-  if (lines && lines.length > 0) {
-    const productIds = lines.map((l) => l.product_id);
-    const { data: invRows } = await service
-      .from("inventory")
-      .select("product_id, quantity_on_hand")
-      .eq("warehouse_id", count.warehouse_id)
-      .in("product_id", productIds);
-    const invMap = new Map((invRows ?? []).map((r) => [r.product_id, Number(r.quantity_on_hand ?? 0)]));
-
-    for (const line of lines) {
-      const sysQty = invMap.get(line.product_id) ?? 0;
-      await service
-        .from("stock_count_lines")
-        .update({ counted_qty: sysQty })
-        .eq("id", line.id);
-    }
-  }
-
+  // fix/approval-queue-gaps: force-close ab na-gini lines ko system qty se
+  // NAHI bharta (farq 0 chhupta tha). Lines khali rehti hain; postCount mein
+  // DOOSRA Admin/Owner (force-close karne wala nahi) partial fill ka faisla karta hai.
   const { error } = await service
     .from("stock_counts")
     .update({ status: "verified", verified_by: user.id, verified_at: new Date().toISOString() })
@@ -580,11 +558,11 @@ export async function forceCloseCount(_prev: ActionState, formData: FormData): P
     actionType: "force_close",
     module: "stock-count",
     recordId: countId,
-    description: `Admin force-close: ${lines?.length ?? 0} items system qty se fill karke verify kiya.`,
+    description: `Admin force-close: ginti band ki; na-gini lines khali, post doosra Admin/Owner karega.`,
   });
 
   revalidatePath("/admin/stock-count");
-  return { success: true, message: `Ginti band ho gayi. ${lines?.length ?? 0} items system qty se puri ki.` };
+  return { success: true, message: `Ginti band ho gayi. Na-gini cheezen khali hain — post doosra Admin/Owner karega (wohi partial fill ka faisla karega).` };
 }
 
 /**
@@ -650,6 +628,8 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
   const rows = lines ?? [];
   const unfilled = rows.filter((r) => r.counted_qty === null);
 
+  const partialChk = partialCountPosterCheck(unfilled.length, (count as { verified_by?: string | null }).verified_by, user.id);
+  if (!partialChk.ok) return { error: partialChk.error };
   if (unfilled.length > 0) {
     if (!isAdminOrOwner) {
       return { error: `${unfilled.length} cheezen abhi gini nahi gayin. Milaan se pehle poori ginti lazmi hai.` };

@@ -1,5 +1,5 @@
 "use server";
-import { isSelfApproval, shouldPostHeldPayment } from "@/lib/approval/guards";
+import { purchaseApproveCheck, isSelfApproval, shouldPostHeldPayment } from "@/lib/approval/guards";
 import { escapeLikePattern, findDuplicateBillNo, isDuplicateBillNoError } from "@/lib/purchases/bill-no-unique";
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
@@ -838,7 +838,7 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
 
   const { data: purchase } = await supabase
     .from("purchases")
-    .select("id, purchase_number, status, review_status, branch_id, total_amount, created_by, supplier_id, held_payment")
+    .select("id, purchase_number, status, review_status, branch_id, total_amount, created_by, verified_by, supplier_id, held_payment")
     .eq("id", purchaseId)
     .maybeSingle();
   if (!purchase) return { error: "Purchase not found." };
@@ -846,6 +846,17 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
   // Self-approval guard: banane wala khud faisla nahi kar sakta.
   if (isSelfApproval(purchase.created_by, user.id)) {
     return { error: "Apni banayi hui purchase par khud faisla nahi kar sakte — doosra Owner/Admin kare." };
+  }
+  // Maker-checker (fix/approval-queue-gaps): staff purchase verify ke baghair
+  // approve nahi; verifier khud approve nahi; dobara approve nahi.
+  if (decision === "approve") {
+    const { data: creator } = purchase.created_by
+      ? await supabase.from("profiles").select("role").eq("id", purchase.created_by).maybeSingle()
+      : { data: null };
+    const chk = purchaseApproveCheck(purchase as { review_status: string | null; verified_by?: string | null }, creator?.role ?? null, user.id);
+    if (!chk.ok) return { error: chk.error };
+  } else if (purchase.review_status === "rejected") {
+    return { error: "Ye purchase pehle hi radd ho chuki hai." };
   }
   if ((decision === "send_back" || decision === "reject") && !comment) {
     return { error: "Wapas bhejne ya radd karne ki wajah likhein -- banane wale ko yehi parhna hai." };

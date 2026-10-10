@@ -1,4 +1,5 @@
 "use server";
+import { posReturnReviewCheck } from "@/lib/approval/guards";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -377,4 +378,57 @@ export async function setReturnWindow(_prev: ReturnState, formData: FormData): P
   revalidatePath("/admin/pos/returns");
   revalidatePath("/admin/pos");
   return { success: true, notice: `Ab wapsi ${din} din ke andar ho sakegi. Is se purani bikri par wapsi nahi hogi.` };
+}
+
+
+/**
+ * Baad ka Admin review (fix/approval-queue-gaps, migration 528). Counter par
+ * wapsi foran hoti hai (gahak ko paisa wahin milta hai), magar har wapsi
+ * admin_review_status='pending' se shuru hoti hai aur doosra Owner/Admin --
+ * na counter wala, na code wala manager -- isay "approved" ya "flagged" karta hai.
+ */
+export async function reviewPosReturn(_prev: ReturnState, formData: FormData): Promise<ReturnState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+  const returnId = String(formData.get("return_id") ?? "");
+  const decision = String(formData.get("decision") ?? "");
+  const note = String(formData.get("note") ?? "").trim();
+  if (!returnId) return { error: "Wapsi nahi mili." };
+  if (!["approved", "flagged"].includes(decision)) return { error: "Faisla saaf nahi." };
+  if (decision === "flagged" && note.length < 5) return { error: "Flag karne ki wajah likhein." };
+
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active) return { error: "Account active nahi." };
+  // Naye column (528) abhi generated types mein nahi -- is liye cast.
+  const db = supabase as unknown as { from: (t: string) => any };
+  const { data: row } = await db
+    .from("pos_returns")
+    .select("id, return_number, created_by, authorized_by, admin_review_status")
+    .eq("id", returnId)
+    .maybeSingle();
+  if (!row) return { error: "Wapsi nahi mili." };
+  const chk = posReturnReviewCheck(row, me.role, user.id);
+  if (!chk.ok) return { error: chk.error };
+
+  // pos_returns par UPDATE policy nahi -- checks ke baad service client (528 trigger dobara jaanchta hai).
+  const svc = createServiceClient() as unknown as { from: (t: string) => any };
+  const { error } = await svc
+    .from("pos_returns")
+    .update({ admin_review_status: decision, admin_reviewed_by: user.id, admin_reviewed_at: new Date().toISOString(), admin_review_note: note || null })
+    .eq("id", returnId)
+    .eq("admin_review_status", "pending");
+  if (error) return { error: error.message };
+
+  await logAudit({
+    actionType: decision === "approved" ? "approve" : "reject",
+    module: "pos_returns",
+    recordId: returnId,
+    recordLabel: row.return_number,
+    description: `POS wapsi Admin review: ${decision}${note ? ` — ${note}` : ""}`,
+  });
+  revalidatePath("/admin/pos/returns");
+  return { success: true, returnNumber: row.return_number };
 }
