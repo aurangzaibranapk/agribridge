@@ -30,6 +30,8 @@ Use the existing green AgriBridge theme, short labels, a bottom navigation bar, 
 - ERP booking, payment, diesel, milk, grain and shop ledgers are **not yet connected** to this mobile build. A status such as “scheduled” on an enquiry must not be represented as a confirmed machinery booking.
 - Testing now has mobile devices, account deletion requests, the farmer summary RPC with linked shop and machinery/GL balances and activity, the request table, catalog RPC and dashboard summary RPC. These were verified with authenticated read-only test calls. Mobile order submission remains undeployed. The original 380 migration references the removed `shop_inventory` table, so the current-schema catalog/dashboard migration replaces that dependency.
 
+Testing data check (10 Oct 2026): 20 active farmer records and 3 active customer records exist, but no customer has a farmer link, and the normalized phone comparison yielded zero candidates. The app must not infer that a customer's khata belongs to a farmer. A verified identity link is needed before that shop balance appears on the farmer's account.
+
 ## Next implementation sequence
 
 1. Reconcile the new read-only farmer balances and activity against the web statement, including a farmer linked to a POS customer. Add grain payment and confirmed booking views without duplicating entries.
