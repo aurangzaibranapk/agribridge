@@ -19,6 +19,7 @@ class ServiceInboxScreen extends ConsumerStatefulWidget {
 
 class _ServiceInboxScreenState extends ConsumerState<ServiceInboxScreen> {
   String filter = 'open';
+  String typeFilter = 'all';
   bool saving = false;
 
   @override
@@ -37,6 +38,19 @@ class _ServiceInboxScreenState extends ConsumerState<ServiceInboxScreen> {
             const SizedBox(height: 4),
             const Text('Machinery, grain, veterinary aur crop doctor requests. Request ko review karein; ERP booking aur payment alag confirm karein.', style: TextStyle(color: AppColors.muted)),
             const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: typeFilter,
+              decoration: const InputDecoration(labelText: 'Business'),
+              items: const [
+                DropdownMenuItem(value: 'all', child: Text('All businesses')),
+                DropdownMenuItem(value: 'machinery_booking', child: Text('Machinery')),
+                DropdownMenuItem(value: 'grain_sale', child: Text('Grain / Procurement')),
+                DropdownMenuItem(value: 'veterinary_service', child: Text('Veterinary')),
+                DropdownMenuItem(value: 'crop_doctor', child: Text('Crop Doctor')),
+              ],
+              onChanged: (value) => setState(() => typeFilter = value ?? 'all'),
+            ),
+            const SizedBox(height: 10),
             SegmentedButton<String>(
               segments: const [
                 ButtonSegment(value: 'open', label: Text('Open')),
@@ -55,8 +69,9 @@ class _ServiceInboxScreenState extends ConsumerState<ServiceInboxScreen> {
             label: const Text('Requests dobara load karein'),
           )),
           data: (rows) {
-            final visible = filter == 'all' ? rows : rows.where((row) =>
-              !const ['completed', 'rejected', 'cancelled'].contains(row['status'])).toList();
+            final visible = rows.where((row) =>
+              (typeFilter == 'all' || row['request_type'] == typeFilter) &&
+              (filter == 'all' || !const ['completed', 'rejected', 'cancelled'].contains(row['status']))).toList();
             if (visible.isEmpty) return const Center(child: Text('Is filter mein koi request nahi.'));
             return RefreshIndicator(
               onRefresh: () => ref.refresh(officeServiceRequestsProvider.future).then((_) {}),
