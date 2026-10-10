@@ -1,4 +1,5 @@
 "use server";
+import { isSelfApproval, stockCountPostCheck, extraItemCountLine } from "@/lib/approval/guards";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -288,10 +289,8 @@ async function addOneExtraItem(
     count_id: countId,
     product_id: productId,
     inventory_id: inventoryId,
-    expected_qty: onHand,
+    ...extraItemCountLine(onHand, quantity),
     unit_cost: purchasePrice ?? 0,
-    counted_qty: round2(onHand + quantity),
-    difference_qty: quantity,
   });
   if (lineErr) return { ok: false, error: `"${name}": ginti ki qatar nahi ban saki: ${lineErr.message}` };
 
@@ -542,7 +541,7 @@ export async function forceCloseCount(_prev: ActionState, formData: FormData): P
   if (!count) return { error: "Ginti nahi mili." };
   if (count.status !== "counting") return { error: "Ye ginti pehle hi band ho chuki hai." };
   // Self guard: jis ne ginti shuru ki wo khud force-close nahi kar sakta.
-  if (count.started_by && count.started_by === user.id) {
+  if (isSelfApproval(count.started_by, user.id)) {
     return { error: "Ye ginti aap ne shuru ki hai — force-close doosra Admin/Owner karega." };
   }
 
@@ -627,14 +626,9 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
     .eq("id", countId)
     .maybeSingle();
   if (!count) return { error: "Ginti nahi mili." };
-  if (count.status === "counting") {
-    return { error: "Pehle ginti ki tasdeeq (verify) zaroori hai — phir post hogi." };
-  }
-  if (count.status !== "verified") {
-    return { error: "Ye ginti pehle hi mukammal ho chuki hai." };
-  }
-  // Self guard: ginti shuru karne wala khud post nahi kar sakta (Admin bhi nahi).
-  if (count.started_by && count.started_by === user.id) {
+  const postCheck = stockCountPostCheck(count, user.id);
+  if (!postCheck.ok && count.status !== "verified") return { error: postCheck.error };
+  if (!postCheck.ok) {
     await logAudit({
       actionType: "reject",
       module: "stock-count",

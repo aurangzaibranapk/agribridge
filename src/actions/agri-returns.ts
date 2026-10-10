@@ -194,52 +194,16 @@ export async function receiveReturn(_prev: ActionState, formData: FormData): Pro
 
   const { data: ret } = await supabase
     .from("agri_order_returns")
-    .select("id, return_number, branch_id, status, total_amount, order_id, created_by")
+    .select("id, return_number, branch_id, status, total_amount")
     .eq("id", returnId)
     .maybeSingle();
   if (!ret) return { error: "Return nahi mila." };
   if (ret.status !== "pending") return { error: "Ye return pehle hi process ho chuka hai." };
-  // Self guard: jis ne return banaya wo khud receive (stock + credit) nahi kar sakta.
-  if (ret.created_by && ret.created_by === user?.id) {
-    return { error: "Ye return aap ne khud banaya hai — doosra HQ banda receive karega." };
-  }
 
   const { data: items } = await supabase
     .from("agri_order_return_items")
-    .select("product_id, product_name, return_qty, unit_price, line_total")
+    .select("product_id, product_name, return_qty, line_total")
     .eq("return_id", returnId);
-
-  // Recheck (createReturn jaisa): qeemat/adad asal order se dobara milao,
-  // stock ya credit hilne se pehle. Kaghaz par badli hui qatar yahan ruk jati hai.
-  if (!ret.order_id) return { error: "Return kisi order se linked nahi — qeemat tasdeeq nahi ho sakti." };
-  const { data: orderItems } = await supabase
-    .from("agri_order_items")
-    .select("product_id, order_qty, unit_price, line_total")
-    .eq("order_id", ret.order_id);
-  const { data: priorReturns } = await supabase
-    .from("agri_order_returns")
-    .select("id, agri_order_return_items(product_id, return_qty)")
-    .eq("order_id", ret.order_id)
-    .neq("status", "rejected")
-    .neq("id", returnId);
-  const alreadyReturned = new Map<string, number>();
-  for (const prior of priorReturns ?? []) {
-    for (const line of prior.agri_order_return_items ?? []) {
-      if (!line.product_id) continue;
-      alreadyReturned.set(line.product_id, (alreadyReturned.get(line.product_id) ?? 0) + Number(line.return_qty ?? 0));
-    }
-  }
-  let recheckedTotal = 0;
-  for (const item of items ?? []) {
-    const orderLine = (orderItems ?? []).find((line) => line.product_id === item.product_id);
-    const check = returnPriceCheck(Number(item.unit_price), Number(item.return_qty), orderLine ?? null, alreadyReturned.get(item.product_id ?? "") ?? 0);
-    if (!check.ok) return { error: `${item.product_name}: ${check.error}` };
-    alreadyReturned.set(item.product_id ?? "", (alreadyReturned.get(item.product_id ?? "") ?? 0) + Number(item.return_qty));
-    recheckedTotal += Number(item.return_qty) * check.unitPrice;
-  }
-  if (Math.abs(recheckedTotal - Number(ret.total_amount)) > 0.01) {
-    return { error: `Return ki kul raqam (Rs ${Number(ret.total_amount).toLocaleString()}) order ke hisaab (Rs ${recheckedTotal.toLocaleString()}) se match nahi — receive roka gaya.` };
-  }
 
   const hqWarehouse = await hqWarehouseId();
   const shopWarehouse = await mainWarehouseId(ret.branch_id);

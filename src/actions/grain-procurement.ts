@@ -1,4 +1,5 @@
 "use server";
+import { isSelfApproval } from "@/lib/approval/guards";
 import { grainBagCalculation } from "@/lib/grain/bag-calculation";
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
@@ -995,7 +996,7 @@ export async function approveGrainPendingEntry(_prev: ActionState, formData: For
   const service = createServiceClient() as any;
   // Self-approval guard: jis ne pending entry banayi wo khud approve nahi kar sakta.
   const { data: owner } = await service.from("grain_pending_entries").select("created_by").eq("id", pendingId).maybeSingle();
-  if (owner?.created_by && owner.created_by === guard.userId) {
+  if (isSelfApproval(owner?.created_by, guard.userId)) {
     return { error: "Ye entry aap ne khud banayi hai — doosra Admin approve karega." };
   }
   const now = new Date().toISOString();

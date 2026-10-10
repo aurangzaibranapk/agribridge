@@ -1,4 +1,5 @@
 "use server";
+import { isSelfApproval, shouldPostHeldPayment } from "@/lib/approval/guards";
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
@@ -828,7 +829,7 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
   if (!purchase) return { error: "Purchase not found." };
   if (purchase.status !== "pending") return { error: "Sirf jo purchase abhi receive nahi hui, us par faisla ho sakta hai." };
   // Self-approval guard: banane wala khud faisla nahi kar sakta.
-  if (purchase.created_by && purchase.created_by === user.id) {
+  if (isSelfApproval(purchase.created_by, user.id)) {
     return { error: "Apni banayi hui purchase par khud faisla nahi kar sakte — doosra Owner/Admin kare." };
   }
   if ((decision === "send_back" || decision === "reject") && !comment) {
@@ -850,7 +851,7 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
   let heldWarn: string | undefined;
   type Held = { amount: number; payment_date: string; payment_method: string | null; finance_account_id: string | null; posted?: boolean };
   const held = (purchase.held_payment as unknown as Held | null) ?? null;
-  if (decision === "approve" && held && !held.posted && Number(held.amount) > 0) {
+  if (held && shouldPostHeldPayment(decision, held)) {
     const paid = await payAndPost(supabase, {
       supplierId: purchase.supplier_id,
       purchaseId,
