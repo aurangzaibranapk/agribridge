@@ -8,16 +8,38 @@ import { postStaffLedger } from "@/lib/ledger/rules";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles, notifyUser } from "@/lib/notifications";
 import { TENANT_PLAN_LIMITS, tenantPlan } from "@/lib/tenant/plan-limits";
+import { DEPARTMENTS } from "@/lib/departments";
 
 export interface ActionState {
   error?: string;
   success?: boolean;
 }
 
-export async function saveStaffDetails(_prev: ActionState, formData: FormData): Promise<ActionState> {
+const PAY_WRITERS = ["hr", "admin", "owner", "super_admin"];
+const PAY_APPROVERS = ["admin", "owner", "super_admin"];
+
+async function requirePayWriter(targetId?: string) {
   const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active || !PAY_WRITERS.includes(String(me.role))) {
+    return { error: "Tankhwah ya staff record sirf HR, Admin ya Owner likh sakta hai." };
+  }
+  if (targetId && targetId === user.id) {
+    return { error: "Apni tankhwah ya apna staff record khud nahi badla ja sakta." };
+  }
+  return { supabase, user, role: String(me.role) };
+}
+
+export async function saveStaffDetails(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const profileId = String(formData.get("profile_id") ?? "");
   if (!profileId) return { error: "Staff member select karein." };
+  const who = await requirePayWriter(profileId);
+  if ("error" in who) return { error: who.error };
+  const supabase = who.supabase;
 
   const payload = {
     profile_id: profileId,
@@ -60,8 +82,10 @@ export async function markAttendance(_prev: ActionState, _formData: FormData): P
 }
 
 export async function recordSalaryPayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
   const profileId = String(formData.get("profile_id") ?? "");
+  const who = await requirePayWriter(profileId);
+  if ("error" in who) return { error: who.error };
+  const supabase = who.supabase;
   const payMonth = Number(formData.get("pay_month") ?? 0);
   const payYear = Number(formData.get("pay_year") ?? 0);
   const basicSalary = Number(formData.get("basic_salary") ?? 0);
@@ -145,6 +169,11 @@ export async function markSalaryPaid(_prev: ActionState, formData: FormData): Pr
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active || !PAY_APPROVERS.includes(String(me.role))) {
+    return { error: "Tankhwah ada karna sirf Admin ya Owner ka kaam hai. Banane wala khud ada nahi karta." };
+  }
 
   const paymentId = String(formData.get("payment_id") ?? "");
   const accountId = String(formData.get("account_id") ?? "");
@@ -157,6 +186,7 @@ export async function markSalaryPaid(_prev: ActionState, formData: FormData): Pr
     .eq("id", paymentId)
     .maybeSingle();
   if (!row) return { error: "Ye tankhwah nahi mili." };
+  if (row.profile_id === user.id) return { error: "Apni tankhwah khud ada nahi ki ja sakti." };
   if (row.status === "paid") return { error: "Ye tankhwah pehle hi di ja chuki hai." };
 
   const net = Number(row.net_salary);
@@ -316,42 +346,11 @@ export async function selfCheckOut(_prev: ActionState, formData: FormData): Prom
     return { error: "Aaj ka check-out pehle ho chuka hai — ya aaj ka check-in hi nahi hua." };
   }
 
-  const { data: staffDetails } = await supabase.from("staff_details").select("basic_salary").eq("profile_id", user.id).single();
-  const basicSalary = Number(staffDetails?.basic_salary ?? 0);
-  if (basicSalary > 0) {
-    const dailyWage = Math.round((basicSalary / 30) * 100) / 100;
-    const { data: wageRow, error: wageError } = await supabase
-      .from("staff_credit_ledger")
-      .insert({
-        profile_id: user.id,
-        ledger_type: "credit",
-        source_type: "daily_wage",
-        amount: dailyWage,
-        notes: `Daily wage - ${today}`,
-        created_by: user.id,
-      })
-      .select("id")
-      .single();
+  // Dihari yahan nahi banti. Check-out sirf hazri ka waqt likhta hai.
+  // Tankhwah HR/Admin banata hai, aur Admin/Owner ada karta hai — khud nahi.
+  // Pehle basic_salary/30 yahin khate mein credit ho jata tha, bina doosri manzoori.
 
-    if (wageError) return { error: `Dihari/ledger posting fail hui: ${wageError.message}` };
-
-    // Dihari us din kharcha ban jati hai jis din kaam hua, na ke jis din
-    // paisa diya gaya. Sirf dene par likhein to mahine ke beech mein ye
-    // nazar nahi aata ke kitni tankhwah ban chuki hai.
-    if (wageRow?.id) {
-      const wagePosted = await postStaffLedger({
-        profileId: user.id,
-        amount: dailyWage,
-        ledgerType: "credit",
-        sourceType: "daily_wage",
-        description: `Dihari — ${today}`,
-        ctx: { createdBy: user.id, claims: [{ table: "staff_credit_ledger", rowId: wageRow.id }] },
-      });
-      if ("error" in wagePosted) return { error: wagePosted.error };
-    }
-  }
-
-  const { data: myProfile2 } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+    const { data: myProfile2 } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
   const staffName2 = myProfile2?.full_name ?? "Staff";
   const checkOutTime = new Date(now).toLocaleTimeString("ur-PK", { hour: "2-digit", minute: "2-digit" });
   await notifyRoles(["hr", "manager", "admin", "owner", "super_admin"],
@@ -380,6 +379,17 @@ export async function inviteStaffMember(_prev: ActionState, formData: FormData):
   const fullName = String(formData.get("full_name") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const role = String(formData.get("role") ?? "sales_staff");
+  const staffRoles = new Set(DEPARTMENTS.map((d) => d.role));
+  const masterRoles = new Set(["owner", "super_admin", "admin"]);
+  if (!staffRoles.has(role) && !masterRoles.has(role)) {
+    return { error: "Ye role sahi nahi." };
+  }
+  if (callerProfile.role === "hr" && !staffRoles.has(role)) {
+    return { error: "HR sirf staff department ka account bana sakta hai — Owner ya Admin nahi." };
+  }
+  if (masterRoles.has(role) && callerProfile.role !== "owner") {
+    return { error: "Owner ya Admin ka account sirf Owner bana sakta hai." };
+  }
   const branchId = (formData.get("branch_id") as string) || null;
   const designation = (formData.get("designation") as string) || null;
   const basicSalary = formData.get("basic_salary") ? Number(formData.get("basic_salary")) : null;
@@ -443,9 +453,18 @@ export async function inviteStaffMember(_prev: ActionState, formData: FormData):
 
 export async function bulkDeactivateStaff(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active || !PAY_APPROVERS.includes(String(me.role))) {
+    return { error: "Staff band karna sirf Admin ya Owner ka kaam hai." };
+  }
   const idsRaw = String(formData.get("ids") ?? "");
   const ids = idsRaw.split(",").filter(Boolean);
   if (ids.length === 0) return { error: "Koi Staff select nahi hui." };
+  if (ids.includes(user.id)) return { error: "Apna account khud band nahi kiya ja sakta." };
 
   // Tasdeeq ke sath -- dekhein `lib/profile-write.ts`. Yahan ginti bhi
   // ahem hai: aadhe bande band ho jayen aur safha "ho gaya" kahe, to wo
