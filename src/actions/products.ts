@@ -138,6 +138,7 @@ export async function quickCreateProduct(input: {
   sellingPrice?: number | null;
   wholesalePrice?: number | null;
   mrpPrice?: number | null;
+  unitsPerPack?: number | null;
 }): Promise<{ id: string; productCode: string | null } | { error: string }> {
   const supabase = createClient();
   const { userId, isUnrestricted, permission } = await getPermissionContext(supabase);
@@ -158,6 +159,7 @@ export async function quickCreateProduct(input: {
       category_id: input.categoryId || null,
       company_id: input.companyId || null,
       ...(await unitFields(input.unit ?? null)),
+      ...(input.unitsPerPack && Number.isFinite(input.unitsPerPack) && input.unitsPerPack > 1 ? { units_per_pack: Math.round(input.unitsPerPack) } : {}),
       purchase_price: input.purchasePrice,
       // Khali chhoR dena "abhi tay nahi" ka matlab deta hai -- Rate
       // Baqi wala nishan isi se lagta hai (rates-baqi/page.tsx).

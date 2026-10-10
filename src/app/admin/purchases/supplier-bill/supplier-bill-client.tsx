@@ -105,6 +105,7 @@ export function SupplierBillClient({
   const [newProductSale, setNewProductSale] = useState("");
   const [newProductMrp, setNewProductMrp] = useState("");
   const [newProductWholesale, setNewProductWholesale] = useState("");
+  const [newProductUnitsPerPack, setNewProductUnitsPerPack] = useState("");
   const [csvNotice, setCsvNotice] = useState("");
   const [csvPreview, setCsvPreview] = useState<ReturnType<typeof importBillCsv> | null>(null);
   const [validationError, setValidationError] = useState("");
@@ -351,10 +352,34 @@ export function SupplierBillClient({
     setNewProductName(row?.query ?? "");
     setNewProductPack(row?.pack_override ?? "");
     setNewProductPurchase(row?.unit_cost ?? "");
-    const group = activeGroup === "all" ? "khaad" : activeGroup;
+    // Prefill every value the CSV line already carries, so nothing is typed twice.
+    setNewProductSale(row?.sale_rate ?? "");
+    setNewProductMrp(row?.mrp_rate ?? "");
+    setNewProductWholesale(row?.wholesale_rate ?? "");
+    setNewProductUnitsPerPack(Number(row?.units_per_pack_override) > 1 ? String(row?.units_per_pack_override) : "");
+    // Guess category/company from the closest existing product (shared leading words), then from the supplier's company.
+    const words = (row?.query ?? "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 2);
+    let similar: Product | null = null;
+    let bestScore = 0;
+    if (words.length) {
+      for (const product of products) {
+        const pw = product.name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+        let score = 0;
+        for (let i = 0; i < Math.min(words.length, pw.length) && words[i] === pw[i]; i++) score += 2;
+        if (!score && pw.includes(words[0])) score = 1;
+        if (score > bestScore) { bestScore = score; similar = product; }
+      }
+    }
+    const similarGroup = similar ? groupForCategory(similar.category_id, categories) : null;
+    const group = similarGroup ?? (activeGroup === "all" ? "khaad" : activeGroup);
     setNewProductGroup(group);
     const root = rootForGroup(group);
-    setNewProductCategory(root?.id ?? "");
+    setNewProductCategory(similar?.category_id && categories.some((c) => c.id === similar?.category_id) ? similar.category_id : root?.id ?? "");
+    const supplierCompany = selectedSupplier?.companyName?.trim().toLowerCase();
+    const companyGuess = (similar?.company_id && companies.some((c) => c.id === similar?.company_id) ? similar.company_id : null)
+      ?? (supplierCompany ? companies.find((c) => c.name.trim().toLowerCase() === supplierCompany)?.id ?? null : null)
+      ?? companies.find((c) => words.length > 0 && c.name.toLowerCase().split(/[^a-z0-9]+/)[0] === words[0])?.id ?? null;
+    if (companyGuess) setNewProductCompany(companyGuess);
     setNewProductError("");
     setProductModal(true);
   }
@@ -369,12 +394,13 @@ export function SupplierBillClient({
       sellingPrice: Number(newProductSale) || 0,
       mrpPrice: Number(newProductMrp) || null,
       wholesalePrice: Number(newProductWholesale) || null,
+      unitsPerPack: Number(newProductUnitsPerPack) > 1 ? Number(newProductUnitsPerPack) : null,
     });
     setNewProductBusy(false);
     if ("error" in result) { setNewProductError(result.error); return; }
     const created: Product = {
       id: result.id, name: newProductName.trim(), company_id: newProductCompany || null, category_id: newProductCategory || null,
-      pack_size: newProductPack.trim() || null, units_per_pack: null, unit: units.find((unit) => unit.code === newProductUnit)?.label ?? null,
+      pack_size: newProductPack.trim() || null, units_per_pack: Number(newProductUnitsPerPack) > 1 ? Math.round(Number(newProductUnitsPerPack)) : null, unit: units.find((unit) => unit.code === newProductUnit)?.label ?? null,
       purchase_price: purchaseRate, selling_price: Number(newProductSale) || 0,
       mrp_price: Number(newProductMrp) || null, wholesale_price: Number(newProductWholesale) || null,
       trade_rate_pending: false, product_code: result.productCode,
@@ -388,11 +414,11 @@ export function SupplierBillClient({
         wholesale_rate: created.wholesale_price ? String(created.wholesale_price) : "",
       };
       if (index < 0) return [...previous, { ...newLineWithDefaults(), product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: String(created.purchase_price), ...selectedRates, pickerOpen: false, pack_override: created.pack_size ?? "" }];
-      return previous.map((line, i) => i === index ? { ...line, product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: line.unit_cost.trim() || String(created.purchase_price), ...selectedRates, pickerOpen: false, pack_override: created.pack_size ?? "" } : line);
+      return previous.map((line, i) => i === index ? { ...line, product_id: created.id, query: `${created.name}${created.pack_size ? ` · ${created.pack_size}` : ""}`, unit_cost: line.unit_cost.trim() || String(created.purchase_price), ...selectedRates, sale_rate: line.sale_rate.trim() || selectedRates.sale_rate, mrp_rate: line.mrp_rate.trim() || selectedRates.mrp_rate, wholesale_rate: line.wholesale_rate.trim() || selectedRates.wholesale_rate, pickerOpen: false, pack_override: created.pack_size ?? line.pack_override ?? "", units_per_pack_override: created.units_per_pack && created.units_per_pack > 1 ? "" : line.units_per_pack_override } : line);
     });
     setProductModal(false);
     setNewProductName(""); setNewProductPack(""); setNewProductUnit(""); setNewProductCompany("");
-    setNewProductPurchase(""); setNewProductSale(""); setNewProductMrp(""); setNewProductWholesale("");
+    setNewProductPurchase(""); setNewProductSale(""); setNewProductMrp(""); setNewProductWholesale(""); setNewProductUnitsPerPack("");
   }
 
   function addExistingToLine(product: Product) {
@@ -904,6 +930,7 @@ export function SupplierBillClient({
           <div><label className={labelClass}>Product Category ({categories.length} available)</label><select required value={newProductCategory} onChange={(event) => setNewProductCategory(event.target.value)} className={inputClass}><option value="">Category chunein</option>{newProductCategories.map((category) => { const parent = category.parent_category_id ? categories.find((item) => item.id === category.parent_category_id)?.name : null; return <option key={category.id} value={category.id}>{parent ? `${parent} → ${category.name}` : category.name}</option>; })}</select></div>
           <div><label className={labelClass}>Company Name ({companies.length} available)</label><select value={newProductCompany} onChange={(event) => setNewProductCompany(event.target.value)} className={inputClass}><option value="">Company chunein (optional)</option>{companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}</select></div>
           <div><label className={labelClass}>Pack / Unit</label><input value={newProductPack} onChange={(event) => setNewProductPack(event.target.value)} className={inputClass} placeholder="Bag (50 kg)" /></div>
+          <div><label className={labelClass}>Items per Pack (optional)</label><input type="number" min="1" step="1" value={newProductUnitsPerPack} onChange={(event) => setNewProductUnitsPerPack(event.target.value)} className={inputClass} placeholder="e.g. 6" /></div>
           <div><label className={labelClass}>Unit (optional)</label><select value={newProductUnit} onChange={(event) => setNewProductUnit(event.target.value)} className={inputClass}><option value="">Pack size se liya jayega</option>{units.map((unit) => <option key={unit.code} value={unit.code}>{unit.label}</option>)}</select></div>
           <div><label className={labelClass}>Purchase Rate</label><input required type="number" min="0" step="0.01" value={newProductPurchase} onChange={(event) => setNewProductPurchase(event.target.value)} className={inputClass} placeholder="0" /></div>
           <div><label className={labelClass}>Sale Rate</label><input type="number" min="0" step="0.01" value={newProductSale} onChange={(event) => setNewProductSale(event.target.value)} className={inputClass} placeholder="0" /></div>
