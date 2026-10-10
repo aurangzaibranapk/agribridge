@@ -28,7 +28,7 @@ Use the existing green AgriBridge theme, short labels, a bottom navigation bar, 
 - Flutter app: role-aware sign-in, farmer summary/khata, catalog and order screens, notifications and request submission exist in code.
 - This change: admin request inbox with status updates; farmer request history shows all requests and current status. Testing database has the request table and scoped RLS.
 - ERP booking, payment, diesel, milk, grain and shop ledgers are **not yet connected** to this mobile build. A status such as “scheduled” on an enquiry must not be represented as a confirmed machinery booking.
-- The other mobile foundation RPCs/tables from migrations 377–381 have not been deployed to Testing. Those migrations need a schema compatibility pass because the current ERP database has evolved; in particular `shop_inventory` is absent.
+- Testing now has mobile devices, account deletion requests, the farmer summary RPC, the request table, catalog RPC and dashboard summary RPC. These were verified with authenticated read-only test calls. Mobile order submission remains undeployed. The original 380 migration references the removed `shop_inventory` table, so the current-schema catalog/dashboard migration replaces that dependency.
 
 ## Next implementation sequence
 
