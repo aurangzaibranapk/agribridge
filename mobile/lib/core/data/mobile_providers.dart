@@ -72,6 +72,8 @@ const demoRoleDashboardSummary = <String, dynamic>{
 const demoFarmerSummary = <String, dynamic>{
   'milk_balance': 42850,
   'credit_balance': 14400,
+  'shop_balance': 7600,
+  'machine_gl_balance': 12000,
   'wallet_balance': 28450,
   'week_liters': 742,
   'week_amount': 158000,
