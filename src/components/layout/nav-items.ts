@@ -124,6 +124,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/anomalies", label: "Ghair-maamooli Tarteeb", icon: Bell },
       { href: "/admin/master-dashboard", label: "Master Dashboard", icon: Scale },
       { href: "/admin/reports/pnl", label: "Nafa Nuqsan (Shop-wise)", icon: LineChart },
+      { href: "/admin/reports/profit-loss", label: "Nafa Nuqsan Dashboard (P&L)", icon: LineChart },
       { href: "/admin/finance/queue", label: "Finance ki Qatar", icon: CreditCard },
       { href: "/admin/finance/payment-mapping", label: "Adaigi ka Tareeqa", icon: CreditCard },
       { href: "/admin/kharche", label: "Paisa & Khata", icon: ReceiptText },

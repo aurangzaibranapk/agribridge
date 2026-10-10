@@ -432,7 +432,7 @@ export default async function PnlPage({
 
   return (
     <div>
-      <PageHeader title={t("rp_title", lang)} description={t("rp_subtitle", lang)} />
+      <PageHeader title={t("rp_title", lang)} description={t("rp_subtitle", lang)} actions={<Link href="/admin/reports/profit-loss" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700">Naya P&amp;L Dashboard / New P&amp;L Dashboard</Link>} />
       <DateRangeForm from={from} to={to} branchOptions={(branches ?? []).map((b) => ({ id: b.id, name: b.name }))} />
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
