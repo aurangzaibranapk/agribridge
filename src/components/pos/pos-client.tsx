@@ -554,7 +554,10 @@ export function PosClient({
     }
 
     const cashCollected = paymentLines
-      .filter((l) => l.method === "cash")
+      // Sab ghair-khata adaigi (cash + bank + wallet) -- server bhi yahi
+      // paymentLines se nikalta hai; sirf "cash" bhejna receipt/ledger ko
+      // adhoora dikhata tha.
+      .filter((l) => l.method !== "khata")
       .reduce((sum, l) => sum + (parseFloat(l.amount) || 0), 0);
     const primaryMethod = paymentLines.length === 1 ? paymentLines[0].method : "split";
 
