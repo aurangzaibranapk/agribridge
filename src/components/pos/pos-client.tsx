@@ -602,7 +602,17 @@ export function PosClient({
     }
 
     setSubmitting(true);
-    const result = await posCheckout(salePayload);
+    let result = await posCheckout(salePayload);
+    // 30 din wali udhaar rok: Admin/Owner wajah likh kar ijazat de sakta hai
+    // (server hi role jaanchta aur override log karta hai).
+    if (result.error && result.error.includes("wajah likh kar ijazat")) {
+      const reason = typeof window !== "undefined"
+        ? window.prompt(result.error + "\n\nAdmin override ki wajah likhein (ya Cancel):")
+        : null;
+      if (reason && reason.trim()) {
+        result = await posCheckout({ ...(salePayload as any), creditOverrideReason: reason.trim() });
+      }
+    }
 
     const data = result.saleId;
     if (result.error) {

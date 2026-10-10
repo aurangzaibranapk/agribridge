@@ -194,6 +194,7 @@ export function SimpleOrderForm({
         placeholder={t("ar_notes_if_any", lang)}
         className="w-full rounded-lg border border-surface-200 p-2 text-sm"
       />
+      <input name="credit_override_reason" placeholder="30 din rok ka override -- wajah (sirf Admin/Owner, warna khali chhorein)" className="w-full rounded-lg border border-surface-200 p-2 text-xs" />
 
       <SubmitButton />
     </form>

@@ -1,6 +1,7 @@
 "use server";
 import { validateCheckoutTotals } from "@/lib/pos/checkout-guards";
 import { createClient } from "@/lib/supabase/server";
+import { checkOverdueCreditBlock } from "@/lib/recovery/credit-block";
 import { createServiceClient } from "@/lib/supabase/service";
 import { ACC, failed, glForFinanceAccount } from "@/lib/ledger/rules";
 import { postJournal, type JournalLine, type SourceClaim } from "@/lib/ledger/post";
@@ -76,6 +77,8 @@ export async function posCheckout(input: {
    */
   receivedBy?: string;
   clientActionId?: string;
+  /** 30 din wali udhaar rok ka Admin override -- wajah lazmi (migration 523). */
+  creditOverrideReason?: string | null;
 }): Promise<PosCheckoutState> {
   const supabase = createClient();
   const {
@@ -125,6 +128,16 @@ export async function posCheckout(input: {
   // farq ki soorat mein nazar aati hai, jahan us ka koi ilaj nahi hota.
   const udhaarGhalat = await checkCredit(input);
   if (udhaarGhalat) return { error: udhaarGhalat };
+
+  // 30 din ki hadd (malik, 10 October): purana baqaya ho to naya udhaar
+  // band. Naqad bikri par ye rok nahi lagti (khata 0).
+  const purana = await checkOverdueCreditBlock({
+    customerId: input.customerId,
+    khataAmount: input.khataAmount,
+    context: "pos",
+    overrideReason: input.creditOverrideReason ?? null,
+  });
+  if (purana) return { error: purana };
 
   // Discount ki rok bhi YAHAN, safhe par nahi -- wohi wajah jo rate ki
   // rok ki hai. Jis ke paas rate girane ki ijazat nahi, us ke haath

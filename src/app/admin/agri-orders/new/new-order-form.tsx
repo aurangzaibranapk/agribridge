@@ -315,6 +315,7 @@ export function NewOrderForm({ branches, products, categories }: { branches: Bra
       </div>
 
       <textarea name="notes" rows={2} placeholder={t("c_notes", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+      <input name="credit_override_reason" placeholder="30 din rok ka override -- wajah (sirf Admin/Owner, warna khali chhorein)" className="w-full rounded-lg border border-surface-200 p-2 text-xs" />
 
       <SubmitButton />
     </form>
