@@ -300,9 +300,11 @@ export async function computeShiftCash(shiftId: string, openingCash: number): Pr
   const cashbookIds = [...new Set(claims.data.map((r) => r.source_row_id as string))];
   for (let offset = 0; offset < cashbookIds.length; offset += 500) {
     const { data, error } = await service.from("finance_transactions")
-      .select("account_id, transaction_type, amount, finance_accounts(name)")
+      .select("account_id, transaction_type, amount, finance_accounts!finance_transactions_account_id_fkey(name)")
       .in("id", cashbookIds.slice(offset, offset + 500));
-    if (error) throw new Error("Shift account receipts could not be verified: " + error.message);
+    // Account-wise breakdown sirf maloomat ke liye hai; is ki ghalti par
+    // poora shift summary (Expected Cash) na rukay.
+    if (error) { console.error("Shift account movements unavailable: " + error.message); break; }
     for (const r of data ?? []) {
       const account = Array.isArray(r.finance_accounts) ? r.finance_accounts[0] : r.finance_accounts;
       const movement = accounts.get(r.account_id) ?? { accountId: r.account_id, name: account?.name ?? "Account", received: 0, paid: 0, net: 0 };
