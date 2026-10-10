@@ -71,7 +71,10 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
   }
   // Manzoori (259): jo khud manzoor karne wala hai us ki purchase seedha
   // approved; baqi staff ki purchase manzoori ke liye jati hai.
-  const approver = profile?.role === "owner" || profile?.role === "super_admin" || profile?.role === "admin";
+  // Approval guard (10 Oct 2026): ab koi bhi role khud apni purchase
+  // approved nahi kar sakta -- har purchase "submitted" se shuru hoti hai
+  // aur doosra Owner/Admin reviewPurchase se manzoor karta hai.
+  const approver = false;
   let branchId: string | null;
   let warehouseId: string | null = null;
   if (supplierBillWorkspace) {
@@ -156,7 +159,7 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
       supplier_bill_no: supplierBillNo,
       warehouse_id: warehouseId,
       status: "pending",
-      review_status: approver ? "approved" : "submitted",
+      review_status: "submitted",
       // New supplier-bill workspace records the bill's net payable here.
       // Legacy purchases keep their original merchandise subtotal model.
       total_amount: supplierBillWorkspace ? invoiceTotal : totalAmount,
@@ -191,22 +194,20 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
   // Jo abhi diya wo supplier_payments mein -- wahi jagah jahan har
   // adaigi jati hai (139). Purchase par adad NAHI likha jata; warna
   // ek din do jagah ka adad alag nikalta hai.
+  // Approval guard: paidNow ab foran post NAHI hota. Irada purchases.held_payment
+  // mein mehfooz hota hai aur reviewPurchase (approve) par post hota hai.
+  let heldWarning: string | null = null;
   if (terms.paidNow > 0) {
-    const paid = await payAndPost(supabase, {
-      supplierId,
-      purchaseId: purchase.id,
+    const held = {
       amount: terms.paidNow,
-      paymentDate: purchaseDate,
-      paymentMethod: (formData.get("payment_method") as string) || null,
-      accountId: String(formData.get("finance_account_id") ?? "").trim() || null,
-      notes: `Kharid ${purchaseNumber} ke waqt`,
-      branchId,
-      createdBy: user?.id ?? null,
-      // Purchase ki tareekh khud peeche chuni gayi ho sakti hai -- wo
-      // khud wajah hai, alag se kisi se poochne ki zaroorat nahi.
-      backdateReason: purchaseDate < aajKaKhana() ? `Purchase ${purchaseNumber} ki apni tareekh (${purchaseDate}) — adaigi bhi usi din ki hai.` : null,
-    });
-    if ("error" in paid) return { error: `Purchase ban gayi magar: ${paid.error}` };
+      payment_date: purchaseDate,
+      payment_method: (formData.get("payment_method") as string) || null,
+      finance_account_id: String(formData.get("finance_account_id") ?? "").trim() || null,
+      requested_by: user?.id ?? null,
+      posted: false,
+    };
+    const { error: holdErr } = await supabase.from("purchases").update({ held_payment: held } as never).eq("id", purchase.id);
+    if (holdErr) heldWarning = `Purchase ban gayi, magar adaigi (Rs ${terms.paidNow.toLocaleString()}) ka irada mehfooz nahi hua: ${holdErr.message}. Manzoori ke baad payment alag se record karein.`;
   }
 
   // Adaigi ki slips (436): har slip raqam + tareekh + tasveer ke sath.
@@ -313,7 +314,14 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
       ? `Supplier Purchase Bill save hua. Supplier bill ${supplierBillNo || "number nahi diya"}; amount Rs ${invoiceTotal.toLocaleString()}. Stock GRN receive par update hoga.`
       : `Purchase ${purchaseNumber} create hui.`,
   });
-  return { success: true, purchaseId: purchase.id, warning: slipWarning ?? undefined };
+  return {
+    success: true,
+    purchaseId: purchase.id,
+    message: terms.paidNow > 0
+      ? `Purchase manzoori ke liye bhej di (approval pending). Rs ${terms.paidNow.toLocaleString()} ki adaigi manzoori ke baad post hogi.`
+      : "Purchase manzoori ke liye bhej di (approval pending).",
+    warning: [heldWarning, slipWarning].filter(Boolean).join(" ") || undefined,
+  };
 }
 
 /**
@@ -814,11 +822,15 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
 
   const { data: purchase } = await supabase
     .from("purchases")
-    .select("id, purchase_number, status, review_status, branch_id, total_amount")
+    .select("id, purchase_number, status, review_status, branch_id, total_amount, created_by, supplier_id, held_payment")
     .eq("id", purchaseId)
     .maybeSingle();
   if (!purchase) return { error: "Purchase not found." };
   if (purchase.status !== "pending") return { error: "Sirf jo purchase abhi receive nahi hui, us par faisla ho sakta hai." };
+  // Self-approval guard: banane wala khud faisla nahi kar sakta.
+  if (purchase.created_by && purchase.created_by === user.id) {
+    return { error: "Apni banayi hui purchase par khud faisla nahi kar sakte — doosra Owner/Admin kare." };
+  }
   if ((decision === "send_back" || decision === "reject") && !comment) {
     return { error: "Wapas bhejne ya radd karne ki wajah likhein -- banane wale ko yehi parhna hai." };
   }
@@ -832,6 +844,33 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
 
   const { error } = await supabase.from("purchases").update(update).eq("id", purchaseId);
   if (error) return { error: error.message };
+
+  // Ruki hui adaigi (held_payment) sirf manzoori par post hoti hai.
+  let heldMsg: string | undefined;
+  let heldWarn: string | undefined;
+  type Held = { amount: number; payment_date: string; payment_method: string | null; finance_account_id: string | null; posted?: boolean };
+  const held = (purchase.held_payment as unknown as Held | null) ?? null;
+  if (decision === "approve" && held && !held.posted && Number(held.amount) > 0) {
+    const paid = await payAndPost(supabase, {
+      supplierId: purchase.supplier_id,
+      purchaseId,
+      amount: Number(held.amount),
+      paymentDate: held.payment_date,
+      paymentMethod: held.payment_method,
+      accountId: held.finance_account_id,
+      clientActionId: `purchase-held-${purchaseId}`,
+      notes: `Kharid ${purchase.purchase_number} ke waqt (manzoori par post)`,
+      branchId: purchase.branch_id ?? null,
+      createdBy: user.id,
+      backdateReason: held.payment_date < aajKaKhana() ? `Purchase ${purchase.purchase_number} ki apni tareekh (${held.payment_date}) — adaigi manzoori tak ruki rahi.` : null,
+    });
+    if ("error" in paid) {
+      heldWarn = `Purchase manzoor ho gayi, magar ruki hui adaigi post nahi hui: ${paid.error}`;
+    } else {
+      await supabase.from("purchases").update({ held_payment: { ...held, posted: true, posted_at: new Date().toISOString(), posted_by: user.id } } as never).eq("id", purchaseId);
+      heldMsg = `Ruki hui adaigi Rs ${Number(held.amount).toLocaleString()} post ho gayi.`;
+    }
+  }
 
   await supabase.from("purchase_comments").insert({
     purchase_id: purchaseId,
@@ -884,7 +923,7 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
   revalidatePath("/admin/purchases/bills");
   revalidatePath("/admin/finance");
   revalidatePath("/admin/inventory/receiving");
-  return { success: true };
+  return { success: true, message: heldMsg, warning: heldWarn };
 }
 
 /**

@@ -128,8 +128,11 @@ function validClientActionId(raw: FormDataEntryValue | null): string | null {
 export async function createGrainEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
   // "Pending (Admin approval)" -- sirf tab jab staff khud chune. Warna purana
   // raasta: foran stock, ledger, cash book, kharche aur payment.
-  if (String(formData.get("save_mode") ?? "") === "pending") return saveGrainEntryAsPending(formData);
-  return postGrainEntry(formData, {});
+  // Approval guard (10 Oct 2026): ab HAR nayi entry Pending banti hai --
+  // stock/ledger/cash sirf tab jab doosra Admin approveGrainPendingEntry
+  // se manzoor kare. save_mode ab asar nahi rakhta (postGrainEntry sirf
+  // approval ke raaste se chalta hai).
+  return saveGrainEntryAsPending(formData);
 }
 
 async function postGrainEntry(formData: FormData, opts: GrainPostOptions): Promise<ActionState & { summary?: GrainEntrySummary }> {
@@ -990,6 +993,11 @@ export async function approveGrainPendingEntry(_prev: ActionState, formData: For
   const pendingId = String(formData.get("pending_id") ?? "").trim();
   if (!pendingId) return { error: "Pending entry nahi mili." };
   const service = createServiceClient() as any;
+  // Self-approval guard: jis ne pending entry banayi wo khud approve nahi kar sakta.
+  const { data: owner } = await service.from("grain_pending_entries").select("created_by").eq("id", pendingId).maybeSingle();
+  if (owner?.created_by && owner.created_by === guard.userId) {
+    return { error: "Ye entry aap ne khud banayi hai — doosra Admin approve karega." };
+  }
   const now = new Date().toISOString();
   const staleBefore = new Date(Date.now() - GRAIN_APPROVAL_STALE_MS).toISOString();
 
@@ -999,6 +1007,7 @@ export async function approveGrainPendingEntry(_prev: ActionState, formData: For
     .eq("id", pendingId)
     .is("approved_entry_id", null)
     .or(`status.eq.pending,and(status.eq.approving,approval_claimed_at.lt."${staleBefore}")`)
+    .or(`created_by.is.null,created_by.neq.${guard.userId}`)
     .select("id, payload, receipt_photo_url, created_by")
     .maybeSingle();
   if (claimError) return { error: claimError.message };

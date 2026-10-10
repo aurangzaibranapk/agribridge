@@ -272,44 +272,26 @@ async function addOneExtraItem(
     };
   }
 
-  // Stock seedha nahi likha jata -- movement se hi hilta hai (129),
-  // taake "ye kahan se aaya" ka nishan hamesha rahe. Isi waqt chalta
-  // hai (foran istemal ho sake) -- is liye post karte waqt yahi adad
-  // dobara na chala jaye, uska dhyan `postCount` mein rakha gaya hai
-  // (pehle se hui harkat dhoond kar usi qadar ki kami karta hai).
-  const { error: mvErr } = await service.from("stock_movements").insert({
-    inventory_id: inventoryId,
-    movement_type: "adjustment_increase",
-    quantity,
-    reference_type: "stock_count",
-    reference_id: countId,
-    notes: "Ginti ke dauran mila — list mein pehle nahi tha.",
-    created_by: userId,
-  });
-  if (mvErr) return { ok: false, error: `"${name}": stock ki harkat darj nahi ho saki: ${mvErr.message}` };
-
-  // Isi ginti ki apni nayi qatar -- taake milaan mein dikhe aur wajah
-  // likhni paRe, chup chaap gum na ho. `expected_qty` ko yahan WOHI
-  // (upar wali harkat ke BAAD ka) adad dena zaroori hai -- 0 likhne se
-  // milaan ke waqt farq dobara "mila" gin leta aur stock DOBARA barh
-  // jata (ek dafa yahan, ek dafa post karte waqt) -- wahi "do jagah,
-  // ek hi fact" ghalti jo pehle machinery mein Rs 32,000 ka farq bana
-  // chuki thi (313).
+  // Approval guard (10 Oct 2026): Extra Item ab stock FORAN nahi
+  // hilata. Qatar expected = abhi ka adad, counted = adad + mila hua,
+  // farq = mila hua ke sath banti hai. Stock sirf postCount par chalta hai,
+  // jo verify + doosre approver (starter nahi) ke baad hi hota hai, aur
+  // farq ki wajah likhna lazmi hota hai.
   const { data: freshInv } = await service
     .from("inventory")
     .select("quantity_on_hand")
     .eq("id", inventoryId)
     .single();
-  const trueQty = Number(freshInv?.quantity_on_hand ?? quantity);
+  const onHand = Number(freshInv?.quantity_on_hand ?? 0);
 
   const { error: lineErr } = await service.from("stock_count_lines").insert({
     count_id: countId,
     product_id: productId,
     inventory_id: inventoryId,
-    expected_qty: trueQty,
+    expected_qty: onHand,
     unit_cost: purchasePrice ?? 0,
-    counted_qty: quantity,
-    difference_qty: 0,
+    counted_qty: round2(onHand + quantity),
+    difference_qty: quantity,
   });
   if (lineErr) return { ok: false, error: `"${name}": ginti ki qatar nahi ban saki: ${lineErr.message}` };
 
@@ -408,7 +390,7 @@ export async function addExtraCountItem(_prev: ActionState, formData: FormData):
   return {
     success: true,
     message:
-      `${done.length} cheez${done.length > 1 ? "en" : ""} darj ho gayi: ${done.join(", ")}.` +
+      `${done.length} cheez${done.length > 1 ? "en" : ""} ginti mein darj ho gayi: ${done.join(", ")}. Stock abhi nahi barha — verify aur Admin approval (post) ke baad barhega.` +
       (failed.length > 0 ? ` (${failed.length} nahi ho saki: ${failed.join(" | ")})` : ""),
   };
 }
@@ -554,11 +536,15 @@ export async function forceCloseCount(_prev: ActionState, formData: FormData): P
 
   const { data: count } = await service
     .from("stock_counts")
-    .select("id, status, warehouse_id")
+    .select("id, status, warehouse_id, started_by")
     .eq("id", countId)
     .maybeSingle();
   if (!count) return { error: "Ginti nahi mili." };
   if (count.status !== "counting") return { error: "Ye ginti pehle hi band ho chuki hai." };
+  // Self guard: jis ne ginti shuru ki wo khud force-close nahi kar sakta.
+  if (count.started_by && count.started_by === user.id) {
+    return { error: "Ye ginti aap ne shuru ki hai — force-close doosra Admin/Owner karega." };
+  }
 
   // Jo lines abhi tak gini nahi gayin un ko current inventory se fill karo
   const { data: lines } = await service
@@ -637,12 +623,25 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
 
   const { data: count } = await service
     .from("stock_counts")
-    .select("id, status, warehouse_id, warehouses(name, branch_id)")
+    .select("id, status, warehouse_id, started_by, verified_by, warehouses(name, branch_id)")
     .eq("id", countId)
     .maybeSingle();
   if (!count) return { error: "Ginti nahi mili." };
-  if (count.status !== "counting" && count.status !== "verified") {
+  if (count.status === "counting") {
+    return { error: "Pehle ginti ki tasdeeq (verify) zaroori hai — phir post hogi." };
+  }
+  if (count.status !== "verified") {
     return { error: "Ye ginti pehle hi mukammal ho chuki hai." };
+  }
+  // Self guard: ginti shuru karne wala khud post nahi kar sakta (Admin bhi nahi).
+  if (count.started_by && count.started_by === user.id) {
+    await logAudit({
+      actionType: "reject",
+      module: "stock-count",
+      recordId: countId,
+      description: "Ginti shuru karne wale ne khud post karne ki koshish ki — roka gaya.",
+    });
+    return { error: "Ye ginti aap ne shuru ki hai — post doosra approver karega." };
   }
 
   // Admin/owner ke liye role check — partial count allow ke liye
@@ -661,6 +660,13 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
     if (!isAdminOrOwner) {
       return { error: `${unfilled.length} cheezen abhi gini nahi gayin. Milaan se pehle poori ginti lazmi hai.` };
     }
+    // Partial fill (farq = 0) sirf Admin, aur starter nahi (upar rok chuke) -- log zaroor.
+    await logAudit({
+      actionType: "force_close",
+      module: "stock-count",
+      recordId: countId,
+      description: `Admin ne ${unfilled.length} na-gini cheezen system qty se bhar kar (farq 0) post kiya.`,
+    });
     // Admin/owner: jo items nahi gine, un ko current inventory qty se fill karo (farq = 0 rakhna)
     const productIds = unfilled.map((l) => l.product_id);
     const { data: invRows } = await service

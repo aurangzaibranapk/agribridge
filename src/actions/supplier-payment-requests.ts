@@ -93,13 +93,20 @@ export async function approveSupplierPayment(_prev: ActionState, formData: FormD
   if (fetchError || !request) return { error: "Request nahi mili." };
   if (request.status === "approved") return { success: true };
   if (request.status !== "pending") return { error: "Ye request already process ho chuki hai." };
+  // Self-approval guard: jis ne request banayi wo khud approve nahi kar sakta.
+  if (request.requested_by && request.requested_by === user.id) {
+    return { error: "Aap ne khud ye request banayi hai — doosra Admin/Owner approve karega." };
+  }
+  const reqExtra = request as { finance_account_id?: string | null; payment_date?: string | null };
+  const accountId = reqExtra.finance_account_id ?? (String(formData.get("finance_account_id") ?? "").trim() || null);
+  if (!accountId) return { error: "Is request par finance account (bank/cash/Wasela) nahi hai — approve karte waqt account chunein." };
 
   const paid = await payAndPost(supabase, {
     supplierId: request.supplier_id,
     amount: request.amount,
-    paymentDate: aajKaKhana(),
+    paymentDate: reqExtra.payment_date ?? aajKaKhana(),
     paymentMethod: request.payment_method,
-    accountId: (request as { finance_account_id?: string | null }).finance_account_id ?? null,
+    accountId,
     clientActionId: requestId,
     notes: `Approved request: ${request.request_number}${request.notes ? " - " + request.notes : ""}`,
     slipUrl: request.slip_url,

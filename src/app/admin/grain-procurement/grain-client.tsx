@@ -436,7 +436,7 @@ function NewEntryForm({
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [paymentAccountId, setPaymentAccountId] = useState("");
   // "post" = purana rawaiya (foran darj). "pending" = Admin approval ke baad.
-  const [saveMode, setSaveMode] = useState<"post" | "pending">("post");
+  const [saveMode, setSaveMode] = useState<"post" | "pending">("pending");
   // Default band: stock mein saaf wazan. On: stock mein kul wazan, katoti sirf adaigi se.
   const [stockFullGross, setStockFullGross] = useState(false);
 
@@ -854,11 +854,7 @@ function NewEntryForm({
 
         <div className={`rounded-lg border-2 p-3 ${saveMode === "pending" ? "border-amber-400 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20" : "border-surface-200 dark:border-surface-700"}`}>
           <Label>Entry kaise save karni hai?</Label>
-          <div className="mt-1 grid gap-2 sm:grid-cols-2">
-            <button type="button" aria-pressed={saveMode === "post"} onClick={() => setSaveMode("post")} className={`rounded-lg border px-3 py-2 text-left text-sm ${saveMode === "post" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"}`}>
-              <span className="block font-medium">Abhi darj karein (Normal)</span>
-              <span className="block text-[11px]">Stock, ledger, cash book, kharche aur payment foran darj.</span>
-            </button>
+          <div className="mt-1 grid gap-2">
             <button type="button" aria-pressed={saveMode === "pending"} onClick={() => setSaveMode("pending")} className={`rounded-lg border px-3 py-2 text-left text-sm ${saveMode === "pending" ? "border-amber-500 bg-amber-100 text-amber-900" : "border-surface-200 text-surface-500"}`}>
               <span className="block font-medium">Pending (Admin approval)</span>
               <span className="block text-[11px]">Abhi kuch darj nahi hoga. Admin parh kar Approve karega, tab entry ki tareekh par sab darj hoga.</span>

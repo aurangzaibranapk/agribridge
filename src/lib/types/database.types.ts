@@ -23172,6 +23172,7 @@ export type Database = {
       }
       purchases: {
         Row: {
+          held_payment: Json | null
           branch_id: string | null
           created_at: string
           created_by: string | null
@@ -23205,6 +23206,7 @@ export type Database = {
           warehouse_id: string | null
         }
         Insert: {
+          held_payment?: Json | null
           branch_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -23238,6 +23240,7 @@ export type Database = {
           warehouse_id?: string | null
         }
         Update: {
+          held_payment?: Json | null
           branch_id?: string | null
           created_at?: string
           created_by?: string | null
@@ -28637,6 +28640,8 @@ export type Database = {
       }
       supplier_payment_requests: {
         Row: {
+          finance_account_id: string | null
+          payment_date: string | null
           amount: number
           approved_at: string | null
           approved_by: string | null
@@ -28652,6 +28657,8 @@ export type Database = {
           supplier_id: string
         }
         Insert: {
+          finance_account_id?: string | null
+          payment_date?: string | null
           amount: number
           approved_at?: string | null
           approved_by?: string | null
@@ -28667,6 +28674,8 @@ export type Database = {
           supplier_id: string
         }
         Update: {
+          finance_account_id?: string | null
+          payment_date?: string | null
           amount?: number
           approved_at?: string | null
           approved_by?: string | null
