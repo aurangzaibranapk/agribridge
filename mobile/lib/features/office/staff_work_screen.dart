@@ -31,7 +31,7 @@ class StaffWorkScreen extends ConsumerWidget {
             ref.read(notificationsProvider.future),
           ]);
         },
-        child: ListView(padding: const EdgeInsets.all(16), children: [
+        child: ListView(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.all(16), children: [
           Text('Assalam-o-Alaikum, ${profile.name}', style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
           const SizedBox(height: 4),
           const Text('Aap ke apne orders aur alerts. Branch ka baqi kaam ERP permission ke mutabiq milega.', style: TextStyle(color: AppColors.muted)),
