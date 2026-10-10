@@ -1,4 +1,5 @@
 "use client";
+import { ExpiryBadge } from "@/components/stock/expiry-badge";
 import { canAddToCart, isOutOfStock, sortInStockFirst, POS_DEMAND_HREF } from "@/lib/pos/stock-availability";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -711,7 +712,7 @@ export function PosClient({
                 <button onClick={() => addToCart(item)} aria-disabled={oos && !canAddToCart(item)} title={oos ? "Out of stock / Stock khatam" : undefined} className={`w-full ${oos ? "opacity-50 grayscale " : ""}overflow-hidden rounded-card border bg-white text-left shadow-card transition hover:shadow-md dark:bg-surface-900 ${inCart ? "border-brand-500 ring-1 ring-brand-200 dark:ring-brand-900/50" : "border-surface-200 hover:border-brand-400 dark:border-surface-800"}`}>
                   <div className="relative aspect-square bg-surface-50 dark:bg-surface-800">
                     {p?.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-2" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center text-surface-300 dark:text-surface-600"><Package className="h-8 w-8" strokeWidth={1.25} /></div>}
-                    <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-surface-700 shadow-sm dark:bg-surface-900/90 dark:text-surface-200"><span className={`h-1.5 w-1.5 rounded-full ${stockTone(item.stock_quantity)}`} />{item.stock_quantity}</span>
+                    <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-surface-700 shadow-sm dark:bg-surface-900/90 dark:text-surface-200"><span className={`h-1.5 w-1.5 rounded-full ${stockTone(item.stock_quantity)}`} />{item.stock_quantity}</span><ExpiryBadge date={item.expiry_date} className="absolute left-1.5 top-1.5 shadow-sm" />
                     {oos && <span data-testid="pos-oos-badge" className="absolute bottom-1.5 left-1.5 rounded-md bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">Out of stock / Stock khatam</span>}
                     {inCart && cartLine && (
                       <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-brand-600 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
@@ -765,7 +766,7 @@ export function PosClient({
             return (
               <button key={line.product_id} type="button" onClick={() => setSelectedId(line.product_id)} className={`flex w-full items-center gap-2 rounded-lg border p-2 text-left transition ${active ? "border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30" : "border-surface-100 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/60"}`}>
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-100 dark:bg-surface-800">{item?.products?.image_url ? <img src={item.products.image_url} alt="" className="h-full w-full object-contain" loading="lazy" /> : <Package className="h-4 w-4 text-surface-400" strokeWidth={1.5} />}</span>
-                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-surface-800 dark:text-surface-200">{line.name}</span><span className="block text-xs text-surface-400">{line.quantity} × Rs {line.unit_price.toLocaleString()}{wholesaleOn && item?.wholesale_price == null && <span className="ml-1 text-amber-700">{t("pf_pos_no_wholesale_rate", lang)}</span>}{regularKhataOn && !(item?.products?.mrp_price != null && item.products.mrp_price > 0) && <span className="ml-1 text-amber-700">(MRP darj nahi, retail lagi)</span>}</span></span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-surface-800 dark:text-surface-200">{line.name}<ExpiryBadge date={item?.expiry_date} className="ml-1 align-middle" /></span><span className="block text-xs text-surface-400">{line.quantity} × Rs {line.unit_price.toLocaleString()}{wholesaleOn && item?.wholesale_price == null && <span className="ml-1 text-amber-700">{t("pf_pos_no_wholesale_rate", lang)}</span>}{regularKhataOn && !(item?.products?.mrp_price != null && item.products.mrp_price > 0) && <span className="ml-1 text-amber-700">(MRP darj nahi, retail lagi)</span>}</span></span>
                 <span className="shrink-0 text-right"><span className="block text-sm font-semibold tabular-nums text-surface-900 dark:text-surface-100">Rs {(line.quantity * line.unit_price).toLocaleString()}</span><span className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] text-brand-600 dark:text-brand-400">{t("pos_details", lang)} <ChevronRight className="h-3 w-3" /></span></span>
               </button>
             );
@@ -888,7 +889,7 @@ function ItemDetails({ line, item, lang, perms, onQty, onRate, onRemove, onClose
         <Field label={t("pos_wh_stock", lang)} value={item.warehouse_stock == null ? nishaan : item.warehouse_stock} />
         <Field label={t("pos_barcode", lang)} value={barcode ? <span className="font-mono text-xs">{barcode}</span> : <span className="text-xs text-surface-400">{t("pos_no_barcode", lang)}</span>} />
         <Field label={t("pos_batch", lang)} value={item.batch_number ? item.batch_number : (item.batch_count ?? 0) > 1 ? t("pos_batch_many", lang).replace("{n}", String(item.batch_count)) : nishaan} />
-        <Field label={t("pos_expiry", lang)} value={expiry ?? nishaan} />
+        <Field label={t("pos_expiry", lang)} value={expiry ? <span className="inline-flex items-center gap-1.5">{expiry}<ExpiryBadge date={item.expiry_date} /></span> : nishaan} />
         <Field label={t("pos_line_total", lang)} strong value={<span className="text-brand-700 dark:text-brand-300">Rs {(line.quantity * line.unit_price).toLocaleString()}</span>} />
       </div>
       {!perms.canEditRate && <p className="text-[11px] text-surface-400">{t("pos_rate_locked", lang)}</p>}
