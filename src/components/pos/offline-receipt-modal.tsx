@@ -23,8 +23,12 @@ export function OfflineReceiptModal({ receipt, onClose }: { receipt: OfflineRece
   });
 
   function handlePrint() {
+    const done = () => {
+      window.removeEventListener("afterprint", done);
+      onClose();
+    };
+    window.addEventListener("afterprint", done);
     window.print();
-    onClose();
   }
 
   return (
