@@ -47,6 +47,14 @@ final serviceRequestsProvider = FutureProvider<List<Map<String, dynamic>>>((ref)
   return ref.read(mobileRepositoryProvider).myServiceRequests();
 });
 
+final farmerGrainSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  if (AppConfig.demoMode) return const {'total_supplied': 0, 'total_paid': 0, 'balance_due': 0, 'entries': [], 'payments': []};
+  if (!AppConfig.hasSupabase) throw StateError('App environment configured nahi.');
+  final profile = ref.watch(sessionProvider).valueOrNull;
+  if (profile == null || profile.role != AppRole.farmer) return const {};
+  return ref.read(mobileRepositoryProvider).myGrainSummary();
+});
+
 final farmerMachineryBookingsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   if (AppConfig.demoMode) return const [];
   if (!AppConfig.hasSupabase) throw StateError('App environment configured nahi.');
