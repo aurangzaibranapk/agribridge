@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { nonRevenueReceiptAccount } from "./receipt-classify";
 import { postJournal, type JournalLine, type PostedEntry, type SourceClaim } from "@/lib/ledger/post";
 
 /**
@@ -247,6 +248,8 @@ export function expenseAccountFor(category: string | null | undefined): string {
 
 /** Aamdani ki qism -> khata. */
 export function incomeAccountFor(category: string | null | undefined): string {
+  const nonRevenue = nonRevenueReceiptAccount(category);
+  if (nonRevenue) return nonRevenue;
   const c = (category ?? "").toLowerCase();
   if (c.includes("milk") || c.includes("doodh")) return ACC.salesMilk;
   if (c.includes("grain") || c.includes("wheat") || c.includes("rice")) return ACC.salesGrain;
