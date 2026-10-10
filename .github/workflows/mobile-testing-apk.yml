@@ -1,6 +1,11 @@
 name: Mobile Real Testing APK
 
 on:
+  pull_request:
+    branches: ['testing/shop-360-zero-leakage']
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-testing-apk.yml'
   workflow_dispatch:
     inputs:
       confirmation:
@@ -10,6 +15,7 @@ on:
 
 jobs:
   testing-apk:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -17,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Refuse non-testing invocation
-        if: ${{ inputs.confirmation != 'TESTING ONLY' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.confirmation != 'TESTING ONLY' }}
         run: |
           echo "Confirmation must be TESTING ONLY"
           exit 1
