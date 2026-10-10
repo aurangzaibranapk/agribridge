@@ -140,11 +140,11 @@ export function GrainClient({
     <div className="mx-auto w-full max-w-[1280px]">
       <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {byGrainType.map((g) => (
-          <div key={g.grain_type} className="rounded-card border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
+          <Link key={g.grain_type} href={`/admin/grain-procurement/details?view=purchases&crop=${g.grain_type}`} className="block rounded-card hover:ring-2 hover:ring-brand-300 border border-surface-200 bg-white p-3 shadow-card dark:border-surface-800 dark:bg-surface-900">
             <p className="text-xs font-medium text-surface-500">{t(GRAIN_LABELS[g.grain_type] ?? "gr_grain", lang)}</p>
             <p className="mt-1 font-display text-lg font-semibold text-surface-900 dark:text-white">{g.totalKg.toLocaleString()} kg</p>
             <p className="text-xs text-surface-400">Rs {g.totalValue.toLocaleString()} - {g.entryCount} entries</p>
-          </div>
+          </Link>
         ))}
       </div>
 

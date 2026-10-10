@@ -3,6 +3,8 @@ import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { GrainClient } from "@/app/admin/grain-procurement/grain-client";
+import Link from "next/link";
+import { drillHref } from "@/lib/grain/drilldown";
 import { GrainSummaryCards } from "@/app/admin/grain-procurement/grain-summary-cards";
 import { summarizeGrainLedger, GRAIN_ONLY_ACCOUNTS, WASELA_AMANAT_ACCOUNT, type GrainLedgerLine, type GrainSummary } from "@/lib/grain/ledger-summary";
 
@@ -196,22 +198,22 @@ export default async function AdminGrainProcurementPage({ searchParams }: { sear
       <GrainSummaryCards summary={grainSummary.summary} from={summaryFrom} to={summaryTo} error={grainSummary.error} />
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Link href={drillHref("purchases", { from: summaryFrom, to: summaryTo })} className="block rounded-card hover:ring-2 hover:ring-brand-300"><Card>
           <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("at_total_bought_kg", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">{totalPurchasedKg.toLocaleString()} kg</p>
-        </Card>
-        <Card>
+        </Card></Link>
+        <Link href={drillHref("purchases", { from: summaryFrom, to: summaryTo })} className="block rounded-card hover:ring-2 hover:ring-brand-300"><Card>
           <p className="text-xs font-medium uppercase tracking-wide text-surface-500">{t("at_total_expense", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-surface-900 dark:text-white">Rs {totalSpent.toLocaleString()}</p>
-        </Card>
-        <Card className="border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/30">
+        </Card></Link>
+        <Link href={drillHref("payments", { from: summaryFrom, to: summaryTo })} className="block rounded-card hover:ring-2 hover:ring-brand-300"><Card className="border-green-200 bg-green-50 dark:border-green-900/40 dark:bg-green-950/30">
           <p className="text-xs font-medium uppercase tracking-wide text-green-600">{t("at_total_paid", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-green-700">Rs {totalPaidOut.toLocaleString()}</p>
-        </Card>
-        <Card className="border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
+        </Card></Link>
+        <Link href={drillHref("payable", { from: summaryFrom, to: summaryTo })} className="block rounded-card hover:ring-2 hover:ring-brand-300"><Card className="border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
           <p className="text-xs font-medium uppercase tracking-wide text-amber-600">{t("at_payable", lang)}</p>
           <p className="mt-2 font-display text-xl font-semibold text-amber-700">Rs {totalOutstanding.toLocaleString()}</p>
-        </Card>
+        </Card></Link>
       </div>
 
       <GrainClient
