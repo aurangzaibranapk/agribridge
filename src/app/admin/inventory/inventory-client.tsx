@@ -1,4 +1,5 @@
 "use client";
+import { ExpiryBadge } from "@/components/stock/expiry-badge";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useFormState, useFormStatus } from "react-dom";
@@ -329,6 +330,7 @@ export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRo
                       {r.product_name}{r.pack_size ? ` (${r.pack_size})` : ""}
                     </Link>
                     {duplicateProductIds.has(r.product_id) && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">Duplicate review</span>}
+                    <ExpiryBadge date={r.expiry_date} daysLeft={r.days_left} className="ml-2" />
                     {r.quantity_on_hand < 0 && <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-[10px] text-red-700 dark:bg-red-900/40 dark:text-red-200">Negative stock</span>}
                   </td>
                   <td className="px-4 py-3 text-surface-600 dark:text-surface-400">{r.warehouse_name}</td>
@@ -341,6 +343,7 @@ export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRo
                     {r.days_left != null && r.days_left <= 90 && (
                       <span className="ml-1 text-xs">({r.days_left < 0 ? t("inv_expired", lang) : `${r.days_left} ${t("inv_days", lang)}`})</span>
                     )}
+                    <ExpiryBadge date={r.expiry_date} daysLeft={r.days_left} className="ml-1" />
                   </td>
                   <td className={`px-4 py-3 text-right font-semibold ${isLow ? "text-red-600" : "text-surface-800 dark:text-surface-200"}`}>
                     <Link href={`/admin/inventory/product/${r.product_id}`} className="hover:text-brand-600 hover:underline" title={t("inv_qty_report_hint", lang)}>
