@@ -17,7 +17,7 @@ class FarmerMachineryScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Meri Machinery')),
       body: RefreshIndicator(
         onRefresh: () => ref.refresh(farmerMachineryBookingsProvider.future).then((_) {}),
-        child: ListView(padding: const EdgeInsets.all(16), children: [
+        child: ListView(physics: const AlwaysScrollableScrollPhysics(), padding: const EdgeInsets.all(16), children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(18)),
