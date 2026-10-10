@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
+import { requireMoneyAdmin } from "@/lib/access/money-gate";
 import { createClient } from "@/lib/supabase/server";
 import { recordCollection, applyFat } from "@/lib/milk-collection";
 import { postFarmerLedger, postFarmerWallet } from "@/lib/farmer-ledger";
@@ -70,6 +71,8 @@ export async function createMilkEntry(_prev: ActionState, formData: FormData): P
 }
 
 export async function recordMilkPayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireMoneyAdmin("Doodh ki adaigi post karna");
+  if (!gate.ok) return { error: gate.error };
   const supabase = createClient();
   const farmerId = String(formData.get("farmer_id") ?? "");
   const amount = Number(formData.get("amount") ?? 0);
@@ -146,6 +149,8 @@ export async function setMilkCollectionType(_prev: ActionState, formData: FormDa
 }
 
 export async function saveMilkRateSettings(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireMoneyAdmin("Doodh ka rate badalna");
+  if (!gate.ok) return { error: gate.error };
   const supabase = createClient();
   const standardRate = Number(formData.get("standard_rate") ?? 0);
   const incentive = Number(formData.get("self_dropoff_incentive") ?? 0);

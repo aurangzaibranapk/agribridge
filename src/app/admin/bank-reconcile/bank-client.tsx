@@ -84,6 +84,10 @@ export function BookLineForm({ lineId }: { lineId: string }) {
         placeholder={t("bk_what_kind", lang)}
         className="min-w-[200px] flex-1 rounded-lg border border-surface-300 px-2 py-1.5 text-xs dark:border-surface-700 dark:bg-surface-900"
       />
+      <label className="flex items-center gap-1 text-xs text-surface-600 dark:text-surface-300">
+        <input type="checkbox" name="force" value="1" />
+        Phir bhi banayein (pakka alag paisa hai)
+      </label>
       <Submit label={t("bk_make_entry", lang)} />
       {state.error && (
         <p className="w-full text-xs text-red-700 dark:text-red-400">{state.error}</p>

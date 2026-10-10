@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { requireMoneyAdmin } from "@/lib/access/money-gate";
 import { postJournal } from "@/lib/ledger/post";
 import { ACC, expenseAccountFor, incomeAccountFor, glForFinanceAccount } from "@/lib/ledger/rules";
 
@@ -22,6 +23,8 @@ export interface ActionState {
  * Musbat raqam = bank mein aaya, manfi = bank se gaya.
  */
 export async function importBankLines(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireMoneyAdmin("Bank statement daalna");
+  if (!gate.ok) return { error: gate.error };
   const supabase = createClient();
   const service = createServiceClient();
 
@@ -113,6 +116,8 @@ export async function importBankLines(_prev: ActionState, formData: FormData): P
  * nahi dhoondh sakta.
  */
 export async function bookBankLine(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireMoneyAdmin("Bank ki qatar ki entry banana");
+  if (!gate.ok) return { error: gate.error };
   const supabase = createClient();
   const service = createServiceClient();
 
@@ -143,6 +148,26 @@ export async function bookBankLine(_prev: ActionState, formData: FormData): Prom
   // ki har qatar ek hi khate mein girti thi, aur phir kisi ek bank ko us
   // ke apne statement se milana mumkin hi nahi rehta tha.
   const bankGl = line.account_id ? await glForFinanceAccount(line.account_id as string) : ACC.bank;
+
+  // Dohri ginti ki rok (finance review #2): isi bank khate par isi
+  // tareekh aur isi raqam ki entry pehle se ho to wo shayad yahi paisa
+  // hai jo kisi aur safhe se darj ho chuka. Admin "phir bhi banayein"
+  // (force=1) de to hi nayi entry banti hai.
+  if (String(formData.get("force") ?? "") !== "1") {
+    const { data: same } = await service
+      .from("journal_lines")
+      .select("entry_id, journal_entries!inner(entry_number, entry_date)")
+      .eq("account_code", bankGl)
+      .eq(moneyIn ? "debit" : "credit", amount)
+      .eq("journal_entries.entry_date", line.txn_date)
+      .limit(1);
+    const hit = (same ?? [])[0] as { journal_entries?: { entry_number?: string } } | undefined;
+    if (hit) {
+      return {
+        error: `Isi tareekh aur raqam (Rs ${amount.toLocaleString()}) ki entry is bank par pehle se hai (${hit.journal_entries?.entry_number ?? "ledger"}). Dohri ginti se bachne ke liye ise usi entry se milayein; agar ye waqai alag paisa hai to "phir bhi banayein" chunein.`,
+      };
+    }
+  }
 
   const posted = await postJournal({
     description: `Bank: ${line.description}`,

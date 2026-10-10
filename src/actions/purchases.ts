@@ -1,5 +1,6 @@
 "use server";
 import { isSelfApproval, shouldPostHeldPayment } from "@/lib/approval/guards";
+import { escapeLikePattern, findDuplicateBillNo, isDuplicateBillNoError } from "@/lib/purchases/bill-no-unique";
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
@@ -150,6 +151,20 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
   if (supplierBillWorkspace && !supplierBillNo) {
     return { error: "Supplier invoice ka bill number zaroor likhein taa-ke wohi bill dobara save na ho." };
   }
+  // 388 ne purchases wala unique index hata diya (bill-read upload ki kai
+  // purchases ke liye). Is raaste par ab code khud dohra bill pakarta hai.
+  if (supplierBillWorkspace && supplierBillNo) {
+    const { data: sameBill, error: sameBillError } = await supabase
+      .from("purchases")
+      .select("purchase_number, supplier_bill_no, status")
+      .eq("supplier_id", supplierId)
+      .neq("status", "cancelled")
+      .ilike("supplier_bill_no", escapeLikePattern(supplierBillNo.trim()))
+      .limit(5);
+    if (sameBillError) return { error: `Bill number check nahi ho saka: ${sameBillError.message}` };
+    const dup = findDuplicateBillNo(sameBill ?? [], supplierBillNo);
+    if (dup !== null) return { error: `Supplier bill ${supplierBillNo} pehle se save hai${dup ? ` (${dup})` : ""}. Duplicate bill dobara nahi banaya.` };
+  }
   const { data: purchase, error: purchaseError } = await supabase
     .from("purchases")
     .insert({
@@ -178,7 +193,7 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
     .select("id")
     .single();
   if (purchaseError || !purchase) {
-    if (supplierBillWorkspace && purchaseError?.code === "23505" && /ux_purchases_supplier_bill_no/i.test(`${purchaseError.message} ${purchaseError.details ?? ""}`) && supplierBillNo) {
+    if (supplierBillWorkspace && supplierBillNo && isDuplicateBillNoError(purchaseError)) {
       return { error: `Supplier bill ${supplierBillNo} pehle se save hai. Duplicate bill dobara nahi banaya.` };
     }
     return { error: purchaseError?.message ?? "Failed to create purchase." };

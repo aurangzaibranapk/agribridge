@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { transferHasEnoughStock } from "@/lib/inventory/transfer-rules";
 
 export interface ActionState {
   error?: string;
@@ -212,7 +213,8 @@ export async function dispatchTransfer(_prev: ActionState, formData: FormData): 
   return { success: true };
 }
 
-async function moveStock(
+/** Sirf paisa (branch ledger). Stock trigger hilata hai. */
+async function postTransferLedger(
   supabase: ReturnType<typeof createClient>,
   transferId: string,
   transferNumber: string,
@@ -237,7 +239,36 @@ async function moveStock(
     });
     if (creditError) throw new Error(`Transfer ledger posting fail hui: ${creditError.message}`);
   }
+}
 
+/** Source godam mein maal kam ho to ledger/status se pehle hi rok do. */
+async function assertSourceStock(
+  supabase: ReturnType<typeof createClient>,
+  productId: string,
+  fromWarehouseId: string,
+  qty: number
+) {
+  const { data } = await supabase
+    .from("inventory")
+    .select("quantity_on_hand")
+    .eq("warehouse_id", fromWarehouseId)
+    .eq("product_id", productId);
+  const onHand = (data ?? []).reduce((sum: number, row: { quantity_on_hand: unknown }) => sum + Number(row.quantity_on_hand ?? 0), 0);
+  if (!transferHasEnoughStock(onHand, qty)) {
+    throw new Error(`Source godam mein maal kam hai (${onHand} maujood, ${qty} chahiye). Transfer complete nahi hua.`);
+  }
+}
+
+/** Status completed hone (aur trigger ke stock hilane) ke BAAD batches. */
+async function moveTransferBatches(
+  supabase: ReturnType<typeof createClient>,
+  transferId: string,
+  productId: string,
+  fromWarehouseId: string,
+  toWarehouseId: string,
+  qty: number,
+  unitPrice: number
+) {
   let remaining = qty;
   const { data: batches } = await supabase
     .from("stock_batches")
@@ -253,62 +284,11 @@ async function moveStock(
     remaining -= take;
   }
 
-  const { data: fromInv } = await supabase
-    .from("inventory")
-    .select("id, quantity_on_hand")
-    .eq("warehouse_id", fromWarehouseId)
-    .eq("product_id", productId)
-    .maybeSingle();
-  if (fromInv) {
-    const deduct = Math.min(qty, Number(fromInv.quantity_on_hand));
-    // Ginti yahan se NAHI badalti -- wo neeche wali harkat par trigger
-    // karta hai (129). Pehle dono kaam hote the, is liye har transfer par
-    // maal dugna nikalta tha. balance_after bhi trigger hi likhta hai.
-    await supabase.from("stock_movements").insert({
-      inventory_id: fromInv.id,
-      movement_type: "transfer_out",
-      quantity: deduct,
-      reference_type: "stock_transfer",
-      reference_id: transferId,
-      created_by: userId,
-    });
-  }
-
-  const { data: toInv } = await supabase
-    .from("inventory")
-    .select("id, quantity_on_hand")
-    .eq("warehouse_id", toWarehouseId)
-    .eq("product_id", productId)
-    .maybeSingle();
-  if (toInv) {
-    await supabase.from("stock_movements").insert({
-      inventory_id: toInv.id,
-      movement_type: "transfer_in",
-      quantity: qty,
-      reference_type: "stock_transfer",
-      reference_id: transferId,
-      created_by: userId,
-    });
-  } else {
-    const { data: newInv } = await supabase
-      .from("inventory")
-      // Nayi qatar hamesha sifar se banti hai (129); maal us mein neeche
-      // wali harkat se aata hai.
-      .insert({ warehouse_id: toWarehouseId, product_id: productId })
-      .select("id")
-      .single();
-    if (newInv) {
-      await supabase.from("stock_movements").insert({
-        inventory_id: newInv.id,
-        movement_type: "transfer_in",
-        quantity: qty,
-        reference_type: "stock_transfer",
-        reference_id: transferId,
-        created_by: userId,
-      });
-    }
-  }
-
+  // Ginti (stock_movements) yahan se NAHI likhi jati. Ek hi malik hai:
+  // fn_apply_stock_transfer trigger, jo status "completed" hote hi
+  // transfer_out + transfer_in likhta hai. Pehle ye function bhi
+  // harkatein daalta tha aur phir status completed hone par trigger
+  // dobara -- yani har transfer par maal dugna hilta tha.
   await supabase.from("stock_batches").insert({
     product_id: productId,
     warehouse_id: toWarehouseId,
@@ -338,21 +318,15 @@ export async function matchAndAcceptTransfer(_prev: ActionState, formData: FormD
   if (transfer.status !== "in_transit") return { error: "This transfer is not out for delivery." };
 
   if (confirmedQuantity >= Number(transfer.quantity)) {
+    const qty = Number(transfer.quantity);
     try {
-      await moveStock(
-      supabase,
-      transferId,
-      transfer.transfer_number,
-      transfer.product_id,
-      transfer.from_warehouse_id,
-      transfer.to_warehouse_id,
-      Number(transfer.quantity),
-      Number(transfer.unit_price ?? 0),
-      user.id
-      );
+      await assertSourceStock(supabase, transfer.product_id, transfer.from_warehouse_id, qty);
+      await postTransferLedger(supabase, transferId, transfer.transfer_number, transfer.product_id,
+        transfer.from_warehouse_id, transfer.to_warehouse_id, qty, Number(transfer.unit_price ?? 0), user.id);
     } catch (error) {
       return { error: error instanceof Error ? error.message : "Transfer ledger posting fail hui." };
     }
+    // Status completed -> fn_apply_stock_transfer trigger transfer_out/in likhta hai (ek hi malik).
     const { error } = await supabase
       .from("stock_transfers")
       .update({
@@ -362,8 +336,10 @@ export async function matchAndAcceptTransfer(_prev: ActionState, formData: FormD
         shop_accepted_by: user.id,
         shop_accepted_at: new Date().toISOString(),
       })
-      .eq("id", transferId);
+      .eq("id", transferId)
+      .eq("status", "in_transit");
     if (error) return { error: error.message };
+    await moveTransferBatches(supabase, transferId, transfer.product_id, transfer.from_warehouse_id, transfer.to_warehouse_id, qty, Number(transfer.unit_price ?? 0));
   } else {
     const { error } = await supabase
       .from("stock_transfers")
@@ -427,21 +403,15 @@ export async function finalizeDiscrepancyAccept(_prev: ActionState, formData: Fo
   if (transfer.status !== "discrepancy" || !transfer.discrepancy_resolved_at) {
     return { error: "This discrepancy has not been resolved yet." };
   }
+  const qty = Number(transfer.confirmed_quantity);
   try {
-    await moveStock(
-    supabase,
-    transferId,
-    transfer.transfer_number,
-    transfer.product_id,
-    transfer.from_warehouse_id,
-    transfer.to_warehouse_id,
-    Number(transfer.confirmed_quantity),
-    Number(transfer.unit_price ?? 0),
-    user.id
-    );
+    await assertSourceStock(supabase, transfer.product_id, transfer.from_warehouse_id, qty);
+    await postTransferLedger(supabase, transferId, transfer.transfer_number, transfer.product_id,
+      transfer.from_warehouse_id, transfer.to_warehouse_id, qty, Number(transfer.unit_price ?? 0), user.id);
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Transfer ledger posting fail hui." };
   }
+  // quantity = confirmed pehle set hoti hai taa-ke trigger sahi miqdar hilaye.
   const { error } = await supabase
     .from("stock_transfers")
     .update({
@@ -450,8 +420,10 @@ export async function finalizeDiscrepancyAccept(_prev: ActionState, formData: Fo
       shop_accepted_by: user.id,
       shop_accepted_at: new Date().toISOString(),
     })
-    .eq("id", transferId);
+    .eq("id", transferId)
+    .eq("status", "discrepancy");
   if (error) return { error: error.message };
+  await moveTransferBatches(supabase, transferId, transfer.product_id, transfer.from_warehouse_id, transfer.to_warehouse_id, qty, Number(transfer.unit_price ?? 0));
   revalidatePath("/admin/stock-transfers");
   revalidatePath("/admin/inventory");
   return { success: true };

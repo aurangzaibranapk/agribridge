@@ -2,8 +2,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { ACC, failed, glForFinanceAccount } from "@/lib/ledger/rules";
-import { postJournal, type JournalLine, type SourceClaim } from "@/lib/ledger/post";
+import { ACC, glForFinanceAccount } from "@/lib/ledger/rules";
+import { prepareJournal, type JournalLine, type SourceClaim } from "@/lib/ledger/post";
+import { matchReturnFinanceRows } from "@/lib/pos/checkout-guards";
 import type { Json } from "@/lib/types/database.types";
 import { logAudit } from "@/lib/audit";
 
@@ -199,6 +200,12 @@ async function postReturnToLedger(returnId: string, userId: string): Promise<str
     .maybeSingle();
   if (!ret) return "Wapsi ka record nahi mila, ledger mein nahi ja saki.";
 
+  // Retry par dobara post nahi -- na journal, na balance.
+  const { data: already } = await service
+    .from("journal_entry_sources").select("entry_id")
+    .eq("source_table", "pos_returns").eq("source_row_id", returnId).maybeSingle();
+  if (already) return null;
+
   // Asal bikri ka gahak -- wapsi usi ke khaate se ghatti hai.
   const saleRow = Array.isArray((ret as any).pos_sales) ? (ret as any).pos_sales[0] : (ret as any).pos_sales;
   const crmCustomerId: string | null = saleRow?.crm_customer_id ?? null;
@@ -218,13 +225,27 @@ async function postReturnToLedger(returnId: string, userId: string): Promise<str
   // ledger mein Rs 200 chala jata -- aur golak har wapsi par utna hi
   // "kam" nazar aata. Is liye ab wo qatarein parhi jati hain jo isi
   // wapsi ne banayi hain.
-  const { data: txns } = await service
+  // return_id (source_row_id, 525) se -- ILIKE notes se nahi, jo RET-1
+  // par RET-10/RET-11 ki qatarein bhi utha leta tha. Purani qatarein
+  // (525 se pehle) sirf exact note token se milti hain.
+  const { data: bySource } = await (service as any)
     .from("finance_transactions")
-    .select("id, account_id, amount")
+    .select("id, account_id, amount, notes, source_row_id")
     .eq("category", "pos_return")
-    .ilike("notes", `%${ret.return_number}%`);
+    .eq("source_table", "pos_returns")
+    .eq("source_row_id", returnId);
+  let candidates: { id: string; account_id: string | null; amount: number; notes: string | null; source_row_id?: string | null }[] = bySource ?? [];
+  if (!candidates.length) {
+    const { data: legacy } = await service
+      .from("finance_transactions")
+      .select("id, account_id, amount, notes")
+      .eq("category", "pos_return")
+      .like("notes", `POS wapsi ${ret.return_number} (%`);
+    candidates = (legacy ?? []) as typeof candidates;
+  }
+  const txns = matchReturnFinanceRows(candidates, returnId, ret.return_number);
 
-  for (const txn of txns ?? []) {
+  for (const txn of txns) {
     const amount = Number(txn.amount);
     if (amount <= 0) continue;
     const gl = txn.account_id ? await glForFinanceAccount(txn.account_id) : ACC.suspense;
@@ -256,33 +277,27 @@ async function postReturnToLedger(returnId: string, userId: string): Promise<str
     lines.push({ account: ACC.cogs, credit: cogs });
   }
 
-  const result = await postJournal({
+  // Journal aur gahak ka balance EK transaction mein (525:
+  // fn_post_pos_return_ledger). Pehle balance alag update hota tha aur
+  // us ki ghalti chupchaap nigal li jati thi.
+  const prepared = await prepareJournal({
     description: `POS wapsi ${ret.return_number}`,
     sourceModule: "pos_return",
     sourceId: returnId,
     branchId: ret.branch_id,
     lines,
     createdBy: userId,
-    claims,
+    claims: [{ table: "pos_returns", rowId: returnId }, ...claims],
   });
+  if ("error" in prepared) return `wapsi ho gayi magar ledger mein nahi gayi: ${prepared.error}`;
 
-  if (failed(result)) return `wapsi ho gayi magar ledger mein nahi gayi: ${result.error}`;
-
-  // Gahak ka balance bhi utarna hai -- warna wapsi ke baad bhi us ka
-  // "hamein dena hai" adad bikri jitna hi bara raha aata, aur agli
-  // bikri par credit-limit ki jaanch usay ghalat rokti rehti.
-  if (khata > 0 && crmCustomerId) {
-    const { data: cust } = await service
-      .from("customers")
-      .select("current_balance")
-      .eq("id", crmCustomerId)
-      .maybeSingle();
-    const abTak = cust?.current_balance == null ? 0 : Number(cust.current_balance);
-    await service
-      .from("customers")
-      .update({ current_balance: Math.round((abTak - khata) * 100) / 100 })
-      .eq("id", crmCustomerId);
-  }
+  const { error: rpcError } = await (service as any).rpc("fn_post_pos_return_ledger", {
+    p_input: prepared.input,
+    p_return_id: returnId,
+    p_customer_id: khata > 0 ? crmCustomerId : null,
+    p_khata: khata > 0 ? khata : 0,
+  });
+  if (rpcError) return `wapsi ho gayi magar ledger mein nahi gayi: ${rpcError.message}`;
 
   return null;
 }

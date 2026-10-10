@@ -306,7 +306,9 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
           .from("inventory")
           .select("product_id, quantity_on_hand, batch_id, products(name, pack_size, units_per_pack, barcode, internal_barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending, mrp_price, purchase_price, expiry_date)")
           .eq("warehouse_id", warehouseId)
-          .gt("quantity_on_hand", 0)
+          // Khatam (0) stock bhi laate hain taake counter par grey nazar aaye
+          // aur staff demand bana sake (10 October). Cart mein jane se rok
+          // pos-client mein canAddToCart karta hai.
       : { data: [] };
     const aggMap = new Map<string, any>();
     // Jis cheez ka sale rate abhi darj nahi hua, wo counter par aati hi
@@ -332,7 +334,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         batch_ids: [] as string[],
         products: product,
       };
-      cur.stock_quantity += Number(row.quantity_on_hand);
+      cur.stock_quantity += Math.max(0, Number(row.quantity_on_hand ?? 0));
       if (row.batch_id) cur.batch_ids.push(row.batch_id);
       aggMap.set(row.product_id, cur);
     });
