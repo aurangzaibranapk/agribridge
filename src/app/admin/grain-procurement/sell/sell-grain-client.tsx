@@ -158,6 +158,7 @@ export function SellGrainClient({
                       {remaining > 0 && (
                         <button onClick={() => setPayingSale(s)} className="mr-2 text-xs font-medium text-brand-600 hover:underline">{t("c_payment_word", lang)}</button>
                       )}
+                      <Link href={`/admin/grain-procurement/sale-bill/${s.id}`} className="mr-2 text-xs font-medium text-brand-600 hover:underline">Bill</Link>
                       <button
                         onClick={() => setOpenSale(openSale === s.id ? null : s.id)}
                         className="text-xs font-medium text-surface-600 hover:underline dark:text-surface-300"
@@ -259,6 +260,7 @@ export function NewSaleForm({
       <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{t("gs_new_sale", lang)}</h2>
       {state.error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
       {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{state.draftId ? state.notice : t("gs_sale_done", lang)}</p>}
+      {state.success && state.saleId && !state.draftId && <p className="mb-3 text-sm"><Link href={`/admin/grain-procurement/sale-bill/${state.saleId}`} className="font-medium text-brand-600 underline">Bill dekhein / print karein</Link></p>}
       {offlineNotice && <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-300">{offlineNotice}</p>}
       {offlinePending > 0 && <p className="mb-3 text-xs text-amber-700 dark:text-amber-400">{offlinePending} grain sales sync ka intezar kar rahi hain.</p>}
       <form action={formAction} className="space-y-3" onSubmit={async (event: FormEvent<HTMLFormElement>) => {
