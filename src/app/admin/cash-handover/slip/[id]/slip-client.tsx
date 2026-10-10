@@ -3,7 +3,11 @@ import { useFormState, useFormStatus } from "react-dom";
 import { CheckCircle2, AlertTriangle, Printer, Clock, ArrowLeft, Truck } from "lucide-react";
 import { receiveCash, carrierConfirm, type ActionState } from "@/actions/cash-handover";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { ReceiptRow } from "@/components/pos/receipt-modal";
+import { thermalReceiptCss } from "@/components/pos/thermal-receipt-print";
+
+const PRINT_AREA_ID = "handover-receipt-print-area";
 
 const INIT: ActionState = {};
 
@@ -51,6 +55,8 @@ function SigBlock({ name, date, label }: { name: string; date: string; label: st
 
 export function SlipClient({
   handover,
+  header,
+  autoPrint = false,
   isRecipient,
   isCarrier,
   viewerName,
@@ -74,6 +80,15 @@ export function SlipClient({
     carrierConfirmedAt: string | null;
     carrierConfirmedByName: string | null;
   };
+  /** POS receipt jaisa header -- Shop, Branch, POS counter, shift. */
+  header?: {
+    shopName: string | null;
+    branchName: string | null;
+    counterName: string | null;
+    shiftNumbers: string[];
+  };
+  /** POS close ke baad khule to slip khud print ho (?print=1). */
+  autoPrint?: boolean;
   isRecipient: boolean;
   isCarrier: boolean;
   viewerName: string;
@@ -94,6 +109,37 @@ export function SlipClient({
   const fmt = (d: string) =>
     new Date(d).toLocaleString("en-PK", { dateStyle: "medium", timeStyle: "short" });
 
+  // POS sale receipt wala date format.
+  const receiptDate = (d: string) =>
+    new Date(d).toLocaleString("en-PK", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  // POS close ke baad seedha print -- Shift slip wali tarah thori der ruk
+  // kar, taake receipt poori render ho jaye.
+  useEffect(() => {
+    if (!autoPrint) return;
+    const timer = window.setTimeout(() => window.print(), 450);
+    return () => window.clearTimeout(timer);
+  }, [autoPrint]);
+
+  const shopTitle = header?.shopName ?? header?.branchName ?? "AgriBridge";
+  const branchLine = header?.shopName ? header?.branchName : null;
+  const statusText =
+    isPending && !handover.carrierConfirmedAt
+      ? `Bheja gaya — ${handover.carrierName ? "carrier ki tasdeeq baqi" : "tasdeeq baqi"}`
+      : isPending && handover.carrierConfirmedAt
+        ? "Carrier ne le liya — Finance ki tasdeeq baqi"
+        : isDone
+          ? handover.status === "received"
+            ? `${rs(handover.amountReceived!)} mile — hisaab barabar`
+            : `${rs(handover.amountReceived!)} mile — ${rs(Math.abs(handover.difference!))} ${handover.difference! < 0 ? "kam" : "zyada"}`
+          : handover.status;
+
   const borderColor = isDone
     ? "border-emerald-200 dark:border-emerald-800"
     : "border-amber-200 dark:border-amber-800";
@@ -102,108 +148,141 @@ export function SlipClient({
     : "bg-amber-50 dark:bg-amber-950/20";
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-6 print:py-2">
+    <div className="mx-auto w-full max-w-sm px-3 py-6 print:p-0">
+      <style>{thermalReceiptCss(PRINT_AREA_ID, { pageMode: true })}</style>
+
       {/* Nav */}
-      <div className="mb-4 flex items-center justify-between print:hidden">
+      <div className="mb-3 flex items-center justify-between print:hidden">
         <Link href="/admin/cash-handover" className="flex items-center gap-1.5 text-xs text-surface-500 hover:text-surface-800">
           <ArrowLeft className="h-3.5 w-3.5" /> Cash Handover
         </Link>
         <button
           onClick={() => window.print()}
-          className="flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-1.5 text-xs text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-400"
+          className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700"
         >
           <Printer className="h-3.5 w-3.5" /> Print
         </button>
       </div>
 
-      {/* Slip */}
-      <div className={`rounded-2xl border-2 p-6 ${borderColor} ${bgColor}`}>
-        {/* Header */}
-        <div className="mb-5 border-b border-dashed border-surface-300 pb-4 dark:border-surface-600">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-surface-400">Cash Handover Slip</p>
-          <p className="mt-0.5 font-mono text-xs text-surface-500">#{handover.id.slice(0, 8).toUpperCase()}</p>
-          <div className="mt-3 text-4xl font-bold tabular-nums text-surface-900 dark:text-white">
-            {rs(handover.amountSent)}
-          </div>
-          <p className="mt-1 text-xs text-surface-500">{handover.sentAt ? fmt(handover.sentAt) : "—"}</p>
+      {/* Slip -- POS sale receipt (receipt-modal.tsx) jaisi thermal slip */}
+      <div
+        id={PRINT_AREA_ID}
+        className="w-full rounded-card bg-white p-5 font-mono text-black shadow-xl print:w-[74mm] print:max-w-[74mm] print:rounded-none print:p-[2mm] print:text-[13px] print:shadow-none"
+      >
+        <div className="receipt-watermark" aria-hidden="true">
+          <img src="/branding/kisan-watermark.svg" alt="" />
         </div>
 
-        {/* Parties */}
-        <div className="mb-4 grid grid-cols-2 gap-4">
-          <div>
-            <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-surface-400">Bhejne wala</p>
-            <p className="text-sm font-semibold text-surface-900 dark:text-white">{handover.senderName}</p>
-            <p className="text-xs capitalize text-surface-500">{handover.senderRole}</p>
-          </div>
-          <div>
-            <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-surface-400">Pane wala</p>
-            <p className="text-sm font-semibold text-surface-900 dark:text-white">{handover.recipientName}</p>
-            <p className="text-xs capitalize text-surface-500">{handover.recipientRole}</p>
-          </div>
+        {/* Header -- POS receipt jaisa */}
+        <div className="text-center">
+          <p className="font-display text-lg font-bold uppercase tracking-wide text-surface-900">{shopTitle}</p>
+          {branchLine && <p className="text-[11px] uppercase tracking-wide text-surface-500">{branchLine}</p>}
+          {header?.counterName && <p className="mt-0.5 text-xs text-surface-500">POS: {header.counterName}</p>}
+          <p className="mt-1 text-xs text-surface-500">{handover.sentAt ? receiptDate(handover.sentAt) : "—"}</p>
+          <p className="mt-2 text-sm font-bold uppercase tracking-wide text-surface-900">Cash Handover Slip</p>
         </div>
 
-        {/* Carrier */}
-        {handover.carrierName && (
-          <div className="mb-4">
-            <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-surface-400">
-              Carrier (le jane wala)
-            </p>
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
-              <Truck className="h-4 w-4 text-surface-400" /> {handover.carrierName}
-            </p>
-          </div>
-        )}
+        <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400" />
 
-        {/* Note */}
+        <div className="space-y-1 text-xs">
+          <ReceiptRow label="Slip #" value={handover.id.slice(0, 8).toUpperCase()} />
+          {header && header.shiftNumbers.length > 0 && (
+            <ReceiptRow label="Shift" value={header.shiftNumbers.join(", ")} />
+          )}
+          <ReceiptRow label="Bhejne wala" value={handover.senderName} />
+          {handover.senderRole && <ReceiptRow label="" value={handover.senderRole} capitalize />}
+          <ReceiptRow label="Pane wala" value={handover.recipientName} />
+          {handover.recipientRole && <ReceiptRow label="" value={handover.recipientRole} capitalize />}
+          {handover.carrierName && <ReceiptRow label="Carrier" value={handover.carrierName} />}
+        </div>
+
+        <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400" />
+
+        <div className="receipt-totals space-y-1 text-xs">
+          <div className="flex items-baseline justify-between gap-3 text-sm">
+            <span className="font-semibold text-surface-900">Raqam</span>
+            <span className="shrink-0 whitespace-nowrap text-right text-base font-bold tabular-nums text-surface-900">
+              {rs(handover.amountSent)}
+            </span>
+          </div>
+          {handover.amountReceived != null && (
+            <ReceiptRow label="Mili" value={rs(handover.amountReceived)} />
+          )}
+          {handover.difference != null && handover.difference !== 0 && (
+            <ReceiptRow
+              label={handover.difference < 0 ? "Kam" : "Zyada"}
+              value={rs(Math.abs(handover.difference))}
+              tone="red"
+            />
+          )}
+        </div>
+
         {handover.sentNote && (
-          <div className="mb-4">
-            <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-surface-400">Tareeqa / Note</p>
-            <p className="text-sm text-surface-700 dark:text-surface-300">{handover.sentNote}</p>
-          </div>
+          <>
+            <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400" />
+            <div className="text-xs">
+              <p className="text-surface-500">Tareeqa / Note</p>
+              <p className="mt-0.5 break-words text-surface-900">{handover.sentNote}</p>
+            </div>
+          </>
         )}
 
-        {/* Status */}
-        <div className="mb-4 rounded-xl bg-white/70 p-3 dark:bg-surface-900/50">
-          <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-wider text-surface-400">Status</p>
-          {isPending && !handover.carrierConfirmedAt && (
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-amber-800 dark:text-amber-400">
-              <Clock className="h-4 w-4" /> Bheja gaya — {handover.carrierName ? "carrier ki tasdeeq baqi" : "tasdeeq baqi"}
-            </p>
-          )}
-          {isPending && handover.carrierConfirmedAt && (
-            <p className="flex items-center gap-1.5 text-sm font-semibold text-blue-800 dark:text-blue-400">
-              <Truck className="h-4 w-4" /> Carrier ne le liya — Finance ki tasdeeq baqi
-            </p>
-          )}
-          {isDone && (
-            <p className={`flex items-center gap-1.5 text-sm font-semibold ${handover.status === "received" ? "text-emerald-800 dark:text-emerald-400" : "text-red-800 dark:text-red-400"}`}>
-              <CheckCircle2 className="h-4 w-4" />
-              {handover.status === "received"
-                ? `${rs(handover.amountReceived!)} mile — hisaab barabar`
-                : `${rs(handover.amountReceived!)} mile — ${rs(Math.abs(handover.difference!))} ${handover.difference! < 0 ? "kam" : "zyada"}`}
-            </p>
-          )}
-          {handover.differenceReason && (
-            <p className="mt-0.5 text-xs text-surface-500">{handover.differenceReason}</p>
-          )}
+        <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400" />
+
+        <div className="receipt-balances text-xs">
+          <p className="text-surface-500">Status</p>
+          <p
+            className={`mt-0.5 flex items-start gap-1.5 font-semibold ${
+              isDone
+                ? handover.status === "received"
+                  ? "text-emerald-700"
+                  : "text-red-600"
+                : handover.carrierConfirmedAt
+                  ? "text-blue-700"
+                  : "text-amber-700"
+            }`}
+          >
+            {isDone ? (
+              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 print:hidden" />
+            ) : handover.carrierConfirmedAt ? (
+              <Truck className="mt-0.5 h-3.5 w-3.5 shrink-0 print:hidden" />
+            ) : (
+              <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 print:hidden" />
+            )}
+            <span>{statusText}</span>
+          </p>
+          {handover.differenceReason && <p className="mt-0.5 text-surface-500">{handover.differenceReason}</p>}
         </div>
 
-        {/* Signatures */}
-        <div className="space-y-2">
-          {handover.carrierConfirmedAt && handover.carrierConfirmedByName && (
-            <SigBlock
-              label="Carrier — Digital Signature"
-              name={handover.carrierConfirmedByName}
-              date={fmt(handover.carrierConfirmedAt)}
-            />
-          )}
-          {handover.receivedByName && handover.receivedAt && (
-            <SigBlock
-              label="Finance / Pane wala — Digital Signature"
-              name={handover.receivedByName}
-              date={fmt(handover.receivedAt)}
-            />
-          )}
+        {/* Digital signatures */}
+        {((handover.carrierConfirmedAt && handover.carrierConfirmedByName) ||
+          (handover.receivedByName && handover.receivedAt)) && (
+          <>
+            <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400" />
+            <div className="receipt-balances space-y-2 text-xs">
+              {handover.carrierConfirmedAt && handover.carrierConfirmedByName && (
+                <div>
+                  <p className="text-surface-500">Carrier — Digital Signature</p>
+                  <p className="font-semibold text-surface-900">{handover.carrierConfirmedByName}</p>
+                  <p className="text-[11px] text-surface-500">{receiptDate(handover.carrierConfirmedAt)} par tasdeeq ki</p>
+                </div>
+              )}
+              {handover.receivedByName && handover.receivedAt && (
+                <div>
+                  <p className="text-surface-500">Finance / Pane wala — Digital Signature</p>
+                  <p className="font-semibold text-surface-900">{handover.receivedByName}</p>
+                  <p className="text-[11px] text-surface-500">{receiptDate(handover.receivedAt)} par tasdeeq ki</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        <div className="receipt-footer">
+          <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400" />
+          <p className="text-center text-xs font-medium text-surface-600">Cash ke sath ye slip office jama karayein</p>
+          <p className="text-center text-[11px] text-surface-500">POS Solution by ZR Technologies</p>
+          <p className="text-center text-[11px] text-surface-500">📞 0312-6513294</p>
         </div>
       </div>
 

@@ -5,7 +5,13 @@ import { SlipClient } from "./slip-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function SlipPage({ params }: { params: { id: string } }) {
+export default async function SlipPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams?: { print?: string };
+}) {
   const supabase = createClient();
   const service = createServiceClient();
 
@@ -16,7 +22,7 @@ export default async function SlipPage({ params }: { params: { id: string } }) {
 
   const { data: h } = await (service as any)
     .from("cash_handovers")
-    .select("id, amount_sent, amount_received, difference, difference_reason, status, sent_note, from_source, sent_at, received_at, from_profile_id, to_profile_id, received_by, carrier_profile_id, carrier_confirmed_at, carrier_confirmed_by")
+    .select("id, amount_sent, amount_received, difference, difference_reason, status, sent_note, from_source, sent_at, received_at, from_profile_id, from_branch_id, to_profile_id, received_by, carrier_profile_id, carrier_confirmed_at, carrier_confirmed_by")
     .eq("id", params.id)
     .maybeSingle();
 
@@ -48,6 +54,32 @@ export default async function SlipPage({ params }: { params: { id: string } }) {
 
   const byId = new Map((profileRows ?? []).map((p) => [p.id, p]));
 
+  // POS receipt jaisa header: Shop ka naam, Branch, POS counter aur shift.
+  // Shift band kar ke bheja gaya cash pos_shifts.cash_handover_id se
+  // is slip se juda hota hai -- wahan se counter -> shop/branch milte hain.
+  // Shift na ho (Cash Handover page se seedha bheja) to sirf bhejne wale
+  // ki branch.
+  const { data: shiftRows } = await (service as any)
+    .from("pos_shifts")
+    .select("shift_number, counter_id, opened_at")
+    .eq("cash_handover_id", h.id)
+    .order("opened_at", { ascending: true });
+  const shifts = (shiftRows ?? []) as { shift_number: string | null; counter_id: string | null }[];
+  const counterId = shifts.find((s) => s.counter_id)?.counter_id ?? null;
+  const { data: counter } = counterId
+    ? await (service as any).from("pos_counters").select("name, shop_id, branch_id").eq("id", counterId).maybeSingle()
+    : { data: null };
+  const branchId: string | null = counter?.branch_id ?? h.from_branch_id ?? null;
+  const [{ data: shop }, { data: branch }] = await Promise.all([
+    counter?.shop_id
+      ? (service as any).from("shops").select("name").eq("id", counter.shop_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    branchId
+      ? (service as any).from("branches").select("name, is_main_branch").eq("id", branchId).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const branchName: string | null = branch ? (branch.is_main_branch ? "Main Branch" : branch.name ?? null) : null;
+
   return (
     <SlipClient
       handover={{
@@ -69,6 +101,13 @@ export default async function SlipPage({ params }: { params: { id: string } }) {
         carrierConfirmedAt: h.carrier_confirmed_at ?? null,
         carrierConfirmedByName: h.carrier_confirmed_by ? (byId.get(h.carrier_confirmed_by)?.full_name ?? null) : null,
       }}
+      header={{
+        shopName: shop?.name ?? null,
+        branchName,
+        counterName: counter?.name ?? null,
+        shiftNumbers: shifts.map((s) => s.shift_number).filter(Boolean) as string[],
+      }}
+      autoPrint={searchParams?.print === "1"}
       isRecipient={isRecipient || isAdmin}
       isCarrier={isCarrier}
       viewerName={me?.full_name ?? ""}

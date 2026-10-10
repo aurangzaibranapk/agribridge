@@ -389,7 +389,7 @@ export function ReceiptModal({
  * yehi cheez pehle ek doosre se alag ho kar bikhar jati thi (thermal
  * ki tang chaudai par, 15 September).
  */
-function ReceiptRow({
+export function ReceiptRow({
   label,
   value,
   strong,

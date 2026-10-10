@@ -166,7 +166,7 @@ export function SendCashForm({
           </p>
           {state.handoverId && (
             <Link
-              href={`/admin/cash-handover/slip/${state.handoverId}`}
+              href={`/admin/cash-handover/slip/${state.handoverId}?print=1`}
               target="_blank"
               className="flex items-center gap-1.5 rounded-lg border border-brand-200 px-3 py-2 text-sm text-brand-700 hover:bg-brand-50 dark:border-brand-800 dark:text-brand-300"
             >
