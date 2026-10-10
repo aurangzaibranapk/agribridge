@@ -7,6 +7,12 @@ import { partyBalanceAmount, partyBalanceLabel, partyBalanceStatus } from "@/lib
 
 export const dynamic = "force-dynamic";
 
+function khataLabel(code?: string | null): string {
+  if (code === "1150") return "Kisan udhaar (khaad/loan)";
+  if (code === "2040") return "Kisan payable (grain)";
+  return "Gahak (1100)";
+}
+
 function rs(n: number): string {
   return `Rs ${n.toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
 }
@@ -41,6 +47,20 @@ function rs(n: number): string {
  * jawab ko "sifar" samajh lena is project mein pehle bhi ghalat adad de
  * chuka hai.
  */
+type KhataRow = { entry_date: string; entry_number: string; tafseel: string; debit: number; credit: number; khata_code?: string | null };
+
+async function loadPartyKhata(
+  supabase: ReturnType<typeof createClient>,
+  customerId: string,
+  start?: string,
+  end?: string,
+): Promise<{ data: KhataRow[]; combined: boolean }> {
+  const combined = await (supabase as any).rpc("fn_party_combined_ledger", { p_customer: customerId, p_start: start ?? null, p_end: end ?? null });
+  if (!combined.error) return { data: (combined.data ?? []) as KhataRow[], combined: true };
+  const old = await supabase.rpc("fn_customer_ledger", { p_customer: customerId, p_start: start, p_end: end });
+  return { data: (old.data ?? []) as KhataRow[], combined: false };
+}
+
 export async function CustomerStatementPage({
   params,
   searchParams,
@@ -63,17 +83,15 @@ export async function CustomerStatementPage({
   // hisaab chal raha ho.
   const openingEnd = sp.start ? new Date(`${sp.start}T00:00:00Z`) : null;
   if (openingEnd) openingEnd.setUTCDate(openingEnd.getUTCDate() - 1);
-  const [{ data: rows }, { data: baqi }, { data: openingRows }, { data: allRows }] = await Promise.all([
-    supabase.rpc("fn_customer_ledger", {
-      p_customer: id,
-      p_start: sp.start ?? undefined,
-      p_end: sp.end ?? undefined,
-    }),
+  // 524: gahak (1100) + jura kisan (customers.farmer_id: 1150 udhaar / 2040
+  // payable) -- grain bill, grain payment aur khaad loan bhi isi khate mein.
+  // Agar nayi function abhi DB par na ho to purana 1100-only khata.
+  const ledger = (p_start?: string, p_end?: string) => loadPartyKhata(supabase, id, p_start, p_end);
+  const [{ data: rows, combined }, { data: baqi }, { data: openingRows }, { data: allRows }] = await Promise.all([
+    ledger(sp.start ?? undefined, sp.end ?? undefined),
     supabase.rpc("fn_customer_baqi", { p_customer: id }),
-    sp.start
-      ? supabase.rpc("fn_customer_ledger", { p_customer: id, p_start: undefined, p_end: openingEnd!.toISOString().slice(0, 10) })
-      : Promise.resolve({ data: [] as any[] }),
-    supabase.rpc("fn_customer_ledger", { p_customer: id, p_start: undefined, p_end: undefined }),
+    sp.start ? ledger(undefined, openingEnd!.toISOString().slice(0, 10)) : Promise.resolve({ data: [] as KhataRow[], combined: false }),
+    ledger(undefined, undefined),
   ]);
 
   const qatarein = rows ?? [];
@@ -178,6 +196,7 @@ export async function CustomerStatementPage({
                   <th className="px-4 py-2">Tareekh</th>
                   <th className="px-4 py-2">Entry</th>
                   <th className="px-4 py-2">Tafseel</th>
+                  {combined && <th className="px-4 py-2">Khata</th>}
                   <th className="px-4 py-2 text-right">Liya</th>
                   <th className="px-4 py-2 text-right">Diya</th>
                   <th className="px-4 py-2 text-right">Baqi</th>
@@ -191,6 +210,7 @@ export async function CustomerStatementPage({
                     </td>
                     <td className="px-4 py-2 font-mono text-xs">{r.entry_number}</td>
                     <td className="px-4 py-2">{r.tafseel}</td>
+                    {combined && <td className="px-4 py-2 text-xs text-surface-500">{khataLabel(r.khata_code)}</td>}
                     <td className="px-4 py-2 text-right tabular-nums">
                       {Number(r.debit) ? rs(Number(r.debit)) : "—"}
                     </td>
