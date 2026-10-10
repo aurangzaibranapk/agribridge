@@ -11,6 +11,7 @@ import '../ai/kisan_ai_screen.dart';
 import '../farmer/farmer_khata_screen.dart';
 import '../farmer/farmer_services_screen.dart';
 import '../notifications/notifications_screen.dart';
+import '../office/service_inbox_screen.dart';
 import '../profile/profile_screen.dart';
 import 'screens/admin_dashboard.dart';
 import 'screens/dealer_dashboard.dart';
@@ -30,7 +31,7 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
 
   List<_NavItem> get allItems => switch (widget.profile.role) {
         AppRole.admin => const [
-            _NavItem('Home', Icons.home_rounded), _NavItem('Alerts', Icons.notifications_outlined), _NavItem('Menu', Icons.menu_rounded),
+            _NavItem('Home', Icons.home_rounded), _NavItem('Requests', Icons.assignment_outlined), _NavItem('Alerts', Icons.notifications_outlined), _NavItem('Menu', Icons.menu_rounded),
           ],
         AppRole.staff => const [
             _NavItem('Dashboard', Icons.dashboard_rounded), _NavItem('Products', Icons.inventory_2_outlined, 'products.intake'), _NavItem('Alerts', Icons.notifications_outlined), _NavItem('Menu', Icons.menu_rounded),
@@ -64,6 +65,7 @@ class _RoleDashboardState extends ConsumerState<RoleDashboard> {
       'Khata' => const FarmerKhataScreen(),
       'Services' => const FarmerServicesScreen(),
       'Alerts' => const NotificationsScreen(),
+      'Requests' => ServiceInboxScreen(profile: widget.profile),
       'Profile' || 'Menu' => ProfileScreen(profile: widget.profile),
       _ => home,
     };
