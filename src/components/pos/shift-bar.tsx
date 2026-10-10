@@ -487,6 +487,7 @@ export function ShiftBar({
   const [handoverOpen, setHandoverOpen] = useState(false);
   const [state, action] = useFormState(closeShift, KHALI);
   const [summary, setSummary] = useState<ShiftCashSummary | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
 
   const router = useRouter();
   const [receiptOpen, setReceiptOpen] = useState(false);
@@ -498,8 +499,13 @@ export function ShiftBar({
   const openedTime = new Date(openedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
   async function refreshSummary() {
-    const result = await getShiftSummary(shiftId);
-    if (!("error" in result)) setSummary(result);
+    try {
+      const result = await getShiftSummary(shiftId);
+      if ("error" in result) setSummaryError(result.error);
+      else { setSummary(result); setSummaryError(null); }
+    } catch (error) {
+      setSummaryError(error instanceof Error ? error.message : "Shift summary load nahi hua.");
+    }
   }
 
   // Bar khulte hi ek dafa, phir har 30 second baad -- taake bina kuch
@@ -693,6 +699,12 @@ export function ShiftBar({
               <form action={action} className="space-y-4 px-5 py-5">
                 <input type="hidden" name="shift_id" value={shiftId} />
 
+                {summaryError && !summary && (
+                  <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700">
+                    Hisaab load nahi hua: {summaryError}{" "}
+                    <button type="button" className="underline" onClick={() => refreshSummary()}>Dobara koshish</button>
+                  </div>
+                )}
                 {/* System khud bataye -- staff se pehle sawal nahi. */}
                 <div className="space-y-1.5 rounded-xl bg-surface-50 px-4 py-3 text-xs dark:bg-surface-800">
                   <div className="flex items-center justify-between text-surface-700 dark:text-surface-300">

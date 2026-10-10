@@ -8,6 +8,7 @@ git diff --cached --quiet || { echo "Commit staged changes before release." >&2;
 npm ci
 node scripts/check-cpanel-env.cjs
 node tests/shift-desk-cash.cjs
+node tests/shift-summary-embed.cjs
 node tests/supplier-bill-math.cjs
 node tests/supplier-bill-fields.cjs
 node tests/supplier-bill-csv.cjs
