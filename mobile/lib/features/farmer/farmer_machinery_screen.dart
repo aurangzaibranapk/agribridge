@@ -6,7 +6,7 @@ import '../../core/data/mobile_providers.dart';
 import '../../core/theme/app_theme.dart';
 import 'farmer_services_screen.dart';
 
-/// Confirmed ERP bookings only. New enquiries remain in Farmer Services.
+/// Canonical ERP booking records, including cancelled work. New enquiries remain in Farmer Services.
 class FarmerMachineryScreen extends ConsumerWidget {
   const FarmerMachineryScreen({super.key});
 
@@ -24,7 +24,7 @@ class FarmerMachineryScreen extends ConsumerWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('Booking aur request alag hain', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
               const SizedBox(height: 5),
-              const Text('Yahan ERP mein confirm hui bookings aur record ki hui raqam nazar aati hai. Nayi machinery request bhejne ke liye neeche button dabayen.'),
+              const Text('Yahan ERP bookings (cancelled bhi) aur record ki hui raqam nazar aati hai. Nayi machinery request bhejne ke liye neeche button dabayen.'),
               const SizedBox(height: 12),
               FilledButton.icon(
                 onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FarmerServicesScreen())),
@@ -40,7 +40,7 @@ class FarmerMachineryScreen extends ConsumerWidget {
             loading: () => const Card(child: ListTile(title: Text('Bookings load ho rahi hain…'))),
             error: (_, __) => Card(child: ListTile(title: const Text('Bookings load nahi huin.'), trailing: TextButton(onPressed: () => ref.invalidate(farmerMachineryBookingsProvider), child: const Text('Retry')))),
             data: (rows) => rows.isEmpty
-              ? const Card(child: ListTile(title: Text('Abhi koi confirmed ERP booking nahi.'), subtitle: Text('Aap ki bheji hui requests Services mein milengi.')))
+              ? const Card(child: ListTile(title: Text('Abhi koi ERP booking nahi.'), subtitle: Text('Aap ki bheji hui requests Services mein milengi.')))
               : Column(children: rows.map((row) => _booking(row)).toList()),
           ),
           const SizedBox(height: 90),
