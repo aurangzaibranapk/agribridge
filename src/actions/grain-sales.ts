@@ -10,6 +10,7 @@ import { requireGrainApprover } from "@/lib/grain/approval-guard";
 import { grainPayloadFromForm, formDataFromGrainPayload, type GrainPendingPayload } from "@/lib/grain/pending-payload";
 import { GRAIN_SALE_DRAFT_EDITABLE } from "@/lib/grain/sale-draft-payload";
 import { notifyRoles } from "@/lib/notifications";
+import { grainSaleReceivableLines, resolveGrainSaleCustomer } from "@/lib/grain/sale-receivable";
 
 export interface ActionState {
   error?: string;
@@ -59,6 +60,39 @@ function saleBackdateReason(date: string, what: string): string | null {
   return date < aajKaKhana() ? `${what} ki asal tareekh ${date} (form par darj)` : null;
 }
 
+/**
+ * 527: grain bikri ka gahak. Form par chuna hua, ya "naya gahak", ya buyer se
+ * jura hua; kuch na ho to buyer ke naam/phone se gahak bana kar buyer se jor
+ * dete hain (purani bikriyan/offline queue bina customer_id ke bhi chalti hain).
+ */
+async function ensureGrainSaleCustomer(
+  supabase: ReturnType<typeof createClient>,
+  args: { buyerId: string; formCustomerId: string | null; newName: string | null; newPhone: string | null },
+): Promise<{ customerId: string } | { error: string }> {
+  const db = supabase as any;
+  const { data: buyer } = await db.from("buyers").select("id, business_name, contact_person, phone_number, customer_id").eq("id", args.buyerId).maybeSingle();
+  if (!buyer) return { error: "Buyer nahi mila." };
+  const pick = resolveGrainSaleCustomer({ formCustomerId: args.formCustomerId, buyerCustomerId: buyer.customer_id ?? null, newCustomerName: args.newName });
+  let customerId: string;
+  if (pick.kind === "existing") {
+    const { data: c } = await db.from("customers").select("id").eq("id", pick.customerId).maybeSingle();
+    if (!c) return { error: "Chuna hua gahak nahi mila." };
+    customerId = c.id;
+  } else {
+    const name = pick.name ?? buyer.business_name ?? buyer.contact_person ?? "Grain buyer";
+    const phone = (args.newPhone ?? "").trim() || buyer.phone_number || "";
+    const { data: created, error } = await db
+      .from("customers")
+      .insert({ name, business_name: buyer.business_name ?? name, contact_person: buyer.contact_person ?? null, phone_number: phone, customer_type: "wholesale_shop" })
+      .select("id")
+      .single();
+    if (error || !created) return { error: `Gahak nahi bana: ${error?.message ?? "jawab nahi mila"}` };
+    customerId = created.id;
+  }
+  if (!buyer.customer_id) await db.from("buyers").update({ customer_id: customerId }).eq("id", buyer.id).is("customer_id", null);
+  return { customerId };
+}
+
 async function generateSaleNumber(): Promise<string> {
   const supabase = createClient();
   const year = new Date().getFullYear() % 100;
@@ -106,6 +140,11 @@ async function postGrainSale(formData: FormData, opts: GrainSalePostOptions): Pr
   if (bardanaCost < 0 || mazdooriCost < 0) return { error: "Bardana/Mazdoori cost sahi likhein." };
   if ((bardanaCost > 0 || mazdooriCost > 0) && !costAccountId) return { error: "Bardana/Mazdoori ka account select karein." };
 
+  const formCustomerId = String(formData.get("customer_id") ?? "").trim() || null;
+  const newCustomerName = String(formData.get("new_customer_name") ?? "").trim() || null;
+  const newCustomerPhone = String(formData.get("new_customer_phone") ?? "").trim() || null;
+  if (formCustomerId === "__new__" && !newCustomerName) return { error: "Naye gahak ka naam likhein." };
+
   const productId = await getGrainProductId(supabase, grainType);
   if (!productId) return { error: "Grain product setup nahi hai." };
 
@@ -127,6 +166,10 @@ async function postGrainSale(formData: FormData, opts: GrainSalePostOptions): Pr
   const backdateReason = (what: string) =>
     opts.backdateReason && saleDate < aajKaKhana() ? opts.backdateReason : saleBackdateReason(saleDate, what);
   if (available < quantity) return { error: `Sirf ${available} kg stock available hai is warehouse mein.` };
+
+  // Gahak stock/bikri se PEHLE tay ho -- warna bikri bina khate ke ban jati.
+  const customer = await ensureGrainSaleCustomer(supabase, { buyerId, formCustomerId, newName: newCustomerName, newPhone: newCustomerPhone });
+  if ("error" in customer) return { error: customer.error };
 
   const {
     data: { user },
@@ -161,6 +204,7 @@ async function postGrainSale(formData: FormData, opts: GrainSalePostOptions): Pr
     .insert({
       sale_number: saleNumber,
       buyer_id: buyerId,
+      customer_id: customer.customerId,
       grain_type: grainType,
       warehouse_id: warehouseId,
       quantity_kg: quantity,
@@ -196,6 +240,19 @@ async function postGrainSale(formData: FormData, opts: GrainSalePostOptions): Pr
       created_by: user?.id ?? null,
     });
   }
+
+  // 527: bikri HAMESHA gahak ka udhaar banati hai -- Dr 1100 (gahak) / Cr 4010,
+  // kisi bhi tareekh par. Fail ho to error (pehle ye kabhi post hi nahi hota tha).
+  const receivablePosted = await postJournal({
+    description: `Grain bikri ${saleNumber} -- ${quantity}kg ${grainType} (gahak khata)`,
+    sourceModule: "grain_sale",
+    sourceId: sale.id,
+    entryDate: saleDate,
+    backdateReason: backdateReason(`Grain sale ${saleNumber}`),
+    createdBy: user?.id ?? null,
+    lines: grainSaleReceivableLines({ customerId: customer.customerId, amount: totalAmount, memo: `Grain bikri ${saleNumber}` }),
+  });
+  if ("error" in receivablePosted) return { error: `Bikri ${saleNumber} ban gayi magar gahak ka khata (Dr 1100 / Cr 4010) ledger mein nahi gaya: ${receivablePosted.error}`, saleId: sale.id };
 
   // Bika hua anaj Stock -- Grain (1220) se nikal kar lagat (5020) mein --
   // procurement ne Dr 1220 / Cr 5020 kiya tha, yahan ulta.
@@ -296,8 +353,8 @@ export async function recordGrainSalePayment(_prev: ActionState, formData: FormD
   const clientActionRaw = String(formData.get("client_action_id") ?? "").trim();
   const clientActionId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(clientActionRaw) ? clientActionRaw : null;
 
-  // Payment row, sale ka amount_received, cash book aur journal (Dr bank /
-  // Cr 4010) -- sab EK database transaction mein (migration 516). Pehle ye
+  // Payment row, sale ka amount_received, cash book aur journal (527: Dr bank /
+  // Cr 1100 gahak) -- sab EK database transaction mein (migration 516). Pehle ye
   // alag alag qadam the aur tareekh hamesha "aaj" likhi jati thi.
   const { data: paid, error } = await (supabase as any).rpc("fn_record_grain_sale_payment_atomic", {
     p: {
@@ -505,7 +562,7 @@ export async function editGrainSaleDraft(_prev: ActionState, formData: FormData)
     if (before[field.key] === undefined && value.trim() === "") continue;
     next[field.key] = value.trim();
   }
-  for (const key of ["warehouse_id", "buyer_id", "delivery_term", "cost_account_id"]) {
+  for (const key of ["warehouse_id", "buyer_id", "customer_id", "delivery_term", "cost_account_id"]) {
     const value = formData.get(key);
     if (typeof value === "string" && (value || before[key] !== undefined)) next[key] = value;
   }
