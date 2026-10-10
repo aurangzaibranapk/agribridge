@@ -28,11 +28,11 @@ Use the existing green AgriBridge theme, short labels, a bottom navigation bar, 
 - Flutter app: role-aware sign-in, farmer summary/khata, catalog and order screens, notifications and request submission exist in code.
 - This change: admin request inbox with status updates; farmer request history shows all requests and current status. Testing database has the request table and scoped RLS.
 - ERP booking, payment, diesel, milk, grain and shop ledgers are **not yet connected** to this mobile build. A status such as “scheduled” on an enquiry must not be represented as a confirmed machinery booking.
-- Testing now has mobile devices, account deletion requests, the farmer summary RPC, the request table, catalog RPC and dashboard summary RPC. These were verified with authenticated read-only test calls. Mobile order submission remains undeployed. The original 380 migration references the removed `shop_inventory` table, so the current-schema catalog/dashboard migration replaces that dependency.
+- Testing now has mobile devices, account deletion requests, the farmer summary RPC with linked shop and machinery/GL balances and activity, the request table, catalog RPC and dashboard summary RPC. These were verified with authenticated read-only test calls. Mobile order submission remains undeployed. The original 380 migration references the removed `shop_inventory` table, so the current-schema catalog/dashboard migration replaces that dependency.
 
 ## Next implementation sequence
 
-1. Replace the mobile farmer summary RPC with a read-only, identity-scoped combined khata using the current ERP schema. Reconcile it against the web statement.
+1. Reconcile the new read-only farmer balances and activity against the web statement, including a farmer linked to a POS customer. Add grain payment and confirmed booking views without duplicating entries.
 2. Link machinery requests to the canonical booking ID, then add booking detail, payment and diesel views backed by existing ERP operations. No duplicate financial writes.
 3. Add milk, karyana and procurement statements from their canonical records. Handle a farmer linked to a customer through the existing identity mapping.
 4. Build a permission-scoped staff task desk and admin business view from ERP data. Add vets workflow when the ERP record and access rules are defined.
