@@ -201,7 +201,7 @@ function PaymentModal({ supplierId, onClose }: { supplierId: string; onClose: ()
     };
   }, [supplierId]);
 
-  if (state.success) setTimeout(onClose, 800);
+  if (state.success) setTimeout(onClose, state.pendingApproval ? 2500 : 800);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -211,6 +211,7 @@ function PaymentModal({ supplierId, onClose }: { supplierId: string; onClose: ()
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
+        {state.success && state.pendingApproval && <p className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Payment request ban gayi — approval pending. Doosra Admin/Owner Finance Queue se approve karega, tab ledger mein post hogi.</p>}
         <form
           action={formAction}
           encType="multipart/form-data"
@@ -225,7 +226,7 @@ function PaymentModal({ supplierId, onClose }: { supplierId: string; onClose: ()
                 entityType: "supplier_payments",
                 payload: { supplier_id: supplierId, fields },
               });
-              setOfflineNotice("Internet nahi hai. Payment device par save ho gayi; internet aate hi supplier ledger mein post hogi. Slip baad mein attach kar sakte hain.");
+              setOfflineNotice("Internet nahi hai. Payment device par save ho gayi; internet aate hi approval request banegi (Admin approve kare to ledger mein post hogi). Slip baad mein attach kar sakte hain.");
             } catch {
               setOfflineNotice("Offline payment save nahi ho saki.");
             }

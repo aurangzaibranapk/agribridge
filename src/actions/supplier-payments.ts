@@ -7,6 +7,8 @@ import { payAndPost } from "@/lib/ledger/supplier-money";
 export interface ActionState {
   error?: string;
   success?: boolean;
+  /** true jab payment approval ke liye ruki hai (abhi post nahi hui). */
+  pendingApproval?: boolean;
 }
 export async function recordSupplierPayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
@@ -35,22 +37,35 @@ export async function recordSupplierPayment(_prev: ActionState, formData: FormDa
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const paid = await payAndPost(supabase, {
-    supplierId,
+  if (!user) return { error: "Login zaroori hai." };
+  // Approval guard: supplier payment ab seedha post NAHI hoti. Ek
+  // supplier_payment_request banti hai; doosra Admin/Owner Finance Queue
+  // se approve kare to tab payAndPost chalta hai (approveSupplierPayment).
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  const role = profile?.role ?? "";
+  if (!["finance", "super_admin", "admin", "owner"].includes(role)) {
+    return { error: "Sirf Finance/Admin payment request bana sakte hain." };
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: reqNum, error: numErr } = await (serviceClient as any).rpc("fn_next_spr_number");
+  if (numErr || !reqNum) return { error: numErr?.message ?? "SPR counter fail" };
+  const { error: insErr } = await supabase.from("supplier_payment_requests").insert({
+    request_number: reqNum as string,
+    supplier_id: supplierId,
     amount,
-    paymentDate,
-    paymentMethod,
-    accountId: financeAccountId,
+    payment_method: paymentMethod ?? "Bank Transfer",
     notes,
-    slipUrl,
-    createdBy: user?.id ?? null,
-  });
-  if ("error" in paid) return { error: paid.error };
-  // Payable yahan se NAHI ghataya jata. supplier_payments mein qatar
-  // daalte hi trigger khud hisaab dobara laga deta hai (139). Pehle
-  // yahan Math.max(0, ...) tha, jo ghalati ko theek nahi karta tha --
-  // sirf chhupa deta tha.
+    slip_url: slipUrl,
+    status: "pending",
+    requested_by: user.id,
+    finance_account_id: financeAccountId,
+    payment_date: paymentDate,
+  } as never);
+  if (insErr) return { error: insErr.message };
+  revalidatePath("/admin/finance/queue");
+  // Purana seedha raasta (payAndPost) jaan boojh kar band -- import rakha hai.
+  void payAndPost;
   revalidatePath(`/admin/suppliers/${supplierId}/statement`);
   revalidatePath("/admin/suppliers");
-  return { success: true };
+  return { success: true, pendingApproval: true };
 }

@@ -349,6 +349,7 @@ export function PurchaseForm({
       {state.success && (
         <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">
           {t("pu_created", lang)}
+          {state.message ? <span className="mt-1 block text-xs">{state.message}</span> : null}
         </p>
       )}
       {state.warning && (
