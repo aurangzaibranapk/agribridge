@@ -13,7 +13,8 @@
     "check:i18n": "node scripts/check-i18n.mjs",
     "test:sales": "npx --yes tsx scripts/test-sales-guards.ts",
     "test:pnl": "npx --yes tsx scripts/test-pnl.ts",
-    "test:grain-summary": "npx --yes tsx scripts/test-grain-summary.ts"
+    "test:grain-summary": "npx --yes tsx scripts/test-grain-summary.ts",
+    "test:grain-drilldown": "npx --yes tsx scripts/test-grain-drilldown.ts"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",
