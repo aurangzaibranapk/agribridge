@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { requireMoneyAdmin } from "@/lib/access/money-gate";
 import { createClient } from "@/lib/supabase/server";
 
 export interface ActionState {
@@ -8,6 +9,8 @@ export interface ActionState {
 }
 
 export async function saveBillingSettings(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireMoneyAdmin("Doodh billing ka rate badalna");
+  if (!gate.ok) return { error: gate.error };
   const supabase = createClient();
   const companyName = String(formData.get("company_name") ?? "").trim();
   const serviceRate = Number(formData.get("service_rate_per_liter") ?? 0);
@@ -31,6 +34,8 @@ export async function saveBillingSettings(_prev: ActionState, formData: FormData
 }
 
 export async function saveMonthlyExpense(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireMoneyAdmin("Mahana kharcha darj karna");
+  if (!gate.ok) return { error: gate.error };
   const supabase = createClient();
   const month = Number(formData.get("expense_month") ?? 0);
   const year = Number(formData.get("expense_year") ?? 0);
