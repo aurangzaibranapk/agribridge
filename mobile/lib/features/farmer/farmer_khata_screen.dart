@@ -37,6 +37,13 @@ class _FarmerKhataScreenState extends ConsumerState<FarmerKhataScreen> {
                       const SizedBox(width: 10),
                       Expanded(child: _BalanceCard(label: 'Credit Due', amount: (data?['credit_balance'] as num?)?.toDouble() ?? 0, positive: false)),
                     ])),
+                    const SizedBox(height: 10),
+                    Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Row(children: [
+                      Expanded(child: _BalanceCard(label: 'Shop / Karyana', amount: (data?['shop_balance'] as num?)?.toDouble() ?? 0, positive: false)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _BalanceCard(label: 'Machine / Other', amount: (data?['machine_gl_balance'] as num?)?.toDouble() ?? 0, positive: false)),
+                    ])),
+                    const Padding(padding: EdgeInsets.fromLTRB(16, 8, 16, 0), child: Text('Yeh alag khatay hain; wallet balance in ka total nahi.', style: TextStyle(fontSize: 11, color: AppColors.muted))),
                     const SizedBox(height: 14),
                     SizedBox(height: 40, child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 16), children: ['All','Milk','FMCG','Fertilizer','Pesticide','Grain','Machinery','Seed'].map((value) => Padding(padding: const EdgeInsets.only(right: 8), child: ChoiceChip(label: Text(value), selected: filter == value, onSelected: (_) => setState(() => filter = value)))).toList())),
                     const SizedBox(height: 8),
