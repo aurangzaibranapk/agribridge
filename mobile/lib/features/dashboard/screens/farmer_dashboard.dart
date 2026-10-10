@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../farmer/farmer_khata_screen.dart';
 import '../../farmer/farmer_services_screen.dart';
+import '../../farmer/farmer_machinery_screen.dart';
 import '../../commerce/product_catalog_screen.dart';
 
 class FarmerDashboard extends ConsumerWidget {
@@ -45,7 +46,7 @@ class FarmerDashboard extends ConsumerWidget {
             QuickAction(label: 'Milk Payment', icon: Icons.water_drop_outlined, onTap: () => _open(context, const FarmerKhataScreen(initialFilter: 'Milk'))),
             QuickAction(label: 'Kisan Dukan', icon: Icons.storefront_outlined, onTap: () => _open(context, const ProductCatalogScreen())),
             QuickAction(label: 'Karyana Khata', icon: Icons.receipt_long_outlined, onTap: () => _open(context, const FarmerKhataScreen(initialFilter: 'FMCG'))),
-            QuickAction(label: 'Machinery Booking', icon: Icons.agriculture_outlined, onTap: () => _open(context, const FarmerServicesScreen())),
+            QuickAction(label: 'Machinery Booking', icon: Icons.agriculture_outlined, onTap: () => _open(context, const FarmerMachineryScreen())),
             QuickAction(label: 'Grain Sale', icon: Icons.grass_outlined, onTap: () => _open(context, const FarmerServicesScreen())),
             QuickAction(label: 'Veterinary', icon: Icons.pets_outlined, onTap: () => _open(context, const FarmerServicesScreen())),
           ]),
