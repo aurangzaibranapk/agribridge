@@ -25,7 +25,7 @@ class FarmerServicesScreen extends ConsumerWidget {
     QuickAction(label: 'Grain Sale Request', icon: Icons.grass_outlined, onTap: () => _request(context, 'grain_sale', 'Grain Sale Request', ['Crop', 'Expected Bags', 'Expected Date', 'Pickup Location'])), const SizedBox(height: 10),
     QuickAction(label: 'Veterinary Service', icon: Icons.pets_outlined, onTap: () => _request(context, 'veterinary_service', 'Veterinary Service', ['Animal', 'Problem', 'Preferred Date', 'Location'])), const SizedBox(height: 10),
     QuickAction(label: 'Crop Doctor', icon: Icons.health_and_safety_outlined, onTap: () => _request(context, 'crop_doctor', 'Crop Doctor', ['Crop', 'Problem', 'Acres', 'Farm Location'])), const SizedBox(height: 18),
-    const SectionTitle('Meri Requests', action: ''), const SizedBox(height: 8),
+    Row(children: [const Expanded(child: SectionTitle('Meri Requests', action: '')), IconButton(tooltip: 'Refresh requests', onPressed: () => ref.invalidate(serviceRequestsProvider), icon: const Icon(Icons.refresh))]), const SizedBox(height: 8),
     _ServiceRequestHistory(state: ref.watch(serviceRequestsProvider), onRetry: () => ref.invalidate(serviceRequestsProvider)),
     const SizedBox(height: 18),
     Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: AppColors.mint, borderRadius: BorderRadius.circular(18)), child: const Row(children: [CircleAvatar(backgroundColor: AppColors.green, child: Icon(Icons.smart_toy_outlined, color: Colors.white)), SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Kisan AI', style: TextStyle(fontWeight: FontWeight.w800)), Text('Fasal, spray, mausam ya janwaron ke bare mein poochain.', style: TextStyle(fontSize: 11, color: AppColors.muted))])), Icon(Icons.chevron_right)])),
@@ -93,13 +93,24 @@ class _ServiceRequestHistory extends StatelessWidget {
         error: (_, __) => Card(child: ListTile(title: const Text('Requests load nahi huin.'), trailing: TextButton(onPressed: onRetry, child: const Text('Retry')))),
         data: (rows) => rows.isEmpty
             ? const Card(child: ListTile(leading: Icon(Icons.inbox_outlined), title: Text('Abhi koi service request nahi.')))
-            : Column(children: rows.take(5).map((row) {
+            : Column(children: rows.map((row) {
                 final type = (row['request_type']?.toString() ?? 'service').replaceAll('_', ' ');
                 final status = (row['status']?.toString() ?? 'submitted').replaceAll('_', ' ');
                 return Card(child: ListTile(
                   leading: const CircleAvatar(backgroundColor: AppColors.mint, child: Icon(Icons.assignment_outlined, color: AppColors.green)),
                   title: Text(_title(type), style: const TextStyle(fontWeight: FontWeight.w700)),
-                  subtitle: Text('Status: ${_title(status)}'),
+                  subtitle: Text('Status: ${_title(status)} • ${row['created_at']?.toString().split('T').first ?? ''}'),
+                  onTap: () => showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+                    title: Text(_title(type)),
+                    content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Status: ${_title(status)}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 10),
+                      if (row['details'] is Map) ...Map<String, dynamic>.from(row['details'] as Map).entries.map((entry) => Padding(
+                        padding: const EdgeInsets.only(bottom: 6), child: Text('${entry.key}: ${entry.value}'),
+                      )),
+                    ])),
+                    actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Close'))],
+                  )),
                 ));
               }).toList()),
       );

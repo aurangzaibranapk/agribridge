@@ -27,6 +27,32 @@ class MobileRepository {
     });
   }
 
+  Future<List<Map<String, dynamic>>> officeServiceRequests() async {
+    if (!AppConfig.hasSupabase) return const [];
+    final user = _client.auth.currentUser;
+    if (user == null) throw StateError('Login zaroori hai.');
+    // RLS limits this query to the authenticated admin's organization.
+    final rows = await _client
+        .from('mobile_service_requests')
+        .select('id, profile_id, request_type, details, status, created_at, profiles(full_name)')
+        .order('created_at', ascending: false)
+        .limit(100);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  Future<void> updateOfficeServiceRequest({required String id, required String status}) async {
+    if (!AppConfig.hasSupabase) throw StateError('Supabase configured nahi.');
+    const allowed = {'submitted', 'in_review', 'approved', 'scheduled', 'completed', 'rejected', 'cancelled'};
+    if (!allowed.contains(status)) throw ArgumentError.value(status, 'status');
+    final row = await _client
+        .from('mobile_service_requests')
+        .update({'status': status, 'updated_at': DateTime.now().toUtc().toIso8601String()})
+        .eq('id', id)
+        .select('id')
+        .maybeSingle();
+    if (row == null) throw StateError('Request update nahi hui; access check karein.');
+  }
+
   Future<List<Map<String, dynamic>>> myServiceRequests() async {
     if (!AppConfig.hasSupabase) return const [];
     final user = _client.auth.currentUser;
@@ -100,6 +126,18 @@ class MobileRepository {
       'p_notes': notes,
     });
     return result.toString();
+  }
+
+  Future<Map<String, dynamic>> myGrainSummary() async {
+    if (!AppConfig.hasSupabase) throw StateError('Supabase configured nahi.');
+    final result = await _client.rpc('mobile_my_grain_summary');
+    return Map<String, dynamic>.from(result as Map);
+  }
+
+  Future<List<Map<String, dynamic>>> myMachineryBookings() async {
+    if (!AppConfig.hasSupabase) throw StateError('Supabase configured nahi.');
+    final result = await _client.rpc('mobile_my_machinery_bookings');
+    return List<Map<String, dynamic>>.from(result as List);
   }
 
   Future<Map<String, dynamic>> myFarmerSummary() async {

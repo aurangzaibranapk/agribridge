@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/commerce/product.dart';
+import '../models/app_role.dart';
 import '../auth/session_controller.dart';
 import '../config/app_config.dart';
 import '../permissions/permission_repository.dart';
@@ -32,10 +33,34 @@ final ordersProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   return ref.read(mobileRepositoryProvider).myOrders(profile.id);
 });
 
+final officeServiceRequestsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  if (AppConfig.demoMode) return const [];
+  if (!AppConfig.hasSupabase) throw StateError('App environment configured nahi.');
+  final profile = ref.watch(sessionProvider).valueOrNull;
+  if (profile == null || profile.role != AppRole.admin) return const [];
+  return ref.read(mobileRepositoryProvider).officeServiceRequests();
+});
+
 final serviceRequestsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   if (AppConfig.demoMode) return const [];
   if (!AppConfig.hasSupabase) throw StateError('App environment configured nahi.');
   return ref.read(mobileRepositoryProvider).myServiceRequests();
+});
+
+final farmerGrainSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  if (AppConfig.demoMode) return const {'total_supplied': 0, 'total_paid': 0, 'balance_due': 0, 'entries': [], 'payments': []};
+  if (!AppConfig.hasSupabase) throw StateError('App environment configured nahi.');
+  final profile = ref.watch(sessionProvider).valueOrNull;
+  if (profile == null || profile.role != AppRole.farmer) return const {};
+  return ref.read(mobileRepositoryProvider).myGrainSummary();
+});
+
+final farmerMachineryBookingsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  if (AppConfig.demoMode) return const [];
+  if (!AppConfig.hasSupabase) throw StateError('App environment configured nahi.');
+  final profile = ref.watch(sessionProvider).valueOrNull;
+  if (profile == null || profile.role != AppRole.farmer) return const [];
+  return ref.read(mobileRepositoryProvider).myMachineryBookings();
 });
 
 final farmerSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
@@ -63,6 +88,8 @@ const demoRoleDashboardSummary = <String, dynamic>{
 const demoFarmerSummary = <String, dynamic>{
   'milk_balance': 42850,
   'credit_balance': 14400,
+  'shop_balance': 7600,
+  'machine_gl_balance': 12000,
   'wallet_balance': 28450,
   'week_liters': 742,
   'week_amount': 158000,

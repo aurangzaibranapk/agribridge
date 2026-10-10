@@ -8,6 +8,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/app_widgets.dart';
 import '../../farmer/farmer_khata_screen.dart';
 import '../../farmer/farmer_services_screen.dart';
+import '../../farmer/farmer_machinery_screen.dart';
+import '../../farmer/farmer_grain_screen.dart';
+import '../../commerce/product_catalog_screen.dart';
 
 class FarmerDashboard extends ConsumerWidget {
   const FarmerDashboard({super.key, required this.profile, this.onNotifications});
@@ -41,10 +44,12 @@ class FarmerDashboard extends ConsumerWidget {
           ])),
           const SizedBox(height: 14),
           GridView.count(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), crossAxisCount: 2, mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 2.1, children: [
-            QuickAction(label: 'Milk Payment', icon: Icons.water_drop_outlined, onTap: () => _open(context, const FarmerKhataScreen())),
-            QuickAction(label: 'FMCG Khata', icon: Icons.shopping_cart_outlined, onTap: () => _open(context, const FarmerKhataScreen())),
-            QuickAction(label: 'Machinery Booking', icon: Icons.agriculture_outlined, onTap: () => _open(context, const FarmerServicesScreen())),
-            QuickAction(label: 'Grain Sale', icon: Icons.grass_outlined, onTap: () => _open(context, const FarmerServicesScreen())),
+            QuickAction(label: 'Milk Payment', icon: Icons.water_drop_outlined, onTap: () => _open(context, const FarmerKhataScreen(initialFilter: 'Milk'))),
+            QuickAction(label: 'Kisan Dukan', icon: Icons.storefront_outlined, onTap: () => _open(context, const ProductCatalogScreen())),
+            QuickAction(label: 'Karyana Khata', icon: Icons.receipt_long_outlined, onTap: () => _open(context, const FarmerKhataScreen(initialFilter: 'FMCG'))),
+            QuickAction(label: 'Machinery Booking', icon: Icons.agriculture_outlined, onTap: () => _open(context, const FarmerMachineryScreen())),
+            QuickAction(label: 'Grain Sale', icon: Icons.grass_outlined, onTap: () => _open(context, const FarmerGrainScreen())),
+            QuickAction(label: 'Veterinary', icon: Icons.pets_outlined, onTap: () => _open(context, const FarmerServicesScreen())),
           ]),
           const SizedBox(height: 16),
           const SectionTitle('Is haftay ka Doodh Record'), const SizedBox(height: 8),

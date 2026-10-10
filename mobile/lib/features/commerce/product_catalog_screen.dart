@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/data/mobile_providers.dart';
 import 'cart_controller.dart';
 import 'cart_screen.dart';
+import 'order_history_screen.dart';
 import 'product.dart';
 
 class ProductCatalogScreen extends ConsumerStatefulWidget {
@@ -24,7 +25,8 @@ class _ProductCatalogScreenState extends ConsumerState<ProductCatalogScreen> {
     final categories = ['All', ...{for (final p in allProducts) p.category}];
     final products = allProducts.where((p) => (category == 'All' || p.category == category) && '${p.name} ${p.brand} ${p.category}'.toLowerCase().contains(query.toLowerCase())).toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('Products'), actions: [
+      appBar: AppBar(title: const Text('Kisan Shop'), actions: [
+        IconButton(tooltip: 'My orders', onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OrderHistoryScreen())), icon: const Icon(Icons.receipt_long_outlined)),
         IconButton(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())), icon: Badge(label: Text('${cart.values.fold<int>(0, (s, e) => s + e.quantity)}'), child: const Icon(Icons.shopping_bag_outlined))),
       ]),
       body: Column(children: [

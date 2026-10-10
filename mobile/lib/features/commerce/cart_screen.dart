@@ -19,10 +19,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final total = cart.values.fold<double>(0, (sum, line) => sum + line.total);
     return Scaffold(appBar: AppBar(title: const Text('Review Order')), body: cart.isEmpty ? const Center(child: Text('Cart abhi khali hai.')) : ListView(padding: const EdgeInsets.all(16), children: [
       ...cart.values.map((line) => Card(child: ListTile(title: Text(line.product.name, style: const TextStyle(fontWeight: FontWeight.w700)), subtitle: Text('${line.quantity} × Rs ${line.product.price.toStringAsFixed(0)}'), trailing: Text('Rs ${line.total.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w800))))),
-      const SizedBox(height: 16), const Text('Payment Method', style: TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 8),
-      DropdownButtonFormField<String>(initialValue: payment, items: ['Cash on Delivery', 'Shop Pickup Payment', 'Customer Khata', 'Bank Transfer', 'Easypaisa', 'JazzCash', 'Advance Payment'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) => setState(() => payment = v!)),
+      const SizedBox(height: 16), const Text('Payment Preference', style: TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 8),
+      DropdownButtonFormField<String>(initialValue: payment, items: ['Cash on Delivery', 'Shop Pickup Payment', 'Customer Khata', 'Bank Transfer', 'Easypaisa', 'JazzCash', 'Advance Payment'].map((v) => DropdownMenuItem(value: v, enabled: v != 'Customer Khata', child: Text(v == 'Customer Khata' ? 'Customer Khata (verification pending)' : v))).toList(), onChanged: (v) { if (v != null) setState(() => payment = v); }),
+      const SizedBox(height: 8), const Text('Yeh sirf payment ki preference hai. Abhi paisa receive ya khata debit nahi hoga; staff stock aur payment confirm karega.'),
       const SizedBox(height: 18), Card(child: Padding(padding: const EdgeInsets.all(18), child: Row(children: [const Expanded(child: Text('Grand Total', style: TextStyle(fontWeight: FontWeight.w700))), Text('Rs ${total.toStringAsFixed(0)}', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.green))]))),
-      const SizedBox(height: 16), FilledButton.icon(onPressed: submitting ? null : () => _submit(cart.values), icon: submitting ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.verified_outlined), label: Text(submitting ? 'Submit ho raha hai…' : 'Order Confirm Karein'), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54))),
+      const SizedBox(height: 16), FilledButton.icon(onPressed: submitting ? null : () => _submit(cart.values), icon: submitting ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.verified_outlined), label: Text(submitting ? 'Submit ho raha hai…' : 'Order Request Bhejein'), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(54))),
     ]));
   }
 
@@ -36,7 +37,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       final id = await ref.read(mobileRepositoryProvider).submitOrder(lines: lines, paymentMethod: payment);
       ref.read(cartProvider.notifier).clear();
       if (!mounted) return;
-      await showDialog(context: context, builder: (_) => AlertDialog(title: const Text('Order Submit Ho Gaya'), content: Text('Reference: $id'), actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Theek hai'))]));
+      await showDialog(context: context, builder: (_) => AlertDialog(title: const Text('Request Mil Gayi'), content: Text('Reference: $id. Staff stock aur payment verify karega. Abhi koi payment ya khata entry nahi hui.'), actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Theek hai'))]));
       if (mounted) Navigator.pop(context);
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Order submit nahi hua. Products aur internet check karke dobara koshish karein.')));
