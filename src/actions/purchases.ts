@@ -142,9 +142,29 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
 
 
   const purchaseNumber = `PO-${Date.now()}`;
-  const supplierBillNo = supplierBillWorkspace ? String(formData.get("supplier_bill_no") ?? "").trim() || null : null;
+  const rawBill = supplierBillWorkspace ? String(formData.get("supplier_bill_no") ?? "").trim() : "";
+  const supplierBillNo = rawBill || null;
   if (supplierBillWorkspace && !supplierBillNo) {
     return { error: "Supplier invoice ka bill number zaroor likhein taa-ke wohi bill dobara save na ho." };
+  }
+  // Duplicate guard (code + DB). Migration 388 ne unique index hata diya tha;
+  // yahan pehle check, aur migration 521 index wapas laati hai.
+  if (supplierBillNo) {
+    const { data: existingBills } = await supabase
+      .from("purchases")
+      .select("id, purchase_number, supplier_bill_no, status")
+      .eq("supplier_id", supplierId)
+      .neq("status", "cancelled");
+    const hit = (existingBills ?? []).find(
+      (row) => String(row.supplier_bill_no ?? "").trim().toLowerCase() === supplierBillNo.toLowerCase()
+    );
+    if (hit) {
+      return { error: `Supplier bill ${supplierBillNo} pehle se save hai (${hit.purchase_number}). Duplicate bill dobara nahi banaya.` };
+    }
+  }
+  // Staff (non Admin/Owner) abhi adaigi nahi kar sakta — manzoori ke baad.
+  if (!approver && terms.paidNow > 0) {
+    return { error: "Abhi adaigi sirf Admin ya Owner kar sakte hain. Staff bill manzoori ke liye bhejein (credit / due)." };
   }
   const { data: purchase, error: purchaseError } = await supabase
     .from("purchases")
@@ -174,7 +194,7 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
     .select("id")
     .single();
   if (purchaseError || !purchase) {
-    if (supplierBillWorkspace && purchaseError?.code === "23505" && /ux_purchases_supplier_bill_no/i.test(`${purchaseError.message} ${purchaseError.details ?? ""}`) && supplierBillNo) {
+    if (supplierBillWorkspace && purchaseError?.code === "23505" && supplierBillNo) {
       return { error: `Supplier bill ${supplierBillNo} pehle se save hai. Duplicate bill dobara nahi banaya.` };
     }
     return { error: purchaseError?.message ?? "Failed to create purchase." };
@@ -186,27 +206,6 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
       kind: "submit",
       body: "Manzoori ke liye bheji",
     });
-  }
-
-  // Jo abhi diya wo supplier_payments mein -- wahi jagah jahan har
-  // adaigi jati hai (139). Purchase par adad NAHI likha jata; warna
-  // ek din do jagah ka adad alag nikalta hai.
-  if (terms.paidNow > 0) {
-    const paid = await payAndPost(supabase, {
-      supplierId,
-      purchaseId: purchase.id,
-      amount: terms.paidNow,
-      paymentDate: purchaseDate,
-      paymentMethod: (formData.get("payment_method") as string) || null,
-      accountId: String(formData.get("finance_account_id") ?? "").trim() || null,
-      notes: `Kharid ${purchaseNumber} ke waqt`,
-      branchId,
-      createdBy: user?.id ?? null,
-      // Purchase ki tareekh khud peeche chuni gayi ho sakti hai -- wo
-      // khud wajah hai, alag se kisi se poochne ki zaroorat nahi.
-      backdateReason: purchaseDate < aajKaKhana() ? `Purchase ${purchaseNumber} ki apni tareekh (${purchaseDate}) — adaigi bhi usi din ki hai.` : null,
-    });
-    if ("error" in paid) return { error: `Purchase ban gayi magar: ${paid.error}` };
   }
 
   // Adaigi ki slips (436): har slip raqam + tareekh + tasveer ke sath.
@@ -298,6 +297,26 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
         .is("pack_size", null);
     }
   }
+  // Adaigi lines ke BAAD — taake line fail hone par payment pehle na ban jaye.
+  // Jo abhi diya wo supplier_payments mein -- wahi jagah jahan har
+  // adaigi jati hai (139). Purchase par adad NAHI likha jata.
+  let paymentWarning: string | null = null;
+  if (terms.paidNow > 0) {
+    const paid = await payAndPost(supabase, {
+      supplierId,
+      purchaseId: purchase.id,
+      amount: terms.paidNow,
+      paymentDate: purchaseDate,
+      paymentMethod: (formData.get("payment_method") as string) || null,
+      accountId: String(formData.get("finance_account_id") ?? "").trim() || null,
+      notes: `Kharid ${purchaseNumber} ke waqt`,
+      branchId,
+      createdBy: user?.id ?? null,
+      backdateReason: purchaseDate < aajKaKhana() ? `Purchase ${purchaseNumber} ki apni tareekh (${purchaseDate}) — adaigi bhi usi din ki hai.` : null,
+    });
+    if ("error" in paid) paymentWarning = `Purchase aur lines ban gayin, magar adaigi nahi hui: ${paid.error}. Dobara poora bill mat banayein — payment alag se karein.`;
+  }
+
   revalidatePath("/admin/purchases");
   revalidatePath("/admin/purchases/bills");
   revalidatePath("/admin/purchases/supplier-bill");
@@ -313,7 +332,7 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
       ? `Supplier Purchase Bill save hua. Supplier bill ${supplierBillNo || "number nahi diya"}; amount Rs ${invoiceTotal.toLocaleString()}. Stock GRN receive par update hoga.`
       : `Purchase ${purchaseNumber} create hui.`,
   });
-  return { success: true, purchaseId: purchase.id, warning: slipWarning ?? undefined };
+  return { success: true, purchaseId: purchase.id, warning: [slipWarning, paymentWarning].filter(Boolean).join(" ") || undefined };
 }
 
 /**
@@ -356,6 +375,21 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     .select("id, product_id, batch_id, quantity, unit_cost, products(name)")
     .eq("purchase_id", purchaseId);
   if (!items || items.length === 0) return { error: "No items on this purchase." };
+  // Agar stock movement pehle ban chuki ho aur status update fail hua ho,
+  // dobara receive stock dohra na kare.
+  const { data: alreadyMoved } = await supabase
+    .from("stock_movements")
+    .select("id")
+    .eq("reference_type", "purchase")
+    .eq("reference_id", purchaseId)
+    .limit(1);
+  if (alreadyMoved && alreadyMoved.length > 0) {
+    await supabase.from("purchases").update({
+      status: "received",
+      received_at: new Date().toISOString(),
+    }).eq("id", purchaseId).neq("status", "received");
+    return { success: true, purchaseId, message: "Ye purchase pehle hi stock mein aa chuki hai. Dobara stock nahi badla." };
+  }
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -704,7 +738,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     recordLabel: purchase.purchase_number ?? null,
     branchId: purchase.branch_id ?? null,
     title: `Maal aa gaya — ab dena bana`,
-    message: `Rs ${Math.round(acceptedTotal).toLocaleString()} ka maal wusool hua. Supplier ka dena ab is raqam ka hai.`,
+    message: `Rs ${Math.round(acceptedTotal).toLocaleString()} ka maal wusool hua. Supplier ka dena ab Rs ${acceptedPayable.toLocaleString()} hai.`,
     byProfileId: user?.id ?? null,
   });
 
@@ -1117,15 +1151,13 @@ export async function getNextSupplierBillNo(): Promise<{ billNo: string } | { er
   const { data } = await service
     .from("purchases")
     .select("supplier_bill_no")
-    .like("supplier_bill_no", `${prefix}%`)
-    .order("supplier_bill_no", { ascending: false })
-    .limit(1);
+    .like("supplier_bill_no", `${prefix}%`);
 
-  let next = 1;
-  if (data?.[0]?.supplier_bill_no) {
-    const num = parseInt(String(data[0].supplier_bill_no).replace(prefix, ""), 10);
-    if (!isNaN(num)) next = num + 1;
+  let max = 0;
+  for (const row of data ?? []) {
+    const num = parseInt(String(row.supplier_bill_no ?? "").replace(prefix, ""), 10);
+    if (!isNaN(num) && num > max) max = num;
   }
 
-  return { billNo: `${prefix}${String(next).padStart(3, "0")}` };
+  return { billNo: `${prefix}${String(max + 1).padStart(3, "0")}` };
 }

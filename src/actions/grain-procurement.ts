@@ -126,9 +126,20 @@ function validClientActionId(raw: FormDataEntryValue | null): string | null {
 }
 
 export async function createGrainEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  // "Pending (Admin approval)" -- sirf tab jab staff khud chune. Warna purana
-  // raasta: foran stock, ledger, cash book, kharche aur payment.
-  if (String(formData.get("save_mode") ?? "") === "pending") return saveGrainEntryAsPending(formData);
+  // Malik: sirf Admin / Owner seedha post kar sakte hain (stock, ledger, cash).
+  // Baqi sab ke liye manzoori lazmi — chahe unhon ne pending na chuna ho.
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+  const isApprover = profile?.role === "owner" || profile?.role === "admin" || profile?.role === "super_admin";
+  if (!isApprover || String(formData.get("save_mode") ?? "") === "pending") {
+    return saveGrainEntryAsPending(formData);
+  }
   return postGrainEntry(formData, {});
 }
 
@@ -236,6 +247,14 @@ async function postGrainEntry(formData: FormData, opts: GrainPostOptions): Promi
     if (photoField instanceof File && photoField.size > 0) receiptPhoto = photoField;
   }
 
+  if (!opts.validateOnly && !opts.pendingEntryId) {
+    const { data: { user: caller } } = await supabase.auth.getUser();
+    const { data: callerProfile } = await supabase.from("profiles").select("role").eq("id", caller?.id ?? "").maybeSingle();
+    const callerIsApprover = callerProfile?.role === "owner" || callerProfile?.role === "admin" || callerProfile?.role === "super_admin";
+    if (!callerIsApprover) {
+      return { error: "Grain entry seedha sirf Admin ya Owner post kar sakte hain. Baqi ke liye manzoori lazmi hai." };
+    }
+  }
   if (opts.validateOnly) {
     return {
       success: true,
