@@ -3,11 +3,45 @@ import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { GrainClient } from "@/app/admin/grain-procurement/grain-client";
+import { GrainSummaryCards } from "@/app/admin/grain-procurement/grain-summary-cards";
+import { summarizeGrainLedger, GRAIN_ONLY_ACCOUNTS, type GrainLedgerLine, type GrainSummary } from "@/lib/grain/ledger-summary";
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+async function loadGrainSummary(supabase: any, from: string, to: string): Promise<{ summary: GrainSummary | null; error: string | null }> {
+  try {
+    const [mods, accs] = await Promise.all([
+      supabase.from("journal_entries").select("id").ilike("source_module", "grain%").lte("entry_date", to).limit(10000),
+      supabase.from("journal_lines").select("entry_id").in("account_code", [...GRAIN_ONLY_ACCOUNTS]).limit(10000),
+    ]);
+    if (mods.error) throw mods.error;
+    if (accs.error) throw accs.error;
+    const ids = Array.from(new Set([...(mods.data ?? []).map((r: any) => r.id), ...(accs.data ?? []).map((r: any) => r.entry_id)]));
+    const lines: GrainLedgerLine[] = [];
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data, error } = await supabase
+        .from("journal_lines")
+        .select("entry_id, account_code, debit, credit, journal_entries!inner(entry_date, source_module)")
+        .in("entry_id", ids.slice(i, i + 200));
+      if (error) throw error;
+      for (const r of data ?? []) {
+        const je = Array.isArray(r.journal_entries) ? r.journal_entries[0] : r.journal_entries;
+        lines.push({ entry_id: r.entry_id, account_code: r.account_code, debit: r.debit, credit: r.credit, entry_date: je?.entry_date, source_module: je?.source_module ?? null });
+      }
+    }
+    return { summary: summarizeGrainLedger(lines, { from: from || null, to }), error: null };
+  } catch (e: any) {
+    return { summary: null, error: e?.message ?? String(e) };
+  }
+}
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminGrainProcurementPage() {
+export default async function AdminGrainProcurementPage({ searchParams }: { searchParams?: { from?: string; to?: string } }) {
   const supabase = createClient();
+  const summaryFrom = ISO_DATE.test(searchParams?.from ?? "") ? String(searchParams?.from) : "";
+  const summaryTo = ISO_DATE.test(searchParams?.to ?? "") ? String(searchParams?.to) : new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Karachi" });
+  const grainSummary = await loadGrainSummary(supabase, summaryFrom, summaryTo);
   const lang = getLanguageFromCookies("rm");
   const { data: { user } } = await supabase.auth.getUser();
   const [
@@ -158,6 +192,8 @@ export default async function AdminGrainProcurementPage() {
   return (
     <div className="mx-auto w-full max-w-[1500px]">
       <PageHeader title={t("gr_title", lang)} description={t("gr_subtitle", lang)} />
+
+      <GrainSummaryCards summary={grainSummary.summary} from={summaryFrom} to={summaryTo} error={grainSummary.error} />
 
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
