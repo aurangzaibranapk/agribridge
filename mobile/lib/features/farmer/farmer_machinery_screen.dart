@@ -50,11 +50,27 @@ class FarmerMachineryScreen extends ConsumerWidget {
   }
 
   Widget _booking(Map<String, dynamic> row) {
-    final total = (row['total_amount'] as num?) ?? 0;
-    final paid = (row['amount_received'] as num?) ?? 0;
-    final remaining = total - paid;
-    final date = row['work_date']?.toString() ?? row['booking_date']?.toString() ?? '';
+    num asAmount(dynamic value) => value is num ? value : num.tryParse(value?.toString() ?? '') ?? 0;
     String amount(num value) => 'Rs ${NumberFormat('#,##0').format(value)}';
+    final total = asAmount(row['total_amount']);
+    final recorded = asAmount(row['amount_received']);
+    final payments = (row['payments'] as List? ?? const [])
+        .whereType<Map>()
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .toList();
+    final diesel = (row['diesel'] as List? ?? const [])
+        .whereType<Map>()
+        .map((entry) => Map<String, dynamic>.from(entry))
+        .toList();
+    final verifiedSum = payments.fold<num>(0, (sum, entry) => sum + asAmount(entry['amount']));
+    final mismatch = payments.isNotEmpty && (verifiedSum - recorded).abs() > 0.01;
+    final date = row['work_date']?.toString() ?? row['booking_date']?.toString() ?? '';
+    String payer(String? value) => switch (value) {
+      'farmer' => 'Farmer',
+      'vendor' => 'Vendor',
+      'company' => 'ART',
+      _ => value ?? 'Unknown',
+    };
     return Padding(padding: const EdgeInsets.only(bottom: 10), child: Card(child: Padding(
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -67,9 +83,43 @@ class FarmerMachineryScreen extends ConsumerWidget {
         if (date.isNotEmpty) Text('Date: $date', style: const TextStyle(color: AppColors.muted)),
         if ((row['location']?.toString() ?? '').isNotEmpty) Text('Village: ${row['location']}'),
         const Divider(height: 22),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Total recorded'), Text(amount(total))]),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Received'), Text(amount(paid))]),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Remaining'), Text(total > 0 ? amount(remaining) : 'Bill pending', style: const TextStyle(fontWeight: FontWeight.w800))]),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Booking amount'), Text(total > 0 ? amount(total) : 'Bill pending')]),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const Text('Booking recorded received'), Text(amount(recorded))]),
+        if (!mismatch)
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            const Text('Remaining'),
+            Text(total > 0 ? amount(total - recorded) : 'Bill pending', style: const TextStyle(fontWeight: FontWeight.w800)),
+          ]),
+        if (mismatch) ...[
+          const SizedBox(height: 8),
+          Text('Verified payment entries: ${amount(verifiedSum)}', style: const TextStyle(fontWeight: FontWeight.w700)),
+          const Text('Payment entries aur booking total match nahi karte. Office se hisaab milwayein; final balance abhi nahi dikhaya gaya.', style: TextStyle(color: AppColors.muted)),
+        ],
+        if (payments.isNotEmpty) ...[
+          const Divider(height: 22),
+          const Text('Verified payments', style: TextStyle(fontWeight: FontWeight.w800)),
+          for (final entry in payments)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: Text('${entry['kind'] == 'advance' ? 'Advance' : 'Payment'} • ${entry['date'] ?? ''}'),
+              subtitle: Text('Method: ${entry['method'] ?? '—'}'),
+              trailing: Text(amount(asAmount(entry['amount']))),
+            ),
+        ],
+        if (diesel.isNotEmpty) ...[
+          const Divider(height: 22),
+          const Text('Verified diesel record', style: TextStyle(fontWeight: FontWeight.w800)),
+          for (final entry in diesel)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: Text('${entry['litres'] ?? '—'} litres • ${entry['date'] ?? ''}'),
+              subtitle: Text('Diya: ${payer(entry['paid_by']?.toString())}'),
+              trailing: Text(amount(asAmount(entry['amount']))),
+            ),
+          const Text('Diesel ki raqam automatic farmer balance mein shamil nahi ki gayi.', style: TextStyle(color: AppColors.muted)),
+        ],
       ]),
     )));
   }
