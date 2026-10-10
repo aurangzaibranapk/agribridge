@@ -226,28 +226,54 @@ export default async function MasterDashboardPage({
   });
 
   const productTrend: Record<string, number[]> = {};
-  let topSellingItems: { name: string; unit: string; qty: number; trend: number[] }[] = [];
+  let topSellingItems: { name: string; unit: string; qty: number; amount?: number; trend: number[] }[] = [];
 
   if (saleIds.length > 0 || trendSaleIds.length > 0) {
-    const allSaleIds = Array.from(new Set([...saleIds, ...trendSaleIds]));
-    const { data: itemRows } = await serviceClient
-      .from("pos_sale_items")
-      .select("product_id, quantity, sale_id, products(name, unit)")
-      .in("sale_id", allSaleIds);
-    const productMap = new Map<string, { name: string; unit: string; qty: number }>();
-    for (const item of itemRows ?? []) {
-      const prod: any = Array.isArray(item.products) ? (item.products as any[])[0] : item.products;
-      const pid = (item as any).product_id as string;
-      if (!prod || !pid) continue;
-      if (saleIds.includes((item as any).sale_id)) {
-        const existing = productMap.get(pid);
-        if (existing) { existing.qty += Number((item as any).quantity ?? 0); }
-        else { productMap.set(pid, { name: prod.name ?? "—", unit: prod.unit ?? "", qty: Number((item as any).quantity ?? 0) }); }
+    // Pehle yahan saare sale ids (400+ UUIDs) `.in("sale_id", ...)` mein URL
+    // ke andar bheje jate the. PostgREST poori query `Content-Location`
+    // header mein wapas bhejta hai; ~16 KB se bara header Node ka fetch
+    // ("Headers Overflow", UND_ERR_HEADERS_OVERFLOW) rad kar deta hai, aur
+    // error chup chaap null ban kar chart khaali dikhata tha. Ab sale ki
+    // tareekh par seedha join (`pos_sales!inner`) se filter hota hai -- URL
+    // chhota rehta hai -- aur 1,000 qataron ki hadd ke liye paging hai.
+    const monthSaleIds = new Set<string>(saleIds as string[]);
+    const itemsFrom = sellTrendStart < monthStart ? sellTrendStart : monthStart;
+    const itemRows: any[] = [];
+    for (let from = 0; ; from += 1000) {
+      let itemsQuery = serviceClient
+        .from("pos_sale_items")
+        .select("id, product_id, quantity, subtotal, sale_id, products(name, unit), pos_sales!inner(created_at, shop_id)")
+        .gte("pos_sales.created_at", itemsFrom)
+        .order("id")
+        .range(from, from + 999);
+      if (shopId) itemsQuery = itemsQuery.eq("pos_sales.shop_id", shopId);
+      const { data: page, error: itemsErr } = await itemsQuery;
+      if (itemsErr) {
+        console.error("[master-dashboard] top selling items load failed:", itemsErr.message);
+        break;
       }
-      const wkIdx = saleWeekMap.get((item as any).sale_id);
+      if (!page) break;
+      itemRows.push(...page);
+      if (page.length < 1000) break;
+    }
+    const productMap = new Map<string, { name: string; unit: string; qty: number; amount: number }>();
+    for (const item of itemRows) {
+      const prod: any = Array.isArray(item.products) ? item.products[0] : item.products;
+      const pid = item.product_id as string;
+      if (!prod || !pid) continue;
+      if (monthSaleIds.has(item.sale_id)) {
+        const existing = productMap.get(pid);
+        if (existing) {
+          existing.qty += Number(item.quantity ?? 0);
+          existing.amount += Number(item.subtotal ?? 0);
+        } else {
+          productMap.set(pid, { name: prod.name ?? "—", unit: prod.unit ?? "", qty: Number(item.quantity ?? 0), amount: Number(item.subtotal ?? 0) });
+        }
+      }
+      const wkIdx = saleWeekMap.get(item.sale_id);
       if (wkIdx !== undefined) {
         if (!productTrend[pid]) productTrend[pid] = Array(SELL_WEEKS).fill(0);
-        productTrend[pid][Number(wkIdx)] += Number((item as any).quantity ?? 0);
+        productTrend[pid][Number(wkIdx)] += Number(item.quantity ?? 0);
       }
     }
     topSellingItems = [...productMap.entries()]
