@@ -13,6 +13,16 @@ export interface ActionState {
 export async function adjustStock(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  const allowed = ["owner", "super_admin", "admin", "warehouse"];
+  if (!me?.is_active || !allowed.includes(me.role)) {
+    return { error: "Stock badalna sirf Owner, Admin ya Warehouse kar sakta hai." };
+  }
+
   let inventoryId = String(formData.get("inventory_id") ?? "").trim();
   const productId = String(formData.get("product_id") ?? "").trim();
   const warehouseId = String(formData.get("warehouse_id") ?? "").trim();
@@ -61,10 +71,6 @@ export async function adjustStock(_prev: ActionState, formData: FormData): Promi
   if (direction === "decrease" && Number(inv.quantity_on_hand) < quantity) {
     return { error: `Itna stock nahi — abhi sirf ${inv.quantity_on_hand} hai.` };
   }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   if (clientActionId) {
     const { data: alreadyRecorded } = await supabase
@@ -124,11 +130,31 @@ export async function adjustStock(_prev: ActionState, formData: FormData): Promi
       unitCost: inCost,
       batchNumber: batchNum,
     });
-    if (created.error) return { error: `Ginti barh gayi magar batch nahi bana: ${created.error}` };
+    if (created.error) {
+      await supabase.from("stock_movements").insert({
+        inventory_id: inventoryId,
+        movement_type: "adjustment_decrease",
+        quantity,
+        reference_type: "manual_adjustment_rollback",
+        notes: "Batch na bana — pehli harkat wapas.",
+        created_by: user.id,
+      });
+      return { error: `Batch nahi bana, ginti wapas kar di: ${created.error}` };
+    }
     value = quantity * inCost;
   } else if (invRow.warehouse_id) {
     const consumed = await consumeBatches(supabase, invRow.warehouse_id, invRow.product_id, quantity);
-    if (consumed.error) return { error: `Ginti ghat gayi magar batch nahi ghata: ${consumed.error}` };
+    if (consumed.error) {
+      await supabase.from("stock_movements").insert({
+        inventory_id: inventoryId,
+        movement_type: "adjustment_increase",
+        quantity,
+        reference_type: "manual_adjustment_rollback",
+        notes: "Batch na ghata — pehli harkat wapas.",
+        created_by: user.id,
+      });
+      return { error: `Batch nahi ghata, ginti wapas kar di: ${consumed.error}` };
+    }
     value = consumed.cost;
   }
   const posted = await postStockValueChange({
@@ -216,10 +242,24 @@ export async function approveTransfer(_prev: ActionState, formData: FormData): P
   const transferId = String(formData.get("transfer_id") ?? "");
   if (!transferId) return { error: "Missing transfer id." };
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active || !["owner", "super_admin", "admin"].includes(me.role)) {
+    return { error: "Transfer complete karna sirf Owner ya Admin ka kaam hai." };
+  }
+
+  const { data: row } = await supabase.from("stock_transfers").select("status").eq("id", transferId).maybeSingle();
+  if (!row) return { error: "Transfer nahi mili." };
+  if (row.status !== "pending") return { error: "Sirf pending transfer complete ho sakti hai." };
+
   const { error } = await supabase
     .from("stock_transfers")
     .update({ status: "completed" })
-    .eq("id", transferId);
+    .eq("id", transferId)
+    .eq("status", "pending");
 
   if (error) return { error: error.message };
 
@@ -304,9 +344,9 @@ export async function fixUnbatchedInventory(_prev: ActionState, formData: FormDa
     .select("role, is_active")
     .eq("id", user.id)
     .maybeSingle();
-  const allowed = ["owner", "super_admin", "admin", "warehouse"];
+  const allowed = ["owner", "super_admin", "admin"];
   if (!me?.is_active || !allowed.includes(me.role)) {
-    return { error: "Batch approve karna sirf Owner, Admin ya Warehouse wale kar sakte hain." };
+    return { error: "Batch ki qeemat approve karna sirf Owner ya Admin kar sakta hai." };
   }
 
   const productId = String(formData.get("product_id") ?? "").trim();

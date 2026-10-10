@@ -368,6 +368,10 @@ export async function approveIntakeBatch(_prev: IntakeState, formData: FormData)
   const { supabase, user, ok } = await gate();
   if (!user) return { error: "Login karein." };
   if (!ok) return { error: "Manzoori sirf Owner, Admin ya Warehouse wale de sakte hain." };
+  const { data: me } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  if (!["owner", "super_admin", "admin"].includes(me?.role ?? "")) {
+    return { error: "Naya maal manzoor karna sirf Owner ya Admin ka kaam hai. Warehouse scan kare, Admin approve kare." };
+  }
 
   const batchId = String(formData.get("batch_id") ?? "");
   if (!batchId) return { error: "Kaun sa chakkar, wo saaf nahi." };

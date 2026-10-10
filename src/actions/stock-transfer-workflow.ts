@@ -137,7 +137,7 @@ export async function verifyTransferPayment(_prev: ActionState, formData: FormDa
   if (!transfer.total_amount) return { error: "This transfer has no amount recorded." };
   const { error: financeError } = await supabase.from("finance_transactions").insert({
     account_id: accountId,
-    transaction_type: "income",
+    transaction_type: "transfer_in",
     category: "Internal Stock Transfer",
     amount: transfer.total_amount,
     transaction_date: aajKaKhana(),
@@ -223,8 +223,27 @@ async function moveStock(
   unitPrice: number,
   userId: string
 ) {
-  const totalValue = qty * unitPrice;
+  // Dobara bhejne par wahi harkat na ho.
+  const { data: already } = await supabase
+    .from("stock_movements")
+    .select("id")
+    .eq("reference_type", "stock_transfer")
+    .eq("reference_id", transferId)
+    .limit(1);
+  if (already && already.length > 0) return;
 
+  const { data: fromInv } = await supabase
+    .from("inventory")
+    .select("id, quantity_on_hand")
+    .eq("warehouse_id", fromWarehouseId)
+    .eq("product_id", productId)
+    .maybeSingle();
+  if (!fromInv) throw new Error("Source godam mein is maal ki qataren nahi.");
+  if (Number(fromInv.quantity_on_hand) < qty) {
+    throw new Error(`Itna stock nahi — source par sirf ${fromInv.quantity_on_hand} hai.`);
+  }
+
+  const totalValue = qty * unitPrice;
   const [{ data: fromWarehouse }, { data: toWarehouse }] = await Promise.all([
     supabase.from("warehouses").select("branch_id, shop_id").eq("id", fromWarehouseId).maybeSingle(),
     supabase.from("warehouses").select("branch_id, shop_id").eq("id", toWarehouseId).maybeSingle(),
@@ -238,10 +257,12 @@ async function moveStock(
     if (creditError) throw new Error(`Transfer ledger posting fail hui: ${creditError.message}`);
   }
 
+  // FIFO se source batch ghatao, aur wahi lagat destination par likho.
   let remaining = qty;
+  let cost = 0;
   const { data: batches } = await supabase
     .from("stock_batches")
-    .select("id, remaining_quantity")
+    .select("id, remaining_quantity, unit_cost")
     .eq("warehouse_id", fromWarehouseId)
     .eq("product_id", productId)
     .gt("remaining_quantity", 0)
@@ -249,74 +270,63 @@ async function moveStock(
   for (const batch of batches ?? []) {
     if (remaining <= 0) break;
     const take = Math.min(remaining, Number(batch.remaining_quantity));
-    await supabase.from("stock_batches").update({ remaining_quantity: Number(batch.remaining_quantity) - take }).eq("id", batch.id);
+    const { error: bErr } = await supabase.from("stock_batches").update({ remaining_quantity: Number(batch.remaining_quantity) - take }).eq("id", batch.id);
+    if (bErr) throw new Error(`Source batch na ghata: ${bErr.message}`);
+    cost += take * Number(batch.unit_cost ?? 0);
     remaining -= take;
   }
-
-  const { data: fromInv } = await supabase
-    .from("inventory")
-    .select("id, quantity_on_hand")
-    .eq("warehouse_id", fromWarehouseId)
-    .eq("product_id", productId)
-    .maybeSingle();
-  if (fromInv) {
-    const deduct = Math.min(qty, Number(fromInv.quantity_on_hand));
-    // Ginti yahan se NAHI badalti -- wo neeche wali harkat par trigger
-    // karta hai (129). Pehle dono kaam hote the, is liye har transfer par
-    // maal dugna nikalta tha. balance_after bhi trigger hi likhta hai.
-    await supabase.from("stock_movements").insert({
-      inventory_id: fromInv.id,
-      movement_type: "transfer_out",
-      quantity: deduct,
-      reference_type: "stock_transfer",
-      reference_id: transferId,
-      created_by: userId,
-    });
+  if (remaining > 0) {
+    throw new Error(`Source batch mein sirf ${qty - remaining} hai — poora ${qty} nahi bhej sakte.`);
   }
+  const unitCost = qty > 0 ? Math.round((cost / qty) * 100) / 100 : 0;
+
+  // Ginti harkat se hi hilti hai (129). Trigger completed par dobara
+  // nahi likhega agar yahan harkat pehle se hai (521).
+  const { error: outErr } = await supabase.from("stock_movements").insert({
+    inventory_id: fromInv.id,
+    movement_type: "transfer_out",
+    quantity: qty,
+    reference_type: "stock_transfer",
+    reference_id: transferId,
+    created_by: userId,
+  });
+  if (outErr) throw new Error(`Source se maal nahi nikla: ${outErr.message}`);
 
   const { data: toInv } = await supabase
     .from("inventory")
-    .select("id, quantity_on_hand")
+    .select("id")
     .eq("warehouse_id", toWarehouseId)
     .eq("product_id", productId)
     .maybeSingle();
-  if (toInv) {
-    await supabase.from("stock_movements").insert({
-      inventory_id: toInv.id,
-      movement_type: "transfer_in",
-      quantity: qty,
-      reference_type: "stock_transfer",
-      reference_id: transferId,
-      created_by: userId,
-    });
-  } else {
-    const { data: newInv } = await supabase
+  let destId = toInv?.id ?? null;
+  if (!destId) {
+    const { data: newInv, error: invErr } = await supabase
       .from("inventory")
-      // Nayi qatar hamesha sifar se banti hai (129); maal us mein neeche
-      // wali harkat se aata hai.
       .insert({ warehouse_id: toWarehouseId, product_id: productId })
       .select("id")
       .single();
-    if (newInv) {
-      await supabase.from("stock_movements").insert({
-        inventory_id: newInv.id,
-        movement_type: "transfer_in",
-        quantity: qty,
-        reference_type: "stock_transfer",
-        reference_id: transferId,
-        created_by: userId,
-      });
-    }
+    if (invErr || !newInv) throw new Error(`Destination qataren nahi bani: ${invErr?.message ?? ""}`);
+    destId = newInv.id;
   }
+  const { error: inErr } = await supabase.from("stock_movements").insert({
+    inventory_id: destId,
+    movement_type: "transfer_in",
+    quantity: qty,
+    reference_type: "stock_transfer",
+    reference_id: transferId,
+    created_by: userId,
+  });
+  if (inErr) throw new Error(`Destination par maal nahi aaya: ${inErr.message}`);
 
-  await supabase.from("stock_batches").insert({
+  const { error: batchErr } = await supabase.from("stock_batches").insert({
     product_id: productId,
     warehouse_id: toWarehouseId,
     batch_number: `TRF-${transferId.slice(0, 8)}`,
     initial_quantity: qty,
     remaining_quantity: qty,
-    unit_cost: unitPrice,
+    unit_cost: unitCost > 0 ? unitCost : unitPrice,
   });
+  if (batchErr) throw new Error(`Destination batch nahi bana: ${batchErr.message}`);
 }
 
 export async function matchAndAcceptTransfer(_prev: ActionState, formData: FormData): Promise<ActionState> {

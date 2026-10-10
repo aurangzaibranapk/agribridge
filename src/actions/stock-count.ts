@@ -200,12 +200,16 @@ async function addOneExtraItem(
 
   // Naam se milan -- pehle se hai to usi ka stock badhta hai, naya
   // product nahi banta (do jagah ek hi cheez do naamon se na ho jaye).
-  const { data: existing } = await service
+  const { data: matches } = await service
     .from("products")
-    .select("id")
+    .select("id, name")
     .ilike("name", name)
     .eq("is_deleted", false)
-    .maybeSingle();
+    .limit(2);
+  if ((matches ?? []).length > 1) {
+    return { ok: false, error: `"${name}" ek se zyada products se milta hai — pehle naam saaf karein.` };
+  }
+  const existing = matches?.[0] ?? null;
 
   let productId = existing?.id ?? null;
 
@@ -361,8 +365,8 @@ export async function addExtraCountItem(_prev: ActionState, formData: FormData):
 
     const rawRate = r.purchasePrice;
     const purchasePrice = rawRate === null || rawRate === "" || rawRate === undefined ? null : Number(rawRate);
-    if (purchasePrice !== null && (!Number.isFinite(purchasePrice) || purchasePrice < 0)) {
-      return { error: `"${name}": rate sahi nahi likha gaya.` };
+    if (purchasePrice === null || !Number.isFinite(purchasePrice) || purchasePrice <= 0) {
+      return { error: `"${name}": khareed rate sifar se zyada likhein — warna Stock Value nahi milegi.` };
     }
 
     items.push({ name, quantity, purchasePrice });
@@ -563,7 +567,7 @@ export async function forceCloseCount(_prev: ActionState, formData: FormData): P
   // Jo lines abhi tak gini nahi gayin un ko current inventory se fill karo
   const { data: lines } = await service
     .from("stock_count_lines")
-    .select("id, product_id, counted_qty")
+    .select("id, product_id, counted_qty, expected_qty")
     .eq("count_id", countId)
     .is("counted_qty", null);
 
@@ -578,9 +582,10 @@ export async function forceCloseCount(_prev: ActionState, formData: FormData): P
 
     for (const line of lines) {
       const sysQty = invMap.get(line.product_id) ?? 0;
+      const diff = Math.round((sysQty - Number(line.expected_qty ?? 0)) * 100) / 100;
       await service
         .from("stock_count_lines")
-        .update({ counted_qty: sysQty })
+        .update({ counted_qty: sysQty, difference_qty: diff })
         .eq("id", line.id);
     }
   }
@@ -641,13 +646,9 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
     .eq("id", countId)
     .maybeSingle();
   if (!count) return { error: "Ginti nahi mili." };
-  if (count.status !== "counting" && count.status !== "verified") {
-    return { error: "Ye ginti pehle hi mukammal ho chuki hai." };
+  if (count.status !== "verified") {
+    return { error: "Pehle ginti verify honi chahiye. Counting se seedha post nahi hota." };
   }
-
-  // Admin/owner ke liye role check — partial count allow ke liye
-  const { data: meProfile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
-  const isAdminOrOwner = ["owner", "super_admin", "admin"].includes(meProfile?.role ?? "");
 
   const { data: lines } = await service
     .from("stock_count_lines")
@@ -658,27 +659,7 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
   const unfilled = rows.filter((r) => r.counted_qty === null);
 
   if (unfilled.length > 0) {
-    if (!isAdminOrOwner) {
-      return { error: `${unfilled.length} cheezen abhi gini nahi gayin. Milaan se pehle poori ginti lazmi hai.` };
-    }
-    // Admin/owner: jo items nahi gine, un ko current inventory qty se fill karo (farq = 0 rakhna)
-    const productIds = unfilled.map((l) => l.product_id);
-    const { data: invRows } = await service
-      .from("inventory")
-      .select("product_id, quantity_on_hand")
-      .eq("warehouse_id", count.warehouse_id)
-      .in("product_id", productIds);
-    const invMap = new Map((invRows ?? []).map((r) => [r.product_id, Number(r.quantity_on_hand ?? 0)]));
-    for (const line of unfilled) {
-      const sysQty = invMap.get(line.product_id) ?? 0;
-      await service.from("stock_count_lines").update({ counted_qty: sysQty, difference_qty: 0 }).eq("id", line.id);
-    }
-    // Updated rows reload
-    const { data: refreshed } = await service
-      .from("stock_count_lines")
-      .select("id, product_id, inventory_id, expected_qty, counted_qty, difference_qty, unit_cost, reason, products(name)")
-      .eq("count_id", countId);
-    rows.splice(0, rows.length, ...(refreshed ?? []));
+    return { error: `${unfilled.length} cheezen abhi gini nahi gayin. Post se pehle poori ginti lazmi hai — kami chhupane ke liye unhein zero nahi kiya jata.` };
   }
 
   // Wajah har us qatar par jahan farq hai.

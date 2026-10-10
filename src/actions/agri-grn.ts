@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getOrderPermissions } from "@/lib/order-permissions";
 import { notifyRoles } from "@/lib/notifications";
+import { postStockValueChange } from "@/lib/inventory/batch-ledger";
 
 export interface ActionState {
   error?: string;
@@ -25,16 +26,25 @@ async function generateGrnNumber(): Promise<string> {
   const serviceClient = createServiceClient();
   const year = new Date().getFullYear() % 100;
 
-  const { data: existing } = await serviceClient.from("agri_grn_counters").select("last_number").eq("year", year).single();
-  const nextNumber = (existing?.last_number ?? 0) + 1;
-
-  if (existing) {
-    await serviceClient.from("agri_grn_counters").update({ last_number: nextNumber }).eq("year", year);
-  } else {
-    await serviceClient.from("agri_grn_counters").insert({ year, last_number: nextNumber });
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { data: existing } = await serviceClient.from("agri_grn_counters").select("last_number").eq("year", year).maybeSingle();
+    const current = Number(existing?.last_number ?? 0);
+    const nextNumber = current + 1;
+    if (existing) {
+      const { data: bumped } = await serviceClient
+        .from("agri_grn_counters")
+        .update({ last_number: nextNumber })
+        .eq("year", year)
+        .eq("last_number", current)
+        .select("last_number");
+      if (!bumped || bumped.length === 0) continue;
+    } else {
+      const { error } = await serviceClient.from("agri_grn_counters").insert({ year, last_number: nextNumber });
+      if (error) continue;
+    }
+    return `GRN-AGR-${year}-${String(nextNumber).padStart(5, "0")}`;
   }
-
-  return `GRN-AGR-${year}-${String(nextNumber).padStart(5, "0")}`;
+  throw new Error("GRN number nahi ban saka — dobara koshish karein.");
 }
 
 interface GrnItemInput {
@@ -128,6 +138,9 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) return { error: "Missing order id." };
 
+  const { data: existingGrn } = await supabase.from("agri_grns").select("id").eq("order_id", orderId).limit(1);
+  if (existingGrn && existingGrn.length > 0) return { error: "Is order ki GRN pehle se hai — dobara stock nahi barhega." };
+
   const { data: orderForPerm } = await supabase.from("agri_orders").select("order_to_branch_id, payment_terms").eq("id", orderId).maybeSingle();
   const permissions = await getOrderPermissions(orderForPerm?.order_to_branch_id ?? null);
   if (!permissions.canCreateGrn) return { error: "Sirf order karne wali branch GRN bana sakti hai." };
@@ -186,7 +199,10 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
     };
   });
 
-  const payableAmount = receivedValue - shortageAmount - damageAmount - discountAdjustment + additionalCharges;
+  // received_qty aachi (theek) maqdar hai. Short aur damage alag
+  // rakhe gaye hain — unhein dobara na kaatein, warna 58 theek par
+  // bill 56 ka ban jata tha.
+  const payableAmount = receivedValue - discountAdjustment + additionalCharges;
   const hasDiscrepancy = shortageAmount > 0 || damageAmount > 0;
   // When charges (freight etc.) are entered, spread them across items
   // proportional to their received value, so stock_batches.unit_cost
@@ -199,7 +215,12 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
     data: { user },
   } = await supabase.auth.getUser();
 
-  const grnNumber = await generateGrnNumber();
+  let grnNumber: string;
+  try {
+    grnNumber = await generateGrnNumber();
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "GRN number nahi ban saka." };
+  }
 
   const { data: grn, error } = await supabase
     .from("agri_grns")
@@ -282,30 +303,49 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
               .single()
           ).data?.id;
 
+        const landed = item.unit_price + item.unit_price * chargeRatio;
         if (inventoryId) {
-          await supabase.from("stock_movements").insert({
-            inventory_id: inventoryId,
-            movement_type: "purchase_in",
-            quantity: item.received_qty,
-            reference_type: "agri_grn",
-            reference_id: orderId,
-            created_by: user?.id ?? null,
-          });
-        }
-        if (item.batch_no) {
-          const { data: newBatch } = await supabase.from("stock_batches").insert({
-            product_id: item.product_id,
-            warehouse_id: warehouse.id,
-            batch_number: item.batch_no,
-            expiry_date: item.expiry_date,
-            manufacture_date: item.manufacturing_date,
-            initial_quantity: item.received_qty,
-            remaining_quantity: item.received_qty,
-            unit_cost: item.unit_price + item.unit_price * chargeRatio,
-          }).select("id").single();
-          if (newBatch && inventoryId) {
-            await supabase.from("inventory").update({ batch_id: newBatch.id }).eq("id", inventoryId).is("batch_id", null);
+          const { data: alreadyMv } = await supabase
+            .from("stock_movements")
+            .select("id")
+            .eq("inventory_id", inventoryId)
+            .eq("reference_type", "agri_grn")
+            .eq("reference_id", orderId)
+            .limit(1);
+          if (!alreadyMv || alreadyMv.length === 0) {
+            await supabase.from("stock_movements").insert({
+              inventory_id: inventoryId,
+              movement_type: "purchase_in",
+              quantity: item.received_qty,
+              reference_type: "agri_grn",
+              reference_id: orderId,
+              created_by: user?.id ?? null,
+            });
+            await postStockValueChange({
+              db: supabase,
+              productId: item.product_id,
+              amount: item.received_qty * landed,
+              direction: "increase",
+              description: `Agri GRN stock: ${item.product_name} x ${item.received_qty}`,
+              sourceModule: "agri_grn",
+              sourceId: orderId,
+              createdBy: user?.id ?? null,
+            });
           }
+        }
+        const batchNo = item.batch_no || `GRN-${orderId.slice(0, 8)}-${item.product_id?.slice(0, 6) ?? "ITEM"}`;
+        const { data: newBatch } = await supabase.from("stock_batches").insert({
+          product_id: item.product_id,
+          warehouse_id: warehouse.id,
+          batch_number: batchNo,
+          expiry_date: item.expiry_date,
+          manufacture_date: item.manufacturing_date,
+          initial_quantity: item.received_qty,
+          remaining_quantity: item.received_qty,
+          unit_cost: landed,
+        }).select("id").single();
+        if (newBatch && inventoryId) {
+          await supabase.from("inventory").update({ batch_id: newBatch.id }).eq("id", inventoryId).is("batch_id", null);
         }
       }
     }
