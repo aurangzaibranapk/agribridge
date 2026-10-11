@@ -1,3 +1,9 @@
+## 11 October 2026 — recovery database migration verified
+
+Owner confirmed completed 13 MB backup before Live migration. Applied `recovery_policy_oct15` to Live, including pg_net dependency (verified on Testing first). Before/after counts unchanged: customers 115; POS sales 456; journal entries 1093; journal lines 3201; reminders 0. Policy effective 15 October 2026 PKT; reminder age 15 days; credit block age 30 days; interval 7 days; positive balances included. POS database trigger enabled and new checkout approval RPC present; anonymous cron configuration denied. Paid sales remain permitted when Khata amount is zero.
+
+**Web build upload and restart pending.** Reminder delivery held disabled until new web deployment; no recovery cron configured and no messages sent. After deployment configure schedule through admin page, enable reminders and verify actual provider delivery. Migration success is not proof of web deployment or message delivery.
+
 ## Pending — 11 October 2026: 15/30-day recovery policy
 
 - Branch `fix/recovery-policy-oct15`: migration `20261011101836_recovery_policy_oct15.sql`.
