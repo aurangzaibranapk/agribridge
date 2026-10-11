@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { ChevronRight, Menu, X } from "lucide-react";
 
 const NAV = [
@@ -51,7 +52,7 @@ export function MobileSiteNav() {
         <Menu className="h-5 w-5" />
       </button>
 
-      {open && (
+      {open && createPortal(
         <div className="fixed inset-0 z-[100] bg-black/35 backdrop-blur-[2px]" role="presentation" onClick={() => setOpen(false)}>
           <div
             id="mobile-site-navigation"
@@ -102,7 +103,8 @@ export function MobileSiteNav() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
