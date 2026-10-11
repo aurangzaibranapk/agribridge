@@ -177,6 +177,7 @@ export async function posCheckout(input: {
 
   const rpcArgs = {
     p_customer_id: input.customerId as string,
+    p_credit_override_reason: input.creditOverrideReason?.trim() || null,
     p_payment_mode: input.paymentMode,
     p_cash_paid: totals.nonKhataPaid,
     p_khata_amount: totals.khata,
@@ -187,7 +188,7 @@ export async function posCheckout(input: {
     p_counter_id: input.counterId ?? undefined,
     ...(input.clientActionId ? { p_client_action_id: input.clientActionId } : {}),
   };
-  const { data: saleIdRaw, error } = await (supabase as any).rpc("create_pos_sale", rpcArgs);
+  const { data: saleIdRaw, error } = await (supabase as any).rpc("create_pos_sale_with_credit_approval", rpcArgs);
 
   const saleId = saleIdRaw as string | null;
   if (error || !saleId) return { error: error?.message ?? "Bikri nahi ho saki." };

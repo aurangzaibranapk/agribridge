@@ -1,20 +1,21 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
-import { DEFAULT_RECOVERY_SETTINGS, blockMessage, computeBranchAging, isCreditBlocked, pkDate, type BranchCreditTxn, type RecoverySettings } from "./aging";
+import { DEFAULT_RECOVERY_SETTINGS, blockMessage, computeBranchAging, isCreditBlocked, recoveryPolicyActive, pkDate, type BranchCreditTxn, type RecoverySettings } from "./aging";
 
 export async function getRecoverySettings(): Promise<RecoverySettings> {
   const service = createServiceClient() as any;
   const { data, error } = await service.from("receivable_recovery_settings").select("*").eq("id", true).maybeSingle();
-  // Table abhi nahi (migration 523 laagu nahi hui)? Purana raasta chalta rahe.
-  if (error || !data) return { ...DEFAULT_RECOVERY_SETTINGS, block_overdue_credit: false };
+  if (error || !data) throw new Error("Udhaar policy verify nahi ho saki; naya udhaar band hai. Naqad bikri ho sakti hai.");
   return {
+    effective_from: String(data.effective_from ?? DEFAULT_RECOVERY_SETTINGS.effective_from),
+    reminder_interval_days: Number(data.reminder_interval_days ?? 7),
     due_days: Number(data.due_days ?? 30),
     reminder_day: Number(data.reminder_day ?? 15),
     final_notice_day: Number(data.final_notice_day ?? 30),
     block_overdue_credit: Boolean(data.block_overdue_credit),
     default_credit_limit: data.default_credit_limit == null ? null : Number(data.default_credit_limit),
-    min_amount: Number(data.min_amount ?? 100),
+    min_amount: Number(data.min_amount ?? 0.01),
     reminders_enabled: Boolean(data.reminders_enabled),
   };
 }
@@ -31,16 +32,19 @@ export async function checkOverdueCreditBlock(input: {
   overrideReason?: string | null;
 }): Promise<string | null> {
   if (!input.customerId || !(Number(input.khataAmount) > 0)) return null;
-  const settings = await getRecoverySettings();
+  let settings: RecoverySettings;
+  try { settings = await getRecoverySettings(); } catch (e) { return e instanceof Error ? e.message : "Udhaar policy verify nahi ho saki."; }
+  if (!recoveryPolicyActive(settings, pkDate(new Date().toISOString()))) return null;
   if (!settings.block_overdue_credit && settings.default_credit_limit == null) return null;
 
   const service = createServiceClient() as any;
-  const { data: cust } = await service
+  const { data: cust, error: customerError } = await service
     .from("customers")
     .select("name, current_balance, credit_limit")
     .eq("id", input.customerId)
     .maybeSingle();
-  const name = cust?.name ?? "Gahak";
+  if (customerError || !cust) return "Gahak ka khata verify nahi ho saka; naya udhaar band hai.";
+  const name = cust.name;
 
   let msg: string | null = null;
   let overdue = 0;
@@ -50,7 +54,8 @@ export async function checkOverdueCreditBlock(input: {
     p_as_of: null,
     p_customer: input.customerId,
   });
-  const row = error ? null : (rows ?? [])[0];
+  if (error) return "Purane baqaye ki jaanch nahi ho saki; naya udhaar band hai. Naqad bikri ho sakti hai.";
+  const row = (rows ?? [])[0];
   if (row) {
     const aging = { balance: Number(row.balance), oldestDays: row.oldest_days == null ? null : Number(row.oldest_days) };
     if (isCreditBlocked(aging, settings)) {
@@ -81,6 +86,8 @@ export async function checkOverdueCreditBlock(input: {
     return msg + " (Override sirf Admin, Super Admin ya Owner kar sakta hai.)";
   }
   if (reason.length < 3) return "Override ki wajah saaf likhein.";
+  // POS override is logged atomically by the database trigger with the sale.
+  if (input.context === "pos") return null;
   const { error: logErr } = await service.from("credit_block_overrides").insert({
     customer_id: input.customerId,
     context: input.context,
@@ -108,16 +115,19 @@ export async function checkOverdueBranchCreditBlock(input: {
   overrideReason?: string | null;
 }): Promise<string | null> {
   if (!input.branchId || !(Number(input.orderAmount) > 0)) return null;
-  const settings = await getRecoverySettings();
+  let settings: RecoverySettings;
+  try { settings = await getRecoverySettings(); } catch (e) { return e instanceof Error ? e.message : "Udhaar policy verify nahi ho saki."; }
+  if (!recoveryPolicyActive(settings, pkDate(new Date().toISOString()))) return null;
   if (!settings.block_overdue_credit) return null;
 
   const service = createServiceClient() as any;
   const { data: br } = await service.from("branches").select("name").eq("id", input.branchId).maybeSingle();
   const name = br?.name ?? "Branch";
-  const { data: txns } = await service
+  const { data: txns, error: txnError } = await service
     .from("branch_credit_transactions")
     .select("transaction_type, amount, created_at")
     .eq("branch_id", input.branchId);
+  if (txnError) return "Branch ka purana baqaya verify nahi ho saka; naya udhaar band hai.";
   const asOf = pkDate(new Date().toISOString());
   const aging = computeBranchAging((txns ?? []) as BranchCreditTxn[], asOf, settings.due_days);
   if (!isCreditBlocked(aging, settings)) return null;

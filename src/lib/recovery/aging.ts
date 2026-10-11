@@ -5,6 +5,8 @@
  */
 
 export interface RecoverySettings {
+  effective_from: string;
+  reminder_interval_days: number;
   due_days: number;
   reminder_day: number;
   final_notice_day: number;
@@ -15,12 +17,14 @@ export interface RecoverySettings {
 }
 
 export const DEFAULT_RECOVERY_SETTINGS: RecoverySettings = {
+  effective_from: "2026-10-15",
+  reminder_interval_days: 7,
   due_days: 30,
   reminder_day: 15,
   final_notice_day: 30,
   block_overdue_credit: true,
   default_credit_limit: null,
-  min_amount: 100,
+  min_amount: 0.01,
   reminders_enabled: false,
 };
 
@@ -90,10 +94,12 @@ export function computeAging(lines: LedgerLine[], asOf: string, dueDays = 30): A
 /** Kya naya udhaar band hai? (sirf jab 30+ din purana baqaya ho) */
 export function isCreditBlocked(
   aging: { balance: number; oldestDays: number | null },
-  s: RecoverySettings
+  s: RecoverySettings,
+  asOf = pkDate(new Date().toISOString())
 ): boolean {
+  if (!recoveryPolicyActive(s, asOf)) return false;
   if (!s.block_overdue_credit) return false;
-  if (aging.balance < s.min_amount) return false;
+  if (aging.balance <= 0.009 || aging.balance < s.min_amount) return false;
   return (aging.oldestDays ?? 0) >= s.due_days;
 }
 
@@ -102,12 +108,23 @@ export type ReminderStage = "day15" | "day30";
 /** Aaj kaun si yaad-dihani banti hai -- ooncha stage pehle. */
 export function reminderStageFor(
   aging: { balance: number; oldestDays: number | null },
-  s: RecoverySettings
+  s: RecoverySettings,
+  asOf = pkDate(new Date().toISOString())
 ): ReminderStage | null {
-  if (aging.balance < s.min_amount || aging.oldestDays == null) return null;
+  if (!recoveryPolicyActive(s, asOf)) return null;
+  if (aging.balance <= 0.009 || aging.balance < s.min_amount || aging.oldestDays == null) return null;
   if (aging.oldestDays >= s.final_notice_day) return "day30";
   if (aging.oldestDays >= s.reminder_day) return "day15";
   return null;
+}
+
+export function recoveryPolicyActive(s: RecoverySettings, asOf: string): boolean {
+  return asOf >= s.effective_from;
+}
+
+/** Successful reminders repeat weekly; entering the final stage sends immediately. */
+export function reminderDue(stage: ReminderStage, last: { stage: string; sent_at: string } | null, today: string, interval: number): boolean {
+  return !last || last.stage !== stage || daysBetween(pkDate(last.sent_at), today) >= interval;
 }
 
 export function formatRs(n: number): string {

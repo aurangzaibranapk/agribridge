@@ -1,8 +1,10 @@
 /** Wasooli (523) ka khalis hisaab -- database nahi chhoota. npx tsx scripts/test-receivable-recovery.ts */
 import assert from "node:assert/strict";
 import {
-  computeAging, isCreditBlocked, reminderStageFor, buildReminderMessage, blockMessage, DEFAULT_RECOVERY_SETTINGS as S,
+  computeAging, reminderDue, isCreditBlocked, reminderStageFor, buildReminderMessage, blockMessage, DEFAULT_RECOVERY_SETTINGS as DEFAULTS,
 } from "../src/lib/recovery/aging";
+
+const S = { ...DEFAULTS, effective_from: "2020-01-01", min_amount: 100 };
 
 let n = 0;
 const t = (name: string, fn: () => void) => { fn(); n++; console.log("ok -", name); };
@@ -54,4 +56,19 @@ t("Paighaam mein raqam, tareekh aur dukan", () => {
   assert.match(blockMessage("Ali", 1000, 35), /wajah likh kar ijazat/);
 });
 
+t("Policy date: old debt blocked only from 15 October; all positive balances count", () => {
+  assert.equal(isCreditBlocked({ balance: 50, oldestDays: 90 }, DEFAULTS, "2026-10-14"), false);
+  assert.equal(isCreditBlocked({ balance: 50, oldestDays: 90 }, DEFAULTS, "2026-10-15"), true);
+  assert.equal(isCreditBlocked({ balance: 0, oldestDays: 90 }, DEFAULTS, "2026-10-15"), false);
+  assert.equal(reminderStageFor({ balance: 50, oldestDays: 15 }, DEFAULTS, "2026-10-14"), null);
+  assert.equal(reminderStageFor({ balance: 50, oldestDays: 15 }, DEFAULTS, "2026-10-15"), "day15");
+});
+
+t("Reminder cadence: weekly, final stage immediate, failed send retry", () => {
+  const last = { stage: "day15", sent_at: "2026-10-15T04:00:00Z" };
+  assert.equal(reminderDue("day15", last, "2026-10-21", 7), false);
+  assert.equal(reminderDue("day15", last, "2026-10-22", 7), true);
+  assert.equal(reminderDue("day30", last, "2026-10-16", 7), true);
+  assert.equal(reminderDue("day15", null, "2026-10-16", 7), true);
+});
 console.log(`\n${n} tests passed`);

@@ -1,7 +1,9 @@
 /** Branch (dealer/agri order) udhaar ki 30 din wali rok -- database nahi chhoota. npx tsx scripts/test-branch-credit-recovery.ts */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { branchTxnsToLedger, computeBranchAging, isCreditBlocked, pkDate, DEFAULT_RECOVERY_SETTINGS as S } from "../src/lib/recovery/aging";
+import { branchTxnsToLedger, computeBranchAging, isCreditBlocked, pkDate, DEFAULT_RECOVERY_SETTINGS as DEFAULTS } from "../src/lib/recovery/aging";
+
+const S = { ...DEFAULTS, effective_from: "2020-01-01", min_amount: 100 };
 
 let n = 0;
 const t = (name: string, fn: () => void) => { fn(); n++; console.log("ok -", name); };

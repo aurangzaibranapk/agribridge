@@ -582,6 +582,10 @@ export function PosClient({
     };
 
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      if (khataTotal > 0) {
+        setMessage({ type: "error", text: "Offline naya udhaar band hai. Internet par khata verify karein; cash bill ban sakta hai." });
+        return;
+      }
       setSubmitting(true);
       try {
         await enqueue({ actionType: "pos.sale", entityType: "pos_sales", payload: salePayload });
