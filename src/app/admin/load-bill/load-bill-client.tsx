@@ -1013,7 +1013,7 @@ export function LoadBillClient({
                   <td className="tabular-nums">{new Date(transaction.waqt).toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit" })}</td>
                   <td><span className="load-transaction-customer">{transaction.customer}</span>{(transaction.kind === "load" || transaction.kind === "bank_transfer") && <small>{transaction.reference}</small>}</td>
                   <td><span className={`load-kind-badge load-kind-${transaction.kind}`}>{transaction.kind === "load" ? "Mobile Load" : transaction.kind === "bill" ? "Bill Payment" : transaction.kind === "udhaar" ? "Udhaar" : transaction.kind === "recovery" ? "Recovery" : "Bank Transfer"}</span></td>
-                  <td className="text-right tabular-nums">{rs(transaction.amount + transaction.serviceCharge)}</td>
+                  <td className="text-right tabular-nums">{rs(transaction.amount + (bt?.direction === "receiving" ? 0 : transaction.serviceCharge))}</td>
                   <td>{transaction.status === "pending" ? <Badge tone="amber">Pending</Badge> : transaction.status === "wapas" ? <Badge tone="red">Reversed</Badge> : <Badge tone="green">Completed</Badge>}</td>
                   <td><div className="load-history-actions">
                     <button type="button" title="Print receipt" aria-label={`Print ${transaction.kind} receipt`} onClick={() => printDeskSlip({
