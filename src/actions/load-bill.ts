@@ -179,7 +179,9 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
   const kind = String(formData.get("kind") ?? "load").trim();
   const reference = String(formData.get("reference") ?? "").trim();
   const principal = paisa(formData.get("principal"));
-  const serviceCharge = paisa(formData.get("service_charge"));
+  let serviceCharge = paisa(formData.get("service_charge"));
+  // 0 = fee nahi li. Constraint sirf NULL ya >0 allow karti hai.
+  if (serviceCharge === 0) serviceCharge = null;
   const method = String(formData.get("payment_method") ?? "cash").trim();
   const financeAccountId = String(formData.get("finance_account_id") ?? "").trim() || null;
   const rawPartyType = String(formData.get("party_type") ?? "").trim();
@@ -423,7 +425,9 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
   const beneficiaryTitle = String(formData.get("beneficiary_title") ?? "").trim();
   const beneficiaryAccount = String(formData.get("beneficiary_account") ?? "").replace(/\s+/g, "").trim();
   const principal = paisa(formData.get("principal"));
-  const serviceCharge = paisa(formData.get("service_charge"));
+  let serviceCharge = paisa(formData.get("service_charge"));
+  // 0 = fee nahi li. Constraint sirf NULL ya >0 allow karti hai.
+  if (serviceCharge === 0) serviceCharge = null;
   const providerTid = String(formData.get("provider_tid") ?? "").trim() || null;
   const customerName = String(formData.get("customer_name") ?? "").trim() || null;
   const customerPhone = String(formData.get("customer_phone") ?? "").trim() || null;
