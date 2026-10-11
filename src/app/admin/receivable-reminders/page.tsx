@@ -5,8 +5,8 @@ import { requireAction } from "@/lib/access/guard";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { loadCustomerAging } from "@/lib/recovery/load-aging";
 import { getRecoverySettings } from "@/lib/recovery/credit-block";
-import { formatRs, formatDatePk, reminderStageFor } from "@/lib/recovery/aging";
-import { updateRecoverySettings, setReminderPref } from "@/actions/receivable-recovery";
+import { formatRs, formatDatePk, reminderStageFor, recoveryPolicyActive } from "@/lib/recovery/aging";
+import { updateRecoverySettings, setReminderPref, configureRecoverySchedule } from "@/actions/receivable-recovery";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,7 @@ export default async function ReceivableRemindersPage() {
     requireAction("system.receivable_reminders", "edit"),
   ]);
   if ("error" in viewGuard) return <div className="p-8 text-center text-surface-400">{viewGuard.error}</div>;
-  const canEdit = !("error" in editGuard);
+  const canEdit = !("error" in editGuard) && editGuard.caller.unrestricted;
 
   const service = createServiceClient() as any;
   const [settings, { rows }, { data: prefs }, { data: log }, { data: overrides }] = await Promise.all([
@@ -33,19 +33,27 @@ export default async function ReceivableRemindersPage() {
   const prefMap = new Map<string, any>((prefs ?? []).map((p: any) => [p.customer_id, p]));
   const nameMap = new Map(rows.map((r) => [r.customer_id, r.name]));
   const today = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 10);
+  const { data: cronRows, error: cronError } = await service.rpc("receivable_reminder_cron_status");
+  const cron = cronRows?.[0];
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Wasooli Yaad-dihani" description="15ve din narm yaad-dihani, 30ve din aakhri notice -- WhatsApp par. Har stage ek hi dafa." />
+      <PageHeader title="Wasooli Yaad-dihani" description="15ve din narm yaad-dihani, 30ve din aakhri notice -- WhatsApp par. Wapsi tak haftay mein yaad-dihani; cash aur recovery khuli." />
 
       <Card className="space-y-3 p-4 text-xs">
         <div className={settings.reminders_enabled ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>
           WhatsApp yaad-dihani: {settings.reminders_enabled ? "CHALU" : "BAND (koi paighaam nahi ja raha)"}
         </div>
+        <p>Policy start: {formatDatePk(settings.effective_from)} — {recoveryPolicyActive(settings, today) ? "Laagu" : "Scheduled"}. Purane khaton ki age reset nahi hoti.</p>
+        <p>Delivery: {process.env.CRON_SECRET && process.env.WHATSAPP_PHONE_NUMBER_ID && process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_RECOVERY_TEMPLATE ? "Credentials/template configured; daily cron aur delivery log verify karein." : "Daily cron, WhatsApp credentials aur approved recovery template zaroori; setup abhi adhoora hai."}</p>
+        <p>Daily schedule: {cronError ? "Verify nahi ho saka" : cron?.active ? "Chalu — roz 9 baje subah (Pakistan)" : "Abhi chalu nahi"}. Last run: {cron?.last_run_status ?? "Abhi run nahi hua"}. Message bhejne ka asal result neeche delivery log mein dekhein.</p>
+        {canEdit && <form action={configureRecoverySchedule}><button className="btn-primary rounded-md px-3 py-2" type="submit">Daily schedule chalu karein</button></form>}
         {canEdit && (
           <form action={updateRecoverySettings} className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <label className="flex items-center gap-2"><input type="checkbox" name="reminders_enabled" defaultChecked={settings.reminders_enabled} /> Yaad-dihani chalu</label>
             <label className="flex items-center gap-2"><input type="checkbox" name="block_overdue_credit" defaultChecked={settings.block_overdue_credit} /> 30+ din par naya udhaar band</label>
+            <label>Start date<input type="date" className="input w-full" name="effective_from" defaultValue={settings.effective_from} /></label>
+            <label>Dobara reminder (din)<input className="input w-full" name="reminder_interval_days" defaultValue={settings.reminder_interval_days} /></label>
             <label>Aakhri hadd (din)<input className="input w-full" name="due_days" defaultValue={settings.due_days} /></label>
             <label>Yaad-dihani din<input className="input w-full" name="reminder_day" defaultValue={settings.reminder_day} /></label>
             <label>Aakhri notice din<input className="input w-full" name="final_notice_day" defaultValue={settings.final_notice_day} /></label>
@@ -72,7 +80,7 @@ export default async function ReceivableRemindersPage() {
           <tbody>
             {rows.map((r) => {
               const p = prefMap.get(r.customer_id);
-              const stage = reminderStageFor({ balance: r.balance, oldestDays: r.oldest_days }, settings);
+              const stage = reminderStageFor({ balance: r.balance, oldestDays: r.oldest_days }, settings, today);
               const status = p?.paused ? "Ruka hua" : p?.skip_until && p.skip_until >= today ? `Skip ${formatDatePk(p.skip_until)} tak` : "Chalu";
               return (
                 <tr key={r.customer_id} className="border-t border-surface-100 dark:border-surface-800">

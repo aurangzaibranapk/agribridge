@@ -1,3 +1,17 @@
+## Pending — 11 October 2026: 15/30-day recovery policy
+
+- Branch `fix/recovery-policy-oct15`: migration `20261011101836_recovery_policy_oct15.sql`.
+- Testing: existing 523 and the new policy/scheduler applied; rollback tests pass (start date, Rs50 balance, staff denial, cash allowed, admin audit, paid debt unlock, secret RPC permissions and daily schedule).
+- Live: NOT applied. Fresh backup verification is required by CLAUDE.md before live migration. Preserve original debt dates and all financial rows.
+- Apply migration while the old web app is stopped, then deploy this code: POS now calls `create_pos_sale_with_credit_approval`. Do not deploy code without migration.
+- Policy effective from 15 October 2026 PKT, all positive CRM balances; 15-day WhatsApp reminders repeat every 7 days; 30-day final stage immediately blocks new credit. Cash sales/recovery stay available. Admin/Owner approves each online sale with a reason; DB trigger logs atomically. Dealer-specific customer ledgers remain separate.
+- Daily job: Admin `/admin/receivable-reminders` → **Daily schedule chalu karein**. Server needs CRON_SECRET (>=16 chars), WhatsApp keys and approved WHATSAPP_RECOVERY_TEMPLATE (five body parameters). Job runs 09:00 PKT; token is stored in Vault. Testing UI cannot schedule live messages. Inspect delivery logs, not just cron success.
+- Provider SMS is not implemented; this flow uses approved WhatsApp templates. No actual messages sent during testing.
+- Before the effective date, cron returns scheduled without sending. Offline credit disabled; offline cash preserved.
+
+
+---
+
 # Live deployment record — 1 September 2026
 
 Ye file **asal ginti** rakhti hai, kisi ki batai hui nahi. Har adad
