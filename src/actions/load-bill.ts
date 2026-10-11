@@ -201,8 +201,8 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
   if (principal === null || principal <= 0) {
     return { error: "Raqam likhein — sifar ya khali raqam ka load nahi hota." };
   }
-  if (serviceCharge !== null && serviceCharge <= 0) {
-    return { error: "Service charge sifar nahi hota. Customer se kuch extra nahi liya to khana khali chhor dein." };
+  if (serviceCharge !== null && serviceCharge < 0) {
+    return { error: "Service charge manfi nahi ho sakta. Extra nahi liya to khana khali chhorein ya 0 likhein." };
   }
 
   const service = createServiceClient();
@@ -439,8 +439,8 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
   if (beneficiaryTitle.length < 2) return { error: "Receiving account ka title likhein." };
   if (beneficiaryAccount.length < 5) return { error: "Receiving account/IBAN/mobile number sahi likhein." };
   if (principal === null || principal <= 0) return { error: "Transfer ki raqam likhein." };
-  if (serviceCharge !== null && serviceCharge <= 0) {
-    return { error: "Service charge sifar nahi hota; extra nahi liya to khana khali chhor dein." };
+  if (serviceCharge !== null && serviceCharge < 0) {
+    return { error: "Service charge manfi nahi ho sakta; extra nahi liya to khana khali chhorein ya 0 likhein." };
   }
 
   const receivingMethod = receivedIn === "cash" ? "cash" : "bank";
