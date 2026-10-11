@@ -1,5 +1,10 @@
 -- Recovery policy starts on 15 October 2026 (Asia/Karachi).
 -- Existing ledger dates and balances are preserved. Apply Testing first.
+-- Aging is read by trusted server code; browser roles need no direct RPC.
+revoke all on function public.fn_customer_receivable_aging(date,uuid) from public,anon,authenticated;
+grant execute on function public.fn_customer_receivable_aging(date,uuid) to service_role;
+revoke all on function public.fn_branch_credit_aging(date,uuid) from public,anon,authenticated;
+grant execute on function public.fn_branch_credit_aging(date,uuid) to service_role;
 alter table public.receivable_recovery_settings
   add column if not exists effective_from date not null default '2026-10-15',
   add column if not exists reminder_interval_days integer not null default 7
