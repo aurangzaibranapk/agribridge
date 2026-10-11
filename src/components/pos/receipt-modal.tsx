@@ -1,4 +1,5 @@
-﻿"use client";
+"use client";
+import { ReceiptPrintPortal } from "./receipt-print-portal";
 import { normalizePkPhone, receiptFigures } from "@/lib/pos/checkout-guards";
 import { useEffect, useState } from "react";
 import { t, type Lang } from "@/lib/i18n/translations";
@@ -157,7 +158,7 @@ export function ReceiptModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 print:static print:block print:h-auto print:min-h-0 print:bg-transparent print:p-0">
+    <ReceiptPrintPortal>
       {/*
         Thermal printer ka apna "kaghaz ka size" hota hai -- bina bataye
         browser use A4/Letter maan leta hai, aur receipt us bade safhe
@@ -176,7 +177,7 @@ export function ReceiptModal({
       */}
       <style>{`
         @media print {
-          @page { size: 80mm auto; margin: 0; }
+          @page { size: auto; margin: 0; }
           html, body {
             width: 80mm;
             height: auto !important;
@@ -394,7 +395,7 @@ export function ReceiptModal({
           </>
         )}
       </div>
-    </div>
+    </ReceiptPrintPortal>
   );
 }
 

@@ -1,3 +1,7 @@
+## 11 October 2026 — POS receipt print fix (web deployment pending)
+
+Receipt modals now render through a body portal so dashboard scroll containers cannot clip long receipts or reserve blank space above them. Receipt print styles explicitly retain the last table column (line total), which generic report print CSS hides as an Actions column. Online and offline receipts share this isolation. Print page size follows the selected printer paper; use the 80 mm roll setting. No database migration. Physical printer validation remains required after deploying the new build.
+
 ## 11 October 2026 — recovery database migration verified
 
 Owner confirmed completed 13 MB backup before Live migration. Applied `recovery_policy_oct15` to Live, including pg_net dependency (verified on Testing first). Before/after counts unchanged: customers 115; POS sales 456; journal entries 1093; journal lines 3201; reminders 0. Policy effective 15 October 2026 PKT; reminder age 15 days; credit block age 30 days; interval 7 days; positive balances included. POS database trigger enabled and new checkout approval RPC present; anonymous cron configuration denied. Paid sales remain permitted when Khata amount is zero.
