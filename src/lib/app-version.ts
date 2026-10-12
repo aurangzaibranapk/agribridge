@@ -4,5 +4,5 @@
  * Isay har approved release par barhaya jayega. Database schema ya npm
  * package version is product version ka substitute nahi hai.
  */
-export const AGRIBRIDGE_OS_VERSION = "v0.3.0";
-export const AGRIBRIDGE_OS_RELEASE = "Tenant Branding & Usage Release";
+export const AGRIBRIDGE_OS_VERSION = "v0.4.0 Beta";
+export const AGRIBRIDGE_OS_RELEASE = "Recovery, POS & Finance Controls Release";
