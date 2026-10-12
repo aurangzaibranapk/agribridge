@@ -46,6 +46,14 @@ async function postOpeningAdjustment(
     baqayaType === "karyana" ? "Kisan Karyana" :
     baqayaType === "kisan_dukan" ? "Kisan Dukan (pesticide/wanda/khad)" :
     baqayaType === "other" ? "Other" : "";
+  // Business type sirf bayan mein likhna kaafi nahi tha: Finance ledger
+  // source_module se filter hota hai. Isi liye Kisan Dukan ka purana
+  // baqaya pehle customer statement mein to aa sakta tha, magar Kisan
+  // Dukan ledger mein chhup jata tha. Ab qism ledger key ka hissa hai.
+  const sourceModule =
+    baqayaType === "karyana" ? "customer_opening_karyana" :
+    baqayaType === "kisan_dukan" ? "customer_opening_kisan_dukan" :
+    "customer_opening_adjustment";
 
   const service = createServiceClient();
   const tafseel = [
@@ -58,7 +66,7 @@ async function postOpeningAdjustment(
 
   const posted = await postJournal({
     description: tafseel,
-    sourceModule: "customer_opening_adjustment",
+    sourceModule,
     sourceId: customerId,
     branchId: null,
     createdBy: userId,
@@ -74,12 +82,21 @@ async function postOpeningAdjustment(
   });
   if ("error" in posted) return { error: `Purana baqaya ledger mein darj nahi ho saka: ${posted.error}` };
 
-  const { data: cust } = await service.from("customers").select("current_balance").eq("id", customerId).maybeSingle();
-  const abTak = cust?.current_balance == null ? 0 : Number(cust.current_balance);
-  await service
+  // Cached balance mein sirf amount jama karna retry/old drift ko aur
+  // barha sakta tha. Ab har posting ke baad asal 1100 ledger se dobara
+  // gina hua balance hi customer par rakha jata hai.
+  const { data: ledgerBalance, error: balanceError } = await (service as any)
+    .rpc("fn_customer_baqi", { p_customer: customerId });
+  if (balanceError || ledgerBalance == null) {
+    return { error: `Entry ledger mein darj ho gayi, magar customer balance dobara nahi gin saka: ${balanceError?.message ?? "jawab nahi mila"}` };
+  }
+  const { error: updateBalanceError } = await service
     .from("customers")
-    .update({ current_balance: Math.round((abTak + amount) * 100) / 100 })
+    .update({ current_balance: Math.round(Number(ledgerBalance) * 100) / 100 })
     .eq("id", customerId);
+  if (updateBalanceError) {
+    return { error: `Entry ledger mein darj ho gayi, magar customer balance update nahi hua: ${updateBalanceError.message}` };
+  }
 
   await logAudit({
     actionType: "create",

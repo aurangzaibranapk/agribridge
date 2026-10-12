@@ -21,13 +21,13 @@ function money(n: number) {
 /** Business type → source_module mapping */
 const BUSINESS_GROUPS: { key: string; label: string; modules: string[] }[] = [
   { key: "all",         label: "Sab (Poora Ledger)",          modules: [] },
-  { key: "karyana",     label: "Karyana / POS",               modules: ["pos", "pos_return", "pos_shift_close"] },
-  { key: "kisan_dukan", label: "Kisan Dukan / Load Bill",     modules: ["load_bill"] },
+  { key: "karyana",     label: "Karyana / POS",               modules: ["pos", "pos_return", "pos_shift_close", "customer_opening_karyana"] },
+  { key: "kisan_dukan", label: "Kisan Dukan / Load Bill",     modules: ["load_bill", "customer_opening_kisan_dukan"] },
   { key: "machinery",   label: "Machinery Kiraya",            modules: ["machinery_bill", "machinery_payment", "machinery_vendor_payout", "machinery_advance", "machinery_correction", "machinery_reset", "machinery_fuel", "machinery_fuel_fix"] },
   { key: "kharid",      label: "Kharid / Suppliers",          modules: ["purchase", "supplier_payment", "supplier_payment_reversal", "purchase_correction"] },
   { key: "doodh",       label: "Doodh / Milk",                modules: ["milk_collection", "milk_payment"] },
   { key: "grain",       label: "Anaaj / Khaad / Pesticide",   modules: ["grain_procurement", "grain_payment", "grain_sale"] },
-  { key: "udhaar",      label: "Udhaar / Customer Credit",    modules: ["customer_udhaar", "customer_udhaar_wapsi", "customer_import"] },
+  { key: "udhaar",      label: "Udhaar / Customer Credit",    modules: ["customer_udhaar", "customer_udhaar_wapsi", "customer_import", "customer_opening_adjustment", "customer_opening_karyana", "customer_opening_kisan_dukan"] },
 ];
 
 export default async function AccountLedgerPage({
