@@ -61,6 +61,10 @@ export type CollectedPayment = {
   memo: string | null;
 };
 
+export type MoneyPartyOption = { type: string; id: string; name: string; phone: string | null };
+export type FinanceAccountOption = { id: string; name: string; accountType: string; balance: number; glCode: string | null };
+export type LedgerAccountOption = { code: string; name: string; accountType: string };
+
 const PAGE_SIZE = 8;
 
 function rs(n: number): string {
@@ -120,6 +124,9 @@ export function RecoveryClient({
   collectedTodayCount,
   collectedPayments,
   failedCount,
+  moneyParties,
+  financeAccounts,
+  ledgerAccounts,
 }: {
   parties: RecoveryParty[];
   templates: ReminderTemplate[];
@@ -132,6 +139,9 @@ export function RecoveryClient({
   collectedTodayCount: number;
   collectedPayments: CollectedPayment[];
   failedCount: number;
+  moneyParties: MoneyPartyOption[];
+  financeAccounts: FinanceAccountOption[];
+  ledgerAccounts: LedgerAccountOption[];
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [offlinePending, setOfflinePending] = useState(0);
@@ -167,9 +177,11 @@ export function RecoveryClient({
   const [draftDueFrom, setDraftDueFrom] = useState("");
   const [draftDueTo, setDraftDueTo] = useState("");
   const [page, setPage] = useState(0);
-  const [mode, setMode] = useState<"schedule" | "promise" | "payment" | null>(null);
+  const [mode, setMode] = useState<"schedule" | "promise" | "money" | null>(null);
+  const [moneyDirection, setMoneyDirection] = useState<"receive" | "pay">("receive");
   const [busy, setBusy] = useState(false);
   const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
+  const [moneyPartyKey, setMoneyPartyKey] = useState("");
   const [notice, setNotice] = useState("");
   const [channel, setChannel] = useState<(typeof CHANNELS)[number]["key"]>("whatsapp");
   const [previewKey, setPreviewKey] = useState<string | null>(null);
@@ -237,6 +249,18 @@ export function RecoveryClient({
       null
     );
   }, [previewParty, templates, channel]);
+
+  const selectedMoneyParty = useMemo(
+    () => moneyParties.find((p) => `${p.type}:${p.id}` === moneyPartyKey) ?? null,
+    [moneyParties, moneyPartyKey]
+  );
+
+  function openMoney(direction: "receive" | "pay") {
+    setMoneyDirection(direction);
+    setPayDate(new Date().toISOString().slice(0, 10));
+    setMoneyPartyKey(previewParty ? `${previewParty.type}:${previewParty.id}` : "");
+    setMode("money");
+  }
 
   function toggle(p: RecoveryParty) {
     const k = key(p);
@@ -500,13 +524,16 @@ export function RecoveryClient({
             </button>
             <button
               disabled={!previewParty}
-              onClick={() => {
-                setPayDate(new Date().toISOString().slice(0, 10));
-                setMode("payment");
-              }}
+              onClick={() => openMoney("receive")}
               className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-40"
             >
               <Banknote className="h-4 w-4" /> Receive Payment
+            </button>
+            <button
+              onClick={() => openMoney("pay")}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700"
+            >
+              <Send className="h-4 w-4" /> Pay Money
             </button>
             <button
               disabled={!chosen.length}
@@ -705,7 +732,7 @@ export function RecoveryClient({
         </button>
       </div>
 
-      {mode === "payment" && previewParty && (
+      {mode === "money" && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
           <form
             onSubmit={async (e) => {
@@ -713,45 +740,40 @@ export function RecoveryClient({
               const f = new FormData(e.currentTarget);
               setBusy(true);
               setNotice("");
-              const res = await fetch("/api/recovery", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  action: "receive_payment",
-                  parties: [previewParty],
-                  amount: Number(f.get("amount")),
-                  paymentDate: f.get("paymentDate"),
-                  backdateReason: f.get("backdateReason") ?? "",
-                  paymentMethod: f.get("paymentMethod"),
-                  notes: f.get("notes") ?? "",
-                }),
-              });
+              const party = selectedMoneyParty;
+              f.set("direction", moneyDirection);
+              f.set("clientActionId", crypto.randomUUID());
+              f.set("partyType", party?.type ?? "other");
+              f.set("partyId", party?.id ?? "");
+              f.set("partyName", party?.name ?? String(f.get("otherPartyName") ?? ""));
+              const res = await fetch("/api/recovery/money", { method: "POST", body: f });
               const json = await res.json();
               setBusy(false);
               if (!res.ok) {
                 setNotice(json.error || "Payment darj nahi ho saki.");
                 return;
               }
-              setNotice(`Payment darj ho gayi. Entry: ${json.entryNumber}`);
+              setNotice(`${moneyDirection === "receive" ? "Payment receive" : "Payment send"} ho gayi. Entry: ${json.entryNumber}`);
               setMode(null);
+              window.location.reload();
             }}
-            className="w-full max-w-md space-y-3 rounded-card bg-white p-5 shadow-xl dark:bg-surface-900"
+            className="max-h-[92vh] w-full max-w-2xl space-y-3 overflow-y-auto rounded-card bg-white p-5 shadow-xl dark:bg-surface-900"
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Payment Darj Karein</h2>
+              <div><h2 className="text-lg font-semibold">{moneyDirection === "receive" ? "Payment Receive Karein" : "Payment Send Karein"}</h2><p className="text-xs text-surface-500">Receive = Credit · Pay = Debit · Balance har entry ke baad</p></div>
               <button type="button" onClick={() => setMode(null)}>
                 <X className="h-5 w-5 text-surface-400 hover:text-surface-700" />
               </button>
             </div>
-            <div className="rounded-lg bg-surface-50 px-3 py-2 text-sm dark:bg-surface-800">
-              <span className="font-semibold text-surface-900 dark:text-white">{previewParty.name}</span>
-              <span className="ml-2 text-surface-500">Outstanding: {rs(previewParty.outstanding)}</span>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">Kis party ka khata?<select required value={moneyPartyKey} onChange={(e) => setMoneyPartyKey(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-800"><option value="">— list se chunein —</option>{moneyParties.map((p) => <option key={`${p.type}:${p.id}`} value={`${p.type}:${p.id}`}>{p.name} — {p.type}{p.phone ? ` (${p.phone})` : ""}</option>)}<option value="other:">Other / list mein nahi</option></select></label>
+              {moneyPartyKey === "other:" && <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">Party ka naam<input required name="otherPartyName" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-800" /></label>}
             </div>
             <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">
               Raqam (Rs)
               <input
                 required name="amount" type="number" min="1" step="1"
-                defaultValue={Math.round(previewParty.outstanding)}
+                defaultValue={moneyDirection === "receive" && previewParty ? Math.round(previewParty.outstanding) : undefined}
                 className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-800"
               />
             </label>
@@ -775,26 +797,33 @@ export function RecoveryClient({
                 />
               </label>
             )}
-            <div>
-              <p className="mb-1.5 text-sm font-medium text-surface-700 dark:text-surface-300">Payment Method</p>
-              <div className="grid grid-cols-3 gap-1.5">
-                {[
-                  { key: "cash", label: "Cash" },
-                  { key: "bank_transfer", label: "Bank" },
-                  { key: "jazzcash", label: "JazzCash" },
-                  { key: "easypaisa", label: "Easypaisa" },
-                  { key: "qr", label: "QR Code" },
-                  { key: "cheque", label: "Cheque" },
-                ].map((m) => (
-                  <label key={m.key} className="cursor-pointer">
-                    <input type="radio" name="paymentMethod" value={m.key} defaultChecked={m.key === "cash"} className="sr-only peer" />
-                    <span className="flex items-center justify-center rounded-lg border border-surface-200 py-2 text-xs font-medium text-surface-600 peer-checked:border-brand-500 peer-checked:bg-brand-50 peer-checked:text-brand-700 dark:border-surface-700 dark:text-surface-300 dark:peer-checked:border-brand-500 dark:peer-checked:bg-brand-950/30 dark:peer-checked:text-brand-300">
-                      {m.label}
-                    </span>
-                  </label>
-                ))}
-              </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">
+                {moneyDirection === "receive" ? "Paisa kis account mein aaya?" : "Paisa kis account se gaya?"}
+                <select required name="financeAccountId" className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-800">
+                  <option value="">— account chunein —</option>
+                  {financeAccounts.map((a) => <option key={a.id} value={a.id}>{a.name} — {rs(a.balance)}</option>)}
+                </select>
+              </label>
+              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">
+                Khate ki mad
+                <select required name="againstAccountCode" defaultValue={moneyDirection === "receive" ? (selectedMoneyParty?.type === "farmer" ? "1150" : "1100") : "2000"} className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-800">
+                  <option value="">— ledger account —</option>
+                  {ledgerAccounts.filter((a) => moneyDirection === "receive" ? a.accountType === "asset" : ["asset", "liability", "expense"].includes(a.accountType)).map((a) => <option key={a.code} value={a.code}>{a.code} — {a.name}</option>)}
+                </select>
+              </label>
             </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">Kis mad / purpose?<input required name="purpose" placeholder="Bill, khaad, mazdoori, machinery..." className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-800" /></label>
+              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">Bill / reference (ikhtiyari)<input name="billReference" placeholder="Bill no. ya reference" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-800" /></label>
+            </div>
+            {moneyDirection === "pay" && (
+              <div className="grid gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 sm:grid-cols-2 dark:border-amber-800 dark:bg-amber-950/20">
+                <label className="block text-sm font-medium">Raqam asal mein kis ne receive ki?<input name="beneficiaryName" placeholder="Party se mukhtalif bhi ho sakta hai" className="mt-1 w-full rounded-lg border border-amber-200 bg-white p-2 text-sm dark:border-amber-800 dark:bg-surface-900" /></label>
+                <label className="block text-sm font-medium">Beneficiary bank/account<input name="beneficiaryAccount" placeholder="Bank, IBAN, wallet ya account title" className="mt-1 w-full rounded-lg border border-amber-200 bg-white p-2 text-sm dark:border-amber-800 dark:bg-surface-900" /></label>
+              </div>
+            )}
+            <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">Screenshot / receipt proof<input name="proof" type="file" accept="image/*,.pdf" className="mt-1 block w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" /></label>
             <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">
               Notes (ikhtiyari)
               <input
@@ -808,7 +837,7 @@ export function RecoveryClient({
                 Wapas
               </button>
               <button disabled={busy} className="flex-1 rounded-lg bg-brand-600 p-2 text-sm font-medium text-white disabled:opacity-50">
-                {busy ? "Darj ho raha hai..." : "Payment Darj Karein"}
+                {busy ? "Darj ho raha hai..." : moneyDirection === "receive" ? "Receive Post Karein" : "Payment Post Karein"}
               </button>
             </div>
           </form>
