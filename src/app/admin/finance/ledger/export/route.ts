@@ -6,13 +6,13 @@ const ROLES = ["owner", "super_admin", "admin", "manager", "finance"];
 
 const BUSINESS_GROUPS: { key: string; modules: string[] }[] = [
   { key: "all",         modules: [] },
-  { key: "karyana",     modules: ["pos", "pos_return", "pos_shift_close"] },
-  { key: "kisan_dukan", modules: ["load_bill"] },
+  { key: "karyana",     modules: ["pos", "pos_return", "pos_shift_close", "customer_opening_karyana"] },
+  { key: "kisan_dukan", modules: ["load_bill", "customer_opening_kisan_dukan"] },
   { key: "machinery",   modules: ["machinery_bill", "machinery_payment", "machinery_vendor_payout", "machinery_advance", "machinery_correction", "machinery_reset", "machinery_fuel", "machinery_fuel_fix"] },
   { key: "kharid",      modules: ["purchase", "supplier_payment", "supplier_payment_reversal", "purchase_correction"] },
   { key: "doodh",       modules: ["milk_collection", "milk_payment"] },
   { key: "grain",       modules: ["grain_procurement", "grain_payment", "grain_sale"] },
-  { key: "udhaar",      modules: ["customer_udhaar", "customer_udhaar_wapsi", "customer_import"] },
+  { key: "udhaar",      modules: ["customer_udhaar", "customer_udhaar_wapsi", "customer_import", "customer_opening_adjustment", "customer_opening_karyana", "customer_opening_kisan_dukan"] },
 ];
 
 function csvEscape(s: string | number | null | undefined) {
