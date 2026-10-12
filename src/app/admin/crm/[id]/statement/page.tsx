@@ -147,19 +147,19 @@ export async function CustomerStatementPage({
 
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="py-3">
-          <p className="text-xs text-surface-500 dark:text-surface-400">Is ne liya (udhaar chaRha)</p>
+          <p className="text-xs text-surface-500 dark:text-surface-400">Debit — Is ne hum se liya</p>
           <p className="font-display text-xl font-semibold tabular-nums text-surface-900 dark:text-white">
             {rs(kulLiya)}
           </p>
         </Card>
         <Card className="py-3">
-          <p className="text-xs text-surface-500 dark:text-surface-400">Is ne diya (wapas kia)</p>
+          <p className="text-xs text-surface-500 dark:text-surface-400">Credit — Is ne hamein diya</p>
           <p className="font-display text-xl font-semibold tabular-nums text-surface-900 dark:text-white">
             {rs(kulDiya)}
           </p>
         </Card>
         <Card className="py-3">
-          <p className="text-xs text-surface-500 dark:text-surface-400">Abhi baqi</p>
+          <p className="text-xs text-surface-500 dark:text-surface-400">Total Balance</p>
           {/*
             NULL aur sifar alag likhe jate hain. `fn_customer_baqi` NULL
             deta hai jab gahak mile hi na ya ijazat na ho -- us ke saamne
@@ -197,9 +197,9 @@ export async function CustomerStatementPage({
                   <th className="px-4 py-2">Entry</th>
                   <th className="px-4 py-2">Tafseel</th>
                   {combined && <th className="px-4 py-2">Khata</th>}
-                  <th className="px-4 py-2 text-right">Liya</th>
-                  <th className="px-4 py-2 text-right">Diya</th>
-                  <th className="px-4 py-2 text-right">Baqi</th>
+                  <th className="px-4 py-2 text-right">Debit</th>
+                  <th className="px-4 py-2 text-right">Credit</th>
+                  <th className="px-4 py-2 text-right">Balance</th>
                 </tr>
               </thead>
               <tbody>
@@ -217,7 +217,9 @@ export async function CustomerStatementPage({
                     <td className="px-4 py-2 text-right tabular-nums">
                       {Number(r.credit) ? rs(Number(r.credit)) : "—"}
                     </td>
-                    <td className="px-4 py-2 text-right font-medium tabular-nums">{rs(r.balance)}</td>
+                    <td className="px-4 py-2 text-right font-medium tabular-nums">
+                      {r.balance > 0 ? `${rs(r.balance)} — Lena` : r.balance < 0 ? `${rs(Math.abs(r.balance))} — Dena` : "Rs 0 — Clear"}
+                    </td>
                   </tr>
                 ))}
               </tbody>
