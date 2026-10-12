@@ -4,7 +4,7 @@ import { CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { AlertTriangle } from "lucide-react";
-import { RecoveryClient, type CollectedPayment, type RecoveryParty, type ReminderTemplate } from "./recovery-client";
+import { RecoveryClient, type CollectedPayment, type FinanceAccountOption, type LedgerAccountOption, type MoneyPartyOption, type RecoveryParty, type ReminderTemplate } from "./recovery-client";
 
 export const dynamic = "force-dynamic";
 
@@ -120,6 +120,31 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
     stage: t.reminder_stage,
   }));
 
+  const [financeResult, glResult, customersResult, farmersResult, suppliersResult, dealersResult, vendorsResult, staffResult] = await Promise.all([
+    loose.from("finance_accounts").select("id,name,account_type,current_balance,gl_code").eq("is_active", true).order("name"),
+    loose.from("gl_accounts").select("code,name,account_type").eq("is_active", true).in("account_type", ["asset", "liability", "expense"]).order("code"),
+    loose.from("customers").select("id,name,phone_number").eq("is_active", true).order("name").limit(1000),
+    loose.from("farmers").select("id,full_name,phone_number").eq("is_active", true).order("full_name").limit(1000),
+    loose.from("suppliers").select("id,name,phone_number").eq("is_active", true).order("name").limit(1000),
+    loose.from("dealers").select("id,business_name,phone_number").eq("is_active", true).order("business_name").limit(1000),
+    loose.from("machinery_vendors").select("id,vendor_name,phone").eq("is_active", true).order("vendor_name").limit(1000),
+    loose.from("profiles").select("id,full_name").eq("is_active", true).order("full_name").limit(1000),
+  ]);
+  const moneyParties: MoneyPartyOption[] = [
+    ...(customersResult.data ?? []).map((p: any) => ({ type: "customer", id: p.id, name: p.name, phone: p.phone_number ?? null })),
+    ...(farmersResult.data ?? []).map((p: any) => ({ type: "farmer", id: p.id, name: p.full_name, phone: p.phone_number ?? null })),
+    ...(suppliersResult.data ?? []).map((p: any) => ({ type: "supplier", id: p.id, name: p.name, phone: p.phone_number ?? null })),
+    ...(dealersResult.data ?? []).map((p: any) => ({ type: "dealer", id: p.id, name: p.business_name, phone: p.phone_number ?? null })),
+    ...(vendorsResult.data ?? []).map((p: any) => ({ type: "machinery_vendor", id: p.id, name: p.vendor_name, phone: p.phone ?? null })),
+    ...(staffResult.data ?? []).map((p: any) => ({ type: "staff", id: p.id, name: p.full_name, phone: null })),
+  ].filter((p) => p.id && p.name);
+  const financeAccounts: FinanceAccountOption[] = (financeResult.data ?? []).map((a: any) => ({
+    id: a.id, name: a.name, accountType: a.account_type, balance: Number(a.current_balance || 0), glCode: a.gl_code ?? null,
+  }));
+  const ledgerAccounts: LedgerAccountOption[] = (glResult.data ?? []).map((a: any) => ({
+    code: a.code, name: a.name, accountType: a.account_type,
+  }));
+
   const todayLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "long",
@@ -184,6 +209,9 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
         collectedTodayCount={collectedTodayCount}
         collectedPayments={collectedPayments}
         failedCount={failedCount}
+        moneyParties={moneyParties}
+        financeAccounts={financeAccounts}
+        ledgerAccounts={ledgerAccounts}
       />
     </div>
   );
