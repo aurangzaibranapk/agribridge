@@ -4,7 +4,7 @@ import { CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { AlertTriangle } from "lucide-react";
-import { RecoveryClient, type CollectedPayment, type FinanceAccountOption, type LedgerAccountOption, type MoneyPartyOption, type RecoveryParty, type ReminderTemplate } from "./recovery-client";
+import { RecoveryClient, type CollectedPayment, type FinanceAccountOption, type LedgerAccountOption, type MoneyPartyOption, type PaymentDestinationOption, type RecoveryParty, type ReminderTemplate } from "./recovery-client";
 
 export const dynamic = "force-dynamic";
 
@@ -120,7 +120,7 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
     stage: t.reminder_stage,
   }));
 
-  const [financeResult, glResult, customersResult, farmersResult, suppliersResult, dealersResult, vendorsResult, staffResult] = await Promise.all([
+  const [financeResult, glResult, customersResult, farmersResult, suppliersResult, dealersResult, vendorsResult, staffResult, destinationsResult] = await Promise.all([
     loose.from("finance_accounts").select("id,name,account_type,current_balance,gl_code").eq("is_active", true).order("name"),
     loose.from("gl_accounts").select("code,name,account_type").eq("is_active", true).in("account_type", ["asset", "liability", "expense"]).order("code"),
     loose.from("customers").select("id,name,phone_number").eq("is_active", true).order("name").limit(1000),
@@ -129,6 +129,7 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
     loose.from("dealers").select("id,business_name,phone_number").eq("is_active", true).order("business_name").limit(1000),
     loose.from("machinery_vendors").select("id,vendor_name,phone").eq("is_active", true).order("vendor_name").limit(1000),
     loose.from("profiles").select("id,full_name").eq("is_active", true).order("full_name").limit(1000),
+    loose.from("recovery_payment_destinations").select("id,party_type,party_id,channel_type,institution_name,account_title,account_number").eq("is_active", true).order("institution_name"),
   ]);
   const moneyParties: MoneyPartyOption[] = [
     ...(customersResult.data ?? []).map((p: any) => ({ type: "customer", id: p.id, name: p.name, phone: p.phone_number ?? null })),
@@ -143,6 +144,10 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
   }));
   const ledgerAccounts: LedgerAccountOption[] = (glResult.data ?? []).map((a: any) => ({
     code: a.code, name: a.name, accountType: a.account_type,
+  }));
+  const paymentDestinations: PaymentDestinationOption[] = (destinationsResult.data ?? []).map((d: any) => ({
+    id: d.id, partyType: d.party_type, partyId: d.party_id ?? null, channelType: d.channel_type,
+    institutionName: d.institution_name, accountTitle: d.account_title, accountNumber: d.account_number,
   }));
 
   const todayLabel = new Date(`${today}T00:00:00`).toLocaleDateString("en-GB", {
@@ -212,6 +217,7 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
         moneyParties={moneyParties}
         financeAccounts={financeAccounts}
         ledgerAccounts={ledgerAccounts}
+        paymentDestinations={paymentDestinations}
       />
     </div>
   );
