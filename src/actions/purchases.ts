@@ -73,9 +73,9 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
   }
   // Manzoori (259): jo khud manzoor karne wala hai us ki purchase seedha
   // approved; baqi staff ki purchase manzoori ke liye jati hai.
-  // Approval guard (10 Oct 2026): ab koi bhi role khud apni purchase
-  // approved nahi kar sakta -- har purchase "submitted" se shuru hoti hai
-  // aur doosra Owner/Admin reviewPurchase se manzoor karta hai.
+  // Purchase pehle submitted hoti hai. Staff ki entry maker-checker se
+  // guzarti hai; Owner/Super Admin/Admin apni entry khud approve kar sakte
+  // hain (Owner decision, 13 Oct 2026).
   const approver = false;
   let branchId: string | null;
   let warehouseId: string | null = null;
@@ -843,8 +843,9 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
     .maybeSingle();
   if (!purchase) return { error: "Purchase not found." };
   if (purchase.status !== "pending") return { error: "Sirf jo purchase abhi receive nahi hui, us par faisla ho sakta hai." };
-  // Self-approval guard: banane wala khud faisla nahi kar sakta.
-  if (isSelfApproval(purchase.created_by, user.id)) {
+  // Staff ke liye maker-checker lazmi hai. Owner/Super Admin/Admin boss
+  // accounts hain: in par kisi doosre login ki dependency nahi (13 Oct).
+  if (isSelfApproval(purchase.created_by, user.id) && !guard.caller.unrestricted) {
     return { error: "Apni banayi hui purchase par khud faisla nahi kar sakte — doosra Owner/Admin kare." };
   }
   // Maker-checker (fix/approval-queue-gaps): staff purchase verify ke baghair
