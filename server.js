@@ -16,6 +16,30 @@ process.chdir(__dirname);
 const fs = require("fs");
 const { createServer } = require("http");
 
+const maintenanceFlag = path.join(__dirname, "maintenance.on");
+const maintenancePage = path.join(__dirname, "public", "system-update.html");
+
+function maintenanceIsOn() {
+  return fs.existsSync(maintenanceFlag);
+}
+
+function sendMaintenance(res) {
+  let page;
+  try {
+    page = fs.readFileSync(maintenancePage);
+  } catch (_err) {
+    page = Buffer.from(
+      "<!doctype html><html><meta name=viewport content='width=device-width'><title>AgriBridge Update</title><body style='font-family:system-ui;text-align:center;padding:15vh 20px'><h1>AgriBridge System Update</h1><p>Aap ka data mehfooz hai. Thori dair baad dobara check karein.</p></body></html>"
+    );
+  }
+  res.statusCode = 503;
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Content-Length", page.length);
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Retry-After", "120");
+  res.end(page);
+}
+
 function logCrash(err) {
   try {
     fs.writeFileSync(
@@ -35,18 +59,35 @@ try {
 
   const dev = process.env.NODE_ENV !== "production";
   const app = next({ dev, dir: __dirname });
-  const handle = app.getRequestHandler();
-
   const port = process.env.PORT || 3000;
+  let handle = null;
 
-  app.prepare().then(() => {
-    createServer((req, res) => {
-      handle(req, res);
-    }).listen(port, (err) => {
-      if (err) { logCrash(err); throw err; }
-      console.log(`AgriBridge ready on port ${port}`);
+  // Server pehle sunna shuru karta hai. Is se maintenance.on maujood ho
+  // to .next replace/restart ke darmiyan bhi user ko Passenger error ke
+  // bajaye hamara branded safha milta hai. Flag File Manager se banaya ya
+  // delete kiya ja sakta hai; terminal aur restart ki zaroorat nahi.
+  createServer((req, res) => {
+    if (maintenanceIsOn() || !handle) {
+      sendMaintenance(res);
+      return;
+    }
+    handle(req, res);
+  }).listen(port, (err) => {
+    if (err) { logCrash(err); throw err; }
+    console.log(`AgriBridge server listening on port ${port}`);
+  });
+
+  app.prepare()
+    .then(() => {
+      handle = app.getRequestHandler();
+      console.log("AgriBridge application ready");
+    })
+    .catch((err) => {
+      // HTTP server branded maintenance screen deta rahega. Asal crash
+      // server-error.log mein mil jayega; public ko technical page nahi.
+      logCrash(err);
+      console.error("AgriBridge prepare failed; maintenance screen active", err);
     });
-  }).catch((err) => { logCrash(err); throw err; });
 } catch (err) {
   logCrash(err);
   throw err;
