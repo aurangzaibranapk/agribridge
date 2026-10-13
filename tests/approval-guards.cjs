@@ -35,7 +35,7 @@ assert.equal(g.shouldPostHeldPayment("approve", null), false);
 const pur = read("src/actions/purchases.ts");
 assert.ok(!/review_status:\s*approver\s*\?/.test(pur), "purchase must not auto-approve");
 assert.ok(/review_status: "submitted"/.test(pur));
-assert.ok(/isSelfApproval\(purchase\.created_by, user\.id\)/.test(pur), "reviewPurchase self guard");
+assert.ok(/isSelfApproval\(purchase\.created_by, user\.id\) && !guard\.caller\.unrestricted/.test(pur), "staff self guard with Admin override");
 const createBody = pur.slice(pur.indexOf("export async function createPurchase"), pur.indexOf("export async function receivePurchase"));
 assert.ok(!/payAndPost\(/.test(createBody), "createPurchase must not post payment");
 assert.ok(/shouldPostHeldPayment\(decision, held\)/.test(pur));
@@ -89,3 +89,11 @@ assert.match(read("src/actions/agri-returns.ts"), /canFinalizeAgriReturn\(role\)
 assert.match(read("src/actions/pos-returns.ts"), /export async function reviewPosReturn/);
 assert.match(read("supabase/migrations/528_approval_queue_gaps.sql"), /authorized_by = new.created_by/);
 console.log("approval-queue-gaps tests ok");
+
+const cashReward = read("supabase/migrations/20261013142519_cash_retail_reward_and_admin_approval.sql");
+assert.match(cashReward, /values \(30000, 200,/);
+assert.match(cashReward, /lower\(d\.payment_method\)='cash'/);
+assert.match(cashReward, /customer_type='wholesale_shop'/);
+assert.match(cashReward, /not exists\(select 1 from public\.pos_sale_payment_details mix/);
+assert.match(cashReward, /v_staff_role in \('owner','super_admin','admin'\)/);
+console.log("cash retail reward and admin override tests ok");
