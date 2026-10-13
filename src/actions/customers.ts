@@ -37,10 +37,15 @@ async function postOpeningAdjustment(
   const raw = String(formData.get("purana_baqaya") ?? "").trim();
   if (!raw) return {};
   const amount = Math.round(Number(raw) * 100) / 100;
-  if (!Number.isFinite(amount) || amount === 0) return {};
+  if (!Number.isFinite(amount) || amount === 0) {
+    return { error: "Purana baqaya mein sifar ke ilawa sahi raqam likhein." };
+  }
 
   const baqayaType = String(formData.get("purana_baqaya_type") ?? "").trim();
   const baqayaNote = String(formData.get("purana_baqaya_note") ?? "").trim();
+  if (!['karyana', 'kisan_dukan', 'other'].includes(baqayaType)) {
+    return { error: "Purana baqaya kis business ka hai, woh bhi chunein." };
+  }
 
   const typeLabel =
     baqayaType === "karyana" ? "Kisan Karyana" :
@@ -85,7 +90,12 @@ async function postOpeningAdjustment(
   // Cached balance mein sirf amount jama karna retry/old drift ko aur
   // barha sakta tha. Ab har posting ke baad asal 1100 ledger se dobara
   // gina hua balance hi customer par rakha jata hai.
-  const { data: ledgerBalance, error: balanceError } = await (service as any)
+  // fn_customer_baqi caller ki signed-in staff identity verify karta hai.
+  // Service-role client ke paas auth.uid() nahi hota, is liye woh yahan
+  // NULL la raha tha aur nayi entry ke baad cached balance update nahi hota
+  // tha. User-bound client se RPC chalane par tenant guard bhi qaim rehta hai.
+  const authed = createClient();
+  const { data: ledgerBalance, error: balanceError } = await (authed as any)
     .rpc("fn_customer_baqi", { p_customer: customerId });
   if (balanceError || ledgerBalance == null) {
     return { error: `Entry ledger mein darj ho gayi, magar customer balance dobara nahi gin saka: ${balanceError?.message ?? "jawab nahi mila"}` };
