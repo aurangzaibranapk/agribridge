@@ -64,6 +64,21 @@ export type CollectedPayment = {
 export type MoneyPartyOption = { type: string; id: string; name: string; phone: string | null };
 export type FinanceAccountOption = { id: string; name: string; accountType: string; balance: number; glCode: string | null };
 export type LedgerAccountOption = { code: string; name: string; accountType: string };
+export type PaymentDestinationOption = {
+  id: string; partyType: string; partyId: string | null; channelType: string;
+  institutionName: string; accountTitle: string; accountNumber: string;
+};
+
+const PAYMENT_INSTITUTIONS = [
+  ["easypaisa", "Easypaisa"], ["jazzcash", "JazzCash"], ["sadapay", "SadaPay"],
+  ["nayapay", "NayaPay"], ["upaisa", "UPaisa"], ["other_wallet", "Other Wallet"],
+  ["bank", "Allied Bank (ABL)"], ["bank", "Askari Bank"], ["bank", "Bank Alfalah"],
+  ["bank", "Bank Al Habib"], ["bank", "Bank of Punjab (BOP)"], ["bank", "Faysal Bank"],
+  ["bank", "Habib Bank (HBL)"], ["bank", "Habib Metropolitan Bank"], ["bank", "JS Bank"],
+  ["bank", "MCB Bank"], ["bank", "Meezan Bank"], ["bank", "National Bank (NBP)"],
+  ["bank", "Soneri Bank"], ["bank", "Standard Chartered"], ["bank", "UBL"],
+  ["bank", "Other Bank"],
+] as const;
 
 const PAGE_SIZE = 8;
 
@@ -127,6 +142,7 @@ export function RecoveryClient({
   moneyParties,
   financeAccounts,
   ledgerAccounts,
+  paymentDestinations,
 }: {
   parties: RecoveryParty[];
   templates: ReminderTemplate[];
@@ -142,6 +158,7 @@ export function RecoveryClient({
   moneyParties: MoneyPartyOption[];
   financeAccounts: FinanceAccountOption[];
   ledgerAccounts: LedgerAccountOption[];
+  paymentDestinations: PaymentDestinationOption[];
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [offlinePending, setOfflinePending] = useState(0);
@@ -182,6 +199,8 @@ export function RecoveryClient({
   const [busy, setBusy] = useState(false);
   const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
   const [moneyPartyKey, setMoneyPartyKey] = useState("");
+  const [destinationId, setDestinationId] = useState("");
+  const [institutionKey, setInstitutionKey] = useState("");
   const [notice, setNotice] = useState("");
   const [channel, setChannel] = useState<(typeof CHANNELS)[number]["key"]>("whatsapp");
   const [previewKey, setPreviewKey] = useState<string | null>(null);
@@ -254,11 +273,17 @@ export function RecoveryClient({
     () => moneyParties.find((p) => `${p.type}:${p.id}` === moneyPartyKey) ?? null,
     [moneyParties, moneyPartyKey]
   );
+  const partyDestinations = useMemo(
+    () => paymentDestinations.filter((d) => d.partyType === selectedMoneyParty?.type && d.partyId === selectedMoneyParty?.id),
+    [paymentDestinations, selectedMoneyParty]
+  );
 
   function openMoney(direction: "receive" | "pay") {
     setMoneyDirection(direction);
     setPayDate(new Date().toISOString().slice(0, 10));
     setMoneyPartyKey(previewParty ? `${previewParty.type}:${previewParty.id}` : "");
+    setDestinationId("");
+    setInstitutionKey("");
     setMode("money");
   }
 
@@ -766,7 +791,7 @@ export function RecoveryClient({
               </button>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">Kis party ka khata?<select required value={moneyPartyKey} onChange={(e) => setMoneyPartyKey(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-800"><option value="">— list se chunein —</option>{moneyParties.map((p) => <option key={`${p.type}:${p.id}`} value={`${p.type}:${p.id}`}>{p.name} — {p.type}{p.phone ? ` (${p.phone})` : ""}</option>)}<option value="other:">Other / list mein nahi</option></select></label>
+              <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">Kis party ka khata?<select required value={moneyPartyKey} onChange={(e) => { setMoneyPartyKey(e.target.value); setDestinationId(""); }} className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-800"><option value="">— list se chunein —</option>{moneyParties.map((p) => <option key={`${p.type}:${p.id}`} value={`${p.type}:${p.id}`}>{p.name} — {p.type}{p.phone ? ` (${p.phone})` : ""}</option>)}<option value="other:">Other / list mein nahi</option></select></label>
               {moneyPartyKey === "other:" && <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">Party ka naam<input required name="otherPartyName" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-800" /></label>}
             </div>
             <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">
@@ -818,9 +843,28 @@ export function RecoveryClient({
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">Bill / reference (ikhtiyari)<input name="billReference" placeholder="Bill no. ya reference" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-800" /></label>
             </div>
             {moneyDirection === "pay" && (
-              <div className="grid gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 sm:grid-cols-2 dark:border-amber-800 dark:bg-amber-950/20">
-                <label className="block text-sm font-medium">Raqam asal mein kis ne receive ki?<input name="beneficiaryName" placeholder="Party se mukhtalif bhi ho sakta hai" className="mt-1 w-full rounded-lg border border-amber-200 bg-white p-2 text-sm dark:border-amber-800 dark:bg-surface-900" /></label>
-                <label className="block text-sm font-medium">Beneficiary bank/account<input name="beneficiaryAccount" placeholder="Bank, IBAN, wallet ya account title" className="mt-1 w-full rounded-lg border border-amber-200 bg-white p-2 text-sm dark:border-amber-800 dark:bg-surface-900" /></label>
+              <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/20">
+                <p className="text-sm font-semibold">Paisa kis bank / wallet account mein gaya?</p>
+                {partyDestinations.length > 0 && (
+                  <label className="block text-sm font-medium">Saved recipient account
+                    <select name="destinationId" value={destinationId} onChange={(e) => setDestinationId(e.target.value)} className="mt-1 w-full rounded-lg border border-amber-200 bg-white p-2 text-sm dark:border-amber-800 dark:bg-surface-900">
+                      <option value="">— Naya account add karein —</option>
+                      {partyDestinations.map((d) => <option key={d.id} value={d.id}>{d.institutionName} — {d.accountTitle} — {d.accountNumber}</option>)}
+                    </select>
+                  </label>
+                )}
+                {!destinationId && <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm font-medium">Bank / wallet
+                    <select required name="institutionKey" value={institutionKey} onChange={(e) => setInstitutionKey(e.target.value)} className="mt-1 w-full rounded-lg border border-amber-200 bg-white p-2 text-sm dark:border-amber-800 dark:bg-surface-900">
+                      <option value="">— bank ya wallet chunein —</option>
+                      {PAYMENT_INSTITUTIONS.map(([type, name]) => <option key={`${type}:${name}`} value={`${type}|${name}`}>{name}</option>)}
+                    </select>
+                  </label>
+                  <label className="block text-sm font-medium">Account title / naam<input required name="beneficiaryName" placeholder="Jis naam par account hai" className="mt-1 w-full rounded-lg border border-amber-200 bg-white p-2 text-sm dark:border-amber-800 dark:bg-surface-900" /></label>
+                  <label className="block text-sm font-medium sm:col-span-2">IBAN / account number / mobile<input required name="beneficiaryAccount" placeholder="PK... ya account/mobile number" className="mt-1 w-full rounded-lg border border-amber-200 bg-white p-2 text-sm dark:border-amber-800 dark:bg-surface-900" /></label>
+                  <label className="flex items-center gap-2 text-sm sm:col-span-2"><input name="saveDestination" type="checkbox" defaultChecked /> Agli payment ke liye ye account save karein</label>
+                </div>}
+                <p className="text-xs text-amber-800 dark:text-amber-300">Source upar hamara account hai; yahan recipient ka account record hoga.</p>
               </div>
             )}
             <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">Screenshot / receipt proof<input name="proof" type="file" accept="image/*,.pdf" className="mt-1 block w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" /></label>
