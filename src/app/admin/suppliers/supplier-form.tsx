@@ -1,5 +1,5 @@
 "use client";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import type { ActionState } from "@/actions/suppliers";
 import { saveSupplier, updateSupplier } from "@/actions/suppliers";
@@ -31,24 +31,29 @@ interface Supplier {
 export function SupplierForm({ editSupplier, onDoneEditing }: { editSupplier?: Supplier | null; onDoneEditing?: () => void }) {
   const action = editSupplier ? updateSupplier : saveSupplier;
   const [state, formAction] = useFormState(action, initialState);
+  // A stale browser/Next.js action response can briefly hydrate as undefined
+  // after a deployment. Never let that take down the whole Suppliers page.
+  const safeState = state ?? initialState;
   const lang = useLang();
   const nameRef = useRef<HTMLInputElement>(null);
   const contactRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
 
-  if (state.success && editSupplier && onDoneEditing) {
-    setTimeout(onDoneEditing, 800);
-  }
+  useEffect(() => {
+    if (!safeState.success || !editSupplier || !onDoneEditing) return;
+    const timer = window.setTimeout(onDoneEditing, 800);
+    return () => window.clearTimeout(timer);
+  }, [safeState.success, editSupplier, onDoneEditing]);
 
   return (
     <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
       <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{editSupplier ? "Edit Supplier" : "New Supplier"}</h2>
-      {state.error && (
+      {safeState.error && (
         <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
-          {state.error}
+          {safeState.error}
         </p>
       )}
-      {state.success && (
+      {safeState.success && (
         <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">{t("c_saved", lang)}</p>
       )}
       <form action={formAction} encType="multipart/form-data" className="space-y-3">
