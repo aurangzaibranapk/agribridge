@@ -271,6 +271,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
   // abhi darj nahi hua. Ye adad chhupaya nahi jata -- warna banda
   // apna maal dhoondta reh jata hai.
   let rateBaqiCount = 0;
+  const rateBaqiProductIds = new Set<string>();
   let rawCustomers:
     | {
         id: string;
@@ -319,8 +320,13 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     // dabaye hi na.
     (invRows ?? []).forEach((row: any) => {
       const product = Array.isArray(row.products) ? row.products[0] : row.products;
-      if (product?.sale_rate_pending) {
-        rateBaqiCount += 1;
+      // Purane import/intake raaste mein kuch products Rs 0 ke sath
+      // `sale_rate_pending=false` ban gaye the. Flag akela dekhne se wo
+      // counter par Rs 0 dikhte (ya muft bikne ki koshish hoti). Asal
+      // qeemat 0 kabhi sale rate nahi: flag YA non-positive rate, dono
+      // sooraton mein product Rate Baqi mein hai aur POS se chhupta hai.
+      if (product?.sale_rate_pending || Number(product?.selling_price ?? 0) <= 0) {
+        rateBaqiProductIds.add(row.product_id);
         return;
       }
       const cur = aggMap.get(row.product_id) ?? {
@@ -338,6 +344,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
       if (row.batch_id) cur.batch_ids.push(row.batch_id);
       aggMap.set(row.product_id, cur);
     });
+    rateBaqiCount = rateBaqiProductIds.size;
     rawInventory = [...aggMap.values()];
     const { data: cust } = await supabase
       .from("customers")
