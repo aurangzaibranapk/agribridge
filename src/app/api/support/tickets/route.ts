@@ -13,13 +13,16 @@ async function context() {
   const service = createServiceClient();
   const { data: profile } = await service.from("profiles").select("id,full_name,role,organization_id,is_active").eq("id", user.id).maybeSingle();
   if (!profile?.is_active) return null;
-  return { user, profile, service, canManage: MANAGERS.has(String(profile.role)) };
+  // These tables are introduced by this feature's migration. Keep the
+  // generated database types backward-compatible until the next type refresh.
+  const supportDb = service as any;
+  return { user, profile, service, supportDb, canManage: MANAGERS.has(String(profile.role)) };
 }
 
 export async function GET() {
   const ctx = await context();
   if (!ctx) return NextResponse.json({ error: "Login zaroori hai." }, { status: 401 });
-  let query = ctx.service.from("support_tickets").select("*, reporter:profiles!support_tickets_reporter_id_fkey(full_name), assignee:profiles!support_tickets_assigned_to_fkey(full_name)").eq("organization_id", ctx.profile.organization_id).order("created_at", { ascending: false }).limit(100);
+  let query = ctx.supportDb.from("support_tickets").select("*, reporter:profiles!support_tickets_reporter_id_fkey(full_name), assignee:profiles!support_tickets_assigned_to_fkey(full_name)").eq("organization_id", ctx.profile.organization_id).order("created_at", { ascending: false }).limit(100);
   if (!ctx.canManage) query = query.eq("reporter_id", ctx.user.id);
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -56,7 +59,7 @@ export async function POST(req: NextRequest) {
 
   let deviceInfo: Record<string, unknown> = {};
   try { deviceInfo = JSON.parse(String(form.get("device_info") ?? "{}")); } catch { /* invalid client metadata ignored */ }
-  const { data, error } = await ctx.service.from("support_tickets").insert({
+  const { data, error } = await ctx.supportDb.from("support_tickets").insert({
     organization_id: ctx.profile.organization_id,
     reporter_id: ctx.user.id,
     title: title.slice(0, 160),

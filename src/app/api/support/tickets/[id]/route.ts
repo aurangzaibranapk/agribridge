@@ -10,9 +10,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const { data: { user } } = await client.auth.getUser();
   if (!user) return NextResponse.json({ error: "Login zaroori hai." }, { status: 401 });
   const service = createServiceClient();
+  // Support tables are added by the accompanying migration and may not yet
+  // exist in an older generated Database type snapshot.
+  const supportDb = service as any;
   const { data: me } = await service.from("profiles").select("id,role,organization_id,is_active").eq("id", user.id).maybeSingle();
   if (!me?.is_active) return NextResponse.json({ error: "Account inactive hai." }, { status: 403 });
-  const { data: ticket } = await service.from("support_tickets").select("id,reporter_id,organization_id,status").eq("id", params.id).maybeSingle();
+  const { data: ticket } = await supportDb.from("support_tickets").select("id,reporter_id,organization_id,status").eq("id", params.id).maybeSingle();
   if (!ticket || ticket.organization_id !== me.organization_id) return NextResponse.json({ error: "Ticket nahi mila." }, { status: 404 });
 
   const body = await req.json();
@@ -25,8 +28,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (canManage && body.assignToMe) update.assigned_to = user.id;
   if (status === "resolved") { update.resolved_at = new Date().toISOString(); update.resolution_note = note || null; }
   if (status === "reopened") update.resolved_at = null;
-  const { error } = await service.from("support_tickets").update(update as any).eq("id", ticket.id);
+  const { error } = await supportDb.from("support_tickets").update(update as any).eq("id", ticket.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (note) await service.from("support_ticket_comments").insert({ ticket_id: ticket.id, author_id: user.id, body: note } as any);
+  if (note) await supportDb.from("support_ticket_comments").insert({ ticket_id: ticket.id, author_id: user.id, body: note } as any);
   return NextResponse.json({ success: true });
 }
