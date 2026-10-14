@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  let proofUrl: string | null = null;
+  let proofUrl: string | null = String(form.get("proofUrl") ?? "").trim() || null;
   const proof = form.get("proof");
   if (proof instanceof File && proof.size > 0) {
     if (proof.size > MAX_PROOF_BYTES) return NextResponse.json({ error: "Proof file 8 MB se chhoti honi chahiye." }, { status: 400 });
