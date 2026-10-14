@@ -13,6 +13,7 @@ import {
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { CoachMessage } from "@/components/guided/coach-message";
+import { SupportDesk } from "@/components/support/support-desk";
 
 const initialState: ActionState = {};
 const initialBroadcastState: BroadcastActionState = {};
@@ -37,7 +38,7 @@ const initialBroadcastState: BroadcastActionState = {};
  * sathi ka paighaam nahi ban jati, aur tajweez ka apna number rehta hai.
  */
 
-type Tab = "ai" | "msg" | "sug";
+type Tab = "ai" | "msg" | "sug" | "support";
 
 interface Contact { id: string; name: string; role: string; roleLabel: string; isAi: boolean }
 interface Dept { key: string; label: string; count: number }
@@ -250,7 +251,7 @@ export function AssistantPanel() {
           </div>
 
           <div className="flex border-b border-surface-200 text-xs dark:border-surface-800">
-            {([["ai", t("ap_tab_ai", lang)], ["msg", t("ap_tab_msg", lang)], ["sug", t("ap_tab_sug", lang)]] as [Tab, string][]).map(([k, label]) => (
+            {([["ai", t("ap_tab_ai", lang)], ["msg", t("ap_tab_msg", lang)], ["sug", t("ap_tab_sug", lang)], ["support", "Support"]] as [Tab, string][]).map(([k, label]) => (
               <button
                 key={k}
                 onClick={() => { setTab(k); if (k !== "msg") back(); }}
@@ -267,6 +268,8 @@ export function AssistantPanel() {
           {tab === "ai" && <AssistantTab pathname={pathname} reviewRequest={reviewRequest} onReviewStarted={() => setReviewRequest(null)} />}
 
           {tab === "sug" && <SuggestionsTab onAsk={() => setTab("ai")} />}
+
+          {tab === "support" && <SupportDesk pathname={pathname} />}
 
           {tab === "msg" && !inThread && (
             <DirectoryPane
