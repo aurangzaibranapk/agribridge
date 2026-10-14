@@ -11,7 +11,6 @@ import {
   Download,
   Mail,
   MessageCircle,
-  MoreVertical,
   Printer,
   RefreshCw,
   Search,
@@ -24,6 +23,7 @@ import {
 import { Badge } from "@/components/ui/form";
 import { enqueue, allActions } from "@/lib/offline/queue";
 import { registerSender, syncQueue } from "@/lib/offline/sync";
+import { createClient } from "@/lib/supabase/client";
 
 export type RecoveryParty = {
   type: string;
@@ -202,6 +202,8 @@ export function RecoveryClient({
   const [destinationId, setDestinationId] = useState("");
   const [institutionKey, setInstitutionKey] = useState("");
   const [notice, setNotice] = useState("");
+  const [moneyError, setMoneyError] = useState("");
+  const [moneyProgress, setMoneyProgress] = useState("");
   const [channel, setChannel] = useState<(typeof CHANNELS)[number]["key"]>("whatsapp");
   const [previewKey, setPreviewKey] = useState<string | null>(null);
   const [summaryView, setSummaryView] = useState<"receivable" | "due_today" | "overdue" | "collected">("receivable");
@@ -284,6 +286,8 @@ export function RecoveryClient({
     setMoneyPartyKey(previewParty ? `${previewParty.type}:${previewParty.id}` : "");
     setDestinationId("");
     setInstitutionKey("");
+    setMoneyError("");
+    setMoneyProgress("");
     setMode("money");
   }
 
@@ -632,8 +636,12 @@ export function RecoveryClient({
                     </td>
                     <td className="px-3 py-3">{statusBadge(p)}</td>
                     <td className="px-3 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                      <Link href={statementHref(p)} className="text-surface-400 hover:text-brand-600">
-                        <MoreVertical className="ml-auto h-4 w-4" />
+                      <Link
+                        href={statementHref(p)}
+                        aria-label={`${p.name} ka khata aur ledger kholein`}
+                        className="ml-auto inline-flex items-center gap-1 rounded-lg border border-brand-200 bg-brand-50 px-2.5 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-950/30 dark:text-brand-300"
+                      >
+                        Details <ChevronRight className="h-3.5 w-3.5" />
                       </Link>
                     </td>
                   </tr>
@@ -765,22 +773,66 @@ export function RecoveryClient({
               const f = new FormData(e.currentTarget);
               setBusy(true);
               setNotice("");
-              const party = selectedMoneyParty;
-              f.set("direction", moneyDirection);
-              f.set("clientActionId", crypto.randomUUID());
-              f.set("partyType", party?.type ?? "other");
-              f.set("partyId", party?.id ?? "");
-              f.set("partyName", party?.name ?? String(f.get("otherPartyName") ?? ""));
-              const res = await fetch("/api/recovery/money", { method: "POST", body: f });
-              const json = await res.json();
-              setBusy(false);
-              if (!res.ok) {
-                setNotice(json.error || "Payment darj nahi ho saki.");
-                return;
+              setMoneyError("");
+              setMoneyProgress("Payment tayyar ho rahi hai...");
+              try {
+                const party = selectedMoneyParty;
+                f.set("direction", moneyDirection);
+                f.set("clientActionId", crypto.randomUUID());
+                f.set("partyType", party?.type ?? "other");
+                f.set("partyId", party?.id ?? "");
+                f.set("partyName", party?.name ?? String(f.get("otherPartyName") ?? ""));
+
+                // Large proof files can hit the cPanel proxy body limit. Upload the
+                // proof directly, then send only its URL with the accounting entry.
+                const proof = f.get("proof");
+                if (proof instanceof File && proof.size > 0) {
+                  if (proof.size > 8 * 1024 * 1024) throw new Error("Proof file 8 MB se chhoti honi chahiye.");
+                  if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(proof.type)) {
+                    throw new Error("Proof JPG, PNG, WebP ya PDF hona chahiye.");
+                  }
+                  setMoneyProgress("Screenshot / receipt upload ho rahi hai...");
+                  const supabase = createClient();
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (!user) throw new Error("Session khatam ho gayi. Dobara login karein.");
+                  const safeName = proof.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+                  const path = `recovery/${user.id}/${Date.now()}-${crypto.randomUUID()}-${safeName}`;
+                  const { error: uploadError } = await supabase.storage
+                    .from("payment-slips")
+                    .upload(path, proof, { contentType: proof.type, upsert: false });
+                  if (uploadError) throw new Error(`Proof upload nahi hua: ${uploadError.message}`);
+                  const proofUrl = supabase.storage.from("payment-slips").getPublicUrl(path).data.publicUrl;
+                  f.delete("proof");
+                  f.set("proofUrl", proofUrl);
+                } else {
+                  f.delete("proof");
+                }
+
+                setMoneyProgress("Ledger aur khata mein entry post ho rahi hai...");
+                const controller = new AbortController();
+                const timer = window.setTimeout(() => controller.abort(), 45000);
+                let res: Response;
+                try {
+                  res = await fetch("/api/recovery/money", { method: "POST", body: f, signal: controller.signal });
+                } finally {
+                  window.clearTimeout(timer);
+                }
+                const raw = await res.text();
+                let json: Record<string, any> = {};
+                try { json = raw ? JSON.parse(raw) : {}; } catch { /* cPanel may return an HTML error page */ }
+                if (!res.ok) throw new Error(json.error || `Payment save nahi hui (server ${res.status}).`);
+                setNotice(`${moneyDirection === "receive" ? "Payment receive" : "Payment send"} ho gayi. Entry: ${json.entryNumber ?? json.movementNumber ?? "saved"}`);
+                setMode(null);
+                window.location.reload();
+              } catch (error) {
+                const message = error instanceof DOMException && error.name === "AbortError"
+                  ? "Server ne 45 seconds mein jawab nahi diya. Dobara try karein; duplicate entry nahi banegi."
+                  : error instanceof Error ? error.message : "Payment darj nahi ho saki.";
+                setMoneyError(message);
+              } finally {
+                setBusy(false);
+                setMoneyProgress("");
               }
-              setNotice(`${moneyDirection === "receive" ? "Payment receive" : "Payment send"} ho gayi. Entry: ${json.entryNumber}`);
-              setMode(null);
-              window.location.reload();
             }}
             className="max-h-[92vh] w-full max-w-2xl space-y-3 overflow-y-auto rounded-card bg-white p-5 shadow-xl dark:bg-surface-900"
           >
@@ -868,6 +920,8 @@ export function RecoveryClient({
               </div>
             )}
             <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">Screenshot / receipt proof<input name="proof" type="file" accept="image/*,.pdf" className="mt-1 block w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" /></label>
+            {moneyError && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">{moneyError}</p>}
+            {busy && moneyProgress && <p className="rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:border-brand-800 dark:bg-brand-950/30 dark:text-brand-300">{moneyProgress}</p>}
             <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">
               Notes (ikhtiyari)
               <input
