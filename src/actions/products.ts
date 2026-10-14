@@ -76,6 +76,7 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
       image_url: (formData.get("image_url") as string) || null,
       purchase_price: Number(formData.get("purchase_price")),
       selling_price: Number(formData.get("selling_price")),
+      sale_rate_pending: Number(formData.get("selling_price")) <= 0,
       mrp_price: formData.get("mrp_price") ? Number(formData.get("mrp_price")) : null,
       // Thok ka rate NULL rehta hai jab tak diya na jaye -- har cheez
       // thok par nahi milti, aur sifar ka matlab "thok par muft" hota.
@@ -164,6 +165,7 @@ export async function quickCreateProduct(input: {
       // Khali chhoR dena "abhi tay nahi" ka matlab deta hai -- Rate
       // Baqi wala nishan isi se lagta hai (rates-baqi/page.tsx).
       selling_price: input.sellingPrice ?? 0,
+      sale_rate_pending: input.sellingPrice == null || input.sellingPrice <= 0,
       wholesale_price: input.wholesalePrice ?? null,
       mrp_price: input.mrpPrice ?? null,
       is_verified: isUnrestricted || permission?.add_needs_approval === false,
@@ -218,6 +220,7 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
     image_url: (formData.get("image_url") as string) || null,
     purchase_price: Number(formData.get("purchase_price")),
     selling_price: Number(formData.get("selling_price")),
+    sale_rate_pending: Number(formData.get("selling_price")) <= 0,
     mrp_price: formData.get("mrp_price") ? Number(formData.get("mrp_price")) : null,
     wholesale_price: formData.get("wholesale_price") ? Number(formData.get("wholesale_price")) : null,
     min_stock_threshold: formData.get("min_stock_threshold") ? Number(formData.get("min_stock_threshold")) : null,
@@ -276,7 +279,10 @@ export async function updateProductNamePackSize(
 
   const extraFields: Record<string, unknown> = {};
   if (category_id !== undefined) extraFields.category_id = category_id;
-  if (selling_price !== undefined) extraFields.selling_price = selling_price;
+  if (selling_price !== undefined) {
+    extraFields.selling_price = selling_price;
+    extraFields.sale_rate_pending = selling_price == null || selling_price <= 0;
+  }
 
   if (extras) {
     if (extras.wholesale_price !== undefined) extraFields.wholesale_price = extras.wholesale_price;
