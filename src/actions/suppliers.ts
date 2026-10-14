@@ -13,13 +13,21 @@ async function getRoleContext(supabase: ReturnType<typeof createClient>) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user?.id ?? "").maybeSingle();
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role,organization_id,branch_id,is_active")
+    .eq("id", user?.id ?? "")
+    .maybeSingle();
   const isUnrestricted = profile?.role === "owner" || profile?.role === "super_admin" || profile?.role === "admin";
-  return { isUnrestricted };
+  return { user, profile, isUnrestricted };
 }
 
 export async function saveSupplier(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
+  const context = await getRoleContext(supabase);
+  if (!context.user) return { error: "Session expire ho gayi hai. Dobara login karein." };
+  if (!context.profile?.is_active) return { error: "Aap ka account active nahi hai." };
+  if (!context.isUnrestricted) return { error: "Sirf Admin/Owner naya supplier bana sakta hai." };
   const serviceClient = createServiceClient();
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return { error: "Supplier name is required." };
@@ -47,6 +55,8 @@ export async function saveSupplier(_prev: ActionState, formData: FormData): Prom
   }
 
   const payload = {
+    organization_id: context.profile.organization_id,
+    branch_id: context.profile.branch_id || null,
     name,
     company_name: (formData.get("company_name") as string) || null,
     contact_person: (formData.get("contact_person") as string) || null,
@@ -64,8 +74,8 @@ export async function saveSupplier(_prev: ActionState, formData: FormData): Prom
     bank_account_number: (formData.get("bank_account_number") as string) || null,
     bank_iban: (formData.get("bank_iban") as string) || null,
   };
-  const { data: supplier, error } = await supabase.from("suppliers").insert(payload).select("id").single();
-  if (error) return { error: error.message };
+  const { data: supplier, error } = await serviceClient.from("suppliers").insert(payload).select("id").single();
+  if (error) return { error: `Supplier save nahi hua: ${error.message}` };
 
   await logAudit({ actionType: "create", module: "suppliers", recordId: supplier?.id, recordLabel: name, description: "Naya supplier add hua." });
 
@@ -75,6 +85,10 @@ export async function saveSupplier(_prev: ActionState, formData: FormData): Prom
 
 export async function updateSupplier(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
+  const context = await getRoleContext(supabase);
+  if (!context.user) return { error: "Session expire ho gayi hai. Dobara login karein." };
+  if (!context.profile?.is_active) return { error: "Aap ka account active nahi hai." };
+  if (!context.isUnrestricted) return { error: "Sirf Admin/Owner supplier update kar sakta hai." };
   const serviceClient = createServiceClient();
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
@@ -118,8 +132,12 @@ export async function updateSupplier(_prev: ActionState, formData: FormData): Pr
     }
   }
 
-  const { error } = await supabase.from("suppliers").update(updates).eq("id", id);
-  if (error) return { error: error.message };
+  const { error } = await serviceClient
+    .from("suppliers")
+    .update(updates)
+    .eq("id", id)
+    .eq("organization_id", context.profile.organization_id);
+  if (error) return { error: `Supplier update nahi hua: ${error.message}` };
 
   await logAudit({ actionType: "update", module: "suppliers", recordId: id, recordLabel: name, description: "Supplier update hua." });
 
