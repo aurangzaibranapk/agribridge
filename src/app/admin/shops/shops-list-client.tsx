@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { createShop, updateShop, updateShopStatus, deleteShop, type ActionState } from "@/actions/shops";
 import { EmptyState } from "@/components/ui/layout-primitives";
 import { Store, Plus, Pencil, Trash2, Ban, Play, Power } from "lucide-react";

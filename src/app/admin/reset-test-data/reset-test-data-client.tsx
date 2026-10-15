@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { resetTestData, lockLiveMode, type ActionState } from "@/actions/reset-test-data";
 import { AlertTriangle, Trash2, Lock, ShieldCheck } from "lucide-react";
 import { t } from "@/lib/i18n/translations";

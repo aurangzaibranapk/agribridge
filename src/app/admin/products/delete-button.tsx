@@ -1,5 +1,6 @@
 "use client";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { deleteProduct, type FormState } from "@/actions/products";

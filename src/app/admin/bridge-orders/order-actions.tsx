@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { adminVerifyOrder, adminMarkDelivered, recordOrderAdvancePayment, type ActionState } from "@/actions/bridge-orders";
 import { CheckCircle2, Truck, X, CreditCard } from "lucide-react";
 import { t } from "@/lib/i18n/translations";

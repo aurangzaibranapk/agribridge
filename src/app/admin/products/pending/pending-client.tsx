@@ -1,5 +1,6 @@
 "use client";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { approveProduct, rejectProduct, approveAllProducts, type ActionState } from "@/actions/product-permissions";
 import { CheckCircle2, XCircle, CheckCheck } from "lucide-react";
 import { t } from "@/lib/i18n/translations";

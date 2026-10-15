@@ -5,7 +5,8 @@ import { buildNewProductPrefill, pickPrefillLine } from "@/lib/purchases/new-pro
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import {
   AlertCircle, ArrowLeft, Check, CheckCircle2, FileText, FileUp,
   PackagePlus, Plus, Search, ShoppingCart, Trash2, X,

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { FileImage, Check, XCircle, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { verifyCollectionDeposit, type ActionState, type PendingDepositRow } from "@/actions/pos-collection";

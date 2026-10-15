@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Save } from "lucide-react";
 import { saveFeatureHelp, type HelpState } from "@/actions/feature-help";
 import { Card } from "@/components/ui/layout-primitives";

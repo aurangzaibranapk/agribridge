@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { computeDepreciation, postDepreciationRun, type AssetState } from "@/actions/assets";
 import { Card } from "@/components/ui/layout-primitives";
 import { Input, Label, Button } from "@/components/ui/form";

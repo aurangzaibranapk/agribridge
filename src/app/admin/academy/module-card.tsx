@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { CheckCircle2, PlayCircle, ExternalLink, Bot, ChevronDown, ChevronUp } from "lucide-react";
 import { markModule, type TrainingState } from "@/actions/training";
 import { Card } from "@/components/ui/layout-primitives";

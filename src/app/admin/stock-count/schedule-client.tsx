@@ -1,7 +1,8 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { CalendarClock, Pencil, AlertTriangle, CheckCircle2, PauseCircle, Loader2 } from "lucide-react";
 import { saveCountSchedule, type ScheduleState } from "@/actions/stock-count-schedule";
 import { Card } from "@/components/ui/layout-primitives";

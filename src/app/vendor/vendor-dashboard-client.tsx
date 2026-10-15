@@ -4,7 +4,8 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { LogoutButton } from "@/components/layout/logout-button";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import {
   Tractor, CheckCircle2, MapPin, Phone, Fuel, HandCoins, Calendar, CalendarDays,
   Layers, Loader2, CircleDashed, ShieldCheck, Droplets, Banknote, Inbox, ArrowRight, Navigation, BellDot,

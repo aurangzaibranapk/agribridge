@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { createClient } from "@/lib/supabase/client";
 import { submitMarketplaceCart, type CartState } from "@/actions/marketplace-cart";
 import { ShoppingCart, Search, Plus, Minus, X, CheckCircle2, Loader2, MapPin } from "lucide-react";

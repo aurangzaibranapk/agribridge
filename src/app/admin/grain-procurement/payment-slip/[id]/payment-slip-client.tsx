@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { editGrainPayment, emailGrainPaymentSlip, type ActionState } from "@/actions/grain-procurement";
 import { Printer, MessageCircle, Mail, ArrowLeft, Pencil, X, AlertCircle } from "lucide-react";
 import { t } from "@/lib/i18n/translations";

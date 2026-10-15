@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { ArrowLeft, ChevronRight, Store, Wallet, Lock } from "lucide-react";
 import { openShift, type ActionState } from "@/actions/pos-counters";
 import { ShiftCashHandoverForm } from "@/components/pos/shift-bar";

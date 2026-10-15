@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, CheckCircle2, FileText, Plus, Save, Search, ShoppingBag, Table2, Trash2, TrendingUp } from "lucide-react";
 import Link from "next/link";

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { saveIdCardDetails, type ActionState } from "@/actions/staff-id-card";
 import { Printer, Download, Mail, MessageCircle, User, Settings } from "lucide-react";
 import { t as tr } from "@/lib/i18n/translations";

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Lightbulb, Users, ExternalLink, Save, MessageSquare, ClipboardCopy, CheckCheck } from "lucide-react";
 import { submitSuggestionForm, updateSuggestionStatus, addSuggestionComment, type SuggestionState } from "@/actions/suggestions";
 import { Card } from "@/components/ui/layout-primitives";

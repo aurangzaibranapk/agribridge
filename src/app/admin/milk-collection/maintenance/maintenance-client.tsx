@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { logMaintenance, recordFundWithdrawal, type ActionState } from "@/actions/maintenance";
 import { Wrench, AlertTriangle, PiggyBank, X } from "lucide-react";
 import { t } from "@/lib/i18n/translations";

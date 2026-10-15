@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { submitOrderPayment, verifyOrderPayment, rejectOrderPayment, type ActionState } from "@/actions/agri-orders";
 import { CreditCard, X, CheckCircle2, XCircle, FileText } from "lucide-react";
 import type { OrderPermissions } from "@/lib/order-permissions";

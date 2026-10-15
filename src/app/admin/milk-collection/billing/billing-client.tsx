@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { saveBillingSettings, saveMonthlyExpense, type ActionState } from "@/actions/billing";
 import { Settings, X, TrendingUp, TrendingDown, Printer, Download, MessageCircle, Mail } from "lucide-react";
 import { t } from "@/lib/i18n/translations";

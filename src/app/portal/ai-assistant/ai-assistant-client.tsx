@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { approveFarmerAiRequest, rejectFarmerAiRequest, type ActionState } from "@/actions/farmer-ai";
 import { Mic, Send, Sparkles, Check, X, Loader2, Square } from "lucide-react";
 

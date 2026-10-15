@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { createFarmerLoan, type ActionState } from "@/actions/farmer-loans";
 import { Button, Input, Label, Select, Textarea, Badge } from "@/components/ui/form";
 import { Plus, X } from "lucide-react";

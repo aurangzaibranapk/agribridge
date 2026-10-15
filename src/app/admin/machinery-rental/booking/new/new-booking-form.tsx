@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { useRouter } from "next/navigation";
 import {
   createBooking,

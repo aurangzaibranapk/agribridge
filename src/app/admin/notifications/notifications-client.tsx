@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { markNotificationRead, sendBroadcast, type ActionState } from "@/actions/notifications";
 import { Bell, Send, X, Check } from "lucide-react";
 import Link from "next/link";

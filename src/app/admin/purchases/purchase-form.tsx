@@ -1,7 +1,8 @@
 "use client";
 import { useMemo, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { createPurchase, type ActionState } from "@/actions/purchases";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { Plus, Trash2, Search, FileUp, X, FileSpreadsheet } from "lucide-react";

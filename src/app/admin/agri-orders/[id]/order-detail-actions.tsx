@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { salesVerifyOrder, financeVerifyOrder, approveOrder, rejectOrder, adminApproveAllStages, type ActionState } from "@/actions/agri-orders";
 import { CheckSquare, DollarSign, CheckCircle2, XCircle, X, Zap } from "lucide-react";
 import type { OrderPermissions } from "@/lib/order-permissions";

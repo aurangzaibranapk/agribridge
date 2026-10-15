@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { saveBlogPost, generateBlogDraftAction, type ActionState, type AIDraftState } from "@/actions/cms";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { VoiceDictationButton } from "@/components/admin/voice-dictation-button";

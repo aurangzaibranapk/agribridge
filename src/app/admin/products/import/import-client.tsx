@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { AlertTriangle, ArrowRightLeft, CheckCircle2, FileUp, RotateCcw, Trash2, Upload } from "lucide-react";
 import { importProductsCsv, previewProductsCsv, type ImportRow, type ImportState } from "@/actions/products-import";
 import { Card } from "@/components/ui/layout-primitives";

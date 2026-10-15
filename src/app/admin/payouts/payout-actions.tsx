@@ -1,5 +1,6 @@
 "use client";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { markDealerPayoutPaid, markFarmerPayoutPaid, type ActionState } from "@/actions/wallet";
 import { CheckCircle2 } from "lucide-react";
 

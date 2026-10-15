@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { approveAiSuggestion, rejectAiSuggestion, addBranchComment, type ActionState } from "@/actions/ai-suggestions";
 import { CheckCircle2, XCircle, X, MessageSquare } from "lucide-react";
 import { t } from "@/lib/i18n/translations";

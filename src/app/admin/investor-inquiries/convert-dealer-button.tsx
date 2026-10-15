@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { convertInquiryToDealer, type ActionState } from "@/actions/dealers";
 import { Button, Input, Label } from "@/components/ui/form";
 import { UserPlus, X } from "lucide-react";

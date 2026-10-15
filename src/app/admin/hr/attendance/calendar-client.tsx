@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { AlertTriangle, ChevronLeft, ChevronRight, History, Lock, PenLine, Send } from "lucide-react";
 import {
   cancelAttendanceCorrection,

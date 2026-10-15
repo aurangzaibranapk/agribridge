@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { AlertTriangle, Camera, CheckCircle2, ImagePlus, Plus, ScanLine, Sparkles, Trash2 } from "lucide-react";
 import { BarcodeCameraModal } from "@/components/pos/barcode-camera-modal";
 import {

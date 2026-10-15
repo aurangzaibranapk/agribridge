@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import Link from "next/link";
 import { deleteBankAccount, type ActionState } from "@/actions/bank-management";
 import AddBankModal from "./add-bank-modal";

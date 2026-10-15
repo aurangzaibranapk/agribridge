@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { createDriver, updateDriverStatus, type ActionState } from "@/actions/drivers";
 import { Plus, X, Phone, Truck, Link as LinkIcon } from "lucide-react";
 import Link from "next/link";

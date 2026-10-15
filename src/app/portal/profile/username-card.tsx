@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Eye, EyeOff } from "lucide-react";
 import { checkFarmerUsername, setFarmerUsername, type UsernameState } from "@/actions/farmer-auth";
 import { t } from "@/lib/i18n/translations";

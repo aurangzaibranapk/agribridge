@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { scanDataHealthNow, resolveDataHealthFinding, type ActionState } from "@/actions/data-health";
 import { Search, Check, AlertTriangle } from "lucide-react";
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { AlertTriangle, Save, Sparkles, Check } from "lucide-react";
 import { saveMissingRates, type RateState } from "@/actions/product-rates";
 import { Card } from "@/components/ui/layout-primitives";

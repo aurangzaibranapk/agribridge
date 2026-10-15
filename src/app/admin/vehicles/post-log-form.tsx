@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { postVehicleDailyLog, type ActionState } from "@/actions/vehicle-logs";
 import { COMMENT_MAX, COMMENT_MIN } from "@/lib/whatsapp-submissions";
 import { t } from "@/lib/i18n/translations";

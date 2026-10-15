@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { recordVendorCashHandover, type ActionState } from "@/actions/machinery-lifecycle";
 import { useLang } from "@/lib/i18n/lang-context";
 import { t } from "@/lib/i18n/translations";

@@ -1,7 +1,8 @@
 ﻿"use client";
 
 import { useRef, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { createProduct, updateProduct, extractProductFromImageAction, type FormState } from "@/actions/products";
 import { type ExtractedProductInfo } from "@/lib/ai/product-extraction-client";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";

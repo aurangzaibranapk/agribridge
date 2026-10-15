@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { closePeriod, reopenPeriod, closeYear, type PeriodState } from "@/actions/accounting-periods";
 import { Card } from "@/components/ui/layout-primitives";
 import { Input, Label, Button } from "@/components/ui/form";
