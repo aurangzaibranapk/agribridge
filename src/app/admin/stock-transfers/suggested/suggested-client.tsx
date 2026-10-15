@@ -1,7 +1,8 @@
 "use client";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { AlertTriangle, CheckCircle2, PackagePlus } from "lucide-react";
 import { requestInternalTransfer } from "@/actions/stock-transfer-workflow";
 import { Card } from "@/components/ui/layout-primitives";

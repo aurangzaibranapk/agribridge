@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Truck, PackageCheck } from "lucide-react";
 import { recordDispatch, recordReceipt, type DispatchState } from "@/actions/milk-dispatch";
 import { Card } from "@/components/ui/layout-primitives";

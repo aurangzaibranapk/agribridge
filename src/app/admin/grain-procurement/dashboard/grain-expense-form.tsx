@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { createGrainExpense, type ActionState } from "@/actions/grain-expenses";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { Fuel } from "lucide-react";

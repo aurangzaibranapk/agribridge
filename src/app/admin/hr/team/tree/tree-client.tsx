@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { ChevronDown, ChevronRight, Search, Users, Pencil, UserRound } from "lucide-react";
 import { saveReportingLine, type AttState } from "@/actions/hr-attendance";
 import { Card } from "@/components/ui/layout-primitives";

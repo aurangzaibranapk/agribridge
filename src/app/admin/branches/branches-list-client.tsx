@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import Link from "next/link";
 import { Users, FileText, CheckSquare, Store, Plus, LayoutDashboard } from "lucide-react";
 import { DeleteBranchButton } from "./delete-branch-button";

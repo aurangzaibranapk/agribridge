@@ -201,12 +201,16 @@ async function addOneExtraItem(
 
   // Naam se milan -- pehle se hai to usi ka stock badhta hai, naya
   // product nahi banta (do jagah ek hi cheez do naamon se na ho jaye).
-  const { data: existing } = await service
+  const { data: matches } = await service
     .from("products")
-    .select("id")
+    .select("id, name")
     .ilike("name", name)
     .eq("is_deleted", false)
-    .maybeSingle();
+    .limit(2);
+  if ((matches ?? []).length > 1) {
+    return { ok: false, error: `"${name}" ek se zyada products se milta hai — pehle naam saaf karein.` };
+  }
+  const existing = matches?.[0] ?? null;
 
   let productId = existing?.id ?? null;
 
@@ -342,8 +346,8 @@ export async function addExtraCountItem(_prev: ActionState, formData: FormData):
 
     const rawRate = r.purchasePrice;
     const purchasePrice = rawRate === null || rawRate === "" || rawRate === undefined ? null : Number(rawRate);
-    if (purchasePrice !== null && (!Number.isFinite(purchasePrice) || purchasePrice < 0)) {
-      return { error: `"${name}": rate sahi nahi likha gaya.` };
+    if (purchasePrice === null || !Number.isFinite(purchasePrice) || purchasePrice <= 0) {
+      return { error: `"${name}": khareed rate sifar se zyada likhein — warna Stock Value nahi milegi.` };
     }
 
     items.push({ name, quantity, purchasePrice });

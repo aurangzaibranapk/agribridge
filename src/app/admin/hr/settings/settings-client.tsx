@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { CalendarOff, Clock, Lock, Trash2, Unlock, UserCheck } from "lucide-react";
 import { saveLeavePolicy } from "@/actions/hr-probation";
 import {

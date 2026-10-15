@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { fetchAttendanceMonth } from "@/actions/hr-attendance";
 import { useEffect, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import {
   saveStaffDetails,
   recordSalaryPayment,

@@ -4,7 +4,8 @@ import { useEffect, useState, useMemo, type FormEvent } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import Link from "next/link";
 import { NewSaleForm } from "./sell/sell-grain-client";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { createGrainEntry, recordGrainPayment, createGrainParty, editGrainEntry, updateGrainPackRule, type ActionState } from "@/actions/grain-procurement";
 import {
   GrainPaymentActionId,

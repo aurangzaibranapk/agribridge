@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { postManualJournal, type JvState } from "@/actions/journal-entry";
 import { Card } from "@/components/ui/layout-primitives";
 import { Input, Select, Label } from "@/components/ui/form";

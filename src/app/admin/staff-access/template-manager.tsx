@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Bot, Check, Search, ShieldCheck, Trash2 } from "lucide-react";
 import { ACTIONS, ACTION_LABEL, DATA_SCOPES, SCOPE_LABEL, type Action, type DataScope } from "@/lib/access/types";
 import { clearRoleTemplate, fillRoleTemplate, saveRoleTemplate, suggestRoleTemplate, type TemplateActionState, type TemplatePermissionDraft } from "@/actions/staff-access";

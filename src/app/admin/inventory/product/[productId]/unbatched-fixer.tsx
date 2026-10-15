@@ -1,5 +1,6 @@
 "use client";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { AlertTriangle } from "lucide-react";
 import { fixUnbatchedInventory } from "@/actions/inventory";
 import type { ActionState } from "@/actions/inventory";

@@ -1,5 +1,6 @@
 "use client";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { saveHeroSlide, type ActionState } from "@/actions/cms";
 import { Button, Input, Label } from "@/components/ui/form";
 import { t } from "@/lib/i18n/translations";

@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Trash2 } from "lucide-react";
 
 export function DeleteButton({ id, action, label = "Delete" }: { id: string; action: any; label?: string }) {

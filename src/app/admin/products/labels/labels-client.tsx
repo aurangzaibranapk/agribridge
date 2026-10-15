@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Barcode, Printer, Search, Sparkles } from "lucide-react";
 import { assignInternalBarcodes, saveScannedBarcode, type SetupState } from "@/actions/product-setup";
 import { Card } from "@/components/ui/layout-primitives";

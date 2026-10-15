@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { saveLandlordSignature, type ActionState } from "@/actions/shop-rent";
 import { SignaturePad } from "@/components/ui/signature-pad";
 

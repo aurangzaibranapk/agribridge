@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { t, type Lang } from "@/lib/i18n/translations";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Search, RotateCcw, KeyRound, CalendarClock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { returnPosSale, setAuthCode, setReturnWindow, type ReturnState } from "@/actions/pos-returns";

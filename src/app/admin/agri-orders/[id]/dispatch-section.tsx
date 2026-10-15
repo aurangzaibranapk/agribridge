@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { createDispatch, confirmDelivery, type ActionState } from "@/actions/agri-dispatch";
 import { Truck, X, MapPin, Check } from "lucide-react";
 import type { OrderPermissions } from "@/lib/order-permissions";

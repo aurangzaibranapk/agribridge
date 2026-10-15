@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { confirmLiabilityShare, declineLiabilityShare, type ActionState } from "@/actions/stock-count-liability";
 import { AlertTriangle } from "lucide-react";
 

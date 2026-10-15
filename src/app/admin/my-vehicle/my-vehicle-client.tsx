@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { AlertTriangle, Camera, CheckCircle2 } from "lucide-react";
 import { Button, Input, Label, Badge } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";

@@ -49,7 +49,9 @@ assert.ok(/supplier_payment_requests/.test(sp));
 const grain = read("src/actions/grain-procurement.ts");
 const cge = grain.slice(grain.indexOf("export async function createGrainEntry"), grain.indexOf("async function postGrainEntry"));
 assert.ok(!/postGrainEntry\(/.test(cge), "createGrainEntry must always go pending");
-assert.ok(/isSelfApproval\(owner\?\.created_by, guard\.userId\)/.test(grain));
+// bea0e8c6: Admin/Owner apni grain entry bhi approve kar sakte hain (malik ka faisla);
+// staff approve action tak pohanch hi nahi sakta.
+assert.ok(/requireGrainApprover\(\)/.test(grain.slice(grain.indexOf("export async function approveGrainPendingEntry"))));
 
 const sc = read("src/actions/stock-count.ts");
 assert.ok(/stockCountPostCheck\(/.test(sc));

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { MapPin, Loader2 } from "lucide-react";
 import { setBookingLocation } from "@/actions/machinery-lifecycle";
 import { t } from "@/lib/i18n/translations";

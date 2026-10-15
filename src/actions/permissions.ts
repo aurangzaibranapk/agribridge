@@ -11,16 +11,32 @@ export interface ActionState {
 }
 
 export async function saveStaffPermissions(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const serviceClient = createServiceClient();
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active || !["owner", "super_admin", "admin"].includes(String(me.role))) {
+    return { error: "Sirf Owner ya Admin staff ki ijazat badal sakta hai." };
+  }
+
   const profileId = String(formData.get("profile_id") ?? "");
   if (!profileId) return { error: "Staff select karein." };
+  if (profileId === user.id) return { error: "Apni ijazat khud nahi badli ja sakti." };
 
   const allowedPages = formData.getAll("allowed_pages").map((v) => String(v));
-
+  const serviceClient = createServiceClient();
   const { error, data } = await serviceClient.from("profiles").update({ allowed_pages: allowedPages }).eq("id", profileId).select("id");
   if (error) return { error: error.message };
   if (!data || data.length === 0) return { error: "Staff record nahi mila - update nahi ho saka." };
 
+  await logAudit({
+    actionType: "update",
+    module: "staff_permissions",
+    recordId: profileId,
+    description: `Staff pages badle — ${allowedPages.length} safhe`,
+  });
   revalidatePath("/admin/permissions");
   return { success: true };
 }
@@ -95,6 +111,7 @@ export async function clearStaffOverride(_prev: ActionState, formData: FormData)
 
   const profileId = String(formData.get("profile_id") ?? "");
   if (!profileId) return { error: "Staff nahi mila." };
+  if (profileId === user.id) return { error: "Apni ijazat khud khali nahi ki ja sakti." };
 
   const service = createServiceClient();
   const { error } = await service.from("profiles").update({ allowed_pages: [] }).eq("id", profileId);

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { createAgriOrder, type ActionState } from "@/actions/agri-orders";
 import { Search, LayoutGrid, List } from "lucide-react";
 import { ProductCardGrid } from "./product-card-grid";

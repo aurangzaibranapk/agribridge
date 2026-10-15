@@ -1,5 +1,6 @@
 "use client";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { aajKaKhana } from "@/lib/utils/format";
 import { approveGeneratorEntry, logGeneratorEntry, type ActionState } from "@/actions/generator";
 import { AlertTriangle, Zap, Image as ImageIcon } from "lucide-react";

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { FileText, Image as ImageIcon, Sparkles, Table2, Upload, X } from "lucide-react";
 import { createBillFromFiles, createBillFromSheet, type BillRateState } from "@/actions/supplier-bill-rates";
 import { createClient } from "@/lib/supabase/client";

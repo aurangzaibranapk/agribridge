@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { saveCustomer, updateCustomer, type ActionState } from "@/actions/customers";
 import { Button, Input, Label, Textarea } from "@/components/ui/form";
 import { Plus, X } from "lucide-react";

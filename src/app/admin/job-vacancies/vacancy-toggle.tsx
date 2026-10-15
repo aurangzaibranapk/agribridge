@@ -1,5 +1,5 @@
 "use client";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { toggleVacancyOpen, type ActionState } from "@/actions/jobs";
 
 const initialState: ActionState = {};

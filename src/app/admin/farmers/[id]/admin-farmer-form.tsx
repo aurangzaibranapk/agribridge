@@ -1,5 +1,6 @@
 "use client";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { adminUpdateFarmerDetails, type FarmerProfileState } from "@/actions/farmer-profile";
 import { Button, Input, Label, Select } from "@/components/ui/form";
 import { ImageCropField } from "@/components/ui/image-crop-field";

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { updateBuyerStatus, deleteBuyer, type ActionState } from "@/actions/buyers";
 import { DeleteButton } from "@/components/admin/delete-button";
 import { EmptyState } from "@/components/ui/layout-primitives";

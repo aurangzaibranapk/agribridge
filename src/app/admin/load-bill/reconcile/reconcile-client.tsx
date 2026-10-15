@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { AlertTriangle, CheckCircle2, Scale } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { Button, Input, Label, Select } from "@/components/ui/form";

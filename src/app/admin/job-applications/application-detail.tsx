@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { markUnderReview, markEligibility, scheduleInterview, saveInterviewScore, createOfficialLogin, type ActionState } from "@/actions/jobs";
 import { suspendStaff, reactivateStaff, deleteStaff, type ActionState as StaffActionState } from "@/actions/users";
 import { OfferButton } from "./offer-modal";

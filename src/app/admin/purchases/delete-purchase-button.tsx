@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Trash2, X } from "lucide-react";
 import { deletePurchase, type ActionState } from "@/actions/purchases";
 import { t } from "@/lib/i18n/translations";

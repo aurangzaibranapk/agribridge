@@ -1,5 +1,6 @@
 "use client";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { verifyFarm, unverifyFarm, type ActionState } from "@/actions/farms";
 import { CheckCircle2, Clock } from "lucide-react";
 import { t } from "@/lib/i18n/translations";

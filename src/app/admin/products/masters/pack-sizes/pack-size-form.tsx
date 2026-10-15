@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Save, Trash2 } from "lucide-react";
 import { savePackSize, deletePackSize, type UnitActionState } from "@/actions/units";
 import { Input, Label, Select, Textarea } from "@/components/ui/form";
