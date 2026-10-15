@@ -30,11 +30,23 @@ export default async function FarmerDemandCenterPage() {
       .limit(50),
   ]);
 
+  // Pipeline/category (migration 20261015233000) -- na hon to purana hi dikhao.
+  const ids = (demands ?? []).map((d: { id: string }) => d.id);
+  const extra = new Map<string, { pipeline_status: string | null; category: string | null }>();
+  if (ids.length) {
+    const { data: ext, error: extErr } = await (supabase as any)
+      .from("farmer_product_demands")
+      .select("id, pipeline_status, category")
+      .in("id", ids);
+    if (!extErr) for (const e of ext ?? []) extra.set(e.id, { pipeline_status: e.pipeline_status ?? null, category: e.category ?? null });
+  }
+  const merged = (demands ?? []).map((d: any) => ({ ...d, ...(extra.get(d.id) ?? {}) }));
+
   return (
     <DemandCenterClient
       farmerName={farmer.full_name ?? "Kisan"}
       products={(products ?? []) as DemandProduct[]}
-      demands={(demands ?? []) as ProductDemandRow[]}
+      demands={merged as ProductDemandRow[]}
     />
   );
 }

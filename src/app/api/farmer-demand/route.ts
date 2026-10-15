@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isDemandCategory } from "@/lib/demand/categories";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,9 @@ export async function POST(request: Request) {
   const neededBy = cleanText(body.neededBy, 20);
   const purpose = cleanText(body.purpose, 120);
   const notes = cleanText(body.notes, 500);
+  const category = isDemandCategory(body.category) ? body.category : null;
+  const area = cleanText(body.area, 120);
+  const source = body.source === "munshi" ? "munshi" : "form";
 
   if (!productName || !Number.isFinite(quantity) || quantity <= 0) {
     return NextResponse.json({ error: "Product aur valid quantity zaroori hai." }, { status: 400 });
@@ -49,6 +53,10 @@ export async function POST(request: Request) {
       notes: notes || null,
       status: "pending",
       payment_required_at_registration: false,
+      // Naye khane (migration 20261015233000): sirf tab bheje jate hain jab bhare hon.
+      ...(category ? { category } : {}),
+      ...(area ? { area } : {}),
+      ...(source === "munshi" ? { source } : {}),
     })
     .select("id, product_id, product_name, quantity, unit, needed_by, purpose, notes, status, staff_note, created_at, updated_at")
     .single();
