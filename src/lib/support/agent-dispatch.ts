@@ -139,6 +139,26 @@ async function createCodexSubscriptionIssue(
   ].filter(Boolean).join("\n");
 
   try {
+    const repositoryResponse = await fetch(`https://api.github.com/repos/${config.repository}`, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${config.token}`,
+        "User-Agent": "AgriBridge-Support-Bridge",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      signal: AbortSignal.timeout(15_000),
+    });
+    const repositoryInfo = await repositoryResponse.json().catch(() => ({}));
+    if (!repositoryResponse.ok) {
+      return { ok: false, error: String(repositoryInfo?.message ?? `GitHub repository HTTP ${repositoryResponse.status}`) };
+    }
+    if (repositoryInfo?.private !== true) {
+      return {
+        ok: false,
+        error: "Customer aur staff evidence ki hifazat ke liye SUPPORT_AGENT_REPOSITORY private hona zaroori hai. Public repository mein support issue create nahi kiya gaya.",
+      };
+    }
+
     const response = await fetch(`https://api.github.com/repos/${config.repository}/issues`, {
       method: "POST",
       headers: {
