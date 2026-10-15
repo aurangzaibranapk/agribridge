@@ -123,13 +123,18 @@ export default async function ReportsPage({ searchParams }: { searchParams?: Sea
   const otherExpenses = complete.reduce((sum, d) => sum + Number(d.otherExpense ?? 0), 0);
 
   return (
-    <ExecutiveReportsDashboard
+    <div>
+      <div className="mb-4 flex justify-end">
+        <Link href="/admin/business-360" className="inline-flex items-center rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">Business 360 — poora lena dena</Link>
+      </div>
+      <ExecutiveReportsDashboard
       filters={{ range, branch, shop, branches: branches ?? [], shops: shops ?? [] }}
       kpis={{ revenue: totals.revenue, directCost, otherExpenses, net: totals.net, receivables: moneyToday.receivable, payables: moneyToday.payable }}
       trend={labels.map(({ label, revenue, expenses }) => ({ label, revenue, expenses }))}
       branchRows={[...branchMap.values()].sort((a, b) => b.revenue - a.revenue)}
       departments={departments.map((d) => ({ name: d.label, revenue: d.revenue, cost: d.directCost == null && d.otherExpense == null ? null : Number(d.directCost ?? 0) + Number(d.otherExpense ?? 0), profit: d.profit, margin: d.margin, state: d.state, href: d.href }))}
       insights={conclude(departments, lang)}
-    />
+      />
+    </div>
   );
 }
