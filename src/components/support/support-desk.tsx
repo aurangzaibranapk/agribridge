@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, Camera, CheckCircle2, ClipboardPaste, ExternalLink, RefreshCw, Send, ShieldCheck, X } from "lucide-react";
+import { AlertTriangle, BarChart3, Camera, CheckCircle2, ClipboardPaste, ExternalLink, RefreshCw, Send, ShieldCheck, X } from "lucide-react";
 
 type Person = { id: string; full_name: string; role: string };
 type Agent = { key: string; label: string };
@@ -107,7 +107,7 @@ export function SupportDesk({ pathname }: { pathname: string }) {
       <button disabled={saving} className="flex w-full items-center justify-center gap-1 rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"><Send className="h-3.5 w-3.5"/>{saving ? "Report ho raha hai…" : "Admin/Developer ko bhejein"}</button>
     </form>
     {error && <p className="mt-2 rounded bg-red-50 p-2 text-[11px] text-red-700">{error}</p>}{sent && <p className="mt-2 rounded bg-green-50 p-2 text-[11px] text-green-700">{sent}</p>}
-    <div className="mt-3 flex items-center justify-between"><p className="text-[11px] font-semibold uppercase text-surface-500">{canManage ? "Tamam Issues" : "Mere Issues"}</p><button onClick={() => void load()} className="text-surface-500"><RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}/></button></div>
+    <div className="mt-3 flex items-center justify-between gap-2"><p className="text-[11px] font-semibold uppercase text-surface-500">{canManage ? "Tamam Issues" : "Mere Issues"}</p><div className="flex items-center gap-2">{canManage && <a href="/admin/my-work/support-dashboard" className="flex items-center gap-1 rounded border border-brand-200 bg-brand-50 px-2 py-1 text-[9px] font-semibold text-brand-800"><BarChart3 className="h-3 w-3"/> Development Dashboard</a>}<button onClick={() => void load()} className="text-surface-500"><RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`}/></button></div></div>
     <div className="mt-2 space-y-2">{!loading && items.length === 0 && <p className="py-4 text-center text-xs text-surface-400">Abhi koi issue report nahi hua.</p>}{items.map((ticket) => {
       const activeStage = currentStage(ticket);
       const activeIndex = stageOrder.indexOf(activeStage);
