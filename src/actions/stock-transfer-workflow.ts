@@ -138,7 +138,7 @@ export async function verifyTransferPayment(_prev: ActionState, formData: FormDa
   if (!transfer.total_amount) return { error: "This transfer has no amount recorded." };
   const { error: financeError } = await supabase.from("finance_transactions").insert({
     account_id: accountId,
-    transaction_type: "income",
+    transaction_type: "transfer_in",
     category: "Internal Stock Transfer",
     amount: transfer.total_amount,
     transaction_date: aajKaKhana(),
