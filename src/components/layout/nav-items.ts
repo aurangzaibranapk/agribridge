@@ -178,6 +178,8 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/menus", label: "Menu", icon: MenuIcon },
       { href: "/admin/contact-messages", label: "Website ke Paighaam", icon: Mail },
       { href: "/admin/investor-inquiries", label: "Sarmayakar ke Sawal", icon: Handshake },
+      { href: "/admin/intelligence", label: "Party 360", icon: Users },
+      { href: "/admin/intelligence/products", label: "Product Intelligence", icon: LineChart },
     ],
   },
   {
