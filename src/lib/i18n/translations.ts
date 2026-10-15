@@ -53,6 +53,7 @@ import { kharcheDict } from "./dict/kharche";
 import { supportCenterDict } from "./dict/support-center";
 import { staffPerformanceDict } from "./dict/staff-performance";
 import { intelligenceDict } from "./dict/intelligence";
+import { business360OwnerDict } from "./dict/business-360-owner";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -157,6 +158,7 @@ const dict = {
   ...supportCenterDict,
   ...staffPerformanceDict,
   ...intelligenceDict,
+  ...business360OwnerDict,
 };
 
 export type TranslationKey = keyof typeof dict;

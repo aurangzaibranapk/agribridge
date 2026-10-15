@@ -28,6 +28,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/suppliers/all-statement", label: "Sab Suppliers Statement", icon: FileBarChart },
       { href: "/admin/investors", label: "Sarmayakar", icon: PiggyBank },
       { href: "/admin/branches", label: "Shaakhein", icon: Store },
+      { href: "/admin/business-360/owner", label: "Business 360 (Malik)", icon: Scale },
       { href: "/admin/branches/locations", label: "Shaakh ki Jagah", icon: MapPin },
       { href: "/admin/shops", label: "Dukanein", icon: Store },
       { href: "/admin/shop-rent", label: "Dukan ka Kiraya aur Bill", icon: Home },

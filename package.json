@@ -17,7 +17,8 @@
     "test:grain-drilldown": "npx --yes tsx scripts/test-grain-drilldown.ts",
     "test:support": "npx --yes tsx scripts/test-support-sla.ts",
     "test:staff-achievement": "npx --yes tsx scripts/test-staff-achievement.ts",
-    "test:intelligence": "npx --yes tsx scripts/test-intelligence.ts"
+    "test:intelligence": "npx --yes tsx scripts/test-intelligence.ts",
+    "test:business-360": "npx --yes tsx scripts/test-business-360.ts"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",
