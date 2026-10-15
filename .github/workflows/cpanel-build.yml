@@ -1,0 +1,71 @@
+name: Build AgriBridge cPanel Package
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-cpanel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Validate build environment
+        shell: bash
+        run: |
+          test -n "$NEXT_PUBLIC_SUPABASE_URL" || { echo "::error::Missing NEXT_PUBLIC_SUPABASE_URL"; exit 1; }
+          test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" || { echo "::error::Missing NEXT_PUBLIC_SUPABASE_ANON_KEY"; exit 1; }
+          case "$NEXT_PUBLIC_SUPABASE_URL" in
+            https://ktskwawkslaznkjjacni.supabase.co|https://hwaiuwxqldxsoukkfefn.supabase.co) ;;
+            *) echo "::error::Unexpected Supabase project URL"; exit 1 ;;
+          esac
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check translations
+        run: npm run check:i18n
+
+      - name: Type check
+        run: npx tsc --noEmit --incremental false
+
+      - name: Production build
+        run: npm run build
+
+      - name: Create complete cPanel archive
+        shell: bash
+        run: |
+          rm -rf cpanel-package
+          mkdir -p cpanel-package
+          cp -a .next cpanel-package/.next
+          [ -d public ] && cp -a public cpanel-package/public || true
+          cp package.json package-lock.json next.config.js cpanel-package/
+          cp -a node_modules cpanel-package/node_modules
+          find cpanel-package/node_modules -type d -name .cache -prune -exec rm -rf {} + || true
+          tar -czf agribridge-cpanel-release.tar.gz -C cpanel-package .
+          sha256sum agribridge-cpanel-release.tar.gz > agribridge-cpanel-release.sha256
+          ls -lh agribridge-cpanel-release.tar.gz agribridge-cpanel-release.sha256
+
+      - name: Upload cPanel build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agribridge-cpanel-release
+          path: |
+            agribridge-cpanel-release.tar.gz
+            agribridge-cpanel-release.sha256
+          retention-days: 14
