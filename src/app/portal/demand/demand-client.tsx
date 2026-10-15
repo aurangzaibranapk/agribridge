@@ -43,6 +43,7 @@ const statusLabels: Record<string, string> = {
   pending: "Nayi demand",
   reviewing: "Check ho rahi hai",
   approved: "Procurement approve",
+  ordered: "Order ho gaya",
   fulfilled: "Product available",
   rejected: "Close",
   cancelled: "Cancel",
@@ -149,6 +150,6 @@ function SummaryCard({ label, value, icon }: { label: string; value: number; ico
 }
 
 function DemandCard({ row }: { row: ProductDemandRow }) {
-  const tone = row.status === "fulfilled" || row.status === "approved" ? "bg-emerald-50 text-emerald-700" : row.status === "rejected" || row.status === "cancelled" ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-700";
+  const tone = row.status === "fulfilled" || row.status === "approved" || row.status === "ordered" ? "bg-emerald-50 text-emerald-700" : row.status === "rejected" || row.status === "cancelled" ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-700";
   return <div className="rounded-2xl border border-surface-200 bg-white p-4 shadow-card"><div className="flex items-start justify-between gap-3"><div><p className="font-semibold text-surface-900">{row.product_name}</p><p className="mt-1 text-sm text-surface-500">{row.quantity} {row.unit}</p></div><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}>{statusLabels[row.status] ?? row.status}</span></div><div className="mt-3 grid grid-cols-2 gap-2 text-xs text-surface-500"><span>Demand: {new Date(row.created_at).toLocaleDateString()}</span><span>Needed: {row.needed_by || "Jab available ho"}</span></div>{row.staff_note && <div className="mt-3 rounded-xl bg-surface-50 p-3 text-sm text-surface-700"><div className="flex items-center gap-2 font-medium"><Truck className="h-4 w-4" /> Munshi update</div><p className="mt-1">{row.staff_note}</p></div>}{row.status === "fulfilled" && <div className="mt-3 flex items-center gap-2 text-sm font-medium text-emerald-700"><CheckCircle2 className="h-4 w-4" /> Product arrange ho gaya—order confirm karein.</div>}{row.status === "rejected" && <div className="mt-3 flex items-center gap-2 text-sm text-rose-700"><XCircle className="h-4 w-4" /> Is demand ko filhal close kar diya gaya hai.</div>}</div>;
 }

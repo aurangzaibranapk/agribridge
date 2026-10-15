@@ -22,7 +22,7 @@ export default async function FarmerDemandCenterPage() {
       .select("id, name, pack_size, unit, is_available, is_deleted")
       .eq("is_deleted", false)
       .order("name"),
-    supabase
+    (supabase as any)
       .from("farmer_product_demands")
       .select("id, product_id, product_name, quantity, unit, needed_by, purpose, notes, status, staff_note, created_at, updated_at")
       .eq("farmer_id", farmer.id)

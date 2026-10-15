@@ -33,7 +33,8 @@ export async function POST(request: Request) {
     .single();
   if (!farmer) return NextResponse.json({ error: "Farmer profile nahi mili." }, { status: 404 });
 
-  const { data: demand, error } = await supabase
+  // Table abhi generated types mein nahi (migration live nahi) -- isliye any.
+  const { data: demand, error } = await (supabase as any)
     .from("farmer_product_demands")
     .insert({
       organization_id: farmer.organization_id,
