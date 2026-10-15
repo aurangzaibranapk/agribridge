@@ -15,54 +15,45 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const productId = cleanText(body.productId, 80);
   const productName = cleanText(body.productName, 160);
-  const quantity = cleanText(body.quantity, 40);
+  const quantityText = cleanText(body.quantity, 40);
+  const quantity = Number(quantityText);
   const unit = cleanText(body.unit, 30) || "other";
   const neededBy = cleanText(body.neededBy, 20);
   const purpose = cleanText(body.purpose, 120);
   const notes = cleanText(body.notes, 500);
 
-  if (!productName || !quantity) {
-    return NextResponse.json({ error: "Product aur quantity zaroori hai." }, { status: 400 });
+  if (!productName || !Number.isFinite(quantity) || quantity <= 0) {
+    return NextResponse.json({ error: "Product aur valid quantity zaroori hai." }, { status: 400 });
   }
 
   const { data: farmer } = await supabase
     .from("farmers")
-    .select("id, full_name, village, district")
+    .select("id, organization_id, branch_id")
     .eq("user_id", user.id)
     .single();
   if (!farmer) return NextResponse.json({ error: "Farmer profile nahi mili." }, { status: 404 });
 
-  const details = {
-    source: "farmer_demand_center",
-    product_id: productId || null,
-    product_name: productName,
-    quantity,
-    unit,
-    needed_by: neededBy || null,
-    purpose: purpose || null,
-    notes: notes || null,
-    farmer_name: farmer.full_name,
-    village: farmer.village,
-    district: farmer.district,
-    payment_required_at_registration: false,
-  };
-
-  const description = `Demand: ${productName} — ${quantity} ${unit}${purpose ? ` — ${purpose}` : ""}`;
-
   const { data: demand, error } = await supabase
-    .from("farmer_ai_requests")
+    .from("farmer_product_demands")
     .insert({
+      organization_id: farmer.organization_id,
+      branch_id: farmer.branch_id,
       farmer_id: farmer.id,
-      intent_type: "product_demand",
-      description,
-      details,
+      product_id: productId || null,
+      product_name: productName,
+      quantity,
+      unit,
+      needed_by: neededBy || null,
+      purpose: purpose || null,
+      notes: notes || null,
       status: "pending",
+      payment_required_at_registration: false,
     })
-    .select("id, intent_type, description, details, status, created_at, reviewed_at, expert_response")
+    .select("id, product_id, product_name, quantity, unit, needed_by, purpose, notes, status, staff_note, created_at, updated_at")
     .single();
 
   if (error) {
-    console.error("farmer demand insert failed", error);
+    console.error("farmer product demand insert failed", error);
     return NextResponse.json({ error: "Demand save nahi ho saki. Dobara try karein." }, { status: 500 });
   }
 
