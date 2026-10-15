@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ReportsClient } from "@/components/reports/reports-client";
 import { ExecutiveReportsDashboard } from "@/components/reports/executive-reports-dashboard";
