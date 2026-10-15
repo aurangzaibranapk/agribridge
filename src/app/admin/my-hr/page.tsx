@@ -10,7 +10,7 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { AttendanceCalendar } from "./attendance-calendar";
 import { PhotoClient } from "./photo-client";
-import { CalendarDays, FileText, Wallet, Receipt, Users, ClipboardCheck, Network } from "lucide-react";
+import { CalendarDays, FileText, Wallet, Receipt, Users, ClipboardCheck, Network, Trophy } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -281,6 +281,7 @@ export default async function MyHrPage() {
               <Action href="/admin/my-wallet" icon={<Wallet className="h-4 w-4" />} label="Mera batwa" />
               <Action href="/admin/my-attendance" icon={<CalendarDays className="h-4 w-4" />} label="Meri hazri" />
               <Action href="/admin/my-work" icon={<FileText className="h-4 w-4" />} label="Mera kaam" />
+              <Action href="/admin/staff-achievement" icon={<Trophy className="h-4 w-4" />} label="Meri achievements" />
             </div>
             {Number(chhuttiBaqi ?? 0) > 0 && (
               <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/20 dark:text-amber-300">
