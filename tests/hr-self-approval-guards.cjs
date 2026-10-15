@@ -1,0 +1,17 @@
+const assert = require("assert");
+const fs = require("fs");
+const read = (f) => fs.readFileSync(require("path").join(__dirname, "..", f), "utf8");
+const hr = read("src/actions/hr.ts");
+const att = read("src/actions/hr-attendance.ts");
+const khata = read("src/actions/staff-khata.ts");
+const users = read("src/actions/users.ts");
+const perms = read("src/actions/permissions.ts");
+assert.match(att, /if \(profileId === user\.id\) \{/, "apni hazri khud nahi");
+assert.match(hr, /Apni tankhwah khud ada nahi/, "apni tankhwah khud ada nahi");
+assert.match(hr, /PAY_APPROVERS/, "tankhwah ada sirf admin/owner");
+assert.match(khata, /requirePayWriter\(profileId\)/, "apna khata khud nahi");
+assert.match(users, /Apna role khud nahi badla/, "apna role khud nahi");
+assert.match(users, /requireMaster\(userId\)/, "suspend/delete sirf master, khud par nahi");
+assert.match(hr + users, /HR sirf staff department/, "HR owner/admin invite nahi kar sakta");
+assert.match(perms, /Apni ijazat khud nahi badli/, "apni ijazat khud nahi");
+console.log("hr self-approval guards: theek");
