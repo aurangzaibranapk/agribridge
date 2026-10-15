@@ -1,5 +1,6 @@
 "use client";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { cancelMyAccessRequest, type AccessState } from "@/actions/access-requests";
 const initial: AccessState = {};
 function B({ label }: { label: string }) {

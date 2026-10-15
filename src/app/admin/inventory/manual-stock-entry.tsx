@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { useState } from "react";
 import { adjustStock, type ActionState } from "@/actions/inventory";
 import { Card } from "@/components/ui/layout-primitives";

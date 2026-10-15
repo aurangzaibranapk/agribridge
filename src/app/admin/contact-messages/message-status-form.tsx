@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormState } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { updateContactMessageStatus, type ActionState } from "@/actions/cms";
 import { Select } from "@/components/ui/form";
 import { t } from "@/lib/i18n/translations";

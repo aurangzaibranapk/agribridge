@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Check, ChevronRight, KeyRound, Search, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { ACTIONS, ACTION_LABEL, DATA_SCOPES, SCOPE_LABEL, type Action } from "@/lib/access/types";
 import { DEPARTMENTS } from "@/lib/departments";

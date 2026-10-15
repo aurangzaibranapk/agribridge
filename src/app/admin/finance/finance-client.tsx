@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { financeStatement } from "@/lib/finance/statement-filter";
 import { aajKaKhana } from "@/lib/utils/format";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import {
   createFinanceAccount,
   recordFinanceTransaction,

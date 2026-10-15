@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Check, Loader2 } from "lucide-react";
 import { assignUserBranch, type ActionState } from "@/actions/branches";
 import { t } from "@/lib/i18n/translations";

@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { sendPaymentReminderNow } from "@/actions/machinery-lifecycle";
 import type { ActionState } from "@/actions/machinery-lifecycle";
 import { t } from "@/lib/i18n/translations";

@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { saveSodRule, type AccessState } from "@/actions/access-requests";
 import { t, type Lang } from "@/lib/i18n/translations";
 

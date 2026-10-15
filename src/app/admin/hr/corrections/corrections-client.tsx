@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { useState } from "react";
 import { Check, RotateCcw, X, Send, Clock, CalendarCheck } from "lucide-react";
 import { decideAttendanceCorrection, requestAttendanceCorrection, type AttState } from "@/actions/hr-attendance";

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { GraduationCap, ExternalLink } from "lucide-react";
 import { setTrainingMode, type TrainingState } from "@/actions/training";
 import { t, type Lang } from "@/lib/i18n/translations";

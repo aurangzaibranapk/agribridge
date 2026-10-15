@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { disposeAsset, revalueAsset, type AssetState } from "@/actions/assets";
 import { Card } from "@/components/ui/layout-primitives";
 import { Input, Select, Label, Textarea, Button } from "@/components/ui/form";

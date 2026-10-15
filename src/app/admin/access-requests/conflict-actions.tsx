@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { RefreshCw, Eye, ShieldOff, RotateCcw } from "lucide-react";
 import { scanConflicts, decideConflict, type AccessState } from "@/actions/access-requests";
 import { Textarea, Label, Input } from "@/components/ui/form";

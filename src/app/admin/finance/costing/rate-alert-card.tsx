@@ -1,5 +1,6 @@
 "use client";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { setRateAlertConfig, type RateAlertState } from "@/actions/rate-alerts";
 import { Card } from "@/components/ui/layout-primitives";
 import { Input, Label, Button } from "@/components/ui/form";

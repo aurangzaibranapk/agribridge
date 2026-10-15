@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Landmark, CheckCircle2, AlertTriangle, Clock, X } from "lucide-react";
 import { Card } from "@/components/ui/layout-primitives";
 import { submitCollectionDeposit, type ActionState } from "@/actions/pos-collection";

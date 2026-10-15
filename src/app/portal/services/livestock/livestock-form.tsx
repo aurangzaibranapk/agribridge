@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useEffect } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import Link from "next/link";
 import { CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { submitLivestockLoan, type ServiceRequestState } from "@/actions/service-requests";

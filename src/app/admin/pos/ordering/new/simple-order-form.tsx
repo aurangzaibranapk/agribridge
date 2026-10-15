@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { CheckCircle } from "lucide-react";
 import { createBranchAgriOrder, type ActionState } from "@/actions/agri-orders";
 import { ProductCardGrid } from "@/app/admin/agri-orders/new/product-card-grid";

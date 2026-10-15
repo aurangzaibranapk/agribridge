@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Printer, Download, Mail, MessageCircle, X, Plus, TrendingUp } from "lucide-react";
 import { recordInvestorInvestment, recordInvestorReturn, type ActionState } from "@/actions/investor-transactions";
 import { t } from "@/lib/i18n/translations";

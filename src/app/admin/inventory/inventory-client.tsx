@@ -2,7 +2,8 @@
 import { ExpiryBadge } from "@/components/stock/expiry-badge";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { adjustStock, transferStock, type ActionState } from "@/actions/inventory";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";

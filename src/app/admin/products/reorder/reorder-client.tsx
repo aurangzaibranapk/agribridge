@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { AlertTriangle, CheckCircle2, ShoppingCart } from "lucide-react";
 import { createReorderPurchases, type ReorderState } from "@/actions/reorder";
 import { Card } from "@/components/ui/layout-primitives";

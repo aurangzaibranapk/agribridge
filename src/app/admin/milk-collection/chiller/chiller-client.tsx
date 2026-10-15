@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { applyFatAction, applyFatToBatch, recordChillerReceipt, type ActionState } from "@/actions/milk-chiller";
 import { NO_ROUTE } from "@/lib/milk-collection";
 import { Droplet, AlertTriangle, ImageIcon } from "lucide-react";

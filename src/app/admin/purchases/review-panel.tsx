@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Check, MessageSquare, Pencil, ShieldCheck, Undo2, X, XCircle } from "lucide-react";
 import { commentPurchase, reviewPurchase, verifyPurchase, updatePurchaseItem, type ActionState } from "@/actions/purchases";
 import { Badge, Button, Input, Textarea } from "@/components/ui/form";

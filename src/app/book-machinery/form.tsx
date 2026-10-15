@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { quickFarmerMachineryBooking, type QuickBookingState } from "@/actions/quick-farmer-booking";
 import { createClient } from "@/lib/supabase/client";
 import { Tractor, Loader2, MapPin, CheckCircle2 } from "lucide-react";

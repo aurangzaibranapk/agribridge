@@ -1,5 +1,6 @@
 "use client";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { setSupplierTerm, savePaymentTerm, type RecurringState } from "@/actions/recurring";
 import { Card } from "@/components/ui/layout-primitives";
 import { Input, Select, Label, Button } from "@/components/ui/form";

@@ -16,6 +16,10 @@ node tests/grain-bag-calculation.cjs
 node tests/desk-fee.cjs
 node tests/finance-statement-filter.cjs
 node tests/qa-inventory-procurement.cjs
+node tests/hr-self-approval-guards.cjs
+node tests/inventory-guards-port.cjs
+node tests/pos-return-cash-match.cjs
+node tests/safe-form-state.cjs
 node tests/maintenance-mode.cjs
 ./node_modules/.bin/tsc --noEmit --incremental
 npm run build

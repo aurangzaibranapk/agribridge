@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { CalendarPlus, Check, RotateCcw, X } from "lucide-react";
 import { requestLeave, decideLeave, type LeaveState } from "@/actions/leave";
 import { Card } from "@/components/ui/layout-primitives";

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import Link from "next/link";
 import { updateSupplierStatus, deleteSupplier, type ActionState } from "@/actions/suppliers";
 import { DeleteButton } from "@/components/admin/delete-button";

@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Plus } from "lucide-react";
 import { createIntakeBatch, type IntakeState } from "@/actions/product-intake";
 import { Card } from "@/components/ui/layout-primitives";

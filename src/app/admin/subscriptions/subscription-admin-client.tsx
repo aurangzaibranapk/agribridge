@@ -1,5 +1,6 @@
 "use client";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { updateSubscriptionSettings, activateFarmerSubscription, type ActionState } from "@/actions/subscriptions";
 import { createAnnouncement, deactivateAnnouncement } from "@/actions/announcements";
 import { Lock, Unlock, Megaphone, UserPlus, X, Users, TrendingUp, UserCheck, UserX, Image as ImageIcon } from "lucide-react";

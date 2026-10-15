@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { updateHeroSlide, type ActionState } from "@/actions/cms";
 import { Button, Input, Label } from "@/components/ui/form";
 import { X, Pencil } from "lucide-react";

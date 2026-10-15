@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { updateDealerStatus, deleteDealer, type ActionState } from "@/actions/dealers";
 import { bulkUpdateDealerStatus, bulkDeleteDealers, type ActionState as BulkActionState } from "@/actions/dealers-bulk";
 import { DeleteButton } from "@/components/admin/delete-button";

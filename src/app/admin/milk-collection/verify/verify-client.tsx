@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { verifyMilkEntries, type ActionState } from "@/actions/milk-chiller";
 import { VERIFY_COMMENT_MAX, VERIFY_COMMENT_MIN } from "@/lib/milk-collection";
 import { Check, X, AlertTriangle } from "lucide-react";

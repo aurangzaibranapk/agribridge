@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { renameDuplicateProduct, hideDuplicateProduct, type ActionState } from "@/actions/product-duplicates";
 import { mergeProductDirect, type ActionState as MergeActionState } from "@/actions/product-merge";
 import { saveMissingRates, type RateState } from "@/actions/product-rates";

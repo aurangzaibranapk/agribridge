@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useRouter } from "next/navigation";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { createGRN, submitWarehouseExplanation, finalizeGrnDiscrepancy, type ActionState } from "@/actions/agri-grn";
 import { ClipboardCheck, X, AlertTriangle, Check } from "lucide-react";
 import type { OrderPermissions } from "@/lib/order-permissions";

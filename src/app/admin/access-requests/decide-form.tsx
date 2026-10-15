@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Check, X, ShieldAlert, Pencil } from "lucide-react";
 import { decideAccess, type AccessState } from "@/actions/access-requests";
 import { Card } from "@/components/ui/layout-primitives";

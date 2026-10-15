@@ -1,6 +1,7 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { reviewOrganizationSignup, type OrganizationSignupState } from "@/actions/organization-signup";
 
 const initialState: OrganizationSignupState = {};

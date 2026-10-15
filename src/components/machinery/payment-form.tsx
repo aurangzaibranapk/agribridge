@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useEffect, useState, type FormEvent } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { Button, Input, Label, Select } from "@/components/ui/form";

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { submitComplaint, updateComplaintStatus, submitFeedback, type ActionState } from "@/actions/agri-complaints";
 import { AlertCircle, X, Star, MessageSquareWarning } from "lucide-react";
 import type { OrderPermissions } from "@/lib/order-permissions";

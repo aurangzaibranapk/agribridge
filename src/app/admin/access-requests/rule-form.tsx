@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Save } from "lucide-react";
 import { saveConflictRule, type AccessState } from "@/actions/access-requests";
 import { Textarea, Label, Input, Select } from "@/components/ui/form";

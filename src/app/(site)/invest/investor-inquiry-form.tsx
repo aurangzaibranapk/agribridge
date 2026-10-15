@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { submitInvestorInquiry, type FormState } from "@/actions/public-forms";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { t } from "@/lib/i18n/translations";

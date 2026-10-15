@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { AlertTriangle, Check, ChevronDown, ChevronRight } from "lucide-react";
 import { resolveError, type ErrorActionState } from "@/actions/errors";
 import { Card } from "@/components/ui/layout-primitives";

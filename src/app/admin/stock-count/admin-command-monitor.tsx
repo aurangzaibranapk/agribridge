@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Card } from "@/components/ui/layout-primitives";
 import { postCount, verifyCount } from "@/actions/stock-count";
 import { BarChart3, CheckCircle2, ChevronRight, Clock3, Eye, Filter, Package, Search, Send, Users, X } from "lucide-react";

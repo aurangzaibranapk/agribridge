@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import Link from "next/link";
 import { Check, X, Plus, Paperclip, Info, Wallet, ExternalLink, HardHat, Search } from "lucide-react";
 import { kharchaDarj, kharchaManzoor, kharchaVerify, kharchaRadd, type ActionState } from "@/actions/kharche";
