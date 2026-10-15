@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { configuredSupportAgents } from "@/lib/support/agent-dispatch";
 
 export const dynamic = "force-dynamic";
 const MANAGERS = new Set(["owner", "super_admin", "admin", "manager", "admin_assistant"]);
@@ -26,15 +27,36 @@ export async function GET() {
   if (!ctx.canManage) query = query.eq("reporter_id", ctx.user.id);
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const ticketIds = (data ?? []).map((row: any) => row.id);
+  const { data: comments } = ticketIds.length
+    ? await ctx.supportDb
+        .from("support_ticket_comments")
+        .select("id,ticket_id,body,source_label,created_at,author:profiles!support_ticket_comments_author_id_fkey(full_name)")
+        .in("ticket_id", ticketIds)
+        .order("created_at", { ascending: true })
+    : { data: [] };
   const items = await Promise.all((data ?? []).map(async (row: any) => {
     let screenshotUrl: string | null = null;
     if (row.screenshot_path) {
       const signed = await ctx.service.storage.from("support-evidence").createSignedUrl(row.screenshot_path, 3600);
       screenshotUrl = signed.data?.signedUrl ?? null;
     }
-    return { ...row, screenshotUrl };
+    return { ...row, screenshotUrl, comments: (comments ?? []).filter((c: any) => c.ticket_id === row.id) };
   }));
-  return NextResponse.json({ items, canManage: ctx.canManage });
+  const { data: assignees } = ctx.canManage
+    ? await ctx.service
+        .from("profiles")
+        .select("id,full_name,role")
+        .eq("organization_id", ctx.profile.organization_id)
+        .eq("is_active", true)
+        .order("full_name")
+    : { data: [] };
+  return NextResponse.json({
+    items,
+    canManage: ctx.canManage,
+    assignees: assignees ?? [],
+    agents: ctx.canManage ? configuredSupportAgents() : [],
+  });
 }
 
 export async function POST(req: NextRequest) {

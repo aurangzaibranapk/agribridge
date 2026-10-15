@@ -1,5 +1,4 @@
 "use server";
-import { isSelfApproval } from "@/lib/approval/guards";
 import { grainBagCalculation } from "@/lib/grain/bag-calculation";
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
@@ -1007,11 +1006,10 @@ export async function approveGrainPendingEntry(_prev: ActionState, formData: For
   const pendingId = String(formData.get("pending_id") ?? "").trim();
   if (!pendingId) return { error: "Pending entry nahi mili." };
   const service = createServiceClient() as any;
-  // Self-approval guard: jis ne pending entry banayi wo khud approve nahi kar sakta.
-  const { data: owner } = await service.from("grain_pending_entries").select("created_by").eq("id", pendingId).maybeSingle();
-  if (isSelfApproval(owner?.created_by, guard.userId)) {
-    return { error: "Ye entry aap ne khud banayi hai — doosra Admin approve karega." };
-  }
+  // Grain approver guard pehle hi role ko Owner / Super Admin / Admin tak
+  // mehdood karta hai. In unrestricted roles ko apni banayi entry bhi
+  // approve karne dein; self-approval ki rok aam staff ke liye hai, jo is
+  // action tak aa hi nahi sakta.
   const now = new Date().toISOString();
   const staleBefore = new Date(Date.now() - GRAIN_APPROVAL_STALE_MS).toISOString();
 
@@ -1021,7 +1019,6 @@ export async function approveGrainPendingEntry(_prev: ActionState, formData: For
     .eq("id", pendingId)
     .is("approved_entry_id", null)
     .or(`status.eq.pending,and(status.eq.approving,approval_claimed_at.lt."${staleBefore}")`)
-    .or(`created_by.is.null,created_by.neq.${guard.userId}`)
     .select("id, payload, receipt_photo_url, created_by")
     .maybeSingle();
   if (claimError) return { error: claimError.message };
