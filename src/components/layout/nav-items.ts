@@ -196,6 +196,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/job-applications", label: "Naukri ki Darkhwastein", icon: FileCheck },
       { href: "/admin/hr-dashboard", label: "HR Dashboard", icon: LayoutGrid },
       { href: "/admin/staff-achievement", label: "Staff Achievement", icon: Trophy },
+      { href: "/admin/support-center", label: "Support Center", icon: Bug },
       { href: "/admin/hr", label: "Salary Payroll", icon: WalletCards },
       { href: "/admin/hr", label: "Salary Payroll", icon: WalletCards },
       { href: "/admin/email-templates", label: "Email ke Namune", icon: MailPlus },
