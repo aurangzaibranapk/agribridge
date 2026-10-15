@@ -246,14 +246,23 @@ async function postReturnToLedger(returnId: string, userId: string): Promise<str
   }
   const txns = matchReturnFinanceRows(candidates, returnId, ret.return_number);
 
+  let cashMatched = 0;
   for (const txn of txns) {
     const amount = Number(txn.amount);
     if (amount <= 0) continue;
+    cashMatched = Math.round((cashMatched + amount) * 100) / 100;
     const gl = txn.account_id ? await glForFinanceAccount(txn.account_id) : ACC.suspense;
     lines.push({ account: gl, credit: amount, memo: `Wapsi ${ret.return_number}` });
     // Cash book ki us qatar par is entry ka daawa. Bina daawe ke wo
     // hamesha "ledger mein nahi gayi" ki fehrist mein khaRi rehti.
     claims.push({ table: "finance_transactions", rowId: txn.id });
+  }
+
+  // Cash book ki qatarein wapsi ke cash_refund se milni chahiyein. Na
+  // milein to ledger adhoora/ghalat likhne ke bajaye ruk jao aur batao.
+  const expectedCash = Number(ret.cash_refund ?? 0);
+  if (expectedCash > 0 && Math.abs(cashMatched - expectedCash) > 0.01) {
+    return `wapsi ho gayi magar cash book ki qatarein is return number se match nahi huin (cash Rs ${expectedCash}, mili Rs ${cashMatched}). Ledger nahi likha.`;
   }
 
   const khata = Number(ret.khata_refund ?? 0);
