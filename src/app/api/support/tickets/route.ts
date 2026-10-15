@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { configuredSupportAgents } from "@/lib/support/agent-dispatch";
+import { notifyUser } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
-const MANAGERS = new Set(["owner", "super_admin", "admin", "manager", "admin_assistant"]);
+const MANAGER_ROLES = ["owner", "super_admin", "admin", "manager", "admin_assistant"];
+const MANAGERS = new Set(MANAGER_ROLES);
 const VALID_PRIORITY = new Set(["normal", "urgent", "work_stopped"]);
 
 async function context() {
@@ -14,8 +16,6 @@ async function context() {
   const service = createServiceClient();
   const { data: profile } = await service.from("profiles").select("id,full_name,role,organization_id,is_active").eq("id", user.id).maybeSingle();
   if (!profile?.is_active) return null;
-  // These tables are introduced by this feature's migration. Keep the
-  // generated database types backward-compatible until the next type refresh.
   const supportDb = service as any;
   return { user, profile, service, supportDb, canManage: MANAGERS.has(String(profile.role)) };
 }
@@ -90,7 +90,19 @@ export async function POST(req: NextRequest) {
     page_url: String(form.get("page_url") ?? "").slice(0, 1000) || null,
     screenshot_path: screenshotPath,
     device_info: deviceInfo,
-  } as any).select("id,ticket_no").single();
+  } as any).select("id,ticket_no,created_at").single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const reference = `ISS-${new Date(data.created_at).getFullYear()}-${String(data.ticket_no).padStart(5, "0")}`;
+  const { data: managers } = await ctx.service
+    .from("profiles")
+    .select("id")
+    .eq("organization_id", ctx.profile.organization_id)
+    .eq("is_active", true)
+    .in("role", MANAGER_ROLES);
+  await Promise.all((managers ?? []).map((manager) =>
+    notifyUser(manager.id, `${reference} · New Support Issue`, `${ctx.profile.full_name}: ${title}`, "/admin/my-work")
+  ));
+  await notifyUser(ctx.user.id, `${reference} · Reported`, "Aapka issue receive ho gaya. Har stage ki update yahin milegi.", "/admin/my-work");
   return NextResponse.json({ success: true, ticket: data });
 }
