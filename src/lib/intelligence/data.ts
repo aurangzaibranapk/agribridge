@@ -102,7 +102,7 @@ export async function loadParty(type: PartyType, id: string): Promise<{ name: st
     }
     case "dealer":
       events = [
-        ...ev((await get("bridge_orders", "id,order_number,created_at,commission_amount", "dealer_id")).filter((r: any) => num(r.commission_amount) > 0), "created_at", "we_bought", "commission_amount", "order_number"),
+        ...ev((await get("bridge_orders", "id,order_number,placed_at,commission_amount", "assigned_dealer_id")).filter((r: any) => num(r.commission_amount) > 0), "placed_at", "we_bought", "commission_amount", "order_number"),
         ...ev(await get("dealer_payments", "id,payment_date,amount", "dealer_id"), "payment_date", "paid", "amount", "id"),
       ];
       notes.push("sold to us = commission earned on bridge orders");
@@ -116,7 +116,7 @@ export async function loadParty(type: PartyType, id: string): Promise<{ name: st
     case "buyer": {
       const pays = await get("buyer_payments", "id,payment_date,amount,direction", "buyer_id");
       events = [
-        ...ev(await get("produce_orders", "id,order_number,created_at,subtotal", "buyer_id"), "created_at", "we_sold", "subtotal", "order_number").map((e) => ({ ...e, credit: e.amount })),
+        ...ev(await get("produce_orders", "id,order_number,placed_at,subtotal", "buyer_id"), "placed_at", "we_sold", "subtotal", "order_number").map((e) => ({ ...e, credit: e.amount })),
         ...ev(pays.filter((p: any) => p.direction === "they_paid"), "payment_date", "received", "amount", "id"),
         ...ev(pays.filter((p: any) => p.direction === "we_paid"), "payment_date", "paid", "amount", "id"),
       ];
@@ -145,7 +145,7 @@ export async function loadParty(type: PartyType, id: string): Promise<{ name: st
 /** Product intelligence -- purchase_items, pos_sale_items, stock_batches. */
 export async function loadProducts(fromIso: string, search: string, category: string | null): Promise<{ products: ProductIn[]; error: string | null }> {
   const db = createServiceClient() as any;
-  let pq = db.from("products").select("id,name,category_id,categories(name)").eq("is_active", true).order("name").limit(300);
+  let pq = db.from("products").select("id,name,category_id,categories(name)").eq("is_deleted", false).order("name").limit(300);
   if (search) pq = pq.ilike("name", `%${search.replace(/[%,()]/g, "")}%`);
   if (category) pq = pq.eq("category_id", category);
   const { data: prods, error } = await pq;
