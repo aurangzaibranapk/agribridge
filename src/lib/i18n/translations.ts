@@ -52,6 +52,7 @@ import { productsFlowDict } from "./dict/products-flow";
 import { kharcheDict } from "./dict/kharche";
 import { supportCenterDict } from "./dict/support-center";
 import { staffPerformanceDict } from "./dict/staff-performance";
+import { intelligenceDict } from "./dict/intelligence";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -155,6 +156,7 @@ const dict = {
   ...kharcheDict,
   ...supportCenterDict,
   ...staffPerformanceDict,
+  ...intelligenceDict,
 };
 
 export type TranslationKey = keyof typeof dict;
