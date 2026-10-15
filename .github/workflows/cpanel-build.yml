@@ -54,7 +54,7 @@ jobs:
           mkdir -p cpanel-package
           cp -a .next cpanel-package/.next
           [ -d public ] && cp -a public cpanel-package/public || true
-          cp package.json package-lock.json next.config.js cpanel-package/
+          cp package.json package-lock.json next.config.js server.js cpanel-package/
           cp -a node_modules cpanel-package/node_modules
           find cpanel-package/node_modules -type d -name .cache -prune -exec rm -rf {} + || true
           tar -czf agribridge-cpanel-release.tar.gz -C cpanel-package .
