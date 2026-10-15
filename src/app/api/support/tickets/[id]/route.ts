@@ -169,6 +169,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   if (!STATUSES.has(status)) return NextResponse.json({ error: "Status theek nahi hai." }, { status: 400 });
+  if (
+    status === "resolved"
+    && ticket.assigned_kind === "agent"
+    && !["testing", "fixed", "completed"].includes(String(ticket.assignment_status))
+  ) {
+    return NextResponse.json({ error: "Agent fix aur testing complete hone se pehle issue close nahi ho sakta." }, { status: 409 });
+  }
   const update: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
   if (canManage && body.assignToMe) {
     update.assigned_to = user.id;
