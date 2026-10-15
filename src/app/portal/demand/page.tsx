@@ -11,7 +11,7 @@ export default async function FarmerDemandCenterPage() {
 
   const { data: farmer } = await supabase
     .from("farmers")
-    .select("id, full_name, village, district")
+    .select("id, full_name")
     .eq("user_id", user.id)
     .single();
   if (!farmer) redirect("/login");
@@ -23,10 +23,9 @@ export default async function FarmerDemandCenterPage() {
       .eq("is_deleted", false)
       .order("name"),
     supabase
-      .from("farmer_ai_requests")
-      .select("id, intent_type, description, details, status, created_at, reviewed_at, expert_response")
+      .from("farmer_product_demands")
+      .select("id, product_id, product_name, quantity, unit, needed_by, purpose, notes, status, staff_note, created_at, updated_at")
       .eq("farmer_id", farmer.id)
-      .eq("intent_type", "product_demand")
       .order("created_at", { ascending: false })
       .limit(50),
   ]);
