@@ -1,0 +1,344 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { CheckCircle2, Clock3, PackageSearch, Send, Sparkles, Truck, XCircle } from "lucide-react";
+
+export type DemandProduct = {
+  id: string;
+  name: string;
+  pack_size: string | null;
+  unit: string | null;
+  is_available: boolean | null;
+  is_deleted: boolean | null;
+};
+
+export type ProductDemandRow = {
+  id: string;
+  intent_type: string;
+  description: string;
+  details: Record<string, unknown> | null;
+  status: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+  expert_response: string | null;
+};
+
+type DemandForm = {
+  productId: string;
+  productName: string;
+  quantity: string;
+  unit: string;
+  neededBy: string;
+  purpose: string;
+  notes: string;
+};
+
+const emptyForm: DemandForm = {
+  productId: "",
+  productName: "",
+  quantity: "",
+  unit: "bag",
+  neededBy: "",
+  purpose: "",
+  notes: "",
+};
+
+const statusLabels: Record<string, string> = {
+  pending: "Nayi demand",
+  reviewing: "Check ho rahi hai",
+  approved: "Procurement ke liye approve",
+  fulfilled: "Product available",
+  rejected: "Close",
+};
+
+export function DemandCenterClient({
+  farmerName,
+  products,
+  demands,
+}: {
+  farmerName: string;
+  products: DemandProduct[];
+  demands: ProductDemandRow[];
+}) {
+  const [form, setForm] = useState<DemandForm>(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [rows, setRows] = useState(demands);
+
+  const stats = useMemo(() => ({
+    total: rows.length,
+    pending: rows.filter((r) => r.status === "pending" || r.status === "reviewing").length,
+    fulfilled: rows.filter((r) => r.status === "fulfilled").length,
+  }), [rows]);
+
+  function setField<K extends keyof DemandForm>(key: K, value: DemandForm[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function chooseProduct(value: string) {
+    const product = products.find((p) => p.id === value);
+    setForm((current) => ({
+      ...current,
+      productId: value,
+      productName: product?.name ?? current.productName,
+      unit: product?.unit || current.unit,
+    }));
+  }
+
+  async function submitDemand(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+
+    if (!form.productName.trim() || !form.quantity.trim()) {
+      setMessage("Product aur quantity zaroor likhein.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await fetch("/api/farmer-demand", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Demand save nahi ho saki.");
+
+      setRows((current) => [data.demand as ProductDemandRow, ...current]);
+      setForm(emptyForm);
+      setMessage("Aap ki demand save ho gayi hai. Product arrange hone par aap ko bataya jayega.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Demand save nahi ho saki.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8" dir="ltr">
+      <Link href="/portal/dashboard" className="text-sm text-surface-500 hover:text-brand-700">
+        ← Dashboard par wapas
+      </Link>
+
+      <div className="mt-5 rounded-3xl bg-gradient-to-r from-emerald-700 via-teal-700 to-slate-900 p-6 text-white shadow-xl">
+        <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-emerald-200">
+              <Sparkles className="h-5 w-5" />
+              <span className="text-sm font-semibold">AgriBridge Digital Munshi</span>
+            </div>
+            <h1 className="mt-2 text-2xl font-bold">Kisan Demand Center</h1>
+            <p className="mt-2 max-w-2xl text-sm text-emerald-50">
+              Assalam-o-Alaikum {farmerName}. Jo product abhi stock mein nahi hai, us ki demand yahan save karein.
+              Payment abhi zaroori nahi—pehle demand collect hogi, phir Al Rana Traders procurement karega.
+            </p>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-4 text-center backdrop-blur">
+            <PackageSearch className="mx-auto h-8 w-8 text-emerald-200" />
+            <p className="mt-2 text-xs text-emerald-100">Aap ki demand</p>
+            <p className="text-3xl font-bold">{stats.total}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <SummaryCard label="Total demands" value={stats.total} icon={<PackageSearch className="h-5 w-5" />} />
+        <SummaryCard label="Pending / checking" value={stats.pending} icon={<Clock3 className="h-5 w-5" />} />
+        <SummaryCard label="Products arranged" value={stats.fulfilled} icon={<CheckCircle2 className="h-5 w-5" />} />
+      </div>
+
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
+        <section className="rounded-2xl border border-surface-200 bg-white p-5 shadow-card">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-surface-900">Nayi product demand</h2>
+            <p className="mt-1 text-sm text-surface-500">Product stock mein na ho to bhi demand register karein.</p>
+          </div>
+
+          <form onSubmit={submitDemand} className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-surface-700">Product select karein</label>
+              <select
+                value={form.productId}
+                onChange={(e) => chooseProduct(e.target.value)}
+                className="mt-1 h-11 w-full rounded-xl border border-surface-200 bg-white px-3 text-sm"
+              >
+                <option value="">Product list se select karein</option>
+                {products.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name}{product.is_available ? " — stock available" : " — demand required"}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-surface-700">Ya product ka naam likhein</label>
+              <input
+                value={form.productName}
+                onChange={(e) => setField("productName", e.target.value)}
+                placeholder="Misal: Arooj wheat seed, Wanda, Khal, pesticide"
+                className="mt-1 h-11 w-full rounded-xl border border-surface-200 px-3 text-sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium text-surface-700">Quantity</label>
+                <input
+                  value={form.quantity}
+                  onChange={(e) => setField("quantity", e.target.value)}
+                  placeholder="Misal: 5"
+                  className="mt-1 h-11 w-full rounded-xl border border-surface-200 px-3 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-surface-700">Unit</label>
+                <select
+                  value={form.unit}
+                  onChange={(e) => setField("unit", e.target.value)}
+                  className="mt-1 h-11 w-full rounded-xl border border-surface-200 bg-white px-3 text-sm"
+                >
+                  <option value="bag">Bori/bag</option>
+                  <option value="kg">KG</option>
+                  <option value="liter">Liter</option>
+                  <option value="packet">Packet</option>
+                  <option value="bottle">Bottle</option>
+                  <option value="piece">Piece</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium text-surface-700">Kab chahiye?</label>
+                <input
+                  type="date"
+                  value={form.neededBy}
+                  onChange={(e) => setField("neededBy", e.target.value)}
+                  className="mt-1 h-11 w-full rounded-xl border border-surface-200 px-3 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-surface-700">Kis liye?</label>
+                <input
+                  value={form.purpose}
+                  onChange={(e) => setField("purpose", e.target.value)}
+                  placeholder="Wheat, Wanda, animals, spray"
+                  className="mt-1 h-11 w-full rounded-xl border border-surface-200 px-3 text-sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-surface-700">Extra note / voice command ka khulasa</label>
+              <textarea
+                value={form.notes}
+                onChange={(e) => setField("notes", e.target.value)}
+                rows={3}
+                placeholder="Location, brand preference, delivery ya koi aur baat"
+                className="mt-1 w-full rounded-xl border border-surface-200 px-3 py-3 text-sm"
+              />
+            </div>
+
+            {message && (
+              <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{message}</div>
+            )}
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+            >
+              <Send className="h-4 w-4" />
+              {saving ? "Save ho raha hai..." : "Demand save karein"}
+            </button>
+          </form>
+        </section>
+
+        <section>
+          <div className="mb-3 flex items-end justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-surface-900">Meri demands</h2>
+              <p className="text-sm text-surface-500">Har demand ka status yahan milega.</p>
+            </div>
+          </div>
+
+          {rows.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-surface-300 bg-white p-8 text-center text-sm text-surface-500">
+              Abhi koi demand save nahi hui.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {rows.map((row) => <DemandCard key={row.id} row={row} />)}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <strong>Important:</strong> Demand register karna order ya advance payment nahi hai. Product arrange hone par aap se confirmation li jayegi.
+      </div>
+    </div>
+  );
+}
+
+function SummaryCard({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-surface-200 bg-white p-4 shadow-card">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700">{icon}</div>
+      <div>
+        <p className="text-xs text-surface-500">{label}</p>
+        <p className="text-2xl font-bold text-surface-900">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function DemandCard({ row }: { row: ProductDemandRow }) {
+  const details = row.details ?? {};
+  const quantity = String(details.quantity ?? "");
+  const unit = String(details.unit ?? "");
+  const product = String(details.product_name ?? row.description);
+  const status = row.status ?? "pending";
+  const tone = status === "fulfilled" || status === "approved"
+    ? "bg-emerald-50 text-emerald-700"
+    : status === "rejected"
+      ? "bg-rose-50 text-rose-700"
+      : "bg-amber-50 text-amber-700";
+
+  return (
+    <div className="rounded-2xl border border-surface-200 bg-white p-4 shadow-card">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-semibold text-surface-900">{product}</p>
+          <p className="mt-1 text-sm text-surface-500">{quantity} {unit}</p>
+        </div>
+        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${tone}`}>
+          {statusLabels[status] ?? status}
+        </span>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-surface-500">
+        <span>Demand date: {new Date(row.created_at).toLocaleDateString()}</span>
+        <span>Needed: {String(details.needed_by || "Jab available ho")}</span>
+      </div>
+      {row.expert_response && (
+        <div className="mt-3 rounded-xl bg-surface-50 p-3 text-sm text-surface-700">
+          <div className="flex items-center gap-2 font-medium"><Truck className="h-4 w-4" /> Munshi update</div>
+          <p className="mt-1">{row.expert_response}</p>
+        </div>
+      )}
+      {status === "fulfilled" && (
+        <div className="mt-3 flex items-center gap-2 text-sm font-medium text-emerald-700">
+          <CheckCircle2 className="h-4 w-4" /> Product arrange ho gaya—order confirm karein.
+        </div>
+      )}
+      {status === "rejected" && (
+        <div className="mt-3 flex items-center gap-2 text-sm text-rose-700">
+          <XCircle className="h-4 w-4" /> Is demand ko filhal close kar diya gaya hai.
+        </div>
+      )}
+    </div>
+  );
+}
