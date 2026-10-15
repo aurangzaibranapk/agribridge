@@ -70,6 +70,7 @@ const ALWAYS = [
   // dekhta hai, kisi aur ka nahi (321).
   "/admin/my-hr",
   "/admin/staff-achievement",
+  "/admin/staff-achievement/performance",
   "/admin/my-access","/admin/permissions-denied", "/admin/my-attendance", "/admin/my-work"];
 
 function fallbackGroups(allowed: Set<string> | null): NavGroupData[] {
