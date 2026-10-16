@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { DailySalesBreakdown } from "@/components/reports/daily-sales-breakdown";
 import { periodRange } from "@/lib/reports/sales-period";
 import { SalesShopSelect } from "@/components/reports/sales-shop-select";
-import { resolveSalesShop, SALES_SHOP_COOKIE } from "@/lib/reports/sales-shop-filter";
+import { resolveSalesShop, readSalesShopParam, SALES_SHOP_COOKIE } from "@/lib/reports/sales-shop-filter";
 import { cookies } from "next/headers";
 import { Card } from "@/components/ui/layout-primitives";
 import { loadMoneyToday, loadDeptKpis, loadAlerts, conclude, deptTotals, loadSalesTrend, loadBranchPerformance, loadTopShops } from "@/lib/command-center";
@@ -72,7 +72,7 @@ const deptIcon: Record<string, typeof Package> = {
   fleet: Building2,
 };
 
-export default async function CommandCenterPage({ searchParams }: { searchParams?: Promise<{ salesShop?: string }> } = {}) {
+export default async function CommandCenterPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
@@ -87,10 +87,9 @@ export default async function CommandCenterPage({ searchParams }: { searchParams
   }
 
   // "Dukan chunein" -- Pichli sale ka khulasa widget
-  const sp = (await searchParams) ?? {};
   const { data: shopRows } = await supabase.from("shops").select("id, name").order("name");
   const salesShops = ((shopRows ?? []) as { id: string; name: string }[]).map((x) => ({ id: x.id, name: x.name }));
-  const salesShop = resolveSalesShop(sp.salesShop, (await cookies()).get(SALES_SHOP_COOKIE)?.value, salesShops.map((x) => x.id));
+  const salesShop = resolveSalesShop(await readSalesShopParam(searchParams), (await cookies()).get(SALES_SHOP_COOKIE)?.value, salesShops.map((x) => x.id));
 
   const scoreRes = await supabase.rpc("fn_recalc_score", { p_subject_type: "staff", p_subject_id: user!.id })
     .then(() => supabase.rpc("fn_score_for", { p_subject_type: "staff", p_subject_id: user!.id }));

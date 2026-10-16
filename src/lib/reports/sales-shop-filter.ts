@@ -27,3 +27,17 @@ export function summaryScope(base: SalesScope, salesShop: string): SalesScope {
   if (!salesShop) return base;
   return { meriDukan: null, shopId: salesShop, branchId: "" };
 }
+
+/** Next 14: searchParams plain object (ya Next 15 mein Promise) -- dono se salesShop. */
+export async function readSalesShopParam(searchParams: unknown): Promise<string | undefined> {
+  const sp = (await (searchParams as any)) ?? {};
+  const v = sp?.[SALES_SHOP_PARAM];
+  return Array.isArray(v) ? v[0] : typeof v === "string" ? v : undefined;
+}
+
+/** Baqi query wesi hi, sirf salesShop badle. */
+export function salesShopHref(pathname: string, search: string, shop: string): string {
+  const q = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  q.set(SALES_SHOP_PARAM, shop || ALL_SHOPS);
+  return `${pathname}?${q.toString()}`;
+}
