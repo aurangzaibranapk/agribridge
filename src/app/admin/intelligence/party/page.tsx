@@ -5,16 +5,24 @@ import { t } from "@/lib/i18n/translations";
 import { PARTY_TYPES, FACETS, summarizeParty, type PartyType } from "@/lib/intelligence/core";
 import { loadParty, STATEMENT_HREF } from "@/lib/intelligence/data";
 import { requireIntelligence } from "@/lib/intelligence/access";
+import { LOADERS, type Party360Type } from "@/lib/intelligence/party360/load";
+import { Party360View } from "@/components/party360/party-360-view";
+import { loadCreditPosition } from "@/lib/recovery/credit-block";
 
 export const dynamic = "force-dynamic";
 const money = (v: number | null) => (v == null ? null : `Rs ${Math.round(v).toLocaleString("en-PK")}`);
 
-export default async function Party360Page({ searchParams }: { searchParams: { type?: string; id?: string; days?: string } }) {
+export default async function Party360Page({ searchParams }: { searchParams: { type?: string; id?: string; days?: string; view?: string } }) {
   const lang = getLanguageFromCookies("rm");
   const me = await requireIntelligence("intelligence.party");
   if (!me) return <div className="p-8 text-center text-surface-500">{t("ppi_no_access", lang)}</div>;
   const type = searchParams.type as PartyType;
   if (!(PARTY_TYPES as readonly string[]).includes(type) || !searchParams.id) return <div className="p-8 text-center">{t("ppi_none", lang)}</div>;
+  if (searchParams.view !== "classic" && type in LOADERS) {
+    const d = await LOADERS[type as Party360Type](searchParams.id);
+    const credit = d.creditCustomerId ? await loadCreditPosition(d.creditCustomerId).catch(() => null) : null;
+    return <Party360View d={d} credit={credit} />;
+  }
   const overdueDays = Math.min(365, Math.max(1, Number(searchParams.days) || 30));
   const data = await loadParty(type, searchParams.id);
   const s = summarizeParty(type, data.events, { now: new Date(), overdueDays, balanceOverride: data.balanceOverride });
