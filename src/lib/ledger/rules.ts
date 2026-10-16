@@ -117,6 +117,8 @@ export const ACC = {
   workerPayable: "2015",
   staffPayable: "2020",
   salaryDue: "2025",
+  /** 554: EOBI / tax jo tankhwah se kata, abhi jama nahi karwaya. */
+  salaryDeductionsPayable: "2050",
   customerAdvance: "2030",
   walletPayable: "2040",
   // Customer ka bill le liya, provider tak abhi nahi pahuncha. Wo paisa
@@ -167,6 +169,8 @@ export const ACC = {
   assetSaleLoss: "6210",
   assetWriteDown: "6220",
   otherExpense: "6090",
+  /** 558: Qist plan ka maaf kiya hua baqaya. */
+  badDebt: "6075",
   cashDifference: "6100",
   // Float ka farq cash ke farq se alag rakha hai: sawal alag hai (golak
   // mein kami hui ya provider ke account mein), aur peechha karne ka
@@ -1602,5 +1606,108 @@ export async function postMachineryVendorPayout(args: {
     createdBy: args.ctx.createdBy,
     claims: args.ctx.claims,
     lines,
+  });
+}
+
+// =====================================================================
+// Payroll (553) aur Qist Plan (556)
+// =====================================================================
+
+/**
+ * Payroll manzoor hua: kharcha ab, paisa baad mein.
+ * Tankhwahein Dr (kamaya hua) / Staff advance Cr / kattautiyan Cr / Tankhwah baqi Cr.
+ */
+export async function postPayrollApproved(args: {
+  runId: string;
+  label: string;
+  totals: { salaries: number; advance: number; statutory: number; payable: number };
+  ctx: EventContext;
+}): Promise<PostResult> {
+  const t = args.totals;
+  const lines: JournalLine[] = [{ account: ACC.salaries, debit: t.salaries, memo: args.label }];
+  if (t.advance > 0) lines.push({ account: ACC.staffAdvance, credit: t.advance, memo: "Advance qist kati" });
+  if (t.statutory > 0) lines.push({ account: ACC.salaryDeductionsPayable, credit: t.statutory, memo: "EOBI / tax kattauti" });
+  if (t.payable > 0) lines.push({ account: ACC.salaryDue, credit: t.payable, memo: args.label });
+  return postJournal({
+    description: args.label,
+    sourceModule: "payroll",
+    sourceId: args.runId,
+    branchId: args.ctx.branchId,
+    entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
+    createdBy: args.ctx.createdBy,
+    claims: args.ctx.claims,
+    lines,
+  });
+}
+
+/** Payroll ada hua: Tankhwah baqi Dr / cash-bank Cr. */
+export async function postPayrollPaid(args: { runId: string; label: string; amount: number; accountId: string; ctx: EventContext }): Promise<PostResult> {
+  const gl = await glForFinanceAccount(args.accountId);
+  return postJournal({
+    description: args.label,
+    sourceModule: "payroll",
+    sourceId: args.runId,
+    branchId: args.ctx.branchId,
+    entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
+    createdBy: args.ctx.createdBy,
+    claims: args.ctx.claims,
+    lines: [
+      { account: ACC.salaryDue, debit: args.amount, memo: args.label },
+      { account: gl, credit: args.amount, memo: args.label },
+    ],
+  });
+}
+
+/**
+ * Qist wasool hui. Adaigi se kati to hamara dena (doodh/anaj 2010, supplier 2000)
+ * Dr; naqad aayi to cash/bank Dr. Doosri taraf member ka advance/udhaar Cr.
+ */
+export async function postQistSettlement(args: {
+  partyType: string;
+  partyId: string;
+  receivable: string;
+  debitAccount?: string | null;
+  cashAccountId?: string | null;
+  amount: number;
+  description: string;
+  ctx: EventContext;
+}): Promise<PostResult> {
+  const dr = args.debitAccount ?? (args.cashAccountId ? await glForFinanceAccount(args.cashAccountId) : ACC.cash);
+  const payableParty = args.debitAccount === ACC.farmerPayable || args.debitAccount === ACC.supplierPayable;
+  return postJournal({
+    description: args.description,
+    sourceModule: "qist",
+    sourceId: args.partyId,
+    branchId: args.ctx.branchId,
+    entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
+    createdBy: args.ctx.createdBy,
+    claims: args.ctx.claims,
+    lines: [
+      payableParty
+        ? { account: dr, debit: args.amount, partyType: args.partyType, partyId: args.partyId, memo: args.description }
+        : { account: dr, debit: args.amount, memo: args.description },
+      { account: args.receivable, credit: args.amount, partyType: args.partyType, partyId: args.partyId, memo: args.description },
+    ],
+  });
+}
+
+/** Qist ka baqaya maaf: Bad debt (6075) Dr / member ka advance-udhaar Cr. */
+export async function postQistWriteOff(args: { partyType: string; partyId: string; receivable: string; amount: number; description: string; ctx: EventContext }): Promise<PostResult> {
+  return postJournal({
+    description: args.description,
+    sourceModule: "qist",
+    sourceId: args.partyId,
+    branchId: args.ctx.branchId,
+    entryDate: args.ctx.entryDate,
+    backdateReason: args.ctx.backdateReason,
+    createdBy: args.ctx.createdBy,
+    claims: args.ctx.claims,
+    lines: [
+      { account: ACC.badDebt, debit: args.amount, memo: args.description },
+      { account: args.receivable, credit: args.amount, partyType: args.partyType, partyId: args.partyId, memo: args.description },
+    ],
   });
 }
