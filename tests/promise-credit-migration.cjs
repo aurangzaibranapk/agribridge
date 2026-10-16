@@ -36,3 +36,4 @@ assert.match(pos, /choice\.kind === "promised"/);
 const page = fs.readFileSync('src/app/admin/intelligence/party/page.tsx', 'utf8');
 assert.match(page, /loadCreditReport/);
 console.log('PASS: 541 promise terms + credit report wiring');
+assert.match(sql, /coalesce\(c\.name, f\.full_name\) as name/, 'farmers has full_name, not name');
