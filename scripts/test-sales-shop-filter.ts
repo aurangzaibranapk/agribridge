@@ -1,0 +1,25 @@
+import assert from "node:assert/strict";
+import { resolveSalesShop, summaryScope } from "../src/lib/reports/sales-shop-filter";
+let n = 0; const ok = (f: () => void) => { f(); n++; };
+const ids = ["a", "b"];
+ok(() => assert.equal(resolveSalesShop("a", null, ids), "a"));
+ok(() => assert.equal(resolveSalesShop(undefined, "b", ids), "b"));
+ok(() => assert.equal(resolveSalesShop("a", "b", ids), "a"));
+ok(() => assert.equal(resolveSalesShop("all", "b", ids), ""));
+ok(() => assert.equal(resolveSalesShop("zzz", null, ids), ""));
+ok(() => assert.equal(resolveSalesShop(undefined, "zzz", ids), ""));
+ok(() => assert.equal(resolveSalesShop("", "", ids), ""));
+ok(() => assert.deepEqual(summaryScope({ meriDukan: "s1", shopId: "", branchId: "" }, "a"), { meriDukan: "s1", shopId: "", branchId: "" }));
+ok(() => assert.deepEqual(summaryScope({ meriDukan: null, shopId: "x", branchId: "br" }, "a"), { meriDukan: null, shopId: "a", branchId: "" }));
+ok(() => assert.deepEqual(summaryScope({ meriDukan: null, shopId: "x", branchId: "br" }, ""), { meriDukan: null, shopId: "x", branchId: "br" }));
+console.log(`sales-shop-filter: ${n}/${n} pass`);
+import { readSalesShopParam, salesShopHref } from "../src/lib/reports/sales-shop-filter";
+(async () => {
+  assert.equal(await readSalesShopParam({ salesShop: "a" }), "a");
+  assert.equal(await readSalesShopParam(Promise.resolve({ salesShop: "b" })), "b");
+  assert.equal(await readSalesShopParam({ salesShop: ["c", "d"] }), "c");
+  assert.equal(await readSalesShopParam(undefined), undefined);
+  assert.equal(salesShopHref("/admin/reports/sales", "?sp=15d&salesShop=x", "y"), "/admin/reports/sales?sp=15d&salesShop=y");
+  assert.equal(salesShopHref("/admin/command-center", "", ""), "/admin/command-center?salesShop=all");
+  console.log("sales-shop-filter async/href: 6/6 pass");
+})();
