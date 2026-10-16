@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { executeBridgeTool } from "@/lib/utils/bridge-tools";
+import { pickTopBranch, paymentSplit } from "@/lib/utils/daily-briefing-summary";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import {
   TrendingUp,
@@ -57,6 +58,8 @@ export default async function DailyBriefingPage() {
   ]);
 
   const biz = bizResult.status === "fulfilled" ? (bizResult.value as any) : null;
+  const topBranch = pickTopBranch(biz?.top_branch);
+  const pay = paymentSplit(biz?.payment_mode_breakdown);
   const stock = stockResult.status === "fulfilled" ? (stockResult.value as any) : null;
   const staff = staffResult.status === "fulfilled" ? (staffResult.value as any) : null;
   const pending = pendingResult.status === "fulfilled" ? (pendingResult.value as any) : null;
@@ -106,13 +109,13 @@ export default async function DailyBriefingPage() {
               <div>
                 <p className="text-xs text-surface-500">Cash / Online</p>
                 <p className="mt-0.5 text-xl font-bold text-surface-900 tabular-nums dark:text-white">
-                  {rs(biz.payment_mode_breakdown?.cash ?? 0)}
+                  {rs(pay.cash)}
                 </p>
               </div>
               <ShoppingCart className="h-5 w-5 shrink-0 text-emerald-500" />
             </div>
             <p className="mt-1 text-xs text-surface-500">
-              Online: {rs(biz.payment_mode_breakdown?.online ?? 0)}
+              Online: {rs(pay.online)}
             </p>
           </Card>
 
@@ -121,13 +124,13 @@ export default async function DailyBriefingPage() {
               <div>
                 <p className="text-xs text-surface-500">Top Branch</p>
                 <p className="mt-0.5 text-base font-bold text-surface-900 dark:text-white line-clamp-1">
-                  {biz.top_branch?.branch_name ?? "—"}
+                  {topBranch?.name ?? "—"}
                 </p>
               </div>
               <BarChart2 className="h-5 w-5 shrink-0 text-purple-500" />
             </div>
             <p className="mt-1 text-xs text-surface-500">
-              {biz.top_branch ? rs(biz.top_branch.total) : "Koi sale nahi"}
+              {topBranch ? rs(topBranch.total) : "Koi sale nahi"}
             </p>
           </Card>
 
@@ -136,7 +139,7 @@ export default async function DailyBriefingPage() {
               <div>
                 <p className="text-xs text-surface-500">Credit Sale</p>
                 <p className="mt-0.5 text-xl font-bold text-surface-900 tabular-nums dark:text-white">
-                  {rs(biz.payment_mode_breakdown?.credit ?? 0)}
+                  {rs(pay.credit)}
                 </p>
               </div>
               <Clock className="h-5 w-5 shrink-0 text-amber-500" />
