@@ -25,11 +25,11 @@ export default async function BuyerStatementPage({
 
   const { data: rawOrders } = await (supabase as any)
     .from("produce_orders")
-    .select("id, order_number, created_at, subtotal")
+    .select("id, order_number, placed_at, subtotal")
     .eq("buyer_id", buyerId)
-    .gte("created_at", startDate)
-    .lte("created_at", endDate)
-    .order("created_at", { ascending: true });
+    .gte("placed_at", startDate)
+    .lte("placed_at", endDate + "T23:59:59")
+    .order("placed_at", { ascending: true });
 
   const { data: rawPayments } = await supabase
     .from("buyer_payments")
@@ -45,7 +45,7 @@ export default async function BuyerStatementPage({
   // Payment "we_paid" -> debit (hum ne diya), "they_paid" -> credit (unhone diya)
   const entries: Entry[] = [
     ...(rawOrders ?? []).map((o: any) => ({
-      date: String(o.created_at).slice(0, 10),
+      date: String(o.placed_at).slice(0, 10),
       description: `Order ${o.order_number}`,
       debit: 0,
       credit: Number(o.subtotal ?? 0),

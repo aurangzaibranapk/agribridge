@@ -28,12 +28,12 @@ export default async function DealerStatementPage({
 
   const { data: rawOrders } = await supabase
     .from("bridge_orders")
-    .select("id, order_number, created_at, commission_amount")
-    .eq("dealer_id", dealerId)
-    .gte("created_at", startDate)
-    .lte("created_at", endDate)
+    .select("id, order_number, placed_at, commission_amount")
+    .eq("assigned_dealer_id", dealerId)
+    .gte("placed_at", startDate)
+    .lte("placed_at", endDate + "T23:59:59")
     .gt("commission_amount", 0)
-    .order("created_at", { ascending: true });
+    .order("placed_at", { ascending: true });
 
   const { data: rawPayments } = await supabase
     .from("dealer_payments")
@@ -46,7 +46,7 @@ export default async function DealerStatementPage({
   type Entry = { date: string; description: string; debit: number; credit: number; slipUrl?: string | null };
   const entries: Entry[] = [
     ...(rawOrders ?? []).map((o: any) => ({
-      date: String(o.created_at).slice(0, 10),
+      date: String(o.placed_at).slice(0, 10),
       description: `Commission - Order ${o.order_number ?? o.id.slice(0, 8)}`,
       debit: Number(o.commission_amount),
       credit: 0,

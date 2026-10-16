@@ -18,7 +18,8 @@
     "test:support": "npx --yes tsx scripts/test-support-sla.ts",
     "test:staff-achievement": "npx --yes tsx scripts/test-staff-achievement.ts",
     "test:intelligence": "npx --yes tsx scripts/test-intelligence.ts",
-    "test:business-360": "npx --yes tsx scripts/test-business-360.ts"
+    "test:business-360": "npx --yes tsx scripts/test-business-360.ts",
+    "test:columns": "node tests/legacy-column-names.cjs"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",
