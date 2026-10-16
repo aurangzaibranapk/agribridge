@@ -2,6 +2,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DailySalesBreakdown } from "@/components/reports/daily-sales-breakdown";
 import { periodRange } from "@/lib/reports/sales-period";
+import { SalesShopSelect } from "@/components/reports/sales-shop-select";
+import { resolveSalesShop, SALES_SHOP_COOKIE } from "@/lib/reports/sales-shop-filter";
+import { cookies } from "next/headers";
 import { Card } from "@/components/ui/layout-primitives";
 import { loadMoneyToday, loadDeptKpis, loadAlerts, conclude, deptTotals, loadSalesTrend, loadBranchPerformance, loadTopShops } from "@/lib/command-center";
 import { SalesTrendChart, DeptSalesDonut } from "@/components/dashboard/command-center-charts";
@@ -69,7 +72,7 @@ const deptIcon: Record<string, typeof Package> = {
   fleet: Building2,
 };
 
-export default async function CommandCenterPage() {
+export default async function CommandCenterPage({ searchParams }: { searchParams?: Promise<{ salesShop?: string }> } = {}) {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const {
@@ -82,6 +85,12 @@ export default async function CommandCenterPage() {
   if (!me?.is_active || !OWNER_ROLES.includes(me.role)) {
     return <div className="p-8 text-center text-surface-400">{t("c_only_owner_admin", lang)}</div>;
   }
+
+  // "Dukan chunein" -- Pichli sale ka khulasa widget
+  const sp = (await searchParams) ?? {};
+  const { data: shopRows } = await supabase.from("shops").select("id, name").order("name");
+  const salesShops = ((shopRows ?? []) as { id: string; name: string }[]).map((x) => ({ id: x.id, name: x.name }));
+  const salesShop = resolveSalesShop(sp.salesShop, (await cookies()).get(SALES_SHOP_COOKIE)?.value, salesShops.map((x) => x.id));
 
   const scoreRes = await supabase.rpc("fn_recalc_score", { p_subject_type: "staff", p_subject_id: user!.id })
     .then(() => supabase.rpc("fn_score_for", { p_subject_type: "staff", p_subject_id: user!.id }));
@@ -156,8 +165,11 @@ export default async function CommandCenterPage() {
 
       {/* Aaj / Kal / Parson + 7 din (compact) -- wahi component jo sales report par hai */}
       <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
-        <h2 className="mb-2 font-display text-sm font-semibold text-surface-900 dark:text-surface-100">{t("sps_title", lang)}</h2>
-        <DailySalesBreakdown supabase={supabase} scope={{ meriDukan: null, shopId: "", branchId: "" }} tableRange={periodRange("7d")} lang={lang} compact reportHref="/admin/reports/sales" />
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-display text-sm font-semibold text-surface-900 dark:text-surface-100">{t("sps_title", lang)}{salesShop ? ` · ${salesShops.find((x) => x.id === salesShop)?.name ?? ""}` : ""}</h2>
+          <SalesShopSelect shops={salesShops} current={salesShop} label={t("sps_shop_pick", lang)} allLabel={t("sps_all_shops", lang)} />
+        </div>
+        <DailySalesBreakdown supabase={supabase} scope={{ meriDukan: null, shopId: salesShop, branchId: "" }} tableRange={periodRange("7d")} lang={lang} compact reportHref={salesShop ? `/admin/reports/sales?salesShop=${salesShop}` : "/admin/reports/sales"} />
       </div>
 
       {/* Primary business position */}
