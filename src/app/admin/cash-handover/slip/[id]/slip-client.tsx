@@ -13,7 +13,7 @@ const PRINT_AREA_ID = "handover-receipt-print-area";
 const INIT: ActionState = {};
 
 function rs(n: number): string {
-  return `Rs ${Math.round(n).toLocaleString()}`;
+  return `Rs ${Math.round(n).toLocaleString("en-PK")}`;
 }
 
 function ConfirmBtn({ label }: { label: string }) {
@@ -108,7 +108,7 @@ export function SlipClient({
   const isDone = handover.status === "received" || handover.status === "short";
 
   const fmt = (d: string) =>
-    new Date(d).toLocaleString("en-PK", { dateStyle: "medium", timeStyle: "short" });
+    new Date(d).toLocaleString("en-PK", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Karachi" });
 
   // POS sale receipt wala date format.
   const receiptDate = (d: string) =>
@@ -118,6 +118,7 @@ export function SlipClient({
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      timeZone: "Asia/Karachi",
     });
 
   // POS close ke baad seedha print -- Shift slip wali tarah thori der ruk

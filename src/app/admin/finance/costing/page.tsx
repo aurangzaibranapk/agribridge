@@ -129,7 +129,7 @@ export default async function CostingPage() {
             {list.map((r) => (
               <tr key={r.id}>
                 <td className="px-4 py-1.5">
-                  <Link href={`/admin/products/${r.id}`} className="text-brand-600 hover:underline">
+                  <Link href={`/admin/products/${r.id}/edit`} prefetch={false} className="text-brand-600 hover:underline">
                     {r.name}
                   </Link>
                   {r.pack && <span className="ml-1 text-xs text-surface-400">({r.pack})</span>}
