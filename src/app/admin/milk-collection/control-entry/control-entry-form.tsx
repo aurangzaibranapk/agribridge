@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { saveControlEntry } from "@/actions/milk-control-entry";
 
 interface Option {
   id: string;
@@ -23,13 +24,30 @@ export function ControlEntryForm({
   const [fat, setFat] = useState("");
   const [rate, setRate] = useState("");
   const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const amount = quantity && rate ? (Number(quantity) * Number(rate)).toFixed(2) : "0";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setMessage("Entry save ho gaya (demo). Real save next step mein.");
-    // TODO: call server action that inserts into milk_entries with collector_id + chillar_id
+    setBusy(true);
+    setMessage("");
+    const fd = new FormData();
+    fd.set("farmer_id", farmerId);
+    fd.set("collector_id", collectorId);
+    fd.set("chillar_id", chillarId);
+    fd.set("quantity", quantity);
+    fd.set("fat", fat);
+    fd.set("rate", rate);
+    const res = await saveControlEntry({}, fd);
+    setBusy(false);
+    if (res.error) setMessage(res.error);
+    else {
+      setMessage(res.message ?? "Saved");
+      setQuantity("");
+      setFat("");
+      setRate("");
+    }
   }
 
   return (
@@ -68,12 +86,14 @@ export function ControlEntryForm({
         </div>
         <div>
           <label className="block text-sm mb-1">Rate</label>
-          <input type="number" step="0.01" className="w-full border rounded px-3 py-2" value={rate} onChange={(e) => setRate(e.target.value)} />
+          <input type="number" step="0.01" className="w-full border rounded px-3 py-2" value={rate} onChange={(e) => setRate(e.target.value)} required />
         </div>
       </div>
       <div className="text-lg font-semibold">Amount: Rs {amount}</div>
-      <button type="submit" className="bg-green-600 text-white px-6 py-2 rounded">Save Entry</button>
-      {message && <p className="text-sm text-green-700">{message}</p>}
+      <button type="submit" disabled={busy} className="bg-green-600 text-white px-6 py-2 rounded disabled:opacity-50">
+        {busy ? "Saving..." : "Save Entry"}
+      </button>
+      {message && <p className="text-sm">{message}</p>}
     </form>
   );
 }
