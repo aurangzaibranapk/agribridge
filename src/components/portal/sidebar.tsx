@@ -12,6 +12,7 @@ export function getPortalNavItems(lang: Lang) {
     { href: "/portal/wallet", label: t("nav_wallet", lang), icon: Wallet },
     { href: "/portal/farms", label: t("nav_farms", lang), icon: MapPin },
     { href: "/portal/demand", label: lang === "ur" ? "طلبِ مصنوعات" : "Product Demand", icon: PackageSearch },
+    { href: "/portal/campaigns", label: lang === "ur" ? "گندم سیزن بکنگ" : "Season Booking", icon: PackageSearch },
     { href: "/portal/services/livestock", label: t("nav_livestock", lang), icon: Landmark },
     { href: "/portal/crops", label: t("nav_crops", lang), icon: Sprout },
     { href: "/portal/services/fertilizer", label: t("nav_fertilizer", lang), icon: Sprout },

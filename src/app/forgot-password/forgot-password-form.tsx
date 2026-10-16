@@ -34,6 +34,9 @@ export function ForgotPasswordForm() {
                 <input type="email" name="email" required placeholder={t("au_eg_email", lang)} className="mt-1 w-full rounded-lg border border-surface-200 p-2.5 text-sm" />
               </div>
               <SubmitButton />
+              <p className="text-center text-sm">
+                <Link href="/forgot-password/farmer" className="font-medium text-brand-700 hover:underline">Kisan? Mobile/WhatsApp code se password badlein</Link>
+              </p>
               <p className="text-center text-sm text-surface-500">
                 <Link href="/login" className="font-medium text-brand-700 hover:underline">{t("au_back_to_login", lang)}</Link>
               </p>

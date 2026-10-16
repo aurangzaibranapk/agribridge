@@ -183,7 +183,9 @@ export async function verifyFarmerOtp(
       phone_number: phone,
       village: village || null,
       registration_source: "SELF",
-    });
+      // Naya khud-bana kisan admin approval mein jata hai (migration 535).
+      signup_approval_status: "pending",
+    } as any);
     if (error) {
       // Ek hi lamhe mein do jagah se koshish ho to database rok deta hai
       // (farmers_phone_key_uniq). Wo rok yahan bhi wohi baat kehti hai:
