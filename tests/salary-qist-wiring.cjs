@@ -26,6 +26,11 @@ assert.match(milk, /amount: qistCut,\s*payment_method: "qist_adjustment"/);
 assert.ok(milk.indexOf('payment_method: "qist_adjustment"') < milk.indexOf('if (cashAmount <= 0)'), 'qist row cash<=0 return se pehle');
 const modal = r('src/app/admin/milk-collection/milk-client.tsx');
 assert.match(modal, /milkQistPreview\(balance\.farmer_id/);
+// Owner faisla 2026-10-16: bina record din = ghair-hazir, UI mein saaf dikhe
+assert.match(r('supabase/migrations/553_payroll_runs.sql'), /coalesce\(m\.unpaid_leave_days, 0\) \+ coalesce\(m\.missing_days, 0\)/, 'missing days kattauti mein');
+const pc = r('src/app/admin/hr/payroll/payroll-client.tsx');
+assert.match(pc, /Bina record \(absent\)/); assert.match(pc, /chargeableAbsentDays\(l\)/); assert.match(pc, /din bina hazri record/);
+assert.doesNotMatch(pc, /bina record<\/div>/, 'purana +N bina record (bina kattauti) label hata');
 // Ledger rules
 const rules = r('src/lib/ledger/rules.ts');
 assert.match(rules, /badDebt: "6075"/);

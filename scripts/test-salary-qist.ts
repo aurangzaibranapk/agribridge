@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { absentDeduction, computePayLine, payrollApprovalLines, serviceMonths, advanceEligibility } from "../src/lib/payroll/compute";
+import { chargeableAbsentDays, absentDeduction, computePayLine, payrollApprovalLines, serviceMonths, advanceEligibility } from "../src/lib/payroll/compute";
 import { buildSchedule, equalAmounts, scheduleError, deductionFor, receivableAccount, payoutAccount } from "../src/lib/qist/schedule";
 
 // 30-din qaida, half day aadha, overtime nahi
@@ -10,6 +10,10 @@ assert.equal(absentDeduction(20000, 31, 0), 20000, "basic se zyada nahi");
 const l = computePayLine({ basic: 20000, absentDays: 2, halfDays: 1, advanceDue: 2000 });
 assert.deepEqual(l, { gross: 20000, absentDeduction: 1667, otherDeductions: 0, advance: 2000, net: 16333 });
 assert.equal(computePayLine({ basic: 20000, absentDays: 30, halfDays: 0, advanceDue: 2000 }).net, 0, "net manfi nahi");
+// Bina record din = ghair-hazir (owner faisla): 2 absent + 13 bina record + 1 half = 15.5 din
+assert.equal(computePayLine({ basic: 20000, absentDays: 2, missingDays: 13, halfDays: 1 }).absentDeduction, 10333, "20000/30*15.5");
+assert.equal(computePayLine({ basic: 20000, absentDays: 0, missingDays: 30, halfDays: 0 }).net, 0, "poora mahina bina record");
+assert.equal(chargeableAbsentDays({ absent_days: 2, unpaid_leave_days: 1, missing_days: 13 }), 16);
 const j = payrollApprovalLines([l]);
 assert.equal(j.salaries, j.advance + j.statutory + j.payable, "journal barabar");
 // Mulazmat

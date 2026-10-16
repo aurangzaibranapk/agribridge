@@ -69,13 +69,16 @@ const inst = await q(`select seq, due_date::text d, amount_due::int a from qist_
 assert.equal(inst.length, 6); assert.equal(inst[0].d, "2026-10-31"); assert.equal(inst[5].d, "2027-03-31"); assert.equal(inst.reduce((s, r) => s + r.a, 0), 12000);
 
 // ---- 553 payroll: Oct 2026, Anwar 2 absent + 1 half, finalized
-await run(`insert into test_attendance values ('${ANWAR}',2026,10,26,1,2,0,2,0,0,true),('${NEW}',2026,10,30,0,0,0,0,0,0,false)`);
+await run(`insert into test_attendance values ('${ANWAR}',2026,10,26,1,2,0,2,0,0,true),('${NEW}',2026,10,17,0,0,0,0,13,0,false)`);
 await as(HR);
 const [{ id: RUN }] = await q(`insert into payroll_runs (pay_year, pay_month) values (2026, 10) returning id`);
 await fails(`select fn_payroll_compute('${RUN}', false)`, /Hazri mukammal nahi/, "unfinalized needs ack");
 await run(`select fn_payroll_compute('${RUN}', true)`);
 const [line] = await q(`select basic::int, absent_deduction::int ad, advance_deduction::int adv, net::int from payroll_lines where run_id=$1 and profile_id=$2`, [RUN, ANWAR]);
 assert.deepEqual(line, { basic: 20000, ad: 1667, adv: 2000, net: 16333 }, "20000 - 1667 - 2000");
+// Bina record din = ghair-hazir, 'hazri adhoori' tick ke bawajood katte hain (15000/30*13)
+const [nl] = await q(`select missing_days, absent_deduction::int ad, net::int from payroll_lines where run_id=$1 and profile_id=$2`, [RUN, NEW]);
+assert.deepEqual(nl, { missing_days: 13, ad: 6500, net: 8500 }, "13 bina record din kate");
 await fails(`insert into payroll_lines (run_id, profile_id, basic, gross, net) values ('${RUN}','${ANWAR}',1,1,1)`, /Hisaab chalayein/);
 await fails(`update payroll_runs set status='approved' where id='${RUN}'`, /payroll functions/);
 await run(`select fn_payroll_transition('${RUN}', 'submit')`);

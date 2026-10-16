@@ -1,6 +1,7 @@
 /**
  * Tankhwah ka hisaab -- wahi qaida jo 553 ka fn_payroll_compute chalata hai.
  * Mahina hamesha 30 din ka (31 din wala bhi). Half day = aadha din. Overtime nahi.
+ * Bina record din (hazri darj nahi) = ghair-hazir, wahi basic/30 kattauti.
  */
 export const DAYS_BASIS = 30;
 
@@ -9,19 +10,26 @@ export function absentDeduction(basic: number, absentDays: number, halfDays: num
   return Math.min(basic, Math.round((basic / DAYS_BASIS) * days));
 }
 
+/** Kul ghair-hazir din jin par kattauti hoti hai (absent + unpaid + bina record). */
+export function chargeableAbsentDays(l: { absent_days?: number; unpaid_leave_days?: number; missing_days?: number }): number {
+  return (+(l.absent_days ?? 0)) + (+(l.unpaid_leave_days ?? 0)) + (+(l.missing_days ?? 0));
+}
+
 export interface PayLineInput {
   basic: number;
   allowances?: number;
   otherDeductions?: number;
   absentDays: number;
   unpaidLeaveDays?: number;
+  /** Hazri darj nahi -- ghair-hazir gina jata hai. */
+  missingDays?: number;
   halfDays: number;
   advanceDue?: number;
 }
 
 export function computePayLine(i: PayLineInput) {
   const gross = i.basic + (i.allowances ?? 0);
-  const absent = absentDeduction(i.basic, i.absentDays + (i.unpaidLeaveDays ?? 0), i.halfDays);
+  const absent = absentDeduction(i.basic, i.absentDays + (i.unpaidLeaveDays ?? 0) + (i.missingDays ?? 0), i.halfDays);
   const available = Math.max(gross - absent - (i.otherDeductions ?? 0), 0);
   const advance = Math.min(Math.max(i.advanceDue ?? 0, 0), available);
   return { gross, absentDeduction: absent, otherDeductions: i.otherDeductions ?? 0, advance, net: available - advance };

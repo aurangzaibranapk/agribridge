@@ -42,7 +42,7 @@ export default async function PayslipPage({ params }: { params: { id: string } }
         </div>
         <div className="grid gap-6 md:grid-cols-2">
           <div><h3 className="mb-1 font-semibold">Hazri</h3>
-            <Row k="Hazir" v={l.present_days} /><Row k="Paid chhutti" v={l.paid_leave_days} /><Row k="Absent" v={l.absent_days} />
+            <Row k="Hazir" v={l.present_days} /><Row k="Paid chhutti" v={l.paid_leave_days} /><Row k="Absent" v={l.absent_days} />{Number(l.missing_days) > 0 && <Row k="Bina record (absent gina)" v={l.missing_days} />}
             {l.unpaid_leave_days > 0 && <Row k="Unpaid chhutti" v={l.unpaid_leave_days} />}<Row k="Half day" v={l.half_days} />
           </div>
           <div><h3 className="mb-1 font-semibold">Kamai</h3>
@@ -50,7 +50,7 @@ export default async function PayslipPage({ params }: { params: { id: string } }
             {comps.filter((c) => c.kind === "earning").map((c) => <Row key={c.code} k={c.name} v={rs(c.amount)} />)}
             <Row k="Gross" v={rs(l.gross)} bold />
             <h3 className="mb-1 mt-4 font-semibold">Kattautiyan</h3>
-            <Row k={`Ghair-hazri (${Number(l.absent_days) + Number(l.unpaid_leave_days) + Number(l.half_days) * 0.5} din)`} v={rs(l.absent_deduction)} />
+            <Row k={`Ghair-hazri (${Number(l.absent_days) + Number(l.unpaid_leave_days) + Number(l.missing_days ?? 0) + Number(l.half_days) * 0.5} din)`} v={rs(l.absent_deduction)} />
             {comps.filter((c) => c.kind === "deduction").map((c) => <Row key={c.code} k={c.name} v={rs(c.amount)} />)}
             {Number(l.advance_deduction) > 0 && <Row k="Advance qist" v={rs(l.advance_deduction)} />}
             <Row k="Kul kattauti" v={rs(Number(l.gross) - Number(l.net))} bold />

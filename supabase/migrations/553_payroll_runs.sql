@@ -1,5 +1,7 @@
 -- 553: Mahana payroll run -- Draft -> Manzoori ke liye -> Manzoor (journal) -> Ada.
--- Ghair-hazri: basic / 30 x (absent + unpaid leave + half day x 0.5). Overtime NAHI.
+-- Ghair-hazri: basic / 30 x (absent + unpaid leave + bina record din + half day x 0.5). Overtime NAHI.
+-- Owner ka faisla (16 Oct 2026): jis din hazri darj na ho (missing / missing_punch) wo ghair-hazir ginta hai.
+-- 'Hazri adhoori, phir bhi banayein' sirf run banne deta hai -- bina record din phir bhi katte hain.
 -- Advance/qist kattauti fn_payroll_advance_due se (556 isay Qist Plan se jorta hai).
 -- Additive.
 
@@ -127,7 +129,7 @@ begin
       into v_allow, v_oded from jsonb_array_elements(v_comp) x;
 
     v_absded := public.fn_payroll_absent_deduction(s.basic,
-                  coalesce(m.absent_days, 0) + coalesce(m.unpaid_leave_days, 0), coalesce(m.half_days, 0));
+                  coalesce(m.absent_days, 0) + coalesce(m.unpaid_leave_days, 0) + coalesce(m.missing_days, 0), coalesce(m.half_days, 0));
     v_gross := s.basic + v_allow;
     v_adv := least(greatest(public.fn_payroll_advance_due(st.profile_id, r.pay_year, r.pay_month,
                      greatest(v_gross - v_absded - v_oded, 0)), 0), greatest(v_gross - v_absded - v_oded, 0));
