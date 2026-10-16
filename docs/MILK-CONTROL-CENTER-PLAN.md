@@ -6,15 +6,17 @@ Branch: feat/milk-collection-masters
 - Collectors Master: /admin/milk-collection/collectors
 - Chillars Master: /admin/milk-collection/chillars
 - Control Center landing: /admin/milk-collection/control
-- Control Entry: /admin/milk-collection/control-entry (real save with collector + chillar)
+- Control Entry: /admin/milk-collection/control-entry (real save)
 - Chillar Control: /admin/milk-collection/chillar-control
 - Weekly Payment sheet: /admin/milk-collection/weekly-payment
+- Dashboard cards: /admin/milk-collection/dashboard
+- Zero leakage alerts: /admin/milk-collection/alerts
+- Company outward: /admin/milk-collection/outward
 
-## Remaining
-- Dashboard cards (today totals, pending)
-- Zero leakage alerts (quantity mismatch)
-- Outward (company) reconciliation
-- Payment entry from weekly sheet
+## Remaining (polish)
+- Payment entry action from weekly sheet
+- Stronger quantity mismatch alerts
+- Better outward vs dispatch integration
 
 ## Rules
 - Branch only. Live DB not touched.
