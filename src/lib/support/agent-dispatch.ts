@@ -1,6 +1,13 @@
 export type SupportAgent = { key: string; label: string };
 
-type AgentRoute = SupportAgent & { url: string; token?: string };
+export type AgentRouteType = "webhook" | "openai" | "xai" | "anthropic" | "github";
+type AgentRoute = SupportAgent & { type: AgentRouteType; url: string; token?: string; model?: string; labels?: string[] };
+
+const LLM_DEFAULTS: Record<"openai" | "xai" | "anthropic", { url: string; envKey: string; model: string; modelEnv: string }> = {
+  openai: { url: "https://api.openai.com/v1/chat/completions", envKey: "OPENAI_API_KEY", model: "gpt-4o", modelEnv: "OPENAI_SUPPORT_MODEL" },
+  xai: { url: "https://api.x.ai/v1/chat/completions", envKey: "XAI_API_KEY", model: "grok-4", modelEnv: "XAI_SUPPORT_MODEL" },
+  anthropic: { url: "https://api.anthropic.com/v1/messages", envKey: "ANTHROPIC_API_KEY", model: "claude-sonnet-4-5", modelEnv: "ANTHROPIC_SUPPORT_MODEL" },
+};
 type DispatchSuccess = {
   ok: true;
   externalTaskId?: string;
@@ -19,20 +26,40 @@ function githubConfig(): { repository: string; token: string } | null {
   return { repository, token };
 }
 
-function routes(): AgentRoute[] {
+export function parseSupportAgentRoutes(rawEnv: string | undefined, env: Record<string, string | undefined> = process.env): AgentRoute[] {
   try {
-    const raw = JSON.parse(process.env.SUPPORT_AGENT_ROUTES ?? "[]") as unknown;
+    const raw = JSON.parse(rawEnv ?? "[]") as unknown;
     if (!Array.isArray(raw)) return [];
     return raw.flatMap((item: any) => {
       const key = String(item?.key ?? "").trim().toLowerCase();
       const label = String(item?.label ?? "").trim();
-      const url = String(item?.url ?? "").trim();
-      if (!/^[a-z0-9_-]{2,40}$/.test(key) || !label || !/^https:\/\//i.test(url)) return [];
-      return [{ key, label: label.slice(0, 80), url, token: String(item?.token ?? "").trim() || undefined }];
+      const typeRaw = String(item?.type ?? "webhook").trim().toLowerCase();
+      if (!["webhook", "openai", "xai", "anthropic", "github"].includes(typeRaw)) return [];
+      const type = typeRaw as AgentRouteType;
+      if (!/^[a-z0-9_-]{2,40}$/.test(key) || !label) return [];
+      const token = String(item?.token ?? "").trim() || undefined;
+      const model = String(item?.model ?? "").trim() || undefined;
+      let url = String(item?.url ?? "").trim();
+      if (type === "openai" || type === "xai" || type === "anthropic") {
+        const def = LLM_DEFAULTS[type];
+        url = url || def.url;
+        // Only list the agent when its API key is present on the server.
+        if (!(token || String(env[def.envKey] ?? "").trim())) return [];
+      } else if (type === "github") {
+        url = "github";
+        if (!String(env.SUPPORT_GITHUB_TOKEN ?? "").trim() || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(String(env.SUPPORT_AGENT_REPOSITORY ?? "").trim())) return [];
+      }
+      if (type !== "github" && !/^https:\/\//i.test(url)) return [];
+      const labels = Array.isArray(item?.labels) ? item.labels.map((l: unknown) => String(l).trim()).filter(Boolean).slice(0, 5) : undefined;
+      return [{ key, label: label.slice(0, 80), type, url, token, model, labels }];
     });
   } catch {
     return [];
   }
+}
+
+function routes(): AgentRoute[] {
+  return parseSupportAgentRoutes(process.env.SUPPORT_AGENT_ROUTES);
 }
 
 export function configuredSupportAgents(): SupportAgent[] {
@@ -53,7 +80,7 @@ export async function postSupportAgentComment(
   externalTaskId: string,
   message: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (agentKey !== CODEX_SUBSCRIPTION_KEY) return { ok: true };
+  if (agentKey !== CODEX_SUBSCRIPTION_KEY && routes().find((r) => r.key === agentKey)?.type !== "github") return { ok: true };
   const config = githubConfig();
   const issueNumber = githubIssueNumber(externalTaskId);
   if (!config || !issueNumber) return { ok: false, error: "Connected GitHub issue nahi mila." };
@@ -80,7 +107,8 @@ export async function postSupportAgentComment(
 }
 
 async function createCodexSubscriptionIssue(
-  ticket: Record<string, unknown>
+  ticket: Record<string, unknown>,
+  labels?: string[]
 ): Promise<DispatchSuccess | { ok: false; error: string }> {
   const config = githubConfig();
   if (!config) {
@@ -168,7 +196,7 @@ async function createCodexSubscriptionIssue(
         "User-Agent": "AgriBridge-Support-Bridge",
         "X-GitHub-Api-Version": "2022-11-28",
       },
-      body: JSON.stringify({ title: `[${issueRef}] ${title}`, body }),
+      body: JSON.stringify({ title: `[${issueRef}] ${title}`, body, ...(labels?.length ? { labels } : {}) }),
       signal: AbortSignal.timeout(15_000),
     });
     const result = await response.json().catch(() => ({}));
@@ -198,6 +226,8 @@ export async function dispatchSupportTicket(
 
   const route = routes().find((item) => item.key === agentKey);
   if (!route) return { ok: false, error: "Ye AI agent abhi connect nahi hai. Pehle us ka secure webhook configure karein." };
+  if (route.type === "github") return createCodexSubscriptionIssue(ticket, route.labels ?? ["support"]);
+  if (route.type === "openai" || route.type === "xai" || route.type === "anthropic") return dispatchToLlm(route, ticket);
 
   try {
     const response = await fetch(route.url, {
@@ -234,5 +264,84 @@ export async function dispatchSupportTicket(
     };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Agent se rabta nahi ho saka." };
+  }
+}
+
+export function buildLlmPrompt(ticket: Record<string, unknown>): string {
+  const ticketNo = String(ticket.ticketNo ?? "").trim();
+  const deviceInfo = ticket.deviceInfo && typeof ticket.deviceInfo === "object" ? JSON.stringify(ticket.deviceInfo).slice(0, 2000) : "";
+  return [
+    "You are a senior support engineer for AgriBridge ERP (Next.js + Supabase, Pakistani agri trading business).",
+    "Diagnose this support ticket. You cannot change code or data; you only advise. Reply in short, simple Roman Urdu with these sections:",
+    "1. Masla kya hai  2. Kahan aur kis par asar  3. Mumkina wajah  4. Risk (data par asar?)  5. Hal ka tareeqa (staff ke liye fori qadam + developer fix)  6. Sawal (agar koi)",
+    "Never ask for passwords or secrets. Never claim the issue is fixed.",
+    "",
+    `Ticket #${ticketNo} | Priority: ${String(ticket.priority ?? "normal")}`,
+    `Title: ${String(ticket.title ?? "").slice(0, 200)}`,
+    ticket.pageUrl ? `Page: ${String(ticket.pageUrl)}` : "",
+    `Description: ${String(ticket.description ?? "").slice(0, 4000)}`,
+    deviceInfo ? `Device: ${deviceInfo}` : "",
+    ticket.screenshotUrl ? "A screenshot is attached." : "No screenshot.",
+  ].filter(Boolean).join("\n");
+}
+
+export function buildLlmRequest(route: { type: "openai" | "xai" | "anthropic"; model?: string }, ticket: Record<string, unknown>, env: Record<string, string | undefined> = process.env) {
+  const def = LLM_DEFAULTS[route.type];
+  const model = route.model || String(env[def.modelEnv] ?? "").trim() || def.model;
+  const prompt = buildLlmPrompt(ticket);
+  const screenshotUrl = String(ticket.screenshotUrl ?? "").trim();
+  if (route.type === "anthropic") {
+    const content: any[] = [{ type: "text", text: prompt }];
+    if (screenshotUrl) content.unshift({ type: "image", source: { type: "url", url: screenshotUrl } });
+    return { model, max_tokens: 1500, messages: [{ role: "user", content }] };
+  }
+  const content: any[] = [{ type: "text", text: prompt }];
+  if (screenshotUrl) content.push({ type: "image_url", image_url: { url: screenshotUrl } });
+  return { model, max_tokens: 1500, messages: [{ role: "user", content }] };
+}
+
+export function extractLlmText(type: "openai" | "xai" | "anthropic", body: any): string {
+  if (type === "anthropic") {
+    return Array.isArray(body?.content) ? body.content.filter((c: any) => c?.type === "text").map((c: any) => String(c.text ?? "")).join("\n").trim() : "";
+  }
+  const c = body?.choices?.[0]?.message?.content;
+  if (typeof c === "string") return c.trim();
+  if (Array.isArray(c)) return c.map((p: any) => String(p?.text ?? "")).join("\n").trim();
+  return "";
+}
+
+async function dispatchToLlm(route: AgentRoute, ticket: Record<string, unknown>): Promise<DispatchSuccess | { ok: false; error: string }> {
+  const type = route.type as "openai" | "xai" | "anthropic";
+  const def = LLM_DEFAULTS[type];
+  const apiKey = route.token || String(process.env[def.envKey] ?? "").trim();
+  if (!apiKey) return { ok: false, error: `${route.label} ke liye ${def.envKey} server par set nahi hai.` };
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (type === "anthropic") {
+    headers["x-api-key"] = apiKey;
+    headers["anthropic-version"] = "2023-06-01";
+  } else {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+  try {
+    const response = await fetch(route.url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(buildLlmRequest({ type, model: route.model }, ticket)),
+      signal: AbortSignal.timeout(90_000),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) return { ok: false, error: `${route.label}: ${String(body?.error?.message ?? body?.error ?? `HTTP ${response.status}`).slice(0, 300)}` };
+    const text = extractLlmText(type, body);
+    if (!text) return { ok: false, error: `${route.label} ne koi jawab nahi diya.` };
+    return {
+      ok: true,
+      externalTaskId: String(body?.id ?? "").trim() || undefined,
+      // Diagnosis only: handed back to Admin, never auto-closed.
+      assignmentStatus: "approval_required",
+      ticketStatus: "assigned",
+      message: `🤖 ${route.label} diagnosis (Admin verify karega, issue khud band nahi hoga):\n\n${text.slice(0, 6000)}`,
+    };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : `${route.label} se rabta nahi ho saka.` };
   }
 }
