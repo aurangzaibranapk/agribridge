@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { formatDate } from "@/lib/utils/format";
 import { StatementActions } from "./statement-actions";
+import { CreditPositionStrip } from "@/components/recovery/credit-position-strip";
+import { loadCreditPosition } from "@/lib/recovery/credit-block";
 import { partyBalanceAmount, partyBalanceLabel, partyBalanceStatus } from "@/lib/finance/party-balance";
 
 export const dynamic = "force-dynamic";
@@ -122,12 +124,19 @@ export async function CustomerStatementPage({
     ...(bankHistory.data ?? []).map((r: any) => ({ ...r, method: r.receiving_method, service: r.direction === "receiving" ? "Bank Receiving — cash payout" : "Bank Sending" })),
   ].sort((a, b) => b.created_at.localeCompare(a.created_at));
 
+  const creditPosition = await loadCreditPosition(id).catch(() => null);
   return (
     <div className="space-y-4">
       <PageHeader
         title={`${customer?.name ?? "Gahak"} — Khata`}
         description="Har lena aur dena, tareekh ke sath — ledger se seedha."
       />
+      {creditPosition && (
+        <Card className="space-y-2 p-3">
+          <div className="flex justify-between text-xs"><b>Udhaar halat</b><span className="flex gap-3"><Link className="underline" href={`/admin/crm/${id}/credit`}>Udhaar hadd</Link><Link className="underline" href={`/admin/finance/recovery?customer=${id}&promise=1`}>Promise to Pay</Link></span></div>
+          <CreditPositionStrip position={creditPosition} compact />
+        </Card>
+      )}
 
       <form className="flex flex-wrap items-end gap-2 rounded-card border border-surface-200 bg-white p-3 dark:border-surface-800 dark:bg-surface-900">
         <label className="text-xs text-surface-500">

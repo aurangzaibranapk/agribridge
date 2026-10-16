@@ -25,7 +25,8 @@
     "test:sales-period": "npx --yes tsx scripts/test-sales-period.ts && npx --yes tsx scripts/test-sales-daily.ts",
     "test:farmers-rls": "node tests/farmers-staff-insert-rls.cjs",
     "test:recovery-guard": "npx --yes tsx scripts/test-recovery-party-guard.ts",
-    "test:support-departments": "npx --yes tsx scripts/test-support-departments.ts"
+    "test:support-departments": "npx --yes tsx scripts/test-support-departments.ts",
+    "test:overdue-policy": "npx --yes tsx scripts/test-overdue-policy.ts"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",

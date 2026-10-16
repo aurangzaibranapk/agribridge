@@ -161,9 +161,9 @@ export function buildReminderMessage(input: {
   );
 }
 
-export function blockMessage(name: string, overdue: number, days: number): string {
+export function blockMessage(name: string, overdue: number, days: number, limitDays = 30): string {
   return (
-    `"${name}" ka ${formatRs(overdue)} udhaar ${days} din se purana hai (30 din ki hadd guzar chuki). ` +
+    `"${name}" ka ${formatRs(overdue)} udhaar ${days} din se purana hai (${limitDays} din ki hadd guzar chuki). ` +
     `Pehle purana baqaya wasool karein -- naya udhaar band hai. Naqad bikri ho sakti hai. ` +
     `Sirf Admin/Owner wajah likh kar ijazat de sakta hai.`
   );
