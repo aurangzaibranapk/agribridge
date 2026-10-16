@@ -1,21 +1,20 @@
 # Milk Control Center – Extension Plan
 Branch: feat/milk-collection-masters
 
-## Existing (already in AgriBridge)
-- /admin/milk-collection dashboard
-- milk_entries, farmers, balances
-- Chiller FAT apply, Dispatch, Routes, Billing
+## Status
+- Migration 530: milk_collectors + milk_chillars tables + links on milk_entries
+- Collectors Master: page + actions + client
+- Chillars Master: page + actions + client
+- Control Center landing: /admin/milk-collection/control
 
-## To Add / Improve
-1. Collectors (Ladke) Master
-2. Multiple Chillars better tracking
-3. Daily Entry with Collector + Chillar link
-4. Farmer Ledger improvements
-5. Chillar Control (inward/outward reconciliation)
-6. Weekly Payment sheet
-7. Zero-leakage checks (quantity match alerts)
+## Remaining
+- Daily Entry form: add collector_id + chillar_id selectors
+- Chillar Control: inward/outward reconciliation view
+- Weekly Payment sheet
+- Dashboard cards (today totals, pending)
+- Zero leakage alerts (quantity mismatch)
 
 ## Rules
-- Work on branch only
-- Live DB not touched
-- Owner approval required before merge
+- Branch only. Live DB not touched.
+- Owner approval required before merge.
+- Apply migration 530 on testing first.
