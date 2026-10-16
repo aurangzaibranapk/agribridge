@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/form";
 import { enqueue, allActions } from "@/lib/offline/queue";
 import { registerSender, syncQueue } from "@/lib/offline/sync";
 import { createClient } from "@/lib/supabase/client";
+import { defaultAgainstAccount, partyAccountProblem } from "@/lib/finance/recovery-party-accounts";
 
 export type RecoveryParty = {
   type: string;
@@ -209,6 +210,7 @@ export function RecoveryClient({
   const [summaryView, setSummaryView] = useState<"receivable" | "due_today" | "overdue" | "collected">("receivable");
   const recordsRef = useRef<HTMLDivElement>(null);
   const collectedRef = useRef<HTMLDivElement>(null);
+  const pendingMoneyActionId = useRef<string | null>(null);
 
   function openReceivableSummary(nextStatus: "all" | "due_today" | "overdue") {
     setSummaryView(nextStatus === "all" ? "receivable" : nextStatus);
@@ -271,6 +273,7 @@ export function RecoveryClient({
     );
   }, [previewParty, templates, channel]);
 
+  useEffect(() => { pendingMoneyActionId.current = null; }, [moneyPartyKey, moneyDirection, mode]);
   const selectedMoneyParty = useMemo(
     () => moneyParties.find((p) => `${p.type}:${p.id}` === moneyPartyKey) ?? null,
     [moneyParties, moneyPartyKey]
@@ -778,10 +781,15 @@ export function RecoveryClient({
               try {
                 const party = selectedMoneyParty;
                 f.set("direction", moneyDirection);
-                f.set("clientActionId", crypto.randomUUID());
+                // Har naye submit ki apni id; sirf timeout/server-error ke baad wahi form dobara bhejne par purani id (duplicate nahi banti).
+                const actionId = pendingMoneyActionId.current ?? crypto.randomUUID();
+                pendingMoneyActionId.current = actionId;
+                f.set("clientActionId", actionId);
                 f.set("partyType", party?.type ?? "other");
                 f.set("partyId", party?.id ?? "");
                 f.set("partyName", party?.name ?? String(f.get("otherPartyName") ?? ""));
+                const accountProblem = partyAccountProblem(party?.type ?? "other", party?.id ?? "", String(f.get("againstAccountCode") ?? ""));
+                if (accountProblem) { pendingMoneyActionId.current = null; throw new Error(accountProblem); }
 
                 // Large proof files can hit the cPanel proxy body limit. Upload the
                 // proof directly, then send only its URL with the accounting entry.
@@ -820,7 +828,12 @@ export function RecoveryClient({
                 const raw = await res.text();
                 let json: Record<string, any> = {};
                 try { json = raw ? JSON.parse(raw) : {}; } catch { /* cPanel may return an HTML error page */ }
-                if (!res.ok) throw new Error(json.error || `Payment save nahi hui (server ${res.status}).`);
+                if (!res.ok) {
+                  // 4xx = server ne wajah batayi (form theek karke naya submit = nayi id); 5xx = wahi id dobara.
+                  if (res.status < 500) pendingMoneyActionId.current = null;
+                  throw new Error(json.error || `Payment save nahi hui (server ${res.status}).`);
+                }
+                pendingMoneyActionId.current = null;
                 setNotice(`${moneyDirection === "receive" ? "Payment receive" : "Payment send"} ho gayi. Entry: ${json.entryNumber ?? json.movementNumber ?? "saved"}`);
                 setMode(null);
                 window.location.reload();
@@ -884,7 +897,7 @@ export function RecoveryClient({
               </label>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">
                 Khate ki mad
-                <select required name="againstAccountCode" defaultValue={moneyDirection === "receive" ? (selectedMoneyParty?.type === "farmer" ? "1150" : "1100") : "2000"} className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-800">
+                <select required name="againstAccountCode" key={`${moneyDirection}:${selectedMoneyParty?.type ?? "other"}:${selectedMoneyParty?.id ?? ""}`} defaultValue={defaultAgainstAccount(selectedMoneyParty?.type, moneyDirection)} className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-800">
                   <option value="">— ledger account —</option>
                   {ledgerAccounts.filter((a) => moneyDirection === "receive" ? a.accountType === "asset" : ["asset", "liability", "expense"].includes(a.accountType)).map((a) => <option key={a.code} value={a.code}>{a.code} — {a.name}</option>)}
                 </select>

@@ -72,3 +72,60 @@ export function pctChange(current: number, previous: number): number | null {
   if (!previous) return null;
   return ((current - previous) / previous) * 100;
 }
+
+// ---------------------------------------------------------------------
+// Aaj / Kal / Parson + rozana table (cash / bank / udhaar).
+// ---------------------------------------------------------------------
+
+export type MethodBucket = "cash" | "bank" | "udhaar";
+
+/** payment_method -> teen khanon mein: khata = udhaar, cash = cash, baqi sab (EasyPaisa, JazzCash, Wasela, QR, card, bank) = bank. */
+export function methodBucket(method: string | null | undefined): MethodBucket {
+  const m = String(method ?? "").toLowerCase();
+  if (m === "cash") return "cash";
+  if (m === "khata" || m === "udhaar" || m === "credit") return "udhaar";
+  return "bank";
+}
+
+export type DayKind = "aaj" | "kal" | "parson";
+/** Aaj (00:00 PKT se abhi tak), Kal aur Parson (poore PKT din). */
+export function recentDayRanges(now: Date = new Date()): { kind: DayKind; key: string; start: Date; end: Date }[] {
+  const m = pktMidnight(now);
+  const day = 86400000;
+  return [
+    { kind: "aaj", key: pktDayKey(m), start: m, end: now },
+    { kind: "kal", key: pktDayKey(new Date(m.getTime() - day)), start: new Date(m.getTime() - day), end: m },
+    { kind: "parson", key: pktDayKey(new Date(m.getTime() - 2 * day)), start: new Date(m.getTime() - 2 * day), end: new Date(m.getTime() - day) },
+  ];
+}
+
+export interface DailyRow { day: string; bills: number; total: number; cash: number; bank: number; udhaar: number }
+
+/**
+ * Har din ki qatar, naya din upar. Total aur bills pos_sales se (card wala hi
+ * hisaab, returns ka koi alag hisaab nahi); cash/bank/udhaar
+ * pos_sale_payment_details.amount > 0 se -- "Payment tareeqe se" wala hisaab.
+ */
+export function buildDailyRows(
+  days: string[],
+  sales: { id: string; total_amount: number | string | null; created_at: string }[],
+  payments: { sale_id: string; payment_method: string; amount: number | string | null }[]
+): DailyRow[] {
+  const rows = new Map<string, DailyRow>(days.map((d) => [d, { day: d, bills: 0, total: 0, cash: 0, bank: 0, udhaar: 0 }]));
+  const saleDay = new Map<string, string>();
+  for (const s of sales) {
+    const k = pktDayKey(s.created_at);
+    const r = rows.get(k); if (!r) continue;
+    r.bills += 1; r.total += Number(s.total_amount ?? 0); saleDay.set(s.id, k);
+  }
+  for (const p of payments) {
+    const amt = Number(p.amount ?? 0); if (amt <= 0) continue;
+    const k = saleDay.get(p.sale_id); if (!k) continue;
+    rows.get(k)![methodBucket(p.payment_method)] += amt;
+  }
+  return [...rows.values()].sort((a, b) => (a.day < b.day ? 1 : -1));
+}
+
+export function sumDailyRows(rows: DailyRow[]): DailyRow {
+  return rows.reduce((t, r) => ({ day: "total", bills: t.bills + r.bills, total: t.total + r.total, cash: t.cash + r.cash, bank: t.bank + r.bank, udhaar: t.udhaar + r.udhaar }), { day: "total", bills: 0, total: 0, cash: 0, bank: 0, udhaar: 0 });
+}
