@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -40,6 +41,7 @@ export default async function ReceivableRemindersPage() {
     <div className="space-y-4">
       <PageHeader title="Wasooli Yaad-dihani" description="15ve din narm yaad-dihani, 30ve din aakhri notice -- WhatsApp par. Wapsi tak haftay mein yaad-dihani; cash aur recovery khuli." />
 
+      <div className="flex gap-3 text-xs"><Link className="underline" href="/admin/settings/credit-policy">Udhaar Policy</Link><Link className="underline" href="/admin/receivable-reminders/overrides">Override Log</Link></div>
       <Card className="space-y-3 p-4 text-xs">
         <div className={settings.reminders_enabled ? "font-semibold text-emerald-700" : "font-semibold text-amber-700"}>
           WhatsApp yaad-dihani: {settings.reminders_enabled ? "CHALU" : "BAND (koi paighaam nahi ja raha)"}

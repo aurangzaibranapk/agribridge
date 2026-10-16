@@ -985,13 +985,24 @@ export function RecoveryClient({
               </>
             ) : (
               <>
-                <label className="block text-sm">
-                  Promised amount
-                  <input required name="amount" type="number" min="1" className="mt-1 w-full rounded-lg border p-2" />
-                </label>
+                <div className="text-sm">
+                  Kitne din mein dega?
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {[3, 7, 15, 30].map((d) => (
+                      <button key={d} type="button" className="rounded-lg border px-3 py-1.5 text-xs hover:bg-orange-50"
+                        onClick={(e) => { const input = e.currentTarget.form?.elements.namedItem("promiseDate") as HTMLInputElement | null; if (input) { const t = new Date(Date.now() + 5 * 3600_000); t.setUTCDate(t.getUTCDate() + d); input.value = t.toISOString().slice(0, 10); } }}>
+                        {d} din
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <label className="block text-sm">
                   Promise date
                   <input required name="promiseDate" type="date" className="mt-1 w-full rounded-lg border p-2" />
+                </label>
+                <label className="block text-sm">
+                  Promised amount (ikhtiyari)
+                  <input name="amount" type="number" min="1" placeholder="Khali = poora late baqaya" className="mt-1 w-full rounded-lg border p-2" />
                 </label>
                 <textarea name="notes" placeholder="Notes" className="w-full rounded-lg border p-2" />
               </>

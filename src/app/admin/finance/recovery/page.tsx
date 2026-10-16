@@ -4,6 +4,9 @@ import { CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { AlertTriangle } from "lucide-react";
+import { CreditPositionStrip } from "@/components/recovery/credit-position-strip";
+import { PromiseForm } from "@/components/recovery/promise-form";
+import { loadCreditPosition } from "@/lib/recovery/credit-block";
 import { RecoveryClient, type CollectedPayment, type FinanceAccountOption, type LedgerAccountOption, type MoneyPartyOption, type PaymentDestinationOption, type RecoveryParty, type ReminderTemplate } from "./recovery-client";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +19,7 @@ function addDays(dateStr: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export default async function RecoveryPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function RecoveryPage({ searchParams }: { searchParams: Promise<{ q?: string; customer?: string; promise?: string }> }) {
   const sp = await searchParams;
   const supabase = createClient();
   const {
@@ -26,6 +29,12 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
 
   const loose = supabase as any;
   const today = new Date().toISOString().slice(0, 10);
+  // 538: ?customer=<id> -- us gahak ke teen adad aur waade ka form upar.
+  const focusId = sp.customer && /^[0-9a-f-]{36}$/i.test(sp.customer) ? sp.customer : null;
+  const [focusPosition, focusCustomer] = focusId
+    ? await Promise.all([loadCreditPosition(focusId), loose.from("customers").select("id,name").eq("id", focusId).maybeSingle().then((r: any) => r.data)])
+    : [null, null];
+  const pkToday = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 10);
 
   const [{ data, error: recoveryError }, { data: reminders }, { data: templates }, { data: customerDueDays }] = await Promise.all([
     loose.rpc("fn_recovery_outstanding", { p_search: sp.q?.trim() || null }),
@@ -178,6 +187,13 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
           </div>
         }
       />
+      {focusId && focusCustomer && (
+        <Card className="space-y-3 p-4">
+          <div className="flex items-center justify-between"><b>{focusCustomer.name}</b><Link href={`/admin/crm/${focusId}/credit`} className="text-xs underline">Udhaar hadd</Link></div>
+          {focusPosition ? <CreditPositionStrip position={focusPosition} /> : <p className="text-xs text-surface-400">Udhaar halat abhi nahi mil saki.</p>}
+          <PromiseForm customerId={focusId} customerName={focusCustomer.name} defaultOpen={sp.promise === "1"} today={pkToday} />
+        </Card>
+      )}
       {/* Ye teen safhe bane hue the magar kahin se raasta hi nahi tha
           (admin panel review, 19 September) -- ab yahan se khulte hain. */}
       <div className="flex flex-wrap gap-2 text-sm">

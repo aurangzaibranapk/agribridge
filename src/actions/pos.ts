@@ -1,7 +1,7 @@
 "use server";
 import { validateCheckoutTotals } from "@/lib/pos/checkout-guards";
 import { createClient } from "@/lib/supabase/server";
-import { checkOverdueCreditBlock } from "@/lib/recovery/credit-block";
+import { checkOverdueCreditBlock, getCreditBlockInfo } from "@/lib/recovery/credit-block";
 import { createServiceClient } from "@/lib/supabase/service";
 import { ACC, failed, glForFinanceAccount } from "@/lib/ledger/rules";
 import { postJournal, type JournalLine, type SourceClaim } from "@/lib/ledger/post";
@@ -14,6 +14,8 @@ export interface PosCheckoutState {
   error?: string;
   notice?: string;
   saleId?: string;
+  /** Purane baqaye ki rok -- POS dialog ke liye poori tafseel (538). */
+  creditBlock?: import("@/lib/recovery/credit-position").CreditBlockInfo;
 }
 
 export interface PosCartItem {
@@ -137,7 +139,10 @@ export async function posCheckout(input: {
     context: "pos",
     overrideReason: input.creditOverrideReason ?? null,
   });
-  if (purana) return { error: purana };
+  if (purana) {
+    const creditBlock = input.customerId ? await getCreditBlockInfo(input.customerId, input.khataAmount).catch(() => undefined) : undefined;
+    return { error: purana, creditBlock };
+  }
 
   // Discount ki rok bhi YAHAN, safhe par nahi -- wohi wajah jo rate ki
   // rok ki hai. Jis ke paas rate girane ki ijazat nahi, us ke haath

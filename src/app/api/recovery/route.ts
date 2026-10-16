@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
+import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
+import { promiseRuleError } from "@/lib/recovery/credit-position";
 
 /**
  * Recovery dashboard se teen kaam: promise darj karna, reminder schedule
@@ -26,15 +28,37 @@ export async function POST(req: NextRequest) {
   if (!parties.length) return NextResponse.json({ error: "Koi account select nahi hua." }, { status: 400 });
 
   if (action === "promise") {
-    const amount = Number(body.amount);
-    if (!(amount > 0) || !body.promiseDate) {
-      return NextResponse.json({ error: "Amount aur promise date zaroori hain." }, { status: 400 });
+    // 538: raqam ikhtiyari; din/tareekh lazmi. Staff: 1 khula waada, max 30 din, toote ke baad sirf Admin.
+    const rawAmount = body.amount == null || body.amount === "" ? null : Number(body.amount);
+    if (rawAmount != null && !(rawAmount > 0)) return NextResponse.json({ error: "Raqam sahi likhein ya khali chhorein." }, { status: 400 });
+    const promiseDate = String(body.promiseDate || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(promiseDate)) return NextResponse.json({ error: "Waade ki tareekh zaroori hai." }, { status: 400 });
+    const today = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 10);
+    const days = Math.round((Date.parse(promiseDate) - Date.parse(today)) / 86400000);
+    const { data: prof } = await service.from("profiles").select("role,is_active").eq("id", user.id).maybeSingle();
+    const isAdmin = Boolean(prof?.is_active && UNRESTRICTED_ROLES.includes(prof.role));
+    for (const p of parties) {
+      if (p.type !== "customer") continue;
+      const { data: last } = await service.from("payment_promises").select("status,promise_date,promised_amount,fulfilled_amount")
+        .eq("party_type", "customer").eq("party_id", p.id).in("status", ["open", "broken"]).order("created_at", { ascending: false }).limit(1).maybeSingle();
+      const lastBroken = Boolean(last && (last.status === "broken" || last.promise_date < today) && !(last.promised_amount != null && Number(last.fulfilled_amount) >= Number(last.promised_amount)));
+      const hasOpen = Boolean(last && last.status === "open" && last.promise_date >= today);
+      const ruleError = promiseRuleError({ isAdmin, days, hasOpenPromise: hasOpen, lastBroken });
+      if (ruleError) return NextResponse.json({ error: ruleError }, { status: 400 });
+    }
+    // Purana khula/toota waada band -- naya hi chalu rahe.
+    const customerIds = parties.filter((p: any) => p.type === "customer").map((p: any) => p.id);
+    if (customerIds.length) {
+      await service.from("payment_promises").update({ status: "replaced", updated_at: new Date().toISOString() })
+        .eq("party_type", "customer").in("party_id", customerIds).in("status", ["open", "broken"]);
     }
     const rows = parties.map((p: any) => ({
       party_type: p.type,
       party_id: p.id,
-      promised_amount: amount,
-      promise_date: body.promiseDate,
+      promised_amount: rawAmount,
+      promise_date: promiseDate,
+      promised_days: days,
+      approved_by: isAdmin ? user.id : null,
       notes: body.notes || null,
       created_by: user.id,
     }));
