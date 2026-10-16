@@ -70,7 +70,7 @@ test("OTP code never logged or returned; migration additive only", () => {
     assert.ok(!/console\.(log|info|warn|error)\([^)]*\bcode\b/.test(src), `${f} logs code`);
   }
   assert.ok(!/code\s*[,}]/.test(readFileSync("src/actions/farmer-signup.ts", "utf8").match(/return \{[^}]*\}/g)!.join("\n")), "OTP code in a return value");
-  const sql = readFileSync("supabase/migrations/535_wheat_season_campaign.sql", "utf8").replace(/--.*$/gm, "").toLowerCase();
+  const sql = readFileSync("supabase/migrations/537_wheat_season_campaign.sql", "utf8").replace(/--.*$/gm, "").toLowerCase();
   assert.ok(!/\bdrop\s+(table|column)\b|\balter\s+column\b|\bdelete\s+from\b|\btruncate\b|\bupdate\s+public\./.test(sql), "non-additive SQL");
 });
 console.log(`\n${n} tests passed`);

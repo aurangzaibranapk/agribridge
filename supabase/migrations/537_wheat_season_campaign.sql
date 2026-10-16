@@ -1,4 +1,4 @@
--- 535: Gandum Season 2026 (Kisan Eco Mahabali) -- booking campaign,
+-- 537: Gandum Season 2026 (Kisan Eco Mahabali) -- booking campaign,
 -- farmer self-signup approval, CNIC match, milk-supplier flag.
 -- SIRF ADDITIVE: naye tables/columns/views/functions. Koi purana column
 -- badla ya hataya nahi jata, koi ledger/stock posting nahi.
