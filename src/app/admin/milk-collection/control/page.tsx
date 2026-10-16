@@ -8,6 +8,7 @@ export default function MilkControlCenterPage() {
     { title: "Chillars", href: "/admin/milk-collection/chillars", desc: "Multiple chillar points" },
     { title: "Control Entry", href: "/admin/milk-collection/control-entry", desc: "Entry with collector + chillar" },
     { title: "Chillar Control", href: "/admin/milk-collection/chillar-control", desc: "Today inward summary" },
+    { title: "Weekly Payment", href: "/admin/milk-collection/weekly-payment", desc: "Pending farmer balances" },
     { title: "Daily Entry (old)", href: "/admin/milk-collection/collect", desc: "Existing collection form" },
     { title: "Farmer Ledger", href: "/admin/milk-collection", desc: "Balances and history" },
     { title: "Dispatch", href: "/admin/milk-collection/dispatch", desc: "Send to company" },
