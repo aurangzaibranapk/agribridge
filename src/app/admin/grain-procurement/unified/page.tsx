@@ -16,8 +16,8 @@ export default async function UnifiedGrainDashboard() {
     { data: rawEntries },
     { data: sales },
     { data: expenses },
-    { data: farmerBalances },
-    { data: buyerBalances },
+    { data: payments },
+    { data: salePayments },
   ] = await Promise.all([
     supabase
       .from("grain_procurement_entries")
@@ -26,8 +26,8 @@ export default async function UnifiedGrainDashboard() {
       .limit(500),
     supabase.from("grain_sales").select("quantity_kg, total_amount, total_cogs, profit, grain_type, buyer_id, buyers(business_name)"),
     supabase.from("grain_expenses").select("amount"),
-    supabase.from("grain_farmer_balances").select("full_name, balance_due").gt("balance_due", 0).order("balance_due", { ascending: false }).limit(20),
-    supabase.from("grain_buyer_balances").select("business_name, balance_due").gt("balance_due", 0).order("balance_due", { ascending: false }).limit(20),
+    supabase.from("grain_procurement_payments").select("amount, farmer_id, party_id, farmers(full_name), grain_parties(party_name)").is("reclassified_as_sale_payment_id", null).limit(500),
+    supabase.from("grain_sale_payments").select("amount, buyer_id, buyers(business_name)").limit(500),
   ]);
 
   const entries = rawEntries ?? [];
@@ -54,8 +54,39 @@ export default async function UnifiedGrainDashboard() {
     grainWise[t].sold += Number(s.quantity_kg || 0);
   }
 
-  const totalReceivable = (buyerBalances ?? []).reduce((s, b: any) => s + Number(b.balance_due || 0), 0);
-  const totalPayable = (farmerBalances ?? []).reduce((s, f: any) => s + Number(f.balance_due || 0), 0);
+  // Payables: entries - payments per farmer/party
+  const payableMap: Record<string, { name: string; due: number }> = {};
+  for (const e of entries) {
+    const name = (e.farmers as any)?.full_name || (e.grain_parties as any)?.party_name || "Unknown";
+    const key = e.farmer_id || e.party_id || name;
+    if (!payableMap[key]) payableMap[key] = { name, due: 0 };
+    payableMap[key].due += Number(e.total_amount || 0);
+  }
+  for (const p of payments ?? []) {
+    const name = (p.farmers as any)?.full_name || (p.grain_parties as any)?.party_name || "Unknown";
+    const key = p.farmer_id || p.party_id || name;
+    if (!payableMap[key]) payableMap[key] = { name, due: 0 };
+    payableMap[key].due -= Number(p.amount || 0);
+  }
+  const payables = Object.values(payableMap).filter((x) => x.due > 0).sort((a, b) => b.due - a.due).slice(0, 15);
+  const totalPayable = payables.reduce((s, x) => s + x.due, 0);
+
+  // Receivables: sales - sale payments per buyer
+  const receivableMap: Record<string, { name: string; due: number }> = {};
+  for (const s of sales ?? []) {
+    const name = (s.buyers as any)?.business_name || "Unknown Buyer";
+    const key = s.buyer_id || name;
+    if (!receivableMap[key]) receivableMap[key] = { name, due: 0 };
+    receivableMap[key].due += Number(s.total_amount || 0);
+  }
+  for (const sp of salePayments ?? []) {
+    const name = (sp.buyers as any)?.business_name || "Unknown Buyer";
+    const key = sp.buyer_id || name;
+    if (!receivableMap[key]) receivableMap[key] = { name, due: 0 };
+    receivableMap[key].due -= Number(sp.amount || 0);
+  }
+  const receivables = Object.values(receivableMap).filter((x) => x.due > 0).sort((a, b) => b.due - a.due).slice(0, 15);
+  const totalReceivable = receivables.reduce((s, x) => s + x.due, 0);
 
   return (
     <div className="p-6 space-y-6">
@@ -64,7 +95,6 @@ export default async function UnifiedGrainDashboard() {
         <p className="text-sm text-gray-500">Ek jagah – kya lena, kahan se, kya dena, kahan. Khata match.</p>
       </div>
 
-      {/* Top Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="rounded-lg border p-4">
           <p className="text-xs text-gray-500">Total Bought</p>
@@ -86,19 +116,18 @@ export default async function UnifiedGrainDashboard() {
         </div>
       </div>
 
-      {/* Receivables & Payables */}
       <div className="grid md:grid-cols-2 gap-4">
         <div className="rounded-lg border p-4">
           <h2 className="font-semibold mb-2">Jin Se Lena Hai (Receivables)</h2>
           <p className="text-sm mb-2">Total: Rs {totalReceivable.toLocaleString()}</p>
-          {(buyerBalances ?? []).length === 0 ? (
+          {receivables.length === 0 ? (
             <p className="text-sm text-gray-500">Koi pending nahi.</p>
           ) : (
             <ul className="text-sm space-y-1">
-              {(buyerBalances ?? []).map((b: any, i: number) => (
+              {receivables.map((b, i) => (
                 <li key={i} className="flex justify-between">
-                  <span>{b.business_name}</span>
-                  <span className="font-medium">Rs {Number(b.balance_due).toLocaleString()}</span>
+                  <span>{b.name}</span>
+                  <span className="font-medium">Rs {b.due.toLocaleString()}</span>
                 </li>
               ))}
             </ul>
@@ -107,14 +136,14 @@ export default async function UnifiedGrainDashboard() {
         <div className="rounded-lg border p-4">
           <h2 className="font-semibold mb-2">Jin Ko Dena Hai (Payables)</h2>
           <p className="text-sm mb-2">Total: Rs {totalPayable.toLocaleString()}</p>
-          {(farmerBalances ?? []).length === 0 ? (
+          {payables.length === 0 ? (
             <p className="text-sm text-gray-500">Koi pending nahi.</p>
           ) : (
             <ul className="text-sm space-y-1">
-              {(farmerBalances ?? []).map((f: any, i: number) => (
+              {payables.map((f, i) => (
                 <li key={i} className="flex justify-between">
-                  <span>{f.full_name}</span>
-                  <span className="font-medium">Rs {Number(f.balance_due).toLocaleString()}</span>
+                  <span>{f.name}</span>
+                  <span className="font-medium">Rs {f.due.toLocaleString()}</span>
                 </li>
               ))}
             </ul>
@@ -122,7 +151,6 @@ export default async function UnifiedGrainDashboard() {
         </div>
       </div>
 
-      {/* Grain-wise */}
       <div className="rounded-lg border p-4">
         <h2 className="font-semibold mb-3">Grain-wise Position</h2>
         <table className="w-full text-sm">
@@ -150,7 +178,6 @@ export default async function UnifiedGrainDashboard() {
         </table>
       </div>
 
-      {/* Ledger Match */}
       <div className="rounded-lg border p-4">
         <h2 className="font-semibold mb-2">Khata Match Check</h2>
         <p className="text-sm">Receivable: Rs {totalReceivable.toLocaleString()}</p>
@@ -160,7 +187,6 @@ export default async function UnifiedGrainDashboard() {
         </p>
       </div>
 
-      {/* Quick Actions */}
       <div className="flex flex-wrap gap-2">
         <Link href="/admin/grain-procurement" className="rounded bg-green-600 text-white px-4 py-2 text-sm">New Purchase</Link>
         <Link href="/admin/grain-procurement/sell" className="rounded bg-blue-600 text-white px-4 py-2 text-sm">New Sale</Link>
