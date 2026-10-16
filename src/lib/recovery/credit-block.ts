@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
+import { mapCreditPosition, type CreditBlockInfo, type CreditPosition } from "./credit-position";
 import { DEFAULT_RECOVERY_SETTINGS, blockMessage, computeBranchAging, isCreditBlocked, recoveryPolicyActive, pkDate, type BranchCreditTxn, type RecoverySettings } from "./aging";
 
 export async function getRecoverySettings(): Promise<RecoverySettings> {
@@ -50,18 +51,25 @@ export async function checkOverdueCreditBlock(input: {
   let overdue = 0;
   let oldestDays: number | null = null;
 
-  const { data: rows, error } = await service.rpc("fn_customer_receivable_aging", {
-    p_as_of: null,
-    p_customer: input.customerId,
-  });
-  if (error) return "Purane baqaye ki jaanch nahi ho saki; naya udhaar band hai. Naqad bikri ho sakti hai.";
-  const row = (rows ?? [])[0];
-  if (row) {
-    const aging = { balance: Number(row.balance), oldestDays: row.oldest_days == null ? null : Number(row.oldest_days) };
-    if (isCreditBlocked(aging, settings)) {
-      overdue = Number(row.bucket_30_plus ?? row.balance);
-      oldestDays = aging.oldestDays;
-      msg = blockMessage(name, overdue, aging.oldestDays ?? 0);
+  const pos = await loadCreditPosition(input.customerId);
+  if (pos) {
+    if (pos.blocked) {
+      overdue = pos.lateAmount;
+      oldestDays = pos.oldestDays;
+      msg = blockMessage(name, overdue, pos.oldestDays ?? 0, pos.limitDays);
+    }
+  } else {
+    // 537 se pehle wala raasta (fn_customer_credit_position abhi nahi bana).
+    const { data: rows, error } = await service.rpc("fn_customer_receivable_aging", { p_as_of: null, p_customer: input.customerId });
+    if (error) return "Purane baqaye ki jaanch nahi ho saki; naya udhaar band hai. Naqad bikri ho sakti hai.";
+    const row = (rows ?? [])[0];
+    if (row) {
+      const aging = { balance: Number(row.balance), oldestDays: row.oldest_days == null ? null : Number(row.oldest_days) };
+      if (isCreditBlocked(aging, settings)) {
+        overdue = Number(row.bucket_30_plus ?? row.balance);
+        oldestDays = aging.oldestDays;
+        msg = blockMessage(name, overdue, aging.oldestDays ?? 0, settings.due_days);
+      }
     }
   }
 
@@ -132,7 +140,7 @@ export async function checkOverdueBranchCreditBlock(input: {
   const aging = computeBranchAging((txns ?? []) as BranchCreditTxn[], asOf, settings.due_days);
   if (!isCreditBlocked(aging, settings)) return null;
   const overdue = aging.bucket30plus || aging.balance;
-  const msg = blockMessage(name, overdue, aging.oldestDays ?? 0);
+  const msg = blockMessage(name, overdue, aging.oldestDays ?? 0, settings.due_days);
 
   const reason = (input.overrideReason ?? "").trim();
   if (!reason) return msg;
@@ -157,4 +165,32 @@ export async function checkOverdueBranchCreditBlock(input: {
   });
   if (logErr) return "Override darj nahi ho saka, is liye udhaar rok diya gaya: " + logErr.message;
   return null;
+}
+
+/** fn_customer_credit_position (537). null = function abhi live nahi / ghalti. */
+export async function loadCreditPosition(customerId: string): Promise<CreditPosition | null> {
+  const service = createServiceClient() as any;
+  const { data, error } = await service.rpc("fn_customer_credit_position", { p_customer: customerId });
+  if (error) return null;
+  return mapCreditPosition((data ?? [])[0]);
+}
+
+/** POS dialog ke liye poori tafseel: teen adad, waada, aur kya ye user override kar sakta hai. */
+export async function getCreditBlockInfo(customerId: string, billKhata: number): Promise<CreditBlockInfo | undefined> {
+  const service = createServiceClient() as any;
+  const [pos, { data: cust }, { data: st }] = await Promise.all([
+    loadCreditPosition(customerId),
+    service.from("customers").select("name").eq("id", customerId).maybeSingle(),
+    service.from("receivable_recovery_settings").select("*").eq("id", true).maybeSingle(),
+  ]);
+  if (!pos) return undefined;
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  let canOverride = false;
+  if (user) {
+    const { data: profile } = await service.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+    canOverride = Boolean(profile?.is_active && UNRESTRICTED_ROLES.includes(profile.role));
+  }
+  const reasons: string[] = Array.isArray(st?.override_reasons) && st.override_reasons.length ? st.override_reasons : ["Purana bharosemand gahak", "Adaigi ka wada (tareekh)", "Doosri wajah"];
+  return { ...pos, customerId, name: cust?.name ?? "Gahak", billKhata: Number(billKhata), canOverride, overrideReasons: reasons };
 }

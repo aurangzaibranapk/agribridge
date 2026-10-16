@@ -32,6 +32,8 @@ import { ReceiptModal } from "@/components/pos/receipt-modal";
 import { OfflineReceiptModal, type OfflineReceiptData } from "@/components/pos/offline-receipt-modal";
 import { BarcodeCameraModal } from "@/components/pos/barcode-camera-modal";
 import { PosReturn } from "@/components/pos/pos-return";
+import { OverdueCreditDialog, type OverdueChoice } from "@/components/pos/overdue-credit-dialog";
+import type { CreditBlockInfo } from "@/lib/recovery/credit-position";
 import type { PosPermissions } from "@/lib/pos/permissions";
 
 interface PosProduct {
@@ -201,6 +203,7 @@ export function PosClient({
     { id: "1", method: "cash", amount: "", reference: "", receiptFile: null, receiptUrl: null, uploading: false },
   ]);
   const [submitting, setSubmitting] = useState(false);
+  const [overdueDialog, setOverdueDialog] = useState<{ info: CreditBlockInfo | null; text: string; resolve: (c: OverdueChoice) => void } | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [completedSaleId, setCompletedSaleId] = useState<string | null>(null);
   const [offlineReceipt, setOfflineReceipt] = useState<OfflineReceiptData | null>(null);
@@ -611,11 +614,24 @@ export function PosClient({
     // 30 din wali udhaar rok: Admin/Owner wajah likh kar ijazat de sakta hai
     // (server hi role jaanchta aur override log karta hai).
     if (result.error && result.error.includes("wajah likh kar ijazat")) {
-      const reason = typeof window !== "undefined"
-        ? window.prompt(result.error + "\n\nAdmin override ki wajah likhein (ya Cancel):")
-        : null;
-      if (reason && reason.trim()) {
-        result = await posCheckout({ ...(salePayload as any), creditOverrideReason: reason.trim() });
+      const blockedError = result.error;
+      const choice = await new Promise<OverdueChoice>((resolve) =>
+        setOverdueDialog({ info: result.creditBlock ?? null, text: blockedError, resolve })
+      );
+      setOverdueDialog(null);
+      if (choice.kind === "override") {
+        result = await posCheckout({ ...(salePayload as any), creditOverrideReason: choice.reason });
+      } else {
+        const custParam = encodeURIComponent(customerId);
+        if (choice.kind === "cash") {
+          setPaymentLines((prev) => prev.map((l) => (l.method === "khata" ? { ...l, method: "cash" } : l)));
+          setMessage({ type: "success", text: "Udhaar wali raqam naqad mein badal di gayi. Raqam check karke dobara Checkout dabayein." });
+        } else if (choice.kind === "recovery" || choice.kind === "promise") {
+          window.open(`/admin/finance/recovery?customer=${custParam}${choice.kind === "promise" ? "&promise=1" : ""}`, "_blank");
+          setMessage({ type: "error", text: blockedError });
+        }
+        setSubmitting(false);
+        return;
       }
     }
 
@@ -668,6 +684,8 @@ export function PosClient({
   }
 
   return (
+    <>
+    {overdueDialog && <OverdueCreditDialog info={overdueDialog.info} fallbackText={overdueDialog.text} onChoose={overdueDialog.resolve} />}
     <div className={`grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:overflow-hidden ${selectedLine && selectedItem ? "lg:grid-cols-[minmax(0,1fr)_21rem_22rem]" : "lg:grid-cols-[minmax(0,1fr)_23rem]"}`}>
       {offlinePending > 0 && <div className="fixed bottom-4 left-4 z-30 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white shadow-lg">{offlinePending} offline bill sync ka intezar kar raha hai</div>}
       <section className="flex flex-col print:hidden lg:min-h-0">
@@ -870,6 +888,7 @@ export function PosClient({
       {offlineReceipt && <OfflineReceiptModal receipt={offlineReceipt} onClose={closeReceiptAndRefreshProducts} />}
       {showCameraModal && <BarcodeCameraModal onDetected={handleCameraDetected} onClose={() => setShowCameraModal(false)} lang={lang} />}
     </div>
+    </>
   );
 }
 

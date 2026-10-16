@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { SettingRow } from "@/app/admin/settings/setting-row";
@@ -28,6 +29,10 @@ export default async function AdminSettingsPage() {
   return (
     <div>
       <PageHeader title={t("at_website_settings", lang)} description="Site-wide values used across the public pages" />
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Link href="/admin/settings/credit-policy" className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">Udhaar Policy (purane baqaye ki rok)</Link>
+        <Link href="/admin/receivable-reminders/overrides" className="rounded-lg border border-surface-200 px-3 py-2 text-sm">Udhaar Override Log</Link>
+      </div>
       <div className="max-w-2xl space-y-3">
         {(settings ?? []).map((s) => (
           <SettingRow key={s.key} settingKey={s.key} label={LABELS[s.key] ?? s.key} value={typeof s.value === "string" ? s.value : JSON.stringify(s.value)} />
