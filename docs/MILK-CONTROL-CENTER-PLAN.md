@@ -6,15 +6,15 @@ Branch: feat/milk-collection-masters
 - Collectors Master: /admin/milk-collection/collectors
 - Chillars Master: /admin/milk-collection/chillars
 - Control Center landing: /admin/milk-collection/control
-- Control Entry form: /admin/milk-collection/control-entry (collector + chillar select)
-- Chillar Control: /admin/milk-collection/chillar-control (today inward summary)
+- Control Entry: /admin/milk-collection/control-entry (real save with collector + chillar)
+- Chillar Control: /admin/milk-collection/chillar-control
+- Weekly Payment sheet: /admin/milk-collection/weekly-payment
 
 ## Remaining
-- Real save in Control Entry (insert into milk_entries with collector_id + chillar_id)
-- Weekly Payment sheet
 - Dashboard cards (today totals, pending)
 - Zero leakage alerts (quantity mismatch)
-- Outward (company dispatch) reconciliation
+- Outward (company) reconciliation
+- Payment entry from weekly sheet
 
 ## Rules
 - Branch only. Live DB not touched.
