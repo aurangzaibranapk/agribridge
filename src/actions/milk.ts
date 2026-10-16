@@ -100,6 +100,19 @@ export async function recordMilkPayment(_prev: ActionState, formData: FormData):
     if (q.error) return { error: q.error };
     qistCut = q.deducted;
   }
+  // Qist wala hissa bhi kisan ke doodh ke baqaya se katna chahiye (warna
+  // milk_farmer_balances sirf naqad hissa ghatata hai aur baqaya zyada dikhta hai).
+  // Yeh row sirf baqaya ke liye hai -- GL/journal qist settlement mein ho chuka.
+  if (qistCut > 0) {
+    const { error: qErr } = await supabase.from("milk_payments").insert({
+      farmer_id: farmerId,
+      amount: qistCut,
+      payment_method: "qist_adjustment",
+      notes: `Qist Plan kattauti (naqad nahi diya) Rs ${qistCut.toLocaleString("en-PK")}`,
+      created_by: user?.id ?? null,
+    });
+    if (qErr) return { error: qErr.message };
+  }
   const cashAmount = Math.round((amount - qistCut) * 100) / 100;
   const qistNote = qistCut > 0 ? ` | Qist kati Rs ${qistCut.toLocaleString("en-PK")}` : skipQist ? ` | Qist roki: ${skipReason}` : "";
   if (cashAmount <= 0) {

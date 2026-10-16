@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { qistAction, receiveQistCash, type QistState } from "@/actions/qist";
 import { BTN, CARD, Header, INPUT, Kpi, Msg, PAGE, Pill, STATUS_TONE, Submit, TD, TH, pkr, rs } from "@/components/payroll/ui";
-import { FREQ_LABEL, PARTY_LABEL, PLAN_STATUS_LABEL, SOURCE_LABEL, equalAmounts, type QistFrequency, type QistParty, type QistSource } from "@/lib/qist/schedule";
+import { FREQ_LABEL, PARTY_LABEL, PLAN_EVENT_LABEL, PLAN_STATUS_LABEL, SOURCE_LABEL, equalAmounts, type QistFrequency, type QistParty, type QistSource } from "@/lib/qist/schedule";
 
 const STATE: Record<string, [string, any]> = {
   paid: ["Kat gayi", "green"], partial: ["Kam kati · baqi akhir mein", "amber"], overdue: ["Overdue", "red"], due_today: ["Aaj wajib", "amber"],
@@ -126,7 +126,7 @@ export default function QistPlanClient({ me, plan, installments, accounts, event
         </div>
         <div className={CARD}>
           <h3 className="mb-2 font-semibold">Record (audit)</h3>
-          <table className="w-full text-sm"><tbody>{events.map((e: any) => <tr key={e.id}><td className={TD}>{new Date(e.at).toLocaleString("en-PK", { timeZone: "Asia/Karachi", dateStyle: "medium", timeStyle: "short" })} PKT</td><td className={TD}>{e.action}{e.amount != null ? ` · ${pkr(e.amount)}` : ""}</td><td className={TD}>{e.reason ?? ""}</td><td className={TD}>{e.by ?? "—"}</td></tr>)}</tbody></table>
+          <table className="w-full text-sm"><tbody>{events.map((e: any) => <tr key={e.id}><td className={TD}>{new Date(e.at).toLocaleString("en-PK", { timeZone: "Asia/Karachi", dateStyle: "medium", timeStyle: "short" })} PKT</td><td className={TD}>{PLAN_EVENT_LABEL[e.action] ?? e.action}{e.amount != null ? ` · ${pkr(e.amount)}` : ""}</td><td className={TD}>{e.reason ?? ""}</td><td className={TD}>{e.by ?? "—"}</td></tr>)}</tbody></table>
         </div>
       </div>
     </div>

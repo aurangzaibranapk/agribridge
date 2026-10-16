@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { payrollViewer } from "@/lib/payroll/access";
 import { pkr } from "@/lib/recovery/credit-report";
-import { PARTY_LABEL, SOURCE_LABEL, type QistParty, type QistSource } from "@/lib/qist/schedule";
+import { PARTY_LABEL, PLAN_STATUS_LABEL, SOURCE_LABEL, type QistParty, type QistSource } from "@/lib/qist/schedule";
 import QistApproveButton from "./approve-button";
 
 export const dynamic = "force-dynamic";
@@ -84,7 +84,7 @@ export default async function QistDashboard() {
           <tbody>{all.map((p: any) => (
             <tr key={p.id}><td className={TD}><Link className="font-semibold hover:underline" href={`/admin/khata/qist/${p.id}`}>{p.code}</Link></td><td className={TD}>{p.party_name ?? "—"}<div className="text-xs text-slate-500">{PARTY_LABEL[p.party_type as QistParty]}</div></td>
               <td className={TD}>{SOURCE_LABEL[p.deduct_source as QistSource]}</td><td className={`${TD} tabular-nums`}>{pkr(p.total)}</td><td className={`${TD} tabular-nums`}>{pkr(p.paid_amount)}</td><td className={`${TD} tabular-nums`}>{pkr(p.outstanding)}</td>
-              <td className={TD}>{p.next_due_date ?? "—"}</td><td className={TD}>{p.status}</td></tr>))}
+              <td className={TD}>{p.next_due_date ?? "—"}</td><td className={TD}>{PLAN_STATUS_LABEL[p.status] ?? p.status}</td></tr>))}
             {all.length === 0 && <tr><td className={TD} colSpan={8}><span className="text-slate-500">Abhi koi qist plan nahi.</span></td></tr>}
           </tbody></table>
       </div>

@@ -18,6 +18,12 @@ export const PLAN_STATUS_LABEL: Record<string, string> = {
   draft: "Draft", submitted: "Manzoori baqi", active: "Chalu", paused: "Ruka hua", completed: "Mukammal", written_off: "Maaf (write-off)", cancelled: "Cancel",
 };
 
+export const PLAN_EVENT_LABEL: Record<string, string> = {
+  created: "Banaya", submitted: "Manzoori ke liye bheja", approved: "Manzoor", rejected: "Rad", paused: "Roka", resumed: "Dobara chalu",
+  rescheduled: "Dobara schedule", edited: "Tabdeeli", written_off: "Maaf (write-off)", completed: "Mukammal", cancelled: "Cancel",
+  deducted: "Qist kati", reversed: "Wapas (reverse)",
+};
+
 export interface ScheduleRow { seq: number; dueDate: string; amount: number }
 
 function addDays(iso: string, n: number): string {

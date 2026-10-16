@@ -17,6 +17,13 @@ const milk = r('src/actions/milk.ts');
 assert.match(milk, /applyQistAtPayout\(\{\s*partyType: "farmer", partyId: farmerId, source: "milk"/);
 assert.match(milk, /Qist is dafa na kaatne ki wajah likhein/);
 assert.match(milk, /amount: cashAmount/);
+// browser check 2026-10-16: raw English status/event na dikhe
+assert.match(r('src/app/admin/khata/qist/page.tsx'), /PLAN_STATUS_LABEL\[p\.status\]/);
+assert.match(r('src/app/admin/khata/qist/[id]/plan-client.tsx'), /PLAN_EVENT_LABEL\[e\.action\]/);
+for (const a of ['created','submitted','approved','rejected','paused','resumed','rescheduled','edited','written_off','completed','cancelled','deducted','reversed']) assert.match(r('src/lib/qist/schedule.ts'), new RegExp(a + ':'), 'event label ' + a);
+// browser check 2026-10-16: qist hissa bhi doodh baqaya ghataye
+assert.match(milk, /amount: qistCut,\s*payment_method: "qist_adjustment"/);
+assert.ok(milk.indexOf('payment_method: "qist_adjustment"') < milk.indexOf('if (cashAmount <= 0)'), 'qist row cash<=0 return se pehle');
 const modal = r('src/app/admin/milk-collection/milk-client.tsx');
 assert.match(modal, /milkQistPreview\(balance\.farmer_id/);
 // Ledger rules
