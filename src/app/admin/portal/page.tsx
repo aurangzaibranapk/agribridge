@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { loadNav } from "@/lib/access/nav";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import Link from "next/link";
+import { AGRIBRIDGE_OS_RELEASE, AGRIBRIDGE_OS_VERSION } from "@/lib/app-version";
+import { ERP_FEATURES, isNewFeature } from "@/lib/erp-directory";
 import {
   ShoppingCart, Package, ShoppingBag, BarChart2, Landmark,
   Warehouse, Wheat, Droplets, Users, BookOpen, Settings,
@@ -324,6 +326,8 @@ export default async function PortalPage() {
 
   const mainModules = PORTAL_MODULES.filter((m) => m.section === "main" && isAllowed(m.checkRoutes));
   const opsModules  = PORTAL_MODULES.filter((m) => m.section === "ops"  && isAllowed(m.checkRoutes));
+  // Naye features ERP ka Naqsha (single source) se aate hain — har release par khud update.
+  const newFeatures = ERP_FEATURES.filter((f) => isNewFeature(f.addedDate) && isAllowed([f.href.split("?")[0]]));
 
   const firstName = me.full_name?.split(" ")[0] ?? "Staff";
   const roleLabel = me.role
@@ -474,10 +478,40 @@ export default async function PortalPage() {
           </section>
         )}
 
+        {/* Naye Features */}
+        {newFeatures.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-5">
+              <div className="h-1 w-5 rounded-full bg-emerald-500" />
+              <h2 className="text-[13px] font-semibold text-surface-500 dark:text-surface-400 uppercase tracking-widest">
+                🆕 Naye Features
+              </h2>
+              <Link href="/admin/erp-directory" className="ml-auto text-[11px] font-medium text-brand-600 hover:underline">
+                ERP ka Naqsha →
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+              {newFeatures.map((f) => (
+                <Link
+                  key={f.href}
+                  href={f.href}
+                  className="group flex items-start gap-3 rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/60 dark:bg-emerald-950/20 px-3.5 py-3 hover:border-emerald-400 hover:shadow-sm transition-all duration-150"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-semibold text-surface-800 dark:text-surface-100 truncate">{f.label}</p>
+                    <p className="text-[10px] text-surface-500 dark:text-surface-400 line-clamp-2">{f.description}</p>
+                  </div>
+                  <ChevronRight size={13} className="ml-auto mt-0.5 shrink-0 text-emerald-400 group-hover:text-emerald-600" />
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Footer */}
         <footer className="pt-4 border-t border-surface-200 dark:border-surface-800 flex items-center justify-between text-[11px] text-surface-400 dark:text-surface-600">
-          <span>AgriBridge OS</span>
-          <span>v2.0</span>
+          <span>AgriBridge OS · {AGRIBRIDGE_OS_RELEASE}</span>
+          <span>{AGRIBRIDGE_OS_VERSION}</span>
         </footer>
 
       </main>
