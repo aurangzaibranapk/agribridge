@@ -30,13 +30,13 @@ export default async function DemandCenterPage() {
   // Naye columns (migration 20261015233000) live na hon to purana select.
   let { data, error } = await service
     .from("farmer_product_demands")
-    .select("id, product_id, product_name, quantity, unit, needed_by, status, pipeline_status, category, area, notified_at, procurement_plan_id, farmer_id, staff_note, recommended_action, reviewed_by, created_at, farmers(full_name, phone, village, tehsil, district)")
+    .select("id, product_id, product_name, quantity, unit, needed_by, status, pipeline_status, category, area, notified_at, procurement_plan_id, farmer_id, staff_note, recommended_action, reviewed_by, created_at, farmers(full_name, phone_number, village, tehsil, district)")
     .order("created_at", { ascending: false })
     .limit(500);
   if (error) {
     ({ data, error } = await service
       .from("farmer_product_demands")
-      .select("id, product_id, product_name, quantity, unit, needed_by, status, farmer_id, staff_note, recommended_action, reviewed_by, created_at, farmers(full_name, phone, village, tehsil, district)")
+      .select("id, product_id, product_name, quantity, unit, needed_by, status, farmer_id, staff_note, recommended_action, reviewed_by, created_at, farmers(full_name, phone_number, village, tehsil, district)")
       .order("created_at", { ascending: false })
       .limit(500));
   }
@@ -135,7 +135,7 @@ export default async function DemandCenterPage() {
             <div className="mt-1 space-y-2">
               {list.map((r: any) => (
                 <div key={r.id} className="flex flex-wrap items-start justify-between gap-2 rounded border border-surface-100 p-2 text-sm">
-                  <span>{r.farmers?.full_name ?? "Kisan"}{r.farmers?.phone ? ` · ${r.farmers.phone}` : ""} — {r.quantity} {r.unit}{r.notified_at ? " · bataya ja chuka" : ""}</span>
+                  <span>{r.farmers?.full_name ?? "Kisan"}{r.farmers?.phone_number ? ` · ${r.farmers.phone_number}` : ""} — {r.quantity} {r.unit}{r.notified_at ? " · bataya ja chuka" : ""}</span>
                   <NotifyButton demandId={r.id} already={!!r.notified_at} />
                 </div>
               ))}

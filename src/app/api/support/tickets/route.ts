@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { configuredSupportAgents } from "@/lib/support/agent-dispatch";
+import { parseAssignChoice } from "@/lib/support/assign";
 import { notifyUser } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
@@ -43,14 +44,13 @@ export async function GET() {
     }
     return { ...row, screenshotUrl, comments: (comments ?? []).filter((c: any) => c.ticket_id === row.id) };
   }));
-  const { data: assignees } = ctx.canManage
-    ? await ctx.service
-        .from("profiles")
-        .select("id,full_name,role")
-        .eq("organization_id", ctx.profile.organization_id)
-        .eq("is_active", true)
-        .order("full_name")
-    : { data: [] };
+  // Har staff issue bhejte waqt developer/staff chun sakta hai (sirf naam aur role).
+  const { data: assignees } = await ctx.service
+    .from("profiles")
+    .select("id,full_name,role")
+    .eq("organization_id", ctx.profile.organization_id)
+    .eq("is_active", true)
+    .order("full_name");
   return NextResponse.json({
     items,
     canManage: ctx.canManage,
@@ -68,6 +68,13 @@ export async function POST(req: NextRequest) {
   const priority = String(form.get("priority") ?? "normal");
   if (title.length < 3 || description.length < 3) return NextResponse.json({ error: "Title aur issue detail likhein." }, { status: 400 });
   if (!VALID_PRIORITY.has(priority)) return NextResponse.json({ error: "Priority theek nahi hai." }, { status: 400 });
+  // Khali = "Admin triage" (unassigned). Ghalat qeemat par bhi issue rukta nahi.
+  const choice = parseAssignChoice(form.get("assign"));
+  let assignee: { id: string; full_name: string } | null = null;
+  if (choice.kind === "person") {
+    const { data: a } = await ctx.service.from("profiles").select("id,full_name,organization_id,is_active").eq("id", choice.id).maybeSingle();
+    if (a?.is_active && a.organization_id === ctx.profile.organization_id) assignee = { id: a.id, full_name: a.full_name };
+  }
 
   let screenshotPath: string | null = null;
   const screenshot = form.get("screenshot");
@@ -90,6 +97,7 @@ export async function POST(req: NextRequest) {
     page_url: String(form.get("page_url") ?? "").slice(0, 1000) || null,
     screenshot_path: screenshotPath,
     device_info: deviceInfo,
+    ...(assignee ? { assigned_to: assignee.id, assigned_kind: "person", assignment_status: "queued", assigned_at: new Date().toISOString(), status: "assigned" } : {}),
   } as any).select("id,ticket_no,created_at").single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -103,6 +111,13 @@ export async function POST(req: NextRequest) {
   await Promise.all((managers ?? []).map((manager) =>
     notifyUser(manager.id, `${reference} · New Support Issue`, `${ctx.profile.full_name}: ${title}`, "/admin/my-work")
   ));
+  if (assignee) {
+    await notifyUser(assignee.id, `Support Issue ${reference}`, title, "/admin/my-work");
+    await ctx.supportDb.from("support_ticket_comments").insert({ ticket_id: data.id, author_id: ctx.user.id, body: `Report karte waqt ${assignee.full_name} ko assign kiya.` });
+  } else if (choice.kind === "agent") {
+    // Agent sirf Admin dispatch karta hai; raiser ki pasand comment mein.
+    await ctx.supportDb.from("support_ticket_comments").insert({ ticket_id: data.id, author_id: ctx.user.id, body: `Raiser ne agent suggest kiya: ${choice.key}. Admin triage karega.` });
+  }
   await notifyUser(ctx.user.id, `${reference} · Reported`, "Aapka issue receive ho gaya. Har stage ki update yahin milegi.", "/admin/my-work");
   return NextResponse.json({ success: true, ticket: data });
 }

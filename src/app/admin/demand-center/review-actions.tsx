@@ -13,7 +13,7 @@ export interface AdminDemandRow {
   staff_note: string | null;
   recommended_action: string | null;
   reviewed_by: string | null;
-  farmers: { full_name: string | null; phone: string | null } | null;
+  farmers: { full_name: string | null; phone_number: string | null } | null;
 }
 
 const init: DemandActionState = {};
@@ -36,7 +36,7 @@ export function DemandReviewRow({ row, isApprover, myId }: { row: AdminDemandRow
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <span className="font-medium">{row.product_name}</span> — {row.quantity} {row.unit}
-          <span className="ml-2 text-xs text-surface-500">{row.farmers?.full_name ?? "Kisan"}{row.farmers?.phone ? ` · ${row.farmers.phone}` : ""} · Needed: {row.needed_by ?? "—"}</span>
+          <span className="ml-2 text-xs text-surface-500">{row.farmers?.full_name ?? "Kisan"}{row.farmers?.phone_number ? ` · ${row.farmers.phone_number}` : ""} · Needed: {row.needed_by ?? "—"}</span>
         </div>
         <span className="rounded-full bg-surface-100 px-2 py-0.5 text-xs">{row.status}{row.recommended_action ? ` (staff: ${row.recommended_action})` : ""}</span>
       </div>

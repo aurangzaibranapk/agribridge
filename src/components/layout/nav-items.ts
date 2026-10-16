@@ -164,6 +164,8 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/reports/salary-planner", label: "Salary Planner", icon: WalletCards },
       { href: "/admin/reports/salary-planner", label: "Salary Planner", icon: WalletCards },
       { href: "/admin/reports/audit", label: "Audit Center (Nuqsan)", icon: AlertTriangle },
+      { href: "/admin/intelligence", label: "Party 360", icon: Users },
+      { href: "/admin/intelligence/products", label: "Product Intelligence", icon: LineChart },
     ],
   },
   {
@@ -180,8 +182,6 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/menus", label: "Menu", icon: MenuIcon },
       { href: "/admin/contact-messages", label: "Website ke Paighaam", icon: Mail },
       { href: "/admin/investor-inquiries", label: "Sarmayakar ke Sawal", icon: Handshake },
-      { href: "/admin/intelligence", label: "Party 360", icon: Users },
-      { href: "/admin/intelligence/products", label: "Product Intelligence", icon: LineChart },
     ],
   },
   {
@@ -200,6 +200,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/hr-dashboard", label: "HR Dashboard", icon: LayoutGrid },
       { href: "/admin/staff-achievement", label: "Staff Achievement", icon: Trophy },
       { href: "/admin/support-center", label: "Support Center", icon: Bug },
+      { href: "/admin/my-work/support-dashboard", label: "Support Dashboard", icon: Bug },
       { href: "/admin/staff-achievement/performance", label: "Staff Performance", icon: BarChart3 },
       { href: "/admin/hr", label: "Salary Payroll", icon: WalletCards },
       { href: "/admin/hr", label: "Salary Payroll", icon: WalletCards },

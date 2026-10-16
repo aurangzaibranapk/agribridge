@@ -152,6 +152,7 @@ export async function loadNav(profileId: string, role: string, lang: Lang = "rm"
   }
 
   if (registry.features.size === 0) {
+    console.error("loadNav: features registry khali -- code wala fallback menu chal raha hai");
     return { groups: fallbackGroups(null), allowedRoutes: [], unrestricted, usedFallback: true };
   }
 

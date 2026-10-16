@@ -12,6 +12,8 @@ import {
   type MetaIn, type ActivityIn, type Ticket,
 } from "@/lib/support/sla";
 import { SupportStatusForm } from "./status-form";
+import { SupportAssignForm } from "./assign-form";
+import { configuredSupportAgents } from "@/lib/support/agent-dispatch";
 
 export const dynamic = "force-dynamic";
 const MANAGERS = new Set(["owner", "super_admin", "admin", "manager", "admin_assistant"]);
@@ -42,6 +44,8 @@ export default async function SupportCenterPage({ searchParams }: { searchParams
     ids.length ? service.from("support_ticket_events").select("id,ticket_id,actor_id,event_type,from_value,to_value,note,created_at,actor:profiles(full_name)").in("ticket_id", ids).order("created_at", { ascending: false }).limit(500) : { data: [], error: null },
     ids.length ? service.from("support_ticket_comments").select("ticket_id,author_id,created_at").in("ticket_id", ids).limit(10000) : { data: [], error: null },
   ]);
+  const { data: people } = await service.from("profiles").select("id,full_name,role").eq("organization_id", me.organization_id).eq("is_active", true).order("full_name");
+  const agentList = configuredSupportAgents().map((a: any) => ({ key: String(a.key), label: String(a.label ?? a.key) }));
   const migrationPending = Boolean(metaRes.error || eventRes.error);
   const metaBy = new Map<string, MetaIn>(((metaRes.error ? [] : metaRes.data) ?? []).map((m: MetaIn) => [m.ticket_id, m]));
   const events = (eventRes.error ? [] : eventRes.data) ?? [];
@@ -70,6 +74,7 @@ export default async function SupportCenterPage({ searchParams }: { searchParams
   return (
     <div className="space-y-4">
       <PageHeader title={t("spc_title", lang)} description={t("spc_subtitle", lang)} />
+      <div className="-mt-2 mb-3 text-xs"><Link href="/admin/my-work/support-dashboard" className="font-semibold text-brand-700 hover:underline">→ Support Dashboard (development / agent progress)</Link></div>
       {migrationPending && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{t("spc_migration_pending", lang)}</p>}
       <div className="grid gap-3 sm:grid-cols-4">
         {cards.map((c) => (
@@ -97,7 +102,8 @@ export default async function SupportCenterPage({ searchParams }: { searchParams
                 <td>{fmt(x.raisedAt)}</td><td>{fmt(x.firstResponseAt)}</td><td>{fmt(x.resolvedAt)}</td>
                 <td>{formatHours(x.turnaroundHours)}</td>
                 <td>{!migrationPending && <SupportStatusForm ticketId={x.id} status={x.status} priority={x.priority} module={x.module}
-                  labels={{ update: t("spc_update", lang), note: t("spc_note", lang), statuses: [...STATUSES], priorities: [...PRIORITIES] }} />}</td>
+                  labels={{ update: t("spc_update", lang), note: t("spc_note", lang), statuses: [...STATUSES], priorities: [...PRIORITIES] }} />}
+                  {x.status !== "resolved" && x.status !== "closed" && <SupportAssignForm ticketId={x.id} people={people ?? []} agents={agentList} />}</td>
               </tr>
             ))}
             {list.length === 0 && <tr><td colSpan={10} className="p-6 text-center text-surface-400">{t("spc_none", lang)}</td></tr>}
