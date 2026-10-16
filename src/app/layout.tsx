@@ -106,7 +106,7 @@ const THEME_INIT_SCRIPT = `
 (function () {
   try {
     var stored = localStorage.getItem('agribridge-theme');
-    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    var theme = stored === 'dark' ? 'dark' : 'light'; // default light (user choice)
     if (theme === 'dark') document.documentElement.classList.add('dark');
   } catch (e) {}
 })();
