@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { DailySalesBreakdown } from "@/components/reports/daily-sales-breakdown";
+import { periodRange } from "@/lib/reports/sales-period";
 import { Card } from "@/components/ui/layout-primitives";
 import { loadMoneyToday, loadDeptKpis, loadAlerts, conclude, deptTotals, loadSalesTrend, loadBranchPerformance, loadTopShops } from "@/lib/command-center";
 import { SalesTrendChart, DeptSalesDonut } from "@/components/dashboard/command-center-charts";
@@ -151,6 +153,12 @@ export default async function CommandCenterPage() {
       </div>
 
       <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={me.role} language="ur" />
+
+      {/* Aaj / Kal / Parson + 7 din (compact) -- wahi component jo sales report par hai */}
+      <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
+        <h2 className="mb-2 font-display text-sm font-semibold text-surface-900 dark:text-surface-100">{t("sps_title", lang)}</h2>
+        <DailySalesBreakdown supabase={supabase} scope={{ meriDukan: null, shopId: "", branchId: "" }} tableRange={periodRange("7d")} lang={lang} compact reportHref="/admin/reports/sales" />
+      </div>
 
       {/* Primary business position */}
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
