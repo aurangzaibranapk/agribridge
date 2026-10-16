@@ -119,7 +119,7 @@ export async function tilesFor(key: string, branchId: string | null): Promise<Ti
 
     case "product": {
       const [active, pending, edits, reorder] = await Promise.all([
-        count(() => s.from("products").select("id", { count: "exact", head: true }).eq("is_active", true)),
+        count(() => s.from("products").select("id", { count: "exact", head: true }).eq("is_deleted", false)),
         count(() => s.from("products").select("id", { count: "exact", head: true }).eq("is_verified", false).eq("is_deleted", false)),
         count(() => s.from("product_edit_requests").select("id", { count: "exact", head: true }).eq("status", "pending")),
         count(() => s.from("inventory").select("id", { count: "exact", head: true }).lte("quantity", 0)),
