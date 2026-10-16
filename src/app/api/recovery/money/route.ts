@@ -83,6 +83,10 @@ export async function POST(req: NextRequest) {
     clientActionId: String(form.get("clientActionId") ?? ""),
   };
   const { data, error } = await (supabase as any).rpc("fn_record_recovery_money", { p_input: input });
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    // Database ki asal wajah (message + hint/detail) user tak pohanche, khamosh fail na ho.
+    const extra = [error.details, error.hint].filter((x: unknown) => typeof x === "string" && x.trim()).join(" ");
+    return NextResponse.json({ error: extra ? `${error.message} (${extra})` : error.message || "Payment database mein save nahi hui." }, { status: 400 });
+  }
   return NextResponse.json({ success: true, ...data });
 }

@@ -7,6 +7,7 @@ import { SuggestionCard, PlanArrivedButton, NotifyButton } from "./planning-acti
 import { buildInsights, productKey, type InsightRow } from "@/lib/demand/insights";
 import { effectivePipeline, PIPELINE_LABELS, PIPELINE_STATUSES } from "@/lib/demand/pipeline";
 import { DEMAND_CATEGORY_LABELS, isDemandCategory } from "@/lib/demand/categories";
+import { aggregateCampaignDemand, type CampaignDemandRow } from "@/lib/campaigns/booking";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,18 @@ export default async function DemandCenterPage() {
   const arrivedRows = (rows as any[]).filter((r) => ["stock_arrived", "notified"].includes(effectivePipeline(r)));
   const arrivedByKey = new Map<string, any[]>();
   for (const r of arrivedRows) { const k = productKey(r); arrivedByKey.set(k, [...(arrivedByKey.get(k) ?? []), r]); }
+  // Booking campaigns (migration 535) -- na lagi ho to card chup.
+  const { data: campaigns } = await service.from("booking_campaigns").select("id, name, deadline, is_active").order("deadline", { ascending: false }).limit(5);
+  const campaignCards: { id: string; name: string; deadline: string; bookings: number; milkSuppliers: number; totals: ReturnType<typeof aggregateCampaignDemand> }[] = [];
+  for (const c of (campaigns ?? []) as any[]) {
+    const [{ data: cRows }, { data: cBookings }] = await Promise.all([
+      service.from("farmer_product_demands").select("product_id, product_name, unit, quantity, farmer_id, status").eq("campaign_id", c.id).limit(5000),
+      service.from("campaign_bookings").select("farmer_id").eq("campaign_id", c.id).eq("status", "submitted"),
+    ]);
+    const fids = ((cBookings ?? []) as any[]).map((b) => b.farmer_id);
+    const { data: milk } = fids.length ? await service.from("v_farmer_milk_supplier").select("farmer_id").in("farmer_id", fids).eq("is_milk_supplier", true) : { data: [] };
+    campaignCards.push({ id: c.id, name: c.name, deadline: c.deadline, bookings: fids.length, milkSuppliers: (milk ?? []).length, totals: aggregateCampaignDemand((cRows ?? []) as CampaignDemandRow[]) });
+  }
   const prioTone = (p: string) => (p === "High" ? "bg-rose-100 text-rose-800" : p === "Medium" ? "bg-amber-100 text-amber-800" : "bg-surface-100 text-surface-700");
 
   return (
@@ -63,6 +76,21 @@ export default async function DemandCenterPage() {
           <Card key={l}><p className="text-xs text-surface-500">{l}</p><p className={`text-2xl font-semibold ${c}`}>{n}</p></Card>
         ))}
       </div>
+      {campaignCards.map((c) => (
+        <Card key={c.id}>
+          <h2 className="mb-1 font-semibold">{c.name} — product-wise booking</h2>
+          <p className="mb-2 text-xs text-surface-500">Aakhri taareekh {pkDate(c.deadline)} · {c.bookings} kisan ({c.milkSuppliers} doodh supplier) · demand-first, koi payment nahi</p>
+          <table className="w-full text-sm">
+            <thead><tr className="text-left text-xs text-surface-500"><th className="py-1">Product</th><th>Kul miqdar</th><th>Kisan</th></tr></thead>
+            <tbody>
+              {c.totals.length === 0 && <tr><td colSpan={3} className="py-2 text-surface-500">Abhi koi booking nahi.</td></tr>}
+              {c.totals.map((t) => (
+                <tr key={`${t.productId}|${t.unit}`} className="border-t border-surface-100"><td className="py-1.5 font-medium">{t.productName}</td><td>{t.totalQuantity.toLocaleString()} {t.unit}</td><td>{t.farmerCount}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      ))}
       <Card>
         <h2 className="mb-2 font-semibold">Product-wise jama</h2>
         <div className="overflow-x-auto">
