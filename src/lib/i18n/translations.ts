@@ -51,6 +51,7 @@ import { sharedDict } from "./dict/shared";
 import { productsFlowDict } from "./dict/products-flow";
 import { kharcheDict } from "./dict/kharche";
 import { supportCenterDict } from "./dict/support-center";
+import { salesPeriodDict } from "./dict/sales-period";
 import { staffPerformanceDict } from "./dict/staff-performance";
 import { intelligenceDict } from "./dict/intelligence";
 import { business360OwnerDict } from "./dict/business-360-owner";
@@ -156,6 +157,7 @@ const dict = {
   ...productsFlowDict,
   ...kharcheDict,
   ...supportCenterDict,
+  ...salesPeriodDict,
   ...staffPerformanceDict,
   ...intelligenceDict,
   ...business360OwnerDict,

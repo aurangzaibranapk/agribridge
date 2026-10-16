@@ -27,6 +27,8 @@ import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { RecentSalesTable } from "./recent-sales-table";
 import { StatementExportBar } from "./statement-export-bar";
+import { PeriodSalesSummary } from "./period-summary";
+import { isSalesPeriod } from "@/lib/reports/sales-period";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -50,7 +52,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 export default async function SalesReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; branch?: string; shop?: string; from?: string; to?: string; payment?: string }>;
+  searchParams: Promise<{ range?: string; branch?: string; shop?: string; from?: string; to?: string; payment?: string; sp?: string }>;
 }) {
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "month";
@@ -649,6 +651,10 @@ export default async function SalesReportPage({
         </div>
         {!cashTargetMet || !creditLimitMet ? <p className="mt-3 text-xs font-semibold text-red-800 dark:text-red-300">Warning: udhaar 30% se ooper ya cash sale 70% se neeche hai — shop ki recovery aur cash flow foran review karein.</p> : <p className="mt-3 text-xs font-semibold text-emerald-800 dark:text-emerald-300">Cash sale target aur udhaar ki hadd dono theek hain.</p>}
       </div>
+
+      {/* Pichli sale ka khulasa -- poore PKT din, aaj shamil nahi */}
+      <PeriodSalesSummary supabase={supabase} scope={{ meriDukan, shopId, branchId }} period={isSalesPeriod(params.sp) ? params.sp : "7d"} lang={lang}
+        baseQuery={{ range: params.range, branch: params.branch, shop: params.shop, from: params.from, to: params.to, payment: params.payment }} paymentLabels={PAYMENT_LABELS} />
 
       {/* Payment method se bikri ka breakdown */}
       {tareeqeKiFehrist.length > 0 && (
