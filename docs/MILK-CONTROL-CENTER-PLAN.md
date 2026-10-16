@@ -1,18 +1,20 @@
 # Milk Control Center – Extension Plan
 Branch: feat/milk-collection-masters
 
-## Status
-- Migration 530: milk_collectors + milk_chillars tables + links on milk_entries
-- Collectors Master: page + actions + client
-- Chillars Master: page + actions + client
+## Done
+- Migration 530: milk_collectors + milk_chillars + links on milk_entries
+- Collectors Master: /admin/milk-collection/collectors
+- Chillars Master: /admin/milk-collection/chillars
 - Control Center landing: /admin/milk-collection/control
+- Control Entry form: /admin/milk-collection/control-entry (collector + chillar select)
+- Chillar Control: /admin/milk-collection/chillar-control (today inward summary)
 
 ## Remaining
-- Daily Entry form: add collector_id + chillar_id selectors
-- Chillar Control: inward/outward reconciliation view
+- Real save in Control Entry (insert into milk_entries with collector_id + chillar_id)
 - Weekly Payment sheet
 - Dashboard cards (today totals, pending)
 - Zero leakage alerts (quantity mismatch)
+- Outward (company dispatch) reconciliation
 
 ## Rules
 - Branch only. Live DB not touched.
