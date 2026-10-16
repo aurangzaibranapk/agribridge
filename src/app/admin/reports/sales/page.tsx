@@ -29,6 +29,9 @@ import { RecentSalesTable } from "./recent-sales-table";
 import { StatementExportBar } from "./statement-export-bar";
 import { PeriodSalesSummary } from "./period-summary";
 import { isSalesPeriod } from "@/lib/reports/sales-period";
+import { resolveSalesShop, summaryScope, SALES_SHOP_COOKIE } from "@/lib/reports/sales-shop-filter";
+import { SalesShopSelect } from "@/components/reports/sales-shop-select";
+import { cookies } from "next/headers";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -49,10 +52,21 @@ const PAYMENT_LABELS: Record<string, string> = {
   bank_transfer: "Bank Transfer",
 };
 
+// Inline <style> children get HTML-escaped on the server ("→&quot;) and
+// cause a hydration text mismatch; inject raw CSS instead.
+const SALES_PRINT_CSS = `
+        @media print {
+          .no-print { display: none !important; }
+          nav, header, aside, [data-sidebar], [role="navigation"] { display: none !important; }
+          body { font-size: 12px; }
+          .rounded-card { border: 1px solid #e5e7eb !important; box-shadow: none !important; }
+        }
+      `;
+
 export default async function SalesReportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; branch?: string; shop?: string; from?: string; to?: string; payment?: string; sp?: string }>;
+  searchParams: Promise<{ range?: string; branch?: string; shop?: string; from?: string; to?: string; payment?: string; sp?: string; salesShop?: string }>;
 }) {
   const params = await searchParams;
   const range: DateRangeKey = isDateRangeKey(params.range) ? params.range : "month";
@@ -99,6 +113,7 @@ export default async function SalesReportPage({
     supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
     supabase.from("shops").select("id, name, business_type, branch_id"),
   ]);
+  const summaryShop = meriDukan ? "" : resolveSalesShop(params.salesShop, (await cookies()).get(SALES_SHOP_COOKIE)?.value, ((dukanein ?? []) as { id: string }[]).map((d) => d.id));
 
   const dukanKiQism = new Map<string, string>();
   const dukanKaNaam = new Map<string, string>();
@@ -474,14 +489,7 @@ export default async function SalesReportPage({
 
   return (
     <div>
-      <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          nav, header, aside, [data-sidebar], [role="navigation"] { display: none !important; }
-          body { font-size: 12px; }
-          .rounded-card { border: 1px solid #e5e7eb !important; box-shadow: none !important; }
-        }
-      `}</style>
+      <style dangerouslySetInnerHTML={{ __html: SALES_PRINT_CSS }} />
       <PageHeader
         title={t("rs_title", lang)}
         description={
@@ -653,8 +661,14 @@ export default async function SalesReportPage({
       </div>
 
       {/* Pichli sale ka khulasa -- poore PKT din, aaj shamil nahi */}
-      <PeriodSalesSummary supabase={supabase} scope={{ meriDukan, shopId, branchId }} period={isSalesPeriod(params.sp) ? params.sp : "7d"} lang={lang}
-        baseQuery={{ range: params.range, branch: params.branch, shop: params.shop, from: params.from, to: params.to, payment: params.payment }} paymentLabels={PAYMENT_LABELS} />
+      {!meriDukan && (
+        <div className="mt-4 flex justify-end">
+          <SalesShopSelect shops={((dukanein ?? []) as { id: string; name: string }[]).map((d) => ({ id: d.id, name: d.name })).sort((a, b) => a.name.localeCompare(b.name))}
+            current={summaryShop} label={t("sps_shop_pick", lang)} allLabel={t("sps_all_shops", lang)} />
+        </div>
+      )}
+      <PeriodSalesSummary supabase={supabase} scope={summaryScope({ meriDukan, shopId, branchId }, summaryShop)} period={isSalesPeriod(params.sp) ? params.sp : "7d"} lang={lang}
+        baseQuery={{ range: params.range, branch: params.branch, shop: params.shop, from: params.from, to: params.to, payment: params.payment, salesShop: params.salesShop }} paymentLabels={PAYMENT_LABELS} />
 
       {/* Payment method se bikri ka breakdown */}
       {tareeqeKiFehrist.length > 0 && (

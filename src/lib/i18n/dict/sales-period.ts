@@ -15,6 +15,8 @@ export const salesPeriodDict = {
   sps_by_method: { en: "By payment method", rm: "Payment tareeqe se", ur: "ادائیگی کے طریقے سے" },
   sps_per_day: { en: "Per day", rm: "Har din", ur: "ہر دن" },
   sps_none: { en: "No sale in this period", rm: "Is arse mein koi sale nahi", ur: "اس عرصے میں کوئی سیل نہیں" },
+  sps_shop_pick: { en: "Choose shop", rm: "Dukan chunein", ur: "دکان چنیں" },
+  sps_all_shops: { en: "All shops", rm: "Sab dukanein", ur: "سب دکانیں" },
   sps_aaj: { en: "Today (so far)", rm: "Aaj (abhi tak)", ur: "آج (اب تک)" },
   sps_kal: { en: "Yesterday", rm: "Kal", ur: "کل" },
   sps_parson: { en: "Day before", rm: "Parson", ur: "پرسوں" },
