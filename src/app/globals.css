@@ -45,3 +45,12 @@ body {
 
   @page { margin: 1cm; }
 }
+
+/* ── Soft dark (slate/navy) — site-wide shell. Sirf .dark par; light mode bilkul wesa hi. ── */
+html.dark { color-scheme: dark; }
+html.dark body.dark\:bg-surface-950, html.dark .dark\:bg-surface-950 { background-color: #172033; }
+html.dark .dark\:bg-surface-900 { background-color: #1e293b; }
+html.dark .dark\:bg-surface-800 { background-color: #24324a; }
+html.dark .dark\:border-surface-800 { border-color: rgba(148, 163, 184, 0.14); }
+html.dark .dark\:border-surface-700 { border-color: rgba(148, 163, 184, 0.2); }
+html.dark .dark\:hover\:bg-surface-800:hover { background-color: #2b3a55; }
