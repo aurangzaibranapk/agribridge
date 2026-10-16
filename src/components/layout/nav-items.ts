@@ -166,6 +166,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/reports/audit", label: "Audit Center (Nuqsan)", icon: AlertTriangle },
       { href: "/admin/intelligence", label: "Party 360", icon: Users },
       { href: "/admin/intelligence/products", label: "Product Intelligence", icon: LineChart },
+      { href: "/admin/intelligence/credit", label: "Credit Darja", icon: Users },
     ],
   },
   {

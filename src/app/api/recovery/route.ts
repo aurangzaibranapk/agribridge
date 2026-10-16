@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { promiseRuleError } from "@/lib/recovery/credit-position";
+import { TERMS_VERSION } from "@/lib/recovery/credit-report";
 
 /**
  * Recovery dashboard se teen kaam: promise darj karna, reminder schedule
@@ -35,6 +36,8 @@ export async function POST(req: NextRequest) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(promiseDate)) return NextResponse.json({ error: "Waade ki tareekh zaroori hai." }, { status: 400 });
     const today = new Date(Date.now() + 5 * 3600_000).toISOString().slice(0, 10);
     const days = Math.round((Date.parse(promiseDate) - Date.parse(today)) / 86400000);
+    // 541: zubani sharaait -- staff checkbox se tasdeeq (staff id + waqt + version).
+    if (body.termsAccepted !== true) return NextResponse.json({ error: "Sharaait ki tasdeeq zaroori hai: customer ne zubani maan li -- checkbox lagayein." }, { status: 400 });
     const { data: prof } = await service.from("profiles").select("role,is_active").eq("id", user.id).maybeSingle();
     const isAdmin = Boolean(prof?.is_active && UNRESTRICTED_ROLES.includes(prof.role));
     for (const p of parties) {
@@ -61,9 +64,13 @@ export async function POST(req: NextRequest) {
       approved_by: isAdmin ? user.id : null,
       notes: body.notes || null,
       created_by: user.id,
+      terms_version: TERMS_VERSION,
+      terms_accepted_at: new Date().toISOString(),
+      terms_accepted_by: user.id,
+      terms_channel: "verbal",
     }));
-    const { error } = await service.from("payment_promises").insert(rows);
-    return error ? NextResponse.json({ error: error.message }, { status: 400 }) : NextResponse.json({ success: true, count: rows.length });
+    const { data: inserted, error } = await service.from("payment_promises").insert(rows).select("id,promise_date,promised_amount");
+    return error ? NextResponse.json({ error: error.message }, { status: 400 }) : NextResponse.json({ success: true, count: rows.length, promises: inserted ?? [] });
   }
 
   if (action === "schedule" || action === "send") {
