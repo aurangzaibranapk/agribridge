@@ -1,4 +1,5 @@
 "use client";
+import { TERMS } from "@/lib/recovery/credit-report";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
@@ -967,6 +968,7 @@ export function RecoveryClient({
                 promiseDate: f.get("promiseDate"),
                 amount: f.get("amount"),
                 notes: f.get("notes"),
+                termsAccepted: f.get("termsAccepted") === "on",
               });
             }}
             className="w-full max-w-md space-y-3 rounded-card bg-white p-5 shadow-xl dark:bg-surface-900"
@@ -1005,6 +1007,11 @@ export function RecoveryClient({
                   <input name="amount" type="number" min="1" placeholder="Khali = poora late baqaya" className="mt-1 w-full rounded-lg border p-2" />
                 </label>
                 <textarea name="notes" placeholder="Notes" className="w-full rounded-lg border p-2" />
+                <div className="rounded-lg border bg-surface-50 p-2 text-xs leading-5 dark:bg-surface-800">
+                  <b>Sharaait</b>
+                  <ol className="ml-4 list-decimal">{TERMS.map((t) => <li key={t}>{t}</li>)}</ol>
+                </div>
+                <label className="flex items-start gap-2 text-sm"><input required type="checkbox" name="termsAccepted" className="mt-1" /> Customer ne sharaait zubani maan li hain (staff ne parh kar sunayi).</label>
               </>
             )}
             <div className="flex gap-2">

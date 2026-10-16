@@ -8,6 +8,7 @@ import { requireIntelligence } from "@/lib/intelligence/access";
 import { LOADERS, type Party360Type } from "@/lib/intelligence/party360/load";
 import { Party360View } from "@/components/party360/party-360-view";
 import { loadCreditPosition } from "@/lib/recovery/credit-block";
+import { loadCreditReport } from "@/lib/recovery/credit-report-load";
 
 export const dynamic = "force-dynamic";
 const money = (v: number | null) => (v == null ? null : `Rs ${Math.round(v).toLocaleString("en-PK")}`);
@@ -21,7 +22,10 @@ export default async function Party360Page({ searchParams }: { searchParams: { t
   if (searchParams.view !== "classic" && type in LOADERS) {
     const d = await LOADERS[type as Party360Type](searchParams.id);
     const credit = d.creditCustomerId ? await loadCreditPosition(d.creditCustomerId).catch(() => null) : null;
-    return <Party360View d={d} credit={credit} />;
+    // 541: andaroni credit report (farmer -> farmer score; khata wala -> customer score).
+    const subject = type === "farmer" ? { t: "farmer" as const, id: searchParams.id } : d.creditCustomerId ? { t: "customer" as const, id: d.creditCustomerId } : null;
+    const report = subject ? await loadCreditReport(subject.t, subject.id).catch(() => null) : null;
+    return <Party360View d={d} credit={credit} report={report} />;
   }
   const overdueDays = Math.min(365, Math.max(1, Number(searchParams.days) || 30));
   const data = await loadParty(type, searchParams.id);

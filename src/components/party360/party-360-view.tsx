@@ -6,6 +6,8 @@ import { ROLE_LABEL } from "@/lib/intelligence/party360/activity";
 import type { CreditPosition } from "@/lib/recovery/credit-position";
 import { CreditPositionStrip } from "@/components/recovery/credit-position-strip";
 import { ACCENT, kpiIcon, short } from "./theme";
+import type { CreditReport } from "@/lib/recovery/credit-report-load";
+import { CreditReportCard } from "./credit-report-card";
 
 /* Theme A (light premium) + Theme B (soft dark pro) — Tailwind `dark` class se. */
 const PAGE = "bg-[#F6F7FB] text-slate-900 dark:bg-[#172033] dark:text-slate-100";
@@ -78,7 +80,7 @@ function SectionCard({ s }: { s: Section }) {
   );
 }
 
-export function Party360View({ d, credit }: { d: Party360Data; credit: CreditPosition | null }) {
+export function Party360View({ d, credit, report }: { d: Party360Data; credit: CreditPosition | null; report?: CreditReport | null }) {
   const act = d.activity;
   const acc = ACCENT[d.type];
   const links = [...(act?.links ?? []), ...(d.links ?? [])];
@@ -128,6 +130,7 @@ export function Party360View({ d, credit }: { d: Party360Data; credit: CreditPos
       </div>
 
       {credit && <div className={`${CARD} p-6`}><h3 className={`${TITLE} mb-3`}>Udhaar halat</h3><CreditPositionStrip position={credit} /></div>}
+      {report && <CreditReportCard r={report} lateAmount={credit?.lateAmount} />}
 
       <div className="grid gap-4 lg:grid-cols-3">
         {d.monthly && <div className={`${CARD} p-6 lg:col-span-2`}><div className={TITLE}>{d.monthly.title}</div><div className={`text-[12px] ${MUTE}`}>Pichle 6 mahine</div><Bars months={d.monthly.months} series={d.monthly.series} acc={acc} /></div>}

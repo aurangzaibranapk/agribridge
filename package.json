@@ -32,7 +32,8 @@
     "test:lightbox": "node tests/support-screenshot-lightbox.cjs",
     "test:support-llm": "npx --yes tsx scripts/test-support-llm-agents.ts",
     "test:txn-counter": "node tests/txn-counter-collision.cjs",
-    "test:party-360": "npx --yes tsx scripts/test-party-360.ts"
+    "test:party-360": "npx --yes tsx scripts/test-party-360.ts",
+    "test:promise-credit": "npx --yes tsx scripts/test-promise-credit.ts && node tests/promise-credit-migration.cjs"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",

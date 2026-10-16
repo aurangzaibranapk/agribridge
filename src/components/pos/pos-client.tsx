@@ -621,6 +621,9 @@ export function PosClient({
       setOverdueDialog(null);
       if (choice.kind === "override") {
         result = await posCheckout({ ...(salePayload as any), creditOverrideReason: choice.reason });
+      } else if (choice.kind === "promised") {
+        // 541: waada isi popup mein darj hua -- ab sale dobara (server khud jaanchta hai).
+        result = await posCheckout(salePayload);
       } else {
         const custParam = encodeURIComponent(customerId);
         if (choice.kind === "cash") {
