@@ -6,7 +6,7 @@ import { updateCreditPolicy } from "@/actions/credit-policy";
 
 export const dynamic = "force-dynamic";
 
-/** Settings › Udhaar Policy (537): aam din ki hadd, override wajah ki list, alag hadd wale gahak. */
+/** Settings › Udhaar Policy (538): aam din ki hadd, override wajah ki list, alag hadd wale gahak. */
 export default async function CreditPolicyPage() {
   const guard = await requireAction("system.receivable_reminders", "view");
   if ("error" in guard) return <div className="p-8 text-center text-surface-400">{guard.error}</div>;

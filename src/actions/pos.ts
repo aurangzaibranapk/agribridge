@@ -14,7 +14,7 @@ export interface PosCheckoutState {
   error?: string;
   notice?: string;
   saleId?: string;
-  /** Purane baqaye ki rok -- POS dialog ke liye poori tafseel (537). */
+  /** Purane baqaye ki rok -- POS dialog ke liye poori tafseel (538). */
   creditBlock?: import("@/lib/recovery/credit-position").CreditBlockInfo;
 }
 

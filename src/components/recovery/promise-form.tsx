@@ -5,7 +5,7 @@ import { addDaysIso } from "@/lib/recovery/credit-position";
 
 const QUICK = [3, 7, 15, 30];
 
-/** Promise to Pay darj karna: jaldi din (3/7/15/30) ya tareekh, raqam ikhtiyari (537). */
+/** Promise to Pay darj karna: jaldi din (3/7/15/30) ya tareekh, raqam ikhtiyari (538). */
 export function PromiseForm({ customerId, customerName, defaultOpen = false, today }: { customerId: string; customerName: string; defaultOpen?: boolean; today: string }) {
   const [open, setOpen] = useState(defaultOpen);
   const [days, setDays] = useState(15);

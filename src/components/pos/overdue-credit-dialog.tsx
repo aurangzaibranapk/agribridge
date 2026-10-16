@@ -11,7 +11,7 @@ export type OverdueChoice =
   | { kind: "promise" }
   | { kind: "override"; reason: string };
 
-/** window.prompt ki jagah: POS par purane baqaye ki rok ka saaf dialog (537). */
+/** window.prompt ki jagah: POS par purane baqaye ki rok ka saaf dialog (538). */
 export function OverdueCreditDialog({ info, fallbackText, onChoose }: { info: CreditBlockInfo | null; fallbackText: string; onChoose: (c: OverdueChoice) => void }) {
   const reasons = info?.overrideReasons ?? ["Purana bharosemand gahak", "Doosri wajah"];
   const [preset, setPreset] = useState(reasons[0] ?? "");

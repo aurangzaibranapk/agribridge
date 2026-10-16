@@ -29,7 +29,7 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
 
   const loose = supabase as any;
   const today = new Date().toISOString().slice(0, 10);
-  // 537: ?customer=<id> -- us gahak ke teen adad aur waade ka form upar.
+  // 538: ?customer=<id> -- us gahak ke teen adad aur waade ka form upar.
   const focusId = sp.customer && /^[0-9a-f-]{36}$/i.test(sp.customer) ? sp.customer : null;
   const [focusPosition, focusCustomer] = focusId
     ? await Promise.all([loadCreditPosition(focusId), loose.from("customers").select("id,name").eq("id", focusId).maybeSingle().then((r: any) => r.data)])

@@ -4,7 +4,7 @@ import { limitLabel } from "@/lib/recovery/credit-position";
 const rs = (n: number) => "Rs " + Math.round(n).toLocaleString("en-PK");
 const pk = (d: string | null) => (d ? d.split("-").reverse().join("-") : "");
 
-/** Teen saaf adad: Kul baqaya, Late raqam, Abhi itna dein to udhaar bahal (537). */
+/** Teen saaf adad: Kul baqaya, Late raqam, Abhi itna dein to udhaar bahal (538). */
 export function CreditPositionStrip({ position, compact = false }: { position: CreditPosition; compact?: boolean }) {
   const p = position;
   const box = compact ? "p-2" : "p-3";

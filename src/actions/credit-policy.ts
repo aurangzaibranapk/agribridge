@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireAction } from "@/lib/access/guard";
 
-/** Aam udhaar rok (Settings › Udhaar Policy, 537). Sirf Admin/Owner. */
+/** Aam udhaar rok (Settings › Udhaar Policy, 538). Sirf Admin/Owner. */
 export async function updateCreditPolicy(formData: FormData): Promise<void> {
   const guard = await requireAction("system.receivable_reminders", "edit");
   if ("error" in guard) throw new Error(guard.error);

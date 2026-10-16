@@ -1,4 +1,4 @@
-/** 537: udhaar rok + waada ka khalis hisaab. npx tsx scripts/test-overdue-policy.ts */
+/** 538: udhaar rok + waada ka khalis hisaab. npx tsx scripts/test-overdue-policy.ts */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { evaluatePosition, promiseRuleError, mapCreditPosition, limitLabel, addDaysIso } from "../src/lib/recovery/credit-position";
@@ -65,8 +65,8 @@ t("RPC row map + label + tareekh", () => {
   assert.equal(mapCreditPosition(null), null);
   assert.equal(addDaysIso("2026-10-16", 15), "2026-10-31");
 });
-t("Migration 537: additive + trigger message wajah wala + admin-only RPC", () => {
-  const sql = readFileSync("supabase/migrations/537_overdue_credit_policy.sql", "utf8");
+t("Migration 538: additive + trigger message wajah wala + admin-only RPC", () => {
+  const sql = readFileSync("supabase/migrations/538_overdue_credit_policy.sql", "utf8");
   assert.doesNotMatch(sql, /drop table|drop column|truncate/i);
   assert.match(sql, /fn_customer_credit_position/);
   assert.match(sql, /wajah likh kar ijazat/);

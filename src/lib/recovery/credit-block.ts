@@ -59,7 +59,7 @@ export async function checkOverdueCreditBlock(input: {
       msg = blockMessage(name, overdue, pos.oldestDays ?? 0, pos.limitDays);
     }
   } else {
-    // 537 se pehle wala raasta (fn_customer_credit_position abhi nahi bana).
+    // 538 se pehle wala raasta (fn_customer_credit_position abhi nahi bana).
     const { data: rows, error } = await service.rpc("fn_customer_receivable_aging", { p_as_of: null, p_customer: input.customerId });
     if (error) return "Purane baqaye ki jaanch nahi ho saki; naya udhaar band hai. Naqad bikri ho sakti hai.";
     const row = (rows ?? [])[0];
@@ -167,7 +167,7 @@ export async function checkOverdueBranchCreditBlock(input: {
   return null;
 }
 
-/** fn_customer_credit_position (537). null = function abhi live nahi / ghalti. */
+/** fn_customer_credit_position (538). null = function abhi live nahi / ghalti. */
 export async function loadCreditPosition(customerId: string): Promise<CreditPosition | null> {
   const service = createServiceClient() as any;
   const { data, error } = await service.rpc("fn_customer_credit_position", { p_customer: customerId });

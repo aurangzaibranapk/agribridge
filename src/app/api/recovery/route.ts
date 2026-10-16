@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   if (!parties.length) return NextResponse.json({ error: "Koi account select nahi hua." }, { status: 400 });
 
   if (action === "promise") {
-    // 537: raqam ikhtiyari; din/tareekh lazmi. Staff: 1 khula waada, max 30 din, toote ke baad sirf Admin.
+    // 538: raqam ikhtiyari; din/tareekh lazmi. Staff: 1 khula waada, max 30 din, toote ke baad sirf Admin.
     const rawAmount = body.amount == null || body.amount === "" ? null : Number(body.amount);
     if (rawAmount != null && !(rawAmount > 0)) return NextResponse.json({ error: "Raqam sahi likhein ya khali chhorein." }, { status: 400 });
     const promiseDate = String(body.promiseDate || "");

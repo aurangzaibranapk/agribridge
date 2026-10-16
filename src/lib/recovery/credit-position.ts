@@ -1,5 +1,5 @@
 /**
- * Gahak ki udhaar halat (migration 537, fn_customer_credit_position).
+ * Gahak ki udhaar halat (migration 538, fn_customer_credit_position).
  * Khalis hisaab -- database nahi chhoota, is liye test ho sakta hai.
  */
 export type PromiseState = "open" | "broken" | "fulfilled" | null;

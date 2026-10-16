@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 const rs = (n: unknown) => (n == null ? "—" : "Rs " + Math.round(Number(n)).toLocaleString("en-PK"));
 
-/** Gahak khata › Udhaar hadd (537): teen adad, din ki hadd, waade. */
+/** Gahak khata › Udhaar hadd (538): teen adad, din ki hadd, waade. */
 export default async function CustomerCreditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const guard = await requireAction("system.receivable_reminders", "view");
@@ -30,7 +30,7 @@ export default async function CustomerCreditPage({ params }: { params: Promise<{
     <div className="space-y-4">
       <PageHeader title={`${c.name} — Udhaar hadd`} description="Kul baqaya, late raqam, aur udhaar bahal karne ke liye raqam." />
       <div className="flex gap-3 text-sm"><Link className="underline" href={`/admin/crm/${id}/statement`}>Khata statement</Link><Link className="underline" href={`/admin/finance/recovery?customer=${id}`}>Wasooli / Waada</Link></div>
-      <Card className="p-4">{position ? <CreditPositionStrip position={position} /> : <p className="text-sm text-surface-400">Udhaar halat abhi nahi mil saki (migration 537 live nahi?).</p>}</Card>
+      <Card className="p-4">{position ? <CreditPositionStrip position={position} /> : <p className="text-sm text-surface-400">Udhaar halat abhi nahi mil saki (migration 538 live nahi?).</p>}</Card>
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="space-y-2 p-5 text-sm">
           <b>Is gahak ki din ki hadd</b>
