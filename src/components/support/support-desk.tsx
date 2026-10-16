@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, BarChart3, Camera, CheckCircle2, ClipboardPaste, ExternalLink, RefreshCw, Send, ShieldCheck, X } from "lucide-react";
+import { LightboxImage } from "@/components/ui/image-lightbox";
 
 type Person = { id: string; full_name: string; role: string };
 type Agent = { key: string; label: string };
@@ -132,7 +133,7 @@ export function SupportDesk({ pathname }: { pathname: string }) {
       const canClose = ticket.assigned_kind !== "agent" || ["testing", "fixed", "completed"].includes(String(ticket.assignment_status));
       return <article key={ticket.id} className="rounded-lg border border-surface-200 p-2.5 dark:border-surface-700">
       <div className="flex items-start justify-between gap-2"><div><p className="text-xs font-semibold text-surface-900 dark:text-white">ISS-{new Date(ticket.created_at).getFullYear()}-{String(ticket.ticket_no).padStart(5, "0")} · {ticket.title}</p><p className="mt-0.5 text-[10px] text-surface-400">{ticket.reporter?.full_name ?? "Staff"} · {new Date(ticket.created_at).toLocaleString()}</p></div><span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold ${statusTone[ticket.status] ?? "bg-surface-100"}`}>{statusLabel[ticket.status] ?? ticket.status}</span></div>
-      <p className="mt-2 whitespace-pre-wrap text-[11px] text-surface-600 dark:text-surface-300">{ticket.description}</p>{ticket.screenshotUrl && <a href={ticket.screenshotUrl} target="_blank" rel="noreferrer"><img src={ticket.screenshotUrl} alt="Issue screenshot" className="mt-2 max-h-28 w-full rounded border object-contain"/></a>}
+      <p className="mt-2 whitespace-pre-wrap text-[11px] text-surface-600 dark:text-surface-300">{ticket.description}</p>{ticket.screenshotUrl && <LightboxImage src={ticket.screenshotUrl} alt="Issue screenshot" className="mt-2 max-h-28 w-full rounded border object-contain"/>}
       {ticket.assigned_kind === "agent" && <div className="mt-2 rounded-lg border border-surface-200 bg-surface-50 p-2 dark:border-surface-700 dark:bg-surface-800">
         <div className="flex items-center justify-between gap-2"><p className="text-[10px] font-semibold">Professional Fix Workflow</p><span className="rounded-full bg-brand-100 px-2 py-0.5 text-[9px] font-semibold text-brand-800">{stageLabel[String(ticket.assignment_status)] ?? activeStage}</span></div>
         <div className="mt-2 grid grid-cols-4 gap-1">{stageOrder.map((stage, index) => <div key={stage} className="text-center"><div className={`mx-auto h-1.5 rounded-full ${index <= activeIndex ? "bg-brand-600" : "bg-surface-200 dark:bg-surface-700"}`}/><p className={`mt-1 text-[8px] ${index === activeIndex ? "font-semibold text-brand-700" : "text-surface-400"}`}>{stageLabel[stage]}</p></div>)}</div>
