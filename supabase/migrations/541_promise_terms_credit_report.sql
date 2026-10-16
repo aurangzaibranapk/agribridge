@@ -199,7 +199,7 @@ create or replace view public.v_member_credit_categories with (security_invoker 
 select distinct on (s.subject_type, s.subject_id)
   s.subject_type, s.subject_id, s.score, s.band, s.state, s.snapshot_date,
   public.fn_default_active(s.subject_type, s.subject_id) as default_active,
-  coalesce(c.name, f.name) as name
+  coalesce(c.name, f.full_name) as name
 from public.score_snapshots s
 left join public.customers c on s.subject_type = 'customer' and c.id = s.subject_id
 left join public.farmers f on s.subject_type = 'farmer' and f.id = s.subject_id
