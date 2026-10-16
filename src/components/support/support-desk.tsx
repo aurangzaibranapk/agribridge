@@ -5,6 +5,8 @@ import { AlertTriangle, BarChart3, Camera, CheckCircle2, ClipboardPaste, Externa
 
 type Person = { id: string; full_name: string; role: string };
 type Agent = { key: string; label: string };
+type Dept = { id: string; name: string; is_default_intake: boolean; notify_scope: string };
+type Member = { id: string; department_id: string; member_kind: "person" | "agent"; profile_id: string | null; agent_key: string | null; agent_label: string | null; full_name: string | null };
 type Comment = { id: string; body: string; source_label?: string | null; created_at: string; author?: { full_name?: string } | null };
 type Ticket = {
   id: string; ticket_no: number; title: string; description: string; priority: string; status: string;
@@ -12,10 +14,11 @@ type Ticket = {
   assigned_kind?: "person" | "agent" | null; assigned_agent?: string | null; assignment_status?: string | null;
   external_task_id?: string | null; last_agent_update_at?: string | null;
   reporter?: { full_name?: string }; assignee?: { full_name?: string }; comments?: Comment[];
+  department_id?: string | null; handback_department_id?: string | null; handback_note?: string | null; resolved_by_label?: string | null; reporter_id?: string | null; assigned_to?: string | null;
 };
 
-const statusLabel: Record<string, string> = { new: "Reported", assigned: "Assigned", investigating: "Analysis / Working", testing: "Testing", resolved: "Verified & Closed", reopened: "Reopened" };
-const statusTone: Record<string, string> = { new: "bg-blue-100 text-blue-800", assigned: "bg-violet-100 text-violet-800", investigating: "bg-amber-100 text-amber-800", testing: "bg-cyan-100 text-cyan-800", resolved: "bg-green-100 text-green-800", reopened: "bg-red-100 text-red-800" };
+const statusLabel: Record<string, string> = { new: "Reported", assigned: "Assigned", investigating: "Analysis / Working", testing: "Testing", resolved_pending_verify: "Resolved — Admin verify", resolved: "Verified & Closed", reopened: "Reopened" };
+const statusTone: Record<string, string> = { resolved_pending_verify: "bg-emerald-100 text-emerald-800", new: "bg-blue-100 text-blue-800", assigned: "bg-violet-100 text-violet-800", investigating: "bg-amber-100 text-amber-800", testing: "bg-cyan-100 text-cyan-800", resolved: "bg-green-100 text-green-800", reopened: "bg-red-100 text-red-800" };
 const stageOrder = ["reported", "analysis", "approval_required", "approved", "working", "testing", "fixed", "verified"];
 const stageLabel: Record<string, string> = {
   reported: "Reported",
@@ -54,13 +57,15 @@ export function SupportDesk({ pathname }: { pathname: string }) {
   const [choices, setChoices] = useState<Record<string, string>>({}), [canManage, setCanManage] = useState(false), [loading, setLoading] = useState(true);
   const [error, setError] = useState(""), [sent, setSent] = useState(""), [file, setFile] = useState<File | null>(null), [preview, setPreview] = useState("");
   const [saving, setSaving] = useState(false), [busyId, setBusyId] = useState("");
+  const [departments, setDepartments] = useState<Dept[]>([]), [members, setMembers] = useState<Member[]>([]), [meId, setMeId] = useState("");
+  const [deptChoice, setDeptChoice] = useState<Record<string, string>>({});
   const formRef = useRef<HTMLFormElement>(null), fileRef = useRef<HTMLInputElement>(null);
 
   async function load(showSpinner = true) {
     if (showSpinner) setLoading(true);
     const response = await fetch("/api/support/tickets", { cache: "no-store" });
     const data = await response.json();
-    if (response.ok) { setItems(data.items ?? []); setAssignees(data.assignees ?? []); setAgents(data.agents ?? []); setCanManage(Boolean(data.canManage)); setError(""); }
+    if (response.ok) { setItems(data.items ?? []); setAssignees(data.assignees ?? []); setAgents(data.agents ?? []); setCanManage(Boolean(data.canManage)); setDepartments(data.departments ?? []); setMembers(data.members ?? []); setMeId(data.meId ?? ""); setError(""); }
     else setError(data.error ?? "Tickets load nahi huay.");
     if (showSpinner) setLoading(false);
   }
@@ -88,6 +93,18 @@ export function SupportDesk({ pathname }: { pathname: string }) {
     if (response.ok) { setSent(data.message ?? "Issue update ho gaya."); await load(false); } else setError(data.error ?? "Issue update nahi hua."); setBusyId("");
   }
   async function update(id: string, status: string) { const note = status === "resolved" ? prompt("Fix verification/solution note likhein:") ?? "" : ""; await patch(id, { status, note, assignToMe: status === "assigned" }); }
+  async function assignDept(ticket: Ticket) {
+    const dept = deptChoice[ticket.id] || ticket.department_id || "";
+    if (!dept) { setError("Department chunein."); return; }
+    const [kind, value] = (choices[ticket.id] ?? "").split(":", 2);
+    await patch(ticket.id, { departmentId: dept, ...(kind === "agent" && value ? { agentKey: value } : {}), ...(kind === "person" && value ? { assigneeId: value } : {}) });
+  }
+  async function resolveHandback(ticket: Ticket) {
+    const note = prompt("Kya theek kiya? (Resolved note -- Admin verify karega)") ?? "";
+    if (note.trim().length < 3) return;
+    const admin = departments.find((d) => d.name === "Admin");
+    await patch(ticket.id, { workflowAction: "resolve_handback", note, returnToDepartmentId: admin?.id ?? "" });
+  }
   async function assign(ticket: Ticket) { const [kind, value] = (choices[ticket.id] ?? "").split(":", 2); if (!value) { setError("Is ticket ke saath wali list se developer/staff ya agent chunein, phir Assign dabayein."); return; } await patch(ticket.id, kind === "agent" ? { agentKey: value } : { assigneeId: value }); }
   async function requestChanges(ticket: Ticket) {
     const note = prompt("Agent ko kya change/recheck karna hai?")?.trim();
@@ -124,9 +141,23 @@ export function SupportDesk({ pathname }: { pathname: string }) {
       {ticket.comments?.map((comment) => <div key={comment.id} className="mt-2 rounded bg-surface-50 p-2 text-[10px] dark:bg-surface-800"><div className="flex justify-between gap-2"><b>{comment.author?.full_name ?? comment.source_label ?? "System"}</b><span className="text-[8px] text-surface-400">{new Date(comment.created_at).toLocaleString()}</span></div><p className="mt-1 whitespace-pre-wrap">{comment.body}</p></div>)}
       {ticket.resolution_note && <p className="mt-2 rounded bg-green-50 p-2 text-[10px] text-green-800"><CheckCircle2 className="mr-1 inline h-3 w-3"/>{ticket.resolution_note}</p>}
       {canManage && ticket.assignment_status === "approval_required" && ticket.status !== "resolved" && <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-2"><p className="text-[10px] font-semibold text-amber-900">Agent ki analysis tayar hai۔ Fix start karne se pehle aapki approval zaroori hai.</p><div className="mt-2 flex gap-2"><button disabled={busyId === ticket.id} onClick={() => void patch(ticket.id, { workflowAction: "approve_fix" })} className="flex flex-1 items-center justify-center gap-1 rounded bg-green-700 px-2 py-1.5 text-[10px] font-semibold text-white"><ShieldCheck className="h-3 w-3"/> Fix Approve Karein</button><button disabled={busyId === ticket.id} onClick={() => void requestChanges(ticket)} className="rounded border border-amber-500 px-2 py-1.5 text-[10px] text-amber-900">Changes Mangwain</button></div></div>}
-      {canManage && ticket.status !== "resolved" && <div className="mt-2 flex gap-1"><select value={choices[ticket.id] ?? ""} onChange={(event) => setChoices((old) => ({ ...old, [ticket.id]: event.target.value }))} className="min-w-0 flex-1 rounded border border-surface-200 px-1.5 py-1 text-[10px] dark:bg-surface-800"><option value="">Developer / Agent chunein</option><optgroup label="Staff / Developer">{assignees.map((person) => <option key={person.id} value={`person:${person.id}`}>{person.full_name} · {person.role}</option>)}</optgroup>{agents.length > 0 && <optgroup label="Connected AI Agents">{agents.map((agent) => <option key={agent.key} value={`agent:${agent.key}`}>{agent.label}</option>)}</optgroup>}</select><button disabled={busyId === ticket.id || !choices[ticket.id]} onClick={() => void assign(ticket)} className="rounded bg-brand-600 px-2 py-1 text-[10px] font-semibold text-white disabled:opacity-50">Assign</button></div>}
+      {ticket.status === "resolved_pending_verify" && <div className="mt-2 rounded-lg border border-emerald-300 bg-emerald-50 p-2 text-[10px] text-emerald-900"><b>Resolved{ticket.resolved_by_label ? ` · ${ticket.resolved_by_label}` : ""}</b> → {departments.find((d) => d.id === ticket.handback_department_id)?.name ?? "Admin"} verify karega.{ticket.handback_note ? <div className="mt-1">{ticket.handback_note}</div> : null}</div>}
+      {canManage && departments.length > 0 && !["resolved", "resolved_pending_verify"].includes(ticket.status) && (() => {
+        const dept = deptChoice[ticket.id] || ticket.department_id || "";
+        const deptMembers = members.filter((m) => m.department_id === dept);
+        return <div className="mt-2 space-y-1">
+          <div className="flex gap-1">
+            <select aria-label="Department" value={dept} onChange={(e) => { setDeptChoice((o) => ({ ...o, [ticket.id]: e.target.value })); setChoices((o) => ({ ...o, [ticket.id]: "" })); }} className="min-w-0 flex-1 rounded border border-surface-200 px-1.5 py-1 text-[10px] dark:bg-surface-800"><option value="">Department chunein</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.name}{d.is_default_intake ? " (intake)" : ""}</option>)}</select>
+            <select aria-label="Member" value={choices[ticket.id] ?? ""} onChange={(e) => setChoices((o) => ({ ...o, [ticket.id]: e.target.value }))} className="min-w-0 flex-1 rounded border border-surface-200 px-1.5 py-1 text-[10px] dark:bg-surface-800"><option value="">Poori team (member baad mein)</option>{deptMembers.map((m) => <option key={m.id} value={m.member_kind === "agent" ? `agent:${m.agent_key}` : `person:${m.profile_id}`}>{m.member_kind === "agent" ? `🤖 ${m.agent_label ?? m.agent_key}` : `👤 ${m.full_name ?? "Staff"}`}</option>)}</select>
+            <button disabled={busyId === ticket.id || !dept} onClick={() => void assignDept(ticket)} className="rounded bg-indigo-600 px-2 py-1 text-[10px] font-semibold text-white disabled:opacity-50">Assign</button>
+          </div>
+          {ticket.department_id && <p className="text-[9px] text-surface-400">Abhi: {departments.find((d) => d.id === ticket.department_id)?.name ?? "—"}</p>}
+        </div>;
+      })()}
+      {(canManage || ticket.assigned_to === meId) && ticket.assigned_kind && !["resolved", "resolved_pending_verify", "new"].includes(ticket.status) && <button disabled={busyId === ticket.id} onClick={() => void resolveHandback(ticket)} className="mt-2 w-full rounded border border-emerald-500 bg-emerald-50 px-2 py-1.5 text-[10px] font-semibold text-emerald-800">Resolved — Admin ko verify ke liye bhejein</button>}
+      {canManage && departments.length === 0 && ticket.status !== "resolved" && <div className="mt-2 flex gap-1"><select value={choices[ticket.id] ?? ""} onChange={(event) => setChoices((old) => ({ ...old, [ticket.id]: event.target.value }))} className="min-w-0 flex-1 rounded border border-surface-200 px-1.5 py-1 text-[10px] dark:bg-surface-800"><option value="">Developer / Agent chunein</option><optgroup label="Staff / Developer">{assignees.map((person) => <option key={person.id} value={`person:${person.id}`}>{person.full_name} · {person.role}</option>)}</optgroup>{agents.length > 0 && <optgroup label="Connected AI Agents">{agents.map((agent) => <option key={agent.key} value={`agent:${agent.key}`}>{agent.label}</option>)}</optgroup>}</select><button disabled={busyId === ticket.id || !choices[ticket.id]} onClick={() => void assign(ticket)} className="rounded bg-brand-600 px-2 py-1 text-[10px] font-semibold text-white disabled:opacity-50">Assign</button></div>}
       {canManage && agents.length === 0 && ticket.status !== "resolved" && <p className="mt-1 text-[9px] text-surface-400">Abhi koi AI agent connected nahi (server par SUPPORT_AGENT_ROUTES / SUPPORT_AGENT_REPOSITORY + SUPPORT_GITHUB_TOKEN set nahi). Staff/developer ko assign kar sakte hain.</p>}
-      <div className="mt-2 flex flex-wrap gap-1">{canManage && ticket.status === "new" && <button onClick={() => void update(ticket.id, "assigned")} className="rounded bg-violet-100 px-2 py-1 text-[10px] text-violet-800">Mujhe assign</button>}{canManage && ticket.assigned_kind !== "agent" && !["resolved", "testing"].includes(ticket.status) && <button onClick={() => void update(ticket.id, "investigating")} className="rounded bg-amber-100 px-2 py-1 text-[10px] text-amber-800">Investigation</button>}{canManage && canClose && ticket.status !== "resolved" && <button onClick={() => void update(ticket.id, "resolved")} className="rounded bg-green-100 px-2 py-1 text-[10px] text-green-800">Verify & Close</button>}{!canManage && ticket.status === "resolved" && <button onClick={() => void update(ticket.id, "reopened")} className="rounded bg-red-100 px-2 py-1 text-[10px] text-red-800">Issue abhi baqi hai</button>}</div>
+      <div className="mt-2 flex flex-wrap gap-1">{canManage && ticket.status === "new" && <button onClick={() => void update(ticket.id, "assigned")} className="rounded bg-violet-100 px-2 py-1 text-[10px] text-violet-800">Mujhe assign</button>}{canManage && ticket.assigned_kind !== "agent" && !["resolved", "testing"].includes(ticket.status) && <button onClick={() => void update(ticket.id, "investigating")} className="rounded bg-amber-100 px-2 py-1 text-[10px] text-amber-800">Investigation</button>}{canManage && canClose && ticket.status !== "resolved" && <button onClick={() => void update(ticket.id, "resolved")} className="rounded bg-green-100 px-2 py-1 text-[10px] text-green-800">Verify & Close</button>}{ticket.reporter_id === meId && ["resolved", "resolved_pending_verify"].includes(ticket.status) && <button onClick={() => void update(ticket.id, "reopened")} className="rounded bg-red-100 px-2 py-1 text-[10px] text-red-800">Abhi bhi masla hai</button>}</div>
     </article>;})}</div>
   </div>;
 }

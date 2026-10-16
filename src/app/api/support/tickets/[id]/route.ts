@@ -2,10 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyUser } from "@/lib/notifications";
-import { dispatchSupportTicket, postSupportAgentComment } from "@/lib/support/agent-dispatch";
+import { dispatchSupportTicket, postSupportAgentComment, configuredSupportAgents } from "@/lib/support/agent-dispatch";
+import { handbackTarget, resolvedRecipients, validateMemberChoice, type Department, type DeptMember } from "@/lib/support/departments";
+
+async function loadDepartments(supportDb: any, orgId: string): Promise<{ depts: Department[]; members: DeptMember[] }> {
+  const { data: depts } = await supportDb.from("support_departments").select("id,name,is_default_intake,return_to_department_id,notify_scope,is_active").eq("organization_id", orgId);
+  const ids = (depts ?? []).map((d: any) => d.id);
+  const { data: members } = ids.length ? await supportDb.from("support_department_members").select("*").in("department_id", ids) : { data: [] };
+  return { depts: (depts ?? []) as Department[], members: (members ?? []) as DeptMember[] };
+}
 
 const MANAGER_ROLES = ["owner", "super_admin", "admin", "manager", "admin_assistant"];
 const MANAGERS = new Set(MANAGER_ROLES);
+const STAFF_ROLES_FOR_NOTICE = ["owner", "super_admin", "admin", "manager", "sales_staff", "finance", "warehouse", "admin_assistant", "hr", "procurement", "milk_collection", "machinery", "agronomist", "ai_assistant"];
 const STATUSES = new Set(["new", "assigned", "investigating", "testing", "resolved", "reopened"]);
 
 async function notifyAudience(service: any, ticket: any, title: string, message: string) {
@@ -45,7 +54,54 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const assigneeId = String(body.assigneeId ?? "").trim();
   const agentKey = String(body.agentKey ?? "").trim().toLowerCase();
   const workflowAction = String(body.workflowAction ?? "").trim().toLowerCase();
-  if (!canManage && !(ticket.reporter_id === user.id && status === "reopened")) return NextResponse.json({ error: "Ijazat nahi hai." }, { status: 403 });
+  const isAssignee = ticket.assigned_to === user.id;
+  if (!canManage && !(ticket.reporter_id === user.id && status === "reopened") && !(isAssignee && workflowAction === "resolve_handback")) return NextResponse.json({ error: "Ijazat nahi hai." }, { status: 403 });
+
+  // 539: Resolve karke wapas bhejna (Admin ya reporter ki team) -- status resolved_pending_verify.
+  if (workflowAction === "resolve_handback") {
+    if (["resolved", "resolved_pending_verify"].includes(ticket.status)) return NextResponse.json({ error: "Ye issue pehle hi resolve ho chuka hai." }, { status: 409 });
+    if (note.length < 3) return NextResponse.json({ error: "Kya theek kiya -- note likhein." }, { status: 400 });
+    const { depts, members } = await loadDepartments(supportDb, me.organization_id);
+    const target = handbackTarget(depts, ticket.department_id ?? null, String(body.returnToDepartmentId ?? "").trim() || null);
+    if (!target) return NextResponse.json({ error: "Wapsi wala department nahi mila." }, { status: 400 });
+    const agentLabel = ticket.assigned_kind === "agent" ? (configuredSupportAgents().find((a) => a.key === ticket.assigned_agent)?.label ?? ticket.assigned_agent) : null;
+    const { data: actor } = await service.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+    const now = new Date().toISOString();
+    const { error } = await supportDb.from("support_tickets").update({
+      status: "resolved_pending_verify",
+      handback_department_id: target.id,
+      handback_note: note,
+      resolved_by_kind: ticket.assigned_kind === "agent" ? "agent" : "person",
+      resolved_by_label: agentLabel ?? actor?.full_name ?? null,
+      resolution_note: note,
+      updated_at: now,
+    }).eq("id", ticket.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await supportDb.from("support_ticket_comments").insert({ ticket_id: ticket.id, author_id: user.id, body: `Resolved → ${target.name} (verify ke liye): ${note}` });
+    await supportDb.from("support_ticket_events").insert({ ticket_id: ticket.id, organization_id: me.organization_id, actor_id: user.id, event_type: "handback", from_value: ticket.status, to_value: target.name, note });
+    const targetPeople = members.filter((m) => m.department_id === target.id && m.is_active && m.profile_id).map((m) => m.profile_id as string);
+    const ref = ticketReference(ticket);
+    await Promise.all(Array.from(new Set([...targetPeople, ticket.reporter_id].filter(Boolean))).filter((id) => id !== user.id).map((id) => notifyUser(id, `${ref} · Resolved — verify karein`, `${ticket.title}: ${note}`, "/admin/support-center")));
+    return NextResponse.json({ success: true, message: `Resolved — ${target.name} ko verify ke liye bhej diya.` });
+  }
+
+  // 539: Department badalna (aur chaho to usi department ka member).
+  const departmentId = String(body.departmentId ?? "").trim();
+  if (canManage && departmentId) {
+    const { depts, members } = await loadDepartments(supportDb, me.organization_id);
+    const dept = depts.find((d) => d.id === departmentId && d.is_active);
+    if (!dept) return NextResponse.json({ error: "Department nahi mila." }, { status: 400 });
+    const choice = assigneeId ? { kind: "person" as const, id: assigneeId } : agentKey ? { kind: "agent" as const, key: agentKey } : { kind: "unassigned" as const };
+    const bad = validateMemberChoice(members, dept.id, choice);
+    if (bad) return NextResponse.json({ error: bad }, { status: 400 });
+    if (ticket.department_id !== dept.id) {
+      await supportDb.from("support_tickets").update({ department_id: dept.id, handback_department_id: null, updated_at: new Date().toISOString() }).eq("id", ticket.id);
+      await supportDb.from("support_ticket_events").insert({ ticket_id: ticket.id, organization_id: me.organization_id, actor_id: user.id, event_type: "department", from_value: ticket.department_id ?? null, to_value: dept.name });
+      await supportDb.from("support_ticket_comments").insert({ ticket_id: ticket.id, author_id: user.id, body: `Department: ${dept.name}` });
+    }
+    if (choice.kind === "unassigned") return NextResponse.json({ success: true, message: `${dept.name} ko bhej diya.` });
+    ticket.department_id = dept.id;
+  }
 
   if (canManage && workflowAction === "approve_fix") {
     if (ticket.assigned_kind !== "agent" || ticket.assignment_status !== "approval_required") {
@@ -171,6 +227,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!STATUSES.has(status)) return NextResponse.json({ error: "Status theek nahi hai." }, { status: 400 });
   if (
     status === "resolved"
+    && ticket.status !== "resolved_pending_verify"
     && ticket.assigned_kind === "agent"
     && !["testing", "fixed", "completed"].includes(String(ticket.assignment_status))
   ) {
@@ -189,6 +246,25 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const { error } = await supportDb.from("support_tickets").update(update as any).eq("id", ticket.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   if (note) await supportDb.from("support_ticket_comments").insert({ ticket_id: ticket.id, author_id: user.id, body: note } as any);
+  if (status === "resolved") {
+    // 539: Verify & close -- department ki setting ke mutabiq sab staff ya reporter + team ko khabar.
+    const { depts, members } = await loadDepartments(supportDb, me.organization_id);
+    const dept = depts.find((d) => d.id === ticket.department_id);
+    const { data: staff } = dept?.notify_scope === "all_staff"
+      ? await service.from("profiles").select("id").eq("organization_id", me.organization_id).eq("is_active", true).in("role", STAFF_ROLES_FOR_NOTICE)
+      : { data: [] as any[] };
+    const recipients = resolvedRecipients({
+      scope: dept?.notify_scope ?? "reporter_team",
+      reporterId: ticket.reporter_id,
+      actorId: user.id,
+      assigneeId: ticket.assigned_to,
+      teamProfileIds: members.filter((m) => m.department_id === ticket.department_id && m.is_active && m.profile_id).map((m) => m.profile_id as string),
+      allStaffIds: (staff ?? []).map((r: any) => r.id),
+    });
+    const by = ticket.resolved_by_label ? ` · Hal kiya: ${ticket.resolved_by_label}${dept ? ` (${dept.name})` : ""}` : "";
+    await Promise.all(recipients.map((id) => notifyUser(id, `✅ ${ticketReference(ticket)} hal ho gaya`, `${ticket.title}${by}. ${note || ticket.handback_note || ""}`.trim(), "/admin/support-center")));
+    return NextResponse.json({ success: true });
+  }
   await notifyAudience(service, ticket, `${ticketReference(ticket)} · ${status}`, note || `Issue status ${status} ho gaya.`);
   return NextResponse.json({ success: true });
 }

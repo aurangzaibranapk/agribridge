@@ -74,7 +74,7 @@ export default async function SupportCenterPage({ searchParams }: { searchParams
   return (
     <div className="space-y-4">
       <PageHeader title={t("spc_title", lang)} description={t("spc_subtitle", lang)} />
-      <div className="-mt-2 mb-3 text-xs"><Link href="/admin/my-work/support-dashboard" className="font-semibold text-brand-700 hover:underline">→ Support Dashboard (development / agent progress)</Link></div>
+      <div className="-mt-2 mb-3 text-xs"><Link href="/admin/my-work/support-dashboard" className="font-semibold text-brand-700 hover:underline">→ Support Dashboard (development / agent progress)</Link> · <Link href="/admin/support-center/departments" className="font-semibold text-brand-700 hover:underline">Departments (Development Team)</Link></div>
       {migrationPending && <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">{t("spc_migration_pending", lang)}</p>}
       <div className="grid gap-3 sm:grid-cols-4">
         {cards.map((c) => (

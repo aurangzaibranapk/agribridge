@@ -63,6 +63,7 @@ export function mapStatus(legacy: string | null | undefined, assignment?: string
   if (meta && (STATUSES as readonly string[]).includes(meta)) return meta as Status;
   if (legacy === "resolved") return "resolved";
   if (legacy === "reopened") return "reopened";
+  if (legacy === "resolved_pending_verify") return "waiting"; // 539: Admin verify ka intezar
   if (assignment === "blocked" || assignment === "approval_required") return "waiting";
   if (legacy === "investigating" || legacy === "testing") return "in_progress";
   if (assignment && ["approved", "working", "testing", "fixed", "analysis"].includes(assignment)) return "in_progress";

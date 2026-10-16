@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { configuredSupportAgents } from "@/lib/support/agent-dispatch";
 import { parseAssignChoice } from "@/lib/support/assign";
 import { notifyUser } from "@/lib/notifications";
+import { intakeDepartment } from "@/lib/support/departments";
 
 export const dynamic = "force-dynamic";
 const MANAGER_ROLES = ["owner", "super_admin", "admin", "manager", "admin_assistant"];
@@ -25,7 +26,8 @@ export async function GET() {
   const ctx = await context();
   if (!ctx) return NextResponse.json({ error: "Login zaroori hai." }, { status: 401 });
   let query = ctx.supportDb.from("support_tickets").select("*, reporter:profiles!support_tickets_reporter_id_fkey(full_name), assignee:profiles!support_tickets_assigned_to_fkey(full_name)").eq("organization_id", ctx.profile.organization_id).order("created_at", { ascending: false }).limit(100);
-  if (!ctx.canManage) query = query.eq("reporter_id", ctx.user.id);
+  // Developer (insaan) ko apne assign kiye hue tickets bhi dikhen (539).
+  if (!ctx.canManage) query = query.or(`reporter_id.eq.${ctx.user.id},assigned_to.eq.${ctx.user.id}`);
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const ticketIds = (data ?? []).map((row: any) => row.id);
@@ -51,9 +53,17 @@ export async function GET() {
     .eq("organization_id", ctx.profile.organization_id)
     .eq("is_active", true)
     .order("full_name");
+  const { data: departments } = await ctx.supportDb.from("support_departments").select("id,name,is_default_intake,return_to_department_id,notify_scope,is_active").eq("organization_id", ctx.profile.organization_id).eq("is_active", true).order("name");
+  const deptIds = (departments ?? []).map((d: any) => d.id);
+  const { data: members } = deptIds.length
+    ? await ctx.supportDb.from("support_department_members").select("id,department_id,member_kind,profile_id,agent_key,agent_label,is_active,person:profiles(full_name)").in("department_id", deptIds).eq("is_active", true)
+    : { data: [] };
   return NextResponse.json({
     items,
+    departments: departments ?? [],
+    members: (members ?? []).map((m: any) => ({ ...m, full_name: m.person?.full_name ?? null })),
     canManage: ctx.canManage,
+    meId: ctx.user.id,
     assignees: assignees ?? [],
     agents: ctx.canManage ? configuredSupportAgents() : [],
   });
@@ -88,8 +98,12 @@ export async function POST(req: NextRequest) {
 
   let deviceInfo: Record<string, unknown> = {};
   try { deviceInfo = JSON.parse(String(form.get("device_info") ?? "{}")); } catch { /* invalid client metadata ignored */ }
+  // 539: naya issue default intake department (Development Team) mein.
+  const { data: depts } = await ctx.supportDb.from("support_departments").select("id,name,is_default_intake,return_to_department_id,notify_scope,is_active").eq("organization_id", ctx.profile.organization_id);
+  const intake = intakeDepartment((depts ?? []) as any);
   const { data, error } = await ctx.supportDb.from("support_tickets").insert({
     organization_id: ctx.profile.organization_id,
+    ...(intake ? { department_id: intake.id } : {}),
     reporter_id: ctx.user.id,
     title: title.slice(0, 160),
     description: description.slice(0, 5000),
