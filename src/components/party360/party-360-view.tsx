@@ -120,11 +120,11 @@ export function Party360View({ d, credit }: { d: Party360Data; credit: CreditPos
           </div>
           <div className={box}>
             <h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-surface-200">Dukan / shoba wise</h3>
-            {act.shops.length ? <div className="overflow-x-auto"><table className="w-full text-xs"><thead><tr className="border-b text-left text-surface-500"><th className="py-1">Shoba</th><th>Hum ne becha</th><th>Hum ne khareeda</th><th>Mila</th><th>Diya</th><th>Baqi (+ wo / − hum)</th></tr></thead>
+            {act.shops.length ? <div className="overflow-x-auto"><table className="w-full text-xs"><thead><tr className="border-b text-left text-surface-500"><th className="py-1">Shoba</th><th>Unhon ne liya (maal/khidmat)</th><th>Unhon ne diya (maal: doodh/fasal/bill)</th><th>Paisa humein mila</th><th>Paisa hum ne diya</th><th>Baqi (+ wo dein / − hum dein)</th></tr></thead>
               <tbody className="divide-y divide-surface-100">{act.shops.map((l) => <tr key={l.key}><td className="py-1.5">{l.label}{l.note && <span className="ml-1 text-[10px] text-surface-400">({l.note})</span>}</td><td className="tabular-nums">{rs(l.weSold)}</td><td className="tabular-nums">{rs(l.weBought)}</td><td className="tabular-nums">{rs(l.received)}</td><td className="tabular-nums">{rs(l.paid)}</td><td className={`tabular-nums font-semibold ${l.balance > 0 ? "text-amber-700" : l.balance < 0 ? "text-red-700" : ""}`}>{l.balance ? (l.balance > 0 ? "+" : "−") + rs(Math.abs(l.balance)) : "—"}</td></tr>)}</tbody></table></div>
               : <p className="text-xs text-surface-400">Kisi shoba mein koi kaam nahi.</p>}
           </div>
-          <div className={box}><h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-surface-200">Mahana: khareed vs doodh/fasal humein</h3><Bars months={act.monthly.months} series={act.monthly.series} /></div>
+          <div className={box}><h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-surface-200">Mahana: sab shobay</h3>{act.monthly.series.length ? <Bars months={act.monthly.months} series={act.monthly.series} /> : <p className="text-xs text-slate-400">Pichle 6 mahine mein koi activity nahi.</p>}</div>
           <div className="grid gap-4 lg:grid-cols-2">{act.sections.map((s) => <SectionCard key={s.title} s={s} />)}</div>
         </div>
       )}

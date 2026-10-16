@@ -112,9 +112,9 @@ export async function loadActivity(db: any, notes: string[], ids: LinkIds, opts:
     F.length ? q(notes, "farmer_credit_ledger", db.from("farmer_credit_ledger").select("farmer_id,created_at,source_type,ledger_type,amount,balance_after").in("farmer_id", F).order("created_at", { ascending: false }).limit(LIMIT)) : none,
     F.length ? q(notes, "campaign_bookings", db.from("campaign_bookings").select("acres,status,created_at,booking_campaigns(name,crop)").in("farmer_id", F).limit(100)) : none,
     C.length ? q(notes, "agri_orders", db.from("agri_orders").select("order_number,created_at,grand_total,status").in("customer_id", C).limit(500)) : none,
-    S.length ? q(notes, "purchases", db.from("purchases").select("total_amount,status").in("supplier_id", S).limit(LIMIT)) : none,
+    S.length ? q(notes, "purchases", db.from("purchases").select("purchase_date,total_amount,status").in("supplier_id", S).limit(LIMIT)) : none,
     S.length ? q(notes, "supplier_payments", db.from("supplier_payments").select("amount").in("supplier_id", S).limit(LIMIT)) : none,
-    B.length ? q(notes, "grain_sales", db.from("grain_sales").select("total_amount,amount_received").in("buyer_id", B).limit(LIMIT)) : none,
+    B.length ? q(notes, "grain_sales", db.from("grain_sales").select("sale_date,total_amount,amount_received").in("buyer_id", B).limit(LIMIT)) : none,
   ]);
   const promises: any[] = [];
   for (const [t, list] of [["farmer", F], ["customer", C], ["supplier", S], ["buyer", B]] as const)
@@ -182,7 +182,9 @@ export async function loadActivity(db: any, notes: string[], ids: LinkIds, opts:
       { name: "Dukanon se khareed", values: monthlySeries(posL.map((s: any) => ({ date: s.created_at, amount: num(s.total_amount) })), keys), color: "bg-blue-500" },
       { name: "Doodh humein", values: monthlySeries(milkL.map((m: any) => ({ date: m.entry_date, amount: num(m.total_amount) })), keys), color: "bg-emerald-500" },
       { name: "Fasal humein", values: monthlySeries(grainL.map((g: any) => ({ date: g.entry_date, amount: num(g.total_amount) })), keys), color: "bg-amber-500" },
-    ] },
+      ...(B.length ? [{ name: "Grain sale (buyer ko)", values: monthlySeries(bSales.map((g: any) => ({ date: g.sale_date, amount: num(g.total_amount) })), keys), color: "bg-orange-500" }] : []),
+      ...(S.length ? [{ name: "Supplier bills", values: monthlySeries(sBillsL.map((b: any) => ({ date: b.purchase_date, amount: num(b.total_amount) })), keys), color: "bg-rose-400" }] : []),
+    ].filter((x) => x.values.some((v) => v > 0)) } ,
     khataAging: khataBal > 0 ? agingFifo(posL.map((s: any) => ({ date: s.created_at, amount: num(s.khata_amount) })), khataBal, now) : null,
     totals: { pos: sum(posL, "total_amount"), milkLiters, milkAmt, grainAmt, posBills: posL.length },
     primaryCustomerId: C[0] ?? null,

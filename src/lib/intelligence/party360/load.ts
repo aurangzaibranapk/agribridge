@@ -162,10 +162,10 @@ export async function loadCustomer360(id: string, now = new Date()): Promise<Par
       ...(c.phone_number ? [{ label: "WhatsApp draft", href: `https://wa.me/${String(c.phone_number).replace(/\D/g, "")}` }] : []),
     ],
     kpis: [
-      { label: "Kul baqaya", value: bal, fmt: "rs", tone: bal > 0 ? "bad" : "good", hint: "customers.current_balance" },
+      { label: "Kul baqaya", value: bal, fmt: "rs", tone: bal > 0 ? "bad" : "good", hint: "purana khata + POS udhaar − wasooli" },
       { label: "POS khareed", value: posTotal, fmt: "rs", hint: `${pos.length} bill` },
-      { label: "Udhaar par", value: credit, fmt: "rs", hint: "khata_amount" },
-      { label: "Avg bill", value: pos.length ? r2(posTotal / pos.length) : null, fmt: "rs" },
+      { label: "POS bills ka udhaar", value: credit, fmt: "rs", hint: "sirf POS bills par" },
+      { label: "Purana khata baqaya", value: r2(Math.max(0, bal - credit)), fmt: "rs", tone: bal - credit > 0 ? "warn" : "neutral", hint: "opening / journal / grain (POS ke ilawa)" },
       { label: "Wasooli (90 din)", value: received90, fmt: "rs", tone: "good", hint: "POS naqad + grain receipt" },
       { label: "Akhri bill", value: last ? pk(last) : null, fmt: "text", hint: pos[0] ? `Rs ${rs(num(pos[0].total_amount))}` : "" },
     ],
