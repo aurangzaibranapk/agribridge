@@ -19,7 +19,8 @@
     "test:staff-achievement": "npx --yes tsx scripts/test-staff-achievement.ts",
     "test:intelligence": "npx --yes tsx scripts/test-intelligence.ts",
     "test:business-360": "npx --yes tsx scripts/test-business-360.ts",
-    "test:columns": "node tests/legacy-column-names.cjs"
+    "test:columns": "node tests/legacy-column-names.cjs",
+    "test:sidebar": "node tests/sidebar-new-modules.cjs"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",

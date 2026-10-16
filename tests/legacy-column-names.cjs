@@ -31,6 +31,8 @@ for (const f of walk("src")) {
     const hit = chain.match(rule.bad);
     if (hit) problems.push(`${f}: ${m[1]}.${hit[0]}`);
   }
+  // farmers par `phone` nahi -- `phone_number` hai (embedded select bhi).
+  for (const e of src.matchAll(/farmers!?[a-z_]*\(([^)]*)\)/g)) if (/\bphone\b/.test(e[1])) problems.push(`${f}: farmers.phone (use phone_number)`);
 }
 if (problems.length) { console.error("GHALAT COLUMN:\n  " + problems.join("\n  ")); process.exit(1); }
 console.log("legacy column names: theek");

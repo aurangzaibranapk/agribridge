@@ -264,6 +264,7 @@ export default async function DevelopmentSupportDashboard() {
             <Link href="/admin/my-work" className="mb-2 inline-flex items-center gap-1 text-xs font-medium text-brand-700">
               <ArrowLeft className="h-3.5 w-3.5" /> Mera Kaam
             </Link>
+            <Link href="/admin/support-center" className="mb-2 ml-3 inline-flex items-center gap-1 text-xs font-medium text-brand-700">→ Support Center (SLA, assign, status)</Link>
             <h1 className="font-display text-2xl font-semibold text-surface-950">Development Support Dashboard</h1>
             <p className="mt-1 text-sm text-surface-500">
               Issue response, approval, fixes, repeat problems aur ERP module health — ek professional control room.

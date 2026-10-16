@@ -58,6 +58,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   /** "work" = staff wali chhoti sidebar, "none" = sirf cards. */
   let sidebarKind: SidebarKind = "full";
   let showPos = false;
+  // Diagnose: <div data-nav-source> batata hai menu DB se bana ya code fallback se.
+  let navSource: "db" | "fallback" | "error" = "error";
   let navGroups: { key: string; label: string; icon?: string | null; items: { href: string; label: string; icon: string | null }[] }[] = [];
   // POORA khana try ke andar.
   //
@@ -97,6 +99,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // na pata.
     const nav = await loadNav(user.id, role, lang);
     navGroups = nav.groups;
+    navSource = nav.usedFallback ? "fallback" : "db";
     unrestricted = nav.unrestricted;
     allowedPages = nav.unrestricted ? null : nav.allowedRoutes;
 
@@ -234,7 +237,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           tha). Ye poore admin app ke liye ek hi jagah se theek ho gaya. */}
       <Suspense fallback={null}>
         <ChromeGate>
-          <div className="print:hidden">
+          <div className="print:hidden" data-nav-source={navSource}>
             {sidebarKind === "work" && user && (
               <WorkSidebar
                 lang={lang}

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { notifyUser } from "@/lib/notifications";
+import { reporterNotice } from "@/lib/support/assign";
 import { PRIORITIES, STATUSES, canTransition, mapStatus, type Status } from "@/lib/support/sla";
 
 const MANAGERS = new Set(["owner", "super_admin", "admin", "manager", "admin_assistant"]);
@@ -24,7 +26,7 @@ export async function POST(req: NextRequest) {
   if (body.priority && !(PRIORITIES as readonly string[]).includes(body.priority)) return NextResponse.json({ error: "Ghalat priority." }, { status: 400 });
   const note = body.note?.trim().slice(0, 3000) || null;
 
-  const { data: ticket } = await service.from("support_tickets").select("id,organization_id,status,assignment_status,priority").eq("id", body.ticket_id).maybeSingle();
+  const { data: ticket } = await service.from("support_tickets").select("id,organization_id,status,assignment_status,priority,reporter_id,ticket_no,created_at").eq("id", body.ticket_id).maybeSingle();
   if (!ticket || ticket.organization_id !== me.organization_id) return NextResponse.json({ error: "Ticket nahi mila." }, { status: 404 });
   const { data: meta, error: metaErr } = await service.from("support_ticket_meta").select("*").eq("ticket_id", ticket.id).maybeSingle();
   if (metaErr) return NextResponse.json({ error: "Support Center migration (529) abhi nahi lagi." }, { status: 503 });
@@ -60,5 +62,12 @@ export async function POST(req: NextRequest) {
     events.map((e) => ({ ...e, note, ticket_id: ticket.id, organization_id: ticket.organization_id, actor_id: me.id })),
   );
   if (evErr) return NextResponse.json({ error: evErr.message }, { status: 500 });
+  // Raiser ko har status tabdeeli / hal hone par khabar (existing notifications).
+  if (body.status) {
+    const ref = `ISS-${new Date(ticket.created_at).getFullYear()}-${String(ticket.ticket_no).padStart(5, "0")}`;
+    const resolved = body.status === "resolved" || body.status === "closed";
+    const n = reporterNotice({ reporterId: ticket.reporter_id, actorId: me.id, event: resolved ? "resolved" : "status", ref, detail: note || `Status: ${body.status}` });
+    if (n) await notifyUser(n.userId, n.title, n.message, n.link);
+  }
   return NextResponse.json({ ok: true });
 }

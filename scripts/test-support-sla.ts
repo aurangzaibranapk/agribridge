@@ -1,5 +1,6 @@
 /** Support Center pure tests.  npm run test:support */
 import assert from "node:assert/strict";
+import { parseAssignChoice, reporterNotice } from "../src/lib/support/assign";
 import { mapPriority, mapStatus, normalize, views, developerCounts, summaries, weekKey, canTransition, moduleFromUrl } from "../src/lib/support/sla";
 
 let n = 0;
@@ -60,5 +61,16 @@ test("transitions: closed only reopens", () => {
   assert.equal(canTransition("closed", "in_progress"), false);
   assert.equal(canTransition("closed", "reopened"), true);
   assert.equal(canTransition("new", "new"), false);
+});
+test("assign choice parsing: empty = unassigned triage", () => {
+  assert.deepEqual(parseAssignChoice(""), { kind: "unassigned" });
+  assert.deepEqual(parseAssignChoice("person:0b6f2c1e-1111-4222-8333-944445555666"), { kind: "person", id: "0b6f2c1e-1111-4222-8333-944445555666" });
+  assert.deepEqual(parseAssignChoice("agent:codex_subscription"), { kind: "agent", key: "codex_subscription" });
+  assert.equal(parseAssignChoice("person:not-a-uuid").kind, "invalid");
+  assert.equal(parseAssignChoice("agent:https://evil").kind, "invalid");
+});
+test("reporter notice: skip self, resolved title", () => {
+  assert.equal(reporterNotice({ reporterId: "a", actorId: "a", event: "status", ref: "ISS-1", detail: "x" }), null);
+  assert.match(reporterNotice({ reporterId: "a", actorId: "b", event: "resolved", ref: "ISS-1", detail: "x" })!.title, /Hal ho gaya/);
 });
 console.log(`\n${n} tests passed`);
