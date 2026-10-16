@@ -1,29 +1,11 @@
 import Link from "next/link";
 import { t, type Lang } from "@/lib/i18n/translations";
+import { salesIn, type SalesScope } from "@/lib/reports/sales-fetch";
+import { DailySalesBreakdown } from "@/components/reports/daily-sales-breakdown";
 import { SALES_PERIODS, periodRange, pktDayKey, dayKeys, pctChange, type SalesPeriod } from "@/lib/reports/sales-period";
 
 const rs = (n: number) => `Rs. ${Math.round(n).toLocaleString()}`;
-const PAGE = 1000;
-
-type Scope = { meriDukan: string | null; shopId: string; branchId: string };
-
-/** Saari qatarein (PostgREST 1000 ki hadd se aage) -- request ke waqt live. */
-async function salesIn(supabase: any, scope: Scope, from: Date, to: Date) {
-  const rows: { id: string; total_amount: number; created_at: string }[] = [];
-  for (let off = 0; off < 200000; off += PAGE) {
-    let q = supabase.from("pos_sales").select("id, total_amount, created_at")
-      .gte("created_at", from.toISOString()).lt("created_at", to.toISOString())
-      .order("created_at").range(off, off + PAGE - 1);
-    if (scope.meriDukan) q = q.eq("shop_id", scope.meriDukan);
-    else if (scope.shopId) q = q.eq("shop_id", scope.shopId);
-    else if (scope.branchId) q = q.eq("branch_id", scope.branchId);
-    const { data, error } = await q;
-    if (error) throw new Error(error.message);
-    rows.push(...(data ?? []));
-    if (!data || data.length < PAGE) break;
-  }
-  return rows;
-}
+type Scope = SalesScope;
 
 export async function PeriodSalesSummary({ supabase, scope, period, lang, baseQuery, paymentLabels }: {
   supabase: any; scope: Scope; period: SalesPeriod; lang: Lang;
@@ -103,6 +85,7 @@ export async function PeriodSalesSummary({ supabase, scope, period, lang, baseQu
           </div>
         </div>
       )}
+      <DailySalesBreakdown supabase={supabase} scope={scope} tableRange={r} lang={lang} />
     </div>
   );
 }
