@@ -39,3 +39,8 @@ test("supplier + buyer lines", () => {
 });
 test("roles from records", () => { assert.deepEqual(rolesFrom({ farmers: 1, customers: 2, milk: true, suppliers: 0, buyers: 1 }), ["kisan", "customer", "milk", "buyer"]); assert.deepEqual(rolesFrom({ farmers: 0, customers: 0, milk: false, suppliers: 0, buyers: 0, dealer: true }), ["dealer"]); });
 console.log(`\n${c} passed`);
+import { ACCENT, kpiIcon, resolveTheme, short as shortRs } from "../src/components/party360/theme";
+test("theme: default light, only saved 'dark' is dark", () => { assert.equal(resolveTheme(null), "light"); assert.equal(resolveTheme("light"), "light"); assert.equal(resolveTheme("x"), "light"); assert.equal(resolveTheme("dark"), "dark"); });
+test("theme: every party type has a 2-stop accent", () => { for (const k of ["farmer", "customer", "dealer", "supplier", "buyer"] as const) assert.equal(ACCENT[k].length, 2); });
+test("theme: kpi icons + short money", () => { assert.equal(kpiIcon("Hum ne dena"), "down"); assert.equal(kpiIcon("Wasooli"), "cash"); assert.equal(kpiIcon("Fasal becha"), "leaf"); assert.equal(shortRs(1228500), "12.3L"); assert.equal(shortRs(16227230), "1.6Cr"); });
+console.log(`${c} passed (incl. theme)`);

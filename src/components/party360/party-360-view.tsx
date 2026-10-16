@@ -1,147 +1,180 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
+import { Banknote, Box, CalendarClock, FileText, MessageCircle, Plus, Scale, TrendingDown, TrendingUp, Wallet, Leaf, User, Link2 } from "lucide-react";
 import type { Party360Data, Tone, Kpi, Section, AgingBuckets } from "@/lib/intelligence/party360/core";
 import { ROLE_LABEL } from "@/lib/intelligence/party360/activity";
 import type { CreditPosition } from "@/lib/recovery/credit-position";
 import { CreditPositionStrip } from "@/components/recovery/credit-position-strip";
+import { ACCENT, kpiIcon, short } from "./theme";
 
-const TONE: Record<Tone, string> = {
-  neutral: "bg-surface-100 text-surface-700", good: "bg-emerald-100 text-emerald-800", bad: "bg-red-100 text-red-700",
-  warn: "bg-amber-100 text-amber-800", info: "bg-blue-100 text-blue-800",
-};
-const TXT: Record<Tone, string> = { neutral: "", good: "text-emerald-700", bad: "text-red-700", warn: "text-amber-700", info: "text-blue-700" };
-const HEAD: Record<Party360Data["type"], string> = { farmer: "bg-gradient-to-br from-green-600 to-green-800", customer: "bg-gradient-to-br from-blue-600 to-blue-800", dealer: "bg-gradient-to-br from-purple-600 to-purple-800", supplier: "bg-gradient-to-br from-orange-500 to-orange-700", buyer: "bg-gradient-to-br from-amber-600 to-amber-800" };
-const STRIPE: Record<Party360Data["type"], string> = { farmer: "bg-gradient-to-r from-green-500 via-green-700 to-emerald-600", customer: "bg-gradient-to-r from-blue-500 via-blue-700 to-indigo-600", dealer: "bg-gradient-to-r from-purple-500 via-purple-700 to-fuchsia-600", supplier: "bg-gradient-to-r from-orange-400 via-orange-600 to-red-500", buyer: "bg-gradient-to-r from-amber-500 via-amber-700 to-yellow-600" };
-const short = (n: number) => n >= 1e7 ? `${(n / 1e7).toFixed(1)}Cr` : n >= 1e5 ? `${(n / 1e5).toFixed(1)}L` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}k` : String(Math.round(n));
-const LABEL: Record<Party360Data["type"], string> = { farmer: "Kisan", customer: "Customer", dealer: "Dealer", supplier: "Supplier / Vendor", buyer: "Grain buyer" };
+/* Theme A (light premium) + Theme B (soft dark pro) — Tailwind `dark` class se. */
+const PAGE = "bg-[#F6F7FB] text-slate-900 dark:bg-[#172033] dark:text-slate-100";
+const CARD = "rounded-2xl border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(16,24,40,.04),0_8px_24px_-12px_rgba(16,24,40,.12)] dark:border-white/10 dark:bg-[#24324a] dark:shadow-[0_8px_24px_-12px_rgba(0,0,0,.45)]";
+const MUTE = "text-slate-500 dark:text-slate-400";
+const TITLE = "text-sm font-semibold text-slate-900 dark:text-slate-100";
+const ROW = "border-t border-slate-100 dark:border-white/[0.06]";
+const TXT: Record<Tone, string> = { neutral: "", good: "text-emerald-600 dark:text-emerald-400", bad: "text-red-600 dark:text-red-400", warn: "text-amber-600 dark:text-amber-400", info: "text-blue-600 dark:text-blue-400" };
+const TONEHEX: Record<Tone, string> = { neutral: "#64748B", good: "#059669", bad: "#DC2626", warn: "#D97706", info: "#2563EB" };
+const LABEL: Record<Party360Data["type"], string> = { farmer: "Kisan", customer: "Customer", dealer: "Dealer", supplier: "Supplier", buyer: "Grain buyer" };
+const ICONS = { rs: Banknote, box: Box, scale: Scale, up: TrendingUp, down: TrendingDown, clock: CalendarClock, cash: Wallet, leaf: Leaf, user: User } as const;
 const rs = (n: number) => `Rs ${Math.round(n).toLocaleString("en-PK")}`;
 const fmt = (k: Kpi) => k.value == null ? "—" : typeof k.value === "string" ? k.value : k.fmt === "rs" ? rs(k.value) : k.fmt === "kg" ? `${Math.round(k.value).toLocaleString("en-PK")} kg` : Math.round(k.value).toLocaleString("en-PK");
-const box = "rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900";
 
-function Bars({ months, series }: { months: string[]; series: { name: string; values: number[]; color: string }[] }) {
+function Bars({ months, series, acc }: { months: string[]; series: { name: string; values: number[]; color: string }[]; acc: [string, string] }) {
   const max = Math.max(1, ...series.flatMap((s) => s.values));
+  const multi = series.length > 1;
   return (
     <div>
-      <div className="flex h-40 items-end gap-2">
+      <div className="mt-10 flex h-52 items-end gap-4">
         {months.map((m, i) => (
-          <div key={m + i} className="flex flex-1 flex-col items-center">
-            <div className="flex h-32 w-full items-end justify-center gap-0.5">
-              {series.map((s) => <div key={s.name} className="flex w-full flex-col items-center justify-end" style={{ maxWidth: series.length > 1 ? 22 : undefined }}><div className="mb-0.5 text-[9px] tabular-nums text-slate-500">{s.values[i] ? short(s.values[i]) : ""}</div><div title={`${s.name}: ${rs(s.values[i])}`} className={`w-full rounded-t ${s.color}`} style={{ height: `${Math.max(3, (s.values[i] / max) * 100)}px` }} /></div>)}
+          <div key={m + i} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+            <div className="flex h-full w-full items-end justify-center gap-1">
+              {series.map((s, si) => {
+                const v = s.values[i];
+                const bg = multi ? undefined : `linear-gradient(180deg, ${acc[0]}, ${acc[1]})`;
+                return (
+                  <div key={s.name} className="group relative flex h-full w-full max-w-[46px] items-end">
+                    <div className={`w-full rounded-b-[4px] rounded-t-[10px] transition-all duration-200 group-hover:opacity-100 group-hover:brightness-110 ${multi ? s.color : ""} ${v ? "opacity-85" : "opacity-25"}`} style={{ height: `${Math.max(4, (v / max) * 100)}%`, background: bg }} />
+                    <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-[11px] text-white shadow-lg group-hover:block dark:bg-white dark:text-slate-900">
+                      <div className="font-semibold">{m}</div>{s.name}: {rs(v)}
+                    </div>
+                    {si === 0 && !multi && v > 0 && <span className={`absolute -top-5 left-1/2 -translate-x-1/2 text-[10px] tabular-nums ${MUTE}`}>{short(v)}</span>}
+                  </div>
+                );
+              })}
             </div>
-            <div className="mt-1 text-[10px] text-surface-500">{m}</div>
+            <div className={`text-[11px] ${MUTE}`}>{m}</div>
           </div>
         ))}
       </div>
-      <div className="mt-2 flex flex-wrap gap-3 text-[10px] text-surface-500">{series.map((s) => <span key={s.name}><span className={`mr-1 inline-block h-2 w-2 rounded ${s.color}`} />{s.name}</span>)}</div>
+      {multi && <div className={`mt-3 flex flex-wrap gap-4 text-[11px] ${MUTE}`}>{series.map((s) => <span key={s.name} className="inline-flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${s.color}`} />{s.name}</span>)}</div>}
     </div>
   );
 }
 
 function Aging({ a, note }: { a: AgingBuckets; note?: string }) {
-  const parts: [string, number, string][] = [["0-30", a.d0_30, "bg-emerald-500"], ["31-60", a.d31_60, "bg-yellow-400"], ["61-90", a.d61_90, "bg-orange-500"], ["90+", a.d90p, "bg-red-600"]];
+  const parts: [string, number, string][] = [["0–30 din", a.d0_30, "#10B981"], ["31–60", a.d31_60, "#F59E0B"], ["61–90", a.d61_90, "#F97316"], ["90+", a.d90p, "#EF4444"]];
   return (
     <div>
-      <div className="flex h-4 overflow-hidden rounded-full bg-slate-100">{parts.map(([l, v, c]) => <div key={l} className={c} style={{ width: `${a.total ? (v / a.total) * 100 : 0}%` }} />)}</div>
-      <div className="mt-2 grid grid-cols-4 text-[11px]">{parts.map(([l, v, c]) => <div key={l}><span className={`mr-1 inline-block h-2 w-2 rounded ${c}`} />{l} din<br /><b className="tabular-nums">{rs(v)}</b></div>)}</div>
-      {note && <p className="mt-1 text-[10px] text-surface-400">{note}</p>}
+      {note && <p className={`text-[12px] ${MUTE}`}>{note}</p>}
+      <div className="mt-5 flex h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">{parts.map(([l, v, c]) => <div key={l} style={{ width: `${a.total ? (v / a.total) * 100 : 0}%`, background: c }} />)}</div>
+      <div className="mt-5 grid grid-cols-2 gap-4">{parts.map(([l, v, c]) => <div key={l}><div className={`flex items-center gap-1.5 text-[11px] ${MUTE}`}><span className="h-2 w-2 rounded-full" style={{ background: c }} />{l}</div><div className="text-sm font-semibold tabular-nums">{rs(v)}</div></div>)}</div>
     </div>
   );
 }
 
 function SectionCard({ s }: { s: Section }) {
   return (
-    <div className={box}>
-      <h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-surface-200">{s.title}</h3>
-      {s.note && <p className="mb-2 text-[11px] text-surface-500">{s.note}</p>}
+    <div className={`${CARD} p-6`}>
+      <h3 className={TITLE}>{s.title}</h3>
+      {s.note && <p className={`mt-0.5 text-[12px] ${MUTE}`}>{s.note}</p>}
       {s.rows.length ? (
-        <div className="overflow-x-auto"><table className="w-full text-xs">
-          {s.columns.some(Boolean) && <thead><tr className="border-b text-left text-surface-500">{s.columns.map((c, i) => <th key={i} className="py-1 pr-2 font-medium">{c}</th>)}</tr></thead>}
-          <tbody className="divide-y divide-surface-100">{s.rows.map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j} className="py-1.5 pr-2 tabular-nums">{c ?? "—"}</td>)}</tr>)}</tbody>
+        <div className="mt-3 overflow-x-auto"><table className="w-full text-[13px]">
+          {s.columns.some(Boolean) && <thead><tr>{s.columns.map((c, i) => <th key={i} className={`pb-2 pr-3 text-left text-[11px] font-medium uppercase tracking-wider ${MUTE}`}>{c}</th>)}</tr></thead>}
+          <tbody>{s.rows.map((r, i) => <tr key={i} className={ROW}>{r.map((c, j) => <td key={j} className="py-2.5 pr-3 tabular-nums">{c ?? "—"}</td>)}</tr>)}</tbody>
         </table></div>
-      ) : <p className="text-xs text-surface-400">{s.empty ?? "Kuch nahi."}</p>}
+      ) : <p className={`mt-3 text-[13px] ${MUTE}`}>{s.empty ?? "Kuch nahi."}</p>}
     </div>
   );
 }
 
 export function Party360View({ d, credit }: { d: Party360Data; credit: CreditPosition | null }) {
   const act = d.activity;
+  const acc = ACCENT[d.type];
   const links = [...(act?.links ?? []), ...(d.links ?? [])];
+  const glow: CSSProperties = { backgroundImage: `radial-gradient(900px 260px at 0% -30%, ${acc[0]}38, transparent), radial-gradient(700px 260px at 100% -40%, ${acc[1]}38, transparent)` };
+  const tl = [...d.timeline, ...(act?.timeline ?? [])].filter((t, i, a) => a.findIndex((x) => x.date === t.date && x.label === t.label && x.amount === t.amount) === i).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 30);
   return (
-    <div className="-m-2 space-y-4 rounded-2xl bg-slate-100 p-4 font-sans dark:bg-surface-950">
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-surface-700 dark:bg-surface-900">
-        <div className={`h-2 ${STRIPE[d.type]}`} />
-        <div className="flex flex-wrap items-center gap-4 p-5">
-          <div className={`flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold text-white shadow-md ring-4 ring-white ${HEAD[d.type]}`}>{(d.name || "?").slice(0, 1).toUpperCase()}</div>
+    <div className={`-m-4 space-y-6 p-4 font-sans antialiased sm:-m-6 sm:p-8 ${PAGE}`} data-party360-theme>
+      {/* Glassy header */}
+      <div className="relative overflow-hidden rounded-3xl border border-slate-200/70 bg-white shadow-[0_20px_50px_-20px_rgba(16,24,40,.25)] dark:border-white/10 dark:bg-[#1e293b]">
+        <div className="pointer-events-none absolute inset-0" style={glow} />
+        <div className="relative flex flex-wrap items-center gap-5 p-7 backdrop-blur-xl">
+          <div className="grid h-16 w-16 place-items-center rounded-2xl text-2xl font-semibold text-white shadow-lg" style={{ background: `linear-gradient(135deg, ${acc[0]}, ${acc[1]})` }}>{(d.name || "?").slice(0, 1).toUpperCase()}</div>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2"><h1 className="text-xl font-bold">{d.name}</h1><span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">{LABEL[d.type]} 360</span></div>
-            <p className="text-xs text-surface-500">{d.sub.join(" · ")}</p>
-            {act && act.roles.length > 0 && (
-              <div className="mt-1 flex flex-wrap items-center gap-1"><span className="text-[10px] font-semibold uppercase text-surface-400">Roles:</span>
-                {act.roles.map((r) => <span key={r} className="rounded-full border border-surface-300 px-2 py-0.5 text-[11px] font-semibold">{ROLE_LABEL[r]}</span>)}</div>
-            )}
-            <div className="mt-1 flex flex-wrap gap-1">{d.badges.map((b) => <span key={b.label} className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${TONE[b.tone]}`}>{b.label}</span>)}</div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-[26px] font-semibold tracking-tight">{d.name}</h1>
+              <span className="rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest" style={{ background: `${acc[0]}1f`, color: acc[0] }}>{LABEL[d.type]} 360</span>
+            </div>
+            <p className={`mt-0.5 text-[13px] ${MUTE}`}>{d.sub.join(" · ")}</p>
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+              {act?.roles.map((r) => <span key={r} className="rounded-full bg-slate-900/[0.04] px-2.5 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-900/10 dark:bg-white/10 dark:text-slate-200 dark:ring-white/10">{ROLE_LABEL[r]}</span>)}
+              {act?.roles.length ? <span className={`mx-1 ${MUTE}`}>·</span> : null}
+              {d.badges.map((b) => <span key={b.label} className="rounded-full px-2.5 py-1 text-[11px] font-medium" style={{ background: `${TONEHEX[b.tone]}22`, color: TONEHEX[b.tone] }}>{b.label}</span>)}
+            </div>
           </div>
-          <div className="flex flex-wrap justify-end gap-2">
+          <div className="flex max-w-xl flex-wrap justify-end gap-2">
             {d.actions.map((a) => {
-              const cls = `rounded-lg px-3 py-1.5 text-xs font-semibold ${a.primary ? "bg-green-800 text-white shadow-sm hover:bg-green-900" : "border border-slate-300 bg-white shadow-sm hover:bg-slate-50 dark:bg-surface-800"}`;
-              return a.href.startsWith("http") ? <a key={a.label} href={a.href} target="_blank" rel="noreferrer" className={cls}>{a.label}</a> : <Link key={a.label} href={a.href} className={cls}>{a.label}</Link>;
+              const Icon = /statement/i.test(a.label) ? FileText : /whatsapp/i.test(a.label) ? MessageCircle : /naya|nayi|new/i.test(a.label) ? Plus : /wasool|payment/i.test(a.label) ? Wallet : User;
+              const inner = <><Icon className="h-4 w-4" />{a.label}</>;
+              const cls = a.primary ? "inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-medium text-white shadow-sm transition hover:brightness-110" : "inline-flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2 text-[13px] font-medium text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 dark:bg-white/5 dark:text-slate-200 dark:ring-white/10 dark:hover:bg-white/10";
+              const st = a.primary ? { background: `linear-gradient(180deg, ${acc[0]}, ${acc[1]})` } : undefined;
+              return a.href.startsWith("http") ? <a key={a.label} href={a.href} target="_blank" rel="noreferrer" className={cls} style={st}>{inner}</a> : <Link key={a.label} href={a.href} className={cls} style={st}>{inner}</Link>;
             })}
           </div>
         </div>
       </div>
 
-      {d.empty && <div className="rounded-xl border border-dashed border-surface-300 p-6 text-center text-sm text-surface-500">{d.empty}</div>}
+      {d.empty && <div className={`${CARD} border-dashed p-8 text-center text-sm ${MUTE}`}>{d.empty}</div>}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        {d.kpis.map((k) => (
-          <div key={k.label} className={box + " p-3"}>
-            <p className="text-[11px] font-medium text-slate-500">{k.label}</p>
-            <p className={`text-lg font-bold tabular-nums ${k.value == null ? "text-surface-400" : TXT[k.tone ?? "neutral"]}`}>{fmt(k)}</p>
-            {k.hint && <p className="text-[10px] text-surface-400">{k.hint}</p>}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+        {d.kpis.map((k) => { const Icon = ICONS[kpiIcon(k.label)]; return (
+          <div key={k.label} className={`${CARD} p-4`}>
+            <div className={`flex items-center gap-2 text-[12px] ${MUTE}`}><span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg" style={{ background: `${acc[0]}1f`, color: acc[0] }}><Icon className="h-4 w-4" /></span><span className="truncate">{k.label}</span></div>
+            <div className={`mt-3 text-[22px] font-semibold tracking-tight tabular-nums ${k.value == null ? "text-slate-400" : TXT[k.tone ?? "neutral"]}`}>{fmt(k)}</div>
+            {k.hint && <div className={`truncate text-[11px] ${MUTE}`}>{k.hint}</div>}
           </div>
-        ))}
+        ); })}
       </div>
 
-      {credit && <div className={box}><h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-surface-200">Udhaar halat</h3><CreditPositionStrip position={credit} /></div>}
+      {credit && <div className={`${CARD} p-6`}><h3 className={`${TITLE} mb-3`}>Udhaar halat</h3><CreditPositionStrip position={credit} /></div>}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        {d.monthly && <div className={box + " lg:col-span-2"}><h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-surface-200">{d.monthly.title}</h3><Bars months={d.monthly.months} series={d.monthly.series} /></div>}
-        <div className={box}><h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-surface-200">Baqaya kitna purana (aging)</h3>{d.aging ? <Aging a={d.aging} note={d.agingNote} /> : <p className="text-xs text-surface-400">Koi baqaya nahi.</p>}</div>
+        {d.monthly && <div className={`${CARD} p-6 lg:col-span-2`}><div className={TITLE}>{d.monthly.title}</div><div className={`text-[12px] ${MUTE}`}>Pichle 6 mahine</div><Bars months={d.monthly.months} series={d.monthly.series} acc={acc} /></div>}
+        <div className={`${CARD} p-6`}>
+          <div className={TITLE}>Aging</div>
+          {d.aging ? <Aging a={d.aging} note={d.agingNote} /> : <p className={`mt-2 text-[13px] ${MUTE}`}>Koi baqaya nahi.</p>}
+          {act && <div className="mt-6 rounded-xl p-4" style={{ background: `${acc[0]}14` }}><div className={`text-[12px] ${MUTE}`}>Net position</div><div className="text-xl font-semibold tabular-nums" style={{ color: acc[0] }}>{act.net.net < 0 ? "− " : ""}{rs(Math.abs(act.net.net))}</div><div className={`text-[11px] ${MUTE}`}>{act.net.net > 0 ? "party ne dena" : act.net.net < 0 ? "hum ne dena" : "barabar"}</div></div>}
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">{d.sections.map((s) => <SectionCard key={s.title} s={s} />)}</div>
 
       {act && (
-        <div className="space-y-4 rounded-2xl border-2 border-dashed border-surface-300 p-4">
-          <div><h2 className="text-base font-bold">Sab kaam humare saath</h2><p className="text-[11px] text-surface-500">Doodh, Vets, Karyana, Dukan, Procurement, khaad credit, bookings aur waade — sirf pakke (explicit) links se jude records.</p></div>
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className={box + " p-3"}><p className="text-[11px] text-surface-500">Unhon ne humein dena</p><p className="text-xl font-bold text-amber-700 tabular-nums">{rs(act.net.theyOwe)}</p></div>
-            <div className={box + " p-3"}><p className="text-[11px] text-surface-500">Hum ne unhein dena</p><p className="text-xl font-bold text-red-700 tabular-nums">{rs(act.net.weOwe)}</p></div>
-            <div className={box + " p-3"}><p className="text-[11px] text-surface-500">Net</p><p className={`text-xl font-bold tabular-nums ${act.net.net > 0 ? "text-amber-700" : act.net.net < 0 ? "text-red-700" : "text-emerald-700"}`}>{rs(Math.abs(act.net.net))}</p><p className="text-[10px] text-surface-400">{act.net.net > 0 ? "party ne dena" : act.net.net < 0 ? "hum ne dena" : "barabar"}</p></div>
+        <div className="space-y-4">
+          <div><h2 className="text-lg font-semibold tracking-tight">Sab kaam humare saath</h2><p className={`text-[12px] ${MUTE}`}>Doodh, Vets, Karyana, Dukan, Procurement, khaad credit, bookings aur waade — sirf pakke (explicit) links se.</p></div>
+          <div className="grid gap-4 md:grid-cols-3">
+            {([["Unhon ne humein dena", act.net.theyOwe, "warn"], ["Hum ne unhein dena", act.net.weOwe, "bad"], ["Net", Math.abs(act.net.net), act.net.net > 0 ? "warn" : act.net.net < 0 ? "bad" : "good"]] as [string, number, Tone][]).map(([l, v, t]) => (
+              <div key={l} className={`${CARD} p-5`}><div className={`text-[12px] ${MUTE}`}>{l}</div><div className={`mt-1 text-2xl font-semibold tracking-tight tabular-nums ${TXT[t]}`}>{rs(v)}</div>{l === "Net" && <div className={`text-[11px] ${MUTE}`}>{act.net.net > 0 ? "party ne dena" : act.net.net < 0 ? "hum ne dena" : "barabar"}</div>}</div>
+            ))}
           </div>
-          <div className={box}>
-            <h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-surface-200">Dukan / shoba wise</h3>
-            {act.shops.length ? <div className="overflow-x-auto"><table className="w-full text-xs"><thead><tr className="border-b text-left text-surface-500"><th className="py-1">Shoba</th><th>Unhon ne liya (maal/khidmat)</th><th>Unhon ne diya (maal: doodh/fasal/bill)</th><th>Paisa humein mila</th><th>Paisa hum ne diya</th><th>Baqi (+ wo dein / − hum dein)</th></tr></thead>
-              <tbody className="divide-y divide-surface-100">{act.shops.map((l) => <tr key={l.key}><td className="py-1.5">{l.label}{l.note && <span className="ml-1 text-[10px] text-surface-400">({l.note})</span>}</td><td className="tabular-nums">{rs(l.weSold)}</td><td className="tabular-nums">{rs(l.weBought)}</td><td className="tabular-nums">{rs(l.received)}</td><td className="tabular-nums">{rs(l.paid)}</td><td className={`tabular-nums font-semibold ${l.balance > 0 ? "text-amber-700" : l.balance < 0 ? "text-red-700" : ""}`}>{l.balance ? (l.balance > 0 ? "+" : "−") + rs(Math.abs(l.balance)) : "—"}</td></tr>)}</tbody></table></div>
-              : <p className="text-xs text-surface-400">Kisi shoba mein koi kaam nahi.</p>}
+          <div className={`${CARD} p-6`}>
+            <h3 className={TITLE}>Shoba-wise</h3>
+            {act.shops.length ? <div className="mt-3 overflow-x-auto"><table className="w-full text-[13px]"><thead><tr>{["Shoba", "Unhon ne liya (maal/khidmat)", "Unhon ne diya (maal: doodh/fasal/bill)", "Paisa humein mila", "Paisa hum ne diya", "Baqi (+ wo dein / − hum dein)"].map((h) => <th key={h} className={`pb-2 pr-3 text-left text-[11px] font-medium uppercase tracking-wider ${MUTE}`}>{h}</th>)}</tr></thead>
+              <tbody>{act.shops.map((l) => <tr key={l.key} className={ROW}><td className="py-2.5 pr-3"><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{ background: l.balance > 0 ? "#D97706" : l.balance < 0 ? "#DC2626" : acc[0] }} />{l.label}</span>{l.note && <span className={`ml-1 text-[10px] ${MUTE}`}>({l.note})</span>}</td><td className="tabular-nums">{rs(l.weSold)}</td><td className="tabular-nums">{rs(l.weBought)}</td><td className="tabular-nums">{rs(l.received)}</td><td className="tabular-nums">{rs(l.paid)}</td><td className={`font-semibold tabular-nums ${l.balance > 0 ? TXT.warn : l.balance < 0 ? TXT.bad : ""}`}>{l.balance ? (l.balance > 0 ? "+" : "−") + rs(Math.abs(l.balance)) : "—"}</td></tr>)}</tbody></table></div>
+              : <p className={`mt-2 text-[13px] ${MUTE}`}>Kisi shoba mein koi kaam nahi.</p>}
           </div>
-          <div className={box}><h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-surface-200">Mahana: sab shobay</h3>{act.monthly.series.length ? <Bars months={act.monthly.months} series={act.monthly.series} /> : <p className="text-xs text-slate-400">Pichle 6 mahine mein koi activity nahi.</p>}</div>
+          <div className={`${CARD} p-6`}><div className={TITLE}>Mahana: sab shobay</div><div className={`text-[12px] ${MUTE}`}>Pichle 6 mahine · bar par hover karein</div>{act.monthly.series.length ? <Bars months={act.monthly.months} series={act.monthly.series} acc={acc} /> : <p className={`mt-3 text-[13px] ${MUTE}`}>Pichle 6 mahine mein koi activity nahi.</p>}</div>
           <div className="grid gap-4 lg:grid-cols-2">{act.sections.map((s) => <SectionCard key={s.title} s={s} />)}</div>
         </div>
       )}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className={box + " lg:col-span-2"}>
-          <h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-surface-200">Timeline</h3>
-          {(() => { const tl = [...d.timeline, ...(act?.timeline ?? [])].filter((t, i, a) => a.findIndex((x) => x.date === t.date && x.label === t.label && x.amount === t.amount) === i).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 30);
-            return tl.length ? <ol className="space-y-2 text-xs">{tl.map((t, i) => <li key={i} className="flex gap-2"><span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${TONE[t.tone ?? "neutral"]}`} /><div className="flex-1"><span className="font-medium">{t.label}</span>{t.amount ? <span className="ml-2 tabular-nums text-surface-600">{rs(t.amount)}</span> : null}<div className="text-surface-400">{new Date(t.date.length === 10 ? `${t.date}T00:00:00+05:00` : t.date).toLocaleString("en-GB", { timeZone: "Asia/Karachi", dateStyle: "medium" })}</div></div></li>)}</ol> : <p className="text-xs text-surface-400">Koi activity nahi.</p>; })()}
+        <div className={`${CARD} p-6 lg:col-span-2`}>
+          <h3 className={`${TITLE} mb-4`}>Timeline</h3>
+          {tl.length ? <ol className="ml-1 border-l border-slate-200 dark:border-white/10">{tl.map((t, i) => (
+            <li key={i} className="relative pb-4 pl-6"><span className="absolute -left-[5px] top-1 h-2.5 w-2.5 rounded-full ring-4 ring-white dark:ring-[#24324a]" style={{ background: TONEHEX[t.tone ?? "neutral"] }} />
+              <div className="text-sm font-medium">{t.label}</div>
+              <div className={`text-[11px] ${MUTE}`}>{new Date(t.date.length === 10 ? `${t.date}T00:00:00+05:00` : t.date).toLocaleDateString("en-GB", { timeZone: "Asia/Karachi", day: "2-digit", month: "short", year: "numeric" })}{t.amount ? ` · ${rs(t.amount)}` : ""}</div></li>
+          ))}</ol> : <p className={`text-[13px] ${MUTE}`}>Koi activity nahi.</p>}
         </div>
-        <div className={box}>
-          <h3 className="mb-2 text-sm font-semibold text-slate-700 dark:text-surface-200">Jude hue records</h3>
-          {links.length ? <ul className="space-y-1 text-xs">{links.map((l) => <li key={l.href + l.label}><Link href={l.href} className="text-brand-700 underline">{l.label}</Link></li>)}</ul> : <p className="text-xs text-surface-400">Koi pakka link nahi.</p>}
+        <div className={`${CARD} p-6`}>
+          <h3 className={`${TITLE} mb-3`}>Jude hue records</h3>
+          {links.length ? <ul className="space-y-2 text-[13px]">{links.map((l) => <li key={l.href + l.label}><Link href={l.href} className="inline-flex items-center gap-1.5 hover:underline" style={{ color: acc[0] }}><Link2 className="h-3.5 w-3.5" />{l.label}</Link></li>)}</ul> : <p className={`text-[13px] ${MUTE}`}>Koi pakka link nahi.</p>}
         </div>
       </div>
-      {d.notes.length > 0 && <p className="text-[10px] text-surface-400">Notes: {d.notes.join(" · ")}</p>}
-      <p className="text-[10px] text-surface-400"><Link href={`?type=${d.type}&id=${d.id}&view=classic`} className="underline">Purana (classic) view</Link></p>
+      {d.notes.length > 0 && <p className={`text-[10px] ${MUTE}`}>Notes: {d.notes.join(" · ")}</p>}
+      <p className={`text-[10px] ${MUTE}`}><Link href={`?type=${d.type}&id=${d.id}&view=classic`} className="underline">Purana (classic) view</Link></p>
     </div>
   );
 }
