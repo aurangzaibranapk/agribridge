@@ -23,6 +23,7 @@
     "test:columns": "node tests/legacy-column-names.cjs",
     "test:sidebar": "node tests/sidebar-new-modules.cjs",
     "test:sales-period": "npx --yes tsx scripts/test-sales-period.ts && npx --yes tsx scripts/test-sales-daily.ts",
+    "test:farmers-rls": "node tests/farmers-staff-insert-rls.cjs",
     "test:recovery-guard": "npx --yes tsx scripts/test-recovery-party-guard.ts"
   },
   "dependencies": {
