@@ -52,6 +52,17 @@ const PAYMENT_LABELS: Record<string, string> = {
   bank_transfer: "Bank Transfer",
 };
 
+// Inline <style> children get HTML-escaped on the server ("→&quot;) and
+// cause a hydration text mismatch; inject raw CSS instead.
+const SALES_PRINT_CSS = `
+        @media print {
+          .no-print { display: none !important; }
+          nav, header, aside, [data-sidebar], [role="navigation"] { display: none !important; }
+          body { font-size: 12px; }
+          .rounded-card { border: 1px solid #e5e7eb !important; box-shadow: none !important; }
+        }
+      `;
+
 export default async function SalesReportPage({
   searchParams,
 }: {
@@ -478,14 +489,7 @@ export default async function SalesReportPage({
 
   return (
     <div>
-      <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          nav, header, aside, [data-sidebar], [role="navigation"] { display: none !important; }
-          body { font-size: 12px; }
-          .rounded-card { border: 1px solid #e5e7eb !important; box-shadow: none !important; }
-        }
-      `}</style>
+      <style dangerouslySetInnerHTML={{ __html: SALES_PRINT_CSS }} />
       <PageHeader
         title={t("rs_title", lang)}
         description={

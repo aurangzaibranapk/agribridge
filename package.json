@@ -27,7 +27,11 @@
     "test:recovery-guard": "npx --yes tsx scripts/test-recovery-party-guard.ts",
     "test:support-departments": "npx --yes tsx scripts/test-support-departments.ts",
     "test:overdue-policy": "npx --yes tsx scripts/test-overdue-policy.ts",
-    "test:sales-shop-filter": "npx --yes tsx scripts/test-sales-shop-filter.ts"
+    "test:sales-shop-filter": "npx --yes tsx scripts/test-sales-shop-filter.ts",
+    "test:lightbox": "node tests/support-screenshot-lightbox.cjs",
+    "test:support-llm": "npx --yes tsx scripts/test-support-llm-agents.ts",
+    "test:txn-counter": "node tests/txn-counter-collision.cjs",
+    "test:party-360": "npx --yes tsx scripts/test-party-360.ts"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",

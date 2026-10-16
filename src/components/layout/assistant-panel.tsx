@@ -15,6 +15,7 @@ import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { CoachMessage } from "@/components/guided/coach-message";
 import { SupportDesk } from "@/components/support/support-desk";
+import { LightboxImage } from "@/components/ui/image-lightbox";
 
 const initialState: ActionState = {};
 const initialBroadcastState: BroadcastActionState = {};
@@ -763,9 +764,7 @@ function ChatPane({
               <div className={`max-w-[80%] rounded-xl px-3 py-1.5 text-xs ${isMine ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-800 dark:bg-surface-800 dark:text-surface-200"}`}>
                 {m.message && <p className="whitespace-pre-line">{m.message}</p>}
                 {m.attachment_url && m.attachment_type === "image" && (
-                  <a href={m.attachment_url} target="_blank" rel="noopener noreferrer">
-                    <img src={m.attachment_url} alt="attachment" className="mt-1 max-h-32 rounded-lg" />
-                  </a>
+                  <LightboxImage src={m.attachment_url} alt="attachment" className="mt-1 max-h-32 rounded-lg" />
                 )}
                 {m.attachment_url && m.attachment_type === "file" && (
                   <a href={m.attachment_url} target="_blank" rel="noopener noreferrer" className="mt-1 flex items-center gap-1 underline">
