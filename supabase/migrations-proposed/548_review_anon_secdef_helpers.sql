@@ -1,0 +1,69 @@
+-- Generated 2026-10-16 from live advisors (read-only analysis). Privilege-only: no data changes.
+-- NEEDS REVIEW: not in supabase/migrations on purpose. Used by RLS policies / views / shared actions / portal.
+-- Revoking anon may break anon queries on tables whose policies are TO public.
+-- [needs_review_policy_helper] callers: 
+-- revoke execute on function public.current_dealer_id() from public, anon;
+-- [needs_review_shared] callers: src/actions/supplier-bill-rates.ts
+-- revoke execute on function public.fn_apply_bill_line_rate(p_line_id uuid) from public, anon;
+-- [needs_review_shared] callers: src/actions/product-setup.ts
+-- revoke execute on function public.fn_assign_internal_barcode(p_product_id uuid) from public, anon;
+-- [needs_review_shared] callers: src/actions/product-setup.ts
+-- revoke execute on function public.fn_assign_internal_barcodes_missing() from public, anon;
+-- [needs_review_shared] callers: src/actions/hr-attendance.ts, src/actions/hr.ts [svc]
+-- revoke execute on function public.fn_attendance_month_summary(p_profile uuid, p_year integer, p_month integer) from public, anon;
+-- [needs_review_policy_helper] callers: 
+-- revoke execute on function public.fn_can_machinery(p_action text) from public, anon;
+-- [needs_review_policy_helper] callers: 
+-- revoke execute on function public.fn_can_see_sale(p_branch_id uuid, p_shop_id uuid) from public, anon;
+-- [needs_review_shared] callers: src/actions/farmer-loans.ts
+-- revoke execute on function public.fn_create_farmer_loan_atomic(p_farmer_id uuid, p_principal_amount numeric, p_weekly_installment numeric, p_notes text, p_client_action_id uuid) from public, anon;
+-- [needs_review_public] callers: src/app/portal/crops/page.tsx
+-- revoke execute on function public.fn_crop_profit_benchmarks() from public, anon;
+-- [needs_review_policy_helper] callers: 
+-- revoke execute on function public.fn_current_user_branch_id() from public, anon;
+-- [needs_review_policy_helper] callers: 
+-- revoke execute on function public.fn_current_user_organization_id() from public, anon;
+-- [needs_review_policy_helper] callers: 
+-- revoke execute on function public.fn_default_active(p_type text, p_id uuid) from public, anon;
+-- [needs_review_shared] callers: src/lib/farmers/identity.ts
+-- revoke execute on function public.fn_find_farmer_by_phone(p_phone text) from public, anon;
+-- [needs_review_shared] callers: src/actions/cycle-stock-count.ts
+-- revoke execute on function public.fn_get_cycle_count_batch(p_cycle_days integer, p_daily_count integer) from public, anon;
+-- [needs_review_shared] callers: src/actions/product-cycles.ts
+-- revoke execute on function public.fn_get_next_product_cycle(p_shop_id uuid, p_count integer) from public, anon;
+-- [needs_review_shared] callers: src/lib/ledger/supplier-money.ts
+-- revoke execute on function public.fn_has_dept(p_roles user_role[]) from public, anon;
+-- [needs_review_shared] callers: src/actions/hr-attendance.ts, src/actions/leave.ts
+-- revoke execute on function public.fn_hr_can_decide_for(p_target uuid) from public, anon;
+-- [needs_review_policy_helper] callers: 
+-- revoke execute on function public.fn_hr_can_view_staff(p_target uuid) from public, anon;
+-- [needs_review_policy_helper] callers: 
+-- revoke execute on function public.fn_is_admin_level() from public, anon;
+-- [needs_review_public] callers: src/app/api/supplier-payments/route.ts, src/app/api/customer-udhaar/route.ts, src/app/api/customer-statements/[id]/route.ts [svc]
+-- revoke execute on function public.fn_is_any_staff() from public, anon;
+-- [needs_review_shared] callers: src/actions/leave.ts
+-- revoke execute on function public.fn_leave_entitlement(p_profile uuid, p_year integer) from public, anon;
+-- [needs_review_policy_helper] callers: 
+-- revoke execute on function public.fn_machine_daily_capacity(p_machine_id uuid) from public, anon;
+-- [needs_review_shared] callers: src/actions/category-merge.ts
+-- revoke execute on function public.fn_merge_categories(p_from uuid, p_into uuid, p_reason text) from public, anon;
+-- [needs_review_shared] callers: src/actions/products.ts
+-- revoke execute on function public.fn_merge_duplicate_product(p_source_id uuid, p_target_id uuid) from public, anon;
+-- [needs_review_shared] callers: src/actions/product-cycles.ts
+-- revoke execute on function public.fn_next_shop_batch_number(p_shop_id uuid) from public, anon;
+-- [needs_review_policy_helper] callers: 
+-- revoke execute on function public.fn_owns_loan(p_loan_type text, p_loan_id uuid) from public, anon;
+-- [needs_review_shared] callers: src/actions/farmer-credit.ts
+-- revoke execute on function public.fn_post_farmer_credit_atomic(p_mode text, p_farmer_id uuid, p_amount numeric, p_source_type text, p_account_id uuid, p_notes text, p_collected_by text, p_client_action_id uuid) from public, anon;
+-- [needs_review_shared] callers: src/actions/finance.ts
+-- revoke execute on function public.fn_post_finance_atomic(p_mode text, p_account_id uuid, p_to_account_id uuid, p_amount numeric, p_category text, p_transaction_date date, p_notes text, p_against_account text, p_client_action_id uuid) from public, anon;
+-- [needs_review_policy_helper] callers: 
+-- revoke execute on function public.fn_score_visible(p_subject_type text, p_subject_id uuid) from public, anon;
+-- [needs_review_shared] callers: src/actions/products-import.ts
+-- revoke execute on function public.fn_set_product_rates(p_product_id uuid, p_sale numeric, p_trade numeric, p_wholesale numeric, p_source text) from public, anon;
+-- [needs_review_shared] callers: src/components/reports/reports-client.tsx
+-- revoke execute on function public.get_daily_sales_summary(p_date date) from public, anon;
+-- [needs_review_shared] callers: src/components/pos/receipt-modal.tsx
+-- revoke execute on function public.get_sale_receipt(p_sale_id uuid) from public, anon;
+-- [needs_review_shared] callers: src/components/khata/khata-client.tsx
+-- revoke execute on function public.record_khata_payment(p_customer_id uuid, p_amount numeric, p_note text) from public, anon;

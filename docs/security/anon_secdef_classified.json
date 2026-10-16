@@ -1,0 +1,1627 @@
+[
+ {
+  "proname": "create_pos_sale",
+  "args": "p_items jsonb, p_payment_mode text, p_cash_paid numeric, p_khata_amount numeric, p_customer_id uuid, p_counter_id uuid, p_payment_lines jsonb, p_discount numeric, p_discount_reason text, p_client_action_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "create_pos_sale_base_504",
+  "args": "p_items jsonb, p_payment_mode text, p_cash_paid numeric, p_khata_amount numeric, p_customer_id uuid, p_counter_id uuid, p_payment_lines jsonb, p_discount numeric, p_discount_reason text",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "current_dealer_id",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "needs_review_policy_helper",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "current_shop_id",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_access_conflicts",
+  "args": "p_profile uuid, p_extra_feature text, p_extra_actions text[], p_extra_scope text",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/lib/access/conflicts.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_ai_daily_stock_alert",
+  "args": "",
+  "no_sp": true,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_apply_bill_line_rate",
+  "args": "p_line_id uuid",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/actions/supplier-bill-rates.ts"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_apply_role_template",
+  "args": "p_profile uuid, p_template text",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_asset_dep_compute",
+  "args": "p_period date, p_user uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/assets.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_asset_dep_mark_posted",
+  "args": "p_run_id uuid, p_entry_id uuid, p_user uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/assets.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_assign_internal_barcode",
+  "args": "p_product_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/actions/product-setup.ts"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_assign_internal_barcodes_missing",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/actions/product-setup.ts"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_attendance_audit",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_attendance_calendar",
+  "args": "p_profile uuid, p_year integer, p_month integer",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "fn_attendance_month_summary",
+  "args": "p_profile uuid, p_year integer, p_month integer",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/actions/hr-attendance.ts",
+   "src/actions/hr.ts [svc]"
+  ],
+  "staff": 2,
+  "edge": []
+ },
+ {
+  "proname": "fn_attendance_self_edit_guard",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_bande_ka_khate_par_baqi",
+  "args": "p_party_type text, p_party_id uuid, p_khata text",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_bande_ka_khulasa",
+  "args": "p_party_type text, p_party_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/customer-udhaar.ts [svc]"
+  ],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "fn_bande_ka_saara_lenden",
+  "args": "p_party_type text, p_party_id uuid, p_start date, p_end date",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "fn_bump_farmer_code_counter",
+  "args": "p_number integer",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_can_machinery",
+  "args": "p_action text",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "needs_review_policy_helper",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_can_see_sale",
+  "args": "p_branch_id uuid, p_shop_id uuid",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "needs_review_policy_helper",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_cheque_guard",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_correct_stock_count_unit_cost",
+  "args": "p_line_id uuid, p_new_unit_cost numeric, p_note text",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/stock-count.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_create_farmer_loan_atomic",
+  "args": "p_farmer_id uuid, p_principal_amount numeric, p_weekly_installment numeric, p_notes text, p_client_action_id uuid",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/actions/farmer-loans.ts"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_credit_eligibility",
+  "args": "p_subject_type text, p_subject_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "fn_crop_profit_benchmarks",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "needs_review_public",
+  "pub": [
+   "src/app/portal/crops/page.tsx"
+  ],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_current_user_branch_id",
+  "args": "",
+  "no_sp": true,
+  "uses_uid": true,
+  "cat": "needs_review_policy_helper",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_current_user_organization_id",
+  "args": "",
+  "no_sp": true,
+  "uses_uid": true,
+  "cat": "needs_review_policy_helper",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_current_user_warehouse_id",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_customer_primary_branch",
+  "args": "p_customer uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_data_health_scan",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/data-health.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_default_active",
+  "args": "p_type text, p_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "needs_review_policy_helper",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_dep_run_immutable",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_farmer_combined_ledger",
+  "args": "p_farmer uuid, p_start date, p_end date",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_farmer_due_breakdown",
+  "args": "p_farmer_id uuid, p_booking_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/crop-lifters.ts [svc]"
+  ],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "fn_find_farmer_by_phone",
+  "args": "p_phone text",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/lib/farmers/identity.ts"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_get_cycle_count_batch",
+  "args": "p_cycle_days integer, p_daily_count integer",
+  "no_sp": true,
+  "uses_uid": false,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/actions/cycle-stock-count.ts"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_get_next_product_cycle",
+  "args": "p_shop_id uuid, p_count integer",
+  "no_sp": true,
+  "uses_uid": false,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/actions/product-cycles.ts"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_gl_account_guard",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_guard_promise_terms",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_handle_new_user",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_handoff_notify",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_has_auth_code",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "fn_has_dept",
+  "args": "p_roles user_role[]",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/lib/ledger/supplier-money.ts"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_hr_can_decide_for",
+  "args": "p_target uuid",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/actions/hr-attendance.ts",
+   "src/actions/leave.ts"
+  ],
+  "staff": 2,
+  "edge": []
+ },
+ {
+  "proname": "fn_hr_can_view_staff",
+  "args": "p_target uuid",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "needs_review_policy_helper",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_hr_expiring_leave",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "fn_hr_needs_attention",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "fn_hr_probation_due",
+  "args": "p_days_ahead integer",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 2,
+  "edge": []
+ },
+ {
+  "proname": "fn_hr_schedule_for",
+  "args": "p_profile uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_hr_staff_directory",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 4,
+  "edge": []
+ },
+ {
+  "proname": "fn_hr_team",
+  "args": "p_manager uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_hr_today_board",
+  "args": "p_date date",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "fn_is_admin_level",
+  "args": "",
+  "no_sp": true,
+  "uses_uid": true,
+  "cat": "needs_review_policy_helper",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_is_any_staff",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "needs_review_public",
+  "pub": [
+   "src/app/api/supplier-payments/route.ts",
+   "src/app/api/customer-udhaar/route.ts",
+   "src/app/api/customer-statements/[id]/route.ts [svc]",
+   "src/app/api/grain-sales/payment/route.ts",
+   "src/app/api/stock-count/save-row/route.ts [svc]",
+   "src/app/api/grain-sales/entry/route.ts",
+   "src/app/api/recovery/route.ts [svc]",
+   "src/app/api/inventory/offline/route.ts",
+   "src/app/api/machinery/offline/route.ts",
+   "src/app/api/hr/attendance/route.ts",
+   "src/app/api/purchases/receive/route.ts",
+   "src/app/api/grain-procurement/payment/route.ts",
+   "src/app/api/recovery/money/route.ts [svc]",
+   "src/app/api/grain-procurement/entry/route.ts"
+  ],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_is_staff",
+  "args": "p_user_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_leave_entitlement",
+  "args": "p_profile uuid, p_year integer",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/actions/leave.ts"
+  ],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "fn_leave_to_attendance",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_load_day_summary",
+  "args": "p_account uuid, p_date date",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/load-bill.ts [svc]"
+  ],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "fn_load_float_balance",
+  "args": "p_account uuid, p_upto date",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/load-bill.ts [svc]"
+  ],
+  "staff": 2,
+  "edge": []
+ },
+ {
+  "proname": "fn_log_return_code_attempt",
+  "args": "p_sale_id uuid",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/pos-returns.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_machine_daily_capacity",
+  "args": "p_machine_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "needs_review_policy_helper",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_manzoori_ka_khulasa",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_mazdoori_haal",
+  "args": "p_party_type text, p_party_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_merge_categories",
+  "args": "p_from uuid, p_into uuid, p_reason text",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/actions/category-merge.ts"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_merge_duplicate_product",
+  "args": "p_source_id uuid, p_target_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/actions/products.ts"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_next_asset_code",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/assets.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_next_farmer_code",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_next_load_number",
+  "args": "p_kind text",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/load-bill.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_next_machinery_number",
+  "args": "p_kind text",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/machinery-lifecycle.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_next_shop_batch_number",
+  "args": "p_shop_id uuid",
+  "no_sp": true,
+  "uses_uid": false,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/actions/product-cycles.ts"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_next_spr_number",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/supplier-payments.ts [svc]",
+   "src/actions/supplier-payment-requests.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_owns_loan",
+  "args": "p_loan_type text, p_loan_id uuid",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "needs_review_policy_helper",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_period_lock",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_pos_return",
+  "args": "p_sale_id uuid, p_reason text, p_manager_code text",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/pos-returns.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_pos_return_lines",
+  "args": "p_sale_id uuid, p_lines jsonb, p_reason text, p_reason_code text, p_refund_method text, p_note text, p_manager_code text, p_counter_id uuid",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/pos-returns.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_post_farmer_credit_atomic",
+  "args": "p_mode text, p_farmer_id uuid, p_amount numeric, p_source_type text, p_account_id uuid, p_notes text, p_collected_by text, p_client_action_id uuid",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/actions/farmer-credit.ts"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_post_finance_atomic",
+  "args": "p_mode text, p_account_id uuid, p_to_account_id uuid, p_amount numeric, p_category text, p_transaction_date date, p_notes text, p_against_account text, p_client_action_id uuid",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/actions/finance.ts"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_prevent_duplicate_shift_repair",
+  "args": "",
+  "no_sp": true,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_product_name_changed",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_product_rate_changed",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_promise_outcome",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_purchase_terms_default",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_recalc_score",
+  "args": "p_subject_type text, p_subject_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 2,
+  "edge": []
+ },
+ {
+  "proname": "fn_recovery_outstanding",
+  "args": "p_search text",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/lib/access/my-work.ts [svc]"
+  ],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "fn_refresh_product_expiry",
+  "args": "p_product_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_reset_test_financials",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/reset-test-data.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_run_access_conflict_scan",
+  "args": "p_trigger text, p_actor uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/lib/access/conflicts.ts [svc]",
+   "src/lib/access/access-requests.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_score_daily_run",
+  "args": "p_by text",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_score_drain_queue",
+  "args": "p_limit integer, p_max_attempts integer",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_score_drop_events",
+  "args": "p_source_table text, p_source_id uuid, p_keep text[], p_reason text",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_score_enqueue",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_score_for",
+  "args": "p_subject_type text, p_subject_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 2,
+  "edge": []
+ },
+ {
+  "proname": "fn_score_health",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "fn_score_put_event",
+  "args": "p_subject_type text, p_subject_id uuid, p_factor text, p_event_type text, p_occurred timestamp with time zone, p_source_table text, p_source_id uuid, p_evidence text, p_decay_from timestamp with time zone, p_note text, p_scale numeric",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_score_queue_tick",
+  "args": "p_limit integer",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_score_retry_failed",
+  "args": "p_max_attempts integer",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_score_severity",
+  "args": "p_subject_type text, p_factor text, p_event_type text",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_score_visible",
+  "args": "p_subject_type text, p_subject_id uuid",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "needs_review_policy_helper",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_set_farmer_username",
+  "args": "p_username text",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/farmer-auth.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_set_my_photo",
+  "args": "p_url text",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/hr.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_set_product_rates",
+  "args": "p_product_id uuid, p_sale numeric, p_trade numeric, p_wholesale numeric, p_source text",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/actions/products-import.ts"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_set_staff_auth_code",
+  "args": "p_profile_id uuid, p_code text",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/pos-returns.ts [svc]"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_shop_day_summary",
+  "args": "p_shop uuid, p_date date",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_shop_delete_guard",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sod_attach_triggers",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sod_no_self_approval",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_staff_sales_reward_on_sale",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_staff_sales_reward_reverse_on_sale",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_stock_count_mere_godam",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [
+   "src/actions/stock-count.ts [svc]"
+  ],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "fn_stop_paid_party_reminders",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_subject_since",
+  "args": "p_subject_type text, p_subject_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_agri_order",
+  "args": "p_order_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_credit_all",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_farmer_credit",
+  "args": "p_farmer_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_grain_all",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_grain_farmer",
+  "args": "p_farmer_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_grain_payment_edit",
+  "args": "p_payment_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_loan_installment",
+  "args": "p_inst_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_machinery_all",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_machinery_bill",
+  "args": "p_bill_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_machinery_booking",
+  "args": "p_booking_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_milk_all",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_milk_farmer",
+  "args": "p_farmer_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_milk_staff",
+  "args": "p_profile_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_order_staff",
+  "args": "p_profile_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_orders_all",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_staff_custody",
+  "args": "p_profile_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_sync_vendor_settlement",
+  "args": "p_payment_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "fn_top_customers_by_purchase",
+  "args": "p_limit integer",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "get_credit_summary",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "get_daily_sales_summary",
+  "args": "p_date date",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/components/reports/reports-client.tsx"
+  ],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "get_khata_aging",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 1,
+  "edge": []
+ },
+ {
+  "proname": "get_sale_receipt",
+  "args": "p_sale_id uuid",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/components/pos/receipt-modal.tsx"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "next_txn_number",
+  "args": "p_year integer",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "record_khata_payment",
+  "args": "p_customer_id uuid, p_amount numeric, p_note text",
+  "no_sp": false,
+  "uses_uid": true,
+  "cat": "needs_review_shared",
+  "pub": [],
+  "shared": [
+   "src/components/khata/khata-client.tsx"
+  ],
+  "staff": 0,
+  "edge": []
+ },
+ {
+  "proname": "rls_auto_enable",
+  "args": "",
+  "no_sp": false,
+  "uses_uid": false,
+  "cat": "safe_revoke_anon",
+  "pub": [],
+  "shared": [],
+  "staff": 0,
+  "edge": []
+ }
+]

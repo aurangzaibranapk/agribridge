@@ -1,0 +1,1406 @@
+[
+ {
+  "k": "nopol",
+  "relname": "ai_report_instructions",
+  "anon_sel": true,
+  "callers": [
+   "src/actions/ai-instructions.ts",
+   "src/app/api/cron/ai-daily-report/route.ts",
+   "src/app/admin/ai-instructions/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/ai-instructions/page.tsx"
+  ]
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_cancan_bct",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_cancan_dispatch_items",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_cancan_grn",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_cancan_grn_items",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_cancan_inventory",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_cancan_order",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_cancan_order_items",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_hs02_stock_batches",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_hs_pos_sales",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_hs_wheat_batch",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_mahabali_1110_lines",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_restore_batches",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_restore_inventory",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_sial_grain",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_sial_journal_entries",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_20261010_sial_journal_lines",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_riaz_munji_20261010_je",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_riaz_munji_20261010_jl",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_riaz_munji_20261010_pay",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "backup_riaz_munji_20261010_src",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "bank_transfer_counters",
+  "anon_sel": false,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "bkp_products_bottle_price_20261010",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "bkp_sb2026006_inventory",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "bkp_sb2026006_products",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "bkp_sb2026006_purchase_items",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "bkp_sb2026006_stock_batches",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "cycle_count_items",
+  "anon_sel": true,
+  "callers": [
+   "src/actions/cycle-stock-count.ts"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/actions/cycle-stock-count.ts"
+  ]
+ },
+ {
+  "k": "nopol",
+  "relname": "cycle_count_sessions",
+  "anon_sel": true,
+  "callers": [
+   "src/actions/cycle-stock-count.ts"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/actions/cycle-stock-count.ts"
+  ]
+ },
+ {
+  "k": "nopol",
+  "relname": "demand_procurement_plans",
+  "anon_sel": true,
+  "callers": [
+   "src/actions/demand-center.ts",
+   "src/app/admin/demand-center/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "farmer_code_counters",
+  "anon_sel": false,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "farmer_login_otps",
+  "anon_sel": true,
+  "callers": [
+   "src/lib/farmers/otp.ts"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "finance_balance_repairs",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "fixed_asset_counter",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "journal_entry_counters_bak_20261016",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "load_txn_counters",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "machinery_machine_counters",
+  "anon_sel": false,
+  "callers": [
+   "src/actions/machinery-rental.ts"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/actions/machinery-rental.ts"
+  ]
+ },
+ {
+  "k": "nopol",
+  "relname": "machinery_receipt_counters",
+  "anon_sel": false,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "organization_signup_requests",
+  "anon_sel": false,
+  "callers": [
+   "src/actions/organization-signup.ts",
+   "src/app/admin/platform/requests/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "pos_cash_outs",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "pos_return_counters",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "pos_shift_counters",
+  "anon_sel": true,
+  "callers": [
+   "src/actions/pos-counters.ts"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "product_costing_overrides",
+  "anon_sel": true,
+  "callers": [
+   "src/actions/product-costing.ts"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "product_merge_audit",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "shop_code_counters",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "staff_auth_codes",
+  "anon_sel": false,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "supplier_payable_repairs",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "supplier_payment_request_counters",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "nopol",
+  "relname": "supplier_product_aliases",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "cycle_count_items_v",
+  "anon_sel": true,
+  "callers": [
+   "src/actions/cycle-stock-count.ts"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/actions/cycle-stock-count.ts"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "farmer_credit_balances",
+  "anon_sel": true,
+  "callers": [
+   "src/lib/utils/bridge-tools.ts",
+   "src/actions/wallet.ts",
+   "src/app/portal/services/fertilizer/page.tsx"
+  ],
+  "pub_nonsvc": [
+   "src/app/portal/services/fertilizer/page.tsx"
+  ],
+  "nonsvc": [
+   "src/actions/wallet.ts",
+   "src/app/portal/services/fertilizer/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "grain_farmer_balances",
+  "anon_sel": true,
+  "callers": [
+   "src/lib/business360/data.ts",
+   "src/app/admin/grain-procurement/payments/page.tsx",
+   "src/app/admin/reports/procurement/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/grain-procurement/payments/page.tsx",
+   "src/app/admin/reports/procurement/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "milk_farmer_balances",
+  "anon_sel": true,
+  "callers": [
+   "src/lib/utils/bridge-tools.ts",
+   "src/lib/intelligence/party360/activity.ts",
+   "src/app/admin/milk-collection/page.tsx",
+   "src/app/admin/reports/milk/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/lib/intelligence/party360/activity.ts",
+   "src/app/admin/milk-collection/page.tsx",
+   "src/app/admin/reports/milk/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_ai_sales_category",
+  "anon_sel": true,
+  "callers": [
+   "src/lib/staff/achievement-data.ts",
+   "src/lib/ai/business-intelligence.ts",
+   "src/app/admin/master-dashboard/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/lib/ai/business-intelligence.ts"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_ai_staff_sales_daily",
+  "anon_sel": true,
+  "callers": [
+   "src/lib/ai/business-intelligence.ts",
+   "src/app/admin/master-dashboard/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/lib/ai/business-intelligence.ts"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_ai_staff_sales_monthly",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_ai_usage_monthly",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_bill_lines_baqi",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_cash_book_ledger_farq",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_cash_custody",
+  "anon_sel": false,
+  "callers": [
+   "src/actions/cash-handover.ts",
+   "src/app/admin/cash-handover/page.tsx",
+   "src/app/admin/cash-custody/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/cash-handover/page.tsx",
+   "src/app/admin/cash-custody/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_crop_lift_trace",
+  "anon_sel": true,
+  "callers": [
+   "src/app/admin/machinery-rental/lifters/dashboard/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/lifters/dashboard/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_crop_lifter_balances",
+  "anon_sel": true,
+  "callers": [
+   "src/actions/crop-lifters.ts",
+   "src/app/admin/machinery-rental/lifters/page.tsx",
+   "src/app/admin/machinery-rental/lifters/[id]/page.tsx",
+   "src/app/admin/machinery-rental/lifters/dashboard/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/lifters/page.tsx",
+   "src/app/admin/machinery-rental/lifters/[id]/page.tsx",
+   "src/app/admin/machinery-rental/lifters/dashboard/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_error_summary",
+  "anon_sel": true,
+  "callers": [
+   "src/lib/utils/bridge-tools.ts",
+   "src/app/admin/errors/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_farm_map",
+  "anon_sel": false,
+  "callers": [
+   "src/app/admin/machinery-rental/farm-map/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/farm-map/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_farmer_combined_balance",
+  "anon_sel": true,
+  "callers": [
+   "src/lib/utils/bridge-tools.ts",
+   "src/app/admin/pos/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/pos/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_finance_balance_check",
+  "anon_sel": false,
+  "callers": [
+   "src/lib/ledger/daily-reconcile.ts"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_grain_leads_from_machinery",
+  "anon_sel": true,
+  "callers": [
+   "src/app/admin/grain/leads/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/grain/leads/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_grain_warehouse_stock",
+  "anon_sel": false,
+  "callers": [
+   "src/lib/command-center.ts",
+   "src/app/admin/grain-procurement/warehouse/page.tsx",
+   "src/app/admin/grain-procurement/details/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/grain-procurement/warehouse/page.tsx",
+   "src/app/admin/grain-procurement/details/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_grn_queue",
+  "anon_sel": false,
+  "callers": [
+   "src/app/admin/purchases/grn/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/purchases/grn/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_inventory_balance_check",
+  "anon_sel": false,
+  "callers": [
+   "src/lib/ledger/daily-reconcile.ts"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_ledger_unposted",
+  "anon_sel": true,
+  "callers": [
+   "src/lib/ledger/money-trail.ts"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_machine_day_load",
+  "anon_sel": false,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_advance_claims",
+  "anon_sel": false,
+  "callers": [
+   "src/app/admin/machinery-rental/dashboard/page.tsx",
+   "src/app/admin/machinery-rental/advance-claims/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/dashboard/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_booking_recoverable_diesel",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_capacity_day",
+  "anon_sel": true,
+  "callers": [
+   "src/app/admin/machinery-rental/calendar/page.tsx",
+   "src/app/admin/machinery-rental/booking/new/page.tsx",
+   "src/app/admin/machinery-rental/booking/[id]/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/calendar/page.tsx",
+   "src/app/admin/machinery-rental/booking/new/page.tsx",
+   "src/app/admin/machinery-rental/booking/[id]/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_commission_watch",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_control",
+  "anon_sel": false,
+  "callers": [
+   "src/lib/command-center.ts",
+   "src/app/admin/machinery-rental/reports/page.tsx",
+   "src/app/admin/machinery-rental/list/page.tsx",
+   "src/app/api/machinery/live-board/route.ts",
+   "src/app/admin/machinery-rental/dashboard/page.tsx"
+  ],
+  "pub_nonsvc": [
+   "src/app/api/machinery/live-board/route.ts"
+  ],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/reports/page.tsx",
+   "src/app/admin/machinery-rental/list/page.tsx",
+   "src/app/api/machinery/live-board/route.ts",
+   "src/app/admin/machinery-rental/dashboard/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_control_all",
+  "anon_sel": false,
+  "callers": [
+   "src/actions/machinery-lifecycle.ts",
+   "src/app/admin/machinery-rental/booking-slip/[id]/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/booking-slip/[id]/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_day_bookings",
+  "anon_sel": true,
+  "callers": [
+   "src/app/admin/machinery-rental/calendar/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/calendar/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_diesel_summary",
+  "anon_sel": false,
+  "callers": [
+   "src/app/admin/machinery-rental/diesel/page.tsx",
+   "src/app/admin/machinery-rental/dashboard/page.tsx",
+   "src/app/admin/machinery-rental/reports/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/diesel/page.tsx",
+   "src/app/admin/machinery-rental/dashboard/page.tsx",
+   "src/app/admin/machinery-rental/reports/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_farmer_statement",
+  "anon_sel": false,
+  "callers": [
+   "src/app/admin/machinery-rental/reports/page.tsx",
+   "src/app/admin/machinery-rental/list/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/reports/page.tsx",
+   "src/app/admin/machinery-rental/list/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_farmer_status",
+  "anon_sel": false,
+  "callers": [
+   "src/actions/public-machinery-booking.ts"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_fuel_claims",
+  "anon_sel": false,
+  "callers": [
+   "src/app/admin/machinery-rental/work-claims/page.tsx",
+   "src/app/admin/machinery-rental/dashboard/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/dashboard/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_harvest_split",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_location_workload",
+  "anon_sel": true,
+  "callers": [
+   "src/app/admin/machinery-rental/calendar/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/calendar/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_machines",
+  "anon_sel": false,
+  "callers": [
+   "src/app/admin/machinery-rental/calendar/page.tsx",
+   "src/app/admin/machinery-rental/dashboard/page.tsx",
+   "src/app/admin/machinery-rental/machines/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/calendar/page.tsx",
+   "src/app/admin/machinery-rental/dashboard/page.tsx",
+   "src/app/admin/machinery-rental/machines/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_payment_due",
+  "anon_sel": false,
+  "callers": [
+   "src/actions/machinery-lifecycle.ts",
+   "src/app/api/cron/machinery-payment-reminders/route.ts",
+   "src/app/admin/machinery-rental/reports/page.tsx",
+   "src/app/admin/machinery-rental/reminders/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/reports/page.tsx",
+   "src/app/admin/machinery-rental/reminders/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_payment_receipts",
+  "anon_sel": false,
+  "callers": [
+   "src/app/admin/machinery-rental/receipt/[id]/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/receipt/[id]/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_pnl_booking",
+  "anon_sel": true,
+  "callers": [
+   "src/lib/command-center.ts",
+   "src/app/admin/machinery-rental/dashboard/page.tsx",
+   "src/app/admin/machinery-rental/pnl/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/dashboard/page.tsx",
+   "src/app/admin/machinery-rental/pnl/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_pnl_crop",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_pnl_machine",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_pnl_month",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_pnl_vendor",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_queue",
+  "anon_sel": false,
+  "callers": [
+   "src/app/admin/machinery-rental/queue-view.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/queue-view.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_unfinished",
+  "anon_sel": false,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_vendor_booking_settlement",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_vendor_collected_pending",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_vendor_collection_claims",
+  "anon_sel": false,
+  "callers": [
+   "src/app/admin/machinery-rental/work-claims/page.tsx",
+   "src/app/admin/machinery-rental/dashboard/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/dashboard/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_vendor_commission",
+  "anon_sel": true,
+  "callers": [
+   "src/app/vendor/page.tsx"
+  ],
+  "pub_nonsvc": [
+   "src/app/vendor/page.tsx"
+  ],
+  "nonsvc": [
+   "src/app/vendor/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_vendor_diesel",
+  "anon_sel": false,
+  "callers": [
+   "src/app/vendor/page.tsx"
+  ],
+  "pub_nonsvc": [
+   "src/app/vendor/page.tsx"
+  ],
+  "nonsvc": [
+   "src/app/vendor/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_vendor_ledger",
+  "anon_sel": false,
+  "callers": [
+   "src/app/vendor/page.tsx"
+  ],
+  "pub_nonsvc": [
+   "src/app/vendor/page.tsx"
+  ],
+  "nonsvc": [
+   "src/app/vendor/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_vendor_location",
+  "anon_sel": true,
+  "callers": [
+   "src/app/vendor/page.tsx"
+  ],
+  "pub_nonsvc": [
+   "src/app/vendor/page.tsx"
+  ],
+  "nonsvc": [
+   "src/app/vendor/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_vendor_machines",
+  "anon_sel": true,
+  "callers": [
+   "src/app/vendor/page.tsx"
+  ],
+  "pub_nonsvc": [
+   "src/app/vendor/page.tsx"
+  ],
+  "nonsvc": [
+   "src/app/vendor/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_vendor_payments",
+  "anon_sel": true,
+  "callers": [
+   "src/app/vendor/page.tsx"
+  ],
+  "pub_nonsvc": [
+   "src/app/vendor/page.tsx"
+  ],
+  "nonsvc": [
+   "src/app/vendor/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_vendor_settlement",
+  "anon_sel": true,
+  "callers": [
+   "src/app/vendor/page.tsx",
+   "src/app/admin/machinery-rental/dashboard/page.tsx",
+   "src/app/admin/machinery-rental/vendor-settlement/page.tsx",
+   "src/app/admin/machinery-rental/reports/page.tsx"
+  ],
+  "pub_nonsvc": [
+   "src/app/vendor/page.tsx"
+  ],
+  "nonsvc": [
+   "src/app/vendor/page.tsx",
+   "src/app/admin/machinery-rental/dashboard/page.tsx",
+   "src/app/admin/machinery-rental/vendor-settlement/page.tsx",
+   "src/app/admin/machinery-rental/reports/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_vendor_week",
+  "anon_sel": false,
+  "callers": [
+   "src/app/vendor/page.tsx"
+  ],
+  "pub_nonsvc": [
+   "src/app/vendor/page.tsx"
+  ],
+  "nonsvc": [
+   "src/app/vendor/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_vendor_work",
+  "anon_sel": false,
+  "callers": [
+   "src/app/vendor/page.tsx"
+  ],
+  "pub_nonsvc": [
+   "src/app/vendor/page.tsx"
+  ],
+  "nonsvc": [
+   "src/app/vendor/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_watch",
+  "anon_sel": true,
+  "callers": [
+   "src/lib/ledger/daily-reconcile.ts"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_work_claims",
+  "anon_sel": false,
+  "callers": [
+   "src/app/admin/machinery-rental/work-claims/page.tsx",
+   "src/app/admin/machinery-rental/dashboard/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/dashboard/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_machinery_work_efficiency",
+  "anon_sel": false,
+  "callers": [
+   "src/app/admin/machinery-rental/booking/[id]/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/booking/[id]/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_manzoori_ki_qatar",
+  "anon_sel": true,
+  "callers": [
+   "src/lib/manzoori-qatar.ts"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_milk_dispatch_watch",
+  "anon_sel": false,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_pos_returns_today",
+  "anon_sel": false,
+  "callers": [
+   "src/app/admin/pos/returns/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/pos/returns/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_product_batches",
+  "anon_sel": true,
+  "callers": [
+   "src/app/admin/inventory/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/inventory/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_product_costing",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_product_costing_with_override",
+  "anon_sel": true,
+  "callers": [
+   "src/app/admin/finance/costing/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_product_setup_counts",
+  "anon_sel": true,
+  "callers": [
+   "src/components/products/setup-tabs.tsx",
+   "src/app/admin/products/setup-queue/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/components/products/setup-tabs.tsx",
+   "src/app/admin/products/setup-queue/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_product_setup_queue",
+  "anon_sel": true,
+  "callers": [
+   "src/app/admin/products/setup-queue/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/products/setup-queue/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_products_rate_baqi",
+  "anon_sel": true,
+  "callers": [
+   "src/app/admin/products/rates-baqi/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/products/rates-baqi/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_products_trade_rate_baqi",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_products_wholesale_baqi",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_purchase_discrepancies",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_reorder_suggestions",
+  "anon_sel": true,
+  "callers": [
+   "src/lib/utils/bridge-tools.ts",
+   "src/lib/ai/business-intelligence.ts",
+   "src/app/admin/products/reorder/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/lib/ai/business-intelligence.ts",
+   "src/app/admin/products/reorder/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_suggestion_report_counts",
+  "anon_sel": true,
+  "callers": [
+   "src/app/admin/improvements/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/improvements/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_supplier_bill_milan",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ },
+ {
+  "k": "view",
+  "relname": "v_supplier_due_calendar",
+  "anon_sel": true,
+  "callers": [
+   "src/lib/utils/bridge-tools.ts",
+   "src/components/purchases/due-soon.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/components/purchases/due-soon.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_supplier_payable_check",
+  "anon_sel": false,
+  "callers": [
+   "src/lib/ledger/daily-reconcile.ts",
+   "src/app/admin/purchases/bills/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/purchases/bills/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_user_feature_access",
+  "anon_sel": true,
+  "callers": [
+   "src/middleware.ts",
+   "src/lib/access/permissions.ts",
+   "src/lib/access/nav.ts",
+   "src/lib/access/guard.ts",
+   "src/lib/access/delegation.ts",
+   "src/lib/access/access-requests.ts",
+   "src/app/admin/my-access/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/middleware.ts",
+   "src/app/admin/my-access/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_vendor_holding_our_cash",
+  "anon_sel": false,
+  "callers": [
+   "src/app/admin/machinery-rental/vendor-cash/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/machinery-rental/vendor-cash/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_warehouse_product_card",
+  "anon_sel": true,
+  "callers": [
+   "src/app/admin/inventory/product/[productId]/page.tsx"
+  ],
+  "pub_nonsvc": [],
+  "nonsvc": [
+   "src/app/admin/inventory/product/[productId]/page.tsx"
+  ]
+ },
+ {
+  "k": "view",
+  "relname": "v_wholesale_shops",
+  "anon_sel": true,
+  "callers": [],
+  "pub_nonsvc": [],
+  "nonsvc": []
+ }
+]
