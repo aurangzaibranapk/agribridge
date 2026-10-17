@@ -39,7 +39,8 @@
     "test:password-reset": "npx --yes tsx scripts/test-password-reset.ts && node tests/password-reset-sql.mjs",
     "test:portal-munshi": "npx --yes tsx scripts/test-portal-munshi.ts",
     "test:portal-khata": "npx --yes tsx scripts/test-portal-khata.ts && node tests/portal-khata-sql.mjs",
-    "test:portal-dairy": "npx --yes tsx scripts/test-portal-dairy.ts && node tests/portal-dairy-sql.mjs"
+    "test:portal-dairy": "npx --yes tsx scripts/test-portal-dairy.ts && node tests/portal-dairy-sql.mjs",
+    "test:portal-dairy-pl": "npx --yes tsx scripts/test-portal-dairy-pl.ts && node tests/portal-dairy-pl-sql.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",
