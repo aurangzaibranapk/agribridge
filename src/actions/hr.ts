@@ -226,11 +226,13 @@ export async function markSalaryPaid(_prev: ActionState, formData: FormData): Pr
     return { error: `Ledger mein nahi gayi, is liye tankhwah darj nahi ki: ${posted.error}` };
   }
 
-  const { error } = await supabase
+  const { error, count } = await supabase
     .from("salary_payments")
     .update({ status: "paid", paid_date: new Date().toISOString().split("T")[0] })
-    .eq("id", paymentId);
+    .eq("id", paymentId)
+    .eq("status", "pending");
   if (error) return { error: error.message };
+  if (count === 0) return { error: "Ye tankhwah pehle hi paid ho chuki hai ya status change nahi hua." };
 
   // Staff ko khud batao ke tankhwah di gayi
   await notifyUser(
