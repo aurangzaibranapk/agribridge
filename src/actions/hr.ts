@@ -254,8 +254,8 @@ export async function selfCheckIn(_prev: ActionState, formData: FormData): Promi
   } = await supabase.auth.getUser();
   if (!user) return { error: "You must be signed in." };
 
-  const today = new Date().toISOString().split("T")[0];
-  const now = new Date().toISOString();
+  const today = aajKaKhana();
+  const now = new Date().toISOString(); // time stamp ok
   const clientActionId = typeof formData.get("client_action_id") === "string" ? String(formData.get("client_action_id")) : "";
   if (clientActionId) {
     const { data: alreadyPosted } = await supabase.from("attendance_records").select("id").eq("client_action_id", clientActionId).maybeSingle();
@@ -321,8 +321,8 @@ export async function selfCheckOut(_prev: ActionState, formData: FormData): Prom
   } = await supabase.auth.getUser();
   if (!user) return { error: "You must be signed in." };
 
-  const today = new Date().toISOString().split("T")[0];
-  const now = new Date().toISOString();
+  const today = aajKaKhana();
+  const now = new Date().toISOString(); // time stamp ok
   const clientActionId = typeof formData.get("client_action_id") === "string" ? String(formData.get("client_action_id")) : "";
   if (clientActionId) {
     const { data: alreadyPosted } = await supabase.from("attendance_records").select("id").eq("client_action_id", clientActionId).maybeSingle();
