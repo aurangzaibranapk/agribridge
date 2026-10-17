@@ -1,3 +1,4 @@
+import { sendJoiningEmail } from "@/lib/hr-emails";
 "use server";
 import { revalidatePath } from "next/cache";
 import { bohatKeKhaneBadlein } from "@/lib/profile-write";
@@ -149,6 +150,11 @@ export async function recordSalaryPayment(_prev: ActionState, formData: FormData
   if (error) return { error: error.message };
 
   revalidatePath("/admin/hr");
+
+  // Professional joining email
+  const joiningDate = new Date().toISOString().slice(0, 10);
+  await sendJoiningEmail(email, fullName, designation || "Staff Member", joiningDate);
+
   return { success: true };
 }
 
