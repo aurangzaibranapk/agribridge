@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, UserCircle, Tractor, Sprout, Landmark, LogOut, Warehouse, MapPin, Wallet, Sparkles, PackageSearch, CalendarClock } from "lucide-react";
+import { LayoutDashboard, UserCircle, Tractor, Sprout, Landmark, LogOut, Warehouse, MapPin, Wallet, Sparkles, PackageSearch, CalendarClock, Milk } from "lucide-react";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { LanguageToggle } from "./language-toggle";
 
@@ -13,6 +13,7 @@ export function getPortalNavItems(lang: Lang) {
     { href: "/portal/farms", label: t("nav_farms", lang), icon: MapPin },
     { href: "/portal/demand", label: t("nav_demand", lang), icon: PackageSearch },
     { href: "/portal/campaigns", label: t("nav_campaigns", lang), icon: CalendarClock },
+    { href: "/portal/dairy", label: t("nav_dairy", lang), icon: Milk },
     { href: "/portal/services/livestock", label: t("nav_livestock", lang), icon: Landmark },
     { href: "/portal/crops", label: t("nav_crops", lang), icon: Sprout },
     { href: "/portal/services/fertilizer", label: t("nav_fertilizer", lang), icon: Sprout },
@@ -37,7 +38,7 @@ export function PortalSidebar({ lang }: { lang: Lang }) {
       <div className="mb-4 px-2"><LanguageToggle current={lang} /></div>
       <nav className="flex flex-1 flex-col gap-1">
         {NAV_ITEMS.map((item) => {
-          const active = pathname === item.href;
+          const active = pathname === item.href || (item.href === "/portal/dairy" && pathname.startsWith("/portal/dairy"));
           return (
             <Link key={item.href} href={item.href} className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${active ? "bg-gradient-to-r from-green-600 to-green-700 text-white shadow" : "text-emerald-50/75 hover:bg-white/10 hover:text-white"}`}>
               <item.icon className="h-4 w-4 shrink-0" />{item.label}
