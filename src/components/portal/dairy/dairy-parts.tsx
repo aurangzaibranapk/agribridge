@@ -153,3 +153,18 @@ export function Footer({ lang }: { lang: Lang }) {
   return <p className="text-center text-[11px] text-surface-500 dark:text-slate-400">{t("dy_footer", lang)}</p>;
 }
 export const fmtL = (n: number) => `${(Math.round(n * 10) / 10).toLocaleString("en-IN")} L`;
+
+/** ?e= ko sirf asal dictionary key hone par dikhao (warna aam ghalti). */
+export function ErrorNote({ e, lang }: { e?: string; lang: Lang }) {
+  if (!e) return null;
+  const key = (/^(dy|dy2)_err_[a-z_]+$/.test(e) && t(e as TranslationKey, lang) && t(e as TranslationKey, lang) !== e ? e : "dy_err_generic") as TranslationKey;
+  return <p className="rounded-xl bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">{t(key, lang)}</p>;
+}
+export function Thumb({ url, emoji, size = 38 }: { url?: string | null; emoji: string; size?: number }) {
+  return url ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={url} alt="" width={size} height={size} className="shrink-0 rounded-xl border-2 border-white object-cover shadow ring-1 ring-surface-200 dark:border-surface-900 dark:ring-surface-700" style={{ width: size, height: size }} />
+  ) : (
+    <span className="grid shrink-0 place-items-center rounded-xl border border-surface-200 bg-gradient-to-br from-yellow-100 to-green-100 text-lg dark:border-surface-700 dark:from-yellow-900/40 dark:to-green-900/40" style={{ width: size, height: size }}>{emoji}</span>
+  );
+}
