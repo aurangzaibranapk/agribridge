@@ -36,6 +36,7 @@
     "test:promise-credit": "npx --yes tsx scripts/test-promise-credit.ts && node tests/promise-credit-migration.cjs",
     "test:admin-review": "npx --yes tsx scripts/test-admin-review.ts",
     "test:salary-qist": "npx --yes tsx scripts/test-salary-qist.ts && node tests/salary-qist-wiring.cjs && node tests/salary-qist-sql.mjs",
+    "test:portal-accounts": "npx --yes tsx scripts/test-portal-accounts.ts && node tests/portal-accounts-sql.mjs",
     "test:password-reset": "npx --yes tsx scripts/test-password-reset.ts && node tests/password-reset-sql.mjs"
   },
   "dependencies": {

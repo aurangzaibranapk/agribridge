@@ -221,6 +221,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/my-department", label: "Meri Team (Head)", icon: Users },
       { href: "/admin/staff-access", label: "Staff & Access Control", icon: ShieldCheck },
       { href: "/admin/users", label: "Users aur Role", icon: UserCog },
+      { href: "/admin/portal-accounts", label: "Portal Accounts", icon: UserCog },
       { href: "/admin/notifications", label: "Ittila'at", icon: Bell },
       { href: "/admin/activity-logs", label: "Kaam ka Record", icon: History },
       { href: "/admin/settings", label: "Website Settings", icon: Sliders },
