@@ -60,6 +60,12 @@ export async function updateUserRole(userId: string, role: UserRole): Promise<{ 
 
   const purana = IKHTIYAR_DARJA[target.role] ?? 1;
   const naya = IKHTIYAR_DARJA[role] ?? 1;
+  const actorRank = IKHTIYAR_DARJA[actingProfile.role] ?? 1;
+
+  // Admin cannot promote to Admin or higher, and cannot act on equal/higher rank
+  if (actingProfile.role === "admin" && (naya >= actorRank || purana >= actorRank)) {
+    return { error: "Admin barabar ya unche darje ko badal nahi sakta, na hi Admin bana sakta hai." };
+  }
 
   if (naya >= purana) {
     const gaps = await profileGaps(userId, role);
