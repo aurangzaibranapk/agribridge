@@ -1,4 +1,3 @@
-import { sendSeparationEmail } from "@/lib/hr-emails";
 "use server";
 import { revalidatePath } from "next/cache";
 import { profileKaKhanaBadlein } from "@/lib/profile-write";
@@ -149,6 +148,18 @@ export interface ActionState {
   success?: boolean;
 }
 
+/**
+ * Account suspend karna.
+ *
+ * Suspend WAPAS ho sakta hai (reactivateStaff), is liye yahan se koi
+ * "contract khatam" ki email nahi jati -- wo email wapas nahi hoti.
+ * Naukri ka asal khatma HR ke "Alag karein" faisle (hr-probation) se
+ * hota hai, jahan aakhri din record mein likha jata hai.
+ *
+ * Dobara suspend dabane se kuch nahi badalta: update sirf usi qatar par
+ * lagta hai jo abhi suspend nahi, is liye na wajah dobara likhi jati hai
+ * na audit ki doosri line banti hai.
+ */
 export async function suspendStaff(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const userId = String(formData.get("user_id") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
@@ -157,7 +168,7 @@ export async function suspendStaff(_prev: ActionState, formData: FormData): Prom
   const who = await requireMaster(userId);
   if ("error" in who) return { error: who.error };
 
-  const { error } = await who.supabase
+  const { data: changed, error } = await who.supabase
     .from("profiles")
     .update({
       status: "suspended",
@@ -165,8 +176,19 @@ export async function suspendStaff(_prev: ActionState, formData: FormData): Prom
       status_changed_at: new Date().toISOString(),
       is_active: false,
     })
-    .eq("id", userId);
+    .eq("id", userId)
+    .neq("status", "suspended")
+    .select("id");
   if (error) return { error: error.message };
+
+  if (!changed || changed.length === 0) {
+    const { data: current } = await who.supabase.from("profiles").select("status").eq("id", userId).maybeSingle();
+    if (!current) return { error: "Ye account nahi mila." };
+    if (current.status !== "suspended") return { error: "Account suspend nahi ho saka. Dobara koshish karein." };
+    // Pehle se suspend -- kuch nahi badla, kuch nahi bheja.
+    revalidatePath("/admin/users");
+    return { success: true };
+  }
 
   await logAudit({
     actionType: "update",
@@ -174,22 +196,6 @@ export async function suspendStaff(_prev: ActionState, formData: FormData): Prom
     recordId: userId,
     description: `Account suspend: ${reason}`,
   });
-
-  // Professional separation email
-  const { data: profile } = await who.supabase.from("profiles").select("full_name, email").eq("id", userId).maybeSingle();
-  const { data: details } = await who.supabase.from("staff_details").select("designation").eq("profile_id", userId).maybeSingle();
-  if (profile?.email) {
-    const lastDay = new Date();
-    lastDay.setDate(lastDay.getDate() + 7); // 7 day notice example
-    const lastDayStr = lastDay.toISOString().slice(0, 10);
-    await sendSeparationEmail(
-      profile.email,
-      profile.full_name || "Staff",
-      details?.designation || "Staff Member",
-      lastDayStr,
-      reason
-    );
-  }
 
   revalidatePath("/admin/users");
   return { success: true };

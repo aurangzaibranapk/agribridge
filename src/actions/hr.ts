@@ -1,4 +1,3 @@
-import { sendJoiningEmail } from "@/lib/hr-emails";
 "use server";
 import { revalidatePath } from "next/cache";
 import { bohatKeKhaneBadlein } from "@/lib/profile-write";
@@ -10,10 +9,14 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles, notifyUser } from "@/lib/notifications";
 import { TENANT_PLAN_LIMITS, tenantPlan } from "@/lib/tenant/plan-limits";
 import { DEPARTMENTS } from "@/lib/departments";
+import { logAudit } from "@/lib/audit";
+import { hrMailAuditText, hrMailNotice, sendJoiningEmail, todayPk } from "@/lib/hr-emails";
 
 export interface ActionState {
   error?: string;
   success?: boolean;
+  /** Kaam ho gaya magar koi baat HR ko batani hai (maslan email nahi gayi). */
+  notice?: string;
 }
 
 const PAY_WRITERS = ["hr", "admin", "owner", "super_admin"];
@@ -150,11 +153,6 @@ export async function recordSalaryPayment(_prev: ActionState, formData: FormData
   if (error) return { error: error.message };
 
   revalidatePath("/admin/hr");
-
-  // Professional joining email
-  const joiningDate = new Date().toISOString().slice(0, 10);
-  await sendJoiningEmail(email, fullName, designation || "Staff Member", joiningDate);
-
   return { success: true };
 }
 
@@ -483,9 +481,27 @@ export async function inviteStaffMember(_prev: ActionState, formData: FormData):
   const { sendOfficialLoginEmail } = await import("@/lib/email");
   await sendOfficialLoginEmail(email, fullName, email, randomPassword);
 
+  // Rasmi joining email -- sirf yahan, jahan banda WAQAI banta hai.
+  // Account ek hi dafa banta hai (auth.createUser dobara usi email par
+  // fail hota hai), is liye ye email bhi ek hi dafa jati hai.
+  const joining = await sendJoiningEmail({
+    toEmail: email,
+    fullName,
+    designation,
+    joiningDate: todayPk(),
+  });
+  await logAudit({
+    actionType: "create",
+    module: "hr_email",
+    recordId: authUser.user.id,
+    recordLabel: fullName,
+    description: hrMailAuditText("joining", email, joining),
+  });
+  if (!joining.sent) console.error("Joining email failed:", joining.error);
+
   revalidatePath("/admin/hr");
   revalidatePath("/admin/users");
-  return { success: true };
+  return { success: true, notice: hrMailNotice("joining", joining) };
 }
 
 export async function bulkDeactivateStaff(_prev: ActionState, formData: FormData): Promise<ActionState> {
