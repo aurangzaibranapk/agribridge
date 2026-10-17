@@ -13,7 +13,7 @@ import { getRoleRedirectPath } from "@/lib/utils/roles";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
-const FIELD = "h-12 rounded-xl border-surface-200 bg-white px-3.5 text-[15px] shadow-sm outline-none transition focus:border-[#2E6840] focus:ring-2 focus:ring-[#2E6840]/10 placeholder:text-surface-400";
+const FIELD = "h-12 rounded-xl border-surface-200 bg-white px-3.5 text-[15px] shadow-sm outline-none transition focus:border-[#2E6840] focus:ring-2 focus:ring-[#2E6840]/10 placeholder:text-surface-400 dark:border-slate-600 dark:bg-[#0B1426] dark:text-white";
 const BIG_BTN = "h-12 w-full rounded-xl bg-[#174B2B] text-[15px] font-semibold tracking-wide text-white shadow-sm transition hover:bg-[#123D23] disabled:cursor-not-allowed disabled:opacity-60";
 const OFFLINE_ROUTE_KEY = "agribridge:last-login-route";
 
@@ -38,6 +38,7 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
   const router = useRouter();
   const supabase = createClient();
   const [identifier, setIdentifier] = useState("");
+  const [tab, setTab] = useState<"login" | "signup">("login");
   const [passwordState, passwordAction] = useFormState(loginWithIdentifier, identifierEmptyState);
   const [phone, setPhone] = useState("");
   const [otpState, otpAction] = useFormState(requestFarmerOtp, emptyState);
@@ -151,6 +152,7 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
   }
 
   const otpSent = otpState.otpSent;
+  const needsProfile = Boolean(otpState.needsProfile || checkState.needsProfile);
   const isEmail = identifier.includes("@");
 
   if (emailStage === "sent") {
@@ -174,13 +176,22 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
     return (
       <div className="space-y-4">
         <div>
-          <p className="text-sm font-semibold text-surface-800">Mobile OTP verify karein</p>
-          <p className="mt-1 text-xs text-surface-500">Code WhatsApp/SMS par bhej diya gaya.</p>
+          <p className="text-sm font-semibold text-surface-800 dark:text-white">Mobile OTP verify karein</p>
+          <p className="mt-1 text-xs text-surface-500 dark:text-slate-400">Code WhatsApp/SMS par bhej diya gaya. 5 minute chalega.</p>
         </div>
+        {needsProfile && <StepHints active={2} />}
         {checkState.error && <Alert tone="error">{checkState.error}</Alert>}
         <form action={checkAction} className="space-y-4">
           <input type="hidden" name="phone" value={phone} />
-          <Input name="code" required inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="- - - - - -" className={`${FIELD} text-center font-mono text-xl tracking-[0.35em]`} />
+          <Input name="code" required inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="- - - - - -" aria-label="6 hindse OTP" className={`${FIELD} text-center font-mono text-xl tracking-[0.35em]`} />
+          {needsProfile && (
+            <div className="space-y-3 rounded-xl border border-[#DCE8DF] bg-[#F5F9F6] p-3 dark:border-slate-700 dark:bg-slate-800/60">
+              <p className="text-xs font-semibold text-[#1E4A2E] dark:text-emerald-300">Qadam 3 · Naya account: apna naam likhein</p>
+              <div><Label htmlFor="signup-name">Poora naam</Label><Input id="signup-name" name="full_name" required placeholder="Misal: Muhammad Aslam" className={FIELD} /></div>
+              <div><Label htmlFor="signup-village">Gaon / shehar <span className="font-normal text-surface-400">(optional)</span></Label><Input id="signup-village" name="village" placeholder="Misal: Chak 12" className={FIELD} /></div>
+              <p className="text-[11px] leading-4 text-[#496052] dark:text-slate-400">Account Admin ki manzoori ke baad mukammal hoga. Password baad mein profile se set kar sakte hain.</p>
+            </div>
+          )}
           <SubmitBtn label="OTP verify karein" busy="Check ho raha hai..." />
         </form>
         <button type="button" onClick={() => setPhone("")} className="w-full text-center text-xs font-semibold text-[#1E4A2E] hover:underline">Login screen par wapas</button>
@@ -203,11 +214,32 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
         </div>
       )}
       <div className="mb-5">
-        <p className="text-sm font-semibold text-surface-800">One {tenantName} Login</p>
-        <p className="mt-1 text-xs leading-relaxed text-surface-500">Admin, staff, farmer, customer, dealer aur vendor sab yahin se login karein.</p>
+        <p className="text-sm font-semibold text-surface-800 dark:text-white">One {tenantName} Login</p>
+        <p className="mt-1 text-xs leading-relaxed text-surface-500 dark:text-slate-400">Admin, staff, farmer, customer, dealer aur vendor sab yahin se login karein.</p>
       </div>
-      {passwordState.error && <Alert tone="error">{passwordState.error}</Alert>}
+      <div role="tablist" aria-label="Login ya naya account" className="mb-4 grid grid-cols-2 rounded-xl bg-[#EEF3EE] p-1 dark:bg-slate-800">
+        {([["login", "Login"], ["signup", "Naya account (OTP)"]] as const).map(([key, label]) => (
+          <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
+            className={`h-10 rounded-lg text-sm font-semibold transition ${tab === key ? "bg-[#174B2B] text-white shadow-sm" : "text-[#3D5A47] hover:bg-white/70 dark:text-slate-300 dark:hover:bg-slate-700"}`}>{label}</button>
+        ))}
+      </div>
       {otpState.error && <div className="mb-3"><Alert tone="error">{otpState.error}</Alert></div>}
+      {tab === "signup" ? (
+        <form
+          className="space-y-4"
+          onSubmit={(e) => { e.preventDefault(); const form = new FormData(); form.set("phone", phone.trim()); form.set("channel", "whatsapp"); otpAction(form); }}
+        >
+          <StepHints active={1} />
+          <div>
+            <Label htmlFor="signup-phone">Mobile number</Label>
+            <Input id="signup-phone" name="phone" required inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0300 1234567" className={FIELD} />
+          </div>
+          <Button type="submit" disabled={!phone.trim()} className={BIG_BTN}>WhatsApp par OTP bhejein</Button>
+          <p className="text-xs leading-relaxed text-[#496052] dark:text-slate-400">Is number par 6 hindse ka WhatsApp code aayega. Pehle se account ho to seedha login ho jayega; naya ho to agle qadam mein naam poochha jayega (Admin approval ke baad account chalega).</p>
+        </form>
+      ) : (
+      <>
+      {passwordState.error && <Alert tone="error">{passwordState.error}</Alert>}
       <form action={passwordAction} className="space-y-4">
         <div>
           <Label htmlFor="unified-identifier">Mobile, Email ya User ID</Label>
@@ -228,13 +260,35 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
             }}
             className="h-12 w-full rounded-xl border border-[#174B2B] bg-[#E9F4EC] text-[15px] font-semibold text-[#174B2B] transition hover:bg-[#DCEFE1] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {emailBusy ? "Bheja ja raha hai..." : "Send OTP"}
+            {emailBusy ? "Bheja ja raha hai..." : "OTP se login"}
           </button>
         </div>
-        <Link href="/forgot-password" className="block text-right text-xs font-semibold text-[#1E4A2E] hover:underline">Password bhool gaye?</Link>
+        <p className="text-[11px] leading-4 text-[#5B6F62] dark:text-slate-400">Password yaad nahi? Mobile ya email likh kar <b>OTP se login</b> dabayein — WhatsApp/email par code aayega. Naya user? Upar <b>Naya account (OTP)</b> chunein.</p>
+        <Link href="/forgot-password" className="block text-right text-xs font-semibold text-[#1E4A2E] hover:underline dark:text-emerald-300">Password bhool gaye?</Link>
       </form>
-      <div className="mt-4 rounded-xl border border-[#DCE8DF] bg-[#F5F9F6] px-3 py-2.5 text-center text-xs leading-relaxed text-[#496052]">Login ke baad system aapki identity ke mutabiq sahi portal khol dega.</div>
+      </>
+      )}
+      <div className="mt-4 rounded-xl border border-[#DCE8DF] bg-[#F5F9F6] px-3 py-2.5 text-center text-xs leading-relaxed text-[#496052] dark:border-slate-700 dark:bg-[#0B1426] dark:text-slate-400">Login ke baad system aapki identity ke mutabiq sahi portal khol dega.</div>
     </div>
+  );
+}
+
+/** Naya account ke qadam: 1 mobile, 2 WhatsApp OTP, 3 naam. */
+function StepHints({ active }: { active: 1 | 2 | 3 }) {
+  const steps = ["Mobile number", "WhatsApp OTP", "Naam / password"];
+  return (
+    <ol className="grid grid-cols-3 gap-1.5" aria-label="Naya account ke qadam">
+      {steps.map((label, i) => {
+        const n = i + 1;
+        const state = n < active ? "done" : n === active ? "now" : "next";
+        return (
+          <li key={label} aria-current={state === "now" ? "step" : undefined}
+            className={`rounded-lg border px-2 py-1.5 text-center text-[11px] leading-4 ${state === "now" ? "border-[#174B2B] bg-[#E9F4EC] font-bold text-[#174B2B] dark:border-emerald-400 dark:bg-emerald-900/30 dark:text-emerald-200" : state === "done" ? "border-[#CFE3D5] text-[#2E6840] dark:border-slate-600 dark:text-emerald-300" : "border-[#E1E6DE] text-[#7A8A80] dark:border-slate-700 dark:text-slate-400"}`}>
+            {state === "done" ? "✓" : n} · {label}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 

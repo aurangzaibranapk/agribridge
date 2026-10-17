@@ -47,7 +47,7 @@ export function ResetPasswordForm() {
               type="password"
               name="password"
               required
-              minLength={6}
+              minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={t("au_min_six_chars", lang)}
