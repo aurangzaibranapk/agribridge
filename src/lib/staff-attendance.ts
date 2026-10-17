@@ -92,10 +92,22 @@ export async function whatsappCheckIn(
   lng: number | null
 ): Promise<AttendanceResult> {
   const service = createServiceClient();
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Karachi" });
   const now = new Date().toISOString();
 
   const loc = await checkLocationAgainstBranch(branchId, lat, lng);
+
+  // Do not overwrite approved leave or manager-set absent
+  const { data: existing } = await service
+    .from("attendance_records")
+    .select("status, source")
+    .eq("profile_id", profileId)
+    .eq("attendance_date", today)
+    .maybeSingle();
+
+  if (existing && (existing.status === "leave" || existing.status === "absent" || existing.source === "manager")) {
+    return { message: "Aaj ki hazri pehle se set hai (leave/absent/manager). WhatsApp se overwrite nahi hogi." };
+  }
 
   const { error } = await service.from("attendance_records").upsert(
     {
