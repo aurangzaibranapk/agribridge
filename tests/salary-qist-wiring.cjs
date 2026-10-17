@@ -34,7 +34,10 @@ assert.doesNotMatch(pc, /bina record<\/div>/, 'purana +N bina record (bina katta
 // Ledger rules
 const rules = r('src/lib/ledger/rules.ts');
 assert.match(rules, /badDebt: "6075"/);
-assert.match(rules, /salaryDeductionsPayable: "2050"/);
+assert.match(rules, /salaryDeductionsPayable: "2027"/);
+// 2050 pehle se 'Cheque diye hue' (307) -- payroll kattauti us mein nahi jani chahiye
+assert.doesNotMatch(r('supabase/migrations/554_payroll_features.sql'), /values \('2050'/);
+assert.match(r('supabase/migrations/554_payroll_features.sql'), /values \('2027'/);
 assert.match(rules, /export async function postQistWriteOff/);
 // Pages exist + nav
 for (const p of ['src/app/admin/hr/salary-structure/page.tsx', 'src/app/admin/hr/payroll/page.tsx', 'src/app/admin/hr/advances/page.tsx',

@@ -117,7 +117,7 @@ export default function PayrollClient({ me, year, month, branch, branches, accou
               <tbody>
                 <tr><td className={TD}>6000 Tankhwahein</td><td className={`${TD} text-right tabular-nums`}>{pkr(totals.salaries)}</td><td className={TD} /></tr>
                 {totals.advance > 0 && <tr><td className={TD}>1130 Staff Advance</td><td className={TD} /><td className={`${TD} text-right tabular-nums`}>{pkr(totals.advance)}</td></tr>}
-                {totals.statutory > 0 && <tr><td className={TD}>2050 EOBI / Tax</td><td className={TD} /><td className={`${TD} text-right tabular-nums`}>{pkr(totals.statutory)}</td></tr>}
+                {totals.statutory > 0 && <tr><td className={TD}>2027 EOBI / Tax</td><td className={TD} /><td className={`${TD} text-right tabular-nums`}>{pkr(totals.statutory)}</td></tr>}
                 <tr><td className={TD}>2025 Tankhwah wajib-ul-ada</td><td className={TD} /><td className={`${TD} text-right tabular-nums`}>{pkr(totals.payable)}</td></tr>
               </tbody>
             </table>

@@ -1,8 +1,9 @@
 -- 554: Salary safhaat ki features, ijazatein, madad, aur kattautiyon ka khata.
 -- Additive.
 
+-- Note: 2050 pehle se "Cheque diye hue" (307) hai, is liye kattautiyon ka khata 2027.
 insert into public.gl_accounts (code, name, account_type, normal_side, is_active, sort_order)
-values ('2050', 'Tankhwah se kattautiyan dena (EOBI / Tax)', 'liability', 'credit', true, 2050)
+values ('2027', 'Tankhwah se kattautiyan dena (EOBI / Tax)', 'liability', 'credit', true, 227)
 on conflict (code) do nothing;
 
 insert into public.features (key, label, label_en, label_ur, route, icon, description) values

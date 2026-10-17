@@ -37,7 +37,7 @@ export function computePayLine(i: PayLineInput) {
 
 /**
  * Manzoori ka journal. Tankhwahein (6000) sirf kamaya hua hissa (gross - ghair-hazri);
- * advance (1130) aur kattautiyan (2050) alag; baqi Tankhwah baqi (2025).
+ * advance (1130) aur kattautiyan (2027) alag; baqi Tankhwah baqi (2025).
  */
 export function payrollApprovalLines(lines: { gross: number; absentDeduction: number; otherDeductions: number; advance: number; net: number }[]) {
   const sum = (f: (l: (typeof lines)[number]) => number) => Math.round(lines.reduce((s, l) => s + f(l), 0) * 100) / 100;

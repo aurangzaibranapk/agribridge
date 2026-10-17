@@ -117,8 +117,8 @@ export const ACC = {
   workerPayable: "2015",
   staffPayable: "2020",
   salaryDue: "2025",
-  /** 554: EOBI / tax jo tankhwah se kata, abhi jama nahi karwaya. */
-  salaryDeductionsPayable: "2050",
+  /** 554: EOBI / tax jo tankhwah se kata, abhi jama nahi karwaya. (2050 = cheque diye hue, alag.) */
+  salaryDeductionsPayable: "2027",
   customerAdvance: "2030",
   walletPayable: "2040",
   // Customer ka bill le liya, provider tak abhi nahi pahuncha. Wo paisa
