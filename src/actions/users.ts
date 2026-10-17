@@ -1,3 +1,4 @@
+import { sendSeparationEmail } from "@/lib/hr-emails";
 "use server";
 import { revalidatePath } from "next/cache";
 import { profileKaKhanaBadlein } from "@/lib/profile-write";
@@ -173,6 +174,23 @@ export async function suspendStaff(_prev: ActionState, formData: FormData): Prom
     recordId: userId,
     description: `Account suspend: ${reason}`,
   });
+
+  // Professional separation email
+  const { data: profile } = await who.supabase.from("profiles").select("full_name, email").eq("id", userId).maybeSingle();
+  const { data: details } = await who.supabase.from("staff_details").select("designation").eq("profile_id", userId).maybeSingle();
+  if (profile?.email) {
+    const lastDay = new Date();
+    lastDay.setDate(lastDay.getDate() + 7); // 7 day notice example
+    const lastDayStr = lastDay.toISOString().slice(0, 10);
+    await sendSeparationEmail(
+      profile.email,
+      profile.full_name || "Staff",
+      details?.designation || "Staff Member",
+      lastDayStr,
+      reason
+    );
+  }
+
   revalidatePath("/admin/users");
   return { success: true };
 }
