@@ -4,8 +4,11 @@ import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { loadDairy, todayPk } from "@/lib/portal/dairy-load";
 import { ACTIVE_STATUSES, STATUSES, STATUS_TONE, SPECIES_EMOJI, addDays, chartEnd, ageText, avg, dailySeries, dim, r1, rangeDays } from "@/lib/portal/dairy";
 import { Badge, Card, longDate, shortDate } from "@/components/portal/khata/khata-parts";
-import { ChartLegend, Footer, Hero, HeroBtn, Kpi, MilkChart, TagChip, Tabs, Tri, fmtL } from "@/components/portal/dairy/dairy-parts";
-import { setStatusAction } from "../../actions";
+import { ChartLegend, ErrorNote, Footer, Hero, HeroBtn, Kpi, MilkChart, TagChip, Tabs, Tri, fmtL } from "@/components/portal/dairy/dairy-parts";
+import { PhotoPicker } from "@/components/portal/dairy/photo-picker";
+import { signedUrls } from "@/lib/portal/dairy-pl-load";
+import { t as tr } from "@/lib/i18n/translations";
+import { setStatusAction, uploadPhotoAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +48,8 @@ export default async function AnimalDetail({ params, searchParams }: { params: {
     [L("dy_c_status"), <Badge key="s" tone={STATUS_TONE[a.status]}>{L(`st_${a.status}` as TranslationKey)}</Badge>],
     [L("dy_d_lactation"), a.lactation_no ? `${a.lactation_no}${d !== null ? ` · ${d} DIM` : ""}` : "—"],
   ];
+  const urls = await signedUrls([a.photo_path]);
+  const photoUrl = a.photo_path ? urls[a.photo_path] : null;
   const canMilk = (ACTIVE_STATUSES as readonly string[]).includes(a.status);
 
   return (
@@ -54,11 +59,25 @@ export default async function AnimalDetail({ params, searchParams }: { params: {
         <HeroBtn href="/portal/dairy/animals">🐄 {L("dy_list_title")}</HeroBtn>
       </Hero>
       {searchParams?.ok && <p className="rounded-xl bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200">{L("dy_saved")}</p>}
-      {searchParams?.e && <p className="rounded-xl bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">{L((searchParams.e.startsWith("dy_err_") ? searchParams.e : "dy_err_generic") as TranslationKey)}</p>}
+      <ErrorNote e={searchParams?.e} lang={lang} />
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.7fr]">
         <Card className="space-y-3">
-          <div className="grid h-44 place-items-center rounded-2xl bg-gradient-to-br from-yellow-200 via-green-300 to-sky-300 text-7xl dark:from-yellow-900 dark:via-green-900 dark:to-sky-900">{SPECIES_EMOJI[a.species]}</div>
+          <div className="relative h-56 overflow-hidden rounded-2xl bg-gradient-to-br from-lime-300 via-green-600 to-emerald-800">
+            {photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photoUrl} alt={a.name ?? a.tag_no} className="h-full w-full object-cover" />
+            ) : (
+              <span className="grid h-full place-items-center text-8xl">{SPECIES_EMOJI[a.species]}</span>
+            )}
+            <span className="absolute left-2.5 top-2.5"><TagChip tag={a.tag_no} /></span>
+          </div>
+          <form action={uploadPhotoAction} className="space-y-2">
+            <input type="hidden" name="id" value={a.id} />
+            <PhotoPicker title={photoUrl ? tr("dy2_photo_change", lang) : tr("dy2_photo_new", lang)} hint={tr("dy2_photo_hint", lang)} shrunkWord={tr("dy2_photo_shrunk", lang)} />
+            <button className="w-full rounded-xl bg-green-600 py-2 text-sm font-semibold text-white hover:bg-green-700">📤 {tr("dy2_photo_upload", lang)}</button>
+            <p className="rounded-xl border border-sky-300/50 bg-sky-50 p-2.5 text-[11px] text-surface-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-slate-200">🔒 {tr("dy2_photo_private", lang)}</p>
+          </form>
           <table className="w-full text-[13px]">
             <tbody>{facts.map(([k, v]) => <tr key={k} className="border-b border-surface-100 dark:border-surface-800"><td className="py-2 pr-2 text-surface-500 dark:text-slate-400">{k}</td><td className="py-2 font-semibold text-surface-900 dark:text-white">{v}</td></tr>)}</tbody>
           </table>
