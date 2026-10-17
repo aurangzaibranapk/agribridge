@@ -1,6 +1,7 @@
 ﻿import {
   LayoutDashboard, FileText, Quote, Image as ImageIcon, HelpCircle,
   Smartphone, Mail, Handshake, Sliders, Menu as MenuIcon, FileCode, UserCog, History, Package, Wheat, FolderOpen, Tag, Layers, Building2, ShoppingCart, Wallet, BarChart3, Truck, ClipboardList, Boxes, Droplet, Store, ArrowLeftRight, Users, PackageSearch, LineChart, PiggyBank, Sprout, Bug, Leaf, Beef, ShoppingBasket, Landmark, Contact, Globe, ShoppingBag, HandCoins, CircleDollarSign, CreditCard, FileCheck, Calculator, Bell, List, MapPin, Briefcase, ShieldCheck, AlertTriangle, Bike, Zap, Wrench, Receipt, ClipboardCheck, PackagePlus, WalletCards, LayoutGrid, MailPlus, Home, ClipboardType, FileBarChart, ReceiptText, Scale, FileSpreadsheet, Sparkles, IdCard, Bot, SlidersHorizontal, MessageCircle, Trash2, Undo2, Inbox, ListChecks, PackageCheck, RefreshCw, Trophy,
+  CalendarDays,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -215,6 +216,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/hr/payroll", label: "Payroll", icon: WalletCards },
       { href: "/admin/hr/advances", label: "Staff Advance", icon: WalletCards },
       { href: "/admin/hr/attendance/board", label: "Hazri Board", icon: AlertTriangle },
+      { href: "/admin/hr/meetings", label: "Meetings", icon: CalendarDays },
       { href: "/admin/submissions", label: "Manzoori Inbox", icon: Inbox },
       { href: "/admin/field-watch", label: "Maidan ki Nigrani", icon: AlertTriangle },
       { href: "/admin/dashboard-manager", label: "Dashboard aur Feature Manager", icon: LayoutGrid },
