@@ -1,4 +1,5 @@
 import { portalDict } from "./dict/portal";
+import { portalMunshiDict } from "./dict/portal-munshi";
 import { posDict } from "./dict/pos";
 import { machineryDict } from "./dict/machinery";
 import { myWorkDict } from "./dict/my-work";
@@ -161,6 +162,7 @@ const dict = {
   ...staffPerformanceDict,
   ...intelligenceDict,
   ...business360OwnerDict,
+  ...portalMunshiDict,
 };
 
 export type TranslationKey = keyof typeof dict;
