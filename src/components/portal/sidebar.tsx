@@ -26,7 +26,7 @@ export function PortalSidebar({ lang }: { lang: Lang }) {
   const pathname = usePathname();
   const NAV_ITEMS = getPortalNavItems(lang);
   return (
-    <aside className="hidden w-60 shrink-0 flex-col bg-[#0f2a1f] px-3 py-6 dark:bg-[#0b1322] sm:flex">
+    <aside className="hidden w-60 shrink-0 flex-col bg-[#0f2a1f] px-3 py-6 dark:bg-[#0b1322] sm:flex print:hidden">
       <div className="mb-4 flex items-center gap-2.5 border-b border-white/10 px-2 pb-4">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-yellow-500 font-bold text-white">A</span>
         <div>
