@@ -28,6 +28,7 @@ do $$
 declare
   t record;
   cols text;
+  secret_cols text;
 begin
   for t in
     select * from (values
@@ -43,8 +44,15 @@ begin
     execute format('revoke select on public.%I from anon', t.tbl);
     execute format('revoke select on public.%I from public', t.tbl);
     -- Column-level grant bhi saaf (pehle se diya gaya ho to).
-    execute format('revoke select (%s) on public.%I from anon',
-      (select string_agg(quote_ident(c), ', ') from unnest(t.secret) c), t.tbl);
+    -- Sirf wohi raaz wale columns jo waqai maujood hain (purane/local DB mein
+    -- koi column na ho to migration na girey).
+    select string_agg(quote_ident(column_name), ', ')
+      into secret_cols
+      from information_schema.columns
+     where table_schema = 'public' and table_name = t.tbl and column_name = any (t.secret);
+    if secret_cols is not null then
+      execute format('revoke select (%s) on public.%I from anon', secret_cols, t.tbl);
+    end if;
 
     select string_agg(quote_ident(column_name), ', ' order by ordinal_position)
       into cols
