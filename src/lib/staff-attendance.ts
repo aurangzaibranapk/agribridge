@@ -85,6 +85,19 @@ export interface AttendanceResult {
   message: string;
 }
 
+/** Aaj ka record pehle se ho to WhatsApp check-in kya jawab de (S3). */
+export function whatsappCheckInBlockedMessage(row: {
+  status: string | null;
+  check_in_at: string | null;
+  source: string | null;
+}): string {
+  if (row.check_in_at) return "Aaj ki hazri pehle hi lag chuki hai.";
+  if (row.source === "leave" || row.status === "leave") {
+    return "Aaj aap ki manzoor shuda chhutti hai. Aaye hain to HR ko batayein — wohi is din ko badal sakte hain.";
+  }
+  return `Aaj ka record pehle se maujood hai (${row.status ?? "—"}). Badalne ke liye darkhwast dein.`;
+}
+
 export async function whatsappCheckIn(
   profileId: string,
   branchId: string | null,
@@ -97,21 +110,34 @@ export async function whatsappCheckIn(
 
   const loc = await checkLocationAgainstBranch(branchId, lat, lng);
 
-  const { error } = await service.from("attendance_records").upsert(
-    {
-      profile_id: profileId,
-      attendance_date: today,
-      status: "present",
-      check_in_at: now,
-      check_in_lat: lat,
-      check_in_lng: lng,
-      check_in_distance_meters: loc.distanceMeters,
-      check_in_location_ok: loc.withinRadius,
-      source: "whatsapp",
-    },
-    { onConflict: "profile_id,attendance_date" }
-  );
-  if (error) return { message: `Hazri darj nahi ho saki: ${error.message}` };
+  // Upsert JAAN BOOJH KAR nahi (S3). Us din manzoor chhutti, ghair-haziri
+  // ya afsar ki lagayi hazri ho to upsert usay chup chaap "present" bana
+  // deta tha. Ab record maujood ho to check-in rukta hai aur wajah batata
+  // hai -- bilkul web check-in (selfCheckIn) ki tarah. DB (591) bhi rokta hai.
+  const { data: already } = await service
+    .from("attendance_records")
+    .select("status, check_in_at, source")
+    .eq("profile_id", profileId)
+    .eq("attendance_date", today)
+    .maybeSingle();
+  if (already) return { message: whatsappCheckInBlockedMessage(already) };
+
+  const { error } = await service.from("attendance_records").insert({
+    profile_id: profileId,
+    attendance_date: today,
+    status: "present",
+    check_in_at: now,
+    check_in_lat: lat,
+    check_in_lng: lng,
+    check_in_distance_meters: loc.distanceMeters,
+    check_in_location_ok: loc.withinRadius,
+    source: "whatsapp",
+  });
+  if (error) {
+    // Do message ek saath aaye: doosra unique par rukta hai.
+    if (error.code === "23505") return { message: "Aaj ki hazri pehle hi lag chuki hai." };
+    return { message: `Hazri darj nahi ho saki: ${error.message}` };
+  }
 
   const waqt = new Date().toLocaleTimeString("en-PK", { hour: "2-digit", minute: "2-digit", hour12: true });
 
