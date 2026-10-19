@@ -9,10 +9,14 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles, notifyUser } from "@/lib/notifications";
 import { TENANT_PLAN_LIMITS, tenantPlan } from "@/lib/tenant/plan-limits";
 import { DEPARTMENTS } from "@/lib/departments";
+import { logAudit } from "@/lib/audit";
+import { hrMailAuditText, hrMailNotice, sendJoiningEmail, todayPk } from "@/lib/hr-emails";
 
 export interface ActionState {
   error?: string;
   success?: boolean;
+  /** Kaam ho gaya magar koi baat HR ko batani hai (maslan email nahi gayi). */
+  notice?: string;
 }
 
 const PAY_WRITERS = ["hr", "admin", "owner", "super_admin"];
@@ -192,7 +196,24 @@ export async function markSalaryPaid(_prev: ActionState, formData: FormData): Pr
   const net = Number(row.net_salary);
   const advance = Number(row.advance_deduction ?? 0);
 
-  // Cash book ki qatar pehle. Balance us par trigger khud hilata hai
+  // Pehle CLAIM (593): ek hi SQL mein "status <> 'paid'" ki shart ke saath
+  // 'paid'. Do click / do tab ho to sirf pehla jeetta hai; doosre ko
+  // error milta hai aur us ka koi paisa nahi nikalta. Pehle ye aakhir
+  // mein bina shart ke lagta tha -- is liye tankhwah do dafa ja sakti thi.
+  const { error: claimError } = await supabase.rpc("fn_salary_payment_claim", { p_payment: paymentId });
+  if (claimError) {
+    if (/pehle hi di ja chuki/i.test(claimError.message)) return { error: "Ye tankhwah pehle hi di ja chuki hai." };
+    return { error: claimError.message };
+  }
+
+  // Kuch fail ho to claim wapas -- warna tankhwah "paid" dikhti jab ke
+  // paisa nikla hi nahi. Cash book ki qatar pehle hatti hai, phir claim.
+  const undo = async (txnId: string | null) => {
+    if (txnId) await supabase.from("finance_transactions").delete().eq("id", txnId);
+    await supabase.rpc("fn_salary_payment_unclaim", { p_payment: paymentId });
+  };
+
+  // Cash book ki qatar. Balance us par trigger khud hilata hai
   // (127) -- yahan se nahi.
   const { data: txn, error: txnError } = await supabase
     .from("finance_transactions")
@@ -207,7 +228,10 @@ export async function markSalaryPaid(_prev: ActionState, formData: FormData): Pr
     })
     .select("id")
     .single();
-  if (txnError) return { error: `Cash book mein darj nahi hui: ${txnError.message}` };
+  if (txnError || !txn) {
+    await undo(null);
+    return { error: `Cash book mein darj nahi hui: ${txnError?.message ?? "qatar nahi bani"}` };
+  }
 
   const posted = await postSalaryPaid({
     profileId: row.profile_id,
@@ -218,19 +242,19 @@ export async function markSalaryPaid(_prev: ActionState, formData: FormData): Pr
     ctx: { createdBy: user?.id ?? null, claims: [{ table: "finance_transactions", rowId: txn.id }] },
   });
 
-  // Ledger mein na ja sake to qatar bhi hata di jati hai. Yahan ye theek
-  // hai (POS ke ulat, jahan maal gahak ke haath mein ja chuka hota hai):
-  // is lamhe tak kuch hua nahi, sirf likha ja raha tha.
+  // Ledger mein na ja sake to qatar bhi hata di jati hai aur claim
+  // wapas. Is lamhe tak kuch hua nahi, sirf likha ja raha tha.
   if (failed(posted)) {
-    await supabase.from("finance_transactions").delete().eq("id", txn.id);
+    await undo(txn.id);
     return { error: `Ledger mein nahi gayi, is liye tankhwah darj nahi ki: ${posted.error}` };
   }
 
-  const { error } = await supabase
-    .from("salary_payments")
-    .update({ status: "paid", paid_date: new Date().toISOString().split("T")[0] })
-    .eq("id", paymentId);
-  if (error) return { error: error.message };
+  // Hawala: is tankhwah ki cash book qatar (bad mein claim wapas na ho sake).
+  const { error: attachError } = await supabase.rpc("fn_salary_payment_attach_txn", {
+    p_payment: paymentId,
+    p_txn: txn.id,
+  });
+  if (attachError) console.error("[markSalaryPaid] pay_txn_id nahi laga:", attachError.message);
 
   // Staff ko khud batao ke tankhwah di gayi
   await notifyUser(
@@ -477,9 +501,27 @@ export async function inviteStaffMember(_prev: ActionState, formData: FormData):
   const { sendOfficialLoginEmail } = await import("@/lib/email");
   await sendOfficialLoginEmail(email, fullName, email, randomPassword);
 
+  // Rasmi joining email -- sirf yahan, jahan banda WAQAI banta hai.
+  // Account ek hi dafa banta hai (auth.createUser dobara usi email par
+  // fail hota hai), is liye ye email bhi ek hi dafa jati hai.
+  const joining = await sendJoiningEmail({
+    toEmail: email,
+    fullName,
+    designation,
+    joiningDate: todayPk(),
+  });
+  await logAudit({
+    actionType: "create",
+    module: "hr_email",
+    recordId: authUser.user.id,
+    recordLabel: fullName,
+    description: hrMailAuditText("joining", email, joining),
+  });
+  if (!joining.sent) console.error("Joining email failed:", joining.error);
+
   revalidatePath("/admin/hr");
   revalidatePath("/admin/users");
-  return { success: true };
+  return { success: true, notice: hrMailNotice("joining", joining) };
 }
 
 export async function bulkDeactivateStaff(_prev: ActionState, formData: FormData): Promise<ActionState> {

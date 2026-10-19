@@ -24170,7 +24170,10 @@ export type Database = {
           id: string
           net_salary: number
           notes: string | null
+          pay_txn_id: string | null
           paid_date: string | null
+          paid_at: string | null
+          paid_by: string | null
           pay_month: number
           pay_year: number
           profile_id: string
@@ -24185,7 +24188,10 @@ export type Database = {
           id?: string
           net_salary: number
           notes?: string | null
+          pay_txn_id?: string | null
           paid_date?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
           pay_month: number
           pay_year: number
           profile_id: string
@@ -24200,7 +24206,10 @@ export type Database = {
           id?: string
           net_salary?: number
           notes?: string | null
+          pay_txn_id?: string | null
           paid_date?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
           pay_month?: number
           pay_year?: number
           profile_id?: string
@@ -35358,6 +35367,18 @@ export type Database = {
           the_date: string
           work_minutes: number
         }[]
+      }
+      fn_salary_payment_attach_txn: {
+        Args: { p_payment: string; p_txn: string }
+        Returns: undefined
+      }
+      fn_salary_payment_claim: {
+        Args: { p_payment: string }
+        Returns: Json
+      }
+      fn_salary_payment_unclaim: {
+        Args: { p_payment: string }
+        Returns: undefined
       }
       fn_attendance_month_summary: {
         Args: { p_month: number; p_profile: string; p_year: number }
