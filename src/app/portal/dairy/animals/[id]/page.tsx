@@ -5,6 +5,9 @@ import { loadDairy, todayPk } from "@/lib/portal/dairy-load";
 import { ACTIVE_STATUSES, STATUSES, STATUS_TONE, SPECIES_EMOJI, addDays, chartEnd, ageText, avg, dailySeries, dim, r1, rangeDays } from "@/lib/portal/dairy";
 import { Badge, Card, longDate, shortDate } from "@/components/portal/khata/khata-parts";
 import { ChartLegend, ErrorNote, Footer, Hero, HeroBtn, Kpi, MilkChart, TagChip, Tabs, Tri, fmtL } from "@/components/portal/dairy/dairy-parts";
+import { EVENT_COLOR, EVENT_ICON } from "@/lib/portal/breeding";
+import { loadBreeding } from "@/lib/portal/breeding-load";
+import { TLItem } from "@/components/portal/breeding/breed-parts";
 import { PhotoPicker } from "@/components/portal/dairy/photo-picker";
 import { signedUrls } from "@/lib/portal/dairy-pl-load";
 import { t as tr } from "@/lib/i18n/translations";
@@ -16,7 +19,9 @@ export default async function AnimalDetail({ params, searchParams }: { params: {
   const lang = getLanguageFromCookies();
   const L = (k: TranslationKey) => t(k, lang);
   const asOf = todayPk();
-  const { animals, yields } = await loadDairy(asOf, 90);
+  const [{ animals, yields }, breed] = await Promise.all([loadDairy(asOf, 90), loadBreeding({ animalId: params.id })]);
+  const bev = breed.events.filter((e) => e.animal_id === params.id);
+  const rp = breed.repro.find((x) => x.animal_id === params.id) ?? null;
   const a = animals.find((x) => x.id === params.id);
   if (!a) notFound(); // RLS: doosre ka janwar milta hi nahi
   const days = rangeDays(searchParams?.r);
@@ -131,14 +136,14 @@ export default async function AnimalDetail({ params, searchParams }: { params: {
         <Card>
           <div className="mb-3 flex items-start justify-between gap-3">
             <h3 className="text-[15px] font-semibold text-surface-900 dark:text-white"><Tri k="dy_d_breed_title" lang={lang} /></h3>
-            <Badge tone="violet">Phase 4</Badge>
+            {rp?.pregnant ? <Badge tone="violet">{L("bh_hs_pregnant")} · {rp.days_pregnant} {L("bh_days")}</Badge> : rp?.pd_pending ? <Badge tone="indigo">{L("bh_hs_pd")}</Badge> : null}
           </div>
           <div className="relative space-y-4 pl-6 before:absolute before:bottom-2 before:left-[9px] before:top-2 before:w-0.5 before:bg-surface-200 dark:before:bg-surface-800">
-            <TL color="bg-violet-500" title="AI · semen code · bull" sub={L("dy_d_breed_p4")} />
-            <TL color="bg-sky-500" title="PD check → expected calving" sub="Cow 283 · Buffalo 310" />
-            <TL color="bg-green-500" title={`${L("dy_d_lactation")} ${a.lactation_no || "—"}`} sub={a.last_calving_date ? longDate(a.last_calving_date, lang) : "—"} />
+            {bev.slice(0, 4).map((e) => <TLItem key={e.id} color={EVENT_COLOR[e.event_type]} date={shortDate(e.event_date, lang)} title={`${EVENT_ICON[e.event_type]} ${tr(`bh_ty_${e.event_type}` as TranslationKey, lang)}${e.bull_name ? ` · ${e.bull_name}` : ""}${e.pd_result ? ` · ${tr(`bh_pd_${e.pd_result}` as TranslationKey, lang)}` : ""}`} />)}
+            {bev.length === 0 && <TL color="bg-green-500" title={`${L("dy_d_lactation")} ${a.lactation_no || "—"}`} sub={a.last_calving_date ? longDate(a.last_calving_date, lang) : "—"} />}
           </div>
-          <div className="mt-3 rounded-xl border border-dashed border-violet-400 bg-violet-500/5 p-3 text-xs text-surface-700 dark:text-slate-200">🧬 {L("dy_d_hook")}</div>
+          {rp?.pregnant && rp.expected_calving && <p className="mt-3 text-xs text-surface-600 dark:text-slate-300">🍼 {L("bh_d_expected")} <b>{longDate(rp.expected_calving, lang)}</b></p>}
+          <a href={`/portal/dairy/breeding/animal/${a.id}`} className="mt-3 block rounded-xl border border-dashed border-violet-400 bg-violet-500/5 p-3 text-xs font-semibold text-violet-700 dark:text-violet-200">🧬 {L("bh_open_tl")} →</a>
         </Card>
       </div>
       <Footer lang={lang} />

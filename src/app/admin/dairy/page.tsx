@@ -36,6 +36,7 @@ export default async function AdminDairy({ searchParams }: { searchParams: Recor
   return (
     <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
       <Hero title={<>🐄 {L("ad_title")} {lang !== "ur" && <span dir="rtl">· {t("ad_title", "ur")}</span>}</>} sub={`${per.from} → ${per.to} · ${L("ad_sub")}`}>
+        <Link href="/admin/dairy/breeding" className="rounded-xl border border-white/30 bg-white/10 px-3.5 py-2 text-xs font-semibold text-white">🧬 {L("bh_ad_title")}</Link>
         <SheetsButton href={csvHref} label={L("ad_sheets")} help={L("ad_sheets_help")} />
       </Hero>
       {error && <ErrorNote e="dy2_err_generic" lang={lang} />}

@@ -4,6 +4,9 @@ import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { dairyContext, loadDairy, todayPk } from "@/lib/portal/dairy-load";
 import { addDays, animalStats, chartEnd, dailySeries, dropAlerts, herdSummary, rangeDays, reconcile, SPECIES_EMOJI } from "@/lib/portal/dairy";
 import { Badge, Card } from "@/components/portal/khata/khata-parts";
+import { priorityTasks } from "@/lib/portal/breeding";
+import { loadTasks } from "@/lib/portal/breeding-load";
+import { AlertRow } from "@/components/portal/breeding/breed-parts";
 import { ChartLegend, Donut, Footer, Hero, HeroBtn, Kpi, MilkChart, STATUS_COLOR, TagChip, Tabs, Tri, fmtL } from "@/components/portal/dairy/dairy-parts";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +16,7 @@ export default async function DairyDashboard({ searchParams }: { searchParams: R
   const L = (k: TranslationKey) => t(k, lang);
   const asOf = todayPk();
   const ctx = await dairyContext();
-  const { animals, yields, collection } = await loadDairy(asOf, 90);
+  const [{ animals, yields, collection }, { tasks: btasks }] = await Promise.all([loadDairy(asOf, 90), loadTasks(30)]);
   const days = rangeDays(searchParams?.r);
   const end = chartEnd(yields, asOf);
   const series = dailySeries(yields, addDays(end, -(days - 1)), end);
@@ -91,8 +94,9 @@ export default async function DairyDashboard({ searchParams }: { searchParams: R
             <Row key={a.id} icon="📉" bg="bg-rose-100 dark:bg-rose-500/20" title={`${a.name ?? ""} #${a.tag_no} ${L("dy_alert_drop")} ${Math.abs(s.dropPct ?? 0)}%`} sub={`${s.last7.find((x) => x > 0)} → ${s.today} L · ${L("dy_alert_drop_sub")}`} badge={<Badge tone="amber">{L("dy_tag_watch")}</Badge>} />
           ))}
           {pending > 0 && <Row icon="✍️" bg="bg-amber-100 dark:bg-amber-500/20" title={`${pending} ${L("dy_alert_pending")}`} sub={L("dy_alert_pending_sub")} badge={<Badge tone="indigo">{L("dy_tag_today")}</Badge>} />}
-          {alerts.length === 0 && pending === 0 && <Row icon="✅" bg="bg-emerald-100 dark:bg-emerald-500/20" title={L("dy_all_good")} sub="" badge={null} />}
-          <Row icon="🧬" bg="bg-violet-100 dark:bg-violet-500/20" title={L("dy_alert_p4")} sub={L("dy_alert_p4_sub")} badge={<Badge tone="violet">{L("dy_tag_soon")}</Badge>} />
+          {alerts.length === 0 && pending === 0 && btasks.length === 0 && <Row icon="✅" bg="bg-emerald-100 dark:bg-emerald-500/20" title={L("dy_all_good")} sub="" badge={null} />}
+          {priorityTasks(btasks, 3).map((x) => <AlertRow key={x.task_key} task={x} lang={lang} asOf={asOf} />)}
+          <Link href="/portal/dairy/breeding" className="mt-1 flex items-center justify-between rounded-xl border border-dashed border-violet-400 bg-violet-500/5 px-3 py-2 text-xs font-semibold text-violet-700 dark:text-violet-200">🧬 {L("bh_dash_link")} {btasks.length ? `· ${btasks.length} ${L("bh_dash_link_n")}` : ""}<span>→</span></Link>
           <div className="mt-3 grid grid-cols-3 gap-2.5">
             <Quick href="/portal/dairy/milk" icon="🥛" bg="bg-emerald-100 dark:bg-emerald-500/20" label={L("dy_btn_milk")} />
             <Quick href="/portal/dairy/animals/new" icon="➕" bg="bg-sky-100 dark:bg-sky-500/20" label={L("dy_btn_add")} />

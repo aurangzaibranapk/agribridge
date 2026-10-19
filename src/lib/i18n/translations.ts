@@ -3,6 +3,7 @@ import { portalMunshiDict } from "./dict/portal-munshi";
 import { portalKhataDict } from "./dict/portal-khata";
 import { portalDairyDict } from "./dict/portal-dairy";
 import { portalDairyPlDict } from "./dict/portal-dairy-pl";
+import { portalBreedingDict } from "./dict/portal-breeding";
 import { posDict } from "./dict/pos";
 import { machineryDict } from "./dict/machinery";
 import { myWorkDict } from "./dict/my-work";
@@ -169,6 +170,7 @@ const dict = {
   ...portalKhataDict,
   ...portalDairyDict,
   ...portalDairyPlDict,
+  ...portalBreedingDict,
 };
 
 export type TranslationKey = keyof typeof dict;

@@ -1,10 +1,22 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, UserCircle, Tractor, Sprout, Landmark, LogOut, Warehouse, MapPin, Wallet, Sparkles, PackageSearch, CalendarClock, Milk, Calculator } from "lucide-react";
+import { LayoutDashboard, UserCircle, Tractor, Sprout, Landmark, LogOut, Warehouse, MapPin, Wallet, Sparkles, PackageSearch, CalendarClock, Milk, Calculator, Dna, Syringe } from "lucide-react";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { LanguageToggle } from "./language-toggle";
 
+/** Dairy ke andar wale hisse apne nav item ko roshan karein (alerts -> Nasal). */
+const DAIRY_SUB: Record<string, string[]> = {
+  "/portal/dairy/hisaab": ["/portal/dairy/hisaab"],
+  "/portal/dairy/breeding": ["/portal/dairy/breeding", "/portal/dairy/alerts"],
+  "/portal/dairy/health": ["/portal/dairy/health"],
+};
+export function isNavActive(pathname: string, href: string): boolean {
+  if (pathname === href) return true;
+  if (DAIRY_SUB[href]) return DAIRY_SUB[href].some((p) => pathname.startsWith(p));
+  if (href === "/portal/dairy") return pathname.startsWith("/portal/dairy") && !Object.values(DAIRY_SUB).flat().some((p) => pathname.startsWith(p));
+  return false;
+}
 export function getPortalNavItems(lang: Lang) {
   return [
     { href: "/portal/dashboard", label: t("nav_dashboard", lang), icon: LayoutDashboard },
@@ -15,6 +27,8 @@ export function getPortalNavItems(lang: Lang) {
     { href: "/portal/campaigns", label: t("nav_campaigns", lang), icon: CalendarClock },
     { href: "/portal/dairy", label: t("nav_dairy", lang), icon: Milk },
     { href: "/portal/dairy/hisaab", label: t("nav_dairy_hisaab", lang), icon: Calculator },
+    { href: "/portal/dairy/breeding", label: t("nav_dairy_breeding", lang), icon: Dna },
+    { href: "/portal/dairy/health", label: t("nav_dairy_health", lang), icon: Syringe },
     { href: "/portal/services/livestock", label: t("nav_livestock", lang), icon: Landmark },
     { href: "/portal/crops", label: t("nav_crops", lang), icon: Sprout },
     { href: "/portal/services/fertilizer", label: t("nav_fertilizer", lang), icon: Sprout },
@@ -39,7 +53,7 @@ export function PortalSidebar({ lang }: { lang: Lang }) {
       <div className="mb-4 px-2"><LanguageToggle current={lang} /></div>
       <nav className="flex flex-1 flex-col gap-1">
         {NAV_ITEMS.map((item) => {
-          const active = pathname === item.href || (item.href === "/portal/dairy" && pathname.startsWith("/portal/dairy") && !pathname.startsWith("/portal/dairy/hisaab")) || (item.href === "/portal/dairy/hisaab" && pathname.startsWith("/portal/dairy/hisaab"));
+          const active = isNavActive(pathname, item.href);
           return (
             <Link key={item.href} href={item.href} className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${active ? "bg-gradient-to-r from-green-600 to-green-700 text-white shadow" : "text-emerald-50/75 hover:bg-white/10 hover:text-white"}`}>
               <item.icon className="h-4 w-4 shrink-0" />{item.label}
