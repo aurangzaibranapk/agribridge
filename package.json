@@ -56,7 +56,8 @@
     "test:pos-card-cash": "npx --yes tsx scripts/test-pos-card-cash-dupes.ts",
     "test:portal-polish": "npx --yes tsx scripts/test-portal-polish.ts && node tests/portal-polish-sql.mjs",
     "test:portal-demand-categories": "npx --yes tsx scripts/test-portal-demand-categories.ts && node tests/portal-demand-categories-sql.mjs",
-    "test:portal-no-fertilizer-credit": "node tests/portal-no-fertilizer-credit.cjs"
+    "test:portal-no-fertilizer-credit": "node tests/portal-no-fertilizer-credit.cjs",
+    "test:portal-one-screen": "npx --yes tsx scripts/test-portal-one-screen.ts"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",

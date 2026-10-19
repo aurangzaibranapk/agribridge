@@ -13,6 +13,7 @@ import {
   officialScore,
   summarizeKhata,
   summarizeLivestock,
+  dairyLitersPerDay,
   summarizeProfit,
   type ActivityItem,
   type CreditPositionRow,
@@ -35,7 +36,8 @@ export async function loadMunshiDashboard(farmer: Record<string, any>, now = new
   const today = now.toISOString().slice(0, 10);
   const since180 = new Date(now.getTime() - 185 * 86_400_000).toISOString().slice(0, 10);
 
-  const [farmsR, customersR, fclR, milkR, milkPayR, milkBalR, grainBalR, creditReqR, bookingsR, demandsR, loansR, campaignsR, campBookR, snapR, eligR] =
+  const since30 = new Date(now.getTime() - 30 * 86_400_000).toISOString().slice(0, 10);
+  const [farmsR, customersR, fclR, milkR, milkPayR, milkBalR, grainBalR, creditReqR, bookingsR, demandsR, loansR, campaignsR, campBookR, snapR, eligR, dairyAnimalsR, dairyYieldsR] =
     await Promise.all([
       sb.from("farms").select("id, name, area_acres, latitude, longitude, is_verified").eq("farmer_id", farmerId).order("created_at"),
       sb.from("customers").select("id, current_balance, credit_limit, is_deleted").eq("farmer_id", farmerId),
@@ -52,6 +54,9 @@ export async function loadMunshiDashboard(farmer: Record<string, any>, now = new
       sb.from("campaign_bookings").select("campaign_id, acres, created_at").eq("farmer_id", farmerId),
       sb.from("score_snapshots").select("score, band, state, snapshot_date").eq("subject_type", "farmer").eq("subject_id", farmerId).order("snapshot_date", { ascending: false }).limit(1).maybeSingle(),
       sb.rpc("fn_credit_eligibility", { p_subject_type: "farmer", p_subject_id: farmerId }),
+      // Livestock -> Dairy: Dairy Management ke janwar aur doodh -- hon to dashboard inhi ko dikhaye.
+      sb.from("dairy_animals").select("species, status").eq("farmer_id", farmerId),
+      sb.from("dairy_milk_yields").select("yield_date, liters").eq("farmer_id", farmerId).gte("yield_date", since30),
     ]);
 
   const farms: any[] = farmsR.data ?? [];
@@ -108,7 +113,7 @@ export async function loadMunshiDashboard(farmer: Record<string, any>, now = new
   });
 
   const creditLimit = Math.max(Number(farmer.credit_limit ?? 0), ...customers.map((c) => Number(c.credit_limit ?? 0)), 0);
-  const livestock = summarizeLivestock(farmer);
+  const livestock = summarizeLivestock(farmer, dairyAnimalsR?.data ?? [], dairyLitersPerDay(dairyYieldsR?.data ?? []));
   const milk: any[] = milkR.data ?? [];
   const milkDays = milkDaily(now, milk, 30);
   const milk30 = milkDays.reduce((s, d) => s + d.liters, 0);

@@ -80,6 +80,8 @@ export const portalMunshiDict = {
   pmd_herd_empty: { en: "No animals on record. Add them on the Livestock page.", rm: "Koi janwar darj nahi. Maweshi ke safhe par shamil karein.", ur: "کوئی جانور درج نہیں۔ مویشی کے صفحے پر شامل کریں۔" },
   pmd_animals: { en: "animals", rm: "janwar", ur: "جانور" },
   pmd_from_record: { en: "From your profile record", rm: "Aap ke profile record se", ur: "آپ کے پروفائل ریکارڈ سے" },
+  pmd_from_dairy: { en: "From Dairy Management records", rm: "Dairy Management ke record se", ur: "ڈیری مینجمنٹ کے ریکارڈ سے" },
+  pmd_per_day_dairy: { en: "L/day (Dairy record, 30-day avg)", rm: "L/din (Dairy record, 30 din ausat)", ur: "لیٹر/دن (ڈیری ریکارڈ، 30 دن اوسط)" },
 
   pmd_tasks: { en: "Today's tasks", rm: "Aaj ke kaam", ur: "آج کے کام" },
   pmd_pending: { en: "pending", rm: "baqi", ur: "باقی" },

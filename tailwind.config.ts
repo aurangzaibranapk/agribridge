@@ -5,6 +5,11 @@ const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      // Portal "ek screen" (malik, 19 Oct): laptop/desktop (>=1024 chaura,
+      // >=640 ooncha) par safha nahi, sirf apne panel ke andar scroll.
+      // Chhoti oonchai ya phone par purana aam scroll. globals.css .pf-*
+      // bhi yahi shart istemal karta hai -- dono ek jagah se badlein.
+      screens: { fit: { raw: "(min-width: 1024px) and (min-height: 640px)" } },
       colors: {
         // AgriBridge ke rang -- malik ne 4 September ko ye lock kiye.
         //

@@ -189,39 +189,44 @@ export function DemandCenterClient({ farmerName, products, demands }: { farmerNa
   const shownGroups = DEMAND_GROUPS.filter((g) => rowGroups.has(g) && (rowFilter === "all" || rowFilter === g));
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8" dir="ltr">
-      <Link href="/portal/dashboard" className="text-sm text-surface-500 hover:text-brand-700 dark:text-slate-400">← Dashboard par wapas</Link>
-      <div className="mt-5 rounded-3xl bg-gradient-to-r from-emerald-700 via-teal-700 to-slate-900 p-6 text-white shadow-xl dark:from-emerald-900 dark:via-cyan-950 dark:to-[#0a1428]">
+    <div className="pf-fit mx-auto max-w-7xl px-4 py-8 sm:px-6 fit:gap-2.5 fit:py-3" dir="ltr">
+      <Link href="/portal/dashboard" className="text-sm text-surface-500 hover:text-brand-700 dark:text-slate-400 fit:hidden">← Dashboard par wapas</Link>
+      <div className="mt-5 rounded-3xl bg-gradient-to-r from-emerald-700 via-teal-700 to-slate-900 p-6 text-white shadow-xl fit:rounded-2xl fit:px-5 fit:py-3 dark:from-emerald-900 dark:via-cyan-950 dark:to-[#0a1428]">
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div>
             <div className="flex items-center gap-2 text-emerald-200"><Sparkles className="h-5 w-5" /><span className="text-sm font-semibold">AgriBridge Digital Munshi</span></div>
-            <h1 className="mt-2 text-2xl font-bold">Kisan Demand Center</h1>
-            <p className="mt-2 max-w-2xl text-sm text-emerald-50">Assalam-o-Alaikum {farmerName}. Pehle qism chunein — phir sirf usi qism ki list aayegi. <span dir="rtl" lang="ur">پہلے قسم چنیں</span></p>
+            <h1 className="mt-2 text-2xl font-bold fit:mt-0.5 fit:text-xl">Kisan Demand Center</h1>
+            <p className="mt-2 max-w-2xl text-sm text-emerald-50 fit:mt-0.5 fit:text-xs">Assalam-o-Alaikum {farmerName}. Pehle qism chunein — phir sirf usi qism ki list aayegi. <span dir="rtl" lang="ur">پہلے قسم چنیں</span></p>
           </div>
-          <div className="rounded-2xl bg-white/10 p-4 text-center"><PackageSearch className="mx-auto h-8 w-8 text-emerald-200" /><p className="mt-2 text-xs text-emerald-100">Aap ki demands</p><p className="text-3xl font-bold">{stats.total}</p></div>
+          <div className="hidden gap-2 text-xs fit:flex">
+            <span className="rounded-xl bg-white/10 px-3 py-1.5">Total <b className="ms-1 text-base">{stats.total}</b></span>
+            <span className="rounded-xl bg-white/10 px-3 py-1.5">Pending <b className="ms-1 text-base">{stats.pending}</b></span>
+            <span className="rounded-xl bg-white/10 px-3 py-1.5">Arranged <b className="ms-1 text-base">{stats.fulfilled}</b></span>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-4 text-center fit:hidden"><PackageSearch className="mx-auto h-8 w-8 text-emerald-200" /><p className="mt-2 text-xs text-emerald-100">Aap ki demands</p><p className="text-3xl font-bold">{stats.total}</p></div>
         </div>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3 fit:hidden">
         <SummaryCard label="Total demands" value={stats.total} icon={<PackageSearch className="h-5 w-5" />} />
         <SummaryCard label="Pending / checking" value={stats.pending} icon={<Clock3 className="h-5 w-5" />} />
         <SummaryCard label="Products arranged" value={stats.fulfilled} icon={<CheckCircle2 className="h-5 w-5" />} />
       </div>
 
       {/* STEP 1 -- qism */}
-      <section className={`mt-6 ${CARD}`} data-testid="demand-groups">
+      <section className={`mt-6 ${CARD} fit:px-4 fit:py-2.5`} data-testid="demand-groups">
         <p className="text-[11px] font-bold tracking-widest text-emerald-600 dark:text-emerald-400">STEP 1 · QISM CHUNEIN</p>
-        <h2 className="mt-1 text-lg font-semibold text-surface-900 dark:text-white">What do you need? · Kya chahiye? · <span dir="rtl" lang="ur">آپ کو کیا چاہیے؟</span></h2>
-        <div className="mt-4 grid grid-cols-3 gap-2.5 md:grid-cols-6">
+        <h2 className="mt-1 text-lg font-semibold text-surface-900 dark:text-white fit:hidden">What do you need? · Kya chahiye? · <span dir="rtl" lang="ur">آپ کو کیا چاہیے؟</span></h2>
+        <div className="mt-4 grid grid-cols-3 gap-2.5 md:grid-cols-6 fit:mt-1.5 fit:gap-2">
           {DEMAND_GROUPS.map((g) => {
             const gi = DEMAND_GROUP_INFO[g]; const gt = tone(g); const on = group === g;
             return (
               <button key={g} type="button" onClick={() => pickGroup(g)} aria-pressed={on} data-group={g}
-                className={`relative rounded-2xl border-2 p-3 text-start transition ${on ? gt.on : `border-surface-200 bg-white dark:border-[#1e3160] dark:bg-[#0c1830] ${gt.card}`}`}>
+                className={`relative rounded-2xl border-2 p-3 text-start transition fit:px-3 fit:py-2 ${on ? gt.on : `border-surface-200 bg-white dark:border-[#1e3160] dark:bg-[#0c1830] ${gt.card}`}`}>
                 <span className={`absolute end-2.5 top-2.5 rounded-full px-2 py-0.5 text-[11px] font-bold ${gt.pill}`}>{counts[g]}</span>
                 {on && <span className={`absolute end-11 top-2.5 flex h-5 w-5 items-center justify-center rounded-full text-white ${gt.bar}`}><Check className="h-3 w-3" /></span>}
-                <span className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl ${gt.icon}`}>{gi.icon}</span>
-                <span className="mt-2 block text-sm font-bold text-surface-900 dark:text-white">{gi.en}</span>
+                <span className={`flex h-10 w-10 items-center justify-center rounded-xl text-xl fit:h-7 fit:w-7 fit:text-base ${gt.icon}`}>{gi.icon}</span>
+                <span className="mt-2 block text-sm font-bold fit:mt-1 text-surface-900 dark:text-white">{gi.en}</span>
                 <span className="block text-[11px] text-surface-500 dark:text-slate-400">{gi.rm}</span>
                 <span dir="rtl" lang="ur" className="mt-0.5 block text-end text-xs text-surface-600 dark:text-slate-300">{gi.ur}</span>
               </button>
@@ -230,8 +235,8 @@ export function DemandCenterClient({ farmerName, products, demands }: { farmerNa
         </div>
       </section>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
-        <section className={CARD}>
+      <div className="pf-grow pf-grid mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_420px] fit:grid-cols-[minmax(0,1fr)_440px] fit:gap-2.5">
+        <section className={`${CARD} pf-panel pf-navy fit:p-4`}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className={`text-[11px] font-bold tracking-widest ${t ? t.text : "text-surface-400"}`}>STEP 2 · {info ? info.rm.toUpperCase() : "NAYI DEMAND"}</p>
@@ -240,7 +245,8 @@ export function DemandCenterClient({ farmerName, products, demands }: { farmerNa
             {info && t && <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${t.pill}`}>{info.icon} {info.en}</span>}
           </div>
 
-          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/40">
+          <div className="pf-body fit:-me-2 fit:pe-2">
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/40 fit:mt-2">
             <label className="flex items-center gap-2 text-sm font-medium text-emerald-900 dark:text-emerald-200"><Wand2 className="h-4 w-4" /> Digital Munshi — likh kar batayein / لکھ کر بتائیں</label>
             <div className="mt-2 flex gap-2">
               <input value={munshiText} onChange={(e) => setMunshiText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); askMunshi(); } }} placeholder="mujhe 20 boriyan urea chahiye" className="h-10 flex-1 rounded-lg border border-emerald-200 bg-white px-3 text-sm dark:border-emerald-900 dark:bg-[#0c1830] dark:text-slate-100" />
@@ -317,9 +323,10 @@ export function DemandCenterClient({ farmerName, products, demands }: { farmerNa
           </form>
           )}
           {!group && message && <div className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">{message}</div>}
+          </div>
         </section>
 
-        <section className={CARD}>
+        <section className={`${CARD} pf-panel pf-navy fit:p-4`}>
           <div className="flex items-baseline justify-between"><h2 className="text-lg font-semibold text-surface-900 dark:text-white">Meri demands · <span lang="ur">میری طلب</span></h2><span className="text-xs text-surface-500 dark:text-slate-400">{rows.length} total</span></div>
           <p className="text-sm text-surface-500 dark:text-slate-400">Har demand ka status yahan milega.</p>
           {rows.length > 0 && (
@@ -328,7 +335,7 @@ export function DemandCenterClient({ farmerName, products, demands }: { farmerNa
               {DEMAND_GROUPS.filter((g) => rowGroups.has(g)).map((g) => <button key={g} type="button" onClick={() => setRowFilter(g)} className={chip(rowFilter === g, tone(g).chipOn)}>{DEMAND_GROUP_INFO[g].icon} {DEMAND_GROUP_INFO[g].rm.split(" /")[0]} {rowGroups.get(g)!.length}</button>)}
             </div>
           )}
-          <div className="mt-2">
+          <div className="pf-body mt-2 fit:-me-2 fit:pe-2">
             {rows.length === 0 ? <div className="mt-3 rounded-2xl border border-dashed border-surface-300 p-8 text-center text-sm text-surface-500 dark:border-[#1e3160] dark:text-slate-400">Abhi koi demand save nahi hui.</div> :
               shownGroups.map((g) => (
                 <div key={g} data-row-group={g}>
@@ -340,7 +347,7 @@ export function DemandCenterClient({ farmerName, products, demands }: { farmerNa
         </section>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"><strong>Important:</strong> Demand register karna order ya advance payment nahi hai. Product arrange hone par confirmation li jayegi.</div>
+      <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 fit:px-3 fit:py-1.5 fit:text-xs dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"><strong>Important:</strong> Demand register karna order ya advance payment nahi hai. Product arrange hone par confirmation li jayegi.</div>
     </div>
   );
 }

@@ -39,7 +39,7 @@ export const PORTAL_NAV_GROUPS: PortalNavGroup[] = [
     { href: "/portal/demand", k: "nav_demand", icon: "demand" },
     { href: "/portal/campaigns", k: "nav_campaigns", icon: "campaigns" },
     { href: "/portal/services/machinery", k: "nav_machinery", icon: "machinery" },
-    { href: "/portal/services/livestock", k: "nav_livestock", icon: "livestock" },
+    // Livestock -> Dairy Management (malik, 19 Oct 2026): doodh ki farokht + maweshi loan ab Dairy mein.
   ] },
   { key: "account", k: "ph6_grp_account", items: [
     { href: "/portal/profile", k: "nav_profile", icon: "profile" },
