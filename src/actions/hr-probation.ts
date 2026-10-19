@@ -68,6 +68,10 @@ export async function startProbation(_prev: ProbState, formData: FormData): Prom
   const startDate = String(formData.get("probation_start_date") ?? "");
   if (!profileId) return { error: "Kaun sa mulazim, wo chunein." };
   if (!startDate) return { error: "Aazmaish kis din se shuru hui, wo tareekh chunein." };
+  // Apne aap par aazmaish ka faisla koi khud nahi karta (S4; DB 592).
+  if (profileId === user.id) {
+    return { error: "Apni aazmaishi muddat khud nahi rakhi ja sakti. Ye kaam doosra HR/Admin karega." };
+  }
 
   const { data: pol } = await supabase
     .from("hr_leave_policy")
