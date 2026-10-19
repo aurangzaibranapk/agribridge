@@ -31,6 +31,7 @@ export const adminPendingDict = {
   apb_approve: { en: "Approve", rm: "Approve", ur: "منظور" },
   apb_reject: { en: "Reject", rm: "Reject", ur: "مسترد" },
   apb_own_tip: { en: "Your own entry — someone else will approve", rm: "Apni entry — koi doosra approve karega", ur: "اپنی اندراج — کوئی دوسرا منظور کرے گا" },
+  apb_code_tip: { en: "Your manager code approved this return — Owner / another Admin will review", rm: "Is wapsi par aap ka manager code laga tha — review Owner / doosra Admin karega", ur: "اس واپسی پر آپ کا مینیجر کوڈ لگا تھا — جائزہ مالک / دوسرا ایڈمن کرے گا" },
   apb_reason: { en: "Reason (min 5 letters)", rm: "Wajah (kam az kam 5 harf)", ur: "وجہ (کم از کم 5 حروف)" },
   apb_confirm_approve: { en: "Approve this? The original page's rules still apply.", rm: "Approve karein? Asal safhe ke qaide wahi rahenge.", ur: "منظور کریں؟ اصل صفحے کے اصول وہی رہیں گے۔" },
   apb_done: { en: "Done", rm: "Ho gaya", ur: "ہو گیا" },

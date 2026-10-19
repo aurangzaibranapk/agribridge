@@ -83,6 +83,8 @@ assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "ad
 assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "manager", "z").ok, false);
 assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m", admin_review_status: "approved" }, "admin", "z").ok, false);
 assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "owner", "z").ok, true);
+assert.match(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "super_admin", "m").error, /manager code/);
+assert.match(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "admin", "c").error, /khud ki/);
 // wiring
 assert.match(read("src/actions/purchases.ts"), /purchaseApproveCheck\(/);
 assert.match(read("src/actions/stock-count.ts"), /partialCountPosterCheck\(/);
