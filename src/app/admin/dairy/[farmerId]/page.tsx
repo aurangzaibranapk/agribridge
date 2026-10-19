@@ -10,6 +10,7 @@ import { CategoryRows, GroupBars } from "@/components/portal/dairy/pl-parts";
 import { SheetsButton } from "@/components/portal/dairy/sheets-button";
 import { PrintButton } from "@/components/portal/dairy/print-button";
 import { Denied } from "@/components/portal/dairy/denied";
+import { ResponsiveTable } from "@/components/portal/responsive-table";
 
 export const dynamic = "force-dynamic";
 const mon = (iso: string) => new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
@@ -53,24 +54,24 @@ export default async function AdminDairyFarmer({ params, searchParams }: { param
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHead title={L("ad_per_animal")} />
-          <table className="w-full text-[13px]">
-            <thead><tr className="border-b border-surface-200 text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800"><th className="py-2 text-left">Tag</th><th className="text-left">{L("ad_c_name")}</th><th className="text-right">{L("dy2_k_milk")}</th><th className="text-right">{L("ad_own_exp")}</th></tr></thead>
+          <ResponsiveTable className="w-full text-[13px]">
+            <thead><tr className="border-b border-surface-200 text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800"><th className="py-2 text-start">Tag</th><th className="text-start">{L("ad_c_name")}</th><th className="text-end">{L("dy2_k_milk")}</th><th className="text-end">{L("ad_own_exp")}</th></tr></thead>
             <tbody>{d.animals.map((a) => (
-              <tr key={a.id} className="border-b border-surface-100 text-surface-700 dark:border-surface-800 dark:text-slate-200"><td className="py-2.5"><TagChip tag={a.tag_no} /></td><td>{a.name ?? "—"}</td><td className="text-right">{fmtL(a.litres)}</td><td className="text-right">{rs(a.expense)}</td></tr>
+              <tr key={a.id} className="border-b border-surface-100 text-surface-700 dark:border-surface-800 dark:text-slate-200"><td className="py-2.5"><TagChip tag={a.tag_no} /></td><td>{a.name ?? "—"}</td><td className="text-end">{fmtL(a.litres)}</td><td className="text-end">{rs(a.expense)}</td></tr>
             ))}</tbody>
-          </table>
+          </ResponsiveTable>
         </Card>
         <Card>
           <CardHead title={L("ad_recent")} right={<span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">{L("dy2_readonly")}</span>} />
-          <table className="w-full text-[13px]">
-            <thead><tr className="border-b border-surface-200 text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800"><th className="py-2 text-left">{L("dy2_f_date")}</th><th className="text-left">{L("dy2_f_cat")}</th><th className="text-left">{L("dy2_detail")}</th><th className="text-right">{L("dy2_amount")}</th></tr></thead>
+          <ResponsiveTable className="w-full text-[13px]">
+            <thead><tr className="border-b border-surface-200 text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800"><th className="py-2 text-start">{L("dy2_f_date")}</th><th className="text-start">{L("dy2_f_cat")}</th><th className="text-start">{L("dy2_detail")}</th><th className="text-end">{L("dy2_amount")}</th></tr></thead>
             <tbody>{d.recent.map((r, i) => (
               <tr key={i} className="border-b border-surface-100 text-surface-700 dark:border-surface-800 dark:text-slate-200">
                 <td className="py-2.5">{day(r.date)}</td><td>{catLabel(r.cat)}</td><td>{r.detail}{r.source === "erp_pos" ? ` (${L("ad_from_shop")})` : ""}</td>
-                <td className={`text-right font-bold ${r.amount < 0 ? "text-rose-600 dark:text-rose-400" : "text-green-600 dark:text-green-400"}`}>{r.amount < 0 ? "-" : "+"}{rs(Math.abs(r.amount))}</td>
+                <td className={`text-end font-bold ${r.amount < 0 ? "text-rose-600 dark:text-rose-400" : "text-green-600 dark:text-green-400"}`}>{r.amount < 0 ? "-" : "+"}{rs(Math.abs(r.amount))}</td>
               </tr>
             ))}</tbody>
-          </table>
+          </ResponsiveTable>
           {d.recent.length === 0 && <p className="py-6 text-center text-sm text-surface-500">{L("dy2_none")}</p>}
         </Card>
       </div>

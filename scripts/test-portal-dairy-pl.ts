@@ -145,7 +145,7 @@ test("wiring: gate, admin guard, no service role, no deletes", () => {
     assert.ok(!/\.delete\(/.test(s), `delete in ${f}`);
   }
   assert.match(fs.readFileSync("src/app/portal/dairy/actions.ts", "utf8"), /savePhoto/);
-  assert.match(fs.readFileSync("src/components/portal/sidebar.tsx", "utf8"), /\/portal\/dairy\/hisaab/);
+  assert.match(fs.readFileSync("src/lib/portal/nav.ts", "utf8"), /\/portal\/dairy\/hisaab/); // phase 6: menu ab lib/portal/nav.ts mein
   assert.match(fs.readFileSync("src/app/admin/dairy/export/route.ts", "utf8"), /content-disposition/);
 });
 console.log(`\n${passed} passed`);

@@ -51,7 +51,7 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
               </span>
             )}
           </div>
-          <div className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-white shadow group-hover:bg-brand-700">
+          <div className="absolute bottom-0 end-0 flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-white shadow group-hover:bg-brand-700">
             <Camera className="h-4 w-4" />
           </div>
         </label>
@@ -365,7 +365,7 @@ function AccordionSection({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-4 py-3 text-left"
+        className="flex w-full items-center justify-between px-4 py-3 text-start"
       >
         <span className="flex items-center gap-2 font-medium text-surface-900 dark:text-surface-100">
           {complete && <CheckCircle2 className="h-4 w-4 text-green-600" />}

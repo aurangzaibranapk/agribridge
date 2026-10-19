@@ -1,68 +1,52 @@
 "use client";
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Menu, X, LogOut } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { t, type Lang } from "@/lib/i18n/translations";
-import { getPortalNavItems } from "./sidebar";
+import { PORTAL_NAV_GROUPS, type PortalNavGroup } from "@/lib/portal/nav";
 import { LanguageToggle } from "./language-toggle";
+import { PortalBrand } from "./sidebar";
+import { NavFooter, NavList, type NavTone } from "./nav-list";
+import { OPEN_MENU_EVENT, useDrawer } from "./use-drawer";
 
-export function PortalMobileSidebar({ lang }: { lang: Lang }) {
+/**
+ * Phone ka drawer -- wahi groups aur wahi roshan qaida jo sidebar ka
+ * (pehle yahan sirf poori URL milti to roshan hota tha).
+ */
+export function PortalMobileSidebar({ lang, groups = PORTAL_NAV_GROUPS, tone = "farmer", badges, brand }: { lang: Lang; groups?: PortalNavGroup[]; tone?: NavTone; badges?: Record<string, number>; brand?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const close = useCallback(() => setOpen(false), []);
+  const ref = useDrawer(open, close);
   useEffect(() => setOpen(false), [pathname]);
-  const NAV_ITEMS = getPortalNavItems(lang);
+  useEffect(() => {
+    const o = () => setOpen(true);
+    window.addEventListener(OPEN_MENU_EVENT, o);
+    return () => window.removeEventListener(OPEN_MENU_EVENT, o);
+  }, []);
+  const bg = tone === "farmer" ? "bg-[#0f2a1f] dark:bg-[#0b1322]" : "bg-[#0b1f44] dark:bg-[#06102a]";
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        aria-label={t("at_open_menu", lang)}
-        className="rounded-lg p-2 text-surface-600 hover:bg-surface-100 sm:hidden dark:text-surface-300 dark:hover:bg-surface-800"
-      >
-        <Menu className="h-5 w-5" />
+      <button type="button" onClick={() => setOpen(true)} aria-label={t("at_open_menu", lang)} aria-expanded={open} aria-controls="portal-drawer"
+        className="grid h-11 w-11 place-items-center rounded-lg text-surface-600 hover:bg-surface-100 sm:hidden dark:text-surface-300 dark:hover:bg-surface-800">
+        <Menu className="h-5 w-5" aria-hidden />
       </button>
       {open && (
         <div className="fixed inset-0 z-50 sm:hidden">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-64 flex-col bg-[#1a1f36] px-3 py-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between px-2">
-              <div>
-                <p className="font-display text-lg font-semibold text-white">{t("app_name", lang)}</p>
-                <p className="text-xs text-slate-400">{t("farmer_portal", lang)}</p>
-              </div>
-              <button onClick={() => setOpen(false)} aria-label={t("at_close_menu", lang)} className="rounded-lg p-1.5 text-slate-400 hover:bg-white/10">
-                <X className="h-4 w-4" />
+          <div className="absolute inset-0 bg-black/50" onClick={close} aria-hidden />
+          <div ref={ref} id="portal-drawer" role="dialog" aria-modal="true" aria-label={t("ph6_nav_label", lang)}
+            className={`absolute inset-y-0 start-0 flex w-72 max-w-[85vw] flex-col px-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4 shadow-xl ${bg}`}>
+            <div className="mb-2 flex items-center justify-between px-1">
+              <div className="min-w-0 flex-1 [&>div]:mb-0 [&>div]:border-0 [&>div]:pb-0">{brand ?? <PortalBrand lang={lang} />}</div>
+              <button type="button" onClick={close} aria-label={t("at_close_menu", lang)} className="grid h-11 w-11 place-items-center rounded-lg text-slate-300 hover:bg-white/10">
+                <X className="h-5 w-5" aria-hidden />
               </button>
             </div>
-            <div className="mb-4 px-2">
-              <LanguageToggle current={lang} />
-            </div>
-            <nav className="flex flex-1 flex-col gap-1 overflow-y-auto">
-              {NAV_ITEMS.map((item) => {
-                const active = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition ${
-                      active ? "bg-brand-600 text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"
-                    }`}
-                  >
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
-            <Link
-              href="/"
-              className="mt-auto flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-400 hover:bg-white/10 hover:text-white"
-            >
-              <LogOut className="h-4 w-4 shrink-0" />
-              {t("back_to_website", lang)}
-            </Link>
-          </aside>
+            <div className="mb-3 px-2"><LanguageToggle current={lang} /></div>
+            <NavList groups={groups} lang={lang} pathname={pathname} tone={tone} badges={badges} />
+            <NavFooter lang={lang} />
+          </div>
         </div>
       )}
     </>

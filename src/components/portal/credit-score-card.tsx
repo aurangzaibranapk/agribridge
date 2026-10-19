@@ -62,7 +62,7 @@ export function CreditScoreCard({ result }: { result: CreditScoreResult }) {
       <div className="flex items-center justify-between">
         <h3 className={`flex items-center gap-2 text-sm font-semibold ${colors.text}`}>
           <Award className="h-4 w-4" />{t("pm_kisan_score", lang)}</h3>
-        <div className="text-right">
+        <div className="text-end">
           <p className={`text-2xl font-bold ${colors.text}`}>{result.score}/100</p>
           <p className={`text-xs font-medium ${colors.text}`}>Grade {result.grade} - {result.gradeLabel}</p>
         </div>
@@ -74,7 +74,7 @@ export function CreditScoreCard({ result }: { result: CreditScoreResult }) {
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/60">
               <div className="h-full rounded-full bg-current opacity-70" style={{ width: `${(b.points / b.max) * 100}%`, color: colors.text.replace("text-", "") }} />
             </div>
-            <span className="w-10 shrink-0 text-right text-surface-500">{b.points}/{b.max}</span>
+            <span className="w-10 shrink-0 text-end text-surface-500">{b.points}/{b.max}</span>
           </div>
         ))}
       </div>

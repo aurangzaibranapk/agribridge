@@ -196,7 +196,7 @@ export default async function FarmsPage({ searchParams }: { searchParams: Promis
                   <p className="text-xs text-surface-500">{t("crops_grown", lang)}</p>
                   <p className="font-medium text-surface-900">{fs.crops.length ? fs.crops.join(", ") : "-"}</p>
                 </div>
-                <div className="text-right">
+                <div className="text-end">
                   <p className="text-xs text-surface-500">{t("total_profit_loss", lang)}</p>
                   <p className={`font-medium ${!fs.hasProfitData ? "text-surface-400" : fs.totalProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
                     {!fs.hasProfitData ? "-" : `${fs.totalProfit >= 0 ? "+" : ""}Rs. ${fs.totalProfit.toLocaleString()}`}
