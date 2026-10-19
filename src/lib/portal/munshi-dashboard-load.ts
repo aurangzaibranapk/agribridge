@@ -189,6 +189,12 @@ export async function loadMunshiDashboard(farmer: Record<string, any>, now = new
     months,
     activity,
     tasks,
+    // Udhaar ab sirf season plans (Gandum, phir Munji) se -- dashboard card yahi dikhata hai.
+    booking: {
+      mine: (campBookR.data ?? []).length,
+      acres: (campBookR.data ?? []).reduce((s: number, b: any) => s + Number(b.acres ?? 0), 0),
+      open: openCampaigns.length,
+    },
     campaign: openCampaigns[0] ? { name: openCampaigns[0].name as string, deadline: openCampaigns[0].deadline as string | null } : null,
     score: officialScore(snapR.data ?? null, eligRow ?? null),
     allCrops: crops,

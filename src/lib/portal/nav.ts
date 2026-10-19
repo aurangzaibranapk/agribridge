@@ -38,7 +38,6 @@ export const PORTAL_NAV_GROUPS: PortalNavGroup[] = [
   { key: "services", k: "ph6_grp_services", items: [
     { href: "/portal/demand", k: "nav_demand", icon: "demand" },
     { href: "/portal/campaigns", k: "nav_campaigns", icon: "campaigns" },
-    { href: "/portal/services/fertilizer", k: "nav_fertilizer", icon: "fertilizer" },
     { href: "/portal/services/machinery", k: "nav_machinery", icon: "machinery" },
     { href: "/portal/services/livestock", k: "nav_livestock", icon: "livestock" },
   ] },
