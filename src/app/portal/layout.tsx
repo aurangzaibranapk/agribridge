@@ -9,6 +9,7 @@ import { checkFarmerSubscriptionAccess } from "@/actions/subscriptions";
 import { getActiveAnnouncementForFarmer } from "@/actions/announcements";
 import { SubscriptionLockedScreen } from "@/components/portal/subscription-locked-screen";
 import { AnnouncementPopup } from "@/components/portal/announcement-popup";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,7 @@ export default async function PortalLayout({ children }: { children: React.React
             <p className="font-display text-sm font-medium text-surface-900 sm:hidden">{t("app_name", lang)}</p>
           </div>
           <div className="ml-auto flex items-center gap-3">
+            <ThemeToggle />
             <div className="text-right">
               <p className="text-sm font-medium text-surface-900 dark:text-white">{farmer.full_name}</p>
               <p className="text-xs text-surface-400">{farmer.farmer_code}</p>
