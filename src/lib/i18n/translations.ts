@@ -4,6 +4,7 @@ import { portalKhataDict } from "./dict/portal-khata";
 import { portalDairyDict } from "./dict/portal-dairy";
 import { portalDairyPlDict } from "./dict/portal-dairy-pl";
 import { portalBreedingDict } from "./dict/portal-breeding";
+import { portalPolishDict } from "./dict/portal-polish";
 import { portalCustomerDict } from "./dict/portal-customer";
 import { posDict } from "./dict/pos";
 import { machineryDict } from "./dict/machinery";
@@ -172,6 +173,7 @@ const dict = {
   ...portalDairyDict,
   ...portalDairyPlDict,
   ...portalBreedingDict,
+  ...portalPolishDict,
   ...portalCustomerDict,
 };
 
