@@ -38,6 +38,7 @@
     "test:grain-unified": "node tests/grain-unified-receivables.cjs",
     "test:salary-qist": "npx --yes tsx scripts/test-salary-qist.ts && node tests/salary-qist-wiring.cjs && node tests/salary-qist-sql.mjs",
     "test:password-reset": "npx --yes tsx scripts/test-password-reset.ts && node tests/password-reset-sql.mjs",
+    "test:season-booking": "npx --yes tsx scripts/test-season-booking.ts && node tests/season-booking-sql.mjs",
     "test:hr-emails": "npx --yes tsx scripts/test-hr-emails.ts",
     "test:sales-secrets": "npx --yes tsx scripts/test-sales-secrets.ts && node tests/sales-secrets-sql.mjs",
     "test:hr-self-approval-db": "node tests/hr-self-approval-db.mjs && node tests/hr-self-approval-wiring.cjs && node tests/hr-self-approval-guards.cjs && npx --yes tsx tests/hr-whatsapp-checkin-message.ts",
