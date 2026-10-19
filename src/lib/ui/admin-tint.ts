@@ -8,7 +8,7 @@
 export type AdminTint = "white" | "mint" | "sage" | "navy";
 
 /** <- Malik ki pasand yahan. "white" = aaj wala (koi tabdeeli nahi). */
-export const ADMIN_TINT: AdminTint = "white";
+export const ADMIN_TINT: AdminTint = "sage";
 
 export interface AdminTintTokens {
   aside: string;   // sidebar ka pas-manzar + border (light) -- dark navy wahi
