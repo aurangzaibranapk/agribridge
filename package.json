@@ -58,10 +58,13 @@
     "test:portal-polish": "npx --yes tsx scripts/test-portal-polish.ts && node tests/portal-polish-sql.mjs",
     "test:portal-demand-categories": "npx --yes tsx scripts/test-portal-demand-categories.ts && node tests/portal-demand-categories-sql.mjs",
     "test:portal-no-fertilizer-credit": "node tests/portal-no-fertilizer-credit.cjs",
+    "test:broadcast": "npx --yes tsx scripts/test-broadcast.ts && node tests/broadcast-sql.mjs",
     "test:portal-one-screen": "npx --yes tsx scripts/test-portal-one-screen.ts",
     "test:twa": "node tests/twa-play-release.cjs",
     "test:whatsapp-inbound": "npx --yes tsx scripts/test-whatsapp-inbound.ts",
-    "test:render-dashboard": "node tests/render-dashboard-parity.cjs && npx --yes tsx scripts/test-render-dashboard-look.ts"
+    "test:render-dashboard": "node tests/render-dashboard-parity.cjs && npx --yes tsx scripts/test-render-dashboard-look.ts",
+    "test:whatsapp-parity": "npx tsx scripts/test-whatsapp-parity.ts && node tests/whatsapp-parity-sql.mjs",
+    "test:whatsapp-inbox": "npx tsx --tsconfig scripts/tsconfig.inbox-test.json scripts/test-whatsapp-inbox.tsx && node tests/whatsapp-inbox-sql.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",

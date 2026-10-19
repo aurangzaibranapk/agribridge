@@ -1,7 +1,7 @@
 ﻿import {
   LayoutDashboard, FileText, Quote, Image as ImageIcon, HelpCircle,
   Smartphone, Mail, Handshake, Sliders, Menu as MenuIcon, FileCode, UserCog, History, Package, Wheat, FolderOpen, Tag, Layers, Building2, ShoppingCart, Wallet, BarChart3, Truck, ClipboardList, Boxes, Droplet, Store, ArrowLeftRight, Users, PackageSearch, LineChart, PiggyBank, Sprout, Bug, Leaf, Beef, ShoppingBasket, Landmark, Contact, Globe, ShoppingBag, HandCoins, CircleDollarSign, CreditCard, FileCheck, Calculator, Bell, List, MapPin, Briefcase, ShieldCheck, AlertTriangle, Bike, Zap, Wrench, Receipt, ClipboardCheck, PackagePlus, WalletCards, LayoutGrid, MailPlus, Home, ClipboardType, FileBarChart, ReceiptText, Scale, FileSpreadsheet, Sparkles, IdCard, Bot, SlidersHorizontal, MessageCircle, Trash2, Undo2, Inbox, ListChecks, PackageCheck, RefreshCw, Trophy,
-  CalendarDays,
+  CalendarDays, Megaphone,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -193,6 +193,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/erp-directory", label: "ERP ka Naqsha", icon: LayoutGrid },
       { href: "/admin/messages", label: "Paighaam", icon: MessageCircle },
+      { href: "/admin/broadcast", label: "Elaan / Broadcast", icon: Megaphone },
       { href: "/admin/bridge-ai", label: "Abram", icon: Sparkles },
       { href: "/admin/bridge-ai/activity-log", label: "Abram Activity Log", icon: History },
       { href: "/admin/bridge-ai/action-requests", label: "Abram Action Requests", icon: ClipboardCheck },
