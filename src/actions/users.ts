@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { profileKaKhanaBadlein } from "@/lib/profile-write";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { removeLoginSafely } from "@/lib/auth/remove-login";
 import type { UserRole } from "@/lib/utils/roles";
 import { DEPARTMENTS } from "@/lib/departments";
 import { logAudit } from "@/lib/audit";
@@ -148,6 +149,18 @@ export interface ActionState {
   success?: boolean;
 }
 
+/**
+ * Account suspend karna.
+ *
+ * Suspend WAPAS ho sakta hai (reactivateStaff), is liye yahan se koi
+ * "contract khatam" ki email nahi jati -- wo email wapas nahi hoti.
+ * Naukri ka asal khatma HR ke "Alag karein" faisle (hr-probation) se
+ * hota hai, jahan aakhri din record mein likha jata hai.
+ *
+ * Dobara suspend dabane se kuch nahi badalta: update sirf usi qatar par
+ * lagta hai jo abhi suspend nahi, is liye na wajah dobara likhi jati hai
+ * na audit ki doosri line banti hai.
+ */
 export async function suspendStaff(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const userId = String(formData.get("user_id") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
@@ -156,7 +169,7 @@ export async function suspendStaff(_prev: ActionState, formData: FormData): Prom
   const who = await requireMaster(userId);
   if ("error" in who) return { error: who.error };
 
-  const { error } = await who.supabase
+  const { data: changed, error } = await who.supabase
     .from("profiles")
     .update({
       status: "suspended",
@@ -164,8 +177,19 @@ export async function suspendStaff(_prev: ActionState, formData: FormData): Prom
       status_changed_at: new Date().toISOString(),
       is_active: false,
     })
-    .eq("id", userId);
+    .eq("id", userId)
+    .neq("status", "suspended")
+    .select("id");
   if (error) return { error: error.message };
+
+  if (!changed || changed.length === 0) {
+    const { data: current } = await who.supabase.from("profiles").select("status").eq("id", userId).maybeSingle();
+    if (!current) return { error: "Ye account nahi mila." };
+    if (current.status !== "suspended") return { error: "Account suspend nahi ho saka. Dobara koshish karein." };
+    // Pehle se suspend -- kuch nahi badla, kuch nahi bheja.
+    revalidatePath("/admin/users");
+    return { success: true };
+  }
 
   await logAudit({
     actionType: "update",
@@ -173,6 +197,7 @@ export async function suspendStaff(_prev: ActionState, formData: FormData): Prom
     recordId: userId,
     description: `Account suspend: ${reason}`,
   });
+
   revalidatePath("/admin/users");
   return { success: true };
 }
@@ -213,9 +238,11 @@ export async function deleteStaff(_prev: ActionState, formData: FormData): Promi
   if ("error" in who) return { error: who.error };
 
   const serviceClient = createServiceClient();
-  const { error: profileError } = await serviceClient.from("profiles").delete().eq("id", userId);
+  // Pehle login hatao -- profile us ke saath cascade se jati hai. Pehle
+  // profile mitane se login baqi reh jata tha (remove-login.ts dekhein).
+  const removal = await removeLoginSafely(serviceClient, userId);
 
-  if (profileError) {
+  if (!removal.removed) {
     const { error: suspendError } = await serviceClient
       .from("profiles")
       .update({
@@ -236,7 +263,6 @@ export async function deleteStaff(_prev: ActionState, formData: FormData): Promi
     return { error: "Is staff se data (attendance/sales/salary) juda hai, is liye delete nahi ho saka - isay permanently suspend kar diya gaya hai." };
   }
 
-  await serviceClient.auth.admin.deleteUser(userId).catch(() => {});
   await logAudit({
     actionType: "delete",
     module: "user_status",

@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isStaffRole } from "@/lib/utils/roles";
 import { homePageForRole } from "@/lib/departments";
 import { ACCESS_REVIEW_ROUTE, roleCanReviewAccess, headGrantActive } from "@/lib/access/reviewer-routes";
+import { pathAllowed } from "@/lib/access/route-match";
 
 /** Ye hamesha khulte hain, chahe ijazat mein likhe hon ya na hon. */
 const ALWAYS_OPEN = [
@@ -147,9 +148,9 @@ export async function middleware(request: NextRequest) {
 
       // Sab se lamba milta hua raasta jeetta hai -- warna
       // /admin/milk-collection ki ijazat chiller ka darwaza bhi khol
-      // deti.
-      const canOpenPath = (path: string) =>
-        allowed.some((r) => path === r || path.startsWith(r + "/"));
+      // deti. "/admin/reports" sirf hub kholta hai, andar ki har report
+      // ko apni ijazat chahiye (route-match.ts, 17 October).
+      const canOpenPath = (path: string) => pathAllowed(allowed, path);
 
       if (!canOpenPath(pathname)) {
         const url = request.nextUrl.clone();

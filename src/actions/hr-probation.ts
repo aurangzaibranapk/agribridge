@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { logAudit } from "@/lib/audit";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { hrMailAuditText, hrMailNotice, sendSeparationEmail } from "@/lib/hr-emails";
 
 export interface ProbState {
   error?: string;
@@ -68,6 +70,10 @@ export async function startProbation(_prev: ProbState, formData: FormData): Prom
   const startDate = String(formData.get("probation_start_date") ?? "");
   if (!profileId) return { error: "Kaun sa mulazim, wo chunein." };
   if (!startDate) return { error: "Aazmaish kis din se shuru hui, wo tareekh chunein." };
+  // Apne aap par aazmaish ka faisla koi khud nahi karta (S4; DB 592).
+  if (profileId === user.id) {
+    return { error: "Apni aazmaishi muddat khud nahi rakhi ja sakti. Ye kaam doosra HR/Admin karega." };
+  }
 
   const { data: pol } = await supabase
     .from("hr_leave_policy")
@@ -165,7 +171,7 @@ export async function decideProbation(_prev: ProbState, formData: FormData): Pro
 
   const { data: sd } = await supabase
     .from("staff_details")
-    .select("employment_status, probation_start_date, probation_end_date, hire_date")
+    .select("employment_status, probation_start_date, probation_end_date, hire_date, designation")
     .eq("profile_id", profileId)
     .maybeSingle();
 
@@ -226,8 +232,19 @@ export async function decideProbation(_prev: ProbState, formData: FormData): Pro
     update.is_active = false;
   }
 
-  const { error: updErr } = await supabase.from("staff_details").update(update).eq("profile_id", profileId);
+  // Sirf usi qatar par jo abhi bhi aazmaish par hai. Do dafa (ya do
+  // tab se) "Alag karein" dabane par doosri dafa kuch nahi lagta -- na
+  // faisla dobara, na contract khatam ki email dobara.
+  const { data: updRows, error: updErr } = await supabase
+    .from("staff_details")
+    .update(update)
+    .eq("profile_id", profileId)
+    .eq("employment_status", "probation")
+    .select("profile_id, exit_date");
   if (updErr) return { error: updErr.message };
+  if (!updRows || updRows.length === 0) {
+    return { error: "Ye faisla pehle hi ho chuka hai, ya record badal gaya. Safha dobara kholein." };
+  }
 
   // Faisla pehle lagta hai, qatar baad mein -- magar qatar na banne par
   // faisla wapas nahi hota. Is liye qatar ki nakami saaf batai jati hai
@@ -260,12 +277,20 @@ export async function decideProbation(_prev: ProbState, formData: FormData): Pro
     },
   });
 
+  // Naukri ka ASAL khatma -- contract closure ki email sirf yahan se.
+  // Aakhri din wohi jo record mein likha gaya (exit_date), khud se nahi.
+  let mailNotice: string | undefined;
+  if (decision === "end") {
+    const lastWorkingDay = String(updRows[0]?.exit_date ?? update.exit_date ?? "");
+    mailNotice = await sendClosureEmail(profileId, sd.designation ?? null, lastWorkingDay);
+  }
+
   paths();
 
   if (revErr) {
     return {
       success: true,
-      notice: `Faisla lag gaya, magar us ki qatar mehfooz nahi hui: ${revErr.message}. HR ko batayein.`,
+      notice: `Faisla lag gaya, magar us ki qatar mehfooz nahi hui: ${revErr.message}. HR ko batayein.${mailNotice ? ` ${mailNotice}` : ""}`,
     };
   }
 
@@ -276,8 +301,48 @@ export async function decideProbation(_prev: ProbState, formData: FormData): Pro
         ? "Pakka ho gaya. Saalana chhutti isi tareekh se shuru hoti hai."
         : decision === "extend"
           ? `Muddat ${newEnd} tak baRha di gayi.`
-          : "Alag kar diya gaya.",
+          : mailNotice
+            ? `Alag kar diya gaya. ${mailNotice}`
+            : "Alag kar diya gaya. Contract closure ki email bhej di gayi.",
   };
+}
+
+/**
+ * Contract closure email + audit ki line. Nakami chhupai nahi jati --
+ * HR ko notice ki shakal mein wapas jati hai.
+ *
+ * Email `profiles` mein nahi hoti; wo login (auth.users) mein hai, is
+ * liye service client ke admin raaste se parhi jati hai.
+ */
+async function sendClosureEmail(
+  profileId: string,
+  designation: string | null,
+  lastWorkingDay: string
+): Promise<string | undefined> {
+  const service = createServiceClient();
+  const [{ data: authData }, { data: prof }] = await Promise.all([
+    service.auth.admin.getUserById(profileId),
+    service.from("profiles").select("full_name").eq("id", profileId).maybeSingle(),
+  ]);
+  const toEmail = authData?.user?.email ?? null;
+  const result = lastWorkingDay
+    ? await sendSeparationEmail({
+        toEmail,
+        fullName: prof?.full_name ?? "",
+        designation,
+        lastWorkingDay,
+      })
+    : ({ sent: false, error: "Aakhri din record mein nahi mila." } as const);
+
+  await logAudit({
+    actionType: "update",
+    module: "hr_email",
+    recordId: profileId,
+    recordLabel: prof?.full_name ?? undefined,
+    description: hrMailAuditText("separation", toEmail, result),
+  });
+  if (!result.sent) console.error("Separation email failed:", result.error);
+  return hrMailNotice("separation", result);
 }
 
 // =====================================================================
