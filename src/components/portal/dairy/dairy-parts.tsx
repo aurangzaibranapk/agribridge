@@ -24,9 +24,9 @@ const KPI: Record<string, string> = {
 };
 export function Kpi({ tone, label, value, sub }: { tone: string; label: string; value: string; sub: string }) {
   return (
-    <div className={`relative min-h-[112px] overflow-hidden rounded-2xl bg-gradient-to-br ${KPI[tone]} p-4 text-white shadow-[0_8px_20px_-10px_rgba(0,0,0,.45)]`}>
+    <div className={`relative min-h-[112px] overflow-hidden rounded-2xl bg-gradient-to-br ${KPI[tone]} p-4 text-white fit:min-h-0 fit:px-3.5 fit:py-2.5 shadow-[0_8px_20px_-10px_rgba(0,0,0,.45)]`}>
       <span className="text-[11px] font-semibold uppercase tracking-wider text-white/85">{label}</span>
-      <p className="mt-2 text-2xl font-bold tracking-tight"><span dir="ltr" className="ltr-iso">{value}</span></p>
+      <p className="mt-2 truncate text-2xl font-bold tracking-tight fit:mt-0.5 fit:text-xl"><span dir="ltr" className="ltr-iso">{value}</span></p>
       <p className="mt-1 truncate text-[11.5px] text-white/90" title={sub}>{sub}</p>
       <span className="pointer-events-none absolute -bottom-6 -end-5 h-20 w-20 rounded-full bg-white/10" />
     </div>
@@ -35,12 +35,12 @@ export function Kpi({ tone, label, value, sub }: { tone: string; label: string; 
 
 export function Hero({ title, sub, children }: { title: React.ReactNode; sub: string; children?: React.ReactNode }) {
   return (
-    <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-800 via-green-700 to-yellow-600 p-6 text-white shadow-lg dark:from-emerald-950 dark:via-green-900 dark:to-yellow-800">
+    <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-800 via-green-700 to-yellow-600 p-6 text-white shadow-lg dark:from-emerald-950 dark:via-green-900 dark:to-yellow-800 fit:rounded-2xl fit:px-5 fit:py-3">
       <span className="pointer-events-none absolute -end-16 -top-20 h-72 w-72 rounded-full bg-white/10" />
       <div className="relative flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-          <p className="mt-1 text-sm text-white/85">{sub}</p>
+          <h1 className="text-2xl font-bold tracking-tight fit:text-xl">{title}</h1>
+          <p className="mt-1 text-sm text-white/85 fit:mt-0 fit:text-xs">{sub}</p>
         </div>
         <div className="flex flex-wrap gap-2">{children}</div>
       </div>
@@ -49,7 +49,7 @@ export function Hero({ title, sub, children }: { title: React.ReactNode; sub: st
 }
 export function HeroBtn({ href, children, primary }: { href: string; children: React.ReactNode; primary?: boolean }) {
   return (
-    <Link href={href} className={primary ? "rounded-xl bg-white px-4 py-2 text-sm font-semibold text-green-900 shadow hover:bg-green-50" : "rounded-xl border border-white/35 bg-white/15 px-4 py-2 text-sm font-semibold text-white hover:bg-white/25"}>
+    <Link href={href} className={primary ? "rounded-xl bg-white px-4 py-2 text-sm font-semibold text-green-900 shadow hover:bg-green-50 fit:py-1.5 fit:text-[13px]" : "rounded-xl border border-white/35 bg-white/15 px-4 py-2 text-sm font-semibold text-white hover:bg-white/25 fit:py-1.5 fit:text-[13px]"}>
       {children}
     </Link>
   );

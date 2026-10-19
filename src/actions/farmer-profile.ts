@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logAudit, diffFields } from "@/lib/audit";
 import { createServiceClient } from "@/lib/supabase/service";
 import { computeProfileCompletion } from "@/lib/utils/farmer-profile";
+import { parseMilkSale } from "@/lib/portal/milk-sale";
 export interface FarmerProfileState {
   error?: string;
   success?: boolean;
@@ -343,5 +344,25 @@ export async function updateLivestockDetails(_prev: FarmerProfileState, formData
   revalidatePath("/portal/services/livestock");
   revalidatePath("/portal/profile");
   revalidatePath("/portal/dashboard");
+  return { success: true };
+}
+/**
+ * Dairy Management > "Doodh ki farokht": purane Livestock safhe ke wohi
+ * 4 `farmers` khane (buyer, rate, L/din, doodh par advance). Sirf apni
+ * row (RLS + user_id), sirf ye 4 khane -- janwaron ki ginti nahi chhedti.
+ */
+export async function updateMilkSale(_prev: FarmerProfileState, formData: FormData): Promise<FarmerProfileState> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+  const parsed = parseMilkSale(formData);
+  if (!parsed.ok) return { error: parsed.error };
+  const { error } = await supabase.from("farmers").update(parsed.value).eq("user_id", user.id);
+  if (error) return { error: error.message };
+  revalidatePath("/portal/dairy");
+  revalidatePath("/portal/dashboard");
+  revalidatePath("/portal/profile");
   return { success: true };
 }

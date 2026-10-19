@@ -43,6 +43,7 @@ const CATEGORY_WORDS: [RegExp, DemandCategory, string?][] = [
   [/^(beej|seed|seeds|بیج)$/, "seed"],
   [/^(spray|zehar|zahar|dawai|dawa|pesticide|سپرے|زہر|دوائی)$/, "pesticide"],
   [/^(zinc|boron|micronutrient|zink|زنک|بوران)$/, "micronutrient"],
+  [/^(karyana|kiryana|sauda|ghee|gheo|cheeni|chini|daal|dal|chai|patti|sabun|surf|masala|atta|aata|کریانہ|گھی|چینی|دال|چائے|صابن|آٹا)$/, "karyana"],
 ];
 const CROPS: Record<string, string> = { wheat: "wheat", gandum: "wheat", "گندم": "wheat", rice: "rice", chawal: "rice", dhan: "rice", munji: "rice", "چاول": "rice", maize: "maize", makai: "maize", "مکئی": "maize", cotton: "cotton", kapas: "cotton", "کپاس": "cotton", sugarcane: "sugarcane", gannay: "sugarcane", kamad: "sugarcane", "گنا": "sugarcane" };
 const STOP = new Set(["mujhe", "mujhay", "muje", "hamein", "chahiye", "chaiye", "chahye", "chahiay", "ke", "ki", "ka", "liye", "liay", "lye", "or", "aur", "de", "do", "dein", "den", "please", "plz", "bhai", "ji", "ko", "se", "main", "mein", "mere", "meri", "hai", "hain", "مجھے", "چاہیے", "کے", "لیے", "لئے", "کی", "کا", "اور", "ہے"]);

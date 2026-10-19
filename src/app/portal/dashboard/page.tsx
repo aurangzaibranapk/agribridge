@@ -30,6 +30,7 @@ import { getMachineryReminders, MachineryReminderBanner } from "@/components/por
 import { getWateringReminders, WateringReminderBanner } from "@/components/portal/watering-reminder";
 import { HerdDonut, MilkAreaChart, MonthBarsChart } from "@/components/portal/munshi/charts";
 import { loadMunshiDashboard } from "@/lib/portal/munshi-dashboard-load";
+import { PanelTabs } from "@/components/portal/fit";
 import { pct, rs, type ActivityKind, type TaskItem } from "@/lib/portal/munshi-dashboard";
 
 export const dynamic = "force-dynamic";
@@ -84,25 +85,23 @@ export default async function FarmerDashboardPage() {
   const wateringReminders = getWateringReminders(d.allCrops as any);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-10 pt-5 sm:px-6">
-      <WateringReminderBanner reminders={wateringReminders} />
-      <MachineryReminderBanner reminders={machineryReminders} />
+    <div className="pf-fit mx-auto max-w-7xl px-4 pb-10 pt-5 sm:px-6 fit:gap-2.5 fit:pb-3 fit:pt-3">
 
       {/* ---- Hero ---- */}
-      <section className="relative overflow-hidden rounded-[20px] bg-gradient-to-r from-emerald-800 via-green-700 to-yellow-600 px-6 py-6 text-white shadow-lg dark:from-emerald-950 dark:via-green-900 dark:to-yellow-800 sm:px-7">
+      <section className="relative overflow-hidden rounded-[20px] bg-gradient-to-r from-emerald-800 via-green-700 to-yellow-600 px-6 py-6 text-white fit:py-3 shadow-lg dark:from-emerald-950 dark:via-green-900 dark:to-yellow-800 sm:px-7">
         <div className="pointer-events-none absolute -end-16 -top-20 h-72 w-72 rounded-full bg-white/10" />
-        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between fit:items-center fit:gap-3">
           <div>
             <p className="text-sm text-white/85">
               {dateLine}
               {place ? ` · ${place}` : ""}
             </p>
-            <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight">
+            <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight fit:mt-0 fit:text-xl">
               {L("pmd_greeting")}
               {farmer.full_name ? `, ${farmer.full_name}` : ""}
             </h1>
-            <p className="mt-1 text-sm text-white/85">{L("pmd_subtitle")}</p>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+            <p className="mt-1 text-sm text-white/85 fit:hidden">{L("pmd_subtitle")}</p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs fit:mt-2 fit:gap-1.5 fit:text-[11px]">
               <HeroPill>
                 {farmer.farmer_code} · {farmer.is_verified ? `✓ ${L("pmd_verified")}` : L("pmd_unverified")}
               </HeroPill>
@@ -115,6 +114,10 @@ export default async function FarmerDashboardPage() {
               <HeroPill>
                 {L("pmd_profile")} {d.completion.isComplete ? `✓ ${L("pmd_complete")}` : `${d.completion.percent}%`}
               </HeroPill>
+              {/* Ek screen par chhote 4 card yahan chips ban jate hain */}
+              <Link href="/portal/campaigns" className="hidden fit:inline-flex"><HeroPill>{L("pmd_kpi_booking")} {d.booking.mine} · {d.booking.acres} {L("pmd_acres")}</HeroPill></Link>
+              <Link href="/portal/services/machinery" className="hidden fit:inline-flex"><HeroPill>{L("pmd_kpi_mach")} {d.mach.total}</HeroPill></Link>
+              <Link href="/portal/harvest" className="hidden fit:inline-flex"><HeroPill>{L("pmd_kpi_profit")} {d.profit.hasData ? rs(d.profit.net) : "Rs 0"}</HeroPill></Link>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -129,7 +132,7 @@ export default async function FarmerDashboardPage() {
       </section>
 
       {/* ---- KPI cards ---- */}
-      <section className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+      <section className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6 fit:grid-cols-6 fit:gap-2.5">
         <Kpi href="/portal/wallet" tone="rose" icon={<Wallet className="h-4 w-4" />} label={L("pmd_kpi_khata")}
           value={d.khata.hasLinkedCustomer || d.khata.owed > 0 ? rs(d.khata.owed) : "—"}
           sub={
@@ -141,16 +144,16 @@ export default async function FarmerDashboardPage() {
               ? d.khata.owed > 0 ? "" : L("pmd_khata_clear")
               : L("pmd_khata_none")
           } />
-        <Kpi href="/portal/services/livestock" tone="sky" icon={<Droplets className="h-4 w-4" />} label={L("pmd_kpi_milk")}
+        <Kpi href="/portal/dairy" tone="sky" icon={<Droplets className="h-4 w-4" />} label={L("pmd_kpi_milk")}
           value={d.milk.hasRecord ? `${Math.round(d.milk.total30)} L` : ls.litersPerDay > 0 ? `${ls.litersPerDay} L` : "—"}
           sub={
             d.milk.hasRecord
               ? `${L("pmd_last_30")}${d.milk.rate ? ` · Rs ${d.milk.rate}/L` : ""}`
               : ls.litersPerDay > 0
-              ? `${L("pmd_per_day_self")}${d.milk.rate ? ` · Rs ${d.milk.rate}/L` : ""}`
+              ? `${L(ls.litersSource === "dairy" ? "pmd_per_day_dairy" : "pmd_per_day_self")}${d.milk.rate ? ` · Rs ${d.milk.rate}/L` : ""}`
               : ""
           } />
-        <Kpi href="/portal/services/livestock" tone="violet" icon={<PawPrint className="h-4 w-4" />} label={L("pmd_kpi_livestock")}
+        <Kpi href="/portal/dairy" tone="violet" icon={<PawPrint className="h-4 w-4" />} label={L("pmd_kpi_livestock")}
           value={ls.total > 0 ? String(ls.total) : "0"}
           sub={ls.total > 0 ? `${ls.milking} ${L("pmd_milking")} · ${ls.dry} ${L("pmd_dry")}${ls.calves ? ` · ${ls.calves} ${L("pmd_calves")}` : ""}` : L("pmd_no_animals")} />
         <Kpi href="/portal/farms" tone="teal" icon={<LandPlot className="h-4 w-4" />} label={L("pmd_kpi_land")}
@@ -164,10 +167,10 @@ export default async function FarmerDashboardPage() {
           sub={[d.creditLimit > 0 ? `${L("pmd_used")} ${used}%` : L("pmd_no_limit"), bandKey ? L(bandKey) : null].filter(Boolean).join(" · ")} />
       </section>
 
-      <section className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MiniKpi href="/portal/services/fertilizer" icon={<Sprout className="h-4 w-4" />} color="text-amber-600 bg-amber-50 dark:bg-amber-500/15 dark:text-amber-300"
-          label={L("pmd_kpi_fert")} value={String(d.fert.total)}
-          sub={d.fert.needsReply ? `${d.fert.needsReply} ${L("pmd_needs_reply")}` : `${d.fert.open} ${L("pmd_open")}`} />
+      <section className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4 fit:hidden">
+        <MiniKpi href="/portal/campaigns" icon={<CalendarClock className="h-4 w-4" />} color="text-amber-600 bg-amber-50 dark:bg-amber-500/15 dark:text-amber-300"
+          label={L("pmd_kpi_booking")} value={String(d.booking.mine)}
+          sub={`${d.booking.acres} ${L("pmd_acres")} · ${d.booking.open} ${L("pmd_open_plans")}`} />
         <MiniKpi href="/portal/services/machinery" icon={<Tractor className="h-4 w-4" />} color="text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-300"
           label={L("pmd_kpi_mach")} value={String(d.mach.total)} sub={`${d.mach.open} ${L("pmd_active")}`} />
         <MiniKpi href="/portal/harvest" icon={<TrendingUp className="h-4 w-4" />}
@@ -180,73 +183,80 @@ export default async function FarmerDashboardPage() {
           sub={farmer.is_verified ? L("pmd_verified") : L("pmd_unverified")} />
       </section>
 
-      {/* ---- Milk chart + tasks ---- */}
-      <section className="mt-4 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+      {/* ---- Ek screen (>=1024): sab panel ek grid mein, har panel apne andar scroll ---- */}
+      <section className="pf-grow pf-grid mt-4 grid gap-4 fit:grid-cols-[1.25fr_1fr_1fr] fit:grid-rows-2 fit:gap-2.5">
+        <PanelTabs
+          className="fit:p-3.5"
+          tabs={[
+            {
+              key: "month",
+              label: L("pmd_month_chart"),
+              content: d.months.some((m) => m.udhaar || m.adaigi || m.milk || m.kharcha) ? (
+                <div className="h-[210px] fit:h-full fit:min-h-[150px]">
+                  <MonthBarsChart height="100%" data={d.months} labels={{ udhaar: L("pmd_udhaar"), adaigi: L("pmd_adaigi"), milk: L("pmd_milk_income"), kharcha: L("pmd_crop_cost") }} />
+                </div>
+              ) : (
+                <Empty icon={<Coins className="h-6 w-6" />} text={L("pmd_month_empty")} />
+              ),
+            },
+            {
+              key: "milk",
+              label: L("pmd_milk_chart"),
+              content: d.milk.hasRecord ? (
+                <div className="h-[230px] fit:h-full fit:min-h-[150px]">
+                  <MilkAreaChart height="100%" data={d.milk.days} />
+                </div>
+              ) : (
+                <Empty icon={<Droplets className="h-6 w-6" />} text={L("pmd_milk_empty")}
+                  extra={ls.litersPerDay > 0 ? `${ls.litersPerDay} ${L(ls.litersSource === "dairy" ? "pmd_per_day_dairy" : "pmd_per_day_self")}` : undefined} />
+              ),
+            },
+            {
+              key: "herd",
+              label: L("pmd_herd"),
+              content: ls.total > 0 ? (
+                <div>
+                  <p className="mb-2 text-xs text-surface-500 dark:text-slate-400">{L(ls.source === "dairy" ? "pmd_from_dairy" : "pmd_from_record")}</p>
+                  <HerdDonut
+                    centerLabel={L("pmd_animals")}
+                    parts={[
+                      { name: L("pmd_milking"), value: ls.milking, color: "#0ea5e9" },
+                      { name: L("pmd_dry"), value: ls.dry, color: "#f59e0b" },
+                      { name: L("pmd_calves"), value: ls.calves, color: "#22c55e" },
+                    ]}
+                  />
+                </div>
+              ) : (
+                <Empty icon={<PawPrint className="h-6 w-6" />} text={L("pmd_herd_empty")} />
+              ),
+            },
+          ]}
+        />
         <Card>
-          <CardHead title={L("pmd_milk_chart")} sub={L("pmd_liters_day")} />
-          {d.milk.hasRecord ? (
-            <MilkAreaChart data={d.milk.days} />
-          ) : (
-            <Empty icon={<Droplets className="h-6 w-6" />} text={L("pmd_milk_empty")}
-              extra={ls.litersPerDay > 0 ? `${ls.litersPerDay} ${L("pmd_per_day_self")}` : undefined} />
-          )}
-        </Card>
-        <Card>
-          <CardHead title={L("pmd_tasks")} right={d.tasks.length ? <Badge tone="rose">{d.tasks.length} {L("pmd_pending")}</Badge> : null} />
-          {d.tasks.length === 0 ? (
-            <Empty icon={<BadgeCheck className="h-6 w-6" />} text={L("pmd_no_tasks")} />
-          ) : (
-            <ul className="divide-y divide-surface-100 dark:divide-surface-800">
-              {d.tasks.slice(0, 5).map((task, i) => (
-                <TaskRow key={i} task={task} L={L} />
-              ))}
-            </ul>
-          )}
-        </Card>
-      </section>
-
-      {/* ---- Month bars + herd + quick ---- */}
-      <section className="mt-4 grid gap-4 lg:grid-cols-3">
-        <Card>
-          <CardHead title={L("pmd_month_chart")} />
-          {d.months.some((m) => m.udhaar || m.adaigi || m.milk || m.kharcha) ? (
-            <MonthBarsChart data={d.months} labels={{ udhaar: L("pmd_udhaar"), adaigi: L("pmd_adaigi"), milk: L("pmd_milk_income"), kharcha: L("pmd_crop_cost") }} />
-          ) : (
-            <Empty icon={<Coins className="h-6 w-6" />} text={L("pmd_month_empty")} />
-          )}
-        </Card>
-        <Card>
-          <CardHead title={L("pmd_herd")} sub={L("pmd_from_record")} />
-          {ls.total > 0 ? (
-            <HerdDonut
-              centerLabel={L("pmd_animals")}
-              parts={[
-                { name: L("pmd_milking"), value: ls.milking, color: "#0ea5e9" },
-                { name: L("pmd_dry"), value: ls.dry, color: "#f59e0b" },
-                { name: L("pmd_calves"), value: ls.calves, color: "#22c55e" },
-              ]}
-            />
-          ) : (
-            <Empty icon={<PawPrint className="h-6 w-6" />} text={L("pmd_herd_empty")} />
-          )}
-        </Card>
-        <Card>
-          <CardHead title={L("pmd_quick")} />
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-            <Quick href="/portal/wallet" icon={<Wallet className="h-4 w-4" />} c="bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300" label={L("pmd_q_khata")} />
-            <Quick href="/portal/campaigns" icon={<CalendarClock className="h-4 w-4" />} c="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300" label={L("pmd_q_booking")} />
-            <Quick href="/portal/demand" icon={<PackageSearch className="h-4 w-4" />} c="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300" label={L("pmd_q_demand")} />
-            <Quick href="/portal/services/fertilizer" icon={<Sprout className="h-4 w-4" />} c="bg-lime-100 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300" label={L("pmd_q_fert")} />
-            <Quick href="/portal/services/machinery" icon={<Tractor className="h-4 w-4" />} c="bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300" label={L("pmd_q_mach")} />
-            <Quick href="/portal/services/livestock" icon={<PawPrint className="h-4 w-4" />} c="bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300" label={L("pmd_q_livestock")} />
+          <CardHead title={L("pmd_tasks")} right={d.tasks.length + wateringReminders.length + machineryReminders.length ? <Badge tone="rose">{d.tasks.length + wateringReminders.length + machineryReminders.length} {L("pmd_pending")}</Badge> : null} />
+          <div className="pf-body">
+            {d.tasks.length === 0 && wateringReminders.length === 0 && machineryReminders.length === 0 ? (
+              <Empty icon={<BadgeCheck className="h-6 w-6" />} text={L("pmd_no_tasks")} />
+            ) : (
+              <>
+                {d.tasks.length > 0 && (
+                  <ul className="divide-y divide-surface-100 dark:divide-surface-800">
+                    {d.tasks.map((task, i) => (
+                      <TaskRow key={i} task={task} L={L} />
+                    ))}
+                  </ul>
+                )}
+                <div className="mt-2 space-y-2 [&>div]:mb-0">
+                  <WateringReminderBanner reminders={wateringReminders} />
+                  <MachineryReminderBanner reminders={machineryReminders} />
+                </div>
+              </>
+            )}
           </div>
         </Card>
-      </section>
-
-      {/* ---- Activity + farms ---- */}
-      <section className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card>
+        <Card className="fit:row-span-2">
           <CardHead title={L("pmd_activity")} sub={L("pmd_activity_sub")} />
+          <div className="pf-body">
           {d.activity.length === 0 ? (
             <Empty icon={<ShoppingBag className="h-6 w-6" />} text={L("pmd_no_activity")} />
           ) : (
@@ -270,9 +280,12 @@ export default async function FarmerDashboardPage() {
               ))}
             </ul>
           )}
+          </div>
         </Card>
-        <Card>
+        <div className="pf-grid grid gap-4 fit:grid-cols-[1.5fr_1fr] fit:gap-2.5">
+          <Card>
           <CardHead title={L("pmd_my_land")} right={<Link href="/portal/farms" className="rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-semibold text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-slate-200 dark:hover:bg-surface-800">{L("pmd_add_farm")}</Link>} />
+            <div className="pf-body">
           {d.farms.length === 0 ? (
             <Empty icon={<LandPlot className="h-6 w-6" />} text={L("pmd_no_farms")} />
           ) : (
@@ -283,24 +296,24 @@ export default async function FarmerDashboardPage() {
                     <th className="py-2 pe-2 font-semibold">{L("pmd_col_farm")}</th>
                     <th className="py-2 pe-2 font-semibold">{L("pmd_col_acres")}</th>
                     <th className="py-2 pe-2 font-semibold">{L("pmd_col_crop")}</th>
-                    <th className="py-2 pe-2 font-semibold">{L("pmd_col_loc")}</th>
-                    <th className="py-2" />
+                    <th className="py-2 pe-2 font-semibold fit:hidden">{L("pmd_col_loc")}</th>
+                    <th className="py-2 fit:hidden" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
                   {d.farms.map((f) => (
                     <tr key={f.id}>
-                      <td className="py-2.5 pe-2 font-semibold text-surface-900 dark:text-white">{f.name}</td>
+                      <td className="py-2.5 pe-2 font-semibold text-surface-900 dark:text-white fit:py-1.5">{f.name}{f.pinned ? <MapPin className="ms-1 hidden h-3 w-3 text-rose-500 fit:inline" /> : null}</td>
                       <td className="py-2.5 pe-2 text-surface-700 dark:text-slate-300">{f.acres}</td>
                       <td className="py-2.5 pe-2 text-surface-700 dark:text-slate-300">{f.crop ?? "—"}</td>
-                      <td className="py-2.5 pe-2">
+                      <td className="py-2.5 pe-2 fit:hidden">
                         {f.pinned ? (
                           <span className="inline-flex items-center gap-1 text-xs text-surface-600 dark:text-slate-300"><MapPin className="h-3.5 w-3.5 text-rose-500" />{L("pmd_pin_set")}</span>
                         ) : (
                           <Badge tone="amber">{L("pmd_pin_missing")}</Badge>
                         )}
                       </td>
-                      <td className="py-2.5 text-end">{f.verified ? <Badge tone="green">{L("pmd_verified")}</Badge> : <Badge tone="slate">{L("pmd_unverified")}</Badge>}</td>
+                      <td className="py-2.5 text-end fit:hidden">{f.verified ? <Badge tone="green">{L("pmd_verified")}</Badge> : <Badge tone="slate">{L("pmd_unverified")}</Badge>}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -308,12 +321,23 @@ export default async function FarmerDashboardPage() {
             </div>
           )}
           <p className="mt-3 text-xs text-surface-500 dark:text-slate-400">{L("pmd_next_season")}</p>
-        </Card>
-      </section>
-
-      {/* ---- Official score + weather ---- */}
-      <section className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.6fr]">
-        <Card>
+            </div>
+          </Card>
+          <Card>
+            <CardHead title={L("pmd_quick")} />
+            <div className="pf-body">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 fit:grid-cols-1 fit:gap-1.5">
+            <Quick href="/portal/wallet" icon={<Wallet className="h-4 w-4" />} c="bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300" label={L("pmd_q_khata")} />
+            <Quick href="/portal/campaigns" icon={<CalendarClock className="h-4 w-4" />} c="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300" label={L("pmd_q_booking")} />
+            <Quick href="/portal/demand" icon={<PackageSearch className="h-4 w-4" />} c="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300" label={L("pmd_q_demand")} />
+            <Quick href="/portal/services/machinery" icon={<Tractor className="h-4 w-4" />} c="bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300" label={L("pmd_q_mach")} />
+            <Quick href="/portal/dairy" icon={<PawPrint className="h-4 w-4" />} c="bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300" label={t("nav_dairy", lang)} />
+          </div>
+            </div>
+          </Card>
+        </div>
+        <div className="pf-scroll space-y-4 fit:space-y-2.5">
+          <Card>
           <CardHead title={L("pmd_score_title")} right={d.score.snapshotDate ? <span className="text-xs text-surface-400">{L("pmd_score_updated")}: {shortDate(d.score.snapshotDate)}</span> : null} />
           {d.score.score === null ? (
             <Empty icon={<CreditCard className="h-6 w-6" />} text={L("pmd_score_none")} />
@@ -335,8 +359,9 @@ export default async function FarmerDashboardPage() {
               <p className="mt-1 text-xs text-surface-500 dark:text-slate-400">{L("pmd_score_hint")}</p>
             </div>
           )}
-        </Card>
+          </Card>
         <ForecastWidget fixedDistrict={farmer.district} title={`${farmer.district ? `${farmer.district} · ` : ""}${L("pmd_forecast")}`} />
+        </div>
       </section>
     </div>
   );
@@ -388,7 +413,7 @@ const TASK_STYLE: Record<TaskItem["kind"], [string, React.ReactNode, Translation
 const TASK_HREF: Record<TaskItem["kind"], string> = {
   late: "/portal/wallet",
   promise: "/portal/wallet",
-  fert_reply: "/portal/services/fertilizer",
+  fert_reply: "/portal/campaigns", // purana khaad-udhaar page band; udhaar ab season plan se
   mach_pay: "/portal/services/machinery",
   campaign: "/portal/campaigns",
   profile: "/portal/profile",
@@ -436,12 +461,12 @@ const TONES: Record<string, string> = {
 
 function Kpi({ href, tone, icon, label, value, sub }: { href: string; tone: string; icon: React.ReactNode; label: string; value: string; sub: string }) {
   return (
-    <Link href={href} className={`group relative block min-h-[118px] overflow-hidden rounded-2xl bg-gradient-to-br ${TONES[tone]} p-4 text-white shadow-[0_8px_20px_-10px_rgba(0,0,0,.45)] transition hover:-translate-y-0.5`}>
+    <Link href={href} className={`group relative block min-h-[118px] overflow-hidden rounded-2xl bg-gradient-to-br ${TONES[tone]} p-4 text-white fit:min-h-0 fit:px-3.5 fit:py-2.5 shadow-[0_8px_20px_-10px_rgba(0,0,0,.45)] transition hover:-translate-y-0.5`}>
       <div className="flex items-start justify-between">
         <span className="text-[11px] font-semibold uppercase tracking-wider text-white/85">{label}</span>
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">{icon}</span>
       </div>
-      <p className="mt-2 text-2xl font-bold tracking-tight">{value}</p>
+      <p className="mt-2 truncate text-2xl font-bold tracking-tight fit:mt-0.5 fit:text-xl">{value}</p>
       {sub && <p className="mt-1 truncate text-[11.5px] text-white/90" title={sub}>{sub}</p>}
       <span className="pointer-events-none absolute -bottom-6 -end-5 h-20 w-20 rounded-full bg-white/12 bg-white/10" />
     </Link>
@@ -461,13 +486,13 @@ function MiniKpi({ href, icon, color, label, value, sub }: { href: string; icon:
   );
 }
 
-function Card({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-2xl border border-surface-200 bg-white p-5 shadow-sm dark:border-surface-800 dark:bg-surface-900">{children}</div>;
+function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`pf-panel rounded-2xl border border-surface-200 bg-white p-5 shadow-sm dark:border-surface-800 dark:bg-surface-900 fit:p-3.5 ${className}`}>{children}</div>;
 }
 
 function CardHead({ title, sub, right }: { title: string; sub?: string; right?: React.ReactNode }) {
   return (
-    <div className="mb-3 flex items-start justify-between gap-3">
+    <div className="mb-3 flex items-start justify-between gap-3 fit:mb-2">
       <div>
         <h3 className="text-[15px] font-semibold text-surface-900 dark:text-white">{title}</h3>
         {sub && <p className="text-xs text-surface-500 dark:text-slate-400">{sub}</p>}
@@ -479,7 +504,7 @@ function CardHead({ title, sub, right }: { title: string; sub?: string; right?: 
 
 function Empty({ icon, text, extra }: { icon: React.ReactNode; text: string; extra?: string }) {
   return (
-    <div className="flex min-h-[150px] flex-col items-center justify-center rounded-xl border border-dashed border-surface-200 bg-surface-50/60 px-6 py-6 text-center dark:border-surface-700 dark:bg-surface-800/40">
+    <div className="flex min-h-[150px] flex-col items-center justify-center rounded-xl fit:min-h-[110px] fit:py-4 border border-dashed border-surface-200 bg-surface-50/60 px-6 py-6 text-center dark:border-surface-700 dark:bg-surface-800/40">
       <span className="mb-2 text-surface-400 dark:text-slate-500">{icon}</span>
       <p className="max-w-sm text-sm text-surface-500 dark:text-slate-400">{text}</p>
       {extra && <p className="mt-2 text-sm font-semibold text-sky-600 dark:text-sky-300">{extra}</p>}
@@ -507,9 +532,9 @@ function HeroPill({ children }: { children: React.ReactNode }) {
 
 function Quick({ href, icon, c, label }: { href: string; icon: React.ReactNode; c: string; label: string }) {
   return (
-    <Link href={href} className="flex items-center gap-2.5 rounded-xl border border-surface-200 bg-surface-50 p-3 text-[12.5px] font-semibold text-surface-800 transition hover:border-green-300 hover:bg-white dark:border-surface-700 dark:bg-surface-800/60 dark:text-slate-100 dark:hover:bg-surface-800">
-      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${c}`}>{icon}</span>
-      <span className="leading-tight">{label}</span>
+    <Link href={href} className="flex items-center gap-2.5 rounded-xl border border-surface-200 bg-surface-50 p-3 text-[12.5px] fit:gap-2 fit:p-1.5 fit:text-[12px] font-semibold text-surface-800 transition hover:border-green-300 hover:bg-white dark:border-surface-700 dark:bg-surface-800/60 dark:text-slate-100 dark:hover:bg-surface-800">
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg fit:h-6 fit:w-6 ${c}`}>{icon}</span>
+      <span className="leading-tight fit:truncate">{label}</span>
     </Link>
   );
 }

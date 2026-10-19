@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DemandCenterClient, type ProductDemandRow, type DemandProduct } from "./demand-client";
+import { classifyProducts, type ClassifiedCategory } from "@/lib/demand/categories";
 
 export const dynamic = "force-dynamic";
 
@@ -16,12 +17,14 @@ export default async function FarmerDemandCenterPage() {
     .single();
   if (!farmer) redirect("/login");
 
-  const [{ data: products }, { data: demands }] = await Promise.all([
+  const [{ data: products }, { data: categories }, { data: demands }] = await Promise.all([
     supabase
       .from("products")
-      .select("id, name, pack_size, unit, is_available, is_deleted")
+      .select("id, name, pack_size, unit, is_available, is_deleted, category_id")
       .eq("is_deleted", false)
       .order("name"),
+    // categories: public read RLS -- qism cards ke liye (Raw Grain farmer se chhupa).
+    (supabase as any).from("categories").select("id, name, parent_category_id, category_kind"),
     (supabase as any)
       .from("farmer_product_demands")
       .select("id, product_id, product_name, quantity, unit, needed_by, purpose, notes, status, staff_note, created_at, updated_at")
@@ -45,7 +48,7 @@ export default async function FarmerDemandCenterPage() {
   return (
     <DemandCenterClient
       farmerName={farmer.full_name ?? "Kisan"}
-      products={(products ?? []) as DemandProduct[]}
+      products={classifyProducts((products ?? []) as any[], (categories ?? []) as ClassifiedCategory[]) as DemandProduct[]}
       demands={merged as ProductDemandRow[]}
     />
   );

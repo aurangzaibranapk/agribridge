@@ -58,7 +58,7 @@ export default async function PortalLayout({ children }: { children: React.React
   // hai jo neeche prop mein ja rahi hai -- ek hi jagah se, do nahi.
   return (
     <LangProvider lang={lang}>
-    <div dir={lang === "ur" ? "rtl" : "ltr"} lang={lang === "ur" ? "ur" : lang === "en" ? "en" : "ur-Latn"} className={`${portalShellClass(lang)} flex min-h-screen bg-surface-50 dark:bg-surface-950`}>
+    <div dir={lang === "ur" ? "rtl" : "ltr"} lang={lang === "ur" ? "ur" : lang === "en" ? "en" : "ur-Latn"} className={`${portalShellClass(lang)} pf-shell flex min-h-screen bg-surface-50 dark:bg-surface-950`}>
       <SkipLink lang={lang} />
       <PortalSidebar lang={lang} badges={{ reminders }} />
       {/* min-w-0 -- wohi wajah jo admin ke layout mein likhi hai: is ke
@@ -66,7 +66,7 @@ export default async function PortalLayout({ children }: { children: React.React
           screen se bara kar deta hai aur poora safha daayen se kat jata
           hai. Kisan ke portal par ye aur bura hai: wahan safha aksar
           phone par khulta hai, jahan chaurai pehle hi kam hoti hai. */}
-      <div className="min-w-0 flex-1">
+      <div className="pf-col min-w-0 flex-1">
         <header className="print:hidden flex items-center justify-between gap-2 border-b border-surface-200 bg-white px-4 py-2 sm:px-6 sm:py-3 dark:bg-surface-900 dark:border-surface-800">
           <div className="flex min-w-0 items-center gap-2">
             <PortalMobileSidebar lang={lang} badges={{ reminders }} />
@@ -88,8 +88,8 @@ export default async function PortalLayout({ children }: { children: React.React
             </div>
           </div>
         </header>
-        <OfflineBanner lang={lang} />
-        <main id="portal-main" tabIndex={-1} className="pb-20 outline-none sm:pb-0">{hasAccess ? children : <SubscriptionLockedScreen minimumAmount={minimumAmount} />}</main>
+        <div className="pf-none"><OfflineBanner lang={lang} /></div>
+        <main id="portal-main" tabIndex={-1} className="pf-main pb-20 outline-none sm:pb-0">{hasAccess ? children : <SubscriptionLockedScreen minimumAmount={minimumAmount} />}</main>
       </div>
       <PortalTabBar lang={lang} kind="farmer" hasDairy={hasDairy} />
       {activeAnnouncement && <AnnouncementPopup announcement={activeAnnouncement} farmerId={farmer.id} />}

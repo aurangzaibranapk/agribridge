@@ -1,5 +1,6 @@
 "use server";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { estimateMachineryCost, estimateFertilizerCost } from "@/lib/ai/cost-estimation-client";
@@ -233,5 +234,8 @@ export async function submitLivestockLoan(_prev: ServiceRequestState, formData: 
     .from("service_categories")
     .upsert({ farmer_id: farmerId, category: "livestock" }, { onConflict: "farmer_id,category" });
 
+  // Maweshi loan ab Dairy Management mein bhi (Livestock -> Dairy, 19 Oct).
+  revalidatePath("/portal/dairy");
+  revalidatePath("/portal/dashboard");
   return { success: true };
 }
