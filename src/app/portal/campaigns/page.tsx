@@ -28,10 +28,11 @@ export default async function CampaignsPage() {
   const toFarm = (f: any, acres?: number): FarmDraft => ({ key: f.id, farmId: f.id, name: f.name ?? "", acres: String(acres ?? f.area_acres ?? ""), village: f.village ?? "", lat: f.latitude != null ? Number(f.latitude) : null, lng: f.longitude != null ? Number(f.longitude) : null });
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-5">
-      <div>
-        <h1 className="font-display text-2xl font-semibold text-surface-900 dark:text-white">Season Booking / سیزن بکنگ</h1>
-        <p className="text-sm text-surface-500">Apne farms, rakba aur zaroorat ka saman likhein. Daftar demand dekh kar raabta karega.</p>
+    // Ek campaign ho to poora form ek screen mein (>=1024); zyada hon to aam scroll (main ke andar).
+    <div className={`mx-auto w-full max-w-7xl space-y-5 px-4 py-6 sm:px-6 ${(campaigns ?? []).length === 1 ? "pf-fit fit:gap-2.5 fit:space-y-0 fit:py-3" : ""}`}>
+      <div className="fit:flex fit:items-baseline fit:gap-3">
+        <h1 className="font-display text-2xl font-semibold text-surface-900 dark:text-white fit:text-xl">Season Booking / سیزن بکنگ</h1>
+        <p className="text-sm text-surface-500 fit:text-xs">Apne farms, rakba aur zaroorat ka saman likhein. Daftar demand dekh kar raabta karega.</p>
       </div>
       {farmer.signup_approval_status === "pending" && (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">Aap ka signup admin ki manzoori ka intezar kar raha hai. Booking abhi bhi bhej sakte hain; daftar check karega.</p>
@@ -48,8 +49,8 @@ export default async function CampaignsPage() {
           productId: l.custom_request_id ? null : l.product_id, customName: l.custom_request_id ? l.product_name : null, quantity: String(Number(l.quantity)), unit: l.unit,
         }));
         return (
-          <CampaignBookingForm key={c.id} campaign={c} open={isCampaignOpen(c)} products={products} farmerCode={farmer.farmer_code ?? null}
-            initialFarms={farms} initialLines={myLines} initialNotes={b?.notes ?? ""} existing={!!b} />
+          <div key={c.id} className="pf-grow"><CampaignBookingForm campaign={c} open={isCampaignOpen(c)} products={products} farmerCode={farmer.farmer_code ?? null}
+            initialFarms={farms} initialLines={myLines} initialNotes={b?.notes ?? ""} existing={!!b} /></div>
         );
       })}
     </div>

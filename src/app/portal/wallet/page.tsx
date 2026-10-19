@@ -69,20 +69,34 @@ export default async function FarmerWalletPage({ searchParams }: { searchParams:
   const pmCh = s?.promise?.channel === "signed" ? "pk_ch_signed" : s?.promise?.channel === "otp" ? "pk_ch_otp" : "pk_ch_verbal";
   const signed = (v: number) => (v > 0 ? `${rs(v)} ${L("pk_owed_short")}` : v < 0 ? `${rs(-v)} ${L("pk_receive_short")}` : rs(0));
 
+  const showOldWallet = !!(wallet && (Number(wallet.balance ?? 0) !== 0 || Number(wallet.held_balance ?? 0) !== 0 || (transactions ?? []).length > 0));
+  const oldWallet = showOldWallet && wallet ? (
+    <Card>
+            <CardHead title={L("pk_wallet")} right={<WalletIcon className="h-4 w-4 text-surface-400" />} />
+            <WalletView
+              lang={lang}
+              balance={Number(wallet.balance ?? 0)}
+              heldBalance={Number(wallet.held_balance ?? 0)}
+              transactions={(transactions ?? []).map((tx) => ({ ...tx, amount: Number(tx.amount), balance_after: Number(tx.balance_after) }))}
+            />
+          </Card>
+  ) : null;
+
   return (
-    <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
+    <div className="pf-fit mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
+      <div className="space-y-5 fit:grid fit:grid-cols-[1.15fr_2fr] fit:gap-2.5 fit:space-y-0">
       {/* Hero */}
-      <section className={`relative overflow-hidden rounded-3xl bg-gradient-to-r ${heroTone} p-6 text-white shadow-lg`}>
+      <section className={`relative overflow-hidden rounded-3xl bg-gradient-to-r ${heroTone} p-6 text-white shadow-lg fit:rounded-2xl fit:px-4 fit:py-3`}>
         <span className="pointer-events-none absolute -end-16 -top-16 h-64 w-64 rounded-full bg-white/10" />
         <div className="relative flex flex-wrap items-end justify-between gap-5">
           <div>
             <p className="text-sm text-white/85">{L("pk_hero_eyebrow")}</p>
-            <p className="mt-1 text-4xl font-extrabold tracking-tight">{rs(Math.abs(owed))}</p>
+            <p className="mt-1 text-4xl font-extrabold tracking-tight fit:mt-0 fit:text-3xl">{rs(Math.abs(owed))}</p>
             <p className="mt-1 text-sm text-white/90">
               {owed > 0 ? L("pk_you_owe") : owed < 0 ? L("pk_we_owe") : L("pk_settled")} · {L("pk_as_of").replace("{d}", longDate(asOf, lang))}
             </p>
             {s && (
-              <div className="mt-3 flex flex-wrap gap-2 text-[12px]">
+              <div className="mt-3 flex flex-wrap gap-2 text-[12px] fit:mt-2 fit:gap-1.5 fit:text-[11px]">
                 {s.promise && (
                   <HeroPill>
                     <CalendarClock className="h-3.5 w-3.5" /> {L("pk_pill_promise")}: {rs(s.promise.amount)} · {shortDate(s.promise.date, lang, year)}
@@ -97,7 +111,7 @@ export default async function FarmerWalletPage({ searchParams }: { searchParams:
               </div>
             )}
           </div>
-          <div className="flex flex-wrap gap-2 print:hidden">
+          <div className="flex flex-wrap gap-2 print:hidden fit:flex-col">
             <a href="#adaigi" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-rose-700 shadow hover:bg-rose-50">
               <Banknote className="h-4 w-4" /> {L("pk_btn_pay")}
             </a>
@@ -107,28 +121,31 @@ export default async function FarmerWalletPage({ searchParams }: { searchParams:
           </div>
         </div>
       </section>
+      {s && (
+            // Char source cards
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 fit:grid-cols-2 fit:gap-2.5">
+              <SourceCard tone="rose" label={L("pk_card_shop")} value={rs(Math.abs(cards!.shop))} sub={cards!.shop === 0 ? L("pk_card_none") : cards!.shop < 0 ? signed(cards!.shop) : L("pk_card_shop_sub")} href={`${qs({ ...keep, f: "udhaar" })}#statement`} />
+              <SourceCard tone="sky" label={L("pk_card_milk")} value={rs(Math.abs(cards!.milk))} sub={cards!.milk === 0 ? L("pk_card_milk_none") : signed(cards!.milk)} href={`${qs({ ...keep, f: "doodh" })}#statement`} />
+              <SourceCard tone="lime" label={L("pk_card_grain")} value={rs(Math.abs(cards!.grain))} sub={cards!.grain === 0 ? L("pk_card_none") : signed(cards!.grain)} href={`${qs({ ...keep, f: "gandum" })}#statement`} />
+              <SourceCard
+                tone="violet"
+                label={L("pk_card_qist")}
+                value={cards!.qistRemaining == null ? "—" : rs(cards!.qistRemaining)}
+                sub={cards!.qistRemaining == null ? L("pk_card_qist_none") : cards!.qistNext ? `${L("pk_card_qist_next")}: ${shortDate(cards!.qistNext, lang, year)}` : L("pk_card_none")}
+              />
+            </section>
+      )}
+      </div>
 
       {!s ? (
         <Card><p className="text-sm text-surface-600 dark:text-slate-300">{L("pk_no_khata")}</p></Card>
       ) : (
         <>
-          {/* Char source cards */}
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <SourceCard tone="rose" label={L("pk_card_shop")} value={rs(Math.abs(cards!.shop))} sub={cards!.shop === 0 ? L("pk_card_none") : cards!.shop < 0 ? signed(cards!.shop) : L("pk_card_shop_sub")} href={`${qs({ ...keep, f: "udhaar" })}#statement`} />
-            <SourceCard tone="sky" label={L("pk_card_milk")} value={rs(Math.abs(cards!.milk))} sub={cards!.milk === 0 ? L("pk_card_milk_none") : signed(cards!.milk)} href={`${qs({ ...keep, f: "doodh" })}#statement`} />
-            <SourceCard tone="lime" label={L("pk_card_grain")} value={rs(Math.abs(cards!.grain))} sub={cards!.grain === 0 ? L("pk_card_none") : signed(cards!.grain)} href={`${qs({ ...keep, f: "gandum" })}#statement`} />
-            <SourceCard
-              tone="violet"
-              label={L("pk_card_qist")}
-              value={cards!.qistRemaining == null ? "—" : rs(cards!.qistRemaining)}
-              sub={cards!.qistRemaining == null ? L("pk_card_qist_none") : cards!.qistNext ? `${L("pk_card_qist_next")}: ${shortDate(cards!.qistNext, lang, year)}` : L("pk_card_none")}
-            />
-          </section>
 
-          <div className="grid gap-5 lg:grid-cols-3">
-            <div className="space-y-5 lg:col-span-2">
+          <div className="pf-grow pf-grid grid gap-5 lg:grid-cols-3 fit:gap-2.5">
+            <div className="space-y-5 lg:col-span-2 fit:flex fit:min-h-0 fit:flex-col fit:space-y-0">
               {/* Statement */}
-              <Card id="statement">
+              <Card id="statement" className="pf-panel fit:flex-1 fit:p-3.5">
                 <CardHead
                   title={L("pk_statement")}
                   sub={`${L("pk_statement_sub")} · ${rows.filter((r) => !r.is_opening).length} ${L("pk_rows")}`}
@@ -147,7 +164,7 @@ export default async function FarmerWalletPage({ searchParams }: { searchParams:
                   }
                 />
                 {/* Tareekh filter */}
-                <form method="get" action="#statement" className="mb-3 flex flex-wrap items-end gap-2 rounded-xl bg-surface-50 p-3 text-xs dark:bg-surface-800/50">
+                <form method="get" action="#statement" className="mb-3 flex flex-wrap items-end gap-2 rounded-xl bg-surface-50 p-3 text-xs dark:bg-surface-800/50 fit:mb-2 fit:p-2">
                   {range.filter !== "all" && <input type="hidden" name="f" value={range.filter} />}
                   <label className="flex flex-col gap-1 text-surface-600 dark:text-slate-300">
                     {L("pk_from")}
@@ -173,37 +190,13 @@ export default async function FarmerWalletPage({ searchParams }: { searchParams:
                 {rows.filter((r) => !r.is_opening).length === 0 && !rows.some((r) => r.is_opening) ? (
                   <p className="py-8 text-center text-sm text-surface-500 dark:text-slate-400">{L("pk_no_rows")}</p>
                 ) : (
-                  <StatementTable rows={rows} totals={totals} lang={lang} year={year} />
+                  <div className="pf-body"><StatementTable rows={rows} totals={totals} lang={lang} year={year} /></div>
                 )}
               </Card>
 
-              {/* Qism-waar */}
-              <Card>
-                <CardHead title={L("pk_breakdown")} sub={L("pk_breakdown_sub")} />
-                {parts.length === 0 ? (
-                  <p className="text-sm text-surface-500 dark:text-slate-400">{L("pk_card_none")}</p>
-                ) : (
-                  <ul className="space-y-3">
-                    {parts.map((p) => (
-                      <li key={p.category}>
-                        <div className="flex items-center justify-between text-[13px]">
-                          <span className="font-semibold text-surface-800 dark:text-slate-100">{L(`pk_cat_${p.category}` as TranslationKey)}</span>
-                          <span className={`font-bold ${p.balance > 0 ? "text-rose-600 dark:text-rose-300" : p.balance < 0 ? "text-emerald-600 dark:text-emerald-300" : "text-surface-500"}`}>{signed(p.balance)}</span>
-                        </div>
-                        <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-100 dark:bg-surface-800">
-                          <div className={`h-full rounded-full ${CAT_BAR[p.category] ?? "bg-surface-400"}`} style={{ width: `${Math.max(3, Math.round((Math.abs(p.balance) / maxPart) * 100))}%` }} />
-                        </div>
-                        <p className="mt-0.5 text-[11px] text-surface-500 dark:text-slate-400">
-                          {L("pk_f_udhaar")} {rs(p.udhaar)} · {L("pk_f_adaigi")} {rs(p.adaigi)}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </Card>
             </div>
 
-            <div className="space-y-5">
+            <div className="pf-scroll space-y-5 fit:space-y-2.5">
               {/* Umar */}
               <Card>
                 <CardHead title={L("pk_aging")} right={<span className="text-xs text-surface-500 dark:text-slate-400">{L("pk_aging_tag")}</span>} />
@@ -286,6 +279,30 @@ export default async function FarmerWalletPage({ searchParams }: { searchParams:
                 )}
               </Card>
 
+              {/* Qism-waar */}
+              <Card>
+                <CardHead title={L("pk_breakdown")} sub={L("pk_breakdown_sub")} />
+                {parts.length === 0 ? (
+                  <p className="text-sm text-surface-500 dark:text-slate-400">{L("pk_card_none")}</p>
+                ) : (
+                  <ul className="space-y-3">
+                    {parts.map((p) => (
+                      <li key={p.category}>
+                        <div className="flex items-center justify-between text-[13px]">
+                          <span className="font-semibold text-surface-800 dark:text-slate-100">{L(`pk_cat_${p.category}` as TranslationKey)}</span>
+                          <span className={`font-bold ${p.balance > 0 ? "text-rose-600 dark:text-rose-300" : p.balance < 0 ? "text-emerald-600 dark:text-emerald-300" : "text-surface-500"}`}>{signed(p.balance)}</span>
+                        </div>
+                        <div className="mt-1 h-2 overflow-hidden rounded-full bg-surface-100 dark:bg-surface-800">
+                          <div className={`h-full rounded-full ${CAT_BAR[p.category] ?? "bg-surface-400"}`} style={{ width: `${Math.max(3, Math.round((Math.abs(p.balance) / maxPart) * 100))}%` }} />
+                        </div>
+                        <p className="mt-0.5 text-[11px] text-surface-500 dark:text-slate-400">
+                          {L("pk_f_udhaar")} {rs(p.udhaar)} · {L("pk_f_adaigi")} {rs(p.adaigi)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
               {/* Adaigi ke tareeqe */}
               <Card id="adaigi">
                 <CardHead title={L("pk_pay_ways")} />
@@ -304,23 +321,14 @@ export default async function FarmerWalletPage({ searchParams }: { searchParams:
                 </div>
                 <p className="mt-3 text-xs text-surface-500 dark:text-slate-400">{L("pk_pay_note")}</p>
               </Card>
+              {oldWallet}
             </div>
           </div>
         </>
       )}
+      {/* Purana digital wallet -- hataya nahi; khata na ho to yahan */}
+      {!s && oldWallet}
 
-      {/* Purana digital wallet -- hataya nahi, neeche rakha */}
-      {wallet && (Number(wallet.balance ?? 0) !== 0 || Number(wallet.held_balance ?? 0) !== 0 || (transactions ?? []).length > 0) && (
-        <Card>
-          <CardHead title={L("pk_wallet")} right={<WalletIcon className="h-4 w-4 text-surface-400" />} />
-          <WalletView
-            lang={lang}
-            balance={Number(wallet.balance ?? 0)}
-            heldBalance={Number(wallet.held_balance ?? 0)}
-            transactions={(transactions ?? []).map((tx) => ({ ...tx, amount: Number(tx.amount), balance_after: Number(tx.balance_after) }))}
-          />
-        </Card>
-      )}
     </div>
   );
 }

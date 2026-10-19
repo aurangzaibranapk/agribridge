@@ -35,10 +35,10 @@ export async function CustomerShell({ userId, children }: { userId: string; chil
   const name = c?.name ?? prof?.full_name ?? "";
   return (
     <LangProvider lang={lang}>
-      <div dir={lang === "ur" ? "rtl" : "ltr"} lang={lang === "ur" ? "ur" : lang === "en" ? "en" : "ur-Latn"} className={`${portalShellClass(lang)} flex min-h-screen bg-[#f4f6fb] dark:bg-[#0a1530]`}>
+      <div dir={lang === "ur" ? "rtl" : "ltr"} lang={lang === "ur" ? "ur" : lang === "en" ? "en" : "ur-Latn"} className={`${portalShellClass(lang)} pf-shell flex min-h-screen bg-[#f4f6fb] dark:bg-[#0a1530]`}>
         <SkipLink lang={lang} />
         <CustomerSidebar lang={lang} />
-        <div className="min-w-0 flex-1">
+        <div className="pf-col min-w-0 flex-1">
           <header className="print:hidden flex items-center justify-between gap-2 border-b border-surface-200 bg-white px-4 py-2 sm:px-6 sm:py-3 dark:border-[#1e3160] dark:bg-[#0b1a3a]">
             <div className="flex min-w-0 items-center gap-2">
               <CustomerMobileNav lang={lang} />
@@ -56,8 +56,8 @@ export async function CustomerShell({ userId, children }: { userId: string; chil
               </div>
             </div>
           </header>
-          <OfflineBanner lang={lang} />
-          <main id="portal-main" tabIndex={-1} className="pb-20 outline-none sm:pb-0">
+          <div className="pf-none"><OfflineBanner lang={lang} /></div>
+          <main id="portal-main" tabIndex={-1} className="pf-main pb-20 outline-none sm:pb-0">
             {p ? children : (
               <div className="mx-auto max-w-xl px-4 py-16">
                 <EmptyState tone="blue" icon="🧾" title={t("pc_no_customer", lang)} lang={lang} />

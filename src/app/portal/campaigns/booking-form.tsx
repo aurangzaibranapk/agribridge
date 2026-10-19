@@ -70,13 +70,13 @@ export function CampaignBookingForm({ campaign, open, products, farmerCode, init
   };
 
   return (
-    <form action={action} className="overflow-hidden rounded-3xl border border-surface-200 bg-surface-50 shadow-card dark:border-surface-800 dark:bg-surface-950">
+    <form action={action} className="overflow-hidden rounded-3xl border border-surface-200 bg-surface-50 shadow-card dark:border-surface-800 dark:bg-surface-950 fit:flex fit:h-full fit:min-h-0 fit:flex-col fit:rounded-2xl">
       <input type="hidden" name="campaign_id" value={campaign.id} />
       <input type="hidden" name="crop" value={SEASON_CROP} />
       <input type="hidden" name="farms" value={JSON.stringify(farms.map(({ key: _k, ...f }) => f))} />
       <input type="hidden" name="lines" value={JSON.stringify(lines.map(({ key: _k, ...l }) => l))} />
 
-      <header className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-emerald-800 via-emerald-600 to-amber-500 px-6 py-5 text-white">
+      <header className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-emerald-800 via-emerald-600 to-amber-500 px-6 py-5 text-white fit:flex-none fit:px-5 fit:py-3">
         <div>
           <h2 className="flex items-center gap-2 font-display text-xl font-semibold"><Wheat className="h-5 w-5" />{campaign.name}</h2>
           <p className="mt-0.5 text-sm text-white/90">{campaign.description?.split(":")[0] ?? "Kisan Eco Mahabali"} · <CalendarClock className="inline h-3.5 w-3.5" /> Aakhri taareekh {dl} · Booking par koi payment nahi</p>
@@ -87,12 +87,12 @@ export function CampaignBookingForm({ campaign, open, products, farmerCode, init
         </div>
       </header>
 
-      <div className="space-y-5 p-5">
+      <div className="space-y-5 p-5 fit:flex fit:min-h-0 fit:flex-1 fit:flex-col fit:gap-3 fit:space-y-0 fit:p-3">
         {state.error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300">{state.error}</p>}
         {state.success && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300">{state.message}</p>}
 
-        <div className="grid gap-5 lg:grid-cols-2">
-          <section className={card}>
+        <div className="grid gap-5 lg:grid-cols-2 fit:min-h-0 fit:flex-1 fit:grid-cols-[1.2fr_1fr_1.25fr] fit:gap-3">
+          <section className={`${card} fit:min-h-0 fit:overflow-auto fit:p-3.5`}>
             <h3 className="text-sm font-semibold text-surface-900 dark:text-white">1 · Fasal</h3>
             <div className="mt-2 flex items-center gap-2 rounded-xl border border-surface-200 bg-surface-50 px-3 py-2.5 text-sm dark:border-surface-700 dark:bg-surface-950">
               <Lock className="h-4 w-4 text-surface-500" /><b className="text-surface-900 dark:text-white">{SEASON_CROP_LABEL}</b>
@@ -121,47 +121,48 @@ export function CampaignBookingForm({ campaign, open, products, farmerCode, init
             </div>
           </section>
 
-          <section className={card}>
-            <div className="flex items-center justify-between">
+          <section className={`${card} fit:flex fit:min-h-0 fit:flex-col fit:p-3.5`}>
+            <div className="flex items-center justify-between gap-2">
               <h3 className="flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white"><MapPin className="h-4 w-4 text-red-500" />Farm location pin — {af?.name || `Farm ${activeFarm + 1}`}</h3>
               {open && <button type="button" onClick={gps} className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-amber-600">📡 Meri location</button>}
             </div>
-            <PinMap className="mt-3" height={290} fitKey={`${activeFarm}`}
+            <div className="mt-3 h-[290px] fit:h-auto fit:min-h-[200px] fit:flex-1">
+            <PinMap fill height={290} fitKey={`${activeFarm}`}
               pins={farms.filter((f) => f.lat != null).map((f) => ({ id: f.key, lat: f.lat!, lng: f.lng!, color: f.key === af?.key ? "#e5484d" : "#16a34a", label: f.name || "Farm", active: f.key === af?.key }))}
               onPick={open ? (lat, lng) => { setFarm(activeFarm, { lat, lng, src: "manual_pin", accuracy: null }); setGpsMsg(null); } : undefined} />
+            </div>
             <p className="mt-2 text-xs text-surface-500">{gpsMsg ?? "Map par tap kar ke pin lagayein, ya khet par khare ho kar \"Meri location\" dabayein."}</p>
           </section>
-        </div>
 
-        <section className={card}>
+        <section className={`${card} lg:col-span-2 fit:col-span-1 fit:flex fit:min-h-0 fit:flex-col fit:p-3.5`}>
           <h3 className="text-sm font-semibold text-surface-900 dark:text-white">3 · Zaroorat ka saman</h3>
-          <div className="mt-3 flex flex-wrap gap-2" role="tablist">
+          <div className="mt-3 flex flex-wrap gap-2 fit:mt-2 fit:gap-1.5" role="tablist">
             {LINE_KINDS.map((kk) => { const U = KIND_UI[kk]; const I = U.icon; return (
-              <button key={kk} type="button" role="tab" aria-selected={tab === kk} onClick={() => { setTab(kk); setQ(""); }} className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition ${tab === kk ? U.on : U.off}`}>
+              <button key={kk} type="button" role="tab" aria-selected={tab === kk} onClick={() => { setTab(kk); setQ(""); }} className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition fit:px-3 fit:py-1 fit:text-xs ${tab === kk ? U.on : U.off}`}>
                 <I className="h-4 w-4" />{U.label} <span className="opacity-75">({byKind[kk].length})</span>
               </button>); })}
           </div>
-          <div className="mt-4 grid gap-5 lg:grid-cols-2">
-            <div>
+          <div className="mt-4 grid gap-5 lg:grid-cols-2 fit:mt-2 fit:min-h-0 fit:flex-1 fit:grid-cols-1 fit:grid-rows-[minmax(0,1.15fr)_minmax(0,1fr)] fit:gap-2">
+            <div className="fit:flex fit:min-h-0 fit:flex-col">
               <label className="relative block"><Search className="absolute start-3 top-2.5 h-4 w-4 text-surface-400" />
                 <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`${KIND_UI[tab].label} talash karein…`} className={`${inp} ps-9`} disabled={!open} />
               </label>
-              <ul className="mt-2 max-h-64 divide-y divide-surface-100 overflow-auto rounded-xl border border-surface-200 dark:divide-surface-800 dark:border-surface-700">
+              <ul className="mt-2 max-h-64 divide-y divide-surface-100 overflow-auto rounded-xl border border-surface-200 dark:divide-surface-800 dark:border-surface-700 fit:max-h-none fit:min-h-0 fit:flex-1">
                 {list.map((p) => { const added = lines.some((l) => l.productId === p.id); return (
-                  <li key={p.id}><button type="button" disabled={!open || added} onClick={() => addProduct(p)} className="flex w-full items-center justify-between px-3 py-2.5 text-start text-sm hover:bg-surface-50 disabled:cursor-default dark:hover:bg-surface-800/60">
+                  <li key={p.id}><button type="button" disabled={!open || added} onClick={() => addProduct(p)} className="flex w-full items-center justify-between px-3 py-2.5 text-start text-sm fit:py-2 hover:bg-surface-50 disabled:cursor-default dark:hover:bg-surface-800/60">
                     <span className="text-surface-800 dark:text-surface-100">{p.name}{p.pack_size && <span className="ms-1 text-xs text-surface-500">({p.pack_size})</span>}</span>
                     {added ? <span className="text-xs font-semibold text-emerald-600">✓ Shamil</span> : <Plus className="h-4 w-4 text-surface-400" />}
                   </button></li>); })}
                 {!list.length && <li className="px-3 py-4 text-center text-sm text-surface-500">{tab === "seed" ? "Gandum ka beej list mein nahi — neeche apna likhein." : "Koi product nahi mili."}</li>}
               </ul>
-              {open && <div className="mt-3 flex gap-2 rounded-xl border border-dashed border-surface-300 p-2 dark:border-surface-600">
+              {open && <div className="mt-3 flex gap-2 rounded-xl border border-dashed border-surface-300 p-2 dark:border-surface-600 fit:mt-2 fit:p-1.5">
                 <PenLine className="mt-2 h-4 w-4 shrink-0 text-surface-400" />
                 <input value={custom} onChange={(e) => setCustom(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } }} placeholder="Product nahi mili? Apni product likhein" className="min-w-0 flex-1 bg-transparent text-sm text-surface-900 placeholder:text-surface-400 focus:outline-none dark:text-surface-100" />
                 <button type="button" onClick={addCustom} className="rounded-lg bg-surface-900 px-3 py-1.5 text-xs font-semibold text-white dark:bg-white dark:text-surface-900">Shamil karein</button>
               </div>}
             </div>
-            <div>
-              <div className="overflow-hidden rounded-xl border border-surface-200 dark:border-surface-700">
+            <div className="fit:flex fit:min-h-0 fit:flex-col">
+              <div className="pf-sticky overflow-hidden rounded-xl border border-surface-200 dark:border-surface-700 fit:min-h-0 fit:flex-1 fit:overflow-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-surface-50 text-xs text-surface-500 dark:bg-surface-950"><tr><th className="px-3 py-2 text-start font-medium">Item</th><th className="px-2 py-2 text-start font-medium">Qism</th><th className="px-2 py-2 text-start font-medium">Miqdar</th><th /></tr></thead>
                   <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
@@ -180,11 +181,14 @@ export function CampaignBookingForm({ campaign, open, products, farmerCode, init
                   </tbody>
                 </table>
               </div>
-              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} name="notes" rows={2} placeholder="Notes (ikhtiyari)" disabled={!open} className={`${inp} mt-3`} />
-              <div className="mt-3 flex justify-end">{open ? <Submit existing={existing} /> : <p className="text-sm text-surface-500">Booking band ho chuki hai.</p>}</div>
+              <div className="fit:flex fit:flex-none fit:items-end fit:gap-2">
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} name="notes" rows={2} placeholder="Notes (ikhtiyari)" disabled={!open} className={`${inp} mt-3 fit:mt-2 fit:min-w-0 fit:flex-1 fit:resize-none`} />
+              <div className="mt-3 flex justify-end fit:mt-2 fit:shrink-0">{open ? <Submit existing={existing} /> : <p className="text-sm text-surface-500">Booking band ho chuki hai.</p>}</div>
+              </div>
             </div>
           </div>
         </section>
+        </div>
       </div>
     </form>
   );

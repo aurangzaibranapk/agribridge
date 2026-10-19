@@ -20,11 +20,13 @@ const walk = (d: string): string[] => fs.readdirSync(d, { withFileTypes: true })
 const FARMER = hrefsOf(PORTAL_NAV_GROUPS);
 const CUST = hrefsOf(CUSTOMER_NAV_GROUPS);
 // Phase 5 tak ki seedhi fehrist -- ek bhi raasta gum na ho.
-const OLD18 = ["/portal/dashboard", "/portal/profile", "/portal/wallet", "/portal/c/orders", "/portal/c/payments", "/portal/farms", "/portal/demand", "/portal/campaigns", "/portal/dairy", "/portal/dairy/hisaab", "/portal/dairy/breeding", "/portal/dairy/health", "/portal/services/livestock", "/portal/crops", "/portal/services/fertilizer", "/portal/services/machinery", "/portal/harvest", "/portal/ai-assistant"];
+const OLD18 = ["/portal/dashboard", "/portal/profile", "/portal/wallet", "/portal/c/orders", "/portal/c/payments", "/portal/farms", "/portal/demand", "/portal/campaigns", "/portal/dairy", "/portal/dairy/hisaab", "/portal/dairy/breeding", "/portal/dairy/health", "/portal/crops", "/portal/services/machinery", "/portal/harvest", "/portal/ai-assistant"];
 
 test("5 groups in mockup order, every phase-5 link kept, no duplicates", () => {
   assert.deepEqual(PORTAL_NAV_GROUPS.map((g) => g.key), ["hisaab", "dairy", "kheti", "services", "account"]);
   assert.deepEqual([...FARMER].sort(), [...OLD18].sort());
+  assert.ok(!FARMER.includes("/portal/services/fertilizer"), "khaad-udhaar page sidebar se hata (19 Oct 2026): udhaar sirf season plan se");
+  assert.ok(!FARMER.includes("/portal/services/livestock"), "Livestock sidebar se hata (19 Oct 2026): ab Dairy Management mein");
   assert.equal(new Set(FARMER).size, FARMER.length);
   assert.deepEqual(CUSTOMER_NAV_GROUPS.map((g) => g.key), ["hisaab", "account"]);
   assert.deepEqual(CUST, ["/portal/c", "/portal/c/khata", "/portal/c/orders", "/portal/c/payments", "/portal/c/profile"]);

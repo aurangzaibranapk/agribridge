@@ -123,10 +123,61 @@ export interface LivestockSummary {
   dry: number;
   meat: number;
   litersPerDay: number;
+  /** Ginti kahan se aayi: Dairy ke janwar records ya profile par likhi ginti. */
+  source: "dairy" | "profile";
+  /** L/din kahan se: Dairy ki doodh entries (30 din ki ausat) ya kisan ka bataya. */
+  litersSource: "dairy" | "profile";
 }
 
-/** Kisan ke record par likhi ginti -- loan ki qataarein nahi. */
-export function summarizeLivestock(f: FarmerAnimals): LivestockSummary {
+/** Dairy Management ka janwar (sirf jo dashboard ko chahiye). */
+export interface DairyAnimalLite {
+  species: string;
+  status: string;
+}
+
+const GONE = new Set(["sold", "dead"]);
+
+/** Dairy ki doodh entries se rozana ausat: kul litre / jin dinon ki entry hai. */
+export function dairyLitersPerDay(rows: { yield_date: string | null; liters: number | string | null }[]): number {
+  const days = new Set<string>();
+  let total = 0;
+  for (const r of rows) {
+    const l = n(r.liters);
+    if (l <= 0 || !r.yield_date) continue;
+    days.add(String(r.yield_date).slice(0, 10));
+    total += l;
+  }
+  return days.size ? total / days.size : 0;
+}
+
+/**
+ * Maweshi ki ginti. Livestock -> Dairy (malik ki manzoori, 19 Oct):
+ * jab Dairy Management mein janwar darj hon to wahi asal record hai;
+ * warna kisan ke profile par likhi purani ginti (purana data mehfooz).
+ * `dairyLitersPerDay` -- Dairy ki doodh entries ki 30 din ki ausat (0/null = nahi).
+ */
+export function summarizeLivestock(f: FarmerAnimals, animals?: DairyAnimalLite[] | null, dairyLitersPerDay?: number | null): LivestockSummary {
+  const fromDairyL = Math.max(0, n(dairyLitersPerDay));
+  const liters = fromDairyL > 0
+    ? { litersPerDay: Math.round(fromDairyL * 10) / 10, litersSource: "dairy" as const }
+    : { litersPerDay: Math.max(0, n(f.milk_liters_per_day)), litersSource: "profile" as const };
+  const active = (animals ?? []).filter((a) => !GONE.has(a.status));
+  if (active.length > 0) {
+    const calves = active.filter((a) => a.status === "calf").length;
+    const adultsList = active.filter((a) => a.status !== "calf");
+    const milking = adultsList.filter((a) => a.status === "milking").length;
+    return {
+      total: active.length,
+      cows: adultsList.filter((a) => a.species === "cow").length,
+      buffalo: adultsList.filter((a) => a.species === "buffalo").length,
+      calves,
+      milking,
+      dry: adultsList.length - milking,
+      meat: Math.max(0, n(f.meat_animal_count)),
+      ...liters,
+      source: "dairy",
+    };
+  }
   const cows = Math.max(0, n(f.cow_count));
   const buffalo = Math.max(0, n(f.buffalo_count));
   const calves = Math.max(0, n(f.calves_count));
@@ -140,7 +191,8 @@ export function summarizeLivestock(f: FarmerAnimals): LivestockSummary {
     milking,
     dry: adults - milking,
     meat: Math.max(0, n(f.meat_animal_count)),
-    litersPerDay: Math.max(0, n(f.milk_liters_per_day)),
+    ...liters,
+    source: "profile",
   };
 }
 

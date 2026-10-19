@@ -8,9 +8,9 @@ const tip = {
   contentStyle: { borderRadius: 12, border: "1px solid rgba(148,163,184,.25)", fontSize: 12, background: "rgba(255,255,255,.97)", color: "#0f1f17" },
 };
 
-export function MilkAreaChart({ data }: { data: { label: string; liters: number }[] }) {
+export function MilkAreaChart({ data, height = 230 }: { data: { label: string; liters: number }[]; height?: number | `${number}%` }) {
   return (
-    <ResponsiveContainer width="100%" height={230}>
+    <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
         <defs>
           <linearGradient id="milkFill" x1="0" y1="0" x2="0" y2="1">
@@ -38,9 +38,11 @@ export interface MonthBarsLabels {
 export function MonthBarsChart({
   data,
   labels,
+  height = 210,
 }: {
   data: { label: string; udhaar: number; adaigi: number; milk: number; kharcha: number }[];
   labels: MonthBarsLabels;
+  height?: number | `${number}%`;
 }) {
   // Sirf wo silsile dikhao jin mein kuch hai -- khali rangon ki legend shor hai.
   const series = (
@@ -52,7 +54,7 @@ export function MonthBarsChart({
     ] as const
   ).filter(([k]) => data.some((d) => d[k] > 0));
   return (
-    <ResponsiveContainer width="100%" height={210}>
+    <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 8, right: 4, left: -8, bottom: 0 }}>
         <CartesianGrid stroke={GRID} vertical={false} />
         <XAxis dataKey="label" tick={AXIS} tickLine={false} axisLine={false} />

@@ -98,3 +98,45 @@ html.dark .dark\:hover\:bg-surface-800:hover { background-color: #2b3a55; }
   table.rt-cards:not(:has(thead)) tr { display: flex; justify-content: space-between; gap: .75rem; margin: 0; border-width: 0 0 1px 0; border-radius: 0; padding: .35rem 0; }
   table.rt-cards:not(:has(thead)) td { width: auto; }
 }
+
+/* ------------------------------------------------------------------
+   Portal "ek screen" layout (malik ki manzoori, 19 Oct 2026).
+   Sirf >=1024px chaurai AUR >=640px oonchai par: poora safha screen
+   jitna, scroll sirf panel ke andar. Phone, tablet aur chhoti oonchai
+   (ya zoom) par kuch nahi badalta -- wahi purana aam scroll.
+   Tailwind `fit:` variant isi shart ka naam hai (tailwind.config.ts).
+   ------------------------------------------------------------------ */
+.pf-panel { --pf-bg: #ffffff; }
+html.dark .pf-panel { --pf-bg: theme("colors.surface.900"); }
+html.dark .pf-panel.pf-navy { --pf-bg: #101f42; }
+@media (min-width: 1024px) and (min-height: 640px) {
+  /* Lambi table ka sar (column ke naam) hamesha upar dikhe. */
+  .pf-body thead th, .pf-sticky thead th { position: sticky; top: 0; z-index: 2; background: var(--pf-bg, #fff); box-shadow: inset 0 -1px 0 theme("colors.surface.200"); }
+  .pf-body tfoot td, .pf-body tfoot th { position: sticky; bottom: 0; z-index: 2; background: var(--pf-bg, #fff); box-shadow: inset 0 1px 0 theme("colors.surface.200"); }
+  html.dark .pf-body tfoot td, html.dark .pf-body tfoot th { box-shadow: inset 0 1px 0 theme("colors.surface.800"); }
+  html.dark .pf-body thead th, html.dark .pf-sticky thead th { background: var(--pf-bg, theme("colors.surface.900")); box-shadow: inset 0 -1px 0 theme("colors.surface.800"); }
+  .pf-shell { height: 100vh; height: 100dvh; overflow: hidden; }
+  .pf-col { display: flex; flex-direction: column; height: 100vh; height: 100dvh; min-height: 0; }
+  .pf-col > header, .pf-col > [role="status"], .pf-col > .pf-none { flex: none; }
+  /* Jo safha abhi "fit" nahi hua woh bhi poora page nahi hilata: sirf ye khana scroll. */
+  .pf-main { flex: 1 1 0%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 0 !important; }
+  .pf-fit { height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .pf-fit > * { flex: none; }
+  .pf-fit > .pf-grow, .pf-grow-in > .pf-grow { flex: 1 1 0%; min-height: 0; }
+  .pf-fit > * + * { margin-top: 0 !important; }
+  .pf-grid > * { min-height: 0; }
+  .pf-panel { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+  .pf-panel > * { flex: none; }
+  .pf-panel > .pf-body { flex: 1 1 0%; min-height: 0; overflow: auto; overscroll-behavior: contain; }
+  .pf-scroll { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+  /* Baqi (abhi na badle) safhon ki lambi tables: apne dabbe mein scroll + sticky sar. */
+  .pf-main .rt-wrap { max-height: 68dvh; overflow: auto; }
+  /* Panel ke andar table ka apna x-scroll dabba sticky sar tod deta hai -- panel hi scroll kare. */
+  .pf-body .overflow-x-auto, .pf-body .rt-wrap { overflow: visible; max-height: none; }
+  .pf-main .rt-wrap thead th { position: sticky; top: 0; z-index: 2; background: #fff; }
+  html.dark .pf-main .rt-wrap thead th { background: theme("colors.surface.900"); }
+  .pf-body .rt-wrap thead th { background: var(--pf-bg, #fff); }
+}
+@media print {
+  .pf-shell, .pf-col, .pf-main, .pf-fit, .pf-panel, .pf-body, .pf-scroll { height: auto !important; overflow: visible !important; display: block !important; }
+}
