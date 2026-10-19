@@ -2,9 +2,9 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import {
-  CATEGORY_KEYS, ROLE_KEYS, GROUP_ORDER, INLINE_DECISIONS, approveState, ageDays, ageTone, live, totals,
+  CATEGORY_KEYS, ROLE_KEYS, GROUP_ORDER, INLINE_DECISIONS, approveState, markCodeOwn, adjustMineForCode, CODE_MAKER_COLS, ageDays, ageTone, live, totals,
   badgeForHref, badgeForGroup, categoriesForPath, newArrivals, groupItems, fmtRs, catLabelKey, roleLabelKey, groupLabelKey,
-  type PendingCount,
+  type PendingCount, type PendingItem,
 } from "../src/lib/pending/categories";
 import { adminPendingDict } from "../src/lib/i18n/dict/admin-pending";
 
@@ -50,6 +50,37 @@ test("approveState: own entry -> 'own' (Approve band), others inline only for ex
   assert.equal(approveState({ category: "expenses", is_own: true }), "page");
   assert.deepEqual(Object.keys(INLINE_DECISIONS).sort(), ["pos_returns", "product_edits", "product_merge"]);
   assert.equal(INLINE_DECISIONS.pos_returns.rejectNeedsReason, true);
+});
+test("POS wapsi: manager code wala (authorized_by) Approve nahi kar sakta, magar doosra kar sakta", () => {
+  const it = (p: Partial<PendingItem>): PendingItem => ({ category: "pos_returns", group_key: "sales", route: "/admin/pos/returns", item_id: "r1",
+    ref: null, title: null, amount: 130, created_at: ago(15), entered_by: "anwar", entered_by_name: "Anwar", actor_id: null, actor_name: null,
+    pending_with: "admin_owner", is_own: false, is_new: false, link: null, ...p });
+  const items = [it({ item_id: "r1" }), it({ item_id: "r2" }), it({ item_id: "r3", is_own: true })];
+  const codeBy = new Map([["r1", "admin"], ["r2", "other_mgr"], ["r3", "admin"]]);
+  const asAdmin = markCodeOwn(items, codeBy, "admin");
+  assert.equal(approveState(asAdmin[0]), "code");
+  assert.equal(approveState(asAdmin[1]), "enabled");
+  assert.equal(approveState(asAdmin[2]), "own");           // apni darj ki hui: "own" hi rahe
+  assert.equal(asAdmin[0].is_own, false);                   // "darj kiya" Anwar hi dikhe
+  const asOwner = markCodeOwn(items, codeBy, "owner");
+  assert.equal(approveState(asOwner[0]), "enabled");        // Owner review kar sakta
+  assert.equal(approveState({ category: "product_edits", is_own: false, code_own: true }), "code");
+  assert.equal(approveState({ category: "expenses", is_own: false, code_own: true }), "page");
+  assert.deepEqual(CODE_MAKER_COLS.pos_returns, { table: "pos_returns", col: "authorized_by" });
+  const c = [row({ category: "pos_returns", pending: 3, mine_to_act: 2 }), row({ category: "settlements", pending: 4, mine_to_act: 4 })];
+  const adj = adjustMineForCode(c, asAdmin);
+  assert.equal(adj[0].mine_to_act, 1);
+  assert.equal(adj[1].mine_to_act, 4);
+  // sab qatarein list mein nahi -> ginti na chherein
+  assert.equal(adjustMineForCode([row({ category: "pos_returns", pending: 50, mine_to_act: 40 })], asAdmin)[0].mine_to_act, 40);
+  assert.ok(dict.apb_code_tip.en && dict.apb_code_tip.rm && dict.apb_code_tip.ur);
+});
+test("Mere Kaam action: code wala bhi server par roka jata hai (e=code)", () => {
+  const act = readFileSync("src/app/admin/my-work/pending/actions.ts", "utf8");
+  assert.match(act, /CODE_MAKER_COLS\[category\]/);
+  assert.match(act, /back\("e=code"\)/);
+  const btn = readFileSync("src/app/admin/my-work/pending/decide-buttons.tsx", "utf8");
+  assert.match(btn, /code_own: codeOwn/);
 });
 test("age: days + tone (blue <3, amber 3-6, red 7+)", () => {
   assert.equal(ageDays(ago(0.2), NOW), 0);
@@ -109,7 +140,7 @@ test("groupItems follows department order; fmtRs", () => {
 });
 test("page wiring: approveState + own tooltip; actions reuse existing flows + refuse own", () => {
   const btn = readFileSync("src/app/admin/my-work/pending/decide-buttons.tsx", "utf8");
-  assert.ok(btn.includes("approveState(") && btn.includes('t("apb_own_tip"') && /disabled[\s\S]{0,40}title=\{ownTip\}/.test(btn));
+  assert.ok(btn.includes("approveState(") && btn.includes('"apb_own_tip"') && btn.includes('"apb_code_tip"') && /disabled[\s\S]{0,40}title=\{ownTip\}/.test(btn));
   const act = readFileSync("src/app/admin/my-work/pending/actions.ts", "utf8");
   for (const f of ["approveProductEdit", "rejectProductEdit", "approveProductMerge", "rejectProductMerge", "reviewPosReturn"]) assert.ok(act.includes(f));
   assert.ok(/is_own\)\s*back\("e=own"\)/.test(act));

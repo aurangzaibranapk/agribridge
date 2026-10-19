@@ -12,12 +12,13 @@ import { decidePending } from "./actions";
  * (title: "Apni entry — koi doosra approve karega"). Jin ka faisla yahan
  * nahi ho sakta wo sirf apne safhe par khulte hain.
  */
-export function DecideButtons({ category, id, isOwn, href }: { category: string; id: string; isOwn: boolean; href: string }) {
+export function DecideButtons({ category, id, isOwn, codeOwn = false, href }: { category: string; id: string; isOwn: boolean; codeOwn?: boolean; href: string }) {
   const lang = useLang();
   const [rejecting, setRejecting] = useState(false);
-  const state = approveState({ category, is_own: isOwn });
+  const state = approveState({ category, is_own: isOwn, code_own: codeOwn });
   const rule = INLINE_DECISIONS[category];
-  const ownTip = t("apb_own_tip", lang);
+  const ownTip = t(state === "code" ? "apb_code_tip" : "apb_own_tip", lang);
+  const locked = state === "own" || state === "code";
   return (
     <div className="flex flex-col items-end gap-1">
       <div className="flex flex-wrap justify-end gap-1.5 md:flex-nowrap">
@@ -40,9 +41,9 @@ export function DecideButtons({ category, id, isOwn, href }: { category: string;
             )}
           </>
         )}
-        {state === "own" && (
+        {locked && (
           <>
-            <button type="button" disabled aria-disabled title={ownTip} data-approve="own" className="inline-flex cursor-not-allowed items-center gap-1 rounded-lg border border-dashed border-surface-300 bg-surface-100 px-2.5 py-1.5 text-[11.5px] font-bold text-surface-400 opacity-60 dark:border-white/15 dark:bg-white/5">
+            <button type="button" disabled aria-disabled title={ownTip} data-approve={state} className="inline-flex cursor-not-allowed items-center gap-1 rounded-lg border border-dashed border-surface-300 bg-surface-100 px-2.5 py-1.5 text-[11.5px] font-bold text-surface-400 opacity-60 dark:border-white/15 dark:bg-white/5">
               <Lock className="h-3 w-3" />
               {t("apb_approve", lang)}
             </button>
@@ -56,7 +57,7 @@ export function DecideButtons({ category, id, isOwn, href }: { category: string;
           <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
-      {state === "own" && <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300">{ownTip}</span>}
+      {locked && <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300">{ownTip}</span>}
       {rejecting && state === "enabled" && (
         <form action={decidePending} className="flex gap-1.5">
           <input type="hidden" name="category" value={category} />

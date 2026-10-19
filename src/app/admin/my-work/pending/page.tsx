@@ -13,6 +13,9 @@ import {
   groupItems,
   groupLabelKey,
   roleLabelKey,
+  CODE_MAKER_COLS,
+  markCodeOwn,
+  adjustMineForCode,
   totals as calcTotals,
   type PendingCount,
   type PendingItem,
@@ -28,7 +31,7 @@ export const dynamic = "force-dynamic";
  * Faisle purane safhon / purane server actions se hi hote hain.
  */
 type Rpc = (fn: string, a?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
-const ERR: Record<string, "apb_e_bad" | "apb_e_reason" | "apb_e_gone" | "apb_own_tip"> = { bad: "apb_e_bad", reason: "apb_e_reason", gone: "apb_e_gone", own: "apb_own_tip" };
+const ERR: Record<string, "apb_e_bad" | "apb_e_reason" | "apb_e_gone" | "apb_own_tip" | "apb_code_tip"> = { bad: "apb_e_bad", reason: "apb_e_reason", gone: "apb_e_gone", own: "apb_own_tip", code: "apb_code_tip" };
 
 export default async function PendingApprovalsPage({ searchParams }: { searchParams?: { f?: string; ok?: string; e?: string } }) {
   const sb = createClient();
@@ -44,11 +47,22 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
   const rpc = sb.rpc.bind(sb) as unknown as Rpc;
 
   const [cRes, iRes] = await Promise.all([rpc("fn_admin_pending_counts"), rpc("fn_admin_pending_items", { p_limit: 25 })]);
-  const counts = ((cRes.data as PendingCount[] | null) ?? []).filter((c) => can(c.route));
-  const allItems = ((iRes.data as PendingItem[] | null) ?? []).filter((i) => can(i.route));
+  const rawItems = ((iRes.data as PendingItem[] | null) ?? []).filter((i) => can(i.route));
+  // Manager code wala bhi maker hai (528) -- us par Approve band, "mujh par baqi" se bahar.
+  const codeBy = new Map<string, string | null>();
+  for (const [cat, src] of Object.entries(CODE_MAKER_COLS)) {
+    const ids = rawItems.filter((i) => i.category === cat).map((i) => i.item_id);
+    if (!ids.length) continue;
+    const { data: rows } = await (sb.from(src.table as never) as unknown as {
+      select: (c: string) => { in: (k: string, v: string[]) => Promise<{ data: Record<string, string | null>[] | null }> };
+    }).select(`id, ${src.col}`).in("id", ids);
+    for (const r of rows ?? []) codeBy.set(String(r.id), r[src.col] ?? null);
+  }
+  const allItems = markCodeOwn(rawItems, codeBy, user.id);
+  const counts = adjustMineForCode(((cRes.data as PendingCount[] | null) ?? []).filter((c) => can(c.route)), allItems);
   const tot = calcTotals(counts);
   const filter = searchParams?.f === "mine" ? "mine" : searchParams?.f === "new" ? "new" : "all";
-  const items = allItems.filter((i) => (filter === "mine" ? !i.is_own : filter === "new" ? i.is_new : true));
+  const items = allItems.filter((i) => (filter === "mine" ? !i.is_own && !i.code_own : filter === "new" ? i.is_new : true));
   const byCat = new Map(counts.map((c) => [c.category, c]));
   const shownPerCat = new Map<string, number>();
   for (const i of allItems) shownPerCat.set(i.category, (shownPerCat.get(i.category) ?? 0) + 1);
@@ -172,7 +186,7 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
                         <span className="truncate">{i.actor_name ?? t(roleLabelKey(i.pending_with), lang)}</span>
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 align-top"><DecideButtons category={i.category} id={i.item_id} isOwn={i.is_own} href={i.link || i.route} /></td>
+                    <td className="px-4 py-2.5 align-top"><DecideButtons category={i.category} id={i.item_id} isOwn={i.is_own} codeOwn={!!i.code_own} href={i.link || i.route} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -194,7 +208,7 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
                     <span className="text-surface-500 dark:text-surface-400">{t("apb_entered", lang)}: {i.is_own ? t("apb_you", lang) : i.entered_by_name ?? t("apb_noname", lang)}</span>
                     <span className="inline-flex items-center gap-1 font-semibold text-surface-700 dark:text-surface-200"><UserRound className="h-3 w-3" />{i.actor_name ?? t(roleLabelKey(i.pending_with), lang)}</span>
                   </div>
-                  <DecideButtons category={i.category} id={i.item_id} isOwn={i.is_own} href={i.link || i.route} />
+                  <DecideButtons category={i.category} id={i.item_id} isOwn={i.is_own} codeOwn={!!i.code_own} href={i.link || i.route} />
                 </li>
               ))}
             </ul>

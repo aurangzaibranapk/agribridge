@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { approveProductEdit, rejectProductEdit } from "@/actions/product-permissions";
 import { approveProductMerge, rejectProductMerge } from "@/actions/product-merge";
 import { reviewPosReturn } from "@/actions/pos-returns";
-import { INLINE_DECISIONS, type PendingItem } from "@/lib/pending/categories";
+import { CODE_MAKER_COLS, INLINE_DECISIONS, type PendingItem } from "@/lib/pending/categories";
 
 /**
  * "Mere Kaam" se faisla -- KOI NAYI manzoori ki logic nahi. Ye sirf purane
@@ -35,6 +35,16 @@ export async function decidePending(fd: FormData) {
   const row = ((data as PendingItem[] | null) ?? []).find((r) => r.item_id === id);
   if (!row) back("e=gone");
   if (row!.is_own) back("e=own");
+  const codeSrc = CODE_MAKER_COLS[category];
+  if (codeSrc) {
+    const {
+      data: { user },
+    } = await sb.auth.getUser();
+    const { data: rec } = await (sb.from(codeSrc.table as never) as unknown as {
+      select: (c: string) => { eq: (k: string, v: string) => { maybeSingle: () => Promise<{ data: Record<string, string | null> | null }> } };
+    }).select(codeSrc.col).eq("id", id).maybeSingle();
+    if (user && rec?.[codeSrc.col] === user.id) back("e=code");
+  }
 
   const f = new FormData();
   let res: { error?: string } = {};

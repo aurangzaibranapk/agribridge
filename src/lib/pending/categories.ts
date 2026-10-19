@@ -38,6 +38,8 @@ export interface PendingItem {
   actor_name: string | null;
   pending_with: string;
   is_own: boolean;
+  /** Darj kisi aur ne kiya, magar is record ki ijazat (manager code) isi bande ki thi -- checker nahi ban sakta. */
+  code_own?: boolean;
   is_new: boolean;
   link: string | null;
 }
@@ -90,9 +92,46 @@ export const INLINE_DECISIONS: Readonly<Record<string, { approve: boolean; rejec
 };
 
 /** Approve ka button: sirf inline wali category, aur kabhi apni entry par nahi. */
-export function approveState(item: Pick<PendingItem, "category" | "is_own">): "enabled" | "own" | "page" {
+export function approveState(item: Pick<PendingItem, "category" | "is_own"> & { code_own?: boolean }): "enabled" | "own" | "code" | "page" {
   if (!INLINE_DECISIONS[item.category]) return "page";
-  return item.is_own ? "own" : "enabled";
+  if (item.is_own) return "own";
+  return item.code_own ? "code" : "enabled";
+}
+
+/**
+ * Jin categories mein darj karne wale ke ilawa ek AUR banda bhi maker hai
+ * (POS wapsi: manager ka code = authorized_by). 582 ki registry sirf
+ * created_by dekhti hai, is liye safha ye column alag se parh kar
+ * code_own lagata hai. DB trigger (528) aur posReturnReviewCheck pehle se
+ * dono ko rokte hain -- ye sirf button / ginti ko us rok ke mutabiq karta hai.
+ */
+export const CODE_MAKER_COLS: Readonly<Record<string, { table: string; col: string }>> = {
+  pos_returns: { table: "pos_returns", col: "authorized_by" },
+};
+
+/** code_own lagao; `codeBy` = item_id -> code wale ka id. Apni darj ki hui entry (is_own) waisi hi rehti hai. */
+export function markCodeOwn(items: PendingItem[], codeBy: ReadonlyMap<string, string | null | undefined>, uid: string | null | undefined): PendingItem[] {
+  if (!uid) return items;
+  return items.map((i) => (CODE_MAKER_COLS[i.category] && !i.is_own && codeBy.get(i.item_id) === uid ? { ...i, code_own: true } : i));
+}
+
+/**
+ * "Mujh par baqi" ginti (582 mine_to_act) mein se wo qatarein nikalo jin par
+ * mera code laga hai. Sirf tab jab category ki saari qatarein list mein hon
+ * (warna andaza galat hota) -- warna ginti waisi hi.
+ */
+export function adjustMineForCode(counts: PendingCount[], items: PendingItem[]): PendingCount[] {
+  const flagged = new Map<string, number>();
+  const shown = new Map<string, number>();
+  for (const i of items) {
+    shown.set(i.category, (shown.get(i.category) ?? 0) + 1);
+    if (i.code_own) flagged.set(i.category, (flagged.get(i.category) ?? 0) + 1);
+  }
+  return counts.map((c) => {
+    const f = flagged.get(c.category) ?? 0;
+    if (!f || c.mine_to_act == null || (shown.get(c.category) ?? 0) < Number(c.pending ?? 0)) return c;
+    return { ...c, mine_to_act: Math.max(0, Number(c.mine_to_act) - f) };
+  });
 }
 
 const DAY = 86_400_000;

@@ -77,8 +77,11 @@ export function posReturnReviewCheck(
 ): { ok: true } | { ok: false; error: string } {
   if (!MASTER_ROLES.includes(reviewerRole ?? "")) return { ok: false, error: "POS wapsi ka review sirf Owner/Admin kar sakta hai." };
   if ((r.admin_review_status ?? "pending") !== "pending") return { ok: false, error: "Is wapsi ka review ho chuka hai." };
-  if (isSelfApproval(r.created_by, reviewerId) || isSelfApproval(r.authorized_by, reviewerId)) {
-    return { ok: false, error: "Jis ne wapsi ki ya apna code lagaya wo khud review nahi kar sakta." };
+  if (isSelfApproval(r.created_by, reviewerId)) {
+    return { ok: false, error: "Ye wapsi aap ne khud ki hai — review Owner / doosra Admin karega." };
+  }
+  if (isSelfApproval(r.authorized_by, reviewerId)) {
+    return { ok: false, error: "Is wapsi par aap ka manager code laga tha — review Owner / doosra Admin karega." };
   }
   return { ok: true };
 }
