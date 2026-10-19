@@ -25,6 +25,7 @@ export async function approveFarmerAiRequest(_prev: ActionState, formData: FormD
     .single();
   if (!request) return { error: "Request nahi mili." };
   if (request.status !== "pending") return { error: "Ye request pehle hi review ho chuki hai." };
+  if (request.intent_type === "whatsapp_reply") return { error: "Ye staff ka WhatsApp jawab hai, kisan ki approval nahi." };
 
   const details = request.details as any;
 
@@ -98,7 +99,8 @@ export async function rejectFarmerAiRequest(_prev: ActionState, formData: FormDa
     .from("farmer_ai_requests")
     .update({ status: "rejected", reviewed_at: new Date().toISOString() })
     .eq("id", requestId)
-    .eq("farmer_id", farmer.id);
+    .eq("farmer_id", farmer.id)
+    .neq("intent_type", "whatsapp_reply");
 
   revalidatePath("/portal/ai-assistant");
   return { success: true };

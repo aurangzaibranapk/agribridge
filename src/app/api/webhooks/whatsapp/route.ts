@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { phoneKey } from "@/lib/farmers/identity";
-import crypto from "crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 import { processFarmerAiMessage } from "@/lib/farmer-ai-processor";
 import { sendWhatsAppMessage, downloadWhatsAppMedia, normalizeWhatsAppPhone } from "@/lib/whatsapp-client";
 import { handleStaffMessage } from "@/lib/staff-whatsapp-router";
 import { handleMachineryConfirmation } from "@/lib/machinery-whatsapp-confirm";
+import { buildReplyDraftRow, canAutoReplyToStaff, checkSignature, readInbound, WHATSAPP_REPLY_INTENT } from "@/lib/whatsapp/inbound-policy";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -21,58 +21,56 @@ export async function GET(request: NextRequest) {
 
 /**
  * Meta har webhook ke sath x-hub-signature-256 bhejta hai: raw body ka
- * HMAC-SHA256, app secret se banaya hua. Iske baghair koi bhi jhoota
- * payload bhej kar naye "kisan" bana sakta hai ya kisi asli kisan ka
- * phone number de kar us ka roop dhar sakta hai — kyunke neeche wala
- * code service client se chalta hai (jo saari bandhishein bypass karta
- * hai) aur message.from par aankh band kar ke bharosa karta hai.
+ * HMAC-SHA256, app secret se banaya hua. Qaide (go-live 5) aur un ki
+ * wajah: src/lib/whatsapp/inbound-policy.ts
  *
- * Agar WHATSAPP_APP_SECRET set nahi hai to purana rawaiya barqarar
- * rehta hai, taake live WhatsApp achanak band na ho jaye. Secret set
- * karte hi tasdeeq khud-ba-khud chalu ho jayegi.
+ *  - WHATSAPP_APP_SECRET set: ghalat / ghaib signature = 401.
+ *  - Set nahi: inbound band nahi hota (warning log), magar is raaste se
+ *    KOI paighaam bahar nahi jata -- jhoota payload kisi ko message na
+ *    bhijwa sake.
+ *  - Kisan / gahak ko AI kabhi khud jawab nahi deta; mashwara staff ke
+ *    liye mehfooz hota hai (/admin/whatsapp-replies) aur staff dekh kar
+ *    "Confirm send" karta hai.
+ *  - Anjaan number se farmer record nahi banta; number admin ki
+ *    "unknown sender" qatar mein jata hai.
  */
-function signatureIsValid(rawBody: string, header: string | null): boolean {
-  const secret = process.env.WHATSAPP_APP_SECRET;
-  if (!secret) return true;
-  if (!header?.startsWith("sha256=")) return false;
-
-  const expected = "sha256=" + crypto.createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
-  const a = Buffer.from(header);
-  const b = Buffer.from(expected);
-  // Lambai alag ho to timingSafeEqual phenk deta hai, is liye pehle check.
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
-}
-
 export async function POST(request: NextRequest) {
   try {
     // Raw text chahiye — JSON parse karne ke baad asal bytes nahi milte,
     // aur HMAC bilkul unhi bytes par banta hai jo Meta ne bheje the.
     const rawBody = await request.text();
-    if (!signatureIsValid(rawBody, request.headers.get("x-hub-signature-256"))) {
+    const sig = checkSignature(rawBody, request.headers.get("x-hub-signature-256"), process.env.WHATSAPP_APP_SECRET);
+    if (sig === "invalid") {
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    }
+    if (sig === "unsigned") {
+      console.warn("[whatsapp-webhook] WHATSAPP_APP_SECRET set nahi -- signature check nahi hua. Paighaam qubool, magar koi jawab nahi bheja jayega.");
     }
 
     const body = JSON.parse(rawBody);
-    const serviceClient = createServiceClient();
-
-    const entry = body.entry?.[0];
-    const change = entry?.changes?.[0];
-    const value = change?.value;
-    const message = value?.messages?.[0];
-
-    if (!message) {
+    const inbound = readInbound(body);
+    if (!inbound) {
       return NextResponse.json({ ok: true });
     }
-
+    const message = inbound.raw;
+    const serviceClient = createServiceClient();
     const fromPhone = normalizeWhatsAppPhone(message.from);
+    const msg = { ...inbound.msg, fromPhone };
+
+    // Staff / machinery ke tay-shuda jawab: sirf signed paighaam par
+    // bheje jate hain. Kisan ko AI ka jawab is function se kabhi nahi jata.
+    const replyToStaff = async (text: string) => {
+      if (!canAutoReplyToStaff(sig)) {
+        console.warn("[whatsapp-webhook] unsigned: staff/machinery jawab nahi bheja gaya.");
+        return;
+      }
+      await sendWhatsAppMessage(fromPhone, text);
+    };
 
     // Pehle dekho ke ye staff to nahi. Staff ka raasta AI se nahi guzarta:
     // un ke kaam (hazri waghera) gine chune hain aur unhein bilkul waisa
-    // hi chalna chahiye jaisa likha gaya. null aaye to ye staff nahi —
-    // neeche farmer wala purana raasta chalega.
-    // Tasveer sirf staff ke liye utarte hain — farmer wala raasta abhi
-    // photo istemal nahi karta, aur har aane wali image download karna
-    // bekar ka kharcha hai.
+    // hi chalna chahiye jaisa likha gaya. null aaye to ye staff nahi.
+    // Tasveer sirf staff ke liye utarte hain.
     let staffImage: { base64: string; mimeType: string } | null = null;
     if (message.type === "image" && message.image?.id) {
       const media = await downloadWhatsAppMedia(message.image.id);
@@ -88,126 +86,88 @@ export async function POST(request: NextRequest) {
       image: staffImage,
     });
     if (staffReply) {
-      await sendWhatsAppMessage(fromPhone, staffReply);
+      await replyToStaff(staffReply);
       return NextResponse.json({ ok: true });
     }
 
-    // Machinery ka rate confirmation. Ye AI se pehle is liye hai ke
-    // "CONFIRM" ka matlab hamesha tasdeeq hi hona chahiye -- AI ka is par
-    // raye qaim karna wahi ek jagah hai jahan ghalti ka natija ye hota
-    // hai ke machine bina tasdeeq ke khet par pahunch jaye.
-    //
-    // Ye tabhi pakaRta hai jab kisan ki koi booking waqai jawab ki
-    // muntazir ho AUR paigham CONFIRM/ISSUE jaisa ho; warna null de kar
-    // purana raasta chalne deta hai.
+    // Machinery ka rate confirmation ("CONFIRM" ka matlab hamesha
+    // tasdeeq). Ye AI nahi, tay-shuda jawab hai -- signed par hi jata hai.
     const machineryReply = await handleMachineryConfirmation({
       fromPhone,
       text: message.type === "text" ? message.text.body : (message.image?.caption ?? null),
     });
     if (machineryReply) {
-      await sendWhatsAppMessage(fromPhone, machineryReply);
+      await replyToStaff(machineryReply);
       return NextResponse.json({ ok: true });
     }
 
-    // WhatsApp se aane wala number kabhi 92 se shuru hota hai, kabhi 0
-    // se, aur kabhi + ke sath. Pehle yahan harf-ba-harf milaya jata tha,
-    // is liye wohi kisan jo counter par 0300-1234567 likha kar bana tha,
-    // WhatsApp par ek naya ajnabi ban jata tha -- naye khate ke sath.
+    // WhatsApp se aane wala number kabhi 92 se, kabhi 0 se, kabhi + se --
+    // phoneKey sab ko ek bana deta hai.
     const key = phoneKey(fromPhone);
-    let { data: farmer } = await serviceClient
+    const { data: farmer } = await serviceClient
       .from("farmers")
-      .select("id, is_profile_complete")
+      .select("id")
       .eq("phone_key", key ?? "")
       .eq("is_deleted", false)
       .maybeSingle();
 
-    if (farmer) {
-      // Purana kisan mil gaya -- us par WhatsApp number darj kar dein
-      // taake agli baar seedha isi se mile.
-      await serviceClient.from("farmers").update({ whatsapp_number: fromPhone }).eq("id", farmer.id);
-    } else {
-      // Malik (7 September): "aisa farmer nahi banna chahiye. Agar
-      // farmer banna hai to naam, mobile, location ke saath bane --
-      // aisa bilkul na bane." Pehle yahan foran "WhatsApp Farmer 8999"
-      // jaisa khaali record ban jata tha. Ab naam aur gaon pehle
-      // poochhe jate hain (360) -- farmer tab hi banta hai jab teenon
-      // (naam, mobile, gaon) sath maujood hon.
-      const text = message.type === "text" ? message.text.body?.trim() : null;
-      if (!text) {
-        await sendWhatsAppMessage(fromPhone, "Assalam-o-Alaikum! AgriBridge mein khush aamdeed. Sab se pehle apna poora naam likh kar bhejein.");
-        return NextResponse.json({ ok: true });
-      }
-
-      const { data: onboarding } = await serviceClient
-        .from("whatsapp_onboarding")
-        .select("full_name")
-        .eq("phone_key", key ?? "")
-        .maybeSingle();
-
-      if (!onboarding) {
-        await serviceClient.from("whatsapp_onboarding").insert({ phone_key: key ?? "", phone_number: fromPhone });
-        await sendWhatsAppMessage(fromPhone, "Assalam-o-Alaikum! AgriBridge mein khush aamdeed. Sab se pehle apna poora naam likh kar bhejein.");
-        return NextResponse.json({ ok: true });
-      }
-
-      if (!onboarding.full_name) {
-        await serviceClient.from("whatsapp_onboarding").update({ full_name: text }).eq("phone_key", key ?? "");
-        await sendWhatsAppMessage(fromPhone, `Shukriya, ${text}. Ab apna gaon/mauza ka naam likh kar bhejein.`);
-        return NextResponse.json({ ok: true });
-      }
-
-      // Naam aur gaon dono mil gaye -- ab hi, aur sirf ab, farmer banta hai.
-      const { data: newFarmer, error: farmerError } = await serviceClient
-        .from("farmers")
-        .insert({
-          full_name: onboarding.full_name,
-          phone_number: fromPhone,
-          whatsapp_number: fromPhone,
-          village: text,
-          registration_source: "WHATSAPP",
-        })
-        .select("id, is_profile_complete, farmer_code")
-        .single();
-
-      await serviceClient.from("whatsapp_onboarding").delete().eq("phone_key", key ?? "");
-
-      if (farmerError || !newFarmer) {
-        await sendWhatsAppMessage(fromPhone, "Maaf kijiye, registration nahi ho saka. Dobara koshish karein.");
-        return NextResponse.json({ ok: true });
-      }
-
-      farmer = newFarmer;
-      await sendWhatsAppMessage(
-        fromPhone,
-        `Shukriya! Aap ka registration mukammal ho gaya — Farmer ID: ${newFarmer.farmer_code}. Ab aap apna sawal poochh sakte hain.`
-      );
-      return NextResponse.json({ ok: true });
-    }
-
     if (!farmer) {
-      await sendWhatsAppMessage(fromPhone, "Maaf kijiye, aapka account set up nahi ho saka. Dobara koshish karein.");
-      return NextResponse.json({ ok: true });
-    }
-
-    const isProfileComplete = (farmer as any).is_profile_complete ?? false;
-
-    let result;
-    if (message.type === "audio" || message.type === "voice") {
-      const mediaId = message.audio?.id ?? message.voice?.id;
-      const media = await downloadWhatsAppMedia(mediaId);
-      if (!media) {
-        await sendWhatsAppMessage(fromPhone, "Voice note download nahi ho saki, dobara bhejein.");
-        return NextResponse.json({ ok: true });
+      // Malik (go-live 5): anjaan number se farmer record KHUD nahi banta,
+      // aur us ko koi paighaam nahi jata. Number admin ki "unknown sender"
+      // qatar mein (whatsapp_onboarding, sirf service role) -- staff dekh
+      // kar khud farmer banaye ya hata de.
+      if (key) {
+        const { data: seen } = await serviceClient.from("whatsapp_onboarding").select("phone_key").eq("phone_key", key).maybeSingle();
+        if (!seen) {
+          await serviceClient.from("whatsapp_onboarding").insert({ phone_key: key, phone_number: fromPhone, full_name: msg.profileName ?? null });
+        }
       }
-      result = await processFarmerAiMessage(serviceClient, farmer.id, { audioBase64: media.base64, audioMimeType: media.mimeType });
-    } else if (message.type === "text") {
-      result = await processFarmerAiMessage(serviceClient, farmer.id, { text: message.text.body });
-    } else {
-      await sendWhatsAppMessage(fromPhone, "Abhi sirf Text ya Voice message samajh sakte hain.");
       return NextResponse.json({ ok: true });
     }
 
-    await sendWhatsAppMessage(fromPhone, result.answer);
+    // Purana kisan mil gaya -- WhatsApp number darj (agli baar seedha mile).
+    await serviceClient.from("farmers").update({ whatsapp_number: fromPhone }).eq("id", farmer.id);
+
+    const isVoice = message.type === "audio" || message.type === "voice";
+    if (!isVoice && message.type !== "text") {
+      // Tasveer / location waghera: kisan ki taraf se abhi sirf text aur
+      // voice samjhe jate hain. Koi jawab nahi bheja jata.
+      return NextResponse.json({ ok: true });
+    }
+
+    // Meta kabhi wohi paighaam dobara bhejta hai -- ek message, ek qatar.
+    if (msg.waMessageId) {
+      const { data: dupe } = await serviceClient
+        .from("farmer_ai_requests")
+        .select("id")
+        .eq("intent_type", WHATSAPP_REPLY_INTENT)
+        .eq("details->>wa_message_id", msg.waMessageId)
+        .maybeSingle();
+      if (dupe) return NextResponse.json({ ok: true });
+    }
+
+    // AI sirf mashwara likhta hai (aur pehle ki tarah kisan ke liye draft,
+    // jo kisan portal ke "Pending Approvals" mein jata hai). Bhejta nahi.
+    let ai: { answer: string | null; draftId?: string | null; error?: string | null } = { answer: null };
+    try {
+      if (isVoice) {
+        const mediaId = message.audio?.id ?? message.voice?.id;
+        const media = mediaId ? await downloadWhatsAppMedia(mediaId) : null;
+        if (!media) {
+          ai = { answer: null, error: "Voice note download nahi ho saki." };
+        } else {
+          const r = await processFarmerAiMessage(serviceClient, farmer.id, { audioBase64: media.base64, audioMimeType: media.mimeType });
+          ai = { answer: r.answer, draftId: r.draftId ?? null };
+        }
+      } else {
+        const r = await processFarmerAiMessage(serviceClient, farmer.id, { text: message.text.body });
+        ai = { answer: r.answer, draftId: r.draftId ?? null };
+      }
+    } catch (e) {
+      ai = { answer: null, error: e instanceof Error ? e.message : "AI se mashwara nahi mila." };
+    }
+
+    await serviceClient.from("farmer_ai_requests").insert(buildReplyDraftRow(farmer.id, msg, sig, ai) as any);
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("WhatsApp webhook error:", error);
