@@ -98,6 +98,8 @@ export const portalMunshiDict = {
   pmd_quick: { en: "Quick actions", rm: "Jaldi karein", ur: "جلدی کریں" },
   pmd_q_khata: { en: "My khata", rm: "Mera khata", ur: "میرا کھاتہ" },
   pmd_q_booking: { en: "Season booking", rm: "Season booking", ur: "سیزن بکنگ" },
+  pmd_kpi_booking: { en: "Season plans (Gandum / Munji)", rm: "Season plan (Gandum / Munji)", ur: "سیزن پلان (گندم / مونجی)" },
+  pmd_open_plans: { en: "open plans", rm: "khule plan", ur: "کھلے پلان" },
   pmd_q_demand: { en: "Product demand", rm: "Product demand", ur: "پروڈکٹ ڈیمانڈ" },
   pmd_q_fert: { en: "Fertilizer credit", rm: "Khaad udhaar", ur: "کھاد ادھار" },
   pmd_q_mach: { en: "Machinery", rm: "Machinery", ur: "مشینری" },

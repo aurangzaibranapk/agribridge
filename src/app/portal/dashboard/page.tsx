@@ -165,9 +165,9 @@ export default async function FarmerDashboardPage() {
       </section>
 
       <section className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MiniKpi href="/portal/services/fertilizer" icon={<Sprout className="h-4 w-4" />} color="text-amber-600 bg-amber-50 dark:bg-amber-500/15 dark:text-amber-300"
-          label={L("pmd_kpi_fert")} value={String(d.fert.total)}
-          sub={d.fert.needsReply ? `${d.fert.needsReply} ${L("pmd_needs_reply")}` : `${d.fert.open} ${L("pmd_open")}`} />
+        <MiniKpi href="/portal/campaigns" icon={<CalendarClock className="h-4 w-4" />} color="text-amber-600 bg-amber-50 dark:bg-amber-500/15 dark:text-amber-300"
+          label={L("pmd_kpi_booking")} value={String(d.booking.mine)}
+          sub={`${d.booking.acres} ${L("pmd_acres")} · ${d.booking.open} ${L("pmd_open_plans")}`} />
         <MiniKpi href="/portal/services/machinery" icon={<Tractor className="h-4 w-4" />} color="text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-300"
           label={L("pmd_kpi_mach")} value={String(d.mach.total)} sub={`${d.mach.open} ${L("pmd_active")}`} />
         <MiniKpi href="/portal/harvest" icon={<TrendingUp className="h-4 w-4" />}
@@ -236,7 +236,6 @@ export default async function FarmerDashboardPage() {
             <Quick href="/portal/wallet" icon={<Wallet className="h-4 w-4" />} c="bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300" label={L("pmd_q_khata")} />
             <Quick href="/portal/campaigns" icon={<CalendarClock className="h-4 w-4" />} c="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300" label={L("pmd_q_booking")} />
             <Quick href="/portal/demand" icon={<PackageSearch className="h-4 w-4" />} c="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300" label={L("pmd_q_demand")} />
-            <Quick href="/portal/services/fertilizer" icon={<Sprout className="h-4 w-4" />} c="bg-lime-100 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300" label={L("pmd_q_fert")} />
             <Quick href="/portal/services/machinery" icon={<Tractor className="h-4 w-4" />} c="bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300" label={L("pmd_q_mach")} />
             <Quick href="/portal/services/livestock" icon={<PawPrint className="h-4 w-4" />} c="bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300" label={L("pmd_q_livestock")} />
           </div>
@@ -388,7 +387,7 @@ const TASK_STYLE: Record<TaskItem["kind"], [string, React.ReactNode, Translation
 const TASK_HREF: Record<TaskItem["kind"], string> = {
   late: "/portal/wallet",
   promise: "/portal/wallet",
-  fert_reply: "/portal/services/fertilizer",
+  fert_reply: "/portal/campaigns", // purana khaad-udhaar page band; udhaar ab season plan se
   mach_pay: "/portal/services/machinery",
   campaign: "/portal/campaigns",
   profile: "/portal/profile",
