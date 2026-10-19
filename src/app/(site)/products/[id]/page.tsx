@@ -13,7 +13,11 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
   const supabase = createClient();
   const { data: product } = await supabase
     .from("products")
-    .select("*, categories(name), brands(name), companies(name)")
+    // Public safha: sirf wohi columns jo dikhaye jate hain -- kharid ki
+    // qeemat (purchase_price) anon ko milti hi nahi (migration 595).
+    .select(
+      "id, name, image_url, selling_price, pack_size, unit, active_ingredient, composition, dose, expiry_date, show_expiry_to_customer, usage_instructions, safety_information, brochure_pdf_url, category_id, categories(name), brands(name), companies(name)"
+    )
     .eq("id", params.id)
     .eq("is_deleted", false)
     .single();
