@@ -18,6 +18,8 @@ export default async function FarmerAiAssistantPage() {
     .from("farmer_ai_requests")
     .select("id, intent_type, description, status, created_at")
     .eq("farmer_id", farmer.id)
+    // WhatsApp ke jawab staff ki qatar hain (admin mein confirm-send) -- kisan ki approval nahi.
+    .neq("intent_type", "whatsapp_reply")
     .order("created_at", { ascending: false })
     .limit(30);
 
