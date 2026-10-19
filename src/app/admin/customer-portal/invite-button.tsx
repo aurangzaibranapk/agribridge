@@ -14,7 +14,7 @@ export function InviteButton({ label, title, preview, offNote, confirmLabel, noP
       <button type="button" onClick={() => setOpen(true)} className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10.5px] font-bold text-blue-800 dark:bg-blue-900/70 dark:text-blue-200">{label}</button>
       {open && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-md rounded-2xl bg-white p-5 text-left shadow-xl dark:bg-[#101f42]" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 text-start shadow-xl dark:bg-[#101f42]" onClick={(e) => e.stopPropagation()}>
             <b className="text-[14px] text-surface-900 dark:text-white">{title}</b>
             <p className="mt-3 whitespace-pre-wrap rounded-xl bg-surface-50 p-3 text-[13px] text-surface-800 dark:bg-[#0d1a3a] dark:text-slate-100">{preview}</p>
             {noPhone && <p className="mt-2 text-[11.5px] font-semibold text-rose-600">{noPhone}</p>}

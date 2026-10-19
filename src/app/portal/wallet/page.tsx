@@ -73,7 +73,7 @@ export default async function FarmerWalletPage({ searchParams }: { searchParams:
     <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
       {/* Hero */}
       <section className={`relative overflow-hidden rounded-3xl bg-gradient-to-r ${heroTone} p-6 text-white shadow-lg`}>
-        <span className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10" />
+        <span className="pointer-events-none absolute -end-16 -top-16 h-64 w-64 rounded-full bg-white/10" />
         <div className="relative flex flex-wrap items-end justify-between gap-5">
           <div>
             <p className="text-sm text-white/85">{L("pk_hero_eyebrow")}</p>

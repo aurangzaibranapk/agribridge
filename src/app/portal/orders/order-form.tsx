@@ -84,12 +84,12 @@ export function OrderForm({
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
       <div>
         <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+          <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("pm_search_products", lang)}
-            className="w-full rounded-lg border border-surface-200 py-2 pl-9 pr-3 text-sm focus:border-brand-500 focus:outline-none"
+            className="w-full rounded-lg border border-surface-200 py-2 ps-9 pe-3 text-sm focus:border-brand-500 focus:outline-none"
           />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -97,7 +97,7 @@ export function OrderForm({
             <button
               key={p.id}
               onClick={() => addToCart(p)}
-              className="rounded-card border border-surface-200 bg-white p-3 text-left shadow-card transition hover:border-brand-400 hover:shadow-md dark:border-surface-800 dark:bg-surface-900"
+              className="rounded-card border border-surface-200 bg-white p-3 text-start shadow-card transition hover:border-brand-400 hover:shadow-md dark:border-surface-800 dark:bg-surface-900"
             >
               <p className="text-sm font-medium text-surface-900 dark:text-surface-100 line-clamp-2">{p.name}</p>
               {p.pack_size && <p className="mt-0.5 text-xs text-surface-400">{p.pack_size}</p>}

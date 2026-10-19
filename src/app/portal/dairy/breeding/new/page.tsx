@@ -130,7 +130,7 @@ export default async function NewBreeding({ searchParams }: { searchParams: Reco
             {!sel && <p className="py-4 text-center text-sm text-surface-500">{L("bh_hist_pick")}</p>}
             {sel && history.length === 0 && <p className="py-4 text-center text-sm text-surface-500">{L("bh_tl_empty")}</p>}
             {sel && history.length > 0 && (
-              <div className="relative pl-6 before:absolute before:bottom-1.5 before:left-[9px] before:top-1.5 before:w-0.5 before:bg-surface-200 dark:before:bg-surface-800">
+              <div className="relative ps-6 before:absolute before:bottom-1.5 before:start-[9px] before:top-1.5 before:w-0.5 before:bg-surface-200 dark:before:bg-surface-800">
                 {history.map((e) => <TLItem key={e.id} color={e.event_type === "pd" ? "#0ea5e9" : e.event_type === "heat" ? "#f43f5e" : "#6366f1"} date={dd(e.event_date)} title={`${EVENT_ICON[e.event_type]} ${L(`bh_ty_${e.event_type}` as TranslationKey)}${e.bull_name ? ` · ${e.bull_name}` : ""}${e.pd_result ? ` · ${L(`bh_pd_${e.pd_result}` as TranslationKey)}` : ""}`} sub={e.cost ? rs(e.cost) : undefined} />)}
               </div>
             )}

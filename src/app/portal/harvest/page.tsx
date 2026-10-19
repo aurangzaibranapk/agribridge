@@ -92,7 +92,7 @@ export default async function HarvestPage({ searchParams }: { searchParams: Prom
       <div className="mt-3 overflow-x-auto rounded-card border border-surface-200 bg-white shadow-card">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-surface-200 bg-surface-50 text-left text-xs font-medium text-surface-500">
+            <tr className="border-b border-surface-200 bg-surface-50 text-start text-xs font-medium text-surface-500">
               <th className="px-4 py-2">{t("table_year_header", lang)}</th>
               <th className="px-4 py-2">{t("crop", lang)}</th>
               <th className="px-4 py-2">{t("table_production_header", lang)}</th>

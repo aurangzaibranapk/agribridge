@@ -90,7 +90,7 @@ export default async function FarmerDashboardPage() {
 
       {/* ---- Hero ---- */}
       <section className="relative overflow-hidden rounded-[20px] bg-gradient-to-r from-emerald-800 via-green-700 to-yellow-600 px-6 py-6 text-white shadow-lg dark:from-emerald-950 dark:via-green-900 dark:to-yellow-800 sm:px-7">
-        <div className="pointer-events-none absolute -right-16 -top-20 h-72 w-72 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -end-16 -top-20 h-72 w-72 rounded-full bg-white/10" />
         <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm text-white/85">
@@ -279,28 +279,28 @@ export default async function FarmerDashboardPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wide text-surface-500 dark:text-slate-400">
-                    <th className="py-2 pr-2 font-semibold">{L("pmd_col_farm")}</th>
-                    <th className="py-2 pr-2 font-semibold">{L("pmd_col_acres")}</th>
-                    <th className="py-2 pr-2 font-semibold">{L("pmd_col_crop")}</th>
-                    <th className="py-2 pr-2 font-semibold">{L("pmd_col_loc")}</th>
+                  <tr className="text-start text-[11px] uppercase tracking-wide text-surface-500 dark:text-slate-400">
+                    <th className="py-2 pe-2 font-semibold">{L("pmd_col_farm")}</th>
+                    <th className="py-2 pe-2 font-semibold">{L("pmd_col_acres")}</th>
+                    <th className="py-2 pe-2 font-semibold">{L("pmd_col_crop")}</th>
+                    <th className="py-2 pe-2 font-semibold">{L("pmd_col_loc")}</th>
                     <th className="py-2" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
                   {d.farms.map((f) => (
                     <tr key={f.id}>
-                      <td className="py-2.5 pr-2 font-semibold text-surface-900 dark:text-white">{f.name}</td>
-                      <td className="py-2.5 pr-2 text-surface-700 dark:text-slate-300">{f.acres}</td>
-                      <td className="py-2.5 pr-2 text-surface-700 dark:text-slate-300">{f.crop ?? "—"}</td>
-                      <td className="py-2.5 pr-2">
+                      <td className="py-2.5 pe-2 font-semibold text-surface-900 dark:text-white">{f.name}</td>
+                      <td className="py-2.5 pe-2 text-surface-700 dark:text-slate-300">{f.acres}</td>
+                      <td className="py-2.5 pe-2 text-surface-700 dark:text-slate-300">{f.crop ?? "—"}</td>
+                      <td className="py-2.5 pe-2">
                         {f.pinned ? (
                           <span className="inline-flex items-center gap-1 text-xs text-surface-600 dark:text-slate-300"><MapPin className="h-3.5 w-3.5 text-rose-500" />{L("pmd_pin_set")}</span>
                         ) : (
                           <Badge tone="amber">{L("pmd_pin_missing")}</Badge>
                         )}
                       </td>
-                      <td className="py-2.5 text-right">{f.verified ? <Badge tone="green">{L("pmd_verified")}</Badge> : <Badge tone="slate">{L("pmd_unverified")}</Badge>}</td>
+                      <td className="py-2.5 text-end">{f.verified ? <Badge tone="green">{L("pmd_verified")}</Badge> : <Badge tone="slate">{L("pmd_unverified")}</Badge>}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -443,7 +443,7 @@ function Kpi({ href, tone, icon, label, value, sub }: { href: string; tone: stri
       </div>
       <p className="mt-2 text-2xl font-bold tracking-tight">{value}</p>
       {sub && <p className="mt-1 truncate text-[11.5px] text-white/90" title={sub}>{sub}</p>}
-      <span className="pointer-events-none absolute -bottom-6 -right-5 h-20 w-20 rounded-full bg-white/12 bg-white/10" />
+      <span className="pointer-events-none absolute -bottom-6 -end-5 h-20 w-20 rounded-full bg-white/12 bg-white/10" />
     </Link>
   );
 }

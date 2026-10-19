@@ -2,6 +2,11 @@ import { CAT_COLOR, CAT_ICON, rs, type ExpenseCat } from "@/lib/portal/dairy-pl"
 import { t, type Lang, type TranslationKey } from "@/lib/i18n/translations";
 
 /** Aamdani (hara) vs kharcha (laal) -- group bars. */
+/** Screen reader ke liye chart ka seedha jumla: "Oct: Aamdani Rs 72,800, Kharcha Rs 54,400; ..." */
+export function chartSummary(groups: { label: string; a: number; b: number }[], names: [string, string]): string {
+  if (!groups.length) return `${names[0]} / ${names[1]}: —`;
+  return groups.map((g) => `${g.label}: ${names[0]} ${rs(g.a)}, ${names[1]} ${rs(g.b)}`).join("; ");
+}
 export function GroupBars({ groups, names, height = 250 }: { groups: { label: string; a: number; b: number }[]; names: [string, string]; height?: number }) {
   const W = 760, H = height, n = Math.max(1, groups.length);
   const max = Math.max(1, ...groups.flatMap((g) => [g.a, g.b])) * 1.15;
@@ -9,7 +14,7 @@ export function GroupBars({ groups, names, height = 250 }: { groups: { label: st
   const short = (v: number) => (v >= 100000 ? `${Math.round(v / 1000)}k` : v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(Math.round(v)));
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="income vs expense">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={chartSummary(groups, names)}>
         {[0, 1, 2, 3, 4].map((k) => {
           const y = H - 24 - (k * (H - 40)) / 4;
           return (<g key={k}><line x1={46} x2={W - 6} y1={y} y2={y} className="stroke-surface-200 dark:stroke-surface-800" /><text x={40} y={y + 4} fontSize={10} textAnchor="end" className="fill-surface-500 dark:fill-slate-400">{short((max * k) / 4)}</text></g>);
@@ -27,8 +32,8 @@ export function GroupBars({ groups, names, height = 250 }: { groups: { label: st
         })}
       </svg>
       <div className="mt-1 flex gap-4 text-xs text-surface-500 dark:text-slate-400">
-        <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-green-500" />{names[0]}</span>
-        <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-rose-500" />{names[1]}</span>
+        <span><span className="me-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-green-500" />{names[0]}</span>
+        <span><span className="me-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-rose-500" />{names[1]}</span>
       </div>
     </div>
   );
@@ -42,18 +47,18 @@ export function CategoryRows({ rows, lang, showPct = true }: { rows: { cat: Expe
           <span className="h-3 w-3 shrink-0 rounded" style={{ background: CAT_COLOR[r.cat] }} />
           <div className="min-w-0 flex-1">
             <span className="text-surface-800 dark:text-slate-100">{CAT_ICON[r.cat]} {t(`cat_${r.cat}` as TranslationKey, lang)}</span>
-            {lang !== "ur" && <span className="ml-1.5 text-[11px] text-surface-500" dir="rtl">{t(`cat_${r.cat}` as TranslationKey, "ur")}</span>}
+            {lang !== "ur" && <span className="ms-1.5 text-[11px] text-surface-500" dir="rtl">{t(`cat_${r.cat}` as TranslationKey, "ur")}</span>}
             <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-100 dark:bg-surface-800"><div className="h-full rounded-full" style={{ width: `${(r.amount / max) * 100}%`, background: CAT_COLOR[r.cat] }} /></div>
           </div>
           <b className="text-surface-900 dark:text-white">{rs(r.amount)}</b>
-          {showPct && <span className="w-9 text-right text-xs text-surface-500">{r.pct}%</span>}
+          {showPct && <span className="w-9 text-end text-xs text-surface-500">{r.pct}%</span>}
         </div>
       ))}
     </div>
   );
 }
 export function Money({ v, className = "" }: { v: number; className?: string }) {
-  return <span className={`font-bold ${v >= 0 ? "text-green-600 dark:text-green-400" : "text-rose-600 dark:text-rose-400"} ${className}`}>{v < 0 ? "-" : ""}{rs(Math.abs(v))}</span>;
+  return <span dir="ltr" className={`ltr-iso font-bold ${v >= 0 ? "text-green-600 dark:text-green-400" : "text-rose-600 dark:text-rose-400"} ${className}`}>{v < 0 ? "-" : ""}{rs(Math.abs(v))}</span>;
 }
 export function Chips({ items }: { items: { href: string; label: string; on: boolean }[] }) {
   return (

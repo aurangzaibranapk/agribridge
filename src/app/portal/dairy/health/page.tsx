@@ -138,7 +138,7 @@ export default async function HealthPage({ searchParams }: { searchParams: Recor
             <div className="grid gap-2.5">
               {byKind.map((x) => (
                 <div key={x.k} className="grid grid-cols-[110px_1fr_80px] items-center gap-2 text-[12.5px] text-surface-700 dark:text-slate-200">
-                  <span>{EVENT_ICON[x.k]} {L(`bh_k_${x.k}` as TranslationKey)}</span><Bar pct={(x.v / maxK) * 100} color={EVENT_COLOR[x.k]} /><b className="text-right">{rs(x.v)}</b>
+                  <span>{EVENT_ICON[x.k]} {L(`bh_k_${x.k}` as TranslationKey)}</span><Bar pct={(x.v / maxK) * 100} color={EVENT_COLOR[x.k]} /><b className="text-end">{rs(x.v)}</b>
                 </div>
               ))}
             </div>

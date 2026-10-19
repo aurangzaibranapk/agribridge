@@ -12,6 +12,7 @@ import { PhotoPicker } from "@/components/portal/dairy/photo-picker";
 import { signedUrls } from "@/lib/portal/dairy-pl-load";
 import { t as tr } from "@/lib/i18n/translations";
 import { setStatusAction, uploadPhotoAction } from "../../actions";
+import { ResponsiveTable } from "@/components/portal/responsive-table";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +76,7 @@ export default async function AnimalDetail({ params, searchParams }: { params: {
             ) : (
               <span className="grid h-full place-items-center text-8xl">{SPECIES_EMOJI[a.species]}</span>
             )}
-            <span className="absolute left-2.5 top-2.5"><TagChip tag={a.tag_no} /></span>
+            <span className="absolute start-2.5 top-2.5"><TagChip tag={a.tag_no} /></span>
           </div>
           <form action={uploadPhotoAction} className="space-y-2">
             <input type="hidden" name="id" value={a.id} />
@@ -83,9 +84,9 @@ export default async function AnimalDetail({ params, searchParams }: { params: {
             <button className="w-full rounded-xl bg-green-600 py-2 text-sm font-semibold text-white hover:bg-green-700">📤 {tr("dy2_photo_upload", lang)}</button>
             <p className="rounded-xl border border-sky-300/50 bg-sky-50 p-2.5 text-[11px] text-surface-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-slate-200">🔒 {tr("dy2_photo_private", lang)}</p>
           </form>
-          <table className="w-full text-[13px]">
-            <tbody>{facts.map(([k, v]) => <tr key={k} className="border-b border-surface-100 dark:border-surface-800"><td className="py-2 pr-2 text-surface-500 dark:text-slate-400">{k}</td><td className="py-2 font-semibold text-surface-900 dark:text-white">{v}</td></tr>)}</tbody>
-          </table>
+          <ResponsiveTable className="w-full text-[13px]">
+            <tbody>{facts.map(([k, v]) => <tr key={k} className="border-b border-surface-100 dark:border-surface-800"><td className="py-2 pe-2 text-surface-500 dark:text-slate-400">{k}</td><td className="py-2 font-semibold text-surface-900 dark:text-white">{v}</td></tr>)}</tbody>
+          </ResponsiveTable>
           <form action={setStatusAction} className="flex flex-wrap items-center gap-2">
             <input type="hidden" name="id" value={a.id} />
             <select name="status" defaultValue={a.status} className="flex-1 rounded-xl border border-surface-200 bg-surface-50 px-3 py-2 text-sm text-surface-800 dark:border-surface-700 dark:bg-surface-800 dark:text-slate-100">
@@ -119,8 +120,8 @@ export default async function AnimalDetail({ params, searchParams }: { params: {
             <h3 className="text-[15px] font-semibold text-surface-900 dark:text-white"><Tri k="dy_d_recent" lang={lang} /></h3>
             {canMilk && <a href={`/portal/dairy/milk?a=${a.id}`} className="rounded-xl bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700">🥛 {L("dy_d_record")}</a>}
           </div>
-          <table className="w-full text-[13px]">
-            <thead><tr className="border-b border-surface-200 text-left text-[11px] uppercase text-surface-500 dark:border-surface-800 dark:text-slate-400">
+          <ResponsiveTable className="w-full text-[13px]">
+            <thead><tr className="border-b border-surface-200 text-start text-[11px] uppercase text-surface-500 dark:border-surface-800 dark:text-slate-400">
               <th className="py-2">{L("dy_d_date")}</th><th>{L("dy_morning")} (AM)</th><th>{L("dy_evening")} (PM)</th><th>{L("dy_d_total")}</th><th>{L("dy_d_fat")}</th><th>{L("dy_d_note")}</th></tr></thead>
             <tbody>
               {recent.map((r) => (
@@ -131,14 +132,14 @@ export default async function AnimalDetail({ params, searchParams }: { params: {
               ))}
               {recent.length === 0 && <tr><td colSpan={6} className="py-6 text-center text-surface-500">{L("dy_d_no_milk")}</td></tr>}
             </tbody>
-          </table>
+          </ResponsiveTable>
         </Card>
         <Card>
           <div className="mb-3 flex items-start justify-between gap-3">
             <h3 className="text-[15px] font-semibold text-surface-900 dark:text-white"><Tri k="dy_d_breed_title" lang={lang} /></h3>
             {rp?.pregnant ? <Badge tone="violet">{L("bh_hs_pregnant")} · {rp.days_pregnant} {L("bh_days")}</Badge> : rp?.pd_pending ? <Badge tone="indigo">{L("bh_hs_pd")}</Badge> : null}
           </div>
-          <div className="relative space-y-4 pl-6 before:absolute before:bottom-2 before:left-[9px] before:top-2 before:w-0.5 before:bg-surface-200 dark:before:bg-surface-800">
+          <div className="relative space-y-4 ps-6 before:absolute before:bottom-2 before:start-[9px] before:top-2 before:w-0.5 before:bg-surface-200 dark:before:bg-surface-800">
             {bev.slice(0, 4).map((e) => <TLItem key={e.id} color={EVENT_COLOR[e.event_type]} date={shortDate(e.event_date, lang)} title={`${EVENT_ICON[e.event_type]} ${tr(`bh_ty_${e.event_type}` as TranslationKey, lang)}${e.bull_name ? ` · ${e.bull_name}` : ""}${e.pd_result ? ` · ${tr(`bh_pd_${e.pd_result}` as TranslationKey, lang)}` : ""}`} />)}
             {bev.length === 0 && <TL color="bg-green-500" title={`${L("dy_d_lactation")} ${a.lactation_no || "—"}`} sub={a.last_calving_date ? longDate(a.last_calving_date, lang) : "—"} />}
           </div>
@@ -153,7 +154,7 @@ export default async function AnimalDetail({ params, searchParams }: { params: {
 function TL({ color, title, sub }: { color: string; title: string; sub: string }) {
   return (
     <div className="relative">
-      <span className={`absolute -left-[23px] top-1 h-3.5 w-3.5 rounded-full ring-4 ring-white dark:ring-surface-900 ${color}`} />
+      <span className={`absolute -start-[23px] top-1 h-3.5 w-3.5 rounded-full ring-4 ring-white dark:ring-surface-900 ${color}`} />
       <b className="text-[13px] text-surface-900 dark:text-white">{title}</b>
       <p className="text-xs text-surface-500 dark:text-slate-400">{sub}</p>
     </div>
