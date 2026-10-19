@@ -5,6 +5,9 @@ import { processFarmerAiMessage } from "@/lib/farmer-ai-processor";
 import { sendWhatsAppMessage, downloadWhatsAppMedia, normalizeWhatsAppPhone } from "@/lib/whatsapp-client";
 import { handleStaffMessage } from "@/lib/staff-whatsapp-router";
 import { handleMachineryConfirmation } from "@/lib/machinery-whatsapp-confirm";
+import { parityEnabled, runParity } from "@/lib/whatsapp/parity/webhook";
+import { transcribeVoice, classifyIntentAi } from "@/lib/whatsapp/parity/transcribe";
+import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { buildReplyDraftRow, canAutoReplyToStaff, checkSignature, readInbound, WHATSAPP_REPLY_INTENT } from "@/lib/whatsapp/inbound-policy";
 
 export async function GET(request: NextRequest) {
@@ -66,6 +69,33 @@ export async function POST(request: NextRequest) {
       }
       await sendWhatsAppMessage(fromPhone, text);
     };
+
+    // WhatsApp = App (Phase 1, sirf parhna). Flag band ho, ya 610/613
+    // na lage hon, to ye kuch nahi karta aur purana raasta chalta hai.
+    if (parityEnabled()) {
+      const p = await runParity(message, phoneKey(fromPhone), canAutoReplyToStaff(sig), {
+        rpc: async (fn, args) => {
+          const { data, error } = await serviceClient.rpc(fn as never, (args ?? {}) as never);
+          return { data, error: error ? { message: error.message } : null };
+        },
+        allowedRoutes: async (uid, role) => {
+          const nav = await loadNav(uid, role);
+          return nav.unrestricted ? null : nav.allowedRoutes;
+        },
+        routeAllowed,
+        transcribe: transcribeVoice,
+        aiIntent: classifyIntentAi,
+        download: async (id) => {
+          const m = await downloadWhatsAppMedia(id);
+          return m ? { base64: m.base64, mimeType: m.mimeType } : null;
+        },
+        send: replyToStaff, // wohi signed-only bhejne wala
+      }).catch((e) => {
+        console.error("[whatsapp-webhook] parity error -- purana raasta", e);
+        return null;
+      });
+      if (p?.handled) return NextResponse.json({ ok: true });
+    }
 
     // Pehle dekho ke ye staff to nahi. Staff ka raasta AI se nahi guzarta:
     // un ke kaam (hazri waghera) gine chune hain aur unhein bilkul waisa
