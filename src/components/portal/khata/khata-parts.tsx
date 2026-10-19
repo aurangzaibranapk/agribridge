@@ -68,11 +68,11 @@ export function SourceCard({ tone, label, value, sub, href }: { tone: string; la
   const body = (
     <>
       <span className="text-[11px] font-semibold uppercase tracking-wider text-white/85">{label}</span>
-      <p className="mt-2 text-2xl font-bold tracking-tight">{value}</p>
-      <p className="mt-1 truncate text-[11.5px] text-white/90" title={sub}>{sub}</p>
-      <span className="pointer-events-none absolute -bottom-6 -right-5 h-20 w-20 rounded-full bg-white/10" />
+      <p className="mt-2 truncate text-2xl font-bold tracking-tight fit:mt-0.5 fit:text-xl">{value}</p>
+      <p className="mt-1 truncate text-[11.5px] text-white/90 fit:mt-0" title={sub}>{sub}</p>
+      <span className="pointer-events-none absolute -bottom-6 -end-5 h-20 w-20 rounded-full bg-white/10" />
     </>
   );
-  const cls = `relative block min-h-[104px] overflow-hidden rounded-2xl bg-gradient-to-br ${TONES[tone]} p-4 text-white shadow-[0_8px_20px_-10px_rgba(0,0,0,.45)]`;
+  const cls = `relative block min-h-[104px] overflow-hidden rounded-2xl bg-gradient-to-br ${TONES[tone]} p-4 text-white fit:min-h-0 fit:px-3.5 fit:py-2.5 shadow-[0_8px_20px_-10px_rgba(0,0,0,.45)]`;
   return href ? <a href={href} className={`${cls} transition hover:-translate-y-0.5`}>{body}</a> : <div className={cls}>{body}</div>;
 }

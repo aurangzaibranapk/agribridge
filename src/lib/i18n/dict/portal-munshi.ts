@@ -80,6 +80,8 @@ export const portalMunshiDict = {
   pmd_herd_empty: { en: "No animals on record. Add them on the Livestock page.", rm: "Koi janwar darj nahi. Maweshi ke safhe par shamil karein.", ur: "کوئی جانور درج نہیں۔ مویشی کے صفحے پر شامل کریں۔" },
   pmd_animals: { en: "animals", rm: "janwar", ur: "جانور" },
   pmd_from_record: { en: "From your profile record", rm: "Aap ke profile record se", ur: "آپ کے پروفائل ریکارڈ سے" },
+  pmd_from_dairy: { en: "From Dairy Management records", rm: "Dairy Management ke record se", ur: "ڈیری مینجمنٹ کے ریکارڈ سے" },
+  pmd_per_day_dairy: { en: "L/day (Dairy record, 30-day avg)", rm: "L/din (Dairy record, 30 din ausat)", ur: "لیٹر/دن (ڈیری ریکارڈ، 30 دن اوسط)" },
 
   pmd_tasks: { en: "Today's tasks", rm: "Aaj ke kaam", ur: "آج کے کام" },
   pmd_pending: { en: "pending", rm: "baqi", ur: "باقی" },
@@ -98,6 +100,8 @@ export const portalMunshiDict = {
   pmd_quick: { en: "Quick actions", rm: "Jaldi karein", ur: "جلدی کریں" },
   pmd_q_khata: { en: "My khata", rm: "Mera khata", ur: "میرا کھاتہ" },
   pmd_q_booking: { en: "Season booking", rm: "Season booking", ur: "سیزن بکنگ" },
+  pmd_kpi_booking: { en: "Season plans (Gandum / Munji)", rm: "Season plan (Gandum / Munji)", ur: "سیزن پلان (گندم / مونجی)" },
+  pmd_open_plans: { en: "open plans", rm: "khule plan", ur: "کھلے پلان" },
   pmd_q_demand: { en: "Product demand", rm: "Product demand", ur: "پروڈکٹ ڈیمانڈ" },
   pmd_q_fert: { en: "Fertilizer credit", rm: "Khaad udhaar", ur: "کھاد ادھار" },
   pmd_q_mach: { en: "Machinery", rm: "Machinery", ur: "مشینری" },

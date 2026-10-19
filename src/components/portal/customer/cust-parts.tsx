@@ -15,16 +15,16 @@ export function L3({ k, lang, className = "" }: { k: TranslationKey; lang: Lang;
 }
 export function PageHead({ title, sub }: { title: React.ReactNode; sub: React.ReactNode }) {
   return (
-    <div className="mb-4">
-      <h1 className="text-2xl font-extrabold tracking-tight text-surface-900 dark:text-white">{title}</h1>
-      <p className="mt-1 text-[13px] text-surface-500 dark:text-slate-400">{sub}</p>
+    <div className="mb-4 fit:mb-0">
+      <h1 className="text-2xl font-extrabold tracking-tight text-surface-900 dark:text-white fit:text-xl">{title}</h1>
+      <p className="mt-1 text-[13px] text-surface-500 dark:text-slate-400 fit:mt-0">{sub}</p>
     </div>
   );
 }
 export function CHero({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
   return (
     <section className="relative mb-4 overflow-hidden rounded-[20px] bg-gradient-to-r from-blue-700 via-violet-600 to-pink-600 p-6 text-white shadow-[0_14px_34px_rgba(76,29,149,.25)] dark:from-blue-900 dark:via-violet-800 dark:to-pink-800">
-      <span className="pointer-events-none absolute -right-16 -top-16 h-60 w-60 rounded-full bg-white/10" />
+      <span className="pointer-events-none absolute -end-16 -top-16 h-60 w-60 rounded-full bg-white/10" />
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div>{children}</div>
         <div className="flex flex-wrap gap-2">{right}</div>
@@ -43,11 +43,11 @@ const BAR: Record<string, string> = { blue: "bg-blue-600", green: "bg-emerald-60
 const ICBG: Record<string, string> = { blue: "bg-blue-100 dark:bg-blue-500/20", green: "bg-emerald-100 dark:bg-emerald-500/20", amber: "bg-amber-100 dark:bg-amber-500/20", pink: "bg-pink-100 dark:bg-pink-500/20", violet: "bg-violet-100 dark:bg-violet-500/20", rose: "bg-rose-100 dark:bg-rose-500/20", slate: "bg-slate-100 dark:bg-slate-500/20" };
 export function CKpi({ tone, icon, label, value, sub }: { tone: string; icon: string; label: React.ReactNode; value: string; sub: string }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-[#1e3160] dark:bg-[#101f42]">
-      <span className={`absolute inset-y-0 left-0 w-1 ${BAR[tone] ?? BAR.blue}`} />
-      <span className={`float-right grid h-9 w-9 place-items-center rounded-xl text-lg ${ICBG[tone] ?? ICBG.blue}`}>{icon}</span>
+    <div className="relative overflow-hidden rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-[#1e3160] dark:bg-[#101f42] fit:py-2.5">
+      <span className={`absolute inset-y-0 start-0 w-1 ${BAR[tone] ?? BAR.blue}`} />
+      <span className={`float-end grid h-9 w-9 place-items-center rounded-xl text-lg ${ICBG[tone] ?? ICBG.blue}`}>{icon}</span>
       <div className="text-[11.5px] font-semibold text-surface-500 dark:text-slate-400">{label}</div>
-      <div className="mt-1.5 text-[22px] font-extrabold text-surface-900 dark:text-white">{value}</div>
+      <div className="mt-1.5 text-[22px] font-extrabold text-surface-900 dark:text-white fit:mt-0.5 fit:text-xl"><span dir="ltr" className="ltr-iso">{value}</span></div>
       <div className="mt-0.5 truncate text-[11px] text-surface-500 dark:text-slate-400" title={sub}>{sub}</div>
     </div>
   );
@@ -113,7 +113,7 @@ export function Sub({ children }: { children: React.ReactNode }) {
   return <div className="text-[10.5px] text-surface-500 dark:text-slate-400">{children}</div>;
 }
 export function Notice({ tone, children }: { tone: "ok" | "err"; children: React.ReactNode }) {
-  return <div className={`mb-4 rounded-xl px-4 py-2.5 text-sm font-semibold ${tone === "ok" ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200" : "bg-rose-50 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200"}`}>{children}</div>;
+  return <div role={tone === "err" ? "alert" : "status"} className={`mb-4 rounded-xl px-4 py-2.5 text-sm font-semibold ${tone === "ok" ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200" : "bg-rose-50 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200"}`}>{children}</div>;
 }
 export const inputCls = "w-full rounded-xl border border-surface-200 bg-surface-50 px-3 py-2 text-[13px] font-semibold text-surface-900 dark:border-[#1e3160] dark:bg-[#0d1a3a] dark:text-white";
 export const btnPrimary = "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-[12.5px] font-bold text-white shadow hover:opacity-95 disabled:opacity-50";

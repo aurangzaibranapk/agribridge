@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { isDemandCategory } from "@/lib/demand/categories";
+import { classifyProducts, demandCategoryFor, isDemandCategory, PRE_604_CATEGORIES } from "@/lib/demand/categories";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   const neededBy = cleanText(body.neededBy, 20);
   const purpose = cleanText(body.purpose, 120);
   const notes = cleanText(body.notes, 500);
-  const category = isDemandCategory(body.category) ? body.category : null;
+  let category: string | null = isDemandCategory(body.category) ? body.category : null;
   const area = cleanText(body.area, 120);
   const source = body.source === "munshi" ? "munshi" : "form";
 
@@ -37,10 +37,17 @@ export async function POST(request: Request) {
     .single();
   if (!farmer) return NextResponse.json({ error: "Farmer profile nahi mili." }, { status: 404 });
 
-  // Table abhi generated types mein nahi (migration live nahi) -- isliye any.
-  const { data: demand, error } = await (supabase as any)
-    .from("farmer_product_demands")
-    .insert({
+  // Qism na aaye to product ki category se nikaalo (server par -- client par bharosa nahi).
+  if (!category && productId) {
+    const { data: prod } = await supabase.from("products").select("id, category_id").eq("id", productId).maybeSingle();
+    if (prod?.category_id) {
+      const { data: cats } = await (supabase as any).from("categories").select("id, name, parent_category_id, category_kind");
+      const [c] = classifyProducts([prod], cats ?? []);
+      if (c) category = demandCategoryFor(c.group, c.sub);
+    }
+  }
+
+  const row = (cat: string | null) => ({
       organization_id: farmer.organization_id,
       branch_id: farmer.branch_id,
       farmer_id: farmer.id,
@@ -54,17 +61,23 @@ export async function POST(request: Request) {
       status: "pending",
       payment_required_at_registration: false,
       // Naye khane (migration 20261015233000): sirf tab bheje jate hain jab bhare hon.
-      ...(category ? { category } : {}),
+      ...(cat ? { category: cat } : {}),
       ...(area ? { area } : {}),
       ...(source === "munshi" ? { source } : {}),
-    })
-    .select("id, product_id, product_name, quantity, unit, needed_by, purpose, notes, status, staff_note, created_at, updated_at")
-    .single();
+  });
+  const SELECT = "id, product_id, product_name, quantity, unit, needed_by, purpose, notes, status, staff_note, created_at, updated_at";
+  // Table abhi generated types mein nahi -- isliye any.
+  let { data: demand, error } = await (supabase as any).from("farmer_product_demands").insert(row(category)).select(SELECT).single();
+  // Migration 604 (karyana/other) live na ho to check constraint (23514) -- demand phir bhi save ho, qism ke baghair.
+  if (error && error.code === "23514" && category && !PRE_604_CATEGORIES.includes(category)) {
+    category = null;
+    ({ data: demand, error } = await (supabase as any).from("farmer_product_demands").insert(row(null)).select(SELECT).single());
+  }
 
   if (error) {
     console.error("farmer product demand insert failed", error);
     return NextResponse.json({ error: "Demand save nahi ho saki. Dobara try karein." }, { status: 500 });
   }
 
-  return NextResponse.json({ demand });
+  return NextResponse.json({ demand: { ...demand, category } });
 }

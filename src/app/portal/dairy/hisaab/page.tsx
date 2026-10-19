@@ -8,6 +8,8 @@ import { Card, CardHead } from "@/components/portal/khata/khata-parts";
 import { ErrorNote, Footer, Hero, HeroBtn, Kpi, fmtL } from "@/components/portal/dairy/dairy-parts";
 import { CategoryRows, Chips, GroupBars, Money } from "@/components/portal/dairy/pl-parts";
 import { PrintButton } from "@/components/portal/dairy/print-button";
+import { ResponsiveTable } from "@/components/portal/responsive-table";
+import { EmptyState } from "@/components/portal/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -81,32 +83,36 @@ export default async function Hisaab({ searchParams }: { searchParams: Record<st
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHead title={L("dy2_src_title")} />
-          <table className="w-full text-[13px]">
-            <thead><tr className="border-b border-surface-200 text-left text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800"><th className="py-2">{L("dy2_src")}</th><th>{L("dy2_detail")}</th><th className="text-right">{L("dy2_amount")}</th></tr></thead>
-            <tbody>
-              {src.map((s) => (
-                <tr key={s.k} className="border-b border-surface-100 dark:border-surface-800">
-                  <td className="py-2.5 text-surface-800 dark:text-slate-100">{s.icon} {L(s.k as TranslationKey)}</td>
-                  <td className="text-surface-600 dark:text-slate-300">{s.ro && <span className="mr-1.5 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">{L("dy2_readonly")}</span>}{s.detail}</td>
-                  <td className="text-right font-bold text-green-600 dark:text-green-400">{rs(s.v)}</td>
-                </tr>
-              ))}
-              <tr className="bg-surface-50 font-bold dark:bg-surface-800/60"><td className="py-2.5 text-surface-900 dark:text-white" colSpan={2}>{L("dy2_total_income")}</td><td className="text-right text-surface-900 dark:text-white">{rs(S.income_total)}</td></tr>
-            </tbody>
-          </table>
+          {S.income_total === 0 ? (
+            <EmptyState compact icon="🥛" lang={lang} titleKey="ph6_es_income_t" bodyKey="ph6_es_income_b" cta={{ href: "/portal/dairy/hisaab/income", label: `＋ ${L("ph6_es_income_cta")}` }} />
+          ) : (
+            <ResponsiveTable className="w-full text-[13px]">
+              <thead><tr className="border-b border-surface-200 text-start text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800"><th className="py-2">{L("dy2_src")}</th><th>{L("dy2_detail")}</th><th className="text-end">{L("dy2_amount")}</th></tr></thead>
+              <tbody>
+                {src.map((s) => (
+                  <tr key={s.k} className="border-b border-surface-100 dark:border-surface-800">
+                    <td className="py-2.5 text-surface-800 dark:text-slate-100">{s.icon} {L(s.k as TranslationKey)}</td>
+                    <td className="text-surface-600 dark:text-slate-300">{s.ro && <span className="me-1.5 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">{L("dy2_readonly")}</span>}{s.detail}</td>
+                    <td className="text-end font-bold text-green-600 dark:text-green-400">{rs(s.v)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-surface-50 font-bold dark:bg-surface-800/60"><td className="py-2.5 text-surface-900 dark:text-white" colSpan={2}>{L("dy2_total_income")}</td><td className="text-end text-surface-900 dark:text-white">{rs(S.income_total)}</td></tr>
+              </tbody>
+            </ResponsiveTable>
+          )}
         </Card>
         <Card>
           <CardHead title={L("dy2_monthly_title")} right={<PrintButton label={L("dy2_print")} />} />
-          <table className="w-full text-[13px]">
-            <thead><tr className="border-b border-surface-200 text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800"><th className="py-2 text-left">{L("dy2_month")}</th><th className="text-right">{L("dy2_income")}</th><th className="text-right">{L("dy2_expense")}</th><th className="text-right">{L("dy2_k_profit")}</th><th className="text-right">{L("dy2_k_cpl")}</th></tr></thead>
+          <ResponsiveTable className="w-full text-[13px]">
+            <thead><tr className="border-b border-surface-200 text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800"><th className="py-2 text-start">{L("dy2_month")}</th><th className="text-end">{L("dy2_income")}</th><th className="text-end">{L("dy2_expense")}</th><th className="text-end">{L("dy2_k_profit")}</th><th className="text-end">{L("dy2_k_cpl")}</th></tr></thead>
             <tbody>
               {[...six].reverse().map((r) => (
-                <tr key={r.period} className="border-b border-surface-100 text-right text-surface-700 dark:border-surface-800 dark:text-slate-200">
-                  <td className="py-2.5 text-left">{monthName(r.period, lang, true)}</td><td>{rs(r.income_total)}</td><td>{rs(r.expense_total)}</td><td><Money v={r.profit} /></td><td>{r.cost_per_litre === null ? "—" : r.cost_per_litre.toFixed(1)}</td>
+                <tr key={r.period} className="border-b border-surface-100 text-end text-surface-700 dark:border-surface-800 dark:text-slate-200">
+                  <td className="py-2.5 text-start">{monthName(r.period, lang, true)}</td><td>{rs(r.income_total)}</td><td>{rs(r.expense_total)}</td><td><Money v={r.profit} /></td><td>{r.cost_per_litre === null ? "—" : r.cost_per_litre.toFixed(1)}</td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </ResponsiveTable>
         </Card>
       </div>
       <Footer lang={lang} />

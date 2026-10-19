@@ -41,7 +41,7 @@ export default async function AnimalList({ searchParams }: { searchParams: Recor
         <div className="overflow-x-auto">
           <table className="w-full text-[13px]">
             <thead>
-              <tr className="border-b border-surface-200 text-left text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800 dark:text-slate-400">
+              <tr className="border-b border-surface-200 text-start text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800 dark:text-slate-400">
                 {(["dy_c_tag", "dy_c_name", "dy_c_breed", "dy_c_age", "dy_c_status", "dy_c_today", "dy_c_trend", "dy_c_breeding"] as const).map((k) => <th key={k} className="px-2 py-2.5 font-semibold">{L(k)}</th>)}
                 <th />
               </tr>

@@ -37,7 +37,7 @@ export default async function FarmerProfilePage() {
       <h1 className="font-display text-2xl font-semibold text-surface-900">{t("nav_profile", lang)}</h1>
       <div className="mt-3 flex items-center justify-between rounded-lg bg-surface-50 px-3 py-2 dark:bg-surface-900">
         <span className="text-sm text-surface-600">{completion.percent}% {t("percent_complete", lang)}</span>
-        <div className="ml-3 h-2 flex-1 overflow-hidden rounded-full bg-surface-200">
+        <div className="ms-3 h-2 flex-1 overflow-hidden rounded-full bg-surface-200">
           <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${completion.percent}%` }} />
         </div>
       </div>

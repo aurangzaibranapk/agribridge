@@ -154,7 +154,7 @@ test("dictionary: har bh_ key teeno zabanon mein, khali nahi", () => {
 test("wiring + hifazat", () => {
   const PAGES = ["src/app/portal/dairy/breeding/page.tsx", "src/app/portal/dairy/breeding/animal/[id]/page.tsx", "src/app/portal/dairy/breeding/new/page.tsx", "src/app/portal/dairy/health/page.tsx", "src/app/portal/dairy/alerts/page.tsx", "src/app/admin/dairy/breeding/page.tsx", "src/app/admin/dairy/breeding/export/route.ts"];
   for (const f of PAGES) assert.ok(fs.existsSync(f), f);
-  const sb = fs.readFileSync("src/components/portal/sidebar.tsx", "utf8");
+  const sb = fs.readFileSync("src/lib/portal/nav.ts", "utf8"); // phase 6: menu ab yahan
   assert.match(sb, /\/portal\/dairy\/breeding/); assert.match(sb, /\/portal\/dairy\/health/); assert.match(sb, /\/portal\/dairy\/hisaab/);
   assert.match(fs.readFileSync("src/app/portal/dairy/page.tsx", "utf8"), /loadTasks/);
   assert.ok(!/Phase 4/.test(fs.readFileSync("src/app/portal/dairy/animals/[id]/page.tsx", "utf8")), "placeholder hata");
