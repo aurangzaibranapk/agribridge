@@ -10,6 +10,14 @@ extension AppRoleX on AppRole {
         AppRole.supplier => 'Supplier',
       };
 
+  /// 605 fn_mobile_whoami ka 'kind' pehle; na mile to profile role.
+  static AppRole fromWhoami(String? kind, String? rawRole) => switch (kind) {
+        'farmer' => AppRole.farmer,
+        'customer' => AppRole.customer,
+        'staff' => fromDatabase(rawRole) == AppRole.admin ? AppRole.admin : AppRole.staff,
+        _ => fromDatabase(rawRole),
+      };
+
   static AppRole fromDatabase(String? role) => switch (role) {
         'owner' || 'super_admin' || 'admin' || 'manager' => AppRole.admin,
         'farmer' => AppRole.farmer,

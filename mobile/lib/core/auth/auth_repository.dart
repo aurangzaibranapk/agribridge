@@ -34,10 +34,19 @@ class AuthRepository {
         .maybeSingle();
     if (row == null) return null;
     final rawRole = row['role'] as String?;
+    // 605: server batata hai login kisan / customer / staff hai. Migration
+    // abhi live na ho to purana profile.role wala tareeqa.
+    Map<String, dynamic>? who;
+    try {
+      final r = await client.rpc('fn_mobile_whoami');
+      if (r is Map) who = Map<String, dynamic>.from(r);
+    } on PostgrestException {
+      who = null;
+    }
     return AppProfile(
       id: row['id'] as String,
       name: (row['full_name'] as String?) ?? 'User',
-      role: AppRoleX.fromDatabase(rawRole),
+      role: AppRoleX.fromWhoami(who?['kind'] as String?, rawRole),
       rawRole: rawRole,
       branchId: row['branch_id'] as String?,
       shopId: row['shop_id'] as String?,
