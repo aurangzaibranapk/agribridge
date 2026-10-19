@@ -1592,6 +1592,13 @@ export type Database = {
             foreignKeyName: "agri_order_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -1790,6 +1797,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agri_order_return_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -2628,6 +2642,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_purchase_suggestions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -5857,6 +5878,7 @@ export type Database = {
       }
       booking_campaigns: {
         Row: {
+          allowed_crops: string[]
           created_at: string
           created_by: string | null
           crop: string
@@ -5870,6 +5892,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allowed_crops?: string[]
           created_at?: string
           created_by?: string | null
           crop: string
@@ -5883,6 +5906,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allowed_crops?: string[]
           created_at?: string
           created_by?: string | null
           crop?: string
@@ -6519,6 +6543,13 @@ export type Database = {
             foreignKeyName: "bridge_ai_action_requests_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bridge_ai_action_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -6690,6 +6721,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bridge_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -7209,6 +7247,55 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_booking_farms: {
+        Row: {
+          acres: number
+          booking_id: string
+          created_at: string
+          crop: string
+          farm_id: string
+          id: string
+        }
+        Insert: {
+          acres: number
+          booking_id: string
+          created_at?: string
+          crop?: string
+          farm_id: string
+          id?: string
+        }
+        Update: {
+          acres?: number
+          booking_id?: string
+          created_at?: string
+          crop?: string
+          farm_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_booking_farms_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_booking_farms_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_booking_farms_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farm_id"]
           },
         ]
       }
@@ -8756,6 +8843,13 @@ export type Database = {
             foreignKeyName: "credit_requests_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -9025,6 +9119,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crop_expenses_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -9345,6 +9446,13 @@ export type Database = {
             foreignKeyName: "crop_product_recommendations_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crop_product_recommendations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -9454,6 +9562,371 @@ export type Database = {
           },
         ]
       }
+      custom_product_requests: {
+        Row: {
+          campaign_booking_id: string | null
+          campaign_id: string | null
+          created_at: string
+          created_by: string | null
+          farmer_id: string
+          id: string
+          line_kind: string
+          mapped_product_id: string | null
+          name: string
+          organization_id: string | null
+          quantity: number | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          unit: string | null
+        }
+        Insert: {
+          campaign_booking_id?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          farmer_id: string
+          id?: string
+          line_kind: string
+          mapped_product_id?: string | null
+          name: string
+          organization_id?: string | null
+          quantity?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          unit?: string | null
+        }
+        Update: {
+          campaign_booking_id?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          farmer_id?: string
+          id?: string
+          line_kind?: string
+          mapped_product_id?: string | null
+          name?: string
+          organization_id?: string | null
+          quantity?: number | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_product_requests_campaign_booking_id_fkey"
+            columns: ["campaign_booking_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "booking_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_milk_supplier"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_mapped_product_id_fkey"
+            columns: ["mapped_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_mapped_product_id_fkey"
+            columns: ["mapped_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_mapped_product_id_fkey"
+            columns: ["mapped_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_mapped_product_id_fkey"
+            columns: ["mapped_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing_with_override"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_mapped_product_id_fkey"
+            columns: ["mapped_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_setup_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_mapped_product_id_fkey"
+            columns: ["mapped_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_missing_image"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_mapped_product_id_fkey"
+            columns: ["mapped_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_mapped_product_id_fkey"
+            columns: ["mapped_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_trade_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_mapped_product_id_fkey"
+            columns: ["mapped_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_wholesale_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_mapped_product_id_fkey"
+            columns: ["mapped_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_suggestions"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_mapped_product_id_fkey"
+            columns: ["mapped_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_product_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      customer_change_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          check_note: string | null
+          checked_at: string | null
+          checked_by: string | null
+          created_at: string
+          created_by: string
+          customer_id: string
+          field: string
+          id: string
+          new_value: string
+          old_value: string | null
+          reject_reason: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          status: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          check_note?: string | null
+          checked_at?: string | null
+          checked_by?: string | null
+          created_at?: string
+          created_by: string
+          customer_id: string
+          field: string
+          id?: string
+          new_value: string
+          old_value?: string | null
+          reject_reason?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          status?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          check_note?: string | null
+          checked_at?: string | null
+          checked_by?: string | null
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          field?: string
+          id?: string
+          new_value?: string
+          old_value?: string | null
+          reject_reason?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_change_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_change_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "v_wholesale_shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_import_drafts: {
         Row: {
           created_at: string
@@ -9539,6 +10012,60 @@ export type Database = {
           },
         ]
       }
+      customer_khata_disputes: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_id: string
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          message: string
+          ref: string | null
+          staff_note: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_id: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          message: string
+          ref?: string | null
+          staff_note?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          message?: string
+          ref?: string | null
+          staff_note?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_khata_disputes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_khata_disputes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "v_wholesale_shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_ledger: {
         Row: {
           balance_after: number
@@ -9589,6 +10116,174 @@ export type Database = {
           },
           {
             foreignKeyName: "customer_ledger_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "v_wholesale_shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_payment_claims: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          check_note: string | null
+          checked_at: string | null
+          checked_by: string | null
+          created_at: string
+          created_by: string
+          customer_id: string
+          finance_account_id: string | null
+          id: string
+          journal_entry_id: string | null
+          method: string
+          movement_id: string | null
+          note: string | null
+          paid_on: string
+          proof_path: string | null
+          reference: string | null
+          reject_reason: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          status: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          check_note?: string | null
+          checked_at?: string | null
+          checked_by?: string | null
+          created_at?: string
+          created_by: string
+          customer_id: string
+          finance_account_id?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          method: string
+          movement_id?: string | null
+          note?: string | null
+          paid_on: string
+          proof_path?: string | null
+          reference?: string | null
+          reject_reason?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          check_note?: string | null
+          checked_at?: string | null
+          checked_by?: string | null
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          finance_account_id?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          method?: string
+          movement_id?: string | null
+          note?: string | null
+          paid_on?: string
+          proof_path?: string | null
+          reference?: string | null
+          reject_reason?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_payment_claims_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_payment_claims_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "v_wholesale_shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_promise_requests: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          check_note: string | null
+          checked_at: string | null
+          checked_by: string | null
+          created_at: string
+          created_by: string
+          customer_id: string
+          id: string
+          promise_date: string
+          promise_id: string | null
+          reject_reason: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          status: string
+          terms_accepted_at: string
+          terms_version: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          check_note?: string | null
+          checked_at?: string | null
+          checked_by?: string | null
+          created_at?: string
+          created_by: string
+          customer_id: string
+          id?: string
+          promise_date: string
+          promise_id?: string | null
+          reject_reason?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          status?: string
+          terms_accepted_at: string
+          terms_version: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          check_note?: string | null
+          checked_at?: string | null
+          checked_by?: string | null
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          id?: string
+          promise_date?: string
+          promise_id?: string | null
+          reject_reason?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          status?: string
+          terms_accepted_at?: string
+          terms_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_promise_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_promise_requests_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "v_wholesale_shops"
@@ -9882,6 +10577,13 @@ export type Database = {
             foreignKeyName: "cycle_count_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cycle_count_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -10050,6 +10752,1753 @@ export type Database = {
             referencedColumns: ["profile_id"]
           },
         ]
+      }
+      dairy_animals: {
+        Row: {
+          breed: string | null
+          created_at: string
+          created_by: string | null
+          dam_id: string | null
+          dob: string | null
+          dob_estimated: boolean
+          farm_id: string | null
+          farmer_id: string
+          id: string
+          lactation_no: number
+          last_calving_date: string | null
+          name: string | null
+          notes: string | null
+          photo_path: string | null
+          photo_thumb_path: string | null
+          purchase_price: number | null
+          rfid_tag: string | null
+          sex: string
+          sire_text: string | null
+          source: string
+          species: string
+          status: string
+          status_date: string | null
+          tag_no: string
+          updated_at: string
+        }
+        Insert: {
+          breed?: string | null
+          created_at?: string
+          created_by?: string | null
+          dam_id?: string | null
+          dob?: string | null
+          dob_estimated?: boolean
+          farm_id?: string | null
+          farmer_id: string
+          id?: string
+          lactation_no?: number
+          last_calving_date?: string | null
+          name?: string | null
+          notes?: string | null
+          photo_path?: string | null
+          photo_thumb_path?: string | null
+          purchase_price?: number | null
+          rfid_tag?: string | null
+          sex?: string
+          sire_text?: string | null
+          source?: string
+          species?: string
+          status?: string
+          status_date?: string | null
+          tag_no: string
+          updated_at?: string
+        }
+        Update: {
+          breed?: string | null
+          created_at?: string
+          created_by?: string | null
+          dam_id?: string | null
+          dob?: string | null
+          dob_estimated?: boolean
+          farm_id?: string | null
+          farmer_id?: string
+          id?: string
+          lactation_no?: number
+          last_calving_date?: string | null
+          name?: string | null
+          notes?: string | null
+          photo_path?: string | null
+          photo_thumb_path?: string | null
+          purchase_price?: number | null
+          rfid_tag?: string | null
+          sex?: string
+          sire_text?: string | null
+          source?: string
+          species?: string
+          status?: string
+          status_date?: string | null
+          tag_no?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dairy_animals_dam_id_fkey"
+            columns: ["dam_id"]
+            isOneToOne: false
+            referencedRelation: "dairy_animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_dam_id_fkey"
+            columns: ["dam_id"]
+            isOneToOne: false
+            referencedRelation: "v_dairy_repro_status"
+            referencedColumns: ["animal_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farm_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_milk_supplier"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      dairy_breeding_events: {
+        Row: {
+          animal_id: string
+          bull_name: string | null
+          calf_alive: boolean | null
+          calf_animal_id: string | null
+          calf_sex: string | null
+          calving_ease: string | null
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          event_date: string
+          event_time: string | null
+          event_type: string
+          expense_id: string | null
+          farmer_id: string
+          heat_signs: string[] | null
+          id: string
+          notes: string | null
+          payment: string
+          pd_method: string | null
+          pd_result: string | null
+          prev_lactation_no: number | null
+          prev_last_calving_date: string | null
+          semen_breed: string | null
+          semen_company: string | null
+          service_id: string | null
+          sexed: boolean
+          straw_no: string | null
+          technician: string | null
+          technician_phone: string | null
+          twins: boolean
+          updated_at: string
+          void_reason: string | null
+          voided: boolean
+        }
+        Insert: {
+          animal_id: string
+          bull_name?: string | null
+          calf_alive?: boolean | null
+          calf_animal_id?: string | null
+          calf_sex?: string | null
+          calving_ease?: string | null
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          event_date?: string
+          event_time?: string | null
+          event_type: string
+          expense_id?: string | null
+          farmer_id: string
+          heat_signs?: string[] | null
+          id?: string
+          notes?: string | null
+          payment?: string
+          pd_method?: string | null
+          pd_result?: string | null
+          prev_lactation_no?: number | null
+          prev_last_calving_date?: string | null
+          semen_breed?: string | null
+          semen_company?: string | null
+          service_id?: string | null
+          sexed?: boolean
+          straw_no?: string | null
+          technician?: string | null
+          technician_phone?: string | null
+          twins?: boolean
+          updated_at?: string
+          void_reason?: string | null
+          voided?: boolean
+        }
+        Update: {
+          animal_id?: string
+          bull_name?: string | null
+          calf_alive?: boolean | null
+          calf_animal_id?: string | null
+          calf_sex?: string | null
+          calving_ease?: string | null
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          event_date?: string
+          event_time?: string | null
+          event_type?: string
+          expense_id?: string | null
+          farmer_id?: string
+          heat_signs?: string[] | null
+          id?: string
+          notes?: string | null
+          payment?: string
+          pd_method?: string | null
+          pd_result?: string | null
+          prev_lactation_no?: number | null
+          prev_last_calving_date?: string | null
+          semen_breed?: string | null
+          semen_company?: string | null
+          service_id?: string | null
+          sexed?: boolean
+          straw_no?: string | null
+          technician?: string | null
+          technician_phone?: string | null
+          twins?: boolean
+          updated_at?: string
+          void_reason?: string | null
+          voided?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dairy_breeding_events_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "dairy_animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "v_dairy_repro_status"
+            referencedColumns: ["animal_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_calf_animal_id_fkey"
+            columns: ["calf_animal_id"]
+            isOneToOne: false
+            referencedRelation: "dairy_animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_calf_animal_id_fkey"
+            columns: ["calf_animal_id"]
+            isOneToOne: false
+            referencedRelation: "v_dairy_repro_status"
+            referencedColumns: ["animal_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "dairy_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_milk_supplier"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_breeding_events_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "dairy_breeding_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dairy_expenses: {
+        Row: {
+          amount: number
+          animal_id: string | null
+          category: string
+          created_at: string
+          created_by: string | null
+          expense_date: string
+          farmer_id: string
+          id: string
+          note: string | null
+          paid_to: string | null
+          payment: string
+          qty: number | null
+          rate: number | null
+          source: string
+          source_ref: string | null
+          sub_type: string | null
+          unit: string | null
+          updated_at: string
+          void_reason: string | null
+          voided: boolean
+        }
+        Insert: {
+          amount: number
+          animal_id?: string | null
+          category: string
+          created_at?: string
+          created_by?: string | null
+          expense_date?: string
+          farmer_id: string
+          id?: string
+          note?: string | null
+          paid_to?: string | null
+          payment?: string
+          qty?: number | null
+          rate?: number | null
+          source?: string
+          source_ref?: string | null
+          sub_type?: string | null
+          unit?: string | null
+          updated_at?: string
+          void_reason?: string | null
+          voided?: boolean
+        }
+        Update: {
+          amount?: number
+          animal_id?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          expense_date?: string
+          farmer_id?: string
+          id?: string
+          note?: string | null
+          paid_to?: string | null
+          payment?: string
+          qty?: number | null
+          rate?: number | null
+          source?: string
+          source_ref?: string | null
+          sub_type?: string | null
+          unit?: string | null
+          updated_at?: string
+          void_reason?: string | null
+          voided?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dairy_expenses_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "dairy_animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "v_dairy_repro_status"
+            referencedColumns: ["animal_id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_milk_supplier"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_expenses_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      dairy_health_event_animals: {
+        Row: {
+          animal_id: string
+          event_id: string
+          farmer_id: string
+        }
+        Insert: {
+          animal_id: string
+          event_id: string
+          farmer_id: string
+        }
+        Update: {
+          animal_id?: string
+          event_id?: string
+          farmer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dairy_health_event_animals_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "dairy_animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "v_dairy_repro_status"
+            referencedColumns: ["animal_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "dairy_health_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_milk_supplier"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_event_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      dairy_health_events: {
+        Row: {
+          animal_id: string | null
+          cost: number | null
+          created_at: string
+          created_by: string | null
+          diagnosis: string | null
+          dose: string | null
+          event_date: string
+          expense_id: string | null
+          farmer_id: string
+          id: string
+          kind: string
+          last_dose_date: string | null
+          medicine: string | null
+          next_due: string | null
+          notes: string | null
+          payment: string
+          updated_at: string
+          vaccine_code: string | null
+          vet_name: string | null
+          void_reason: string | null
+          voided: boolean
+          withdrawal_days: number
+          withdrawal_until: string | null
+        }
+        Insert: {
+          animal_id?: string | null
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          diagnosis?: string | null
+          dose?: string | null
+          event_date?: string
+          expense_id?: string | null
+          farmer_id: string
+          id?: string
+          kind: string
+          last_dose_date?: string | null
+          medicine?: string | null
+          next_due?: string | null
+          notes?: string | null
+          payment?: string
+          updated_at?: string
+          vaccine_code?: string | null
+          vet_name?: string | null
+          void_reason?: string | null
+          voided?: boolean
+          withdrawal_days?: number
+          withdrawal_until?: string | null
+        }
+        Update: {
+          animal_id?: string | null
+          cost?: number | null
+          created_at?: string
+          created_by?: string | null
+          diagnosis?: string | null
+          dose?: string | null
+          event_date?: string
+          expense_id?: string | null
+          farmer_id?: string
+          id?: string
+          kind?: string
+          last_dose_date?: string | null
+          medicine?: string | null
+          next_due?: string | null
+          notes?: string | null
+          payment?: string
+          updated_at?: string
+          vaccine_code?: string | null
+          vet_name?: string | null
+          void_reason?: string | null
+          voided?: boolean
+          withdrawal_days?: number
+          withdrawal_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dairy_health_events_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "dairy_animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "v_dairy_repro_status"
+            referencedColumns: ["animal_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "dairy_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_milk_supplier"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_health_events_vaccine_code_fkey"
+            columns: ["vaccine_code"]
+            isOneToOne: false
+            referencedRelation: "dairy_vaccine_schedule"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      dairy_income: {
+        Row: {
+          amount: number
+          animal_id: string | null
+          buyer: string | null
+          created_at: string
+          created_by: string | null
+          farmer_id: string
+          id: string
+          income_date: string
+          kind: string
+          note: string | null
+          qty: number | null
+          rate: number | null
+          updated_at: string
+          void_reason: string | null
+          voided: boolean
+        }
+        Insert: {
+          amount: number
+          animal_id?: string | null
+          buyer?: string | null
+          created_at?: string
+          created_by?: string | null
+          farmer_id: string
+          id?: string
+          income_date?: string
+          kind: string
+          note?: string | null
+          qty?: number | null
+          rate?: number | null
+          updated_at?: string
+          void_reason?: string | null
+          voided?: boolean
+        }
+        Update: {
+          amount?: number
+          animal_id?: string | null
+          buyer?: string | null
+          created_at?: string
+          created_by?: string | null
+          farmer_id?: string
+          id?: string
+          income_date?: string
+          kind?: string
+          note?: string | null
+          qty?: number | null
+          rate?: number | null
+          updated_at?: string
+          void_reason?: string | null
+          voided?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dairy_income_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "dairy_animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_income_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "v_dairy_repro_status"
+            referencedColumns: ["animal_id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_milk_supplier"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_income_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      dairy_milk_yields: {
+        Row: {
+          animal_id: string
+          created_at: string
+          created_by: string | null
+          farmer_id: string
+          fat: number | null
+          id: string
+          liters: number
+          note: string | null
+          shift: string
+          snf: number | null
+          updated_at: string
+          withheld: boolean
+          yield_date: string
+        }
+        Insert: {
+          animal_id: string
+          created_at?: string
+          created_by?: string | null
+          farmer_id: string
+          fat?: number | null
+          id?: string
+          liters: number
+          note?: string | null
+          shift: string
+          snf?: number | null
+          updated_at?: string
+          withheld?: boolean
+          yield_date?: string
+        }
+        Update: {
+          animal_id?: string
+          created_at?: string
+          created_by?: string | null
+          farmer_id?: string
+          fat?: number | null
+          id?: string
+          liters?: number
+          note?: string | null
+          shift?: string
+          snf?: number | null
+          updated_at?: string
+          withheld?: boolean
+          yield_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dairy_milk_yields_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "dairy_animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "v_dairy_repro_status"
+            referencedColumns: ["animal_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_milk_supplier"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      dairy_reminders: {
+        Row: {
+          animal_id: string | null
+          created_on: string
+          due_date: string
+          farmer_id: string
+          id: string
+          seen_at: string | null
+          task: string
+          task_key: string
+        }
+        Insert: {
+          animal_id?: string | null
+          created_on?: string
+          due_date: string
+          farmer_id: string
+          id?: string
+          seen_at?: string | null
+          task: string
+          task_key: string
+        }
+        Update: {
+          animal_id?: string | null
+          created_on?: string
+          due_date?: string
+          farmer_id?: string
+          id?: string
+          seen_at?: string | null
+          task?: string
+          task_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dairy_reminders_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "dairy_animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "v_dairy_repro_status"
+            referencedColumns: ["animal_id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_milk_supplier"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_reminders_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      dairy_task_state: {
+        Row: {
+          farmer_id: string
+          reason: string | null
+          snooze_until: string | null
+          state: string
+          task_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          farmer_id: string
+          reason?: string | null
+          snooze_until?: string | null
+          state: string
+          task_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          farmer_id?: string
+          reason?: string | null
+          snooze_until?: string | null
+          state?: string
+          task_key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_milk_supplier"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_task_state_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      dairy_vaccine_schedule: {
+        Row: {
+          code: string
+          interval_months: number | null
+          min_age_months: number
+          name_en: string
+          name_rm: string
+          name_ur: string
+          season_hint: string | null
+          species: string[]
+        }
+        Insert: {
+          code: string
+          interval_months?: number | null
+          min_age_months?: number
+          name_en: string
+          name_rm: string
+          name_ur: string
+          season_hint?: string | null
+          species?: string[]
+        }
+        Update: {
+          code?: string
+          interval_months?: number | null
+          min_age_months?: number
+          name_en?: string
+          name_rm?: string
+          name_ur?: string
+          season_hint?: string | null
+          species?: string[]
+        }
+        Relationships: []
       }
       dashboard_features: {
         Row: {
@@ -10290,6 +12739,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dealer_inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -10671,6 +13127,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demand_procurement_plans_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -11908,6 +14371,7 @@ export type Database = {
           campaign_id: string | null
           category: string | null
           created_at: string
+          custom_request_id: string | null
           decided_at: string | null
           decided_by: string | null
           farmer_id: string
@@ -11945,6 +14409,7 @@ export type Database = {
           campaign_id?: string | null
           category?: string | null
           created_at?: string
+          custom_request_id?: string | null
           decided_at?: string | null
           decided_by?: string | null
           farmer_id: string
@@ -11982,6 +14447,7 @@ export type Database = {
           campaign_id?: string | null
           category?: string | null
           created_at?: string
+          custom_request_id?: string | null
           decided_at?: string | null
           decided_by?: string | null
           farmer_id?: string
@@ -12039,6 +14505,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "booking_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farmer_product_demands_custom_request_id_fkey"
+            columns: ["custom_request_id"]
+            isOneToOne: false
+            referencedRelation: "custom_product_requests"
             referencedColumns: ["id"]
           },
           {
@@ -12228,6 +14701,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farmer_product_demands_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -15329,6 +17809,13 @@ export type Database = {
             foreignKeyName: "grain_type_products_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grain_type_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -15609,6 +18096,389 @@ export type Database = {
           },
         ]
       }
+      hr_meeting_action_items: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string
+          id: string
+          meeting_id: string
+          owner_id: string
+          postponed_count: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          id?: string
+          meeting_id: string
+          owner_id: string
+          postponed_count?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          meeting_id?: string
+          owner_id?: string
+          postponed_count?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_meeting_action_items_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "hr_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_meeting_action_items_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "v_hr_meeting_flags"
+            referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "hr_meeting_action_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_meeting_action_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      hr_meeting_attendees: {
+        Row: {
+          attended: boolean | null
+          meeting_id: string
+          profile_id: string
+          response: string
+        }
+        Insert: {
+          attended?: boolean | null
+          meeting_id: string
+          profile_id: string
+          response?: string
+        }
+        Update: {
+          attended?: boolean | null
+          meeting_id?: string
+          profile_id?: string
+          response?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_meeting_attendees_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "hr_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_meeting_attendees_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "v_hr_meeting_flags"
+            referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "hr_meeting_attendees_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_meeting_attendees_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
+      hr_meeting_decisions: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          meeting_id: string
+          recorded_by: string | null
+          seq: number
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          meeting_id: string
+          recorded_by?: string | null
+          seq?: number
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          meeting_id?: string
+          recorded_by?: string | null
+          seq?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_meeting_decisions_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "hr_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_meeting_decisions_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "v_hr_meeting_flags"
+            referencedColumns: ["meeting_id"]
+          },
+        ]
+      }
+      hr_meeting_reschedules: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          id: string
+          meeting_id: string
+          new_starts_at: string
+          old_starts_at: string
+          reason: string | null
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          meeting_id: string
+          new_starts_at: string
+          old_starts_at: string
+          reason?: string | null
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          id?: string
+          meeting_id?: string
+          new_starts_at?: string
+          old_starts_at?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_meeting_reschedules_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "hr_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_meeting_reschedules_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "v_hr_meeting_flags"
+            referencedColumns: ["meeting_id"]
+          },
+        ]
+      }
+      hr_meetings: {
+        Row: {
+          agenda: string | null
+          created_at: string
+          created_by: string | null
+          duration_min: number
+          external_event_id: string | null
+          id: string
+          location: string | null
+          meet_provider: string
+          meet_url: string | null
+          minutes: string | null
+          organizer_id: string
+          parent_meeting_id: string | null
+          reschedule_count: number
+          series_id: string | null
+          starts_at: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          agenda?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_min?: number
+          external_event_id?: string | null
+          id?: string
+          location?: string | null
+          meet_provider?: string
+          meet_url?: string | null
+          minutes?: string | null
+          organizer_id: string
+          parent_meeting_id?: string | null
+          reschedule_count?: number
+          series_id?: string | null
+          starts_at: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          agenda?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_min?: number
+          external_event_id?: string | null
+          id?: string
+          location?: string | null
+          meet_provider?: string
+          meet_url?: string | null
+          minutes?: string | null
+          organizer_id?: string
+          parent_meeting_id?: string | null
+          reschedule_count?: number
+          series_id?: string | null
+          starts_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_meetings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_meetings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "hr_meetings_organizer_id_fkey"
+            columns: ["organizer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_meetings_organizer_id_fkey"
+            columns: ["organizer_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "hr_meetings_parent_meeting_id_fkey"
+            columns: ["parent_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "hr_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_meetings_parent_meeting_id_fkey"
+            columns: ["parent_meeting_id"]
+            isOneToOne: false
+            referencedRelation: "v_hr_meeting_flags"
+            referencedColumns: ["meeting_id"]
+          },
+        ]
+      }
+      hr_notifications: {
+        Row: {
+          action_item_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          meeting_id: string | null
+          read_at: string | null
+          recipient_id: string
+          title: string
+        }
+        Insert: {
+          action_item_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          meeting_id?: string | null
+          read_at?: string | null
+          recipient_id: string
+          title: string
+        }
+        Update: {
+          action_item_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          meeting_id?: string | null
+          read_at?: string | null
+          recipient_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_notifications_action_item_id_fkey"
+            columns: ["action_item_id"]
+            isOneToOne: false
+            referencedRelation: "hr_meeting_action_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_notifications_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "hr_meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_notifications_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "v_hr_meeting_flags"
+            referencedColumns: ["meeting_id"]
+          },
+          {
+            foreignKeyName: "hr_notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_notifications_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+        ]
+      }
       hr_payroll_settings: {
         Row: {
           advance_cap_pct: number | null
@@ -15839,6 +18709,13 @@ export type Database = {
             foreignKeyName: "inventory_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -15995,6 +18872,13 @@ export type Database = {
             columns: ["linked_product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "investment_deals_linked_product_id_fkey"
+            columns: ["linked_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -23477,6 +26361,111 @@ export type Database = {
         }
         Relationships: []
       }
+      portal_account_actions: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          error: string | null
+          id: string
+          ok: boolean
+          reason: string
+          target_label: string | null
+          target_user_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          ok?: boolean
+          reason: string
+          target_label?: string | null
+          target_user_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          ok?: boolean
+          reason?: string
+          target_label?: string | null
+          target_user_id?: string
+        }
+        Relationships: []
+      }
+      portal_account_delete_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          reason: string
+          requested_by: string
+          status: string
+          target_label: string | null
+          target_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          reason: string
+          requested_by: string
+          status?: string
+          target_label?: string | null
+          target_user_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          reason?: string
+          requested_by?: string
+          status?: string
+          target_label?: string | null
+          target_user_id?: string
+        }
+        Relationships: []
+      }
+      portal_whatsapp_sends: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          phone: string | null
+          sent_by: string
+          status: string
+          target_user_id: string
+          template: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          phone?: string | null
+          sent_by: string
+          status: string
+          target_user_id: string
+          template?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          phone?: string | null
+          sent_by?: string
+          status?: string
+          target_user_id?: string
+          template?: string | null
+        }
+        Relationships: []
+      }
       pos_cash_outs: {
         Row: {
           amount: number
@@ -24041,6 +27030,13 @@ export type Database = {
             foreignKeyName: "pos_return_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_return_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -24350,6 +27346,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -25129,6 +28132,13 @@ export type Database = {
             foreignKeyName: "product_costing_overrides_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: true
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_costing_overrides_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -25230,6 +28240,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_edit_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -25363,6 +28380,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_image_drafts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -25644,6 +28668,13 @@ export type Database = {
             foreignKeyName: "product_intake_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_intake_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -25815,6 +28846,13 @@ export type Database = {
             foreignKeyName: "product_merge_requests_source_product_id_fkey"
             columns: ["source_product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -25879,6 +28917,13 @@ export type Database = {
             columns: ["target_product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_merge_requests_target_product_id_fkey"
+            columns: ["target_product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -25991,6 +29036,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_name_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -26155,6 +29207,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -26341,6 +29400,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_trade_rate_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -26918,6 +29984,13 @@ export type Database = {
             foreignKeyName: "purchase_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -27097,6 +30170,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_returns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -29152,6 +32232,13 @@ export type Database = {
             foreignKeyName: "sale_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -29678,6 +32765,327 @@ export type Database = {
         }
         Relationships: []
       }
+      season_import_batches: {
+        Row: {
+          campaign_id: string
+          committed_at: string | null
+          committed_by: string | null
+          created_at: string
+          created_by: string | null
+          error_rows: number
+          file_name: string | null
+          id: string
+          ok_rows: number
+          organization_id: string | null
+          status: string
+          total_rows: number
+          warning_rows: number
+        }
+        Insert: {
+          campaign_id: string
+          committed_at?: string | null
+          committed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_rows?: number
+          file_name?: string | null
+          id?: string
+          ok_rows?: number
+          organization_id?: string | null
+          status?: string
+          total_rows?: number
+          warning_rows?: number
+        }
+        Update: {
+          campaign_id?: string
+          committed_at?: string | null
+          committed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_rows?: number
+          file_name?: string | null
+          id?: string
+          ok_rows?: number
+          organization_id?: string | null
+          status?: string
+          total_rows?: number
+          warning_rows?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_import_batches_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "booking_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_import_batches_committed_by_fkey"
+            columns: ["committed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_import_batches_committed_by_fkey"
+            columns: ["committed_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "season_import_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_import_batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_cash_custody"
+            referencedColumns: ["profile_id"]
+          },
+          {
+            foreignKeyName: "season_import_batches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      season_import_rows: {
+        Row: {
+          batch_id: string
+          farmer_id: string | null
+          id: string
+          messages: string[]
+          product_id: string | null
+          raw: Json
+          result: string
+          row_no: number
+        }
+        Insert: {
+          batch_id: string
+          farmer_id?: string | null
+          id?: string
+          messages?: string[]
+          product_id?: string | null
+          raw: Json
+          result: string
+          row_no: number
+        }
+        Update: {
+          batch_id?: string
+          farmer_id?: string | null
+          id?: string
+          messages?: string[]
+          product_id?: string | null
+          raw?: Json
+          result?: string
+          row_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "season_import_rows_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "season_import_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_milk_supplier"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_costing_with_override"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_product_setup_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_missing_image"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_trade_rate_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_products_wholesale_baqi"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_reorder_suggestions"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "season_import_rows_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_shop_replenishment"
+            referencedColumns: ["product_id"]
+          },
+        ]
+      }
       service_categories: {
         Row: {
           category: string
@@ -29999,6 +33407,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_product_cycles_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -32007,6 +35422,13 @@ export type Database = {
             foreignKeyName: "stock_batches_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_batches_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -32397,6 +35819,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_count_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -32803,6 +36232,13 @@ export type Database = {
             foreignKeyName: "stock_loss_records_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_loss_records_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -33141,6 +36577,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -33740,6 +37183,13 @@ export type Database = {
             foreignKeyName: "supplier_bill_lines_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bill_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -34279,6 +37729,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_product_aliases_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -36335,6 +39792,13 @@ export type Database = {
             foreignKeyName: "cycle_count_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cycle_count_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -36591,6 +40055,13 @@ export type Database = {
             foreignKeyName: "supplier_bill_lines_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bill_lines_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -36680,6 +40151,13 @@ export type Database = {
             foreignKeyName: "farmer_product_demands_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farmer_product_demands_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -36738,6 +40216,26 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_shop_replenishment"
             referencedColumns: ["product_id"]
+          },
+        ]
+      }
+      v_campaign_products: {
+        Row: {
+          category_id: string | null
+          category_name: string | null
+          id: string | null
+          line_kind: string | null
+          name: string | null
+          pack_size: string | null
+          unit: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -36969,6 +40467,414 @@ export type Database = {
           village: string | null
         }
         Relationships: []
+      }
+      v_dairy_animal_daily: {
+        Row: {
+          am: number | null
+          animal_id: string | null
+          farmer_id: string | null
+          pm: number | null
+          total: number | null
+          yield_date: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dairy_milk_yields_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "dairy_animals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_animal_id_fkey"
+            columns: ["animal_id"]
+            isOneToOne: false
+            referencedRelation: "v_dairy_repro_status"
+            referencedColumns: ["animal_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_milk_supplier"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      v_dairy_herd_daily: {
+        Row: {
+          am: number | null
+          animals: number | null
+          farmer_id: string | null
+          pm: number | null
+          total: number | null
+          yield_date: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_milk_supplier"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_milk_yields_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
+      }
+      v_dairy_repro_status: {
+        Row: {
+          animal_id: string | null
+          days_pregnant: number | null
+          dim: number | null
+          dob: string | null
+          dried: boolean | null
+          dry_off_due: string | null
+          expected_calving: string | null
+          farmer_id: string | null
+          gestation_days: number | null
+          lactation_no: number | null
+          last_calving_date: string | null
+          last_close: string | null
+          last_heat: string | null
+          last_service_date: string | null
+          last_service_id: string | null
+          name: string | null
+          next_heat: string | null
+          pd_from: string | null
+          pd_pending: boolean | null
+          pd_to: string | null
+          preg_service_date: string | null
+          preg_service_id: string | null
+          pregnant: boolean | null
+          repeat_breeder: boolean | null
+          services_lactation: number | null
+          species: string | null
+          status: string | null
+          tag_no: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmer_credit_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "farmers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "grain_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "milk_farmer_balances"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_crop_lift_trace"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farm_map"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_combined_balance"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_farmer_milk_supplier"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_grain_leads_from_machinery"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_control_all"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_statement"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_farmer_status"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_due"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_payment_receipts"
+            referencedColumns: ["farmer_id"]
+          },
+          {
+            foreignKeyName: "dairy_animals_farmer_id_fkey"
+            columns: ["farmer_id"]
+            isOneToOne: false
+            referencedRelation: "v_machinery_vendor_collection_claims"
+            referencedColumns: ["farmer_id"]
+          },
+        ]
       }
       v_error_summary: {
         Row: {
@@ -37217,6 +41123,48 @@ export type Database = {
         }
         Relationships: []
       }
+      v_hr_meeting_flags: {
+        Row: {
+          decisions: number | null
+          flag_no_decision: boolean | null
+          flag_rescheduled: boolean | null
+          max_postponed: number | null
+          meeting_id: string | null
+          open_actions: number | null
+          overdue_actions: number | null
+          reschedule_count: number | null
+          starts_at: string | null
+          status: string | null
+          title: string | null
+        }
+        Insert: {
+          decisions?: never
+          flag_no_decision?: never
+          flag_rescheduled?: never
+          max_postponed?: never
+          meeting_id?: string | null
+          open_actions?: never
+          overdue_actions?: never
+          reschedule_count?: number | null
+          starts_at?: string | null
+          status?: string | null
+          title?: string | null
+        }
+        Update: {
+          decisions?: never
+          flag_no_decision?: never
+          flag_rescheduled?: never
+          max_postponed?: never
+          meeting_id?: string | null
+          open_actions?: never
+          overdue_actions?: never
+          reschedule_count?: number | null
+          starts_at?: string | null
+          status?: string | null
+          title?: string | null
+        }
+        Relationships: []
+      }
       v_inventory_balance_check: {
         Row: {
           asal_hisaab: number | null
@@ -37242,6 +41190,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -40522,6 +44477,13 @@ export type Database = {
             foreignKeyName: "pos_sale_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sale_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -40619,6 +44581,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_batches_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "v_campaign_products"
             referencedColumns: ["id"]
           },
           {
@@ -41507,6 +45476,13 @@ export type Database = {
             foreignKeyName: "inventory_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_campaign_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_product_costing"
             referencedColumns: ["product_id"]
           },
@@ -41725,6 +45701,63 @@ export type Database = {
           severity: string
         }[]
       }
+      fn_admin_breeding_totals: {
+        Args: { p_as_of: string }
+        Returns: {
+          animals: number
+          bq_pct: number
+          calvings_30: number
+          conception_pct: number
+          customer_name: string
+          farmer_code: string
+          farmer_id: string
+          fmd_missing: number
+          fmd_pct: number
+          full_name: string
+          hs_pct: number
+          lsd_pct: number
+          overdue: number
+          pregnant: number
+          services_known: number
+          vets_cost: number
+          village: string
+          withheld: number
+        }[]
+      }
+      fn_admin_breeding_upcoming: {
+        Args: { p_as_of: string; p_days: number }
+        Returns: {
+          animal_name: string
+          expected_calving: string
+          farmer_code: string
+          farmer_id: string
+          full_name: string
+          tag_no: string
+        }[]
+      }
+      fn_admin_customer_portal: { Args: never; Returns: Json }
+      fn_admin_dairy_farmer: {
+        Args: { p_farmer: string; p_from: string; p_to: string }
+        Returns: Json
+      }
+      fn_admin_dairy_totals: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          animals: number
+          centre_litres: number
+          cost_per_litre: number
+          customer_name: string
+          expense: number
+          farmer_code: string
+          farmer_id: string
+          full_name: string
+          income: number
+          litres: number
+          milking: number
+          profit: number
+          village: string
+        }[]
+      }
       fn_ai_daily_stock_alert: { Args: never; Returns: undefined }
       fn_apply_bill_line_rate: { Args: { p_line_id: string }; Returns: Json }
       fn_apply_role_template: {
@@ -41907,6 +45940,36 @@ export type Database = {
         Args: { p_line_id: string; p_new_unit_cost: number; p_note: string }
         Returns: undefined
       }
+      fn_cp_approve: {
+        Args: { p_finance_account?: string; p_id: string; p_kind: string }
+        Returns: Json
+      }
+      fn_cp_check: {
+        Args: { p_id: string; p_kind: string; p_note?: string }
+        Returns: undefined
+      }
+      fn_cp_code: { Args: { p: string }; Returns: string }
+      fn_cp_dispute_update: {
+        Args: { p_id: string; p_note: string; p_status: string }
+        Returns: undefined
+      }
+      fn_cp_folder_customer: { Args: { p_name: string }; Returns: string }
+      fn_cp_is_admin: { Args: never; Returns: boolean }
+      fn_cp_mask_cnic: { Args: { p: string }; Returns: string }
+      fn_cp_mask_phone: { Args: { p: string }; Returns: string }
+      fn_cp_my_customers: { Args: never; Returns: string[] }
+      fn_cp_pick_customer: { Args: { p_customer: string }; Returns: string }
+      fn_cp_queue: { Args: never; Returns: Json }
+      fn_cp_rate_ok: { Args: { p_table: string }; Returns: undefined }
+      fn_cp_reject: {
+        Args: { p_id: string; p_kind: string; p_reason: string }
+        Returns: undefined
+      }
+      fn_cp_row: {
+        Args: { p_id: string; p_kind: string }
+        Returns: Record<string, unknown>
+      }
+      fn_cp_staff_can: { Args: { p_customer: string }; Returns: boolean }
       fn_create_farmer_loan_atomic: {
         Args: {
           p_client_action_id?: string
@@ -41990,6 +46053,96 @@ export type Database = {
           oldest_days: number
           oldest_unpaid_date: string
         }[]
+      }
+      fn_dairy_add_from_shop: { Args: { p_item: string }; Returns: string }
+      fn_dairy_bulk_milk: {
+        Args: { p_date: string; p_rows: Json; p_shift: string }
+        Returns: number
+      }
+      fn_dairy_centre_for: {
+        Args: { p_farmer: string; p_from: string; p_to: string }
+        Returns: {
+          litres: number
+          paid: number
+          value: number
+        }[]
+      }
+      fn_dairy_coverage_for: {
+        Args: { p_as_of: string; p_farmer: string }
+        Returns: {
+          code: string
+          covered: number
+          eligible: number
+          last_date: string
+          next_due: string
+        }[]
+      }
+      fn_dairy_due_tasks_for: {
+        Args: { p_as_of: string; p_days: number; p_farmer: string }
+        Returns: {
+          animal_id: string
+          animal_name: string
+          due_date: string
+          info: Json
+          severity: string
+          tag_no: string
+          task: string
+          task_key: string
+          until_date: string
+        }[]
+      }
+      fn_dairy_event_cost: {
+        Args: {
+          p_animal: string
+          p_cost: number
+          p_date: string
+          p_event: string
+          p_farmer: string
+          p_link: string
+          p_note: string
+          p_payment: string
+          p_source: string
+          p_voided: boolean
+        }
+        Returns: string
+      }
+      fn_dairy_gestation_days: { Args: { p_species: string }; Returns: number }
+      fn_dairy_is_admin: { Args: never; Returns: boolean }
+      fn_dairy_my_farmer_id: { Args: never; Returns: string }
+      fn_dairy_open_pregnancy: { Args: { p_animal: string }; Returns: string }
+      fn_dairy_pnl_for: {
+        Args: {
+          p_farmer: string
+          p_from: string
+          p_group?: string
+          p_to: string
+        }
+        Returns: Json
+      }
+      fn_dairy_record_calving: {
+        Args: {
+          p_animal: string
+          p_calf: Json
+          p_date: string
+          p_ease: string
+          p_notes?: string
+          p_service: string
+        }
+        Returns: string
+      }
+      fn_dairy_reminder_sweep: { Args: never; Returns: number }
+      fn_dairy_reminders_seen: { Args: never; Returns: number }
+      fn_dairy_shop_category: {
+        Args: { p_category: string; p_name: string; p_shop_type: string }
+        Returns: string
+      }
+      fn_dairy_task_set: {
+        Args: { p_key: string; p_reason?: string; p_state: string }
+        Returns: undefined
+      }
+      fn_dairy_withheld_until: {
+        Args: { p_animal: string; p_on: string }
+        Returns: string
       }
       fn_data_health_scan: {
         Args: never
@@ -42128,6 +46281,12 @@ export type Database = {
           remaining_days: number
         }[]
       }
+      fn_hr_meeting_is_organizer: {
+        Args: { p_meeting: string }
+        Returns: boolean
+      }
+      fn_hr_meeting_visible: { Args: { p_meeting: string }; Returns: boolean }
+      fn_hr_meetings_full_access: { Args: never; Returns: boolean }
       fn_hr_needs_attention: {
         Args: never
         Returns: {
@@ -42212,7 +46371,21 @@ export type Database = {
       }
       fn_is_admin_level: { Args: never; Returns: boolean }
       fn_is_any_staff: { Args: never; Returns: boolean }
+      fn_is_portal_admin: { Args: never; Returns: boolean }
       fn_is_staff: { Args: { p_user_id: string }; Returns: boolean }
+      fn_khata_lines_for: {
+        Args: { p_customers: string[]; p_farmer: string }
+        Returns: {
+          category: string
+          credit: number
+          debit: number
+          entry_date: string
+          kind: string
+          ref: string
+          tafseel: string
+          txn_at: string
+        }[]
+      }
       fn_leave_entitlement: {
         Args: { p_profile: string; p_year: number }
         Returns: {
@@ -42273,6 +46446,124 @@ export type Database = {
       fn_merge_duplicate_product: {
         Args: { p_source_id: string; p_target_id: string }
         Returns: undefined
+      }
+      fn_my_bills: {
+        Args: { p_from?: string; p_limit?: number; p_to?: string }
+        Returns: Json
+      }
+      fn_my_centre_milk_income: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          litres: number
+          paid: number
+          value: number
+        }[]
+      }
+      fn_my_customer_profile: { Args: never; Returns: Json }
+      fn_my_dairy_pnl: {
+        Args: { p_from: string; p_group?: string; p_to: string }
+        Returns: Json
+      }
+      fn_my_due_tasks: {
+        Args: { p_days?: number }
+        Returns: {
+          animal_id: string
+          animal_name: string
+          due_date: string
+          info: Json
+          severity: string
+          tag_no: string
+          task: string
+          task_key: string
+          until_date: string
+        }[]
+      }
+      fn_my_khata_scope: { Args: never; Returns: Record<string, unknown> }
+      fn_my_khata_statement: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          adaigi: number
+          baqaya: number
+          category: string
+          entry_date: string
+          is_opening: boolean
+          kind: string
+          ref: string
+          tafseel: string
+          udhaar: number
+        }[]
+      }
+      fn_my_khata_summary: { Args: { p_as_of?: string }; Returns: Json }
+      fn_my_milk_collection: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          am: number
+          entry_date: string
+          pm: number
+          total: number
+        }[]
+      }
+      fn_my_open_dispute: {
+        Args: { p_customer?: string; p_message: string; p_ref?: string }
+        Returns: string
+      }
+      fn_my_orders: { Args: { p_limit?: number }; Returns: Json }
+      fn_my_payments: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: Json
+      }
+      fn_my_promises: { Args: never; Returns: Json }
+      fn_my_request_change: {
+        Args: { p_customer?: string; p_field: string; p_new_value: string }
+        Returns: string
+      }
+      fn_my_request_promise: {
+        Args: {
+          p_accept: boolean
+          p_amount: number
+          p_customer?: string
+          p_promise_date: string
+          p_terms_version: string
+        }
+        Returns: string
+      }
+      fn_my_requests: { Args: never; Returns: Json }
+      fn_my_returns: { Args: never; Returns: Json }
+      fn_my_shop_dairy_suggestions: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          added: boolean
+          amount: number
+          category: string
+          item_id: string
+          product: string
+          qty: number
+          rate: number
+          ref: string
+          sale_date: string
+        }[]
+      }
+      fn_my_submit_payment_claim: {
+        Args: {
+          p_amount: number
+          p_customer?: string
+          p_method: string
+          p_note?: string
+          p_paid_on: string
+          p_proof_path?: string
+          p_reference?: string
+        }
+        Returns: string
+      }
+      fn_my_vaccine_coverage: {
+        Args: never
+        Returns: {
+          code: string
+          covered: number
+          eligible: number
+          last_date: string
+          next_due: string
+        }[]
       }
       fn_next_access_request_number: { Args: never; Returns: string }
       fn_next_asset_code: { Args: never; Returns: string }
@@ -42457,6 +46748,28 @@ export type Database = {
           revenue: number
         }[]
       }
+      fn_portal_accounts: {
+        Args: never
+        Returns: {
+          auth_phone: string
+          banned_until: string
+          created_at: string
+          has_profile: boolean
+          last_sign_in_at: string
+          last_whatsapp_at: string
+          login_email: string
+          pending_delete_by: string
+          pending_delete_id: string
+          profile_active: boolean
+          record_code: string
+          record_id: string
+          record_name: string
+          record_phone: string
+          record_type: string
+          role: string
+          user_id: string
+        }[]
+      }
       fn_pos_return: {
         Args: { p_manager_code: string; p_reason: string; p_sale_id: string }
         Returns: string
@@ -42510,6 +46823,7 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_product_line_kind: { Args: { p_category_id: string }; Returns: string }
       fn_profile_seed_for_user: {
         Args: { p_user: string }
         Returns: {
@@ -42816,6 +47130,10 @@ export type Database = {
           p_txn: string
         }
         Returns: undefined
+      }
+      fn_staff_seed_animals_from_cow_count: {
+        Args: { p_farmer: string }
+        Returns: number
       }
       fn_staff_service_start: { Args: { p_profile: string }; Returns: string }
       fn_stock_count_mere_godam: {
