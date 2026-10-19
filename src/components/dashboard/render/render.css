@@ -1,0 +1,29 @@
+/* Render-style "New look" owner dashboard. Animates only transform/opacity/filter/stroke-dashoffset. */
+.rd-root { position: relative; isolation: isolate; }
+.rd-aurora { position: absolute; inset: -40px 0 auto 0; height: 520px; z-index: -1; pointer-events: none; overflow: hidden; opacity: .16; }
+.dark .rd-aurora { opacity: .45; }
+.rd-aurora i { position: absolute; width: 420px; height: 420px; border-radius: 50%; filter: blur(80px); will-change: transform; animation: rd-drift 14s ease-in-out infinite alternate; }
+.rd-aurora i:nth-child(1) { left: 5%; top: 0; background: #10b981; }
+.rd-aurora i:nth-child(2) { left: 40%; top: -60px; background: #6366f1; animation-delay: -5s; }
+.rd-aurora i:nth-child(3) { right: 5%; top: 40px; background: #0ea5e9; animation-delay: -9s; }
+@keyframes rd-drift { from { transform: translate3d(0,0,0) scale(1); } to { transform: translate3d(60px,40px,0) scale(1.15); } }
+.rd-card { border-radius: 18px; border: 1px solid rgba(148,163,184,.25); background: rgba(255,255,255,.82); box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 8px 24px -12px rgba(15,23,42,.12); backdrop-filter: blur(10px); }
+.dark .rd-card { background: rgba(15,23,42,.72); border-color: rgba(51,65,85,.7); box-shadow: 0 8px 30px -12px rgba(0,0,0,.6); }
+.rd-in { opacity: 0; animation: rd-focus 700ms cubic-bezier(.2,.7,.2,1) forwards; animation-delay: calc(var(--i, 0) * 80ms); }
+@keyframes rd-focus { from { opacity: 0; filter: blur(14px); transform: translateY(10px) scale(.985); } to { opacity: 1; filter: blur(0); transform: none; } }
+.rd-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: rd-draw 1200ms 250ms cubic-bezier(.2,.7,.2,1) forwards; }
+@keyframes rd-draw { to { stroke-dashoffset: 0; } }
+.rd-fill { opacity: 0; animation: rd-fade 900ms 600ms ease forwards; }
+@keyframes rd-fade { to { opacity: 1; } }
+.rd-bar { transform-origin: left; transform: scaleX(0); animation: rd-grow 1000ms 300ms cubic-bezier(.2,.7,.2,1) forwards; }
+[dir="rtl"] .rd-bar { transform-origin: right; }
+@keyframes rd-grow { to { transform: scaleX(1); } }
+.rd-num { font-variant-numeric: tabular-nums; }
+.rd-hl { background: linear-gradient(transparent 60%, rgba(16,185,129,.28) 0); padding: 0 2px; border-radius: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .rd-aurora i { animation: none; }
+  .rd-in { animation: rd-fade 150ms ease forwards; filter: none; transform: none; }
+  .rd-draw { animation: none; stroke-dashoffset: 0; }
+  .rd-fill { animation: none; opacity: 1; }
+  .rd-bar { animation: none; transform: none; }
+}

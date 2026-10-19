@@ -32,6 +32,9 @@ import { LiveRefresh } from "@/components/live/live-refresh";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { StaffMotivationCard } from "@/components/guided/staff-motivation-card";
+import { RenderOwnerDashboard } from "@/components/dashboard/render/render-owner-dashboard";
+import { LookToggle } from "@/components/dashboard/render/render-islands";
+import { resolveDashLook, DASH_LOOK_COOKIE } from "@/lib/render-dashboard/look";
 
 export const dynamic = "force-dynamic";
 
@@ -112,6 +115,32 @@ export default async function CommandCenterPage({ searchParams }: { searchParams
   const lines = conclude(depts, lang);
   const totals = deptTotals(depts);
 
+  // "New look" (Render) -- sirf toggle par. Default hamesha purana view.
+  // Dono views BILKUL wohi loaded data use karte hain (zero data loss).
+  const look = resolveDashLook(searchParams?.look, (await cookies()).get(DASH_LOOK_COOKIE)?.value);
+  const liveTables = ["pos_sales", "company_expense_requests", "labour_work_entries", "party_settlements", "whatsapp_submissions", "journal_entries", "finance_transactions"];
+  if (look === "new") {
+    return (
+      <RenderOwnerDashboard
+        lang={lang}
+        money={money}
+        depts={depts}
+        alerts={alerts}
+        entityCounts={entityCounts}
+        salesTrend={salesTrend}
+        branchPerformance={branchPerformance}
+        topShops={topShops}
+        lines={lines}
+        totals={totals}
+        liveRefresh={<LiveRefresh tables={liveTables} />}
+        motivation={<StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={me.role} language="ur" />}
+        dailySalesTitle={<>{t("sps_title", lang)}{salesShop ? ` · ${salesShops.find((x) => x.id === salesShop)?.name ?? ""}` : ""}</>}
+        shopSelect={<SalesShopSelect shops={salesShops} current={salesShop} label={t("sps_shop_pick", lang)} allLabel={t("sps_all_shops", lang)} />}
+        dailySales={<DailySalesBreakdown supabase={supabase} scope={{ meriDukan: null, shopId: salesShop, branchId: "" }} tableRange={periodRange("7d")} lang={lang} compact reportHref={salesShop ? `/admin/reports/sales?salesShop=${salesShop}` : "/admin/reports/sales"} />}
+      />
+    );
+  }
+
   const topTiles = [
     { label: "Today Sales", value: rs(money.revenue), href: "/admin/pos", icon: CircleDollarSign, iconClass: "bg-emerald-50 text-emerald-700" },
     { label: "Today Expenses", value: rs(money.expenses), href: "/admin/company-expenses", icon: ReceiptText, iconClass: "bg-rose-50 text-rose-600" },
@@ -138,6 +167,7 @@ export default async function CommandCenterPage({ searchParams }: { searchParams
           <p className="mt-0.5 text-sm text-surface-500">Today&apos;s money, department performance aur zaroori actions — ek nazar mein. Neeche scroll karke poora dashboard dekhein.</p>
         </div>
         <div className="flex items-center gap-2 pt-1">
+          <LookToggle current="old" labels={{ old: lang === "en" ? "Classic" : lang === "ur" ? "پرانا انداز" : "Purana look", new: lang === "en" ? "New look" : lang === "ur" ? "نیا انداز" : "Naya look" }} />
           <Link
             href="/admin/my-home"
             className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-white px-3 py-2 text-xs font-semibold text-brand-800 shadow-sm transition hover:border-brand-400 hover:bg-brand-50 dark:border-surface-700 dark:bg-surface-900 dark:text-brand-300 dark:hover:bg-surface-800"
