@@ -129,6 +129,8 @@ html.dark .pf-panel.pf-navy { --pf-bg: #101f42; }
   .pf-panel > * { flex: none; }
   .pf-panel > .pf-body { flex: 1 1 0%; min-height: 0; overflow: auto; overscroll-behavior: contain; }
   .pf-scroll { min-height: 0; overflow: auto; overscroll-behavior: contain; }
+  /* sr-only (chhupe radio/checkbox) absolute hote hain -- dabba relative na ho to woh poore safhe ko lamba kar dete hain. */
+  .pf-main, .pf-panel, .pf-body, .pf-scroll { position: relative; }
   /* Baqi (abhi na badle) safhon ki lambi tables: apne dabbe mein scroll + sticky sar. */
   .pf-main .rt-wrap { max-height: 68dvh; overflow: auto; }
   /* Panel ke andar table ka apna x-scroll dabba sticky sar tod deta hai -- panel hi scroll kare. */

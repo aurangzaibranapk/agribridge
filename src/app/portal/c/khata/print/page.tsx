@@ -27,12 +27,12 @@ export default async function CustomerStatementPrint({ searchParams }: { searchP
   const c = ctx.profile?.customers[0];
   const period = `${range.from ? longDate(range.from, lang) : L("pc_p_all")} — ${longDate(range.to ?? asOf, lang)}`;
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 print:max-w-none print:p-0">
-      <div className="mb-4 flex items-center justify-between print:hidden">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] px-4 py-6 sm:px-6 print:max-w-none print:p-0 fit:gap-2.5 fit:py-3">
+      <div className="mb-4 flex items-center justify-between print:hidden fit:mb-0">
         <Link href={`/portal/c/khata${qs({})}`} className="text-sm text-surface-500 dark:text-slate-400">← {L("pc_nav_khata")}</Link>
         <PrintButton label={L("pc_btn_pdf")} className="rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white" />
       </div>
-      <div className="rounded-2xl border border-surface-200 bg-white p-6 shadow-sm dark:border-[#1e3160] dark:bg-[#101f42] print:rounded-none print:border-0 print:shadow-none">
+      <div className="pf-panel pf-navy pf-grow rounded-2xl border border-surface-200 bg-white p-6 shadow-sm dark:border-[#1e3160] dark:bg-[#101f42] print:rounded-none print:border-0 print:shadow-none fit:p-4">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-surface-200 pb-4 dark:border-[#1e3160]">
           <div><p className="text-lg font-bold text-surface-900 dark:text-white">Al Rana Traders · AgriBridge</p><p className="text-sm text-surface-500 dark:text-slate-400">{L("pc_khata_title")}</p></div>
           <div className="text-end text-sm">
@@ -41,13 +41,13 @@ export default async function CustomerStatementPrint({ searchParams }: { searchP
             <p className="text-surface-500 dark:text-slate-400">{period}</p>
           </div>
         </div>
-        <div className="my-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+        <div className="my-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4 fit:my-2.5">
           {([["pc_opening", totals.opening], ["pc_debit", totals.udhaar], ["pc_credit", totals.adaigi], ["pc_closing", totals.closing]] as const).map(([k, v]) => (
             <div key={k} className="rounded-xl bg-surface-50 p-3 dark:bg-[#0d1a3a]"><p className="text-xs text-surface-500 dark:text-slate-400">{L(k)}</p><p className="font-bold text-surface-900 dark:text-white">{rs(v)}</p></div>
           ))}
         </div>
-        <StatementTable rows={rows} totals={totals} lang={lang} year={0} compact />
-        <p className="mt-6 border-t border-surface-200 pt-3 text-[11px] text-surface-500 dark:border-[#1e3160] dark:text-slate-400">{L("pc_signs")} · {longDate(asOf, lang)}</p>
+        <div className="pf-body"><StatementTable rows={rows} totals={totals} lang={lang} year={0} compact /></div>
+        <p className="mt-6 border-t border-surface-200 pt-3 fit:mt-2 fit:pt-2 text-[11px] text-surface-500 dark:border-[#1e3160] dark:text-slate-400">{L("pc_signs")} · {longDate(asOf, lang)}</p>
       </div>
     </div>
   );

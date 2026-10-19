@@ -45,15 +45,15 @@ export function AddHarvestForm({ farms, readyToRecord }: { farms: Farm[]; readyT
           <p className="mt-1 text-xs text-brand-600">{t("select_crop_hint", lang)}</p>
         </div>
       )}
-      <form action={addHarvestAction} className="space-y-3 rounded-card border border-surface-200 bg-white p-4 shadow-card">
-        <h2 className="font-display text-sm font-semibold text-surface-900">{t("add_harvest_record_heading", lang)}</h2>
+      <form action={addHarvestAction} className="space-y-3 rounded-card border border-surface-200 bg-white p-4 shadow-card dark:bg-surface-900 dark:border-surface-700">
+        <h2 className="font-display text-sm font-semibold text-surface-900 dark:text-white">{t("add_harvest_record_heading", lang)}</h2>
         {readyToRecord.length > 0 && (
           <div>
-            <label className="text-xs font-medium text-surface-600">{t("select_crop_autofill", lang)}</label>
+            <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("select_crop_autofill", lang)}</label>
             <select
               name="h_crop_history_id"
               onChange={(e) => handleCropSelect(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
             >
               <option value="">{t("manual_entry_option", lang)}</option>
               {readyToRecord.map((c) => (
@@ -63,7 +63,7 @@ export function AddHarvestForm({ farms, readyToRecord }: { farms: Farm[]; readyT
           </div>
         )}
         {selectedCrop && (
-          <div className="rounded-lg bg-surface-50 p-3 text-xs text-surface-600">
+          <div className="rounded-lg bg-surface-50 p-3 text-xs text-surface-600 dark:text-slate-300 dark:bg-surface-800">
             <p><strong>{t("farm_label", lang)}:</strong> {selectedCrop.farmName}</p>
             <p><strong>{t("crop", lang)}:</strong> {selectedCrop.cropName}</p>
             <p><strong>{t("expected_harvest_date_label", lang)}:</strong> {new Date(selectedCrop.expectedHarvestDate).toLocaleDateString()}</p>
@@ -76,11 +76,11 @@ export function AddHarvestForm({ farms, readyToRecord }: { farms: Farm[]; readyT
         {!selectedCrop && (
           <>
             <div>
-              <label className="text-xs font-medium text-surface-600">{t("farm_label", lang)}</label>
+              <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("farm_label", lang)}</label>
               <select name="h_farm_id_manual" onChange={(e) => {
                 const hidden = document.querySelector('input[name="h_farm_id"]') as HTMLInputElement;
                 if (hidden) hidden.value = e.target.value;
-              }} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
+              }} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700">
                 <option value="">{t("select_farm", lang)}</option>
                 {farms.map((f) => (
                   <option key={f.id} value={f.id}>{f.name}</option>
@@ -88,7 +88,7 @@ export function AddHarvestForm({ farms, readyToRecord }: { farms: Farm[]; readyT
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-surface-600">{t("crop", lang)}</label>
+              <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("crop", lang)}</label>
               <input
                 type="text"
                 onChange={(e) => {
@@ -97,24 +97,24 @@ export function AddHarvestForm({ farms, readyToRecord }: { farms: Farm[]; readyT
                 }}
                 required
                 placeholder={t("eg_wheat", lang)}
-                className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+                className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
               />
             </div>
           </>
         )}
         <div>
-          <label className="text-xs font-medium text-surface-600">{t("harvest_date_label", lang)}</label>
+          <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("harvest_date_label", lang)}</label>
           <input
             type="date"
             name="h_harvest_date"
             required
             defaultValue={selectedCrop?.expectedHarvestDate?.slice(0, 10)}
-            className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs font-medium text-surface-600">{t("quantity_maund_kg_label", lang)}</label>
+            <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("quantity_maund_kg_label", lang)}</label>
             <div className="mt-1 flex gap-2">
               <input
                 ref={quantityRef}
@@ -125,14 +125,14 @@ export function AddHarvestForm({ farms, readyToRecord }: { farms: Farm[]; readyT
                 onChange={(e) => setQuantity(e.target.value)}
                 required
                 placeholder={t("eg_40", lang)}
-                className="w-full rounded-lg border border-surface-200 p-2 text-sm"
+                className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
               />
               <VoiceDictationButton onResult={(text) => setQuantity(text.replace(/[^0-9.]/g, ""))} />
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-600">{t("unit_label", lang)}</label>
-            <select name="h_unit" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
+            <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("unit_label", lang)}</label>
+            <select name="h_unit" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700">
               <option value="maund">{t("unit_maund", lang)}</option>
               <option value="kg">{t("unit_kg", lang)}</option>
               <option value="bags">{t("unit_bags", lang)}</option>
@@ -140,11 +140,11 @@ export function AddHarvestForm({ farms, readyToRecord }: { farms: Farm[]; readyT
           </div>
         </div>
         <div>
-          <label className="text-xs font-medium text-surface-600">{t("quality_grade_optional", lang)}</label>
-          <input type="text" name="h_quality_grade" placeholder={t("eg_grade_a", lang)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("quality_grade_optional", lang)}</label>
+          <input type="text" name="h_quality_grade" placeholder={t("eg_grade_a", lang)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" />
         </div>
         <div>
-          <label className="text-xs font-medium text-surface-600">
+          <label className="text-xs font-medium text-surface-600 dark:text-slate-300">
             {t("sale_rate_label", lang)} {selectedCrop?.suggestedRate ? `- ${t("suggested_rate_prefix", lang)}: Rs ${selectedCrop.suggestedRate}` : ""}
           </label>
           <div className="mt-1 flex gap-2">
@@ -156,7 +156,7 @@ export function AddHarvestForm({ farms, readyToRecord }: { farms: Farm[]; readyT
               value={saleRate}
               onChange={(e) => setSaleRate(e.target.value)}
               placeholder={t("eg_3000", lang)}
-              className="w-full rounded-lg border border-surface-200 p-2 text-sm"
+              className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
             />
             <VoiceDictationButton onResult={(text) => setSaleRate(text.replace(/[^0-9.]/g, ""))} />
           </div>

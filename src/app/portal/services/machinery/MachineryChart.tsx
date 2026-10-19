@@ -16,8 +16,8 @@ export default function MachineryChart({ data }: { data: ChartItem[] }) {
   if (data.length === 0) return null;
 
   return (
-    <div className="mt-6 rounded-card border border-surface-200 bg-white p-4 shadow-card">
-      <h3 className="mb-3 text-sm font-semibold text-surface-900">{t("pm_chart_machine_type", lang)}</h3>
+    <div className="mt-6 rounded-card border border-surface-200 bg-white p-4 shadow-card dark:bg-surface-900 dark:border-surface-700">
+      <h3 className="mb-3 text-sm font-semibold text-surface-900 dark:text-white">{t("pm_chart_machine_type", lang)}</h3>
       <ResponsiveContainer width="100%" height={Math.max(120, data.length * 50)}>
         <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20 }}>
           <XAxis type="number" allowDecimals={false} hide />

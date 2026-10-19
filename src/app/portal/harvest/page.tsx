@@ -1,12 +1,11 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ShoppingBag } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { AddHarvestForm } from "./add-harvest-form";
 import { checkProfileComplete } from "@/lib/utils/profile-gate";
 import { ProfileGateMessage } from "@/components/portal/profile-gate-message";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
+import { Hero, HeroBtn, Kpi } from "@/components/portal/dairy/dairy-parts";
 
 export default async function HarvestPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const params = await searchParams;
@@ -68,31 +67,38 @@ export default async function HarvestPage({ searchParams }: { searchParams: Prom
         .in("farm_id", farmIds)
         .order("harvest_date", { ascending: false })
     : { data: [] };
+  const hs = harvests ?? [];
+  const profitOf = (h: (typeof hs)[number]) => (h.sale_rate && h.total_expense !== null ? h.quantity_harvested * h.sale_rate - h.total_expense : null);
+  const totalProfit = hs.reduce((a, h) => a + (profitOf(h) ?? 0), 0);
+  const withProfit = hs.filter((h) => profitOf(h) !== null).length;
+  const thisYear = new Date().getFullYear();
+  const card = "rounded-2xl border border-surface-200 bg-white shadow-sm dark:border-surface-800 dark:bg-surface-900";
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
-      <Link href="/portal/dashboard" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">
-        {t("back_to_dashboard", lang)}
-      </Link>
-      <h1 className="font-display text-2xl font-semibold text-surface-900">{t("farm_mgmt_title", lang)}</h1>
-      <p className="mt-1 text-surface-500">{t("farm_mgmt_subtitle", lang)}</p>
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
+      <Hero title={<>📊 {t("farm_mgmt_title", lang)}</>} sub={t("farm_mgmt_subtitle", lang)}>
+        <HeroBtn href="/portal/sell-produce" primary>🛍️ {t("sell_produce_title", lang)}</HeroBtn>
+        <HeroBtn href="/portal/crops">🌱 {t("nav_crops", lang)}</HeroBtn>
+        <HeroBtn href="/portal/farms">🌾 {t("my_farms_title", lang)}</HeroBtn>
+      </Hero>
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 fit:grid-cols-4 fit:gap-2.5">
+        <Kpi tone="green" label={t("os2_harvests", lang)} value={String(hs.length)} sub={`${hs.filter((h) => new Date(h.harvest_date).getFullYear() === thisYear).length} · ${thisYear}`} />
+        <Kpi tone="amber" label={t("os2_to_record", lang)} value={String(readyToRecord.length)} sub={readyToRecord.slice(0, 2).map((r) => r.cropName).join(", ") || "—"} />
+        <Kpi tone={totalProfit >= 0 ? "violet" : "rose"} label={t("os2_profit", lang)} value={`${totalProfit < 0 ? "-" : ""}Rs ${Math.abs(Math.round(totalProfit)).toLocaleString("en-IN")}`} sub={`${withProfit} / ${hs.length}`} />
+        <Kpi tone="sky" label={t("my_farms_title", lang)} value={String((farms ?? []).length)} sub={(farms ?? []).map((f) => f.name).slice(0, 2).join(", ") || "—"} />
+      </div>
       {params.error && (
-        <p className="mt-4 rounded-card border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
           {t("error_prefix", lang)}: {params.error}
         </p>
       )}
-      <div className="mt-6">
-        <AddHarvestForm farms={farms ?? []} readyToRecord={readyToRecord} />
-      </div>
-      <div className="mt-4 text-center">
-        <Link href="/portal/sell-produce" className="inline-flex items-center gap-1 text-sm font-medium text-green-700 hover:underline">
-          <ShoppingBag className="h-4 w-4" /> {t("sell_produce_title", lang)}
-        </Link>
-      </div>
-      <h2 className="mt-8 font-display text-lg font-semibold text-surface-900">{t("crop_history_title", lang)}</h2>
-      <div className="mt-3 overflow-x-auto rounded-card border border-surface-200 bg-white shadow-card">
-        <table className="w-full text-sm">
+      <div className="pf-grow pf-grid grid gap-4 lg:grid-cols-[1fr_1.5fr] fit:grid-cols-[1fr_1.7fr] fit:gap-2.5">
+        <div className="pf-scroll"><AddHarvestForm farms={farms ?? []} readyToRecord={readyToRecord} /></div>
+        <section className={`pf-panel ${card} p-4 fit:p-3.5`}>
+          <h2 className="mb-2 font-display text-[15px] font-semibold text-surface-900 dark:text-white">{t("crop_history_title", lang)} <span className="text-xs font-normal text-surface-500 dark:text-slate-400">· {hs.length}</span></h2>
+          <div className="pf-body overflow-x-auto">
+<table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-surface-200 bg-surface-50 text-start text-xs font-medium text-surface-500">
+            <tr className="border-b border-surface-200 bg-surface-50 text-start text-xs font-medium text-surface-500 dark:text-slate-400 dark:border-surface-700 dark:bg-surface-800">
               <th className="px-4 py-2">{t("table_year_header", lang)}</th>
               <th className="px-4 py-2">{t("crop", lang)}</th>
               <th className="px-4 py-2">{t("table_production_header", lang)}</th>
@@ -114,7 +120,7 @@ export default async function HarvestPage({ searchParams }: { searchParams: Prom
                 const revenue = h.sale_rate ? h.quantity_harvested * h.sale_rate : null;
                 const profit = revenue !== null && h.total_expense !== null ? revenue - h.total_expense : null;
                 return (
-                  <tr key={h.id} className="border-b border-surface-100 last:border-0">
+                  <tr key={h.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                     <td className="px-4 py-2">{new Date(h.harvest_date).getFullYear()}</td>
                     <td className="px-4 py-2">{h.crop_name}</td>
                     <td className="px-4 py-2">{h.quantity_harvested} {h.unit}</td>
@@ -130,7 +136,10 @@ export default async function HarvestPage({ searchParams }: { searchParams: Prom
             )}
           </tbody>
         </table>
+          </div>
+        </section>
       </div>
     </div>
   );
+
 }

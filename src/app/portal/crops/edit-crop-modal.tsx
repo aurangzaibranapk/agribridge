@@ -58,9 +58,9 @@ function EditModal({ crop, onClose }: { crop: Crop; onClose: () => void }) {
   const area = decomposeAcres(crop.area_sown_acres);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
+      <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">{t("pm_edit_crop", lang)}</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pm_edit_crop", lang)}</h3>
           <button type="button" onClick={onClose} aria-label={t("ph6_a_close", lang)} className="grid h-11 w-11 place-items-center rounded-lg text-surface-400 hover:text-surface-700">
             <X className="h-5 w-5" />
           </button>
@@ -68,11 +68,11 @@ function EditModal({ crop, onClose }: { crop: Crop; onClose: () => void }) {
         <form action={updateCropAction} className="space-y-3">
           <input type="hidden" name="crop_id" value={crop.id} />
           <div>
-            <label className="text-xs font-medium text-surface-600">{t("c_crop", lang)}</label>
+            <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("c_crop", lang)}</label>
             <select
               value={selectedCrop}
               onChange={(e) => setSelectedCrop(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
             >
               {CROP_NAMES.map((name) => (
                 <option key={name} value={name}>{name}</option>
@@ -86,21 +86,21 @@ function EditModal({ crop, onClose }: { crop: Crop; onClose: () => void }) {
                 onChange={(e) => setCustomCrop(e.target.value)}
                 placeholder={t("other_crop_placeholder", lang)}
                 required
-                className="mt-2 w-full rounded-lg border border-surface-200 p-2 text-sm"
+                className="mt-2 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
               />
             )}
             <input type="hidden" name="crop_name" value={finalCropName} />
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-600">{t("pm_sowing_date", lang)}</label>
-            <input type="date" name="sowing_date" defaultValue={crop.sowing_date} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+            <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("pm_sowing_date", lang)}</label>
+            <input type="date" name="sowing_date" defaultValue={crop.sowing_date} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" />
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-600">{t("pm_area_optional", lang)}</label>
+            <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("pm_area_optional", lang)}</label>
             <div className="mt-1 grid grid-cols-3 gap-2">
-              <input type="number" step="1" min="0" name="area_acre" defaultValue={area.acre || ""} placeholder={t("unit_acre", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-              <input type="number" step="1" min="0" max="7" name="area_kanal" defaultValue={area.kanal || ""} placeholder={t("unit_kanal", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-              <input type="number" step="1" min="0" max="19" name="area_marla" defaultValue={area.marla || ""} placeholder={t("unit_marla", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+              <input type="number" step="1" min="0" name="area_acre" defaultValue={area.acre || ""} placeholder={t("unit_acre", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" />
+              <input type="number" step="1" min="0" max="7" name="area_kanal" defaultValue={area.kanal || ""} placeholder={t("unit_kanal", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" />
+              <input type="number" step="1" min="0" max="19" name="area_marla" defaultValue={area.marla || ""} placeholder={t("unit_marla", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" />
             </div>
           </div>
           <button type="submit" className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("pm_save_changes", lang)}</button>

@@ -16,7 +16,7 @@ const bar = "rounded-lg bg-surface-200/80 dark:bg-white/10 animate-pulse motion-
 export function PortalLoading({ kpis = 4, rows = 5 }: { kpis?: number; rows?: number }) {
   const lang = useLang();
   return (
-    <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6" aria-busy="true" aria-live="polite">
+    <div className="mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6" aria-busy="true" aria-live="polite">
       <span className="sr-only" role="status">{t("ph6_loading", lang)}</span>
       <div className="space-y-2" aria-hidden>
         <div className={`${bar} h-7 w-56`} />

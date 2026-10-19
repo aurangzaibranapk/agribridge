@@ -21,12 +21,12 @@ export default async function AddExpense({ searchParams }: { searchParams: Recor
   const active = sortByTag(animals.filter((a) => a.status !== "sold" && a.status !== "dead"));
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
       <Hero title={<>➕ {L("dy2_exp_title")} {lang !== "ur" && <span dir="rtl">· {t("dy2_exp_title", "ur")}</span>}</>} sub={L("dy2_exp_sub")} />
       {searchParams?.ok && <p className="rounded-xl bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200">{L("dy2_saved")}</p>}
       <ErrorNote e={searchParams?.e} lang={lang} />
-      <div className="grid gap-4 lg:grid-cols-[1.45fr_1fr]">
-        <Card>
+      <div className="pf-grow pf-grid grid gap-4 lg:grid-cols-[1.45fr_1fr] fit:gap-2.5">
+        <Card className="pf-scroll fit:p-3.5">
           <CardHead title={L("dy2_exp_details")} />
           <form action={addExpenseAction} className="space-y-4">
             <Field k="dy2_f_cat" lang={lang}>
@@ -61,8 +61,8 @@ export default async function AddExpense({ searchParams }: { searchParams: Recor
             </div>
           </form>
         </Card>
-        <div className="space-y-4">
-          <Card>
+        <div className="pf-scroll space-y-4 fit:space-y-2.5">
+          <Card className="fit:p-3.5">
             <CardHead title={L("dy2_shop_title")} right={<span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">{L("dy2_readonly")}</span>} />
             <p className="mb-3 text-xs text-surface-500 dark:text-slate-400">{L("dy2_shop_note")}</p>
             {sugg.length === 0 && <p className="py-6 text-center text-sm text-surface-500">{L("dy2_shop_none")}</p>}

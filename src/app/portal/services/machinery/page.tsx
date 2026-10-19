@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MachineryPageClient } from "./machinery-page-client";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
+import { Hero, Kpi } from "@/components/portal/dairy/dairy-parts";
 
 /**
  * Kisan ka machinery wala safha.
@@ -160,28 +160,29 @@ export default async function PortalMachineryPage() {
     };
   });
 
+  const openB = bookingRows.filter((b) => b.status !== "closed" && b.status !== "cancelled");
+  const due = bookingRows.reduce((a, b) => a + (b.balance ?? 0), 0);
+  const acres = farmData.reduce((a, f) => a + f.totalArea, 0);
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
-      <Link href="/portal/dashboard" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">
-        ← {t("back_to_dashboard", lang)}
-      </Link>
-      <h1 className="font-display text-2xl font-semibold text-surface-900">{t("machinery_title", lang)}</h1>
-      <p className="mt-1 text-sm text-surface-500">{t("machinery_subtitle", lang)}</p>
-      {bookingRows.length > 0 && (
-        <div className="mt-6">
-          <h2 className="mb-2 font-display text-sm font-semibold text-surface-900">
-            {t("my_bookings_heading", lang)}
-          </h2>
-          <div className="space-y-2">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
+      <Hero title={<>🚜 {t("machinery_title", lang)}</>} sub={t("machinery_subtitle", lang)} />
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 fit:grid-cols-4 fit:gap-2.5">
+        <Kpi tone="green" label={t("os2_bookings", lang)} value={String(bookingRows.length)} sub={`${openB.length} ${t("os2_open", lang)}`} />
+        <Kpi tone="amber" label={t("outstanding_label_portal", lang)} value={`Rs ${Math.round(due).toLocaleString("en-IN")}`} sub={bookingRows.find((b) => (b.balance ?? 0) > 0)?.bookingNumber ?? "—"} />
+        <Kpi tone="sky" label={t("my_farms_title", lang)} value={String(farmData.length)} sub={`${Math.round(acres * 10) / 10} ${t("acres_unit", lang)}`} />
+        <Kpi tone="violet" label={t("os2_needs", lang)} value={String(farmData.reduce((a, f) => a + f.crops.length + (f.khaliZameen > 0 ? 1 : 0), 0))} sub={t("needed_suffix", lang)} />
+      </div>
+      <div className="pf-grow pf-grid grid gap-4 lg:grid-cols-2 fit:grid-cols-[1fr_1.25fr_1fr] fit:gap-2.5">
+        <MachineryPageClient farms={farmData} />
+        <section className="pf-panel rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-800 dark:bg-surface-900 fit:p-3.5" data-testid="machinery-bookings">
+          <h2 className="mb-2 font-display text-[15px] font-semibold text-surface-900 dark:text-white">{t("my_bookings_heading", lang)} <span className="text-xs font-normal text-surface-500">· {bookingRows.length}</span></h2>
+          <div className="pf-body space-y-2">
             {bookingRows.map((b) => (
               <BookingStatusCard key={b.id} booking={b} lang={lang} />
             ))}
+            {bookingRows.length === 0 && <p className="py-8 text-center text-sm text-surface-400">—</p>}
           </div>
-        </div>
-      )}
-
-      <div className="mt-6">
-        <MachineryPageClient farms={farmData} />
+        </section>
       </div>
     </div>
   );
@@ -221,14 +222,14 @@ function BookingStatusCard({
 }) {
   const statusKey = FARMER_STATUS[booking.status] ?? "farmer_status_new";
   return (
-    <div className="rounded-card border border-surface-200 bg-white p-3 shadow-card">
+    <div className="rounded-card border border-surface-200 bg-white p-3 shadow-card dark:bg-surface-900 dark:border-surface-700">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-mono text-xs text-surface-400">{booking.bookingNumber}</p>
-          <p className="text-sm font-medium text-surface-900">
+          <p className="text-sm font-medium text-surface-900 dark:text-white">
             {booking.cropType ?? "-"} · {booking.area} {t("acres_unit", lang)}
           </p>
-          <p className="text-xs text-surface-500">{booking.bookingDate}</p>
+          <p className="text-xs text-surface-500 dark:text-slate-400">{booking.bookingDate}</p>
         </div>
         <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
           {t(statusKey, lang)}
@@ -236,19 +237,19 @@ function BookingStatusCard({
       </div>
 
       {booking.rate !== null && (
-        <p className="mt-2 text-xs text-surface-600">
+        <p className="mt-2 text-xs text-surface-600 dark:text-slate-300">
           {t("rate_label_portal", lang)}: Rs {booking.rate.toLocaleString()} / {t("acres_unit", lang)}
         </p>
       )}
 
       {booking.gross !== null && (
-        <div className="mt-2 space-y-0.5 border-t border-surface-100 pt-2 text-sm">
+        <div className="mt-2 space-y-0.5 border-t border-surface-100 pt-2 text-sm dark:border-surface-800">
           <Row label={t("bill_label_portal", lang)} value={booking.gross} />
           {booking.advanceVerified > 0 && (
             <Row label={t("advance_label_portal", lang)} value={-booking.advanceVerified} />
           )}
           {booking.paid > 0 && <Row label={t("paid_label_portal", lang)} value={-booking.paid} />}
-          <div className="flex justify-between border-t border-surface-100 pt-1 font-semibold">
+          <div className="flex justify-between border-t border-surface-100 pt-1 font-semibold dark:border-surface-800">
             <span>{t("outstanding_label_portal", lang)}</span>
             <span className={(booking.balance ?? 0) > 0 ? "text-red-600" : "text-brand-700"}>
               Rs {(booking.balance ?? 0).toLocaleString()}
@@ -274,7 +275,7 @@ function Row({ label, value }: { label: string; value: number }) {
   // rukta hai aur sochta hai kya cheez manfi hai. Kuch bhi nahi.
   const v = value === 0 ? 0 : value;
   return (
-    <div className="flex justify-between text-surface-600">
+    <div className="flex justify-between text-surface-600 dark:text-slate-300">
       <span>{label}</span>
       <span>{v < 0 ? `- Rs ${Math.abs(v).toLocaleString()}` : `Rs ${v.toLocaleString()}`}</span>
     </div>

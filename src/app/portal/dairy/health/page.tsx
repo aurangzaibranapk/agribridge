@@ -29,7 +29,7 @@ export default async function HealthPage({ searchParams }: { searchParams: Recor
   const live = animals.filter((a) => a.status !== "sold" && a.status !== "dead");
   const tag = new Map(animals.map((a) => [a.id, a]));
   const dd = (x: string | null) => (x ? shortDate(x, lang, yr) : "—");
-  const recent = health.filter((h) => f === "all" || h.kind === f).slice(0, 8);
+  const recent = health.filter((h) => f === "all" || h.kind === f).slice(0, 30);
   const byKind = HEALTH_KINDS.map((k) => ({ k, v: health.filter((h) => h.kind === k).reduce((s, h) => s + (h.cost ?? 0), 0) }));
   const yearTotal = byKind.reduce((s, x) => s + x.v, 0);
   const maxK = Math.max(1, ...byKind.map((x) => x.v));
@@ -37,7 +37,7 @@ export default async function HealthPage({ searchParams }: { searchParams: Recor
   const tabs = HEALTH_KINDS.map((k) => ({ k, href: `/portal/dairy/health?kind=${k}#new` }));
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
       <BHero title={<>💉 {L("bh_health_title")} {lang !== "ur" && <>· <span dir="rtl">{t("bh_health_title", "ur")}</span></>}</>} sub={L("bh_health_sub")}>
         <HeroBtn href="/portal/dairy/health?kind=vaccine#new" primary>💉 {L("bh_btn_vaccine")}</HeroBtn>
         <HeroBtn href="/portal/dairy/health?kind=treatment#new">💊 {L("bh_btn_treatment")}</HeroBtn>
@@ -45,13 +45,13 @@ export default async function HealthPage({ searchParams }: { searchParams: Recor
       </BHero>
       {searchParams?.ok && <p className="rounded-xl bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200">{L("bh_saved")}</p>}
       <BErrorNote e={searchParams?.e} lang={lang} />
-      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4 fit:grid-cols-4 fit:gap-2.5">
         {CORE_VACCINES.map((code) => {
           const c = cov.find((x) => x.code === code);
           const pct = c ? coveragePct(c.covered, c.eligible) : null;
           const late = c?.next_due && c.next_due < asOf;
           return (
-            <Card key={code}>
+            <Card key={code} className="fit:px-4 fit:py-2.5">
               <div className="flex items-center gap-3.5">
                 <Ring pct={pct} color={RING[code]} />
                 <div className="min-w-0">
@@ -64,10 +64,11 @@ export default async function HealthPage({ searchParams }: { searchParams: Recor
           );
         })}
       </div>
-      <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-        <form action={addHealthAction} id="new" className="grid content-start gap-4">
-          <Card>
+      <div className="pf-grow pf-grid grid gap-4 lg:grid-cols-[1.3fr_1fr] fit:grid-cols-[1.35fr_1fr_0.85fr] fit:gap-2.5">
+        <form action={addHealthAction} id="new" className="grid content-start gap-4 fit:flex fit:min-h-0 fit:flex-col">
+          <Card className="pf-panel fit:min-h-0 fit:flex-1 fit:p-3.5">
             <H3 k="bh_h_new" lang={lang} />
+            <div className="pf-body">
             <div className="mb-3 flex flex-wrap gap-1.5">
               {tabs.map((x) => (
                 <Link key={x.k} href={x.href} className={`rounded-full border px-3.5 py-1.5 text-[13px] font-semibold ${x.k === kind ? "border-green-600 bg-green-600 text-white" : "border-surface-200 text-surface-700 dark:border-surface-700 dark:text-slate-200"}`}>{EVENT_ICON[x.k]} {L(`bh_k_${x.k}` as TranslationKey)}</Link>
@@ -113,14 +114,15 @@ export default async function HealthPage({ searchParams }: { searchParams: Recor
                 <Field k="bh_f_payment" lang={lang}><Seg name="payment" value="cash" lang={lang} options={[{ v: "cash", k: "bh_pay_cash" }, { v: "udhaar", k: "bh_pay_udhaar" }, { v: "bank", k: "bh_pay_bank" }]} /></Field>
               </div>
               <Field k="bh_f_notes" lang={lang}><textarea name="notes" rows={2} maxLength={300} className={inputCls} /></Field>
-              <div><button className="rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-green-700">✓ {L("bh_save")}</button></div>
+              <LinkCost shop={shop} existing={existing} lang={lang} />
+              <div className="fit:sticky fit:bottom-0 fit:bg-white fit:py-2 dark:fit:bg-surface-900"><button className="rounded-xl bg-green-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-green-700">✓ {L("bh_save")}</button></div>
+            </div>
             </div>
           </Card>
-          <LinkCost shop={shop} existing={existing} lang={lang} />
         </form>
-        <div className="grid content-start gap-4">
-          <Card>
+          <Card className="pf-panel fit:p-3.5">
             <H3 k="bh_h_recent" lang={lang} right={<Chips items={(["all", ...HEALTH_KINDS] as string[]).map((k) => ({ href: `/portal/dairy/health${k === "all" ? "" : `?f=${k}`}`, label: k === "all" ? L("bh_f_all") : L(`bh_k_${k}` as TranslationKey), on: f === k }))} />} />
+            <div className="pf-body">
             {recent.map((h) => (
               <div key={h.id} className="flex items-start gap-3 border-b border-surface-100 py-2.5 last:border-0 dark:border-surface-800">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-base" style={{ background: `${EVENT_COLOR[h.kind]}22` }}>{EVENT_ICON[h.kind]}</span>
@@ -132,19 +134,19 @@ export default async function HealthPage({ searchParams }: { searchParams: Recor
               </div>
             ))}
             {recent.length === 0 && <p className="py-6 text-center text-sm text-surface-500">{L("bh_h_empty")}</p>}
+            </div>
           </Card>
-          <Card>
+          <Card className="pf-panel fit:p-3.5">
             <H3 k="bh_h_cost" lang={lang} right={<b className="text-sm text-surface-900 dark:text-white">{rs(yearTotal)}</b>} />
-            <div className="grid gap-2.5">
+            <div className="pf-body grid content-start gap-2.5">
               {byKind.map((x) => (
                 <div key={x.k} className="grid grid-cols-[110px_1fr_80px] items-center gap-2 text-[12.5px] text-surface-700 dark:text-slate-200">
                   <span>{EVENT_ICON[x.k]} {L(`bh_k_${x.k}` as TranslationKey)}</span><Bar pct={(x.v / maxK) * 100} color={EVENT_COLOR[x.k]} /><b className="text-end">{rs(x.v)}</b>
                 </div>
               ))}
+              <p className="mt-1 text-[11.5px] text-surface-500 dark:text-slate-400">{L("bh_h_cost_note")}</p>
             </div>
-            <p className="mt-3 text-[11.5px] text-surface-500 dark:text-slate-400">{L("bh_h_cost_note")}</p>
           </Card>
-        </div>
       </div>
       <Footer lang={lang} />
     </div>

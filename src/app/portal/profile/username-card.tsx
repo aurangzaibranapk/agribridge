@@ -46,10 +46,10 @@ export function UsernameCard({ current }: { current: string | null }) {
 
   if (current) {
     return (
-      <div className="rounded-card border border-surface-200 bg-white p-5">
-        <h2 className="font-display text-base font-semibold text-surface-900">{t("pm_your_user_id", lang)}</h2>
+      <div className="rounded-card border border-surface-200 bg-white p-5 dark:bg-surface-900 dark:border-surface-700">
+        <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pm_your_user_id", lang)}</h2>
         <p className="mt-2 font-mono text-lg font-semibold text-brand-700">{current}</p>
-        <p className="mt-2 text-xs text-surface-500">
+        <p className="mt-2 text-xs text-surface-500 dark:text-slate-400">
           Ab aap mobile aur OTP ke bajaye seedha User ID aur password se bhi login kar sakte hain. OTP wala raasta
           bhi khula hai — jo aasan lage, wohi istemal karein.
         </p>
@@ -70,9 +70,9 @@ export function UsernameCard({ current }: { current: string | null }) {
   }
 
   return (
-    <div className="rounded-card border border-surface-200 bg-white p-5">
-      <h2 className="font-display text-base font-semibold text-surface-900">{t("pm_make_user_id", lang)}</h2>
-      <p className="mt-1 text-xs text-surface-500">
+    <div className="rounded-card border border-surface-200 bg-white p-5 dark:bg-surface-900 dark:border-surface-700">
+      <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pm_make_user_id", lang)}</h2>
+      <p className="mt-1 text-xs text-surface-500 dark:text-slate-400">
         Marzi ki baat hai. Bana lenge to har dafa OTP ka intezar nahi karna paRega — seedha User ID aur password se
         andar aa jayenge. Na banayein to bhi sab kuch waise hi chalta rahega.
       </p>
@@ -81,7 +81,7 @@ export function UsernameCard({ current }: { current: string | null }) {
         {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
 
         <div>
-          <label htmlFor="username" className="mb-1 block text-xs font-medium text-surface-700">{t("pm_user_id", lang)}</label>
+          <label htmlFor="username" className="mb-1 block text-xs font-medium text-surface-700 dark:text-slate-200">{t("pm_user_id", lang)}</label>
           <input
             id="username"
             name="username"
@@ -89,7 +89,7 @@ export function UsernameCard({ current }: { current: string | null }) {
             value={name}
             onChange={(e) => checkName(e.target.value)}
             placeholder={t("pm_eg_username", lang)}
-            className="w-full rounded-lg border border-surface-200 px-3 py-2 font-mono text-sm lowercase"
+            className="w-full rounded-lg border border-surface-200 px-3 py-2 font-mono text-sm lowercase dark:border-surface-700"
           />
           <p className="mt-1 text-[11px] text-surface-400">{t("pm_user_id_rule", lang)}</p>
           {checking && <p className="mt-1 text-[11px] text-surface-400">{t("pm_checking", lang)}</p>}
@@ -102,7 +102,7 @@ export function UsernameCard({ current }: { current: string | null }) {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label htmlFor="password" className="mb-1 block text-xs font-medium text-surface-700">{t("pm_password", lang)}</label>
+            <label htmlFor="password" className="mb-1 block text-xs font-medium text-surface-700 dark:text-slate-200">{t("pm_password", lang)}</label>
             <div className="relative">
               <input
                 id="password"
@@ -110,7 +110,7 @@ export function UsernameCard({ current }: { current: string | null }) {
                 type={showPassword ? "text" : "password"}
                 required
                 minLength={6}
-                className="w-full rounded-lg border border-surface-200 px-3 py-2 pe-9 text-sm"
+                className="w-full rounded-lg border border-surface-200 px-3 py-2 pe-9 text-sm dark:border-surface-700"
               />
               <button
                 type="button"
@@ -123,7 +123,7 @@ export function UsernameCard({ current }: { current: string | null }) {
             </div>
           </div>
           <div>
-            <label htmlFor="password_confirm" className="mb-1 block text-xs font-medium text-surface-700">{t("pm_password_again", lang)}</label>
+            <label htmlFor="password_confirm" className="mb-1 block text-xs font-medium text-surface-700 dark:text-slate-200">{t("pm_password_again", lang)}</label>
             <div className="relative">
               <input
                 id="password_confirm"
@@ -131,7 +131,7 @@ export function UsernameCard({ current }: { current: string | null }) {
                 type={showPasswordAgain ? "text" : "password"}
                 required
                 minLength={6}
-                className="w-full rounded-lg border border-surface-200 px-3 py-2 pe-9 text-sm"
+                className="w-full rounded-lg border border-surface-200 px-3 py-2 pe-9 text-sm dark:border-surface-700"
               />
               <button
                 type="button"

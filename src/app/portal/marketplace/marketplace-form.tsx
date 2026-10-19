@@ -47,7 +47,7 @@ export function MarketplaceForm({ products }: { products: Product[] }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("pm_search_inputs", lang)}
-            className="w-full rounded-lg border border-surface-200 py-2 ps-9 pe-3 text-sm focus:border-brand-500 focus:outline-none"
+            className="w-full rounded-lg border border-surface-200 py-2 ps-9 pe-3 text-sm focus:border-brand-500 focus:outline-none dark:border-surface-700"
           />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -95,14 +95,14 @@ export function MarketplaceForm({ products }: { products: Product[] }) {
         <form action={formAction} className="space-y-3">
           <input type="hidden" name="product_id" value={selectedProduct?.id ?? ""} />
           <div>
-            <label className="text-xs font-medium text-surface-500">{t("c_quantity", lang)}</label>
+            <label className="text-xs font-medium text-surface-500 dark:text-slate-400">{t("c_quantity", lang)}</label>
             <input
               type="number"
               name="quantity"
               min={1}
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none dark:border-surface-700"
             />
           </div>
           <p className="text-xs text-surface-400">{t("pm_will_match_best", lang)}</p>

@@ -41,7 +41,7 @@ export default async function Hisaab({ searchParams }: { searchParams: Record<st
   const chip = (k: string) => `/portal/dairy/hisaab?p=${k}`;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 print:max-w-none">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 print:max-w-none fit:gap-2.5 fit:space-y-0 fit:py-3">
       <Hero title={<>📒 {L("dy2_title")} {lang !== "ur" && <span dir="rtl" className="font-urdu">· {t("dy2_title", "ur")}</span>}</>} sub={`${monthName(per.from, lang, true)}${per.from.slice(0, 7) !== per.to.slice(0, 7) ? ` – ${monthName(per.to, lang, true)}` : ""} · ${L("dy2_sub")}`}>
         <HeroBtn href="/portal/dairy/hisaab/expense" primary>➕ {L("dy2_btn_exp")}</HeroBtn>
         <HeroBtn href="/portal/dairy/hisaab/income">➕ {L("dy2_btn_inc")}</HeroBtn>
@@ -60,7 +60,7 @@ export default async function Hisaab({ searchParams }: { searchParams: Record<st
         </form>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6 fit:grid-cols-6 fit:gap-2.5">
         <Kpi tone="green" label={L("dy2_k_income")} value={rs(S.income_total)} sub={L("dy2_k_income_sub")} />
         <Kpi tone="rose" label={L("dy2_k_expense")} value={rs(S.expense_total)} sub={`${cats.length} ${L("dy2_k_cats")}`} />
         <Kpi tone="violet" label={L(S.profit >= 0 ? "dy2_k_profit" : "dy2_k_loss")} value={`${S.profit < 0 ? "-" : ""}${rs(Math.abs(S.profit))}`} sub={ch === null ? L("dy2_vs_prev") : `${ch >= 0 ? "▲" : "▼"} ${Math.abs(ch)}% ${L("dy2_vs_prev")}`} />
@@ -69,20 +69,33 @@ export default async function Hisaab({ searchParams }: { searchParams: Record<st
         <Kpi tone="teal" label={L("dy2_k_milk")} value={fmtL(S.litres)} sub={`${L("dy2_home")} ${fmtL(homeL)} · ${L("dy2_centre")} ${fmtL(S.income.centre_litres ?? 0)}`} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.45fr_1fr]">
-        <Card>
+      <div className="pf-grow pf-grid grid gap-4 lg:grid-cols-2 fit:grid-cols-[1.35fr_1fr_1.15fr] fit:grid-rows-2 fit:gap-2.5">
+        <Card className="pf-panel fit:row-span-1 fit:p-3.5">
           <CardHead title={L("dy2_chart_title")} sub={`${L("dy2_income")} vs ${L("dy2_expense")}`} right={<span className="text-xs text-surface-500">Rs</span>} />
-          <GroupBars groups={six.map((r) => ({ label: monthName(r.period, lang), a: r.income_total, b: r.expense_total }))} names={[L("dy2_income"), L("dy2_expense")]} />
+          <div className="pf-body"><GroupBars height={210} groups={six.map((r) => ({ label: monthName(r.period, lang), a: r.income_total, b: r.expense_total }))} names={[L("dy2_income"), L("dy2_expense")]} /></div>
         </Card>
-        <Card>
+        <Card className="pf-panel fit:p-3.5">
           <CardHead title={L("dy2_cat_title")} right={<span className="text-xs text-surface-500">{monthName(per.to, lang)}</span>} />
-          {cats.length ? <CategoryRows rows={cats} lang={lang} /> : <p className="py-8 text-center text-sm text-surface-500">{L("dy2_none")}</p>}
+          <div className="pf-body">{cats.length ? <CategoryRows rows={cats} lang={lang} /> : <p className="py-8 text-center text-sm text-surface-500">{L("dy2_none")}</p>}</div>
         </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
+        <Card className="pf-panel fit:row-span-2 fit:p-3.5">
+          <CardHead title={L("dy2_monthly_title")} right={<PrintButton label={L("dy2_print")} />} />
+          <div className="pf-body">
+          <ResponsiveTable className="w-full text-[13px] fit:text-[12px] fit:[&_td]:whitespace-nowrap">
+            <thead><tr className="border-b border-surface-200 text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800"><th className="py-2 text-start">{L("dy2_month")}</th><th className="text-end">{L("dy2_income")}</th><th className="text-end">{L("dy2_expense")}</th><th className="text-end">{L("dy2_k_profit")}</th><th className="text-end">{L("dy2_k_cpl")}</th></tr></thead>
+            <tbody>
+              {[...six].reverse().map((r) => (
+                <tr key={r.period} className="border-b border-surface-100 text-end text-surface-700 dark:border-surface-800 dark:text-slate-200">
+                  <td className="py-2.5 text-start">{monthName(r.period, lang, true)}</td><td>{rs(r.income_total)}</td><td>{rs(r.expense_total)}</td><td><Money v={r.profit} /></td><td>{r.cost_per_litre === null ? "—" : r.cost_per_litre.toFixed(1)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </ResponsiveTable>
+          </div>
+        </Card>
+        <Card className="pf-panel fit:col-span-2 fit:p-3.5">
           <CardHead title={L("dy2_src_title")} />
+          <div className="pf-body">
           {S.income_total === 0 ? (
             <EmptyState compact icon="🥛" lang={lang} titleKey="ph6_es_income_t" bodyKey="ph6_es_income_b" cta={{ href: "/portal/dairy/hisaab/income", label: `＋ ${L("ph6_es_income_cta")}` }} />
           ) : (
@@ -100,19 +113,7 @@ export default async function Hisaab({ searchParams }: { searchParams: Record<st
               </tbody>
             </ResponsiveTable>
           )}
-        </Card>
-        <Card>
-          <CardHead title={L("dy2_monthly_title")} right={<PrintButton label={L("dy2_print")} />} />
-          <ResponsiveTable className="w-full text-[13px]">
-            <thead><tr className="border-b border-surface-200 text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800"><th className="py-2 text-start">{L("dy2_month")}</th><th className="text-end">{L("dy2_income")}</th><th className="text-end">{L("dy2_expense")}</th><th className="text-end">{L("dy2_k_profit")}</th><th className="text-end">{L("dy2_k_cpl")}</th></tr></thead>
-            <tbody>
-              {[...six].reverse().map((r) => (
-                <tr key={r.period} className="border-b border-surface-100 text-end text-surface-700 dark:border-surface-800 dark:text-slate-200">
-                  <td className="py-2.5 text-start">{monthName(r.period, lang, true)}</td><td>{rs(r.income_total)}</td><td>{rs(r.expense_total)}</td><td><Money v={r.profit} /></td><td>{r.cost_per_litre === null ? "—" : r.cost_per_litre.toFixed(1)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </ResponsiveTable>
+          </div>
         </Card>
       </div>
       <Footer lang={lang} />

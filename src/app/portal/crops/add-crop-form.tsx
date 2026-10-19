@@ -23,7 +23,7 @@ interface Benchmark {
 
 const OTHER_CROP = "__other__";
 
-export function AddCropForm({ farmLand, benchmarks }: { farmLand: FarmLand[]; benchmarks: Record<string, Benchmark> }) {
+export function AddCropForm({ farmLand, benchmarks, className = "mt-6" }: { farmLand: FarmLand[]; benchmarks: Record<string, Benchmark>; className?: string }) {
   const { language: lang } = useLanguage();
   const [selectedFarmId, setSelectedFarmId] = useState("");
   const [selectedCrop, setSelectedCrop] = useState(CROP_NAMES[0] ?? "");
@@ -57,17 +57,17 @@ export function AddCropForm({ farmLand, benchmarks }: { farmLand: FarmLand[]; be
   }, [benchmark, totalAreaAcres]);
 
   return (
-    <form action={addCropAction} className="mt-6 space-y-3 rounded-card border border-surface-200 bg-white p-4 shadow-card">
-      <h2 className="font-display text-sm font-semibold text-surface-900">{t("add_new_crop", lang)}</h2>
+    <form action={addCropAction} className={`${className} space-y-3 rounded-card border border-surface-200 bg-white p-4 shadow-card dark:bg-surface-900 dark:border-surface-700`}>
+      <h2 className="font-display text-sm font-semibold text-surface-900 dark:text-white">{t("add_new_crop", lang)}</h2>
 
       <div>
-        <label className="text-xs font-medium text-surface-600">{t("farm_label", lang)}</label>
+        <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("farm_label", lang)}</label>
         <select
           name="farm_id"
           required
           value={selectedFarmId}
           onChange={(e) => setSelectedFarmId(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+          className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
         >
           <option value="" disabled>{t("select_farm", lang)}</option>
           {farmLand.map((f) => (
@@ -85,11 +85,11 @@ export function AddCropForm({ farmLand, benchmarks }: { farmLand: FarmLand[]; be
       </div>
 
       <div>
-        <label className="text-xs font-medium text-surface-600">{t("crop", lang)}</label>
+        <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("crop", lang)}</label>
         <select
           value={selectedCrop}
           onChange={(e) => setSelectedCrop(e.target.value)}
-          className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+          className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
         >
           {CROP_NAMES.map((name) => (
             <option key={name} value={name}>
@@ -105,7 +105,7 @@ export function AddCropForm({ farmLand, benchmarks }: { farmLand: FarmLand[]; be
             onChange={(e) => setCustomCrop(e.target.value)}
             placeholder={t("other_crop_placeholder", lang)}
             required
-            className="mt-2 w-full rounded-lg border border-surface-200 p-2 text-sm"
+            className="mt-2 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
           />
         )}
         {/* Asal jo form submit karta hai -- fehrist se chuna hua naam ya
@@ -114,16 +114,16 @@ export function AddCropForm({ farmLand, benchmarks }: { farmLand: FarmLand[]; be
       </div>
 
       <div>
-        <label className="text-xs font-medium text-surface-600">{t("sowing_date", lang)}</label>
-        <input type="date" name="sowing_date" required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("sowing_date", lang)}</label>
+        <input type="date" name="sowing_date" required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" />
       </div>
 
       <div>
-        <label className="text-xs font-medium text-surface-600">{t("area_optional", lang)}</label>
+        <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("area_optional", lang)}</label>
         <div className="mt-1 grid grid-cols-3 gap-2">
-          <input type="number" step="1" min="0" name="area_acre" value={areaAcre} onChange={(e) => setAreaAcre(e.target.value)} placeholder={t("unit_acre", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input type="number" step="1" min="0" max="7" name="area_kanal" value={areaKanal} onChange={(e) => setAreaKanal(e.target.value)} placeholder={t("unit_kanal", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-          <input type="number" step="1" min="0" max="19" name="area_marla" value={areaMarla} onChange={(e) => setAreaMarla(e.target.value)} placeholder={t("unit_marla", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="number" step="1" min="0" name="area_acre" value={areaAcre} onChange={(e) => setAreaAcre(e.target.value)} placeholder={t("unit_acre", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" />
+          <input type="number" step="1" min="0" max="7" name="area_kanal" value={areaKanal} onChange={(e) => setAreaKanal(e.target.value)} placeholder={t("unit_kanal", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" />
+          <input type="number" step="1" min="0" max="19" name="area_marla" value={areaMarla} onChange={(e) => setAreaMarla(e.target.value)} placeholder={t("unit_marla", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" />
         </div>
         {selectedFarm && (
           <p className="mt-1 text-xs text-surface-400">

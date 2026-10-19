@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
 
 const config: Config = {
   darkMode: "class",
@@ -80,7 +81,11 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // `pf:` = "ek screen" safhe (.pf-fit) ke andar, sirf fit screen par. Saanjhe
+    // hisse (KPI, hero, calendar) admin mein waise hi rahen, portal mein chhote.
+    plugin(({ addVariant }) => addVariant("pf", "@media (min-width: 1024px) and (min-height: 640px) { .pf-fit & }")),
+  ],
 };
 
 export default config;

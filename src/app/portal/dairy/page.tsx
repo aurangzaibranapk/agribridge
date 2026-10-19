@@ -50,7 +50,7 @@ export default async function DairyDashboard({ searchParams }: { searchParams: R
     : { cow: ctx?.farmer?.cow_count ?? 0, buffalo: ctx?.farmer?.buffalo_count ?? 0, goat: 0 };
 
   return (
-    <div className="pf-fit mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
       <Hero title={<>🐄 {L("dy_dash_title")}</>} sub={`${L("dy_dash_sub")} · ${ctx?.farmer?.farmer_code ?? ""}`}>
         <HeroBtn href="/portal/dairy/milk" primary>🥛 {L("dy_btn_milk")}</HeroBtn>
         <HeroBtn href="/portal/dairy/animals/new">➕ {L("dy_btn_add")}</HeroBtn>

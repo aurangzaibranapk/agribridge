@@ -9,6 +9,8 @@ import { MapLink } from "./map-link";
 import { checkProfileComplete } from "@/lib/utils/profile-gate";
 import { ProfileGateMessage } from "@/components/portal/profile-gate-message";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { PinMap } from "@/components/maps/pin-map";
+import { Hero, HeroBtn, Kpi } from "@/components/portal/dairy/dairy-parts";
 import { t } from "@/lib/i18n/translations";
 
 export default async function FarmsPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
@@ -82,64 +84,71 @@ export default async function FarmsPage({ searchParams }: { searchParams: Promis
     };
   });
 
-  return (
-    <div className="mx-auto max-w-2xl px-4 py-12">
-      <Link href="/portal/dashboard" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">
-        {t("back_to_dashboard", lang)}
-      </Link>
-      <h1 className="font-display text-2xl font-semibold text-surface-900">{t("my_farms_title", lang)}</h1>
-      <p className="mt-1 text-surface-500">{t("my_farms_subtitle", lang)}</p>
+  const pins = (farms ?? []).filter((f) => f.latitude != null && f.longitude != null).map((f) => ({ id: f.id, lat: Number(f.latitude), lng: Number(f.longitude), label: f.name, color: f.is_verified ? "#16a34a" : "#f59e0b" }));
+  const verifiedCount = (farms ?? []).filter((f) => f.is_verified).length;
+  const recordsTotal = farmStats.reduce((a, f) => a + f.recordCount, 0);
+  const lbl = "text-xs font-medium text-surface-600 dark:text-slate-300";
+  const inp = "mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm text-surface-900 dark:border-surface-700 dark:bg-surface-800 dark:text-white dark:[color-scheme:dark]";
+  const card = "rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-800 dark:bg-surface-900";
 
-      <div className="mt-6 grid grid-cols-2 gap-4">
-        <div className="rounded-card border border-surface-200 bg-white p-4 text-center shadow-card">
-          <p className="text-xs text-surface-500">{t("total_land_auto", lang)}</p>
-          <p className="mt-1 text-xl font-semibold text-surface-900">{totalLandAcres} {t("acres_unit", lang)}</p>
-        </div>
-        <div className="rounded-card border border-surface-200 bg-white p-4 text-center shadow-card">
-          <p className="text-xs text-surface-500">{t("total_farms_auto", lang)}</p>
-          <p className="mt-1 text-xl font-semibold text-surface-900">{totalFarmsCount}</p>
-        </div>
+  return (
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
+      <Hero title={<>🌾 {t("my_farms_title", lang)}</>} sub={t("my_farms_subtitle", lang)}>
+        <HeroBtn href="#add-farm" primary>➕ {t("add_new_farm_heading", lang)}</HeroBtn>
+        <HeroBtn href="/portal/crops">🌱 {t("nav_crops", lang)}</HeroBtn>
+        <HeroBtn href="/portal/harvest">📊 {t("nav_farm_management", lang)}</HeroBtn>
+      </Hero>
+
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 fit:grid-cols-4 fit:gap-2.5">
+        <Kpi tone="green" label={t("total_land_auto", lang)} value={`${totalLandAcres} ${t("acres_unit", lang)}`} sub={`${totalFarmsCount} ${t("total_farms_auto", lang)}`} />
+        <Kpi tone="sky" label={t("total_farms_auto", lang)} value={String(totalFarmsCount)} sub={`${verifiedCount} ${t("verified", lang)} · ${totalFarmsCount - verifiedCount} ${t("unverified", lang)}`} />
+        <Kpi tone="violet" label={t("os2_harvests", lang)} value={String(recordsTotal)} sub={t("crops_grown", lang)} />
+        <Kpi tone="amber" label={t("os2_rented_farms", lang)} value={String((farms ?? []).filter((f) => f.ownership_type === "rented").length)} sub={t("owned_or_rented", lang)} />
       </div>
 
       {params.error && (
-        <p className="mt-4 rounded-card border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
           {t("error_prefix", lang)}: {params.error}
         </p>
       )}
 
-      <form action={addFarmAction} className="mt-6 space-y-3 rounded-card border border-surface-200 bg-white p-4 shadow-card">
-        <h2 className="font-display text-sm font-semibold text-surface-900">{t("add_new_farm_heading", lang)}</h2>
+      <div className="pf-grow pf-grid grid gap-4 lg:grid-cols-2 fit:grid-cols-[1fr_1.25fr_1.1fr] fit:gap-2.5">
+      <form id="add-farm" action={addFarmAction} className={`pf-panel ${card} fit:p-3.5`}>
+        <h2 className="mb-2 font-display text-[15px] font-semibold text-surface-900 dark:text-white">➕ {t("add_new_farm_heading", lang)}</h2>
+        <div className="pf-body space-y-3">
         <div>
-          <label className="text-xs font-medium text-surface-600">{t("farm_name", lang)}</label>
-          <input type="text" name="name" required placeholder={t("eg_farm_name", lang)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-surface-600">{t("area_acres", lang)}</label>
-          <input type="number" step="0.1" name="area_acres" required placeholder={t("eg_area", lang)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <label className={lbl}>{t("farm_name", lang)}</label>
+          <input type="text" name="name" required placeholder={t("eg_farm_name", lang)} className={inp} />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs font-medium text-surface-600">{t("village_optional", lang)}</label>
-            <input type="text" name="village" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+            <label className={lbl}>{t("area_acres", lang)}</label>
+            <input type="number" step="0.1" name="area_acres" required placeholder={t("eg_area", lang)} className={inp} />
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-600">{t("district_optional", lang)}</label>
-            <input type="text" name="district" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+            <label className={lbl}>{t("owned_or_rented", lang)}</label>
+            <select name="ownership_type" className={inp} defaultValue="owned">
+              <option value="owned">{t("owned", lang)}</option>
+              <option value="rented">{t("rented", lang)}</option>
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className={lbl}>{t("village_optional", lang)}</label>
+            <input type="text" name="village" className={inp} />
+          </div>
+          <div>
+            <label className={lbl}>{t("district_optional", lang)}</label>
+            <input type="text" name="district" className={inp} />
           </div>
         </div>
         <div>
-          <label className="text-xs font-medium text-surface-600">{t("owned_or_rented", lang)}</label>
-          <select name="ownership_type" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" defaultValue="owned">
-            <option value="owned">{t("owned", lang)}</option>
-            <option value="rented">{t("rented", lang)}</option>
-          </select>
+          <label className={lbl}>{t("rent_per_acre", lang)}</label>
+          <input type="number" step="1" name="rent_per_acre" placeholder={t("eg_rent", lang)} className={inp} />
         </div>
         <div>
-          <label className="text-xs font-medium text-surface-600">{t("rent_per_acre", lang)}</label>
-          <input type="number" step="1" name="rent_per_acre" placeholder={t("eg_rent", lang)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-surface-600">{t("pin_location_optional", lang)}</label>
+          <label className={`mb-1 block ${lbl}`}>{t("pin_location_optional", lang)}</label>
           <LocationPicker lang={lang} />
         </div>
         <button type="submit" className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">
@@ -148,37 +157,39 @@ export default async function FarmsPage({ searchParams }: { searchParams: Promis
         <p className="text-center text-xs text-surface-400">
           {t("unverified_hint", lang)}
         </p>
+        </div>
       </form>
 
-      <h2 className="mt-8 font-display text-lg font-semibold text-surface-900">{t("my_farms_list", lang)}</h2>
-      <div className="mt-3 space-y-3">
+      <section className={`pf-panel ${card} fit:p-3.5`}>
+      <h2 className="mb-2 font-display text-[15px] font-semibold text-surface-900 dark:text-white">{t("my_farms_list", lang)} <span className="text-xs font-normal text-surface-500">· {totalFarmsCount}</span></h2>
+      <div className="pf-body space-y-3">
         {farmStats.length === 0 ? (
-          <p className="rounded-card border border-dashed border-surface-200 bg-white p-6 text-center text-sm text-surface-400">
+          <p className="rounded-xl border border-dashed border-surface-200 p-6 text-center text-sm text-surface-400 dark:border-surface-700">
             {t("no_farms_yet", lang)}
           </p>
         ) : (
           farmStats.map((fs) => (
-            <div key={fs.farm.id} className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-surface-900">{fs.farm.name}</p>
+            <div key={fs.farm.id} className="rounded-xl border border-surface-200 p-3.5 dark:border-surface-700">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-semibold text-surface-900 dark:text-white">{fs.farm.name}</p>
                   {fs.farm.is_verified ? (
-                    <span className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700">
+                    <span className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700 dark:bg-green-500/15 dark:text-green-300">
                       <CheckCircle2 className="h-3 w-3" /> {t("verified", lang)}
                     </span>
                   ) : (
-                    <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
+                    <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
                       <Clock className="h-3 w-3" /> {t("unverified", lang)}
                     </span>
                   )}
                   {fs.farm.ownership_type === "rented" && (
-                    <span className="rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-medium text-purple-700">
+                    <span className="rounded-full bg-purple-50 px-2 py-0.5 text-[10px] font-medium text-purple-700 dark:bg-purple-500/15 dark:text-purple-300">
                       {t("rented", lang)} - Rs {fs.farm.rent_per_acre}/acre
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <p className="text-xs text-surface-500">
+                  <p className="text-xs text-surface-500 dark:text-slate-400">
                     {fs.farm.area_acres} {t("acres_unit", lang)} {fs.farm.village ? `- ${fs.farm.village}` : ""} {fs.farm.district ? `, ${fs.farm.district}` : ""}
                   </p>
                   <DeleteFarmButton farmId={fs.farm.id} />
@@ -187,24 +198,24 @@ export default async function FarmsPage({ searchParams }: { searchParams: Promis
 
               <MapLink latitude={fs.farm.latitude} longitude={fs.farm.longitude} />
 
-              <div className="mt-3 flex items-center justify-between border-t border-surface-100 pt-3 text-sm">
+              <div className="mt-2.5 grid grid-cols-3 gap-2 border-t border-surface-100 pt-2.5 text-sm dark:border-surface-800">
                 <div>
-                  <p className="text-xs text-surface-500">{t("harvest_records", lang)}</p>
-                  <p className="font-medium text-surface-900">{fs.recordCount}</p>
+                  <p className="text-xs text-surface-500 dark:text-slate-400">{t("harvest_records", lang)}</p>
+                  <p className="font-medium text-surface-900 dark:text-white">{fs.recordCount}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-surface-500">{t("crops_grown", lang)}</p>
-                  <p className="font-medium text-surface-900">{fs.crops.length ? fs.crops.join(", ") : "-"}</p>
+                <div className="min-w-0">
+                  <p className="text-xs text-surface-500 dark:text-slate-400">{t("crops_grown", lang)}</p>
+                  <p className="truncate font-medium text-surface-900 dark:text-white" title={fs.crops.join(", ")}>{fs.crops.length ? fs.crops.join(", ") : "-"}</p>
                 </div>
                 <div className="text-end">
-                  <p className="text-xs text-surface-500">{t("total_profit_loss", lang)}</p>
+                  <p className="text-xs text-surface-500 dark:text-slate-400">{t("total_profit_loss", lang)}</p>
                   <p className={`font-medium ${!fs.hasProfitData ? "text-surface-400" : fs.totalProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
                     {!fs.hasProfitData ? "-" : `${fs.totalProfit >= 0 ? "+" : ""}Rs. ${fs.totalProfit.toLocaleString()}`}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-3 border-t border-surface-100 pt-3 text-xs">
+              <div className="mt-2.5 border-t border-surface-100 pt-2.5 text-xs dark:border-surface-800">
                 {fs.recordCount < 2 ? (
                   <p className="text-surface-400">{t("not_enough_data", lang)}</p>
                 ) : (
@@ -224,6 +235,15 @@ export default async function FarmsPage({ searchParams }: { searchParams: Promis
             </div>
           ))
         )}
+      </div>
+      </section>
+
+      <section className={`pf-panel ${card} lg:col-span-2 fit:col-span-1 fit:p-3.5`} data-testid="farms-map">
+        <h2 className="mb-2 font-display text-[15px] font-semibold text-surface-900 dark:text-white">🗺️ {t("os2_farms_map", lang)} <span className="text-xs font-normal text-surface-500">· {pins.length}/{totalFarmsCount}</span></h2>
+        <div className="pf-body h-72 overflow-hidden rounded-xl fit:h-auto">
+          {pins.length ? <PinMap fill height={288} pins={pins} fitKey={`${pins.length}`} className="h-full" /> : <p className="grid h-full place-items-center p-6 text-center text-sm text-surface-400">{t("os2_no_pins", lang)}</p>}
+        </div>
+      </section>
       </div>
     </div>
   );

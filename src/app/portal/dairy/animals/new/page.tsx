@@ -23,11 +23,11 @@ export default async function NewAnimal({ searchParams }: { searchParams: Record
   const err = searchParams?.e;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
       <Hero title={<>➕ {L("dy_add_title")}</>} sub={L("dy_add_sub")} />
       <ErrorNote e={err} lang={lang} />
-      <form action={addAnimalAction} className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-        <Card className="space-y-4">
+      <form action={addAnimalAction} className="pf-grow pf-grid grid gap-4 lg:grid-cols-[1.6fr_1fr] fit:gap-2.5">
+        <Card className="pf-scroll space-y-4 fit:p-3.5">
           <h3 className="text-[15px] font-semibold text-surface-900 dark:text-white"><Tri k="dy_add_details" lang={lang} /></h3>
           <div className="grid gap-3.5 sm:grid-cols-2">
             <Field k="dy_f_tag" lang={lang}><input name="tag_no" required maxLength={30} defaultValue={tag} className={inputCls} /></Field>
@@ -56,13 +56,13 @@ export default async function NewAnimal({ searchParams }: { searchParams: Record
             <button className="rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700">✓ {L("dy_save_animal")}</button>
           </div>
         </Card>
-        <div className="space-y-4">
-          <Card>
+        <div className="pf-scroll space-y-4 fit:space-y-2.5">
+          <Card className="fit:p-3.5">
             <h3 className="mb-3 text-[15px] font-semibold text-surface-900 dark:text-white"><Tri k="dy_photo" lang={lang} /></h3>
             <PhotoPicker title={L("dy2_photo_new")} hint={L("dy2_photo_hint")} shrunkWord={L("dy2_photo_shrunk")} />
             <p className="mt-2 text-[11px] text-surface-500 dark:text-slate-400">🔒 {L("dy2_photo_private")}</p>
           </Card>
-          <Card className="space-y-3">
+          <Card className="space-y-3 fit:p-3.5">
             <div className="rounded-xl border border-dashed border-violet-400 bg-violet-500/5 p-3 text-xs text-surface-700 dark:text-slate-200">🧬 {L("dy_hook_p4")}</div>
             <div className="rounded-xl border border-sky-300/50 bg-sky-50 p-3 text-xs text-surface-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-slate-200">
               💡 {L("dy_hint_count").replace("{n}", String(herd)).replace("{k}", String(animals.length)).replace("{t}", tag)}

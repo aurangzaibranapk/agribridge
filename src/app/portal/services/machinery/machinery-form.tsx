@@ -78,8 +78,8 @@ export function MachineryForm({
   }
 
   return (
-    <div className="mt-4 rounded-card border border-surface-200 bg-white p-4 shadow-card">
-      <h2 className="flex items-center gap-2 font-display text-sm font-semibold text-surface-900">
+    <div className="pf-scroll rounded-card border border-surface-200 bg-white p-4 shadow-card dark:bg-surface-900 dark:border-surface-700">
+      <h2 className="flex items-center gap-2 font-display text-sm font-semibold text-surface-900 dark:text-white">
         <Tractor className="h-4 w-4 text-brand-600" /> {t("new_machinery_request", lang)}
       </h2>
       {state.error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
@@ -89,8 +89,8 @@ export function MachineryForm({
             booking par dobara location nahi leni parti. */}
         <input type="hidden" name="farm_id" value={farmId ?? ""} />
         <div>
-          <label className="text-xs font-medium text-surface-600">{t("machine_type_label", lang)}</label>
-          <select name="machine_type" value={machineType} onChange={(e) => setMachineType(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
+          <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("machine_type_label", lang)}</label>
+          <select name="machine_type" value={machineType} onChange={(e) => setMachineType(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700">
             <option value="rotavator">{t("machine_rotavator", lang)}</option>
             <option value="thresher">{t("machine_thresher", lang)}</option>
             <option value="harvester">{t("machine_harvester", lang)}</option>
@@ -101,24 +101,24 @@ export function MachineryForm({
 
         {machineType === "other" && (
           <div>
-            <label className="text-xs font-medium text-surface-600">{lang === "ur" ? "کون سی مشین چاہیے؟" : "Which machine do you need?"}</label>
+            <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{lang === "ur" ? "کون سی مشین چاہیے؟" : "Which machine do you need?"}</label>
             <input
               type="text"
               name="machine_type_other"
-              className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
               placeholder={t("eg_laser_leveller", lang)}
             />
           </div>
         )}
 
         <div>
-          <label className="text-xs font-medium text-surface-600">{t("how_many_acres", lang)}</label>
-          <input type="number" step="0.1" min="0.1" name="acres" defaultValue={initialAcres} required placeholder={t("eg_area", lang)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("how_many_acres", lang)}</label>
+          <input type="number" step="0.1" min="0.1" name="acres" defaultValue={initialAcres} required placeholder={t("eg_area", lang)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" />
         </div>
 
         <div>
-          <label className="text-xs font-medium text-surface-600">{lang === "ur" ? "فصل" : "Crop"}</label>
-          <select name="crop_type" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
+          <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{lang === "ur" ? "فصل" : "Crop"}</label>
+          <select name="crop_type" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700">
             <option value="">{lang === "ur" ? "منتخب کریں" : "- select -"}</option>
             {CROP_OPTIONS.map((c) => (
               <option key={c.value} value={c.value}>{lang === "ur" ? c.ur : c.en}</option>
@@ -127,8 +127,8 @@ export function MachineryForm({
         </div>
 
         <div>
-          <label className="text-xs font-medium text-surface-600">{t("when_needed", lang)}</label>
-          <input type="date" name="expected_date" min={new Date().toISOString().split("T")[0]} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("when_needed", lang)}</label>
+          <input type="date" name="expected_date" min={new Date().toISOString().split("T")[0]} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" />
         </div>
 
         {farmHasLocation ? (
@@ -137,7 +137,7 @@ export function MachineryForm({
           </div>
         ) : (
         <div>
-          <label className="text-xs font-medium text-surface-600">{t("location_label", lang)}</label>
+          <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("location_label", lang)}</label>
           <button
             type="button"
             onClick={handleUseMyLocation}
@@ -153,7 +153,7 @@ export function MachineryForm({
           <input
             type="text"
             name="location_address"
-            className="mt-2 w-full rounded-lg border border-surface-200 p-2 text-sm"
+            className="mt-2 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
             placeholder={t("village_area_placeholder", lang)}
           />
         </div>
@@ -162,7 +162,7 @@ export function MachineryForm({
         {/* Fasal bechne ka sawal BOOKING ke waqt ka hai: anaj ki
             kharidari ki tayari isi din se shuru hoti hai. */}
         <div>
-          <label className="text-xs font-medium text-surface-600">{t("will_sell_to_us_q", lang)}</label>
+          <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("will_sell_to_us_q", lang)}</label>
           <input type="hidden" name="will_sell_to_us" value={willSell} />
           <div className="mt-1 flex gap-2">
             {[
@@ -174,7 +174,7 @@ export function MachineryForm({
                 type="button"
                 onClick={() => setWillSell(willSell === o.v ? "" : o.v)}
                 className={`flex-1 rounded-lg border py-2 text-sm font-medium ${
-                  willSell === o.v ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500"
+                  willSell === o.v ? "border-brand-500 bg-brand-50 text-brand-700" : "border-surface-200 text-surface-500 dark:text-slate-400 dark:border-surface-700"
                 }`}
               >
                 {o.label}
@@ -189,7 +189,7 @@ export function MachineryForm({
             raqam kisi hisaab mein nahi ginti, aur ye baat kisan ko
             saaf likh kar batayi jati hai taake wo ye na samjhe ke
             us ka bill kam ho chuka hai. */}
-        <div className="rounded-lg border border-surface-200 p-3">
+        <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -208,9 +208,9 @@ export function MachineryForm({
                 name="advance_claimed_amount"
                 required
                 placeholder={t("advance_amount_placeholder", lang)}
-                className="w-full rounded-lg border border-surface-200 p-2 text-sm"
+                className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
               />
-              <select name="advance_claimed_method" className="w-full rounded-lg border border-surface-200 p-2 text-sm">
+              <select name="advance_claimed_method" className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700">
                 <option value="cash">{t("pay_cash", lang)}</option>
                 <option value="bank">{t("pay_bank", lang)}</option>
                 <option value="wallet">{t("pay_wallet", lang)}</option>
@@ -219,7 +219,7 @@ export function MachineryForm({
                 type="text"
                 name="advance_claimed_reference"
                 placeholder={t("advance_reference_placeholder", lang)}
-                className="w-full rounded-lg border border-surface-200 p-2 text-sm"
+                className="w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
               />
               <p className="text-xs text-amber-700">{t("advance_claim_pending_note", lang)}</p>
             </div>
@@ -227,11 +227,11 @@ export function MachineryForm({
         </div>
 
         <div>
-          <label className="text-xs font-medium text-surface-600">{t("additional_notes_optional", lang)}</label>
+          <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("additional_notes_optional", lang)}</label>
           <textarea
             name="notes"
             rows={3}
-            className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+            className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
             placeholder={t("anything_else_placeholder", lang)}
           />
         </div>
@@ -241,16 +241,16 @@ export function MachineryForm({
 
       {requests.length > 0 && (
         <div className="mt-6">
-          <h3 className="mb-2 font-display text-sm font-semibold text-surface-900">{t("past_requests", lang)}</h3>
+          <h3 className="mb-2 font-display text-sm font-semibold text-surface-900 dark:text-white">{t("past_requests", lang)}</h3>
           <div className="space-y-2">
             {requests.map((r) => (
-              <div key={r.id} className="rounded-lg border border-surface-100 p-2 text-xs">
-                <p className="font-medium text-surface-800">
+              <div key={r.id} className="rounded-lg border border-surface-100 p-2 text-xs dark:border-surface-800">
+                <p className="font-medium text-surface-800 dark:text-slate-200">
                   {MACHINE_LABELS[r.machine_type] ?? r.machine_type} - {r.acres} {t("acres_unit", lang)}
                 </p>
                 <p className="text-surface-400">{r.expected_date} - {r.status}</p>
                 {r.estimated_cost !== null ? (
-                  <p className="text-surface-600">{t("ai_estimated_cost_label", lang)}: Rs {r.estimated_cost.toLocaleString()}</p>
+                  <p className="text-surface-600 dark:text-slate-300">{t("ai_estimated_cost_label", lang)}: Rs {r.estimated_cost.toLocaleString()}</p>
                 ) : (
                   <p className="text-surface-400">{t("ai_estimate_pending", lang)}</p>
                 )}

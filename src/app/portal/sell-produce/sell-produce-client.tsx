@@ -49,14 +49,14 @@ export function SellProduceClient({ listings, orders }: { listings: Listing[]; o
     <div>
       {orders.some((o) => o.status === "placed") && (
         <div className="mb-6">
-          <h2 className="mb-3 font-display text-lg font-semibold text-surface-900">{t("pm_orders_needing", lang)}</h2>
+          <h2 className="mb-3 font-display text-lg font-semibold text-surface-900 dark:text-white">{t("pm_orders_needing", lang)}</h2>
           <div className="space-y-3">
             {orders.filter((o) => o.status === "placed").map((o) => (
               <div key={o.id} className="rounded-card border border-amber-200 bg-amber-50 p-4">
-                <p className="font-medium text-surface-900">
+                <p className="font-medium text-surface-900 dark:text-white">
                   {o.crop_name} - {o.quantity} {o.unit}
                 </p>
-                <p className="text-sm text-surface-600">
+                <p className="text-sm text-surface-600 dark:text-slate-300">
                   Order #{o.order_number} - You'll receive Rs {o.farmer_payout_amount.toLocaleString()}
                 </p>
                 <OrderResponseButtons orderId={o.id} />
@@ -68,17 +68,17 @@ export function SellProduceClient({ listings, orders }: { listings: Listing[]; o
 
       {orders.filter((o) => o.status !== "placed").length > 0 && (
         <div className="mb-6">
-          <h2 className="mb-3 font-display text-lg font-semibold text-surface-900">{t("pm_order_history", lang)}</h2>
+          <h2 className="mb-3 font-display text-lg font-semibold text-surface-900 dark:text-white">{t("pm_order_history", lang)}</h2>
           <div className="space-y-2">
             {orders.filter((o) => o.status !== "placed").map((o) => (
-              <div key={o.id} className="flex items-center justify-between rounded-card border border-surface-200 bg-white p-3 shadow-card">
+              <div key={o.id} className="flex items-center justify-between rounded-card border border-surface-200 bg-white p-3 shadow-card dark:bg-surface-900 dark:border-surface-700">
                 <div>
-                  <p className="text-sm font-medium text-surface-900">
+                  <p className="text-sm font-medium text-surface-900 dark:text-white">
                     {o.crop_name} - {o.quantity} {o.unit}
                   </p>
                   <p className="text-xs text-surface-400">Rs {o.farmer_payout_amount.toLocaleString()}</p>
                 </div>
-                <span className="text-xs text-surface-500">{statusLabel(o.status)}</span>
+                <span className="text-xs text-surface-500 dark:text-slate-400">{statusLabel(o.status)}</span>
               </div>
             ))}
           </div>
@@ -86,7 +86,7 @@ export function SellProduceClient({ listings, orders }: { listings: Listing[]; o
       )}
 
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="font-display text-lg font-semibold text-surface-900">{t("pm_my_listings", lang)}</h2>
+        <h2 className="font-display text-lg font-semibold text-surface-900 dark:text-white">{t("pm_my_listings", lang)}</h2>
         <button
           onClick={() => setShowForm(true)}
           className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
@@ -96,17 +96,17 @@ export function SellProduceClient({ listings, orders }: { listings: Listing[]; o
 
       <div className="space-y-3">
         {listings.length === 0 ? (
-          <p className="rounded-card border border-dashed border-surface-200 bg-white p-8 text-center text-sm text-surface-400">{t("pm_no_listings", lang)}</p>
+          <p className="rounded-card border border-dashed border-surface-200 bg-white p-8 text-center text-sm text-surface-400 dark:bg-surface-900 dark:border-surface-700">{t("pm_no_listings", lang)}</p>
         ) : (
           listings.map((l) => (
-            <div key={l.id} className="flex items-center justify-between rounded-card border border-surface-200 bg-white p-4 shadow-card">
+            <div key={l.id} className="flex items-center justify-between rounded-card border border-surface-200 bg-white p-4 shadow-card dark:bg-surface-900 dark:border-surface-700">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-600">
                   <Wheat className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="font-medium text-surface-900">{l.crop_name}</p>
-                  <p className="text-sm text-surface-500">
+                  <p className="font-medium text-surface-900 dark:text-white">{l.crop_name}</p>
+                  <p className="text-sm text-surface-500 dark:text-slate-400">
                     {l.quantity_available} {l.unit} available @ Rs {l.asking_price_per_unit}/{l.unit}
                   </p>
                 </div>
@@ -114,7 +114,7 @@ export function SellProduceClient({ listings, orders }: { listings: Listing[]; o
               <div className="flex items-center gap-3">
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                    l.status === "active" ? "bg-brand-50 text-brand-700" : "bg-surface-100 text-surface-500"
+                    l.status === "active" ? "bg-brand-50 text-brand-700" : "bg-surface-100 text-surface-500 dark:text-slate-400 dark:bg-surface-800"
                   }`}
                 >
                   {l.status}
@@ -177,9 +177,9 @@ function NewListingModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
+      <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">{t("pm_new_produce_listing", lang)}</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pm_new_produce_listing", lang)}</h3>
           <button type="button" onClick={onClose} aria-label={t("ph6_a_close", lang)} className="grid h-11 w-11 place-items-center rounded-lg text-surface-400 hover:text-surface-700">
             <X className="h-5 w-5" />
           </button>
@@ -188,17 +188,17 @@ function NewListingModal({ onClose }: { onClose: () => void }) {
         {state.success && <p className="mb-3 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("pm_listing_created", lang)}</p>}
         <form action={formAction} className="space-y-3">
           <div>
-            <label className="text-xs font-medium text-surface-500">{t("pm_crop_name", lang)}</label>
-            <input name="crop_name" required placeholder={t("pm_eg_crops", lang)} className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
+            <label className="text-xs font-medium text-surface-500 dark:text-slate-400">{t("pm_crop_name", lang)}</label>
+            <input name="crop_name" required placeholder={t("pm_eg_crops", lang)} className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-surface-700" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-surface-500">{t("pm_qty_available", lang)}</label>
-              <input name="quantity_available" type="number" step="0.1" required className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
+              <label className="text-xs font-medium text-surface-500 dark:text-slate-400">{t("pm_qty_available", lang)}</label>
+              <input name="quantity_available" type="number" step="0.1" required className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-surface-700" />
             </div>
             <div>
-              <label className="text-xs font-medium text-surface-500">{t("unit_label", lang)}</label>
-              <select name="unit" defaultValue="kg" className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none">
+              <label className="text-xs font-medium text-surface-500 dark:text-slate-400">{t("unit_label", lang)}</label>
+              <select name="unit" defaultValue="kg" className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-surface-700">
                 <option value="kg">{t("pm_kg", lang)}</option>
                 <option value="maund">{t("pm_maund", lang)}</option>
                 <option value="ton">{t("pm_ton", lang)}</option>
@@ -206,16 +206,16 @@ function NewListingModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-500">{t("pm_asking_price", lang)}</label>
-            <input name="asking_price_per_unit" type="number" step="0.01" required className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
+            <label className="text-xs font-medium text-surface-500 dark:text-slate-400">{t("pm_asking_price", lang)}</label>
+            <input name="asking_price_per_unit" type="number" step="0.01" required className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-surface-700" />
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-500">{t("pm_quality_grade", lang)}</label>
-            <input name="quality_grade" placeholder={t("pm_eg_grade", lang)} className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
+            <label className="text-xs font-medium text-surface-500 dark:text-slate-400">{t("pm_quality_grade", lang)}</label>
+            <input name="quality_grade" placeholder={t("pm_eg_grade", lang)} className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-surface-700" />
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-500">{t("c_notes", lang)}</label>
-            <textarea name="notes" rows={2} className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none" />
+            <label className="text-xs font-medium text-surface-500 dark:text-slate-400">{t("c_notes", lang)}</label>
+            <textarea name="notes" rows={2} className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-surface-700" />
           </div>
           <SubmitButton />
         </form>

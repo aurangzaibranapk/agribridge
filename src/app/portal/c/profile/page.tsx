@@ -39,12 +39,12 @@ export default async function CustomerProfilePage({ searchParams }: { searchPara
   const complete = profileComplete(c);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] px-4 py-6 sm:px-6 fit:gap-2.5 fit:py-3">
       <PageHead title={<L3 k="pc_profile_title" lang={lang} />} sub={L("pc_profile_sub")} />
       {ok && <Notice tone="ok">✔ {L("pc_ok_sent")}</Notice>}
       {e && <Notice tone="err">{t(e as TranslationKey, lang)}</Notice>}
-      <div className="grid gap-3.5 lg:grid-cols-[1.4fr_1fr]">
-        <Panel>
+      <div className="pf-grow pf-grid grid gap-3.5 lg:grid-cols-[1.4fr_1fr] fit:grid-cols-[1.5fr_1fr_1fr] fit:gap-2.5">
+        <Panel className="pf-scroll pf-navy fit:p-3.5">
           <PanelHead title={<L3 k="pc_personal" lang={lang} />} right={<Pill tone={complete ? "green" : "amber"}>{complete ? L("pc_verified") : L("pc_incomplete")}</Pill>} />
           <div className="grid gap-x-3 sm:grid-cols-2">
             <Box label={L("pc_f_name")} value={c.name} /><Box label={L("pc_f_business")} value={c.business_name} />
@@ -68,26 +68,28 @@ export default async function CustomerProfilePage({ searchParams }: { searchPara
           </form>
           <div className="mt-3"><Lock>{L("pc_profile_lock")}</Lock></div>
         </Panel>
-        <div className="space-y-3.5">
-          <Panel>
+        <div className="space-y-3.5 fit:contents">
+          <div className="pf-scroll space-y-3.5 fit:space-y-2.5">
+          <Panel className="fit:p-3.5">
             <PanelHead title={<L3 k="pc_terms" lang={lang} />} />
             <Row><span>{L("pc_limit")}</span><b>{rs(c.credit_limit)}</b></Row>
             <Row><span>{L("pc_pay_days")}</span><b>{c.payment_due_days ?? "—"}</b></Row>
             <Row><span>{L("pc_block_after")}</span><b>{c.overdue_block_days ? L("pc_after_days").replace("{n}", String(c.overdue_block_days)) : "—"}</b></Row>
             <Row><span>{L("pc_terms_accepted")}</span><b>{c.terms_version ? `${c.terms_version}${c.terms_at ? ` · ${longDate(c.terms_at.slice(0, 10), lang)}` : ""}` : "—"}</b></Row>
           </Panel>
-          <Panel>
+          <Panel className="fit:p-3.5">
+            <PanelHead title={<L3 k="pc_prefs" lang={lang} />} />
+            <Row><span>{L("pc_language")}</span><b>EN · Roman · <span dir="rtl">اردو</span></b></Row>
+            <Row><span>{L("pc_theme")}</span><b>{L("pc_theme_v")}</b></Row>
+            <Row><span>{L("pc_wa_updates")}</span><b>{L("pc_wa_optin")}</b></Row>
+          </Panel>
+          </div>
+          <Panel className="pf-scroll pf-navy fit:p-3.5">
             <PanelHead title={<L3 k="pc_linked" lang={lang} />} />
             <Row><span>👨‍🌾 {L("pc_farmer_profile")} {c.farmer_code ?? ""}</span><Pill tone={c.farmer_code ? "violet" : "slate"}>{c.farmer_code ? L("pc_linked_b") : "—"}</Pill></Row>
             {animals > 0 && <Row><span>🐄 {L("pc_dairy")} ({animals})</span><Pill tone="green">{L("pc_ad_st_active")}</Pill></Row>}
             {pending.map((p) => <Row key={p.id}><span>📨 {L("pc_pending_change")}</span><Pill tone="amber">{L(`pc_fld_${p.field}` as TranslationKey)} · {L(`pc_st_${p.status}` as TranslationKey)}</Pill></Row>)}
             {pending.length === 0 && <EmptyState compact tone="blue" icon="📨" lang={lang} titleKey="ph6_es_changes_t" bodyKey="ph6_es_changes_b" cta={{ href: "#pc-change", label: `✏ ${L("pc_req_change")}` }} />}
-          </Panel>
-          <Panel>
-            <PanelHead title={<L3 k="pc_prefs" lang={lang} />} />
-            <Row><span>{L("pc_language")}</span><b>EN · Roman · <span dir="rtl">اردو</span></b></Row>
-            <Row><span>{L("pc_theme")}</span><b>{L("pc_theme_v")}</b></Row>
-            <Row><span>{L("pc_wa_updates")}</span><b>{L("pc_wa_optin")}</b></Row>
           </Panel>
         </div>
       </div>

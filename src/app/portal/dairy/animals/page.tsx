@@ -26,19 +26,25 @@ export default async function AnimalList({ searchParams }: { searchParams: Recor
   const tabs = [["all", L("dy_f_all")], ["milking", L("st_milking")], ["pregnant", L("st_pregnant")], ["dry", L("st_dry")], ["young", L("dy_f_young")], ["gone", L("dy_f_gone")]] as const;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
       <Hero title={<>🐄 {L("dy_list_title")}</>} sub={`${active.length} ${L("dy_list_sub").split(" · ")[0]} · ${milkingNow} ${L("dy_list_sub").split(" · ").slice(1).join(" · ")}`}>
         <HeroBtn href="/portal/dairy/animals/new" primary>➕ {L("dy_btn_add")}</HeroBtn>
         <HeroBtn href="/portal/dairy/milk">🥛 {L("dy_btn_milk")}</HeroBtn>
       </Hero>
-      <Card>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="grid grid-cols-2 gap-3.5 md:grid-cols-4 fit:gap-2.5">
+        <Kpi tone="green" label={L("st_milking")} value={String(count("milking"))} sub={L("dy_animals_word")} />
+        <Kpi tone="violet" label={L("st_pregnant")} value={String(count("pregnant"))} sub={L("dy_animals_word")} />
+        <Kpi tone="amber" label={L("st_dry")} value={String(count("dry"))} sub={L("dy_animals_word")} />
+        <Kpi tone="sky" label={L("dy_f_young")} value={String(count("young"))} sub={L("dy_animals_word")} />
+      </div>
+      <Card className="pf-panel pf-grow fit:p-3.5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 fit:mb-2">
           <Tabs items={tabs.map(([k, label]) => ({ href: `/portal/dairy/animals?s=${k}`, label: `${label} (${count(k)})`, on: f === k }))} />
           <form className="flex"><input type="hidden" name="s" value={f} />
             <input name="q" defaultValue={q} placeholder={`🔍 ${L("dy_search")}`} className="rounded-full border border-surface-200 bg-surface-50 px-3 py-1.5 text-xs text-surface-800 dark:border-surface-700 dark:bg-surface-800 dark:text-slate-100" />
           </form>
         </div>
-        <div className="overflow-x-auto">
+        <div className="pf-body overflow-x-auto">
           <table className="w-full text-[13px]">
             <thead>
               <tr className="border-b border-surface-200 text-start text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800 dark:text-slate-400">
@@ -68,12 +74,6 @@ export default async function AnimalList({ searchParams }: { searchParams: Recor
           </table>
         </div>
       </Card>
-      <div className="grid grid-cols-2 gap-3.5 md:grid-cols-4">
-        <Kpi tone="green" label={L("st_milking")} value={String(count("milking"))} sub={L("dy_animals_word")} />
-        <Kpi tone="violet" label={L("st_pregnant")} value={String(count("pregnant"))} sub={L("dy_animals_word")} />
-        <Kpi tone="amber" label={L("st_dry")} value={String(count("dry"))} sub={L("dy_animals_word")} />
-        <Kpi tone="sky" label={L("dy_f_young")} value={String(count("young"))} sub={L("dy_animals_word")} />
-      </div>
       <Footer lang={lang} />
     </div>
   );
