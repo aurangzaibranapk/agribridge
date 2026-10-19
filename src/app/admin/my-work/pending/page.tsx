@@ -148,7 +148,7 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
                   <th className="w-[96px] px-2 py-2">{t("apb_col_age", lang)}</th>
                   <th className="w-[130px] px-2 py-2">{t("apb_col_by", lang)}</th>
                   <th className="w-[150px] px-2 py-2">{t("apb_col_with", lang)}</th>
-                  <th className="w-[230px] px-4 py-2 text-right">{t("apb_col_act", lang)}</th>
+                  <th className="w-[290px] px-4 py-2 text-right">{t("apb_col_act", lang)}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-100 dark:divide-white/5">

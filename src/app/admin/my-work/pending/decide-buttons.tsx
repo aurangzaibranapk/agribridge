@@ -20,7 +20,7 @@ export function DecideButtons({ category, id, isOwn, href }: { category: string;
   const ownTip = t("apb_own_tip", lang);
   return (
     <div className="flex flex-col items-end gap-1">
-      <div className="flex flex-wrap justify-end gap-1.5">
+      <div className="flex flex-wrap justify-end gap-1.5 md:flex-nowrap">
         {state === "enabled" && (
           <>
             <form action={decidePending} onSubmit={(e) => { if (!window.confirm(t("apb_confirm_approve", lang))) e.preventDefault(); }}>
