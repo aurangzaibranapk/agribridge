@@ -35,6 +35,7 @@
     "test:party-360": "npx --yes tsx scripts/test-party-360.ts",
     "test:promise-credit": "npx --yes tsx scripts/test-promise-credit.ts && node tests/promise-credit-migration.cjs",
     "test:admin-review": "npx --yes tsx scripts/test-admin-review.ts",
+    "test:grain-unified": "node tests/grain-unified-receivables.cjs",
     "test:salary-qist": "npx --yes tsx scripts/test-salary-qist.ts && node tests/salary-qist-wiring.cjs && node tests/salary-qist-sql.mjs",
     "test:password-reset": "npx --yes tsx scripts/test-password-reset.ts && node tests/password-reset-sql.mjs",
     "test:hr-emails": "npx --yes tsx scripts/test-hr-emails.ts",
