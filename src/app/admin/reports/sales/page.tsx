@@ -33,6 +33,8 @@ import { resolveSalesShop, summaryScope, SALES_SHOP_COOKIE } from "@/lib/reports
 import { SalesShopSelect } from "@/components/reports/sales-shop-select";
 import { cookies } from "next/headers";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { salesReportSections, shouldUseMeriDukan, loadScope, cashHealth, MERI_DUKAN_ROUTE } from "@/lib/reports/sales-secrets";
 
 export const dynamic = "force-dynamic";
 
@@ -98,6 +100,18 @@ export default async function SalesReportPage({
     .select("role, shop_id, branch_id")
     .eq("id", user?.id ?? "")
     .maybeSingle();
+
+  // Sales staff ko poori report nahi -- apni dukan ki "Meri Dukan Report"
+  // (bina qeemat, kharche ya kamai ke). 17 October, malik ki manzoori.
+  if (shouldUseMeriDukan(me?.role as string | undefined)) {
+    const q = new URLSearchParams();
+    if (params.range) q.set("range", params.range);
+    if (params.from) q.set("from", params.from);
+    if (params.to) q.set("to", params.to);
+    redirect(`${MERI_DUKAN_ROUTE}${q.toString() ? `?${q}` : ""}`);
+  }
+  /** Company ke raaz (cost, kharche, kamai, sab dukanein, kul lena) -- sirf owner/admin. */
+  const show = salesReportSections(me?.role as string | undefined);
 
   const sabKuchWala = UNRESTRICTED_ROLES.includes(String(me?.role ?? ""));
   const meriDukan = !sabKuchWala ? ((me?.shop_id as string | null) ?? null) : null;
@@ -211,17 +225,29 @@ export default async function SalesReportPage({
         ? supabase.from("pos_sale_payment_details").select("sale_id, payment_method, amount").in("sale_id", saleIds)
         : Promise.resolve({ data: [] as { sale_id: string; payment_method: string; amount: number }[] }),
       supabase.from("payment_method_account_map").select("payment_method, finance_accounts(name)"),
-      supabase
-        .from("load_transactions")
-        .select("kind, principal, service_charge, commission_confirmed, status, created_at, branch_id")
-        .gte("created_at", start.toISOString())
-        .lte("created_at", end.toISOString()),
-      supabase
-        .from("finance_transactions")
-        .select("amount, category, transaction_date")
-        .eq("transaction_type", "expense")
-        .gte("transaction_date", start.toISOString().slice(0, 10))
-        .lte("transaction_date", end.toISOString().slice(0, 10)),
+      // Load/Bill aur kharche -- sirf owner/admin ke liye query chalti hai.
+      // Pehle dukan wale bande ka branch filter khali reh jata tha aur SAB
+      // branches ka load aur POORI company ke kharche us ko nazar aate the.
+      show.loadEarnings
+        ? (() => {
+            let lq = supabase
+              .from("load_transactions")
+              .select("kind, principal, service_charge, commission_confirmed, status, created_at, branch_id, shop_id")
+              .gte("created_at", start.toISOString())
+              .lte("created_at", end.toISOString());
+            const daira = loadScope({ shopId: meriDukan || shopId, branchId });
+            if (daira) lq = lq.eq(daira.column, daira.value);
+            return lq;
+          })()
+        : Promise.resolve({ data: [] as any[] }),
+      show.expenses
+        ? supabase
+            .from("finance_transactions")
+            .select("amount, category, transaction_date")
+            .eq("transaction_type", "expense")
+            .gte("transaction_date", start.toISOString().slice(0, 10))
+            .lte("transaction_date", end.toISOString().slice(0, 10))
+        : Promise.resolve({ data: [] as any[] }),
       supabase.from("warehouses").select("id, name, branch_id, shop_id"),
     ]);
 
@@ -263,9 +289,7 @@ export default async function SalesReportPage({
   const udhaarDiya = (sales ?? []).reduce((sum, s: any) => sum + Number(s.khata_amount ?? 0), 0);
   const naqadAaya = (sales ?? []).reduce((sum, s: any) => sum + Number(s.cash_paid ?? 0), 0);
 
-  const chalteLoad = (loadRows ?? []).filter(
-    (l: any) => l.status !== "wapas" && (!branchId || l.branch_id === branchId)
-  );
+  const chalteLoad = (loadRows ?? []).filter((l: any) => l.status !== "wapas");
   const loadKiRaqam = chalteLoad
     .filter((l: any) => l.kind === "load")
     .reduce((s2, l: any) => s2 + Number(l.principal ?? 0), 0);
@@ -308,8 +332,11 @@ export default async function SalesReportPage({
       : Promise.resolve({
           data: [] as { product_id: string; quantity_on_hand: number; warehouse_id: string; updated_at: string }[],
         }),
-    supabase.from("products").select("id, purchase_price").eq("is_deleted", false),
-    godamIds.length > 0
+    // Kharid ki qeemat sirf owner/admin ke liye uthayi jati hai.
+    show.stockValue
+      ? supabase.from("products").select("id, purchase_price").eq("is_deleted", false)
+      : Promise.resolve({ data: [] as { id: string; purchase_price: number }[] }),
+    show.stockValue && godamIds.length > 0
       ? service.from("stock_batches").select("warehouse_id, remaining_quantity, unit_cost").in("warehouse_id", godamIds)
       : Promise.resolve({ data: [] as { warehouse_id: string; remaining_quantity: number; unit_cost: number }[] }),
   ]);
@@ -399,6 +426,8 @@ export default async function SalesReportPage({
   let khataQuery = supabase.from("customers").select("current_balance, credit_limit, branch_id");
   if (meriDukan && meriBranch) khataQuery = khataQuery.eq("branch_id", meriBranch);
   else if (branchId) khataQuery = khataQuery.eq("branch_id", branchId);
+  // Ghair-owner jis ki branch hi set nahi, us ko kisi branch ka udhaar nahi.
+  else if (!show.totalReceivable) khataQuery = meriBranch ? khataQuery.eq("branch_id", meriBranch) : khataQuery.eq("branch_id", "00000000-0000-0000-0000-000000000000");
   const { data: khaate } = await khataQuery;
 
   const kulLena = (khaate ?? []).reduce((sum, k: any) => {
@@ -464,10 +493,11 @@ export default async function SalesReportPage({
   const totalSales = (sales ?? []).reduce((sum, s) => sum + Number(s.total_amount ?? 0), 0);
   const totalCount = (sales ?? []).length;
   const avgSale = totalCount > 0 ? totalSales / totalCount : 0;
-  const cashSalePct = totalSales > 0 ? (naqadAaya / totalSales) * 100 : 0;
-  const udhaarPct = totalSales > 0 ? (udhaarDiya / totalSales) * 100 : 0;
-  const cashTargetMet = cashSalePct >= 70;
-  const creditLimitMet = udhaarPct <= 30;
+  const sehat = cashHealth(totalSales, naqadAaya, udhaarDiya);
+  const cashSalePct = sehat.cashPct;
+  const udhaarPct = sehat.udhaarPct;
+  const cashTargetMet = sehat.cashOk;
+  const creditLimitMet = sehat.udhaarOk;
 
   const allRows = (sales ?? []).map((s: any) => {
     const branch = Array.isArray(s.branches) ? s.branches[0] : s.branches;
@@ -565,13 +595,15 @@ export default async function SalesReportPage({
       )}
 
       <p className="mt-5 text-[11px] font-semibold uppercase tracking-wide text-surface-400">Aaj ka khulasa</p>
-      <div className="mt-2 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div>
-          <Link href="/admin/reports/stock-reconcile" className="block">
-            <StatCard label="Stock ki qeemat" value={rs(kulStockQeemat)} icon={Boxes} tone="purple" />
-          </Link>
-          <Link href="/admin/reports/stock-reconcile" className="mt-1 block text-center text-[11px] font-semibold text-brand-700 hover:underline dark:text-brand-400">Farq / reconciliation dekhein →</Link>
-        </div>
+      <div className={`mt-2 grid grid-cols-2 gap-4 ${show.stockValue ? "lg:grid-cols-4" : "lg:grid-cols-2"}`}>
+        {show.stockValue && (
+          <div>
+            <Link href="/admin/reports/stock-reconcile" className="block">
+              <StatCard label="Stock ki qeemat" value={rs(kulStockQeemat)} icon={Boxes} tone="purple" />
+            </Link>
+            <Link href="/admin/reports/stock-reconcile" className="mt-1 block text-center text-[11px] font-semibold text-brand-700 hover:underline dark:text-brand-400">Farq / reconciliation dekhein →</Link>
+          </div>
+        )}
         <StatCard
           label="Stock ki ginti"
           value={`${kulStockGinti.toLocaleString()} units`}
@@ -579,7 +611,7 @@ export default async function SalesReportPage({
           tone="blue"
         />
         <StatCard label={t("rs_total_sales", lang)} value={rs(totalSales)} icon={TrendingUp} tone="brand" />
-        <StatCard label="Kul lena hai" value={rs(kulLena)} icon={HandCoins} tone="orange" />
+        {show.totalReceivable && <StatCard label="Kul lena hai" value={rs(kulLena)} icon={HandCoins} tone="orange" />}
       </div>
 
       <p className="mt-5 text-[11px] font-semibold uppercase tracking-wide text-surface-400">Khabardar</p>
@@ -637,10 +669,10 @@ export default async function SalesReportPage({
       </div>
 
       <p className="mt-5 text-[11px] font-semibold uppercase tracking-wide text-surface-400">Paisa</p>
-      <div className="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className={`mt-2 grid grid-cols-2 gap-4 ${show.expenses ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
         <StatCard label="Naqad aaya" value={rs(naqadAaya)} icon={Wallet} tone="green" />
         <StatCard label="Udhaar diya" value={rs(udhaarDiya)} icon={CreditCard} tone="warn" />
-        <StatCard label="Daily kharche" value={rs(kulKharche)} icon={ArrowDownCircle} tone="red" />
+        {show.expenses && <StatCard label="Daily kharche" value={rs(kulKharche)} icon={ArrowDownCircle} tone="red" />}
         <StatCard label={t("rs_transactions", lang)} value={String(totalCount)} icon={ClipboardList} tone="blue" />
       </div>
 
@@ -732,7 +764,7 @@ export default async function SalesReportPage({
         </div>
 
         {/* Har SHOP ka alag hisaab -- sirf jab kisi ek dukan tak mehdood na ho */}
-        {!meriDukan && !shopId && dukanKiFehrist.length > 0 && (
+        {show.allShopsTable && !meriDukan && !shopId && dukanKiFehrist.length > 0 && (
           <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900 lg:col-span-2">
             <h2 className="mb-1 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
               Har Shop ka Alag Hisaab
@@ -793,6 +825,7 @@ export default async function SalesReportPage({
             </table>
           )}
 
+          {show.stockValueByType && (<>
           <p className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-wide text-surface-400">
             Stock ki qeemat (kharid par)
           </p>
@@ -814,9 +847,11 @@ export default async function SalesReportPage({
               </tbody>
             </table>
           )}
+          </>)}
         </div>
 
-        {/* Load aur Bill */}
+        {/* Load aur Bill -- sirf owner/admin */}
+        {show.loadEarnings && (
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
           <h2 className="mb-1 flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
             <Smartphone className="h-4 w-4 text-surface-400" /> Load aur Bill
@@ -847,13 +882,18 @@ export default async function SalesReportPage({
             </tbody>
           </table>
         </div>
+        )}
 
-        {/* Kharche */}
+        {/* Kharche -- sirf owner/admin */}
+        {show.expenses && (
         <div className="rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">
           <h2 className="mb-1 flex items-center gap-2 font-display text-base font-semibold text-surface-900 dark:text-surface-100">
             <Receipt className="h-4 w-4 text-surface-400" /> Kharche
           </h2>
-          <p className="mb-4 text-xs text-surface-400">Cash Book mein darj kharche — is arse ke.</p>
+          <p className="mb-4 text-xs text-surface-400">
+            Cash Book mein darj kharche — is arse ke.
+            {(branchId || shopId) && " Kharche kisi branch/dukan se jure nahi, is liye ye poori company ke hain."}
+          </p>
           {kharchKiFehrist.length === 0 ? (
             <p className="text-sm text-surface-400">Is arse mein koi kharcha darj nahi hua.</p>
           ) : (
@@ -877,12 +917,13 @@ export default async function SalesReportPage({
             </table>
           )}
         </div>
+        )}
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <div className={`mt-4 grid grid-cols-2 gap-4 ${show.loadEarnings ? "sm:grid-cols-3" : "sm:grid-cols-1"}`}>
         <StatCard label={t("rs_avg_sale", lang)} value={rs(avgSale)} icon={ShoppingCart} tone="purple" />
-        <StatCard label="Load + Bill" value={rs(loadKiRaqam + billKiRaqam)} icon={Landmark} tone="orange" />
-        <StatCard label="Load ki kamai" value={rs(loadKiAamdani)} icon={TrendingUp} tone="green" />
+        {show.loadEarnings && <StatCard label="Load + Bill" value={rs(loadKiRaqam + billKiRaqam)} icon={Landmark} tone="orange" />}
+        {show.loadEarnings && <StatCard label="Load ki kamai" value={rs(loadKiAamdani)} icon={TrendingUp} tone="green" />}
       </div>
 
       <div className="mt-6 rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-800 dark:bg-surface-900">

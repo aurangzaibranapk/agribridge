@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { pathAllowed } from "@/lib/access/route-match";
 import { UNRESTRICTED_ROLES, homePageForRole } from "@/lib/departments";
 
 /**
@@ -66,5 +67,5 @@ export async function effectiveAccess(
 /** Safha khulta hai ya nahi. Neeche ke safhe bhi khulte hain (/a → /a/b). */
 export function canOpen(access: EffectiveAccess, pathname: string): boolean {
   if (access.unrestricted) return true;
-  return access.pages.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  return pathAllowed(access.pages, pathname);
 }
