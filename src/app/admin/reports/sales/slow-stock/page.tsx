@@ -3,6 +3,7 @@ import { ArrowLeft, Clock3, PackageSearch } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
+import { canSeeSalesSecrets } from "@/lib/reports/sales-secrets";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,8 @@ export default async function SlowStockPage({ searchParams }: { searchParams: Se
   } = await db.auth.getUser();
   const { data: me } = await db.from("profiles").select("role, shop_id, branch_id").eq("id", user?.id ?? "").maybeSingle();
   const unrestricted = UNRESTRICTED_ROLES.includes(String(me?.role ?? ""));
+  // Kharid ki qeemat company ka raaz hai -- sirf owner/admin (17 October).
+  const showCost = canSeeSalesSecrets(me?.role as string | undefined);
   const ownShop = !unrestricted ? ((me?.shop_id as string | null) ?? null) : null;
   const branchId = ownShop ? "" : params.branch ?? "";
   const shopId = ownShop ? "" : params.shop ?? "";
@@ -56,7 +59,7 @@ export default async function SlowStockPage({ searchParams }: { searchParams: Se
   const inventoryIds = (inventory ?? []).map((r: any) => r.id);
   const productIds = [...new Set((inventory ?? []).map((r: any) => r.product_id))];
   const [{ data: products }, { data: movements }] = await Promise.all([
-    productIds.length ? db.from("products").select("id, name, pack_size, purchase_price").in("id", productIds).eq("is_deleted", false) : Promise.resolve({ data: [] as any[] }),
+    productIds.length ? db.from("products").select(showCost ? "id, name, pack_size, purchase_price" : "id, name, pack_size").in("id", productIds).eq("is_deleted", false) : Promise.resolve({ data: [] as any[] }),
     inventoryIds.length ? db.from("stock_movements").select("inventory_id, movement_type, created_at").in("inventory_id", inventoryIds).order("created_at", { ascending: false }).limit(20000) : Promise.resolve({ data: [] as any[] }),
   ]);
 
@@ -92,7 +95,7 @@ export default async function SlowStockPage({ searchParams }: { searchParams: Se
         warehouseId: row.warehouse_id,
         warehouseName: warehouseMap.get(row.warehouse_id) ?? "Unknown location",
         quantity: qty,
-        purchasePrice: Number(product.purchase_price ?? 0),
+        purchasePrice: showCost ? Number((product as any).purchase_price ?? 0) : 0,
         lastDate,
         lastMovement: movement?.movement_type ?? null,
         usedFallback: !movement,
@@ -134,17 +137,17 @@ export default async function SlowStockPage({ searchParams }: { searchParams: Se
         <button className="h-10 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Search</button>
       </form>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+      <div className={`grid grid-cols-2 gap-3 ${showCost ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
         <Card className="p-4"><p className="text-xs text-surface-500">Slow stock lines</p><p className="mt-1 text-2xl font-bold">{rows.length}</p></Card>
         <Card className="p-4"><p className="text-xs text-surface-500">Total units</p><p className="mt-1 text-2xl font-bold">{totalUnits.toLocaleString()}</p></Card>
-        <Card className="col-span-2 p-4 md:col-span-1"><p className="text-xs text-surface-500">Purchase value</p><p className="mt-1 text-2xl font-bold">Rs. {Math.round(totalValue).toLocaleString()}</p></Card>
+        {showCost && <Card className="col-span-2 p-4 md:col-span-1"><p className="text-xs text-surface-500">Purchase value</p><p className="mt-1 text-2xl font-bold">Rs. {Math.round(totalValue).toLocaleString()}</p></Card>}
       </div>
 
       {rows.length === 0 ? <EmptyState title="20+ din wala stock nahi mila" description="Is filter ke mutabiq koi positive stock nahi mila." /> : (
         <Card className="overflow-x-auto p-0">
           <table className="w-full min-w-[980px] text-sm">
-            <thead><tr className="border-b border-surface-200 bg-surface-50 text-left text-xs text-surface-500 dark:border-surface-800 dark:bg-surface-800"><th className="px-4 py-3">Product</th><th className="px-4 py-3">Shop / Godam</th><th className="px-4 py-3 text-right">Stock</th><th className="px-4 py-3">Aakhri movement</th><th className="px-4 py-3 text-right">Idle days</th><th className="px-4 py-3 text-right">Value</th><th className="px-4 py-3">Statement</th></tr></thead>
-            <tbody>{rows.map((row) => <tr key={`${row.productId}:${row.warehouseId}`} className="border-b border-surface-100 last:border-0 dark:border-surface-800"><td className="px-4 py-3 font-semibold text-surface-900 dark:text-surface-100">{row.productName}{row.packSize ? <span className="ml-1 text-xs font-normal text-surface-500">({row.packSize})</span> : null}</td><td className="px-4 py-3 text-surface-600 dark:text-surface-300">{row.warehouseName}</td><td className="px-4 py-3 text-right font-semibold tabular-nums">{row.quantity.toLocaleString()}</td><td className="px-4 py-3 text-surface-600 dark:text-surface-300">{dateText(row.lastDate)}<span className="block text-[11px] text-surface-400">{row.usedFallback ? "Inventory update fallback" : String(row.lastMovement ?? "movement").replace(/_/g, " ")}</span></td><td className="px-4 py-3 text-right font-bold tabular-nums text-amber-700 dark:text-amber-300">{row.idleDays} din</td><td className="px-4 py-3 text-right tabular-nums">Rs. {Math.round(row.value).toLocaleString()}</td><td className="px-4 py-3"><Link href={`/admin/inventory/product/${row.productId}/statement?warehouse=${row.warehouseId}`} className="inline-flex items-center gap-1 text-brand-600 hover:underline"><PackageSearch className="h-4 w-4" /> Open</Link></td></tr>)}</tbody>
+            <thead><tr className="border-b border-surface-200 bg-surface-50 text-left text-xs text-surface-500 dark:border-surface-800 dark:bg-surface-800"><th className="px-4 py-3">Product</th><th className="px-4 py-3">Shop / Godam</th><th className="px-4 py-3 text-right">Stock</th><th className="px-4 py-3">Aakhri movement</th><th className="px-4 py-3 text-right">Idle days</th>{showCost && <th className="px-4 py-3 text-right">Value</th>}<th className="px-4 py-3">Statement</th></tr></thead>
+            <tbody>{rows.map((row) => <tr key={`${row.productId}:${row.warehouseId}`} className="border-b border-surface-100 last:border-0 dark:border-surface-800"><td className="px-4 py-3 font-semibold text-surface-900 dark:text-surface-100">{row.productName}{row.packSize ? <span className="ml-1 text-xs font-normal text-surface-500">({row.packSize})</span> : null}</td><td className="px-4 py-3 text-surface-600 dark:text-surface-300">{row.warehouseName}</td><td className="px-4 py-3 text-right font-semibold tabular-nums">{row.quantity.toLocaleString()}</td><td className="px-4 py-3 text-surface-600 dark:text-surface-300">{dateText(row.lastDate)}<span className="block text-[11px] text-surface-400">{row.usedFallback ? "Inventory update fallback" : String(row.lastMovement ?? "movement").replace(/_/g, " ")}</span></td><td className="px-4 py-3 text-right font-bold tabular-nums text-amber-700 dark:text-amber-300">{row.idleDays} din</td>{showCost && <td className="px-4 py-3 text-right tabular-nums">Rs. {Math.round(row.value).toLocaleString()}</td>}<td className="px-4 py-3"><Link href={`/admin/inventory/product/${row.productId}/statement?warehouse=${row.warehouseId}`} className="inline-flex items-center gap-1 text-brand-600 hover:underline"><PackageSearch className="h-4 w-4" /> Open</Link></td></tr>)}</tbody>
           </table>
         </Card>
       )}
