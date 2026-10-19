@@ -56,7 +56,8 @@ export default async function FarmerDashboardPage() {
   if (!user) redirect("/login");
 
   const { data: farmer } = await supabase.from("farmers").select("*").eq("user_id", user.id).single();
-  if (!farmer) redirect("/login");
+  // Phase 5: sirf-customer login (kisan nahi) apne Customer Portal par.
+  if (!farmer) redirect("/portal/c");
 
   const pref = (farmer as any).preferred_language;
   const lang: Lang = getLanguageFromCookies(pref === "en" || pref === "rm" || pref === "ur" ? pref : "ur");

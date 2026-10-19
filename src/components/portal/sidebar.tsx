@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, UserCircle, Tractor, Sprout, Landmark, LogOut, Warehouse, MapPin, Wallet, Sparkles, PackageSearch, CalendarClock, Milk, Calculator, Dna, Syringe } from "lucide-react";
+import { LayoutDashboard, UserCircle, Tractor, Sprout, Landmark, LogOut, Warehouse, MapPin, Wallet, Sparkles, PackageSearch, CalendarClock, Milk, Calculator, Dna, Syringe, ShoppingBag, HandCoins } from "lucide-react";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { LanguageToggle } from "./language-toggle";
 
@@ -22,6 +22,9 @@ export function getPortalNavItems(lang: Lang) {
     { href: "/portal/dashboard", label: t("nav_dashboard", lang), icon: LayoutDashboard },
     { href: "/portal/profile", label: t("nav_profile", lang), icon: UserCircle },
     { href: "/portal/wallet", label: t("nav_wallet", lang), icon: Wallet },
+    // Phase 5: bill/orders aur adaigi/wade (Customer Portal ke safhe, kisan ke liye bhi)
+    { href: "/portal/c/orders", label: t("pc_nav_bills_f", lang), icon: ShoppingBag },
+    { href: "/portal/c/payments", label: t("pc_nav_pay_f", lang), icon: HandCoins },
     { href: "/portal/farms", label: t("nav_farms", lang), icon: MapPin },
     { href: "/portal/demand", label: t("nav_demand", lang), icon: PackageSearch },
     { href: "/portal/campaigns", label: t("nav_campaigns", lang), icon: CalendarClock },

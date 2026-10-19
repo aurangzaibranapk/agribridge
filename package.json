@@ -41,7 +41,8 @@
     "test:portal-khata": "npx --yes tsx scripts/test-portal-khata.ts && node tests/portal-khata-sql.mjs",
     "test:portal-dairy": "npx --yes tsx scripts/test-portal-dairy.ts && node tests/portal-dairy-sql.mjs",
     "test:portal-dairy-pl": "npx --yes tsx scripts/test-portal-dairy-pl.ts && node tests/portal-dairy-pl-sql.mjs",
-    "test:portal-breeding": "npx --yes tsx scripts/test-portal-breeding.ts && node tests/portal-breeding-sql.mjs"
+    "test:portal-breeding": "npx --yes tsx scripts/test-portal-breeding.ts && node tests/portal-breeding-sql.mjs",
+    "test:portal-customer": "npx --yes tsx scripts/test-portal-customer.ts && node tests/portal-customer-sql.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",

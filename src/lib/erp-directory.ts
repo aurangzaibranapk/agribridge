@@ -124,6 +124,7 @@ const CURATED_FEATURES: ErpFeature[] = [
   { section: "Finance", label: "Cash Book", href: "/admin/finance", description: "GL accounts, journal entries, aur cashbook — poora finance ledger.", who: "Finance / Accounts" },
   { section: "Finance", label: "Bank", href: "/admin/finance/banks", description: "Bank accounts ka record — balance, transactions.", who: "Finance / Admin" },
   { section: "Finance", label: "Khata (Party Ledger)", href: "/admin/khata", description: "Parties (suppliers, dealers) ka khata — kitna dena, kitna lena.", who: "Finance / Admin" },
+  { section: "Finance", label: "Customer Portal (gahak requests)", href: "/admin/customer-portal", description: "Gahak portal: kis ka login hai, adaigi saboot / wade / profile tabdeeli / khata aitraaz ki checker queue (apni entry khud approve nahi).", who: "Admin / Finance" },
   { section: "Finance", label: "Staff Khata", href: "/admin/staff-khata", description: "Staff ki salary ka khata — baqi, advance, aur katauti.", who: "HR / Finance" },
   { section: "Finance", label: "Shop ka Udhaar aur Advance", href: "/admin/branch-credit", description: "Dukan ko diya hua advance aur unse milna wala udhaar.", who: "Finance / Admin" },
   { section: "Finance", label: "Udhaar ki Darkhwastein", href: "/admin/credit-requests", description: "Udhaar ki requests — kaun ne maanga, kitna, approve ya reject.", who: "Finance Head / Malik" },
