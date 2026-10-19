@@ -11,6 +11,7 @@ import { useLang } from "@/lib/i18n/lang-context";
 import { usePending, PENDING_PAGE } from "@/components/pending/pending-context";
 import { RedBadge, NayaPill, PendingMeta, ZeroMark } from "@/components/pending/pending-ui";
 import { badgeForGroup, badgeForHref } from "@/lib/pending/categories";
+import { adminTint } from "@/lib/ui/admin-tint";
 export type { NavItem } from "@/components/layout/nav-items";
 
 /**
@@ -27,7 +28,8 @@ export interface SidebarGroup {
 
 /** Khula safha neela (laal sirf "baqi kaam" ke liye). */
 const ACTIVE_CLS = "bg-gradient-to-r from-[#1e3a8a] to-[#2563eb] text-white shadow-[0_10px_24px_-10px_rgba(37,99,235,.7)]";
-const IDLE_CLS = "text-surface-700 hover:bg-surface-100 hover:text-surface-900 dark:text-surface-300 dark:hover:bg-white/5 dark:hover:text-white";
+const TINT = adminTint();
+const IDLE_CLS = "text-surface-700 " + TINT.hover + " hover:text-surface-900 dark:text-surface-300 dark:hover:bg-white/5 dark:hover:text-white";
 const PENDING_CLS = "border-l-red-500 bg-red-500/[0.07] text-surface-900 hover:bg-red-500/[0.11] dark:border-l-red-400 dark:bg-red-500/[0.12] dark:text-white";
 
 export function Sidebar({
@@ -85,8 +87,8 @@ export function Sidebar({
 
   // Sidebar HAMESHA poori chaurai -- koi collapse / icon-only nahi (malik, 19 Oct).
   return (
-    <aside data-sidebar="admin" className="hidden h-screen min-h-0 w-72 shrink-0 overflow-hidden border-r border-surface-200 bg-white/90 backdrop-blur-xl lg:flex lg:flex-col dark:border-white/10 dark:bg-[#0b1430]">
-      <Link href={homeHref} className="flex h-16 items-center gap-2 border-b border-surface-200 px-5 dark:border-white/10">
+    <aside data-sidebar="admin" className={cn("hidden h-screen min-h-0 w-72 shrink-0 overflow-hidden border-r backdrop-blur-xl lg:flex lg:flex-col", TINT.aside)}>
+      <Link href={homeHref} className={cn("flex h-16 items-center gap-2 border-b px-5 dark:border-white/10", TINT.divider)}>
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-600 to-blue-600 text-sm font-bold text-white">{t("au_ar", lang)}</div>
         <div className="min-w-0 flex-1">
           <p className="font-display text-sm font-semibold leading-tight text-surface-900 dark:text-white">{t("au_company", lang)}</p>
@@ -136,7 +138,7 @@ export function Sidebar({
             </span>
           </Link>
         )}
-        <div className="my-2 border-t border-surface-200 dark:border-white/10" />
+        <div className={cn("my-2 border-t dark:border-white/10", TINT.divider)} />
         {visibleGroups.map((group) => {
           const isOpen = openGroups.has(group.label);
           const groupActive = group.items.some((item) => isActive(item.href));
@@ -212,7 +214,7 @@ export function Sidebar({
         })}
       </nav>
       {pend.enabled && (
-        <div data-pending-legend className="mx-3 mb-3 flex flex-wrap gap-x-3 gap-y-1 rounded-xl bg-surface-100 px-3 py-2 text-[10.5px] text-surface-500 dark:bg-white/5 dark:text-surface-400">
+        <div data-pending-legend className={cn("mx-3 mb-3 flex flex-wrap gap-x-3 gap-y-1 rounded-xl px-3 py-2 text-[10.5px] text-surface-500 dark:bg-white/5 dark:text-surface-400", TINT.legend)}>
           <span className="flex items-center gap-1"><NayaPill lang={lang} /> {t("apb_legend_new", lang)}</span>
           <span className="flex items-center gap-1"><RedBadge n={5} /> {t("apb_legend_pending", lang)}</span>
           <span className="flex items-center gap-1"><ZeroMark /> {t("apb_legend_zero", lang)}</span>
