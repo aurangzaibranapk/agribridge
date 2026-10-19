@@ -20,6 +20,7 @@ import { sidebarModeFor, type SidebarKind } from "@/lib/access/sidebar-free";
 import { homePageForRole } from "@/lib/departments";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { LangProvider } from "@/lib/i18n/lang-context";
+import { PendingProvider } from "@/components/pending/pending-context";
 import { t } from "@/lib/i18n/translations";
 
 export const dynamic = "force-dynamic";
@@ -224,6 +225,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <LangProvider lang={lang}>
+    {/* Pending badges (582): ek hi poll -- sidebar, mobile menu, ghanti, toast. */}
+    <PendingProvider allowedRoutes={allowedPages} active={!!user}>
     <div className="flex h-screen min-h-0 overflow-hidden bg-surface-50 print:h-auto print:overflow-visible dark:bg-surface-950">
       {/* Chhoti sidebar sirf us bande ko jise das se ZYADA safhe khulte
           hain. Us se kam par safha sirf cards ka rehta hai -- malik ka
@@ -302,6 +305,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       {user && <CycleCountNudge />}
       {user && <StockCountNudge />}
     </div>
+    </PendingProvider>
     </LangProvider>
   );
 }
