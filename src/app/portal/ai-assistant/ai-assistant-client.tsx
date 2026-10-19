@@ -3,6 +3,8 @@ import { useState, useRef, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { approveFarmerAiRequest, rejectFarmerAiRequest, type ActionState } from "@/actions/farmer-ai";
+import { useLang } from "@/lib/i18n/lang-context";
+import { t as tr } from "@/lib/i18n/translations";
 import { Mic, Send, Sparkles, Check, X, Loader2, Square } from "lucide-react";
 
 const initialState: ActionState = {};
@@ -170,7 +172,7 @@ export function AiAssistantClient({ farmerName, pendingRequests }: { farmerName:
             </div>
           )}
           {messages.map((m, i) => (
-            <div key={i} className={m.role === "user" ? "text-left" : "text-right"}>
+            <div key={i} className={m.role === "user" ? "text-start" : "text-end"}>
               <span
                 className={`inline-block max-w-[85%] whitespace-pre-line rounded-lg px-3 py-2 text-sm ${
                   m.role === "user" ? "bg-brand-600 text-white" : "bg-surface-100 text-surface-800"
@@ -252,8 +254,9 @@ function ApproveButton() {
 
 function RejectButton() {
   const { pending } = useFormStatus();
+  const lang = useLang();
   return (
-    <button type="submit" disabled={pending} className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-100 text-surface-600 hover:bg-surface-200 disabled:opacity-60">
+    <button type="submit" disabled={pending} aria-label={tr("ph6_a_reject", lang)} className="flex h-8 w-8 items-center justify-center rounded-lg bg-surface-100 text-surface-600 hover:bg-surface-200 disabled:opacity-60">
       <X className="h-3.5 w-3.5" />
     </button>
   );

@@ -8,6 +8,7 @@ import { loadBreeding, loadTasks } from "@/lib/portal/breeding-load";
 import { Card, shortDate } from "@/components/portal/khata/khata-parts";
 import { Donut, Footer, HeroBtn, TagChip } from "@/components/portal/dairy/dairy-parts";
 import { AlertRow, BHero, BKpi, Calendar, H3, Legend, Pill, monthLabel , BErrorNote } from "@/components/portal/breeding/breed-parts";
+import { ResponsiveTable } from "@/components/portal/responsive-table";
 
 export const dynamic = "force-dynamic";
 
@@ -84,8 +85,8 @@ export default async function BreedingDashboard({ searchParams }: { searchParams
         </Card>
         <Card>
           <H3 k="bh_up_title" lang={lang} right={<span className="text-xs text-surface-500">283 {L("bh_cow")} · 310 {L("bh_buffalo")}</span>} />
-          <table className="w-full text-[13px]">
-            <thead><tr className="border-b border-surface-200 text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800"><th className="py-2 text-left">Tag</th><th className="text-left">{L("bh_c_name")}</th><th className="text-left">{L("bh_c_expected")}</th><th className="text-left">{L("bh_c_days")}</th></tr></thead>
+          <ResponsiveTable className="w-full text-[13px]">
+            <thead><tr className="border-b border-surface-200 text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800"><th className="py-2 text-start">Tag</th><th className="text-start">{L("bh_c_name")}</th><th className="text-start">{L("bh_c_expected")}</th><th className="text-start">{L("bh_c_days")}</th></tr></thead>
             <tbody>
               {preg.slice(0, 5).map((r) => (
                 <tr key={r.animal_id} className="border-b border-surface-100 text-surface-800 dark:border-surface-800 dark:text-slate-200">
@@ -95,7 +96,7 @@ export default async function BreedingDashboard({ searchParams }: { searchParams
               ))}
               {preg.length === 0 && <tr><td colSpan={4} className="py-6 text-center text-surface-500">{L("bh_none_pregnant")}</td></tr>}
             </tbody>
-          </table>
+          </ResponsiveTable>
         </Card>
         <Card>
           <H3 k="bh_fert_title" lang={lang} />

@@ -52,13 +52,13 @@ export function CropsTable({ crops, expenseOptions }: { crops: CropRow[]; expens
     <div className="overflow-x-auto rounded-card border border-surface-200 bg-white shadow-card">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-surface-200 bg-surface-50 text-left text-xs font-medium text-surface-500">
+          <tr className="border-b border-surface-200 bg-surface-50 text-start text-xs font-medium text-surface-500">
             <th className="px-3 py-2">{t("crop", lang)}</th>
             <th className="px-3 py-2">{t("farm_label", lang)}</th>
             <th className="px-3 py-2">{t("sowing_date", lang)}</th>
             <th className="px-3 py-2">{t("table_progress_header", lang)}</th>
-            <th className="px-3 py-2 text-right">{t("total_expense_col", lang)}</th>
-            <th className="px-3 py-2 text-right">{t("per_acre_col", lang)}</th>
+            <th className="px-3 py-2 text-end">{t("total_expense_col", lang)}</th>
+            <th className="px-3 py-2 text-end">{t("per_acre_col", lang)}</th>
             <th className="px-3 py-2"></th>
           </tr>
         </thead>
@@ -79,7 +79,7 @@ export function CropsTable({ crops, expenseOptions }: { crops: CropRow[]; expens
                       <EditCropButton crop={{ id: c.id, crop_name: c.cropName, sowing_date: c.sowingDate, area_sown_acres: c.areaSownAcres }} />
                       <form action={deleteCropAction} onSubmit={(e) => { if (!confirm(t("confirm_delete_crop", lang))) e.preventDefault(); }}>
                         <input type="hidden" name="crop_id" value={c.id} />
-                        <button type="submit" className="text-red-400 hover:text-red-600">
+                        <button type="submit" aria-label={t("ph6_a_delete", lang)} className="text-red-400 hover:text-red-600">
                           <Trash2 className="h-3 w-3" />
                         </button>
                       </form>
@@ -95,8 +95,8 @@ export function CropsTable({ crops, expenseOptions }: { crops: CropRow[]; expens
                       <span className="text-xs text-surface-500">{isReady ? t("ready_label", lang) : `${c.daysRemaining}d`}</span>
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-right font-medium text-surface-800">Rs {totalExpense.toLocaleString()}</td>
-                  <td className="px-3 py-2 text-right text-surface-500">
+                  <td className="px-3 py-2 text-end font-medium text-surface-800">Rs {totalExpense.toLocaleString()}</td>
+                  <td className="px-3 py-2 text-end text-surface-500">
                     {perAcre !== null ? `Rs ${perAcre.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "-"}
                   </td>
                   <td className="px-3 py-2">

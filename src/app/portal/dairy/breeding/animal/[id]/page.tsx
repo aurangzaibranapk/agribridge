@@ -110,7 +110,7 @@ export default async function BreedTimeline({ params, searchParams }: { params: 
                 <span>AI<b className="block text-surface-800 dark:text-slate-200">{dd(r.preg_service_date)}</b></span>
                 <span className="text-center">PD<b className="block text-surface-800 dark:text-slate-200">{dd(addDays(r.preg_service_date, 35))}</b></span>
                 <span className="text-center">Dry-off<b className="block text-surface-800 dark:text-slate-200">{dd(r.dry_off_due)}</b></span>
-                <span className="text-right">{L("bh_ev_calving")}<b className="block text-surface-800 dark:text-slate-200">{dd(r.expected_calving)}</b></span>
+                <span className="text-end">{L("bh_ev_calving")}<b className="block text-surface-800 dark:text-slate-200">{dd(r.expected_calving)}</b></span>
               </div>
             </div>
           )}
@@ -135,7 +135,7 @@ export default async function BreedTimeline({ params, searchParams }: { params: 
         </Card>
         <Card>
           <H3 k="bh_tl_all" lang={lang} right={<Chips items={(["all", "breed", "health"] as const).map((k) => ({ href: `/portal/dairy/breeding/animal/${a.id}${k === "all" ? "" : `?f=${k}`}`, label: L(`bh_f_${k}` as TranslationKey), on: f === k }))} />} />
-          <div className="relative pl-6 before:absolute before:bottom-1.5 before:left-[9px] before:top-1.5 before:w-0.5 before:bg-surface-200 dark:before:bg-surface-800">
+          <div className="relative ps-6 before:absolute before:bottom-1.5 before:start-[9px] before:top-1.5 before:w-0.5 before:bg-surface-200 dark:before:bg-surface-800">
             {items.map((i) => (
               <div key={i.id} className="group">
                 <TLItem color={i.color} date={dd(i.date)} title={i.title} sub={i.sub} />

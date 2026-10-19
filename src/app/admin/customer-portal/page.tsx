@@ -57,8 +57,8 @@ export default async function AdminCustomerPortal({ searchParams }: { searchPara
             </div>} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-[12.5px]">
-              <thead><tr className="border-b border-surface-200 text-left text-[10.5px] uppercase tracking-wide text-surface-500 dark:border-[#1e3160] dark:text-slate-400">
-                <th className="py-2">{L("pc_ad_c_code")}</th><th>{L("pc_ad_c_name")}</th><th>{L("pc_ad_c_branch")}</th><th className="text-right">{L("pc_ad_c_balance")}</th><th className="ps-3">{L("pc_ad_c_portal")}</th><th>{L("pc_ad_c_seen")}</th>
+              <thead><tr className="border-b border-surface-200 text-start text-[10.5px] uppercase tracking-wide text-surface-500 dark:border-[#1e3160] dark:text-slate-400">
+                <th className="py-2">{L("pc_ad_c_code")}</th><th>{L("pc_ad_c_name")}</th><th>{L("pc_ad_c_branch")}</th><th className="text-end">{L("pc_ad_c_balance")}</th><th className="ps-3">{L("pc_ad_c_portal")}</th><th>{L("pc_ad_c_seen")}</th>
               </tr></thead>
               <tbody>
                 {rows.length === 0 && <tr><td colSpan={6} className="py-6 text-center text-surface-500">{L("pc_empty")}</td></tr>}
@@ -67,7 +67,7 @@ export default async function AdminCustomerPortal({ searchParams }: { searchPara
                     <td className="py-2.5"><Code>{r.code}</Code></td>
                     <td><b className="text-surface-900 dark:text-white">{r.name}</b><Sub>{r.farmer_code ? `farmer ${r.farmer_code}` : L("pc_ad_shop_only")}{r.pending ? ` · 📨 ${r.pending}` : ""}</Sub></td>
                     <td>{r.branch ?? "—"}</td>
-                    <td className={`text-right font-bold ${r.balance > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>{rs(r.balance).replace("Rs ", "")}</td>
+                    <td className={`text-end font-bold ${r.balance > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}`}>{rs(r.balance).replace("Rs ", "")}</td>
                     <td className="ps-3">
                       {r.portal === "none" ? (
                         <InviteButton label={L("pc_ad_st_none")} title={`${L("pc_ad_invite_preview")} · ${r.name}`} confirmLabel={L("pc_ad_invite_confirm")} offNote={L("pc_ad_invite_off")}

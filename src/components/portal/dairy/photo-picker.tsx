@@ -43,7 +43,7 @@ export function PhotoPicker({ title, hint, shrunkWord, current, tall }: { title:
         ) : (
           <span className="p-4"><span className="block text-3xl">📤</span><b className="block text-surface-800 dark:text-slate-100">{title}</b>{hint}</span>
         )}
-        {preview && <span className="absolute bottom-2 right-2 rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold text-white">📷 {title}</span>}
+        {preview && <span className="absolute bottom-2 end-2 rounded-full bg-black/60 px-3 py-1 text-[11px] font-semibold text-white">📷 {title}</span>}
         {busy && <span className="absolute inset-0 grid place-items-center bg-white/70 text-sm font-semibold text-green-800 dark:bg-black/60 dark:text-green-200">…</span>}
         <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only" onChange={pick} />
       </label>

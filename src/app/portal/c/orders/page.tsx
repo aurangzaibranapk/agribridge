@@ -54,8 +54,8 @@ export default async function CustomerOrders({ searchParams }: { searchParams: R
             ))}</div>} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[620px] text-[12.5px]">
-              <thead><tr className="border-b border-surface-200 text-left text-[10.5px] uppercase tracking-wide text-surface-500 dark:border-[#1e3160] dark:text-slate-400">
-                <th className="py-2">{L("pc_c_no")}</th><th>{L("pc_c_date")}</th><th>{L("pc_c_items")}</th><th className="text-right">{L("pc_c_amount")}</th><th className="ps-3">{L("pc_c_paidby")}</th><th>{L("pc_c_status")}</th>
+              <thead><tr className="border-b border-surface-200 text-start text-[10.5px] uppercase tracking-wide text-surface-500 dark:border-[#1e3160] dark:text-slate-400">
+                <th className="py-2">{L("pc_c_no")}</th><th>{L("pc_c_date")}</th><th>{L("pc_c_items")}</th><th className="text-end">{L("pc_c_amount")}</th><th className="ps-3">{L("pc_c_paidby")}</th><th>{L("pc_c_status")}</th>
               </tr></thead>
               <tbody>
                 {lines.length === 0 && <tr><td colSpan={6} className="py-6 text-center text-surface-500">{L("pc_empty")}</td></tr>}
@@ -63,7 +63,7 @@ export default async function CustomerOrders({ searchParams }: { searchParams: R
                   <tr key={x.key} className="border-b border-surface-100 text-surface-800 dark:border-[#1e3160] dark:text-slate-100">
                     <td className="py-2.5"><Code>{x.no}</Code></td><td className="whitespace-nowrap">{shortDate(x.date, lang, year)}</td>
                     <td className="max-w-[240px] truncate" title={x.items}>{x.items || "—"}</td>
-                    <td className={`text-right font-semibold ${x.amount < 0 ? "text-emerald-600 dark:text-emerald-400" : ""}`}>{x.amount < 0 ? `−${rs(-x.amount).replace("Rs ", "")}` : rs(x.amount).replace("Rs ", "")}</td>
+                    <td className={`text-end font-semibold ${x.amount < 0 ? "text-emerald-600 dark:text-emerald-400" : ""}`}>{x.amount < 0 ? `−${rs(-x.amount).replace("Rs ", "")}` : rs(x.amount).replace("Rs ", "")}</td>
                     <td className="ps-3">{x.paid}</td><td><Pill tone={STATUS_TONE[x.status] ?? "amber"}>{stLabel(x.status)}</Pill></td>
                   </tr>
                 ))}

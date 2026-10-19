@@ -110,12 +110,12 @@ export function UsernameCard({ current }: { current: string | null }) {
                 type={showPassword ? "text" : "password"}
                 required
                 minLength={6}
-                className="w-full rounded-lg border border-surface-200 px-3 py-2 pr-9 text-sm"
+                className="w-full rounded-lg border border-surface-200 px-3 py-2 pe-9 text-sm"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute inset-y-0 right-0 flex items-center px-2 text-surface-400 hover:text-surface-600"
+                className="absolute inset-y-0 end-0 flex items-center px-2 text-surface-400 hover:text-surface-600"
                 aria-label={showPassword ? "Password chhupayein" : "Password dikhayein"}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -131,12 +131,12 @@ export function UsernameCard({ current }: { current: string | null }) {
                 type={showPasswordAgain ? "text" : "password"}
                 required
                 minLength={6}
-                className="w-full rounded-lg border border-surface-200 px-3 py-2 pr-9 text-sm"
+                className="w-full rounded-lg border border-surface-200 px-3 py-2 pe-9 text-sm"
               />
               <button
                 type="button"
                 onClick={() => setShowPasswordAgain((v) => !v)}
-                className="absolute inset-y-0 right-0 flex items-center px-2 text-surface-400 hover:text-surface-600"
+                className="absolute inset-y-0 end-0 flex items-center px-2 text-surface-400 hover:text-surface-600"
                 aria-label={showPasswordAgain ? "Password chhupayein" : "Password dikhayein"}
               >
                 {showPasswordAgain ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

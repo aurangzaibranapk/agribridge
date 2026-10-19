@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ChevronDown, Receipt, TrendingUp, TrendingDown } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { ResponsiveTable } from "@/components/portal/responsive-table";
 
 const CATEGORY_LABELS: Record<string, string> = {
   land_prep: "Zameen Tayari",
@@ -36,7 +37,7 @@ export function ExpenseStatement({
     <div className="rounded-card border border-surface-200 bg-white shadow-card">
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between px-4 py-3 text-left"
+        className="flex w-full items-center justify-between px-4 py-3 text-start"
       >
         <span className="flex items-center gap-2 font-display text-sm font-semibold text-surface-900">
           <Receipt className="h-4 w-4 text-brand-600" />{t("pm_expense_income_stmt", lang)}</span>
@@ -64,7 +65,7 @@ export function ExpenseStatement({
       {open && (
         <div className="border-t border-surface-100 px-4 py-3">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-surface-400">{t("pm_expense_by_category", lang)}</p>
-          <table className="w-full text-sm">
+          <ResponsiveTable className="w-full text-sm">
             <tbody>
               {categoryTotals.length === 0 ? (
                 <tr>
@@ -74,12 +75,12 @@ export function ExpenseStatement({
                 categoryTotals.map((c) => (
                   <tr key={c.category} className="border-b border-surface-50 last:border-0">
                     <td className="py-1.5 text-surface-600">{CATEGORY_LABELS[c.category] ?? c.category}</td>
-                    <td className="py-1.5 text-right font-medium text-surface-900">Rs {c.amount.toLocaleString()}</td>
+                    <td className="py-1.5 text-end font-medium text-surface-900">Rs {c.amount.toLocaleString()}</td>
                   </tr>
                 ))
               )}
             </tbody>
-          </table>
+          </ResponsiveTable>
         </div>
       )}
     </div>
