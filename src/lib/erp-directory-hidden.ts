@@ -10,6 +10,7 @@ export const ERP_HIDDEN_ROUTES: string[] = [
   "/admin/branches/tree",
   "/admin/brands",
   "/admin/bridge-ai/daily-briefing",
+  "/admin/broadcast/new",
   "/admin/business-360",
   "/admin/cash-custody",
   "/admin/categories/merge",
