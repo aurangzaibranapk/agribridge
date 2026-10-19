@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCropProgress } from "@/lib/utils/crop-duration";
 import { createClient } from "@/lib/supabase/server";
@@ -9,6 +8,7 @@ import { checkProfileComplete } from "@/lib/utils/profile-gate";
 import { ProfileGateMessage } from "@/components/portal/profile-gate-message";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
+import { Hero, HeroBtn, Kpi } from "@/components/portal/dairy/dairy-parts";
 
 export default async function CropsPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const params = await searchParams;
@@ -113,31 +113,44 @@ export default async function CropsPage({ searchParams }: { searchParams: Promis
     };
   });
 
+  const chartData = (crops ?? []).map((c) => {
+    const p = getCropProgress(c.sowing_date ?? "", c.expected_harvest_date ?? "");
+    return { crop_name: c.crop_name ?? "", percent: p.percent, daysRemaining: p.daysRemaining };
+  });
+  const active = cropRows.filter((c) => !harvestedSet.has(c.id));
+  const sown = active.reduce((a, c) => a + Number(c.areaSownAcres ?? 0), 0);
+  const ready = active.filter((c) => c.daysRemaining <= 14).length;
+  const spent = (allExpenses ?? []).reduce((a, e) => a + Number(e.amount ?? 0), 0);
+  const land = farmLand.reduce((a, f) => a + f.total, 0);
+
   return (
-    <div className="mx-auto max-w-4xl px-4 py-12">
-      <Link href="/portal/dashboard" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">
-        {t("back_to_dashboard", lang)}
-      </Link>
-      <h1 className="font-display text-2xl font-semibold text-surface-900">{t("my_crops_title", lang)}</h1>
-      <p className="mt-1 text-surface-500">{t("my_crops_subtitle", lang)}</p>
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
+      <Hero title={<>🌱 {t("my_crops_title", lang)}</>} sub={t("my_crops_subtitle", lang)}>
+        <HeroBtn href="#add-crop" primary>➕ {t("add_new_crop", lang)}</HeroBtn>
+        <HeroBtn href="/portal/farms">🌾 {t("my_farms_title", lang)}</HeroBtn>
+        <HeroBtn href="/portal/harvest">📊 {t("nav_farm_management", lang)}</HeroBtn>
+      </Hero>
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 fit:grid-cols-4 fit:gap-2.5">
+        <Kpi tone="green" label={t("active_crops", lang)} value={String(active.length)} sub={`${cropRows.length} ${t("os2_crops_total", lang)}`} />
+        <Kpi tone="sky" label={t("os2_sown", lang)} value={`${Math.round(sown * 10) / 10} / ${Math.round(land * 10) / 10}`} sub={t("acres_unit", lang)} />
+        <Kpi tone="amber" label={t("os2_ready_soon", lang)} value={String(ready)} sub={t("os2_ready_sub", lang)} />
+        <Kpi tone="rose" label={t("os2_spent", lang)} value={`Rs ${Math.round(spent).toLocaleString("en-IN")}`} sub={`${(allExpenses ?? []).length} ${t("os2_entries", lang)}`} />
+      </div>
       {params.error && (
-        <p className="mt-4 rounded-card border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-200">
           Error: {params.error}
         </p>
       )}
 
-      <AddCropForm farmLand={farmLand} benchmarks={benchmarkMap} />
-
-      <CropsChart
-        data={(crops ?? []).map((c) => {
-          const p = getCropProgress(c.sowing_date ?? "", c.expected_harvest_date ?? "");
-          return { crop_name: c.crop_name ?? "", percent: p.percent, daysRemaining: p.daysRemaining };
-        })}
-      />
-
-      <h2 className="mt-8 font-display text-lg font-semibold text-surface-900">{t("active_crops", lang)}</h2>
-      <div className="mt-3">
-        <CropsTable crops={cropRows} expenseOptions={expenseOptions} />
+      <div className="pf-grow pf-grid grid gap-4 lg:grid-cols-[1fr_1.6fr] fit:grid-cols-[1fr_2fr] fit:gap-2.5">
+        <div id="add-crop" className="pf-scroll"><AddCropForm className="" farmLand={farmLand} benchmarks={benchmarkMap} /></div>
+        <div className="flex min-h-0 flex-col gap-4 fit:gap-2.5">
+          <CropsChart className="shrink-0" maxHeight={170} data={chartData} />
+          <section className="flex min-h-0 flex-1 flex-col">
+            <h2 className="mb-2 font-display text-[15px] font-semibold text-surface-900 dark:text-white">{t("active_crops", lang)}</h2>
+            <CropsTable className="pf-scroll pf-sticky min-h-0 flex-1" crops={cropRows} expenseOptions={expenseOptions} />
+          </section>
+        </div>
       </div>
     </div>
   );

@@ -75,7 +75,7 @@ export default async function BreedTimeline({ params, searchParams }: { params: 
   const statusBadge = r?.pregnant ? <Pill tone="violet">{L("bh_hs_pregnant")} · {r.days_pregnant} {L("bh_days")}</Pill> : r?.pd_pending ? <Pill tone="indigo">{L("bh_hs_pd")}</Pill> : <Pill tone="slate">{L(`st_${a.status}` as TranslationKey)}</Pill>;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
       <BHero title={<span className="flex flex-wrap items-center gap-2">{SPECIES_EMOJI[a.species]} #{a.tag_no} {a.name ?? ""} · {L("bh_tl_title")} {lang !== "ur" && <>· <span dir="rtl">{t("bh_tl_title", "ur")}</span></>}</span>}
         sub={[a.breed, `${ageText(a.dob, asOf)}`, `lactation ${a.lactation_no}`, r?.pregnant ? L("bh_hs_pregnant") : L(`st_${a.status}` as TranslationKey)].filter(Boolean).join(" · ")}>
         <HeroBtn href={`/portal/dairy/breeding/new?animal=${a.id}${r?.pd_pending ? "&type=pd" : r?.pregnant ? "&type=calving" : "&type=ai"}`} primary>➕ {L("bh_new_event")}</HeroBtn>
@@ -83,8 +83,8 @@ export default async function BreedTimeline({ params, searchParams }: { params: 
       </BHero>
       {searchParams?.ok && <p className="rounded-xl bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200">{L("bh_saved")}</p>}
       <BErrorNote e={searchParams?.e} lang={lang} />
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.7fr]">
-        <Card>
+      <div className="pf-grow pf-grid grid gap-4 lg:grid-cols-[1fr_1.7fr] fit:gap-2.5">
+        <Card className="pf-scroll fit:p-3.5">
           <div className="flex items-center gap-4">
             <Thumb url={photo} emoji={SPECIES_EMOJI[a.species]} size={92} />
             <div className="min-w-0">
@@ -133,8 +133,9 @@ export default async function BreedTimeline({ params, searchParams }: { params: 
             </div>
           </div>
         </Card>
-        <Card>
+        <Card className="pf-panel fit:p-3.5">
           <H3 k="bh_tl_all" lang={lang} right={<Chips items={(["all", "breed", "health"] as const).map((k) => ({ href: `/portal/dairy/breeding/animal/${a.id}${k === "all" ? "" : `?f=${k}`}`, label: L(`bh_f_${k}` as TranslationKey), on: f === k }))} />} />
+          <div className="pf-body">
           <div className="relative ps-6 before:absolute before:bottom-1.5 before:start-[9px] before:top-1.5 before:w-0.5 before:bg-surface-200 dark:before:bg-surface-800">
             {items.map((i) => (
               <div key={i.id} className="group">
@@ -152,6 +153,7 @@ export default async function BreedTimeline({ params, searchParams }: { params: 
               </div>
             ))}
             {items.length === 0 && <p className="py-8 text-center text-sm text-surface-500">{L("bh_tl_empty")}</p>}
+          </div>
           </div>
         </Card>
       </div>

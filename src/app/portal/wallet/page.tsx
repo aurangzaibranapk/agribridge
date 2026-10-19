@@ -83,7 +83,7 @@ export default async function FarmerWalletPage({ searchParams }: { searchParams:
   ) : null;
 
   return (
-    <div className="pf-fit mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
       <div className="space-y-5 fit:grid fit:grid-cols-[1.15fr_2fr] fit:gap-2.5 fit:space-y-0">
       {/* Hero */}
       <section className={`relative overflow-hidden rounded-3xl bg-gradient-to-r ${heroTone} p-6 text-white shadow-lg fit:rounded-2xl fit:px-4 fit:py-3`}>

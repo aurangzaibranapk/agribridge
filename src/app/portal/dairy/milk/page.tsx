@@ -27,7 +27,7 @@ export default async function MilkEntry({ searchParams }: { searchParams: Record
   const sh = (s: string) => `/portal/dairy/milk?d=${date}&s=${s}${searchParams?.a ? `&a=${searchParams.a}` : ""}`;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
       <Hero title={<>🥛 {L("dy_milk_title")}</>} sub={`${longDate(date, lang)} · ${L("dy_milk_sub")}`}>
         <form className="flex items-center gap-2"><input type="hidden" name="s" value={shift} />
           <input type="date" name="d" defaultValue={date} max={asOf} min={addDays(asOf, -60)} className="rounded-xl border border-white/35 bg-white/15 px-3 py-2 text-sm text-white [color-scheme:dark]" />
@@ -38,9 +38,9 @@ export default async function MilkEntry({ searchParams }: { searchParams: Record
       {searchParams?.ok && <p className="rounded-xl bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200">{L("dy_saved")}</p>}
       <ErrorNote e={searchParams?.e} lang={lang} />
 
-      <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-        <Card>
-          <form action={bulkMilkAction}>
+      <div className="pf-grow pf-grid grid gap-4 lg:grid-cols-[1.6fr_1fr] fit:gap-2.5">
+        <Card className="pf-panel fit:p-3.5">
+          <form action={bulkMilkAction} className="fit:flex fit:min-h-0 fit:flex-1 fit:flex-col">
             <input type="hidden" name="date" value={date} /><input type="hidden" name="shift" value={shift} />
             <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
               <h3 className="text-[15px] font-semibold text-surface-900 dark:text-white"><Tri k="dy_bulk_title" lang={lang} /></h3>
@@ -49,7 +49,7 @@ export default async function MilkEntry({ searchParams }: { searchParams: Record
             {milking.length === 0 ? (
               <p className="py-8 text-center text-sm text-surface-500">{L("dy_no_milking")} <Link className="font-semibold text-green-700 underline" href="/portal/dairy/animals/new">{L("dy_btn_add")}</Link></p>
             ) : (
-              <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+              <div className="pf-scroll grid grid-cols-2 content-start gap-2.5 md:grid-cols-4 fit:flex-1 xl:grid-cols-5">
                 {milking.map((a) => {
                   const cur = get(a.id, date), y = get(a.id, prev);
                   return (
@@ -63,7 +63,7 @@ export default async function MilkEntry({ searchParams }: { searchParams: Record
                 })}
               </div>
             )}
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 fit:mt-2">
               <span className="text-sm text-surface-700 dark:text-slate-200">{L("dy_d_total")} {shift === "am" ? L("dy_morning") : L("dy_evening")}: <b className="text-lg text-surface-900 dark:text-white">{fmtL(homeShift)}</b> · {milking.length} {L("dy_animals_word")}</span>
               <div className="flex gap-2.5">
                 <Link href="/portal/dairy" className="rounded-xl border border-surface-200 px-4 py-2.5 text-sm font-semibold text-surface-800 dark:border-surface-700 dark:text-slate-100">{L("dy_cancel")}</Link>
@@ -72,8 +72,8 @@ export default async function MilkEntry({ searchParams }: { searchParams: Record
             </div>
           </form>
         </Card>
-        <div className="space-y-4">
-          <Card>
+        <div className="pf-scroll space-y-4 fit:space-y-2.5">
+          <Card className="fit:p-3.5">
             <h3 className="mb-3 text-[15px] font-semibold text-surface-900 dark:text-white"><Tri k="dy_single_title" lang={lang} /></h3>
             <form action={singleMilkAction} className="grid gap-3">
               <Field k="dy_f_animal" lang={lang}><select name="animal_id" defaultValue={sel} required className={inputCls}>{milking.map((a) => <option key={a.id} value={a.id}>#{a.tag_no} {a.name ?? ""}</option>)}</select></Field>

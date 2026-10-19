@@ -38,7 +38,7 @@ export default async function CustomerOrders({ searchParams }: { searchParams: R
   };
 
   return (
-    <div className="pf-fit mx-auto max-w-7xl px-4 py-6 sm:px-6 fit:gap-2.5 fit:py-3">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] px-4 py-6 sm:px-6 fit:gap-2.5 fit:py-3">
       <PageHead title={<L3 k="pc_orders_title" lang={lang} />} sub={L("pc_orders_sub")} />
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 fit:grid-cols-4 fit:gap-2.5">
         <CKpi tone="blue" icon="🧾" label={<L3 k="pc_k_bills" lang={lang} />} value={String(yb.length)} sub={`${year} · ${rs(yb.reduce((a, b) => a + b.total, 0))}`} />

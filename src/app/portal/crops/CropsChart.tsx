@@ -10,14 +10,14 @@ type ChartCrop = {
   daysRemaining: number;
 };
 
-export default function CropsChart({ data }: { data: ChartCrop[] }) {
+export default function CropsChart({ data, className = "mt-6", maxHeight }: { data: ChartCrop[]; className?: string; maxHeight?: number }) {
   const lang = useLang();
   if (data.length === 0) return null;
 
   return (
-    <div className="mt-6 rounded-card border border-surface-200 bg-white p-4 shadow-card">
-      <h3 className="mb-3 text-sm font-semibold text-surface-900">{t("pm_chart_progress", lang)}</h3>
-      <ResponsiveContainer width="100%" height={Math.max(120, data.length * 50)}>
+    <div className={`${className} rounded-card border border-surface-200 bg-white p-4 shadow-card dark:bg-surface-900 dark:border-surface-700`}>
+      <h3 className="mb-3 text-sm font-semibold text-surface-900 dark:text-white">{t("pm_chart_progress", lang)}</h3>
+      <ResponsiveContainer width="100%" height={Math.min(maxHeight ?? Infinity, Math.max(120, data.length * 50))}>
         <BarChart data={data} layout="vertical" margin={{ left: 10, right: 20 }}>
           <XAxis type="number" domain={[0, 100]} hide />
           <YAxis type="category" dataKey="crop_name" width={90} tick={{ fontSize: 12 }} />

@@ -29,7 +29,7 @@ export default async function CampaignsPage() {
 
   return (
     // Ek campaign ho to poora form ek screen mein (>=1024); zyada hon to aam scroll (main ke andar).
-    <div className={`mx-auto w-full max-w-7xl space-y-5 px-4 py-6 sm:px-6 ${(campaigns ?? []).length === 1 ? "pf-fit fit:gap-2.5 fit:space-y-0 fit:py-3" : ""}`}>
+    <div className={`mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 ${(campaigns ?? []).length === 1 ? "pf-fit fit:gap-2.5 fit:space-y-0 fit:py-3" : ""}`}>
       <div className="fit:flex fit:items-baseline fit:gap-3">
         <h1 className="font-display text-2xl font-semibold text-surface-900 dark:text-white fit:text-xl">Season Booking / سیزن بکنگ</h1>
         <p className="text-sm text-surface-500 fit:text-xs">Apne farms, rakba aur zaroorat ka saman likhein. Daftar demand dekh kar raabta karega.</p>

@@ -1,5 +1,4 @@
-﻿import Link from "next/link";
-import { redirect } from "next/navigation";
+﻿import { redirect } from "next/navigation";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { computeProfileCompletion } from "@/lib/utils/farmer-profile";
@@ -8,6 +7,7 @@ import { FarmerProfileForm, ConfirmProfileCard } from "./farmer-profile-form";
 import { UsernameCard } from "./username-card";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
+import { Hero } from "@/components/portal/dairy/dairy-parts";
 
 const PROFILE_STATUS_LABEL: Record<string, string> = {
   basic_registered: "Registered — buniyadi tafseel",
@@ -28,48 +28,39 @@ export default async function FarmerProfilePage() {
   const completion = computeProfileCompletion(farmer);
   const motivation = getMotivationMessage(completion.percent);
   return (
-    <div className="mx-auto max-w-2xl px-4 py-12">
-      <Link href="/portal/dashboard" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">← {t("back_to_dashboard", lang)}</Link>
-      {/* Sidebar mein "My Profile" likha hai -- yahan hamesha "Complete
-          Your Profile" aata tha, chahe profile poori ho chuki ho. Naam
-          consistent rakha, "complete karein" wala paighaam neeche wale
-          badge mein pehle se hai (malik, 11 September). */}
-      <h1 className="font-display text-2xl font-semibold text-surface-900">{t("nav_profile", lang)}</h1>
-      <div className="mt-3 flex items-center justify-between rounded-lg bg-surface-50 px-3 py-2 dark:bg-surface-900">
-        <span className="text-sm text-surface-600">{completion.percent}% {t("percent_complete", lang)}</span>
-        <div className="ms-3 h-2 flex-1 overflow-hidden rounded-full bg-surface-200">
-          <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${completion.percent}%` }} />
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-4 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
+      {/* Sidebar mein "My Profile" likha hai -- yahan bhi wahi naam (malik, 11 September). */}
+      <Hero title={<>👤 {t("nav_profile", lang)}</>} sub={`${(farmer as any).farmer_code ?? ""} · ${motivation}`}>
+        <div className="flex min-w-[220px] items-center gap-2 rounded-xl border border-white/35 bg-white/15 px-3 py-1.5 text-xs font-semibold">
+          <span>{completion.percent}% {t("percent_complete", lang)}</span>
+          <span className="h-2 flex-1 overflow-hidden rounded-full bg-white/25"><span className="block h-full rounded-full bg-white" style={{ width: `${completion.percent}%` }} /></span>
         </div>
-      </div>
-      <p className="mt-2 text-sm font-medium text-brand-700">{motivation}</p>
-      {completion.isComplete ? (
-        <div className="mt-3 flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
-          {t("profile_complete_msg", lang)}
-        </div>
-      ) : (
-        <div className="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          {t("profile_incomplete_msg", lang)}
-        </div>
-      )}
-
-      {/* Darja database khud nikalta hai (migration 124) -- yahan sirf
-          dikhaya jata hai. Do jagah alag alag hisaab rakhna hi wo cheez
-          hai jis se ek din dono alag ho jate hain. */}
-      <p className="mt-2 text-xs text-surface-400">
-        Darja: {PROFILE_STATUS_LABEL[(farmer as any).profile_status] ?? (farmer as any).profile_status}
-      </p>
-
-      <div className="mt-6">
-        <UsernameCard current={(farmer as any).username ?? null} />
-
+      </Hero>
+      <div className="pf-grow pf-grid grid gap-4 fit:grid-cols-[minmax(240px,0.85fr)_3fr] fit:gap-2.5">
+        <aside className="pf-scroll space-y-3" data-testid="profile-identity">
+          {completion.isComplete ? (
+            <div className="flex items-center gap-2 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-500/10 dark:text-green-300">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              {t("profile_complete_msg", lang)}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              {t("profile_incomplete_msg", lang)}
+            </div>
+          )}
+          {/* Darja database khud nikalta hai (migration 124) -- yahan sirf dikhaya jata hai. */}
+          <p className="text-xs text-surface-400">
+            Darja: {PROFILE_STATUS_LABEL[(farmer as any).profile_status] ?? (farmer as any).profile_status}
+          </p>
+          <UsernameCard current={(farmer as any).username ?? null} />
+          <ConfirmProfileCard
+            completion={completion}
+            confirmedAt={(farmer as any).profile_confirmed_at ?? null}
+            isVerified={Boolean(farmer.is_verified)}
+          />
+        </aside>
         <FarmerProfileForm farmer={farmer} completion={completion} lang={lang} />
-        <ConfirmProfileCard
-          completion={completion}
-          confirmedAt={(farmer as any).profile_confirmed_at ?? null}
-          isVerified={Boolean(farmer.is_verified)}
-        />
       </div>
     </div>
   );

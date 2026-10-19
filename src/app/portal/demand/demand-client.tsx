@@ -189,7 +189,7 @@ export function DemandCenterClient({ farmerName, products, demands }: { farmerNa
   const shownGroups = DEMAND_GROUPS.filter((g) => rowGroups.has(g) && (rowFilter === "all" || rowFilter === g));
 
   return (
-    <div className="pf-fit mx-auto max-w-7xl px-4 py-8 sm:px-6 fit:gap-2.5 fit:py-3" dir="ltr">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] px-4 py-8 sm:px-6 fit:gap-2.5 fit:py-3" dir="ltr">
       <Link href="/portal/dashboard" className="text-sm text-surface-500 hover:text-brand-700 dark:text-slate-400 fit:hidden">← Dashboard par wapas</Link>
       <div className="mt-5 rounded-3xl bg-gradient-to-r from-emerald-700 via-teal-700 to-slate-900 p-6 text-white shadow-xl fit:rounded-2xl fit:px-5 fit:py-3 dark:from-emerald-900 dark:via-cyan-950 dark:to-[#0a1428]">
         <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">

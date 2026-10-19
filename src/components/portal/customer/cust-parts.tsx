@@ -23,7 +23,7 @@ export function PageHead({ title, sub }: { title: React.ReactNode; sub: React.Re
 }
 export function CHero({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
   return (
-    <section className="relative mb-4 overflow-hidden rounded-[20px] bg-gradient-to-r from-blue-700 via-violet-600 to-pink-600 p-6 text-white shadow-[0_14px_34px_rgba(76,29,149,.25)] dark:from-blue-900 dark:via-violet-800 dark:to-pink-800">
+    <section className="relative mb-4 overflow-hidden rounded-[20px] bg-gradient-to-r from-blue-700 via-violet-600 to-pink-600 p-6 text-white pf:mb-0 pf:px-5 pf:py-3.5 shadow-[0_14px_34px_rgba(76,29,149,.25)] dark:from-blue-900 dark:via-violet-800 dark:to-pink-800">
       <span className="pointer-events-none absolute -end-16 -top-16 h-60 w-60 rounded-full bg-white/10" />
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div>{children}</div>

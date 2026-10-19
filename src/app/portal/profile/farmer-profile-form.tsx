@@ -36,9 +36,10 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
   }
 
   return (
-    <form action={formAction} encType="multipart/form-data" className="space-y-3">
-      {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
-      {state.success && <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{t("save_profile", lang)}.</p>}
+    <form action={formAction} encType="multipart/form-data" className="space-y-3 fit:grid fit:h-full fit:min-h-0 fit:grid-cols-[minmax(260px,1fr)_1.8fr] fit:grid-rows-[auto_minmax(0,1fr)] fit:gap-2.5 fit:space-y-0" data-testid="profile-form">
+      <div className="space-y-3 fit:col-start-1 fit:row-start-1">
+      {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-200">{state.error}</p>}
+      {state.success && <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-500/10 dark:text-green-200">{t("save_profile", lang)}.</p>}
 
       <div className="flex flex-col items-center rounded-card border border-surface-200 bg-white p-5 shadow-card dark:border-surface-700 dark:bg-surface-900">
         <label htmlFor="member_photo" className="group relative cursor-pointer">
@@ -60,7 +61,9 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
         <p className="text-xs text-surface-400">{farmer.farmer_code}</p>
         <p className="mt-1 text-xs text-surface-400">{t("tap_photo_hint", lang)}</p>
       </div>
+      </div>
 
+      <div className="pf-scroll space-y-3 fit:col-start-2 fit:row-span-2 fit:row-start-1" data-testid="profile-sections">
       <AccordionSection
         title="1 — Pehchan"
         complete={completion.identityComplete}
@@ -89,7 +92,7 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
                 hai. Badalna ho to daftar se, taake do khate na ban jayen. */}
             <Label>{t("ou_mobile", lang)}</Label>
             <Input value={farmer.phone_number ?? ""} readOnly disabled />
-            <p className="mt-1 text-xs text-surface-500">{t("ou_mobile_note", lang)}</p>
+            <p className="mt-1 text-xs text-surface-500 dark:text-slate-400">{t("ou_mobile_note", lang)}</p>
           </div>
         </div>
       </AccordionSection>
@@ -152,7 +155,7 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
             safhe par hai. Yahan sirf kul zameen li jati hai: dono jagah
             wohi tafseel maangna banda ko do baar likhwata hai aur phir
             dono kabhi barabar nahi rehte. */}
-        <p className="mt-3 text-xs text-surface-500">
+        <p className="mt-3 text-xs text-surface-500 dark:text-slate-400">
           Har khet ki alag jagah, raqba aur malkiyat (apni ya theke par){" "}
           <a href="/portal/farms" className="font-medium text-brand-700 underline">{t("ou_my_fields", lang)}</a>{" "}
           wale safhe par likhein.
@@ -169,7 +172,7 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
             hoga: bohot se kisanon ke paas khata hai hi nahi, aur unhein
             rok dene ka matlab ye ke un ka paisa hamare paas para rehta
             hai. */}
-        <p className="mb-3 text-xs text-surface-500">{t("ou_bank_or_wallet_note", lang)}</p>
+        <p className="mb-3 text-xs text-surface-500 dark:text-slate-400">{t("ou_bank_or_wallet_note", lang)}</p>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="bank_name">{t("ou_bank_name", lang)}</Label>
@@ -227,7 +230,9 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
           </div>
         </div>
       </AccordionSection>
+      </div>
 
+      <div className="pf-scroll space-y-3 fit:col-start-1 fit:row-start-2">
       <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-700 dark:bg-surface-900">
         {/* Zaban cookie mein bhi rehti hai, magar WhatsApp cookie nahi
             parhta -- aur wahi paighaam kisan sab se zyada parhta hai. */}
@@ -242,7 +247,7 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
           <option value="rm">{t("ou_roman", lang)}</option>
           <option value="en">{t("ou_english", lang)}</option>
         </select>
-        <label className="mt-3 flex items-center gap-2 text-sm text-surface-600">
+        <label className="mt-3 flex items-center gap-2 text-sm text-surface-600 dark:text-slate-300">
           <input
             type="checkbox"
             name="whatsapp_notifications_enabled"
@@ -254,6 +259,7 @@ export function FarmerProfileForm({ farmer, completion, lang }: { farmer: any; c
       </div>
 
       <SubmitButton lang={lang} />
+      </div>
     </form>
   );
 }

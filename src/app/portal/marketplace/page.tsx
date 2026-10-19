@@ -29,11 +29,11 @@ export default async function FarmerMarketplacePage() {
     .eq("is_deleted", false)
     .order("name");
   return (
-    <div className="mx-auto max-w-5xl px-4 py-12">
-      <Link href="/portal/dashboard" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">{t("back_to_dashboard", lang)}</Link>
-      <h1 className="font-display text-2xl font-semibold text-surface-900">{t("marketplace_title", lang)}</h1>
-      <p className="mt-1 text-surface-500">{t("pm_marketplace_intro", lang)}</p>
-      <div className="mt-6">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] px-4 py-6 sm:px-6 fit:gap-2 fit:py-3">
+      <Link href="/portal/dashboard" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700 dark:text-slate-400 fit:mb-0">{t("back_to_dashboard", lang)}</Link>
+      <h1 className="font-display text-2xl font-semibold text-surface-900 dark:text-white">{t("marketplace_title", lang)}</h1>
+      <p className="mt-1 text-surface-500 dark:text-slate-400">{t("pm_marketplace_intro", lang)}</p>
+      <div className="pf-scroll pf-grow mt-6 fit:mt-0">
         <MarketplaceForm products={products ?? []} />
       </div>
     </div>

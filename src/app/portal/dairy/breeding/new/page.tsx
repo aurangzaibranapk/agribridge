@@ -52,7 +52,7 @@ export default async function NewBreeding({ searchParams }: { searchParams: Reco
   );
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
       <BHero title={<>➕ {L("bh_new_title")} {lang !== "ur" && <>· <span dir="rtl">{t("bh_new_title", "ur")}</span></>}</>} sub={L("bh_new_sub")}>
         <HeroBtn href="/portal/dairy/breeding">← {L("bh_back")}</HeroBtn>
       </BHero>
@@ -64,9 +64,9 @@ export default async function NewBreeding({ searchParams }: { searchParams: Reco
           </Link>
         ))}
       </div>
-      <form action={type === "calving" ? addCalvingAction : addBreedingAction} className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+      <form action={type === "calving" ? addCalvingAction : addBreedingAction} className="pf-grow pf-grid grid gap-4 lg:grid-cols-[1.5fr_1fr] fit:gap-2.5">
         <input type="hidden" name="event_type" value={type} />
-        <Card>
+        <Card className="pf-scroll fit:p-3.5">
           <H3 k={`bh_ty_${type}` as TranslationKey} lang={lang} />
           <div className="grid gap-3.5">
             <BreedPicker animals={pool.map((a) => ({ id: a.id, species: a.species, label: `${SPECIES_EMOJI[a.species]} #${a.tag_no} ${a.name ?? ""} · ${L(`st_${a.status}` as TranslationKey)}` }))}
@@ -124,8 +124,8 @@ export default async function NewBreeding({ searchParams }: { searchParams: Reco
             </div>
           </div>
         </Card>
-        <div className="grid content-start gap-4">
-          <Card>
+        <div className="pf-scroll grid content-start gap-4 fit:gap-2.5">
+          <Card className="fit:p-3.5">
             <H3 k="bh_hist_title" lang={lang} right={sel ? <Pill tone="slate">#{sel.tag_no} {sel.name ?? ""}</Pill> : undefined} />
             {!sel && <p className="py-4 text-center text-sm text-surface-500">{L("bh_hist_pick")}</p>}
             {sel && history.length === 0 && <p className="py-4 text-center text-sm text-surface-500">{L("bh_tl_empty")}</p>}

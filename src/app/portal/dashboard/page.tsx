@@ -85,7 +85,7 @@ export default async function FarmerDashboardPage() {
   const wateringReminders = getWateringReminders(d.allCrops as any);
 
   return (
-    <div className="pf-fit mx-auto max-w-7xl px-4 pb-10 pt-5 sm:px-6 fit:gap-2.5 fit:pb-3 fit:pt-3">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] px-4 pb-10 pt-5 sm:px-6 fit:gap-2.5 fit:pb-3 fit:pt-3">
 
       {/* ---- Hero ---- */}
       <section className="relative overflow-hidden rounded-[20px] bg-gradient-to-r from-emerald-800 via-green-700 to-yellow-600 px-6 py-6 text-white fit:py-3 shadow-lg dark:from-emerald-950 dark:via-green-900 dark:to-yellow-800 sm:px-7">

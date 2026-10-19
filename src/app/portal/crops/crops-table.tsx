@@ -44,15 +44,15 @@ interface CropRow {
   expenses: Expense[];
 }
 
-export function CropsTable({ crops, expenseOptions }: { crops: CropRow[]; expenseOptions: ExpenseOptions }) {
+export function CropsTable({ crops, expenseOptions, className = "" }: { crops: CropRow[]; expenseOptions: ExpenseOptions; className?: string }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { language: lang } = useLanguage();
 
   return (
-    <div className="overflow-x-auto rounded-card border border-surface-200 bg-white shadow-card">
+    <div className={`overflow-x-auto rounded-card border border-surface-200 bg-white shadow-card dark:bg-surface-900 dark:border-surface-700 ${className}`}>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-surface-200 bg-surface-50 text-start text-xs font-medium text-surface-500">
+          <tr className="border-b border-surface-200 bg-surface-50 text-start text-xs font-medium text-surface-500 dark:text-slate-400 dark:border-surface-700 dark:bg-surface-800">
             <th className="px-3 py-2">{t("crop", lang)}</th>
             <th className="px-3 py-2">{t("farm_label", lang)}</th>
             <th className="px-3 py-2">{t("sowing_date", lang)}</th>
@@ -71,11 +71,11 @@ export function CropsTable({ crops, expenseOptions }: { crops: CropRow[]; expens
 
             return (
               <>
-                <tr key={c.id} className="border-b border-surface-100 last:border-0 hover:bg-surface-50">
+                <tr key={c.id} className="border-b border-surface-100 last:border-0 hover:bg-surface-50 dark:border-surface-800">
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-1.5">
                       <Sprout className="h-3.5 w-3.5 text-brand-600" />
-                      <span className="font-medium text-surface-900">{c.cropName}</span>
+                      <span className="font-medium text-surface-900 dark:text-white">{c.cropName}</span>
                       <EditCropButton crop={{ id: c.id, crop_name: c.cropName, sowing_date: c.sowingDate, area_sown_acres: c.areaSownAcres }} />
                       <form action={deleteCropAction} onSubmit={(e) => { if (!confirm(t("confirm_delete_crop", lang))) e.preventDefault(); }}>
                         <input type="hidden" name="crop_id" value={c.id} />
@@ -85,24 +85,24 @@ export function CropsTable({ crops, expenseOptions }: { crops: CropRow[]; expens
                       </form>
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-surface-600">{c.farmName}</td>
-                  <td className="px-3 py-2 text-surface-600">{new Date(c.sowingDate).toLocaleDateString()}</td>
+                  <td className="px-3 py-2 text-surface-600 dark:text-slate-300">{c.farmName}</td>
+                  <td className="px-3 py-2 text-surface-600 dark:text-slate-300">{new Date(c.sowingDate).toLocaleDateString()}</td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-surface-100">
+                      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-surface-100 dark:bg-surface-800">
                         <div className="h-full rounded-full bg-brand-500" style={{ width: `${c.percent}%` }} />
                       </div>
-                      <span className="text-xs text-surface-500">{isReady ? t("ready_label", lang) : `${c.daysRemaining}d`}</span>
+                      <span className="text-xs text-surface-500 dark:text-slate-400">{isReady ? t("ready_label", lang) : `${c.daysRemaining}d`}</span>
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-end font-medium text-surface-800">Rs {totalExpense.toLocaleString()}</td>
-                  <td className="px-3 py-2 text-end text-surface-500">
+                  <td className="px-3 py-2 text-end font-medium text-surface-800 dark:text-slate-200">Rs {totalExpense.toLocaleString()}</td>
+                  <td className="px-3 py-2 text-end text-surface-500 dark:text-slate-400">
                     {perAcre !== null ? `Rs ${perAcre.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "-"}
                   </td>
                   <td className="px-3 py-2">
                     <button
                       onClick={() => setExpandedId(isExpanded ? null : c.id)}
-                      className="flex items-center gap-1 rounded-lg border border-surface-200 px-2 py-1 text-xs text-surface-600 hover:bg-surface-100"
+                      className="flex items-center gap-1 rounded-lg border border-surface-200 px-2 py-1 text-xs text-surface-600 hover:bg-surface-100 dark:text-slate-300 dark:border-surface-700"
                     >
                       {t("details_btn", lang)} <ChevronDown className={`h-3 w-3 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                     </button>
@@ -110,7 +110,7 @@ export function CropsTable({ crops, expenseOptions }: { crops: CropRow[]; expens
                 </tr>
                 {isExpanded && (
                   <tr key={`${c.id}-expanded`}>
-                    <td colSpan={7} className="bg-surface-50 px-3 py-3">
+                    <td colSpan={7} className="bg-surface-50 px-3 py-3 dark:bg-surface-800">
                       <CropExpensePanel
                         cropHistoryId={c.id}
                         cropName={c.cropName}

@@ -40,17 +40,18 @@ export default async function CustomerKhata({ searchParams }: { searchParams: Re
   const exp = `/portal/c/khata/export${qs({ from: per.from, to: per.to })}`;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] px-4 py-6 sm:px-6 fit:gap-2.5 fit:py-3">
       <PageHead title={<L3 k="pc_khata_title" lang={lang} />} sub={L("pc_khata_sub")} />
       {ok && <Notice tone="ok">✔ {L("pc_ok_sent")}</Notice>}
       {e && <Notice tone="err">{t(e as TranslationKey, lang)}</Notice>}
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 fit:grid-cols-4 fit:gap-2.5">
         <CKpi tone="slate" icon="📂" label={<L3 k="pc_opening" lang={lang} />} value={rs(tot.opening)} sub={per.from ? shortDate(per.from, lang, year) : "—"} />
         <CKpi tone="rose" icon="⬆" label={<L3 k="pc_debit" lang={lang} />} value={rs(tot.udhaar)} sub={`${nDr} ${L("pc_entries")}`} />
         <CKpi tone="green" icon="⬇" label={<L3 k="pc_credit" lang={lang} />} value={rs(tot.adaigi)} sub={`${nCr} ${L("pc_entries")}`} />
         <CKpi tone="violet" icon="🧮" label={<L3 k="pc_closing" lang={lang} />} value={rs(tot.closing)} sub={shortDate(per.to ?? asOf, lang, year)} />
       </div>
-      <Panel className="mt-3.5">
+      <div className={`pf-grow pf-grid mt-3.5 grid gap-3.5 fit:mt-0 fit:gap-2.5 ${ctx.profile ? "fit:grid-cols-[2fr_1fr]" : ""}`}>
+      <Panel className="pf-panel pf-navy fit:p-3.5">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap gap-1.5">
             {(["month", "last", "3m", "all"] as const).map((k) => (
@@ -64,11 +65,11 @@ export default async function CustomerKhata({ searchParams }: { searchParams: Re
             <Link href={`/portal/c/khata/print${qs({ from: per.from, to: per.to })}`} className={btnPrimary}>📄 {L("pc_btn_pdf")}</Link>
           </div>
         </div>
-        {body.length === 0 ? <Sub>{L("pc_empty")}</Sub> : <StatementTable rows={rows} totals={tot} lang={lang} year={year} />}
-        <p className="mt-3 text-[11px] text-surface-500 dark:text-slate-400">ℹ {L("pc_signs")}</p>
+        {body.length === 0 ? <Sub>{L("pc_empty")}</Sub> : <div className="pf-body"><StatementTable rows={rows} totals={tot} lang={lang} year={year} /></div>}
+        <p className="mt-3 text-[11px] text-surface-500 dark:text-slate-400 fit:mt-2">ℹ {L("pc_signs")}</p>
       </Panel>
       {ctx.profile && (
-        <div id="dispute" className="mt-3.5 grid gap-3.5 lg:grid-cols-2">
+        <div id="dispute" className="pf-scroll mt-3.5 grid content-start gap-3.5 lg:grid-cols-2 fit:mt-0 fit:grid-cols-1 fit:gap-2.5">
           <Panel>
             <PanelHead title={<L3 k="pc_dispute" lang={lang} />} right={<Pill tone="blue">{L("pc_request_only")}</Pill>} />
             <form action={openDisputeAction}>
@@ -90,6 +91,7 @@ export default async function CustomerKhata({ searchParams }: { searchParams: Re
           </Panel>
         </div>
       )}
+      </div>
     </div>
   );
 }

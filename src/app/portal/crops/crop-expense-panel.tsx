@@ -71,7 +71,7 @@ export function CropExpensePanel({
   }
 
   return (
-    <div className="mt-3 border-t border-surface-100 pt-3">
+    <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
       {isReadyToHarvest && !isBooked && (
         <div className="mb-3 rounded-lg bg-brand-50 p-3">
           <p className="flex items-center gap-1.5 text-sm font-medium text-brand-800">
@@ -85,16 +85,16 @@ export function CropExpensePanel({
       )}
 
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-surface-500">Total Kharcha: Rs {totalExpense.toLocaleString()}</p>
+        <p className="text-xs font-medium text-surface-500 dark:text-slate-400">Total Kharcha: Rs {totalExpense.toLocaleString()}</p>
         {perAcre !== null && (
-          <p className="text-xs font-medium text-surface-500">Per Acre: Rs {perAcre.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+          <p className="text-xs font-medium text-surface-500 dark:text-slate-400">Per Acre: Rs {perAcre.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
         )}
       </div>
 
       {expenses.length > 0 && (
         <div className="mt-2 space-y-1">
           {expenses.map((e) => (
-            <div key={e.id} className="flex items-center justify-between text-xs text-surface-600">
+            <div key={e.id} className="flex items-center justify-between text-xs text-surface-600 dark:text-slate-300">
               <span>
                 {categoryLabel(e.expense_category)} {e.source === "internal" ? "(Hamare System Se)" : ""}
                 {e.description ? ` - ${e.description}` : ""}
@@ -183,9 +183,9 @@ function ExpenseModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
+      <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl dark:bg-surface-900">
         <div className="mb-1 flex items-center justify-between">
-          <h3 className="font-display text-base font-semibold text-surface-900">{t("pm_add_expense", lang)}</h3>
+          <h3 className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pm_add_expense", lang)}</h3>
           <button type="button" onClick={onClose} aria-label={t("ph6_a_close", lang)} className="grid h-11 w-11 place-items-center rounded-lg text-surface-400 hover:text-surface-700">
             <X className="h-5 w-5" />
           </button>
@@ -204,12 +204,12 @@ function ExpenseModal({
           <input type="hidden" name="product_id" value={productId} />
 
           <div>
-            <label className="text-xs font-medium text-surface-600">{t("c_category", lang)}</label>
+            <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("c_category", lang)}</label>
             <select
               name="expense_category"
               value={category}
               onChange={(e) => { setCategory(e.target.value); setAmount(""); setDescription(""); setProductId(""); }}
-              className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm"
+              className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
             >
               {CATEGORIES.map((c) => (
                 <option key={c.value} value={c.value}>{c.label}</option>
@@ -219,10 +219,10 @@ function ExpenseModal({
 
           {showDropdown && (
             <div>
-              <label className="text-xs font-medium text-surface-600">
+              <label className="text-xs font-medium text-surface-600 dark:text-slate-300">
                 {category === "land_prep" ? "Kaam Ka Type" : category === "labor" ? "Mazdori Ka Type" : "Product Select Karein"}
               </label>
-              <select onChange={(e) => handleOptionSelect(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm">
+              <select onChange={(e) => handleOptionSelect(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700">
                 <option value="">- select karein -</option>
                 {optionsForCategory.map((o) => (
                   <option key={o.id} value={o.id}>{o.name} (Rs {o.rate.toLocaleString()})</option>
@@ -234,7 +234,7 @@ function ExpenseModal({
 
           {!["fertilizer", "spray", "seed", "land_prep", "labor"].includes(category) && (
             <div>
-              <label className="text-xs font-medium text-surface-600">{t("pm_where_from", lang)}</label>
+              <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("pm_where_from", lang)}</label>
               <div className="mt-1 flex gap-3">
                 <label className="flex items-center gap-1.5 text-sm">
                   <input type="radio" name="source" value="external" checked={source === "external"} onChange={() => setSource("external")} />{t("pm_from_outside", lang)}</label>
@@ -248,12 +248,12 @@ function ExpenseModal({
           )}
 
           <div>
-            <label className="text-xs font-medium text-surface-600">{t("pm_amount_rs", lang)}</label>
-            <input type="number" step="0.01" name="amount" value={amount} onChange={(e) => setAmount(e.target.value)} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+            <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("pm_amount_rs", lang)}</label>
+            <input type="number" step="0.01" name="amount" value={amount} onChange={(e) => setAmount(e.target.value)} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" />
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-600">{t("pm_notes_optional", lang)}</label>
-            <input type="text" name="description" value={description} onChange={(e) => setDescription(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" placeholder={t("pm_eg_expense", lang)} />
+            <label className="text-xs font-medium text-surface-600 dark:text-slate-300">{t("pm_notes_optional", lang)}</label>
+            <input type="text" name="description" value={description} onChange={(e) => setDescription(e.target.value)} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700" placeholder={t("pm_eg_expense", lang)} />
           </div>
           <SubmitButton />
         </form>

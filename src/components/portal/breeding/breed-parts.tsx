@@ -18,10 +18,10 @@ const TONES: Record<string, string> = {
 };
 export function BKpi({ tone, k, lang, value, sub }: { tone: string; k: TranslationKey; lang: Lang; value: string; sub: string }) {
   return (
-    <div className={`relative min-h-[118px] overflow-hidden rounded-2xl bg-gradient-to-br ${TONES[tone]} p-4 text-white shadow-[0_8px_20px_-10px_rgba(0,0,0,.45)]`}>
+    <div className={`relative min-h-[118px] overflow-hidden rounded-2xl bg-gradient-to-br ${TONES[tone]} p-4 text-white pf:min-h-0 pf:px-3.5 pf:py-2.5 shadow-[0_8px_20px_-10px_rgba(0,0,0,.45)]`}>
       <span className="block text-[11px] font-semibold uppercase tracking-wider text-white/90">{t(k, lang)}</span>
       <Sub2 k={k} lang={lang} className="block truncate text-[10.5px] text-white/80" />
-      <p className="mt-2 text-2xl font-bold tracking-tight"><span dir="ltr" className="ltr-iso">{value}</span></p>
+      <p className="mt-2 text-2xl font-bold tracking-tight pf:mt-0.5 pf:text-xl"><span dir="ltr" className="ltr-iso">{value}</span></p>
       <p className="mt-1 truncate text-[11.5px] text-white/90" title={sub}>{sub}</p>
       <span className="pointer-events-none absolute -bottom-6 -end-5 h-20 w-20 rounded-full bg-white/10" />
     </div>
@@ -29,10 +29,10 @@ export function BKpi({ tone, k, lang, value, sub }: { tone: string; k: Translati
 }
 export function BHero({ title, sub, children, admin }: { title: React.ReactNode; sub: string; children?: React.ReactNode; admin?: boolean }) {
   return (
-    <section className={`relative overflow-hidden rounded-3xl p-6 text-white shadow-lg ${admin ? "bg-gradient-to-r from-blue-900 via-teal-700 to-yellow-600" : "bg-gradient-to-r from-emerald-800 via-green-700 to-yellow-600 dark:from-emerald-950 dark:via-green-900 dark:to-yellow-800"}`}>
+    <section className={`relative overflow-hidden rounded-3xl p-6 text-white shadow-lg pf:rounded-2xl pf:px-5 pf:py-3 ${admin ? "bg-gradient-to-r from-blue-900 via-teal-700 to-yellow-600" : "bg-gradient-to-r from-emerald-800 via-green-700 to-yellow-600 dark:from-emerald-950 dark:via-green-900 dark:to-yellow-800"}`}>
       <span className="pointer-events-none absolute -end-16 -top-20 h-72 w-72 rounded-full bg-white/10" />
       <div className="relative flex flex-wrap items-end justify-between gap-4">
-        <div><h1 className="text-2xl font-bold tracking-tight">{title}</h1><p className="mt-1 text-sm text-white/85">{sub}</p></div>
+        <div><h1 className="text-2xl font-bold tracking-tight pf:text-xl">{title}</h1><p className="mt-1 text-sm text-white/85 pf:mt-0 pf:text-xs">{sub}</p></div>
         <div className="flex flex-wrap gap-2">{children}</div>
       </div>
     </section>
@@ -40,7 +40,7 @@ export function BHero({ title, sub, children, admin }: { title: React.ReactNode;
 }
 export function H3({ k, lang, right }: { k: TranslationKey; lang: Lang; right?: React.ReactNode }) {
   return (
-    <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+    <div className="mb-3 flex pf:mb-1.5 flex-wrap items-start justify-between gap-2">
       <div>
         <h3 className="text-[15px] font-semibold text-surface-900 dark:text-white">{t(k, lang)}</h3>
         <Sub2 k={k} lang={lang} className="text-xs text-surface-500 dark:text-slate-400" />
@@ -109,7 +109,7 @@ export function AlertRow({ task, lang, asOf, children }: { task: DueTask; lang: 
 const LEG: [string, TranslationKey][] = [["heat", "bh_lg_heat"], ["ai", "bh_lg_ai"], ["pd", "bh_lg_pd"], ["calving", "bh_lg_calving"], ["dry_off", "bh_lg_dry"], ["vaccine", "bh_lg_vaccine"], ["deworm", "bh_lg_deworm"], ["treatment", "bh_lg_treatment"]];
 export function Legend({ lang }: { lang: Lang }) {
   return (
-    <div className="mt-3 flex flex-wrap gap-3 text-[11.5px] text-surface-500 dark:text-slate-400">
+    <div className="mt-3 flex flex-wrap gap-3 text-[11.5px] text-surface-500 dark:text-slate-400 pf:mt-1.5">
       {LEG.map(([k, key]) => <span key={k}><span className="me-1.5 inline-block h-2.5 w-2.5 rounded-sm align-[-1px]" style={{ background: EVENT_COLOR[k] }} />{t(key, lang)}</span>)}
     </div>
   );
@@ -119,13 +119,13 @@ export function Calendar({ cells, items, asOf, lang }: { cells: { date: string; 
   const by = new Map<string, CalItem[]>();
   for (const i of items) { const l = by.get(i.date) ?? []; l.push(i); by.set(i.date, l); }
   return (
-    <div className="grid grid-cols-7 gap-1.5">
+    <div className="grid grid-cols-7 gap-1.5 pf:h-full pf:grid-rows-[auto] pf:auto-rows-fr pf:gap-1">
       {DOW.map((d) => <div key={d} className="py-0.5 text-center text-[10.5px] font-bold uppercase tracking-wider text-surface-500 dark:text-slate-400">{t(d, lang)}</div>)}
       {cells.map((c) => {
         const list = by.get(c.date) ?? [];
         const today = c.date === asOf;
         return (
-          <div key={c.date} className={`flex min-h-[78px] flex-col gap-1 rounded-lg border p-1.5 text-[11px] ${today ? "border-2 border-green-600 shadow-[0_0_0_3px_rgba(22,163,74,.15)]" : "border-surface-200 dark:border-surface-700"} ${c.inMonth ? "bg-surface-50 dark:bg-surface-800/60" : "bg-surface-50/40 opacity-40 dark:bg-surface-800/30"}`}>
+          <div key={c.date} className={`flex min-h-[78px] flex-col gap-1 overflow-hidden rounded-lg border p-1.5 text-[11px] pf:min-h-0 pf:gap-0.5 pf:p-1 ${today ? "border-2 border-green-600 shadow-[0_0_0_3px_rgba(22,163,74,.15)]" : "border-surface-200 dark:border-surface-700"} ${c.inMonth ? "bg-surface-50 dark:bg-surface-800/60" : "bg-surface-50/40 opacity-40 dark:bg-surface-800/30"}`}>
             <span className="text-[11.5px] font-bold text-surface-800 dark:text-slate-100">{Number(c.date.slice(8))}{!c.inMonth ? ` ${shortDate(c.date, lang).split(" ")[1] ?? ""}` : ""}{today ? ` · ${t("bh_today", lang)}` : ""}</span>
             {list.slice(0, 3).map((i, n) => (
               <span key={n} className="truncate rounded px-1.5 py-0.5 text-[10px] font-semibold text-white" style={{ background: EVENT_COLOR[i.type] ?? "#64748b" }} title={i.label}>{i.label}</span>

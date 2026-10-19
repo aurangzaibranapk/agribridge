@@ -123,4 +123,50 @@ test("i18n: new labels EN / Roman / Urdu", () => {
   for (const k of ["pmd_from_dairy", "pmd_per_day_dairy"]) assert.match(m, new RegExp(`${k}: \\{ en: "[^"]+", rm: "[^"]+", ur: "[^"]+" \\}`), k);
 });
 
+// v0.5.8 (owner feedback): baqi portal safhe bhi poori chaurai + ek screen.
+const OS2_FILES = [
+  "c/payments/page.tsx", "dairy/hisaab/page.tsx", "dairy/breeding/page.tsx", "dairy/health/page.tsx", "farms/page.tsx",
+  "crops/page.tsx", "harvest/page.tsx", "services/machinery/page.tsx", "profile/page.tsx",
+  "wallet/statement/page.tsx", "dairy/animals/page.tsx", "dairy/animals/new/page.tsx", "dairy/animals/[id]/page.tsx",
+  "dairy/milk/page.tsx", "dairy/alerts/page.tsx", "dairy/hisaab/expense/page.tsx", "dairy/hisaab/income/page.tsx",
+  "dairy/breeding/new/page.tsx", "dairy/breeding/animal/[id]/page.tsx", "ai-assistant/ai-assistant-client.tsx",
+  "marketplace/page.tsx", "orders/page.tsx", "sell-produce/page.tsx", "c/page.tsx", "c/khata/page.tsx", "c/khata/print/page.tsx", "c/profile/page.tsx",
+].map((f) => `src/app/portal/${f}`);
+
+test("v0.5.8: every portal page is pf-fit and full width (no max-w-7xl/5xl/4xl/2xl page wrapper)", () => {
+  for (const f of [...OS2_FILES, "src/app/portal/dashboard/page.tsx", "src/app/portal/wallet/page.tsx", "src/app/portal/c/orders/page.tsx", "src/app/portal/demand/demand-client.tsx", "src/app/portal/dairy/page.tsx", "src/app/portal/campaigns/page.tsx"]) {
+    const s = read(f);
+    assert.ok(s.includes("pf-fit"), `${f}: pf-fit`);
+    assert.ok(s.includes("max-w-[1760px]"), `${f}: full width wrapper`);
+    assert.ok(!/mx-auto (w-full )?max-w-(7xl|6xl|5xl|4xl|3xl|2xl)/.test(s), `${f}: no narrow centred wrapper`);
+  }
+});
+
+test("v0.5.8: pf: variant (compact only inside portal pf-fit) + sr-only fix scoped to fit query", () => {
+  const tw = read("tailwind.config.ts");
+  assert.ok(tw.includes('addVariant("pf", "@media (min-width: 1024px) and (min-height: 640px) { .pf-fit & }")'));
+  const css = read("src/app/globals.css");
+  const i = css.indexOf("@media (min-width: 1024px) and (min-height: 640px)");
+  const j = css.indexOf("position: relative", i);
+  assert.ok(j > i, "position:relative inside fit query");
+  const bp = read("src/components/portal/breeding/breed-parts.tsx");
+  assert.ok(bp.includes("pf:") && !/\bfit:/.test(bp), "shared breeding parts use pf: (admin unchanged)");
+});
+
+test("v0.5.8: test hooks on new panels", () => {
+  assert.ok(read("src/app/portal/farms/page.tsx").includes('data-testid="farms-map"'));
+  assert.ok(read("src/app/portal/services/machinery/page.tsx").includes('data-testid="machinery-bookings"'));
+  const pf = read("src/app/portal/profile/page.tsx") + read("src/app/portal/profile/farmer-profile-form.tsx");
+  for (const id of ["profile-identity", "profile-form", "profile-sections"]) assert.ok(pf.includes(`data-testid="${id}"`), id);
+});
+
+test("v0.5.8: os2 labels EN / Roman / Urdu, dict registered; no new migration", () => {
+  const d = read("src/lib/i18n/dict/portal-onescreen2.ts");
+  const keys = [...d.matchAll(/^\s*(os2_\w+):/gm)].map((m) => m[1]);
+  assert.ok(keys.length >= 20, `os2 keys ${keys.length}`);
+  for (const k of keys) assert.match(d, new RegExp(`${k}: \\{ en: "[^"]+", rm: "[^"]+", ur: "[^"]+" \\}`), k);
+  assert.ok(read("src/lib/i18n/translations.ts").includes("portalOneScreen2Dict"));
+  assert.ok(!fs.readdirSync("supabase/migrations").some((f) => /one_screen|onescreen|os2/i.test(f)));
+});
+
 console.log(`\nportal-one-screen: ${passed} passed`);

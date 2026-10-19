@@ -28,16 +28,16 @@ export function MachineryPageClient({ farms }: { farms: FarmData[] }) {
   const selectedFarm = farms.find((f) => f.id === selectedFarmId);
 
   return (
-    <div>
+    <div className="space-y-4 fit:contents">
       {farms.length > 0 && (
-        <div className="mb-6 rounded-card border border-surface-200 bg-white p-4 shadow-card">
-          <h2 className="flex items-center gap-2 font-display text-sm font-semibold text-surface-900">
+        <div className="pf-scroll rounded-card border border-surface-200 bg-white p-4 shadow-card dark:bg-surface-900 dark:border-surface-700">
+          <h2 className="flex items-center gap-2 font-display text-sm font-semibold text-surface-900 dark:text-white">
             <LandPlot className="h-4 w-4 text-brand-600" /> {t("select_your_farm", lang)}
           </h2>
           <select
             value={selectedFarmId}
             onChange={(e) => setSelectedFarmId(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-surface-200 p-2 text-sm"
+            className="mt-2 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700"
           >
             {farms.map((f) => (
               <option key={f.id} value={f.id}>{f.name} ({f.totalArea} {t("acres_unit", lang)})</option>
@@ -46,8 +46,8 @@ export function MachineryPageClient({ farms }: { farms: FarmData[] }) {
           {selectedFarm && (
             <div className="mt-3 space-y-1.5">
               {selectedFarm.crops.map((c, i) => (
-                <div key={i} className="flex items-center justify-between rounded-lg bg-surface-50 px-3 py-2 text-sm">
-                  <span className="text-surface-700">{c.cropName} - {c.area} {t("acres_unit", lang)}</span>
+                <div key={i} className="flex items-center justify-between rounded-lg bg-surface-50 px-3 py-2 text-sm dark:bg-surface-800">
+                  <span className="text-surface-700 dark:text-slate-200">{c.cropName} - {c.area} {t("acres_unit", lang)}</span>
                   <button
                     onClick={() => setSuggestion({ machineType: c.suggestedMachine, acres: String(c.area) })}
                     className="flex items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-brand-700"

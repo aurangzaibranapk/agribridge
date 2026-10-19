@@ -3,7 +3,8 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { loadDairy, todayPk } from "@/lib/portal/dairy-load";
 import { addDays, sortByTag } from "@/lib/portal/dairy";
-import { INCOME_KINDS } from "@/lib/portal/dairy-pl";
+import { INCOME_KINDS, rs } from "@/lib/portal/dairy-pl";
+import { loadEntries } from "@/lib/portal/dairy-pl-load";
 import { Card, CardHead } from "@/components/portal/khata/khata-parts";
 import { ErrorNote, Footer, Hero } from "@/components/portal/dairy/dairy-parts";
 import { Field, Seg, inputCls } from "@/components/portal/dairy/form-parts";
@@ -16,13 +17,16 @@ export default async function AddIncome({ searchParams }: { searchParams: Record
   const lang = getLanguageFromCookies();
   const L = (k: TranslationKey) => t(k, lang);
   const asOf = todayPk();
-  const { animals } = await loadDairy(asOf, 1);
+  const [{ animals }, entries] = await Promise.all([loadDairy(asOf, 1), loadEntries(addDays(asOf, -365), asOf, 60)]);
+  const recent = entries.filter((e) => e.type === "income");
+  const total = recent.reduce((a, e) => a + e.amount, 0);
   const active = sortByTag(animals.filter((a) => a.status !== "sold" && a.status !== "dead"));
   return (
-    <div className="mx-auto max-w-4xl space-y-5 px-4 py-6 sm:px-6">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
       <Hero title={<>➕ {L("dy2_inc_title")} {lang !== "ur" && <span dir="rtl">· {t("dy2_inc_title", "ur")}</span>}</>} sub={L("dy2_inc_sub")} />
       <ErrorNote e={searchParams?.e} lang={lang} />
-      <Card>
+      <div className="pf-grow pf-grid grid gap-4 lg:grid-cols-[1.3fr_1fr] fit:gap-2.5">
+      <Card className="pf-scroll fit:p-3.5">
         <CardHead title={L("dy2_inc_title")} />
         <form action={addIncomeAction} className="space-y-4">
           <Field k="dy2_f_kind" lang={lang}><Seg name="kind" value="home_milk" lang={lang} options={INCOME_KINDS.map((k) => ({ v: k, k: `inc_${k}` as TranslationKey, icon: k === "home_milk" ? "🏠" : k === "animal_sale" ? "🐄" : "➕" }))} /></Field>
@@ -47,6 +51,22 @@ export default async function AddIncome({ searchParams }: { searchParams: Record
           </div>
         </form>
       </Card>
+      <Card className="pf-panel fit:p-3.5">
+        <CardHead title={`${L("os2_history")} · ${L("dy2_income")}`} right={<b className="text-sm text-green-600 dark:text-green-400">{rs(total)}</b>} />
+        <div className="pf-body">
+          {recent.length === 0 && <p className="py-8 text-center text-sm text-surface-500">{L("dy2_none")}</p>}
+          {recent.map((e) => (
+            <div key={e.id} className="flex items-center justify-between gap-3 border-b border-surface-100 py-2.5 text-[13px] last:border-0 dark:border-surface-800">
+              <div className="min-w-0">
+                <b className="text-surface-900 dark:text-white">{L(`inc_${e.cat}` as TranslationKey)}</b>
+                <p className="truncate text-xs text-surface-500 dark:text-slate-400">{e.date}{e.qty ? ` · ${e.qty}` : ""}{e.detail ? ` · ${e.detail}` : ""}</p>
+              </div>
+              <b className="shrink-0 text-green-600 dark:text-green-400">{rs(e.amount)}</b>
+            </div>
+          ))}
+        </div>
+      </Card>
+      </div>
       <Footer lang={lang} />
     </div>
   );

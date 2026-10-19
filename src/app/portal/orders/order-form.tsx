@@ -89,7 +89,7 @@ export function OrderForm({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t("pm_search_products", lang)}
-            className="w-full rounded-lg border border-surface-200 py-2 ps-9 pe-3 text-sm focus:border-brand-500 focus:outline-none"
+            className="w-full rounded-lg border border-surface-200 py-2 ps-9 pe-3 text-sm focus:border-brand-500 focus:outline-none dark:border-surface-700"
           />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -137,7 +137,7 @@ export function OrderForm({
                 min={1}
                 value={l.quantity}
                 onChange={(e) => updateQty(l.product_id, parseInt(e.target.value) || 0)}
-                className="h-8 w-14 rounded-md border border-surface-200 text-center text-sm"
+                className="h-8 w-14 rounded-md border border-surface-200 text-center text-sm dark:border-surface-700"
               />
               <button onClick={() => updateQty(l.product_id, 0)} className="text-surface-400 hover:text-red-600">
                 <Trash2 className="h-4 w-4" />
@@ -149,22 +149,22 @@ export function OrderForm({
         <form action={formAction} className="mt-3 space-y-3 border-t border-surface-100 pt-3 dark:border-surface-800">
           <input type="hidden" name="items_json" value={itemsJson} />
           <div>
-            <label className="text-xs font-medium text-surface-500">{t("c_district", lang)}</label>
+            <label className="text-xs font-medium text-surface-500 dark:text-slate-400">{t("c_district", lang)}</label>
             <input
               name="district"
               value={district}
               onChange={(e) => setDistrict(e.target.value)}
               required
-              className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none dark:border-surface-700"
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-surface-500">{t("pm_tehsil", lang)}</label>
+            <label className="text-xs font-medium text-surface-500 dark:text-slate-400">{t("pm_tehsil", lang)}</label>
             <input
               name="tehsil"
               value={tehsil}
               onChange={(e) => setTehsil(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-surface-200 px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none dark:border-surface-700"
             />
           </div>
           <div className="flex items-center justify-between border-t border-surface-100 pt-2 dark:border-surface-800">

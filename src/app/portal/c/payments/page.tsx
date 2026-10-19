@@ -36,22 +36,22 @@ export default async function CustomerPayments({ searchParams }: { searchParams:
   const stK = (s: string) => `pc_st_${s}` as TranslationKey;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] px-4 py-6 sm:px-6 fit:gap-2.5 fit:py-3">
       <PageHead title={<L3 k="pc_pay_title" lang={lang} />} sub={L("pc_pay_sub")} />
       {ok && <Notice tone="ok">✔ {L("pc_ok_sent")}</Notice>}
       {e && <Notice tone="err">{t(e as TranslationKey, lang)}</Notice>}
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 fit:grid-cols-4 fit:gap-2.5">
         <CKpi tone="violet" icon="👛" label={<L3 k="pc_k_wallet" lang={lang} />} value="Rs 0" sub={L("pc_no_advance")} />
         <CKpi tone="green" icon="💵" label={<L3 k="pc_k_paid_year" lang={lang} />} value={rs(paidYear)} sub={`${payments.length} ${L("pc_payments_n")}`} />
         <CKpi tone="amber" icon="🤝" label={<L3 k="pc_k_active_promise" lang={lang} />} value={active ? rs(active.amount) : L("pc_none")} sub={active ? shortDate(active.date, lang, year) : "—"} />
         <CKpi tone="blue" icon="✅" label={<L3 k="pc_k_kept" lang={lang} />} value={kept.closed ? `${kept.kept} / ${kept.closed}` : "—"} sub={kept.closed ? `${Math.round((kept.kept / kept.closed) * 100)}%` : "—"} />
       </div>
-      <div className="mt-3.5 grid gap-3.5 lg:grid-cols-2">
-        <Panel>
+      <div className="pf-grow pf-grid mt-3.5 grid gap-3.5 lg:grid-cols-2 xl:grid-cols-[1fr_1fr_1.25fr] fit:mt-0 fit:gap-2.5">
+        <Panel className="pf-panel pf-navy fit:p-3.5">
           <div id="proof" />
           <PanelHead title={<L3 k="pc_pay_proof" lang={lang} />} right={<Pill tone="blue">{L("pc_request_only")}</Pill>} />
           {canAsk ? (
-            <form action={submitClaimAction}>
+            <form action={submitClaimAction} className="pf-body">
               <div className="grid gap-x-3 sm:grid-cols-2">
                 <Field label={L("pc_f_amount")}><input name="amount" required inputMode="decimal" className={inputCls} placeholder="40000" /></Field>
                 <Field label={L("pc_f_method")}>
@@ -67,9 +67,10 @@ export default async function CustomerPayments({ searchParams }: { searchParams:
             </form>
           ) : <Sub>{L("pc_no_customer")}</Sub>}
         </Panel>
-        <Panel>
+        <Panel className="pf-panel pf-navy fit:p-3.5">
           <div id="promise" />
           <PanelHead title={<L3 k="pc_my_promises" lang={lang} />} />
+          <div className="pf-body">
           <table className="w-full text-[12.5px]">
             <thead><tr className="border-b border-surface-200 text-start text-[10.5px] uppercase tracking-wide text-surface-500 dark:border-[#1e3160] dark:text-slate-400">
               <th className="py-2">{L("pc_c_date")}</th><th className="text-end">{L("pc_c_amount")}</th><th className="text-end">{L("pc_c_paid")}</th><th className="ps-3">{L("pc_c_status")}</th>
@@ -106,13 +107,13 @@ export default async function CustomerPayments({ searchParams }: { searchParams:
               <p className="mt-2 text-[11px] text-surface-500 dark:text-slate-400">📜 {L("pc_promise_note")}</p>
             </form>
           )}
+          </div>
         </Panel>
-      </div>
-      <Panel className="mt-3.5">
+      <Panel className="pf-panel pf-navy mt-3.5 lg:col-span-2 xl:col-span-1 xl:mt-0 fit:mt-0 fit:p-3.5">
         <div id="history" />
         <PanelHead title={<L3 k="pc_history" lang={lang} />} right={<Sub>{L("pc_history_sub")}</Sub>} />
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] text-[12.5px]">
+        <div className="pf-body overflow-x-auto">
+          <table className="w-full min-w-[520px] fit:min-w-0 text-[12.5px]">
             <thead><tr className="border-b border-surface-200 text-start text-[10.5px] uppercase tracking-wide text-surface-500 dark:border-[#1e3160] dark:text-slate-400">
               <th className="py-2">{L("pc_c_date")}</th><th>{L("pc_c_method")}</th><th>{L("pc_c_ref")}</th><th className="text-end">{L("pc_c_amount")}</th><th className="ps-3">{L("pc_c_status")}</th>
             </tr></thead>
@@ -120,7 +121,7 @@ export default async function CustomerPayments({ searchParams }: { searchParams:
               {hist.length === 0 && <tr><td colSpan={5} className="py-4 text-center text-surface-500">{L("pc_empty")}</td></tr>}
               {hist.slice(0, 40).map((h) => (
                 <tr key={h.key} className="border-b border-surface-100 text-surface-800 dark:border-[#1e3160] dark:text-slate-100">
-                  <td className="py-2.5">{shortDate(h.date, lang, year)}</td><td>{h.method}</td><td>{h.ref}</td>
+                  <td className="py-2.5">{shortDate(h.date, lang, year)}</td><td>{h.method}</td><td className="max-w-[9rem] truncate" title={h.ref}>{h.ref}</td>
                   <td className={`text-end ${h.status === "verified" ? "font-semibold text-emerald-600 dark:text-emerald-400" : ""}`}>{rs(h.amount).replace("Rs ", "")}</td>
                   <td className="ps-3"><Pill tone={STATUS_TONE[h.status] ?? "amber"}>{L(stK(h.status))}</Pill></td>
                 </tr>
@@ -129,6 +130,7 @@ export default async function CustomerPayments({ searchParams }: { searchParams:
           </table>
         </div>
       </Panel>
+      </div>
     </div>
   );
 }

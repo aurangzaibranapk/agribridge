@@ -38,21 +38,21 @@ export default async function AlertsPage({ searchParams }: { searchParams: Recor
   const groups: [keyof typeof g, TranslationKey, string][] = [["overdue", "bh_g_overdue", "text-rose-600 dark:text-rose-300"], ["today", "bh_g_today", "text-amber-600 dark:text-amber-300"], ["week", "bh_g_week", "text-indigo-600 dark:text-indigo-300"], ["later", "bh_g_later", "text-surface-600 dark:text-slate-300"]];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
+    <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
       <BHero title={<>🔔 {L("bh_alerts_page")} {lang !== "ur" && <>· <span dir="rtl">{t("bh_alerts_page", "ur")}</span></>}</>} sub={`${tasks.length} ${L("bh_alerts_sub")}`}>
         <HeroBtn href="/portal/dairy/breeding">🧬 {L("bh_dash_title")}</HeroBtn>
         <HeroBtn href="/portal/dairy/health">💉 {L("bh_health_title")}</HeroBtn>
       </BHero>
       {searchParams?.ok && <p className="rounded-xl bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200">{L("bh_saved")}</p>}
       <BErrorNote e={searchParams?.e} lang={lang} />
-      <div className="grid grid-cols-2 gap-3.5 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3.5 xl:grid-cols-4 fit:grid-cols-4 fit:gap-2.5">
         <BKpi tone="rose" k="bh_g_overdue" lang={lang} value={String(g.overdue.length)} sub={L("bh_g_overdue_sub")} />
         <BKpi tone="amber" k="bh_g_today" lang={lang} value={String(g.today.length)} sub={L("bh_g_today_sub")} />
         <BKpi tone="indigo" k="bh_g_week" lang={lang} value={String(g.week.length)} sub={L("bh_g_week_sub")} />
         <BKpi tone="teal" k="bh_g_later" lang={lang} value={String(g.later.length)} sub={L("bh_g_later_sub")} />
       </div>
-      <div className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
-        <Card>
+      <div className="pf-grow pf-grid grid gap-4 lg:grid-cols-[1.7fr_1fr] fit:gap-2.5">
+        <Card className="pf-scroll fit:p-3.5">
           {groups.map(([k, label, cls]) => g[k].length > 0 && (
             <section key={k} className="mb-4">
               <h4 className={`mb-2 text-xs font-bold uppercase tracking-wide ${cls}`}>{L(label)} · {g[k].length}</h4>
@@ -61,8 +61,8 @@ export default async function AlertsPage({ searchParams }: { searchParams: Recor
           ))}
           {tasks.length === 0 && <p className="py-10 text-center text-sm text-surface-500">✅ {L("bh_no_tasks")}</p>}
         </Card>
-        <div className="grid content-start gap-4">
-          <Card>
+        <div className="pf-scroll grid content-start gap-4 fit:gap-2.5">
+          <Card className="fit:p-3.5">
             <H3 k="bh_set_title" lang={lang} />
             {PREF_TASKS.map((p) => {
               const on = prefs[p] !== false;
@@ -77,7 +77,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: Recor
               );
             })}
           </Card>
-          <Card>
+          <Card className="fit:p-3.5">
             <H3 k="bh_ch_title" lang={lang} />
             <div className="flex items-center justify-between py-2 text-[13px]"><span className="text-surface-800 dark:text-slate-200">📱 {L("bh_ch_app")}</span><span className="rounded-full bg-green-100 px-2.5 py-0.5 text-[11px] font-semibold text-green-700 dark:bg-green-500/20 dark:text-green-200">{L("bh_on")}</span></div>
             <div className="flex items-center justify-between py-2 text-[13px] opacity-60" aria-disabled>
