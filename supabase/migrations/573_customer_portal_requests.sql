@@ -340,7 +340,7 @@ begin
       insert into payment_promises (branch_id, party_type, party_id, promised_amount, promise_date, status, notes, created_by,
                                     approved_by, promised_days, terms_version, terms_accepted_at, terms_accepted_by, terms_channel, signature_ref)
       values (c.branch_id, 'customer', c.id, pr.amount, pr.promise_date, 'open', 'Customer portal darkhwast', auth.uid(),
-              auth.uid(), pr.promise_date - v_today, pr.terms_version, pr.terms_accepted_at, pr.created_by, 'verbal', 'portal:' || pr.id)
+              auth.uid(), case when pr.promise_date - v_today between 1 and 365 then pr.promise_date - v_today end, pr.terms_version, pr.terms_accepted_at, pr.created_by, 'verbal', 'portal:' || pr.id)
       returning id into v_pid;
       update customer_promise_requests set status = 'approved', approved_by = auth.uid(), approved_at = now(), promise_id = v_pid where id = p_id;
     end;
