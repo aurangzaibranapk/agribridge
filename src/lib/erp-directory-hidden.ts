@@ -118,7 +118,6 @@ export const ERP_HIDDEN_ROUTES: string[] = [
   "/admin/purchases/new",
   "/admin/purchases/tax-report",
   "/admin/reports/audit/verifiers",
-  "/admin/reports/sales/meri-dukan",
   "/admin/reports/sales/slow-stock",
   "/admin/reports/stock-reconcile",
   "/admin/search",
