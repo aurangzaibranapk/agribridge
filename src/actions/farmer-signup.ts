@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { ensureProfileFor } from "@/lib/auth/ensure-profile";
 import { findFarmerByPhone, phoneKey } from "@/lib/farmers/identity";
 import { sendFarmerOtp } from "@/lib/farmers/otp";
 import { normalizeCnic, formatCnic, signupDecision } from "@/lib/campaigns/booking";
@@ -118,6 +119,9 @@ export async function completeFarmerSignup(_p: SignupState, formData: FormData):
     if (/phone_key_uniq|cnic_key/.test(insError.message)) return { existing: true, error: EXISTING_MSG };
     return { error: "Kisan ka khata nahi ban saka." };
   }
+
+  // Profile yaqeeni (560): trigger ne bana di ho to kuch nahi badalta.
+  await ensureProfileFor(service, made.user.id);
 
   // Session: wohi tareeqa jo OTP login (farmer-auth.ts) istemal karta hai.
   const { data: link } = await service.auth.admin.generateLink({ type: "magiclink", email });
