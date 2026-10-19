@@ -34,7 +34,8 @@
     "test:txn-counter": "node tests/txn-counter-collision.cjs",
     "test:party-360": "npx --yes tsx scripts/test-party-360.ts",
     "test:promise-credit": "npx --yes tsx scripts/test-promise-credit.ts && node tests/promise-credit-migration.cjs",
-    "test:admin-review": "npx --yes tsx scripts/test-admin-review.ts"
+    "test:admin-review": "npx --yes tsx scripts/test-admin-review.ts",
+    "test:grain-unified": "node tests/grain-unified-receivables.cjs"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",

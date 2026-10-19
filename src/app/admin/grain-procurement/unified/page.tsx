@@ -27,7 +27,7 @@ export default async function UnifiedGrainDashboard() {
     supabase.from("grain_sales").select("quantity_kg, total_amount, total_cogs, profit, grain_type, buyer_id, buyers(business_name)"),
     supabase.from("grain_expenses").select("amount"),
     supabase.from("grain_procurement_payments").select("amount, farmer_id, party_id, farmers(full_name), grain_parties(party_name)").is("reclassified_as_sale_payment_id", null).limit(500),
-    supabase.from("grain_sale_payments").select("amount, buyer_id, buyers(business_name)").limit(500),
+    supabase.from("grain_sale_payments").select("amount, sale_id, grain_sales(buyer_id, buyers(business_name))").limit(500),
   ]);
 
   const entries = rawEntries ?? [];
@@ -80,8 +80,10 @@ export default async function UnifiedGrainDashboard() {
     receivableMap[key].due += Number(s.total_amount || 0);
   }
   for (const sp of salePayments ?? []) {
-    const name = (sp.buyers as any)?.business_name || "Unknown Buyer";
-    const key = sp.buyer_id || name;
+    // grain_sale_payments has no buyer_id; the buyer comes through the parent sale.
+    const sale = (sp as any).grain_sales;
+    const name = sale?.buyers?.business_name || "Unknown Buyer";
+    const key = sale?.buyer_id || name;
     if (!receivableMap[key]) receivableMap[key] = { name, due: 0 };
     receivableMap[key].due -= Number(sp.amount || 0);
   }
