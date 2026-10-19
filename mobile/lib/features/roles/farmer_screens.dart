@@ -81,9 +81,9 @@ class FarmerHome extends ConsumerWidget {
         HeroBanner(title: context.tr(T.farmerDash), name: row?['full_name']?.toString() ?? profile.name, code: row?['farmer_code']?.toString() ?? ''),
         Transform.translate(offset: const Offset(0, -16), child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: KpiStrip(items: [
           Kpi(Icons.landscape_rounded, const Color(0xFF43A047), num0(row?['land_size_acres'] as num?), context.tr(T.acres)),
-          Kpi(Icons.grass_rounded, const Color(0xFF7CB342), num0(crops), context.tr(T.crops)),
-          Kpi(Icons.pets_rounded, const Color(0xFF8D6E63), num0(animals), context.tr(T.animals)),
-          Kpi(Icons.account_balance_wallet_rounded, const Color(0xFFD81B60), owed == null ? '—' : num0(-owed), context.tr(T.khata), valueColor: (owed ?? 0) > 0 ? RC.red : RC.ok),
+          Kpi(Icons.grass_rounded, const Color(0xFF7CB342), num0(crops == 0 ? null : crops), context.tr(T.crops)),
+          Kpi(Icons.pets_rounded, const Color(0xFF8D6E63), num0(animals == 0 ? null : animals), context.tr(T.animals)),
+          Kpi(Icons.account_balance_wallet_rounded, const Color(0xFFD81B60), owed == null ? '—' : (owed == 0 ? '0' : '-${num0(owed.abs())}'), context.tr(T.khata), valueColor: owed == null ? null : owed > 0 ? RC.red : RC.ok),
         ]))),
         TileGrid(tiles: [
           TileData(Icons.event_note_rounded, const Color(0xFFF9A825), context.tr(T.seasonPlan), sub: 'Gandum / Munji', key: const ValueKey('tile-season'), onTap: () => push(context, const SeasonBookingScreen())),

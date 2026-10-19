@@ -123,7 +123,7 @@ class RoleTopBar extends ConsumerWidget {
     final content = Row(children: [
       if (back) IconButton(onPressed: () => Navigator.maybePop(context), icon: Icon(Icons.arrow_back, color: staff ? Colors.white : context.ink)),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(staff ? context.tr(T.staffApp) : 'AgriBridge', style: TextStyle(color: fg, fontSize: 21, fontWeight: FontWeight.w800)),
+        FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: Text(staff ? context.tr(T.staffApp) : 'AgriBridge', maxLines: 1, style: TextStyle(color: fg, fontSize: staff ? 19 : 21, fontWeight: FontWeight.w800))),
         Text(subtitle ?? context.tr(T.tagline), style: TextStyle(fontSize: 10.5, color: staff ? const Color(0xFFCFE5D4) : context.muted)),
       ])),
       if (trailing != null) trailing!,
