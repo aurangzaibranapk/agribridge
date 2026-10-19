@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { buildSaleCashIndex, saleCash, type SalePaymentRow } from "@/lib/pos/sale-cash";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { StatCard } from "@/components/dashboard/stat-card";
@@ -287,7 +288,9 @@ export default async function SalesReportPage({
 
   // Udhaar (khata) -- bikri ka wo hissa jo abhi aaya hi nahi.
   const udhaarDiya = (sales ?? []).reduce((sum, s: any) => sum + Number(s.khata_amount ?? 0), 0);
-  const naqadAaya = (sales ?? []).reduce((sum, s: any) => sum + Number(s.cash_paid ?? 0), 0);
+  // Sirf asal cash -- Waseela Card/bank/wallet nahi (fix/pos-card-cash-dupes).
+  const cashIdx = buildSaleCashIndex((adaigiyan ?? []) as SalePaymentRow[]);
+  const naqadAaya = (sales ?? []).reduce((sum, s: any) => sum + saleCash(s, cashIdx), 0);
 
   const chalteLoad = (loadRows ?? []).filter((l: any) => l.status !== "wapas");
   const loadKiRaqam = chalteLoad
@@ -483,7 +486,7 @@ export default async function SalesReportPage({
     const pehle = bikriDukanWar.get(s.shop_id) ?? { raqam: 0, naqad: 0, udhaar: 0, ginti: 0 };
     bikriDukanWar.set(s.shop_id, {
       raqam: pehle.raqam + Number(s.total_amount ?? 0),
-      naqad: pehle.naqad + Number(s.cash_paid ?? 0),
+      naqad: pehle.naqad + saleCash(s, cashIdx),
       udhaar: pehle.udhaar + Number(s.khata_amount ?? 0),
       ginti: pehle.ginti + 1,
     });
