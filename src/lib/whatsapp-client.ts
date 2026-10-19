@@ -113,7 +113,7 @@ export async function sendWhatsAppTemplate(
   languageCode: string,
   bodyParams: string[],
   otpButtonParam?: string
-): Promise<void> {
+): Promise<string | null> {
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
 
@@ -162,6 +162,9 @@ export async function sendWhatsAppTemplate(
     const body = await res.text().catch(() => "");
     throw new Error(`WhatsApp ne template nahi liya (${res.status}): ${body.slice(0, 300)}`);
   }
+  // Meta ka message id (broadcast delivery report ke liye). Purane callers ise nazarandaz karte hain.
+  const json = (await res.json().catch(() => null)) as { messages?: { id?: string }[] } | null;
+  return json?.messages?.[0]?.id ?? null;
 }
 
 /**

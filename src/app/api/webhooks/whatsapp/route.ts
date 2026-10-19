@@ -48,6 +48,13 @@ export async function POST(request: NextRequest) {
     }
 
     const body = JSON.parse(rawBody);
+    // Broadcast: delivery status + STOP/START (sirf signed). Ghalti ho to purana raasta chalta rahe.
+    if (sig === "valid") {
+      const svc = createServiceClient();
+      await import("@/lib/broadcast/webhook")
+        .then((m) => m.recordBroadcastWebhook(async (fn, args) => (await svc.rpc(fn as never, args as never)).data, body))
+        .catch((e) => console.error("[whatsapp-webhook] broadcast hook error", e));
+    }
     const inbound = readInbound(body);
     if (!inbound) {
       return NextResponse.json({ ok: true });
