@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { createClient } from "@/lib/supabase/client";
@@ -10,16 +10,13 @@ import { Button, Input, Label } from "@/components/ui/form";
 import { PasswordInput } from "@/components/ui/password-input";
 import { requestFarmerOtp, verifyFarmerOtp, loginWithIdentifier, type FarmerAuthState, type IdentifierLoginState } from "@/actions/farmer-auth";
 import { getRoleRedirectPath } from "@/lib/utils/roles";
+import { loadOrHealProfile } from "@/lib/auth/ensure-profile";
+import { goAfterLogin, routeAfterLogin, OFFLINE_ROUTE_KEY } from "@/lib/navigation/after-login";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
-const FIELD = "h-12 rounded-xl border-surface-200 bg-white px-3.5 text-[15px] shadow-sm outline-none transition focus:border-[#2E6840] focus:ring-2 focus:ring-[#2E6840]/10 placeholder:text-surface-400";
+const FIELD = "h-12 rounded-xl border-surface-200 bg-white px-3.5 text-[15px] shadow-sm outline-none transition focus:border-[#2E6840] focus:ring-2 focus:ring-[#2E6840]/10 placeholder:text-surface-400 dark:border-slate-600 dark:bg-[#0B1426] dark:text-white";
 const BIG_BTN = "h-12 w-full rounded-xl bg-[#174B2B] text-[15px] font-semibold tracking-wide text-white shadow-sm transition hover:bg-[#123D23] disabled:cursor-not-allowed disabled:opacity-60";
-const OFFLINE_ROUTE_KEY = "agribridge:last-login-route";
-
-function rememberLoginRoute(route: string) {
-  try { window.localStorage.setItem(OFFLINE_ROUTE_KEY, route); } catch {}
-}
 
 export function LoginForm({ tenantName = "AgriBridge" }: { tenantName?: string }) {
   return <UnifiedLogin tenantName={tenantName} />;
@@ -35,9 +32,9 @@ const identifierEmptyState: IdentifierLoginState = {};
  */
 function UnifiedLogin({ tenantName }: { tenantName: string }) {
   const lang = useLang();
-  const router = useRouter();
   const supabase = createClient();
   const [identifier, setIdentifier] = useState("");
+  const [tab, setTab] = useState<"login" | "signup">("login");
   const [passwordState, passwordAction] = useFormState(loginWithIdentifier, identifierEmptyState);
   const [phone, setPhone] = useState("");
   const [otpState, otpAction] = useFormState(requestFarmerOtp, emptyState);
@@ -89,21 +86,15 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
 
   useEffect(() => {
     if (passwordState.success) {
-      const route = passwordState.redirectPath ?? "/";
-      rememberLoginRoute(route);
-      router.push(route);
-      router.refresh();
+      goAfterLogin(routeAfterLogin(null, passwordState.redirectPath));
     }
-  }, [passwordState.success, passwordState.redirectPath, router]);
+  }, [passwordState.success, passwordState.redirectPath]);
 
   useEffect(() => {
     if (checkState.success) {
-      const route = checkState.hasUsername ? "/portal/dashboard" : "/portal/profile";
-      rememberLoginRoute(route);
-      router.push(route);
-      router.refresh();
+      goAfterLogin(checkState.hasUsername ? "/portal/dashboard" : "/portal/profile");
     }
-  }, [checkState.success, checkState.hasUsername, router]);
+  }, [checkState.success, checkState.hasUsername]);
 
   async function sendEmailOtp() {
     setEmailBusy(true);
@@ -133,24 +124,18 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
       setEmailError(error?.message ?? "Code theek nahi.");
       return;
     }
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, is_active")
-      .eq("id", data.user.id)
-      .single();
+    const profile = await loadOrHealProfile(supabase, data.user.id);
     setEmailBusy(false);
     if (!profile || !profile.is_active) {
       await supabase.auth.signOut();
       setEmailError("Account active nahi hai. Admin se rabta karein.");
       return;
     }
-    const route = getRoleRedirectPath(profile.role);
-    rememberLoginRoute(route);
-    router.push(route);
-    router.refresh();
+    goAfterLogin(getRoleRedirectPath(profile.role));
   }
 
   const otpSent = otpState.otpSent;
+  const needsProfile = Boolean(otpState.needsProfile || checkState.needsProfile);
   const isEmail = identifier.includes("@");
 
   if (emailStage === "sent") {
@@ -174,13 +159,22 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
     return (
       <div className="space-y-4">
         <div>
-          <p className="text-sm font-semibold text-surface-800">Mobile OTP verify karein</p>
-          <p className="mt-1 text-xs text-surface-500">Code WhatsApp/SMS par bhej diya gaya.</p>
+          <p className="text-sm font-semibold text-surface-800 dark:text-white">Mobile OTP verify karein</p>
+          <p className="mt-1 text-xs text-surface-500 dark:text-slate-400">Code WhatsApp/SMS par bhej diya gaya. 5 minute chalega.</p>
         </div>
+        {needsProfile && <StepHints active={2} />}
         {checkState.error && <Alert tone="error">{checkState.error}</Alert>}
         <form action={checkAction} className="space-y-4">
           <input type="hidden" name="phone" value={phone} />
-          <Input name="code" required inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="- - - - - -" className={`${FIELD} text-center font-mono text-xl tracking-[0.35em]`} />
+          <Input name="code" required inputMode="numeric" autoComplete="one-time-code" maxLength={6} placeholder="- - - - - -" aria-label="6 hindse OTP" className={`${FIELD} text-center font-mono text-xl tracking-[0.35em]`} />
+          {needsProfile && (
+            <div className="space-y-3 rounded-xl border border-[#DCE8DF] bg-[#F5F9F6] p-3 dark:border-slate-700 dark:bg-slate-800/60">
+              <p className="text-xs font-semibold text-[#1E4A2E] dark:text-emerald-300">Qadam 3 · Naya account: apna naam likhein</p>
+              <div><Label htmlFor="signup-name">Poora naam</Label><Input id="signup-name" name="full_name" required placeholder="Misal: Muhammad Aslam" className={FIELD} /></div>
+              <div><Label htmlFor="signup-village">Gaon / shehar <span className="font-normal text-surface-400">(optional)</span></Label><Input id="signup-village" name="village" placeholder="Misal: Chak 12" className={FIELD} /></div>
+              <p className="text-[11px] leading-4 text-[#496052] dark:text-slate-400">Account Admin ki manzoori ke baad mukammal hoga. Password baad mein profile se set kar sakte hain.</p>
+            </div>
+          )}
           <SubmitBtn label="OTP verify karein" busy="Check ho raha hai..." />
         </form>
         <button type="button" onClick={() => setPhone("")} className="w-full text-center text-xs font-semibold text-[#1E4A2E] hover:underline">Login screen par wapas</button>
@@ -203,11 +197,32 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
         </div>
       )}
       <div className="mb-5">
-        <p className="text-sm font-semibold text-surface-800">One {tenantName} Login</p>
-        <p className="mt-1 text-xs leading-relaxed text-surface-500">Admin, staff, farmer, customer, dealer aur vendor sab yahin se login karein.</p>
+        <p className="text-sm font-semibold text-surface-800 dark:text-white">One {tenantName} Login</p>
+        <p className="mt-1 text-xs leading-relaxed text-surface-500 dark:text-slate-400">Admin, staff, farmer, customer, dealer aur vendor sab yahin se login karein.</p>
       </div>
-      {passwordState.error && <Alert tone="error">{passwordState.error}</Alert>}
+      <div role="tablist" aria-label="Login ya naya account" className="mb-4 grid grid-cols-2 rounded-xl bg-[#EEF3EE] p-1 dark:bg-slate-800">
+        {([["login", "Login"], ["signup", "Naya account (OTP)"]] as const).map(([key, label]) => (
+          <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
+            className={`h-10 rounded-lg text-sm font-semibold transition ${tab === key ? "bg-[#174B2B] text-white shadow-sm" : "text-[#3D5A47] hover:bg-white/70 dark:text-slate-300 dark:hover:bg-slate-700"}`}>{label}</button>
+        ))}
+      </div>
       {otpState.error && <div className="mb-3"><Alert tone="error">{otpState.error}</Alert></div>}
+      {tab === "signup" ? (
+        <form
+          className="space-y-4"
+          onSubmit={(e) => { e.preventDefault(); const form = new FormData(); form.set("phone", phone.trim()); form.set("channel", "whatsapp"); otpAction(form); }}
+        >
+          <StepHints active={1} />
+          <div>
+            <Label htmlFor="signup-phone">Mobile number</Label>
+            <Input id="signup-phone" name="phone" required inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0300 1234567" className={FIELD} />
+          </div>
+          <Button type="submit" disabled={!phone.trim()} className={BIG_BTN}>WhatsApp par OTP bhejein</Button>
+          <p className="text-xs leading-relaxed text-[#496052] dark:text-slate-400">Is number par 6 hindse ka WhatsApp code aayega. Pehle se account ho to seedha login ho jayega; naya ho to agle qadam mein naam poochha jayega (Admin approval ke baad account chalega).</p>
+        </form>
+      ) : (
+      <>
+      {passwordState.error && <Alert tone="error">{passwordState.error}</Alert>}
       <form action={passwordAction} className="space-y-4">
         <div>
           <Label htmlFor="unified-identifier">Mobile, Email ya User ID</Label>
@@ -228,19 +243,40 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
             }}
             className="h-12 w-full rounded-xl border border-[#174B2B] bg-[#E9F4EC] text-[15px] font-semibold text-[#174B2B] transition hover:bg-[#DCEFE1] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {emailBusy ? "Bheja ja raha hai..." : "Send OTP"}
+            {emailBusy ? "Bheja ja raha hai..." : "OTP se login"}
           </button>
         </div>
-        <Link href="/forgot-password" className="block text-right text-xs font-semibold text-[#1E4A2E] hover:underline">Password bhool gaye?</Link>
+        <p className="text-[11px] leading-4 text-[#5B6F62] dark:text-slate-400">Password yaad nahi? Mobile ya email likh kar <b>OTP se login</b> dabayein — WhatsApp/email par code aayega. Naya user? Upar <b>Naya account (OTP)</b> chunein.</p>
+        <Link href="/forgot-password" className="block text-right text-xs font-semibold text-[#1E4A2E] hover:underline dark:text-emerald-300">Password bhool gaye?</Link>
       </form>
-      <div className="mt-4 rounded-xl border border-[#DCE8DF] bg-[#F5F9F6] px-3 py-2.5 text-center text-xs leading-relaxed text-[#496052]">Login ke baad system aapki identity ke mutabiq sahi portal khol dega.</div>
+      </>
+      )}
+      <div className="mt-4 rounded-xl border border-[#DCE8DF] bg-[#F5F9F6] px-3 py-2.5 text-center text-xs leading-relaxed text-[#496052] dark:border-slate-700 dark:bg-[#0B1426] dark:text-slate-400">Login ke baad system aapki identity ke mutabiq sahi portal khol dega.</div>
     </div>
+  );
+}
+
+/** Naya account ke qadam: 1 mobile, 2 WhatsApp OTP, 3 naam. */
+function StepHints({ active }: { active: 1 | 2 | 3 }) {
+  const steps = ["Mobile number", "WhatsApp OTP", "Naam / password"];
+  return (
+    <ol className="grid grid-cols-3 gap-1.5" aria-label="Naya account ke qadam">
+      {steps.map((label, i) => {
+        const n = i + 1;
+        const state = n < active ? "done" : n === active ? "now" : "next";
+        return (
+          <li key={label} aria-current={state === "now" ? "step" : undefined}
+            className={`rounded-lg border px-2 py-1.5 text-center text-[11px] leading-4 ${state === "now" ? "border-[#174B2B] bg-[#E9F4EC] font-bold text-[#174B2B] dark:border-emerald-400 dark:bg-emerald-900/30 dark:text-emerald-200" : state === "done" ? "border-[#CFE3D5] text-[#2E6840] dark:border-slate-600 dark:text-emerald-300" : "border-[#E1E6DE] text-[#7A8A80] dark:border-slate-700 dark:text-slate-400"}`}>
+            {state === "done" ? "✓" : n} · {label}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
 function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () => void }) {
   const lang = useLang();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [state, action] = useFormState(loginWithIdentifier, identifierEmptyState);
 
@@ -248,10 +284,8 @@ function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () 
     if (!state.success) return;
     // Login se pehle jo safha khulna tha wahi jeetta hai -- role ke
     // hisaab se ghar sirf tab, jab koi khaas manzil na ho.
-    const redirectTo = searchParams.get("redirectTo");
-    router.push(redirectTo && redirectTo !== "/login" ? redirectTo : state.redirectPath ?? "/");
-    router.refresh();
-  }, [state.success, state.redirectPath, searchParams, router]);
+    goAfterLogin(routeAfterLogin(searchParams?.get("redirectTo"), state.redirectPath));
+  }, [state.success, state.redirectPath, searchParams]);
 
   return (
     <>
@@ -289,7 +323,6 @@ const emptyState: FarmerAuthState = {};
 
 function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; onPassword: () => void }) {
   const lang = useLang();
-  const router = useRouter();
   const supabase = createClient();
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -315,9 +348,8 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
     // page khule jahan password aur User ID banti hai -- dashboard nahi.
     // Jis ki User ID pehle se bani hui hai us ke liye ye qadam guzar
     // chuka, seedha dashboard.
-    router.push(checkState.hasUsername ? "/portal/dashboard" : "/portal/profile");
-    router.refresh();
-  }, [checkState.success, checkState.hasUsername, router]);
+    goAfterLogin(checkState.hasUsername ? "/portal/dashboard" : "/portal/profile");
+  }, [checkState.success, checkState.hasUsername]);
   useEffect(() => {
     if (askState.retryAfterSeconds) setCooldown(askState.retryAfterSeconds);
   }, [askState]);
@@ -344,9 +376,9 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
     setEmailBusy(true); setEmailError(null);
     const { data, error } = await supabase.auth.verifyOtp({ email: email.trim(), token: code, type: "email" });
     if (error || !data.user) { setEmailBusy(false); setEmailError(error?.message ?? "Code theek nahi."); return; }
-    const { data: profile } = await supabase.from("profiles").select("role, is_active").eq("id", data.user.id).single();
+    const profile = await loadOrHealProfile(supabase, data.user.id);
     if (!profile || !profile.is_active) { await supabase.auth.signOut(); setEmailBusy(false); setEmailError(profile ? "Ye account deactivate ho chuka hai. Admin se rabta karein." : "Account setup adhoora hai. Support se rabta karein."); return; }
-    router.push(getRoleRedirectPath(profile.role)); router.refresh();
+    goAfterLogin(getRoleRedirectPath(profile.role));
   }
 
   if (emailStage === "sent") return (
@@ -411,9 +443,8 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
 
 function FarmerUsernameLogin({ onBack }: { onBack: () => void }) {
   const lang = useLang();
-  const router = useRouter();
   const [state, action] = useFormState(loginWithIdentifier, identifierEmptyState);
-  useEffect(() => { if (state.success) { router.push(state.redirectPath ?? "/portal/dashboard"); router.refresh(); } }, [state.success, state.redirectPath, router]);
+  useEffect(() => { if (state.success) goAfterLogin(routeAfterLogin(null, state.redirectPath ?? "/portal/dashboard")); }, [state.success, state.redirectPath]);
   return <div><div className="mb-4"><StepBadge>↳</StepBadge><span className="ml-2 text-sm font-semibold text-surface-800">User ID se login</span></div><form action={action} className="space-y-4">{state.error && <Alert tone="error">{state.error}</Alert>}<div><Label htmlFor="identifier">{t("pm_user_id", lang)}</Label><Input id="identifier" name="identifier" required autoComplete="username" placeholder={t("pm_eg_username", lang)} className={FIELD} /></div><div><Label htmlFor="fpassword">{t("pm_password", lang)}</Label><PasswordInput id="fpassword" name="password" required placeholder="••••••••" className={FIELD} /></div><SubmitBtn label={t("au_go_in", lang)} busy="Check ho raha hai..." /></form><button type="button" onClick={onBack} className="mt-4 w-full text-center text-xs font-semibold text-[#1E4A2E] hover:underline">Mobile / OTP login par wapas</button></div>;
 }
 

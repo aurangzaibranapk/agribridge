@@ -304,7 +304,7 @@ export async function sendOfficialLoginEmail(toEmail: string, fullName: string, 
 export async function sendPasswordResetEmail(toEmail: string, fullName: string, resetLink: string) {
   const html = emailWrapper(`
     <p>Dear <strong>${fullName}</strong>,</p>
-    <p>Aap ne apna password reset karne ki request ki hai. Neeche button dabayein - ye link 1 ghante ke liye valid hai.</p>
+    <p>Aap ne apna password reset karne ki request ki hai. Neeche button dabayein - ye link 30 minute ke liye valid hai aur sirf ek dafa chalega.</p>
     <p style="text-align:center; margin:24px 0;">
       <a href="${resetLink}" style="background:#16a34a; color:#ffffff; padding:12px 28px; border-radius:8px; text-decoration:none; font-weight:600; display:inline-block;">
         Naya Password Set Karein
@@ -313,7 +313,7 @@ export async function sendPasswordResetEmail(toEmail: string, fullName: string, 
     <p style="color:#6b7280; font-size:12px;">Agar button kaam na kare, ye link browser mein paste karein:<br/>${resetLink}</p>
     <p style="color:#6b7280; font-size:12px;">Agar aap ne ye request nahi ki, is email ko nazar-andaz kar dein.</p>
   `, "hr");
-  await send("hr", toEmail, "Password Reset - Al Rana Traders", html);
+  return send("hr", toEmail, "Password Reset - Al Rana Traders", html);
 }
 
 export const EMAIL_TEMPLATE_DEFAULTS: { key: string; name: string; subject: string; body: string }[] = [

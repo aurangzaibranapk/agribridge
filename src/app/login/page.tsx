@@ -30,7 +30,7 @@ export default async function LoginPage() {
 
   return (
     <LangProvider lang={lang}>
-      <main className="min-h-screen bg-[#f8f9f5] lg:grid lg:h-screen lg:min-h-0 lg:grid-cols-[51%_49%] lg:overflow-hidden">
+      <main className="min-h-screen bg-[#f8f9f5] dark:bg-[#0B1426] lg:grid lg:h-screen lg:min-h-0 lg:grid-cols-[51%_49%] lg:overflow-hidden">
         <section className="relative hidden min-h-screen overflow-hidden border-r border-[#dce6d9] bg-[#eef5e8] lg:flex lg:h-screen lg:min-h-0 lg:flex-col lg:justify-between lg:px-12 lg:py-6 xl:px-16 xl:py-7">
           <div className="pointer-events-none absolute inset-0">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_5%,rgba(191,224,213,0.72),transparent_34%),radial-gradient(circle_at_68%_28%,rgba(255,248,208,0.86),transparent_36%),linear-gradient(180deg,#edf7ee_0%,#f6f6dc_52%,#dce9a7_100%)]" />
@@ -77,7 +77,7 @@ export default async function LoginPage() {
           </div>
         </section>
 
-        <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#fbfcf8] px-4 py-5 sm:px-8 lg:h-screen lg:min-h-0 lg:px-10 lg:py-3">
+        <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#fbfcf8] dark:bg-[#0B1426] px-4 py-5 sm:px-8 lg:h-screen lg:min-h-0 lg:px-10 lg:py-3">
           <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#f0e6b5]/35 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-[#b8d8c2]/25 blur-3xl" />
           <div className="relative w-full max-w-[470px]">
@@ -85,12 +85,12 @@ export default async function LoginPage() {
               <div className="flex items-center gap-3"><BrandMark compact /><div><p className="font-display text-base font-semibold text-[#123321]">{brandName}</p><p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#5c795f]">{t("au_brand", lang)}</p></div></div>
               <Link href="/" className="rounded-full border border-[#dfe5dc] bg-white px-3 py-2 text-xs font-semibold text-[#385442] shadow-sm">Website</Link>
             </div>
-            <div className="mb-4 lg:mb-3"><p className="text-sm font-semibold text-[#2f6b45]">Welcome to {brandName}</p><h2 className="mt-1 font-display text-3xl font-semibold tracking-tight text-[#103b29]">Apna account kholain</h2><p className="mt-1.5 text-sm leading-5 text-[#66766b]">Farmer, customer, staff aur vendor — apna sahi login raasta chunain.</p></div>
-            <div className="rounded-[28px] border border-[#e1e6de] bg-white/95 p-5 shadow-[0_24px_70px_-30px_rgba(13,40,24,0.32)] sm:p-6 lg:p-5">
+            <div className="mb-4 lg:mb-3"><p className="text-sm font-semibold text-[#2f6b45] dark:text-emerald-300">Welcome to {brandName}</p><h2 className="mt-1 font-display text-3xl font-semibold tracking-tight text-[#103b29] dark:text-white">Apna account kholain</h2><p className="mt-1.5 text-sm leading-5 text-[#66766b] dark:text-slate-400">Farmer, customer, staff aur vendor — apna sahi login raasta chunain.</p></div>
+            <div className="rounded-[28px] border border-[#e1e6de] bg-white/95 dark:border-[#22314F] dark:bg-[#111D35] p-5 shadow-[0_24px_70px_-30px_rgba(13,40,24,0.32)] sm:p-6 lg:p-5">
               <Suspense fallback={null}><LoginForm tenantName={brandName} /></Suspense>
-              <div className="mt-4 border-t border-[#e9ece7] pt-3"><div className="flex items-start gap-3 rounded-xl bg-[#f2f7f2] px-3.5 py-2.5"><span className="mt-0.5 text-[#2f6b45]"><ShieldMark /></span><div><p className="text-xs font-semibold text-[#284a34]">Aapki maloomat mehfooz hai</p><p className="mt-0.5 text-[11px] leading-4 text-[#708076]">OTP, account aur business data secure access ke sath use hota hai.</p></div></div><Link href="/request-demo" className="mt-3 block text-center text-xs font-bold text-[#2f6b45] hover:underline">Apne business ke liye AgriBridge OS hasil karein</Link></div>
+              <div className="mt-4 border-t border-[#e9ece7] dark:border-[#22314F] pt-3"><div className="flex items-start gap-3 rounded-xl bg-[#f2f7f2] dark:bg-[#0B1426] px-3.5 py-2.5"><span className="mt-0.5 text-[#2f6b45]"><ShieldMark /></span><div><p className="text-xs font-semibold text-[#284a34]">Aapki maloomat mehfooz hai</p><p className="mt-0.5 text-[11px] leading-4 text-[#708076]">OTP, account aur business data secure access ke sath use hota hai.</p></div></div><Link href="/request-demo" className="mt-3 block text-center text-xs font-bold text-[#2f6b45] hover:underline">Apne business ke liye AgriBridge OS hasil karein</Link></div>
             </div>
-            <div className="mt-3 grid grid-cols-3 divide-x divide-[#cddacb] rounded-2xl border border-[#cfe3b9] bg-white/90 px-2 py-2.5 text-[#164a31] shadow-[0_8px_26px_-15px_rgba(55,109,53,0.7)] ring-1 ring-[#e5f0cf]">
+            <div className="mt-3 grid grid-cols-3 divide-x divide-[#cddacb] rounded-2xl border border-[#cfe3b9] bg-white/90 dark:border-[#22314F] dark:bg-[#111D35] dark:text-slate-200 px-2 py-2.5 text-[#164a31] shadow-[0_8px_26px_-15px_rgba(55,109,53,0.7)] ring-1 ring-[#e5f0cf]">
               <FooterItem href="/" icon={<GlobeMark />} label="Website par wapas" /><FooterItem icon={<LockMark />} label="Safe & Secure" /><FooterItem icon={<HeadsetMark />} label="24/7 Support" />
             </div>
           </div>

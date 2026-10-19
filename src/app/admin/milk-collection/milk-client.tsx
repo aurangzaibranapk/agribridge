@@ -1,9 +1,9 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
-import { createMilkEntry, recordMilkPayment, type ActionState } from "@/actions/milk";
+import { createMilkEntry, recordMilkPayment, milkQistPreview, type ActionState } from "@/actions/milk";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { Card } from "@/components/ui/layout-primitives";
 import { t } from "@/lib/i18n/translations";
@@ -336,6 +336,15 @@ function NewEntryForm({ farmers, balances, branches }: { farmers: Farmer[]; bala
 function PaymentModal({ balance, onClose }: { balance: Balance; onClose: () => void }) {
   const lang = useLang();
   const [state, formAction] = useFormState(recordMilkPayment, initialState);
+  // 557: is kisan ki doodh wali wajib qist -- adaigi se pehle nazar aaye
+  const [payout, setPayout] = useState<number>(balance.balance_due);
+  const [qist, setQist] = useState<{ due: number; deduct: number; items: { code: string; deduct: number; shortfall: number }[] } | null>(null);
+  const [skipQist, setSkipQist] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => { milkQistPreview(balance.farmer_id, payout || 0).then(setQist).catch(() => setQist(null)); }, 250);
+    return () => clearTimeout(t);
+  }, [balance.farmer_id, payout]);
+  const cut = skipQist ? 0 : qist?.deduct ?? 0;
 
   if (state.success) {
     setTimeout(onClose, 800);
@@ -359,8 +368,19 @@ function PaymentModal({ balance, onClose }: { balance: Balance; onClose: () => v
           <input type="hidden" name="farmer_id" value={balance.farmer_id} />
           <div>
             <Label>{t("mk_amount_req", lang)}</Label>
-            <Input type="number" step="0.01" name="amount" max={balance.balance_due} defaultValue={balance.balance_due} required />
+            <Input type="number" step="0.01" name="amount" max={balance.balance_due} defaultValue={balance.balance_due} required onChange={(e) => setPayout(Number(e.target.value))} />
           </div>
+          {qist && qist.due > 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200">
+              {qist.items.map((i) => (
+                <div key={i.code} className="flex justify-between"><span>Qist Plan {i.code}{i.shortfall > 0 ? ` (Rs ${i.shortfall.toLocaleString("en-PK")} akhir mein)` : ""}</span><span>− Rs {i.deduct.toLocaleString("en-PK")}</span></div>
+              ))}
+              <div className="mt-1 flex justify-between border-t border-amber-200 pt-1 font-semibold dark:border-amber-400/30"><span>Ada karna</span><span>Rs {Math.max((payout || 0) - cut, 0).toLocaleString("en-PK")}</span></div>
+              <label className="mt-1 flex items-center gap-2"><input type="checkbox" checked={!skipQist} onChange={(e) => setSkipQist(!e.target.checked)} /> Qist is dafa katni hai</label>
+              {skipQist && <input name="qist_skip_reason" required minLength={3} placeholder="Na kaatne ki wajah (lazmi)" className="mt-1 w-full rounded border border-amber-300 bg-white px-2 py-1 dark:bg-transparent" />}
+              <input type="hidden" name="apply_qist" value={skipQist ? "no" : "yes"} />
+            </div>
+          )}
           <div>
             <Label>{t("mk_payment_method", lang)}</Label>
             <Select name="payment_method">

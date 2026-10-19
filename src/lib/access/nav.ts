@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { pathAllowed } from "@/lib/access/route-match";
 import { loadRegistry, featureForPath, type Registry } from "@/lib/access/registry";
 import type { Lang } from "@/lib/i18n/translations";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
@@ -264,10 +265,8 @@ export async function loadNav(profileId: string, role: string, lang: Lang = "rm"
  * jise sirf collection ki ijazat thi.
  */
 export function routeAllowed(allowedRoutes: string[], pathname: string): boolean {
-  return allowedRoutes.some((route) => {
-    const path = route.split(/[?#]/, 1)[0];
-    return pathname === path || pathname.startsWith(path + "/");
-  });
+  // Wohi qaida jo middleware lagata hai -- menu aur rok alag baat na kahein.
+  return pathAllowed(allowedRoutes, pathname);
 }
 
 export { featureForPath };
