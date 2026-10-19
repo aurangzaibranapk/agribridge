@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "pk.alranatraders.agribridge",
+      "sha256_cert_fingerprints": [
+        "55:82:07:50:34:55:42:BA:B2:66:5A:95:0A:D3:17:E2:59:1C:35:93:11:36:9E:8E:E8:03:B3:3B:A2:73:A7:81"
+      ]
+    }
+  }
+]

@@ -46,6 +46,7 @@ const support: string[][] = [
   ["Privacy Policy", "/privacy-policy"],
   ["Disclaimer", "/disclaimer"],
   ["Cookie Policy", "/cookie-policy"],
+  ["Delete Account", "/account-deletion"],
 ];
 
 /** Design ke adad -- sirf tab jab CMS par kuch darj hi na ho. */
