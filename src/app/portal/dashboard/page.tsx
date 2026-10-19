@@ -1,457 +1,515 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   AlertTriangle,
-  CheckCircle2,
-  Sprout,
-  Landmark,
-  Tractor,
   ArrowRight,
-  Clock,
-  MapPin,
-  Phone,
-  Wheat,
+  BadgeCheck,
+  CalendarClock,
+  Coins,
+  CreditCard,
+  Droplets,
+  HandCoins,
   LandPlot,
-  ClipboardList,
+  MapPin,
+  PackageSearch,
+  PawPrint,
+  ShieldCheck,
   ShoppingBag,
-  Store,
+  Sprout,
+  Tractor,
+  TrendingUp,
+  UserCircle,
   Wallet,
-  Warehouse,
+  Wheat,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { computeProfileCompletion } from "@/lib/utils/farmer-profile";
-import { ActivityTrendChart, ServiceBreakdownChart } from "@/components/dashboard/dashboard-charts";
-import { WeatherStatCard } from "@/components/dashboard/weather-widget";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { t, type Lang, type TranslationKey } from "@/lib/i18n/translations";
 import { ForecastWidget } from "@/components/dashboard/forecast-widget";
 import { getMachineryReminders, MachineryReminderBanner } from "@/components/portal/machinery-reminder";
 import { getWateringReminders, WateringReminderBanner } from "@/components/portal/watering-reminder";
-import { ExpenseStatement } from "@/components/portal/expense-statement";
-import { computeFarmerCreditScore } from "@/lib/utils/credit-score";
-import { CreditScoreCard } from "@/components/portal/credit-score-card";
-import { getLanguageFromCookies } from "@/lib/i18n/get-language";
-import { t } from "@/lib/i18n/translations";
+import { HerdDonut, MilkAreaChart, MonthBarsChart } from "@/components/portal/munshi/charts";
+import { loadMunshiDashboard } from "@/lib/portal/munshi-dashboard-load";
+import { pct, rs, type ActivityKind, type TaskItem } from "@/lib/portal/munshi-dashboard";
 
+export const dynamic = "force-dynamic";
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const shortDate = (iso: string | null | undefined) => {
+  if (!iso) return "";
+  const d = new Date(String(iso).length <= 10 ? `${iso}T00:00:00Z` : String(iso));
+  return Number.isNaN(d.getTime()) ? "" : `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+};
+
+/**
+ * Kisan ka "Digital Munshi" -- ghar ka safha.
+ *
+ * Har card ab wahan se parhta hai jahan asal record hai (dekhein
+ * lib/portal/munshi-dashboard.ts). Charts mein namoona kuch nahi: data na
+ * ho to saaf likha aata hai ke kyun khali hai.
+ */
 export default async function FarmerDashboardPage() {
   const supabase = createClient();
-  const lang = getLanguageFromCookies();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { data: farmer } = await supabase.from("farmers").select("*").eq("user_id", user.id).single();
-  if (!farmer) redirect("/login");
+  // Phase 5: sirf-customer login (kisan nahi) apne Customer Portal par.
+  if (!farmer) redirect("/portal/c");
 
-  const completion = computeProfileCompletion(farmer);
+  const pref = (farmer as any).preferred_language;
+  const lang: Lang = getLanguageFromCookies(pref === "en" || pref === "rm" || pref === "ur" ? pref : "ur");
+  const L = (k: TranslationKey) => t(k, lang);
 
-  const { data: categories } = await supabase.from("service_categories").select("category").eq("farmer_id", farmer.id);
-  const activeCategories = new Set((categories ?? []).map((c) => c.category));
+  const d = await loadMunshiDashboard(farmer);
 
-  const { data: machineryRequests } = await supabase
-    .from("machinery_requests")
-    .select("machine_type, machine_type_other, acres, expected_date, created_at")
-    .eq("farmer_id", farmer.id)
-    .order("created_at", { ascending: false });
-
-  const { data: fertilizerRequests } = await supabase
-    .from("fertilizer_requests")
-    .select("crop_type, cultivation_date, created_at")
-    .eq("farmer_id", farmer.id)
-    .order("created_at", { ascending: false });
-
-  const { data: livestockLoans } = await supabase
-    .from("livestock_loans")
-    .select("cow_count, buffalo_count, goat_count, loan_amount, outstanding_amount, created_at")
-    .eq("farmer_id", farmer.id)
-    .order("created_at", { ascending: false });
-
-  const { data: farms } = await supabase.from("farms").select("id").eq("farmer_id", farmer.id);
-  const farmIds = (farms ?? []).map((f) => f.id);
-
-  const { data: crops } = farmIds.length
-    ? await supabase.from("crop_history").select("id, crop_name, sowing_date, expected_harvest_date, farms(name)").in("farm_id", farmIds)
-    : { data: [] };
-
-  const machineryReminders = getMachineryReminders((crops ?? []) as any);
-  const wateringReminders = getWateringReminders((crops ?? []) as any);
-
-  const { data: harvests } = farmIds.length
-    ? await supabase
-        .from("harvest_records")
-        .select("id, quantity_harvested, sale_rate, total_expense")
-        .in("farm_id", farmIds)
-    : { data: [] };
-
-  const farmsCount = farms?.length ?? 0;
-  const cropsCount = crops?.length ?? 0;
-  const harvestCount = harvests?.length ?? 0;
-
-  const harvestProfit = (harvests ?? []).reduce((sum, h) => {
-    if (h.sale_rate !== null && h.total_expense !== null) {
-      return sum + (h.quantity_harvested * h.sale_rate - h.total_expense);
-    }
-    return sum;
-  }, 0);
-
-  const cropIds = (crops ?? []).map((c) => c.id);
-  const { data: allExpenses } = cropIds.length
-    ? await supabase.from("crop_expenses").select("expense_category, amount").in("crop_history_id", cropIds)
-    : { data: [] };
-  const categoryTotalsMap: Record<string, number> = {};
-  (allExpenses ?? []).forEach((e) => {
-    categoryTotalsMap[e.expense_category] = (categoryTotalsMap[e.expense_category] ?? 0) + Number(e.amount);
-  });
-  const categoryTotals = Object.entries(categoryTotalsMap).map(([category, amount]) => ({ category, amount }));
-  const totalExpenseAllCrops = Object.values(categoryTotalsMap).reduce((sum, v) => sum + v, 0);
-  const totalRevenueAllHarvests = (harvests ?? []).reduce((sum, h) => {
-    return h.sale_rate !== null ? sum + h.quantity_harvested * h.sale_rate : sum;
-  }, 0);
-
-  const { data: verifiedFarm } = await supabase.from("farms").select("id").eq("farmer_id", farmer.id).eq("is_verified", true).limit(1).maybeSingle();
-  const { data: creditLedgerRows } = await supabase.from("farmer_credit_ledger").select("ledger_type, amount").eq("farmer_id", farmer.id);
-  const totalCreditIssued = (creditLedgerRows ?? []).filter((r) => r.ledger_type === "debit").reduce((sum, r) => sum + Number(r.amount), 0);
-  const totalCreditRepaid = (creditLedgerRows ?? []).filter((r) => r.ledger_type === "credit").reduce((sum, r) => sum + Number(r.amount), 0);
-
-  // Saboot ki ginti -- score dikhane se pehle.
-  //
-  // Ye wo kaam hain jo kisan ke naam par WAQAI hue aur jin par kisi na
-  // kisi taur par tasdeeq ka nishan hai: tasdeeq shuda doodh, wo booking
-  // jis ka rate kisan ne khud maan liya, aur udhaar ke khate ki har
-  // qatar (wo bina kisi ke darj kiye banti hi nahi).
-  //
-  // Fasal aur kattai ka record yahan jaan boojh kar nahi gina gaya: wo
-  // kisan apne liye khud likhta hai, aur us par kisi doosre ki tasdeeq
-  // nahi hoti. Us se score ka saboot banana bande ko apna hi darja
-  // barhane ka raasta de deta.
-  const [{ count: verifiedMilkCount }, { count: confirmedBookingCount }] = await Promise.all([
-    supabase
-      .from("milk_entries")
-      .select("id", { count: "exact", head: true })
-      .eq("farmer_id", farmer.id)
-      .not("verified_at", "is", null),
-    supabase
-      .from("machinery_bookings")
-      .select("id", { count: "exact", head: true })
-      .eq("farmer_id", farmer.id)
-      .not("farmer_confirmed_at", "is", null),
-  ]);
-
-  const meaningfulEventCount =
-    (verifiedMilkCount ?? 0) + (confirmedBookingCount ?? 0) + (creditLedgerRows?.length ?? 0);
-
-  const relationshipDays = farmer.created_at
-    ? Math.floor((Date.now() - new Date(farmer.created_at).getTime()) / 86_400_000)
-    : 0;
-
-  const creditScore = computeFarmerCreditScore({
-    profileComplete: completion.isComplete,
-    hasVerifiedFarm: !!verifiedFarm,
-    totalCreditIssued,
-    totalCreditRepaid,
-    harvestRecordCount: harvestCount,
-    cropCount: cropsCount,
-    relationshipDays,
-    meaningfulEventCount,
-  });
-
-  const { data: wallet } = await supabase
-    .from("wallets")
-    .select("balance")
-    .eq("owner_type", "farmer")
-    .eq("owner_id", farmer.id)
-    .single();
-  const walletBalance = Number(wallet?.balance ?? 0);
-
-  const cropCounts: Record<string, number> = {};
-  (crops ?? []).forEach((c) => {
-    cropCounts[c.crop_name] = (cropCounts[c.crop_name] ?? 0) + 1;
-  });
-  const cropBreakdown = Object.entries(cropCounts).map(([service, count]) => ({ service, count }));
-
-  type Activity = { type: "machinery" | "fertilizer" | "livestock"; label: string; detail: string; date: string };
-  const activity: Activity[] = [
-    ...(machineryRequests ?? []).map((r) => ({
-      type: "machinery" as const,
-      label: `Machinery: ${r.machine_type === "other" ? r.machine_type_other : r.machine_type}`,
-      detail: r.acres ? `${r.acres} acres - Needed by ${r.expected_date}` : `Needed by ${r.expected_date}`,
-      date: r.created_at,
-    })),
-    ...(fertilizerRequests ?? []).map((r) => ({
-      type: "fertilizer" as const,
-      label: `Fertilizer for ${r.crop_type}`,
-      detail: `Cultivation date: ${r.cultivation_date}`,
-      date: r.created_at,
-    })),
-    ...(livestockLoans ?? []).map((r) => ({
-      type: "livestock" as const,
-      label: `Livestock Loan: PKR ${r.loan_amount?.toLocaleString()}`,
-      detail: `Animals: ${r.cow_count + r.buffalo_count + r.goat_count} - Outstanding: PKR ${r.outstanding_amount?.toLocaleString()}`,
-      date: r.created_at,
-    })),
-  ];
-  activity.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-  const allDates: string[] = [
-    ...(machineryRequests ?? []).map((r) => r.created_at),
-    ...(fertilizerRequests ?? []).map((r) => r.created_at),
-    ...(livestockLoans ?? []).map((r) => r.created_at),
-  ];
-
-  const monthLabels: string[] = [];
   const now = new Date();
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    monthLabels.push(d.toLocaleString("default", { month: "short" }));
-  }
+  // Hafte ka din English mein aa jata tha ("Saturday") -- sirf tareekh, har zaban mein ek jaisi.
+  const pk = new Date(now.getTime() + 5 * 3_600_000);
+  const dateLine = `${pk.getUTCDate()} ${MONTHS[pk.getUTCMonth()]} ${pk.getUTCFullYear()}`;
+  const place = [farmer.village, farmer.district].filter(Boolean).join(", ");
+  const campaignDays = d.campaign?.deadline
+    ? Math.max(0, Math.round((new Date(d.campaign.deadline).getTime() - now.getTime()) / 86_400_000))
+    : null;
 
-  const trendData = monthLabels.map((label, idx) => {
-    const targetDate = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1);
-    const count = allDates.filter((dateStr) => {
-      const d = new Date(dateStr);
-      return d.getFullYear() === targetDate.getFullYear() && d.getMonth() === targetDate.getMonth();
-    }).length;
-    return { month: label, requests: count };
-  });
+  const ls = d.livestock;
+  const verifiedFarms = d.farms.filter((f) => f.verified).length;
+  const used = pct(d.khata.owed, d.creditLimit);
+  const bandKey = d.score.band ? (`pmd_band_${d.score.band}` as TranslationKey) : null;
+  const levelKey = d.score.level ? (`pmd_level_${d.score.level}` as TranslationKey) : null;
 
-  const serviceBreakdown = [
-    { service: "Machinery", count: machineryRequests?.length ?? 0 },
-    { service: "Fertilizer", count: fertilizerRequests?.length ?? 0 },
-    { service: "Livestock", count: livestockLoans?.length ?? 0 },
-  ];
-
-  const initials = (farmer.full_name ?? "F")
-    .split(" ")
-    .map((w: string) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  const machineryReminders = getMachineryReminders(d.allCrops as any);
+  const wateringReminders = getWateringReminders(d.allCrops as any);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12">
-      <Link href="/" className="mb-4 inline-block text-sm text-surface-500 hover:text-brand-700">
-        {t("back_to_website", lang)}
-      </Link>
-      <h1 className="font-display text-2xl font-semibold text-surface-900">
-        {t("welcome", lang)}{farmer.full_name ? `, ${farmer.full_name}` : ""}
-      </h1>
-      <p className="mt-1 text-surface-500">{t("farmer_code", lang)}: {farmer.farmer_code}</p>
+    <div className="mx-auto max-w-7xl px-4 pb-10 pt-5 sm:px-6">
+      <WateringReminderBanner reminders={wateringReminders} />
+      <MachineryReminderBanner reminders={machineryReminders} />
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
-        <div>
-          <WateringReminderBanner reminders={wateringReminders} />
-          <MachineryReminderBanner reminders={machineryReminders} />
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 sm:gap-5">
-            <Link href="/portal/profile">
-              <StatCard
-                color={completion.isComplete ? "green" : "red"}
-                icon={completion.isComplete ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
-                label={t("profile", lang)}
-                value={completion.isComplete ? t("complete", lang) : `${completion.percent}%`}
-              />
-            </Link>
-            <Link href="/portal/wallet">
-              <StatCard color="cyan" icon={<Wallet className="h-5 w-5" />} label={t("my_wallet_stat", lang)} value={`Rs ${walletBalance.toLocaleString()}`} />
-            </Link>
-            <Link href="/portal/farms">
-              <StatCard color="teal" icon={<LandPlot className="h-5 w-5" />} label={t("my_farms_stat", lang)} value={String(farmsCount)} />
-            </Link>
-            <Link href="/portal/crops">
-              <StatCard color="lime" icon={<Wheat className="h-5 w-5" />} label={t("my_crops_stat", lang)} value={String(cropsCount)} />
-            </Link>
-            <Link href="/portal/harvest">
-              <StatCard
-                color={harvestProfit >= 0 ? "green" : "red"}
-                icon={<Warehouse className="h-5 w-5" />}
-                label={t("harvest_profit", lang)}
-                value={harvestCount === 0 ? "-" : `Rs ${harvestProfit.toLocaleString()}`}
-              />
-            </Link>
-            <Link href="/portal/services/machinery">
-              <StatCard color="blue" icon={<Tractor className="h-5 w-5" />} label={t("machinery_stat", lang)} value={String(machineryRequests?.length ?? 0)} />
-            </Link>
-            <Link href="/portal/services/fertilizer">
-              <StatCard color="amber" icon={<Sprout className="h-5 w-5" />} label={t("fertilizer_stat", lang)} value={String(fertilizerRequests?.length ?? 0)} />
-            </Link>
-            <Link href="/portal/services/livestock">
-              <StatCard color="purple" icon={<Landmark className="h-5 w-5" />} label={t("livestock_stat", lang)} value={String(livestockLoans?.length ?? 0)} />
-            </Link>
-            <WeatherStatCard district={farmer.district} />
+      {/* ---- Hero ---- */}
+      <section className="relative overflow-hidden rounded-[20px] bg-gradient-to-r from-emerald-800 via-green-700 to-yellow-600 px-6 py-6 text-white shadow-lg dark:from-emerald-950 dark:via-green-900 dark:to-yellow-800 sm:px-7">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-72 w-72 rounded-full bg-white/10" />
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-sm text-white/85">
+              {dateLine}
+              {place ? ` · ${place}` : ""}
+            </p>
+            <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight">
+              {L("pmd_greeting")}
+              {farmer.full_name ? `, ${farmer.full_name}` : ""}
+            </h1>
+            <p className="mt-1 text-sm text-white/85">{L("pmd_subtitle")}</p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <HeroPill>
+                {farmer.farmer_code} · {farmer.is_verified ? `✓ ${L("pmd_verified")}` : L("pmd_unverified")}
+              </HeroPill>
+              {d.campaign && (
+                <HeroPill>
+                  🌾 {d.campaign.name} · {L("pmd_booking_open")}
+                  {campaignDays !== null ? ` · ${campaignDays} ${L("pmd_days_left")}` : ""}
+                </HeroPill>
+              )}
+              <HeroPill>
+                {L("pmd_profile")} {d.completion.isComplete ? `✓ ${L("pmd_complete")}` : `${d.completion.percent}%`}
+              </HeroPill>
+            </div>
           </div>
-
-          <div className="mt-6">
-            <CreditScoreCard result={creditScore} />
+          <div className="flex flex-wrap gap-2">
+            <Link href="/portal/wallet" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-emerald-900 shadow hover:bg-emerald-50">
+              <Wallet className="h-4 w-4" /> {L("pmd_btn_khata")}
+            </Link>
+            <Link href="/portal/campaigns" className="inline-flex items-center gap-2 rounded-xl border border-white/40 bg-white/15 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/25">
+              <CalendarClock className="h-4 w-4" /> {L("pmd_btn_booking")}
+            </Link>
           </div>
+        </div>
+      </section>
 
-          <div className="mt-6">
-            <ExpenseStatement
-              categoryTotals={categoryTotals}
-              totalExpense={totalExpenseAllCrops}
-              totalRevenue={totalRevenueAllHarvests}
+      {/* ---- KPI cards ---- */}
+      <section className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <Kpi href="/portal/wallet" tone="rose" icon={<Wallet className="h-4 w-4" />} label={L("pmd_kpi_khata")}
+          value={d.khata.hasLinkedCustomer || d.khata.owed > 0 ? rs(d.khata.owed) : "—"}
+          sub={
+            d.khata.promise
+              ? `${L("pmd_promise")}: ${rs(d.khata.promise.amount)} · ${shortDate(d.khata.promise.date)}`
+              : d.khata.late > 0
+              ? `${rs(d.khata.late)} ${L("pmd_over_30")}`
+              : d.khata.hasLinkedCustomer
+              ? d.khata.owed > 0 ? "" : L("pmd_khata_clear")
+              : L("pmd_khata_none")
+          } />
+        <Kpi href="/portal/services/livestock" tone="sky" icon={<Droplets className="h-4 w-4" />} label={L("pmd_kpi_milk")}
+          value={d.milk.hasRecord ? `${Math.round(d.milk.total30)} L` : ls.litersPerDay > 0 ? `${ls.litersPerDay} L` : "—"}
+          sub={
+            d.milk.hasRecord
+              ? `${L("pmd_last_30")}${d.milk.rate ? ` · Rs ${d.milk.rate}/L` : ""}`
+              : ls.litersPerDay > 0
+              ? `${L("pmd_per_day_self")}${d.milk.rate ? ` · Rs ${d.milk.rate}/L` : ""}`
+              : ""
+          } />
+        <Kpi href="/portal/services/livestock" tone="violet" icon={<PawPrint className="h-4 w-4" />} label={L("pmd_kpi_livestock")}
+          value={ls.total > 0 ? String(ls.total) : "0"}
+          sub={ls.total > 0 ? `${ls.milking} ${L("pmd_milking")} · ${ls.dry} ${L("pmd_dry")}${ls.calves ? ` · ${ls.calves} ${L("pmd_calves")}` : ""}` : L("pmd_no_animals")} />
+        <Kpi href="/portal/farms" tone="teal" icon={<LandPlot className="h-4 w-4" />} label={L("pmd_kpi_land")}
+          value={`${d.totalAcres} ${L("pmd_acres")}`}
+          sub={`${d.farms.length} ${L("pmd_farms")} · ${verifiedFarms} ${L("pmd_verified_n")}`} />
+        <Kpi href="/portal/crops" tone="lime" icon={<Wheat className="h-4 w-4" />} label={L("pmd_kpi_crops")}
+          value={String(d.crops.count)}
+          sub={d.crops.count ? d.crops.byName.map(([n, c]) => `${n} ${c}`).join(" · ") : L("pmd_no_crops")} />
+        <Kpi href="/portal/wallet" tone="amber" icon={<ShieldCheck className="h-4 w-4" />} label={L("pmd_kpi_credit")}
+          value={d.creditLimit > 0 ? rs(d.creditLimit) : "—"}
+          sub={[d.creditLimit > 0 ? `${L("pmd_used")} ${used}%` : L("pmd_no_limit"), bandKey ? L(bandKey) : null].filter(Boolean).join(" · ")} />
+      </section>
+
+      <section className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <MiniKpi href="/portal/services/fertilizer" icon={<Sprout className="h-4 w-4" />} color="text-amber-600 bg-amber-50 dark:bg-amber-500/15 dark:text-amber-300"
+          label={L("pmd_kpi_fert")} value={String(d.fert.total)}
+          sub={d.fert.needsReply ? `${d.fert.needsReply} ${L("pmd_needs_reply")}` : `${d.fert.open} ${L("pmd_open")}`} />
+        <MiniKpi href="/portal/services/machinery" icon={<Tractor className="h-4 w-4" />} color="text-blue-600 bg-blue-50 dark:bg-blue-500/15 dark:text-blue-300"
+          label={L("pmd_kpi_mach")} value={String(d.mach.total)} sub={`${d.mach.open} ${L("pmd_active")}`} />
+        <MiniKpi href="/portal/harvest" icon={<TrendingUp className="h-4 w-4" />}
+          color={d.profit.net < 0 ? "text-rose-600 bg-rose-50 dark:bg-rose-500/15 dark:text-rose-300" : "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/15 dark:text-emerald-300"}
+          label={L("pmd_kpi_profit")} value={d.profit.hasData ? rs(d.profit.net) : "Rs 0"}
+          sub={d.profit.hasData ? `${L("pmd_income")} ${rs(d.profit.revenue)} · ${L("pmd_cost")} ${rs(d.profit.expense)}` : L("pmd_no_entries")} />
+        <MiniKpi href="/portal/profile" icon={<UserCircle className="h-4 w-4" />}
+          color={d.completion.isComplete ? "text-emerald-600 bg-emerald-50 dark:bg-emerald-500/15 dark:text-emerald-300" : "text-rose-600 bg-rose-50 dark:bg-rose-500/15 dark:text-rose-300"}
+          label={L("pmd_profile")} value={d.completion.isComplete ? L("pmd_complete") : `${d.completion.percent}%`}
+          sub={farmer.is_verified ? L("pmd_verified") : L("pmd_unverified")} />
+      </section>
+
+      {/* ---- Milk chart + tasks ---- */}
+      <section className="mt-4 grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+        <Card>
+          <CardHead title={L("pmd_milk_chart")} sub={L("pmd_liters_day")} />
+          {d.milk.hasRecord ? (
+            <MilkAreaChart data={d.milk.days} />
+          ) : (
+            <Empty icon={<Droplets className="h-6 w-6" />} text={L("pmd_milk_empty")}
+              extra={ls.litersPerDay > 0 ? `${ls.litersPerDay} ${L("pmd_per_day_self")}` : undefined} />
+          )}
+        </Card>
+        <Card>
+          <CardHead title={L("pmd_tasks")} right={d.tasks.length ? <Badge tone="rose">{d.tasks.length} {L("pmd_pending")}</Badge> : null} />
+          {d.tasks.length === 0 ? (
+            <Empty icon={<BadgeCheck className="h-6 w-6" />} text={L("pmd_no_tasks")} />
+          ) : (
+            <ul className="divide-y divide-surface-100 dark:divide-surface-800">
+              {d.tasks.slice(0, 5).map((task, i) => (
+                <TaskRow key={i} task={task} L={L} />
+              ))}
+            </ul>
+          )}
+        </Card>
+      </section>
+
+      {/* ---- Month bars + herd + quick ---- */}
+      <section className="mt-4 grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHead title={L("pmd_month_chart")} />
+          {d.months.some((m) => m.udhaar || m.adaigi || m.milk || m.kharcha) ? (
+            <MonthBarsChart data={d.months} labels={{ udhaar: L("pmd_udhaar"), adaigi: L("pmd_adaigi"), milk: L("pmd_milk_income"), kharcha: L("pmd_crop_cost") }} />
+          ) : (
+            <Empty icon={<Coins className="h-6 w-6" />} text={L("pmd_month_empty")} />
+          )}
+        </Card>
+        <Card>
+          <CardHead title={L("pmd_herd")} sub={L("pmd_from_record")} />
+          {ls.total > 0 ? (
+            <HerdDonut
+              centerLabel={L("pmd_animals")}
+              parts={[
+                { name: L("pmd_milking"), value: ls.milking, color: "#0ea5e9" },
+                { name: L("pmd_dry"), value: ls.dry, color: "#f59e0b" },
+                { name: L("pmd_calves"), value: ls.calves, color: "#22c55e" },
+              ]}
             />
+          ) : (
+            <Empty icon={<PawPrint className="h-6 w-6" />} text={L("pmd_herd_empty")} />
+          )}
+        </Card>
+        <Card>
+          <CardHead title={L("pmd_quick")} />
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+            <Quick href="/portal/wallet" icon={<Wallet className="h-4 w-4" />} c="bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300" label={L("pmd_q_khata")} />
+            <Quick href="/portal/campaigns" icon={<CalendarClock className="h-4 w-4" />} c="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300" label={L("pmd_q_booking")} />
+            <Quick href="/portal/demand" icon={<PackageSearch className="h-4 w-4" />} c="bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300" label={L("pmd_q_demand")} />
+            <Quick href="/portal/services/fertilizer" icon={<Sprout className="h-4 w-4" />} c="bg-lime-100 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300" label={L("pmd_q_fert")} />
+            <Quick href="/portal/services/machinery" icon={<Tractor className="h-4 w-4" />} c="bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300" label={L("pmd_q_mach")} />
+            <Quick href="/portal/services/livestock" icon={<PawPrint className="h-4 w-4" />} c="bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300" label={L("pmd_q_livestock")} />
           </div>
+        </Card>
+      </section>
 
-          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <ActivityTrendChart data={trendData} />
-            <ServiceBreakdownChart data={serviceBreakdown} />
-          </div>
-
-          {cropBreakdown.length > 0 && (
-            <div className="mt-4 grid grid-cols-1 gap-4">
-              <ServiceBreakdownChart data={cropBreakdown} />
+      {/* ---- Activity + farms ---- */}
+      <section className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHead title={L("pmd_activity")} sub={L("pmd_activity_sub")} />
+          {d.activity.length === 0 ? (
+            <Empty icon={<ShoppingBag className="h-6 w-6" />} text={L("pmd_no_activity")} />
+          ) : (
+            <ul className="divide-y divide-surface-100 dark:divide-surface-800">
+              {d.activity.map((a, i) => (
+                <li key={i} className="flex items-start gap-3 py-2.5">
+                  <ActIcon kind={a.kind} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-surface-900 dark:text-white">
+                      {L(ACT_TITLE[a.kind])}
+                      {a.amount ? ` · ${rs(a.amount)}` : ""}
+                    </p>
+                    {a.kind === "khata_udhaar" ? (
+                      <p className="truncate text-xs text-surface-500 dark:text-slate-400">Al Rana Traders{Number(a.detail) > 1 ? ` · ${a.detail} bill` : ""}</p>
+                    ) : a.detail ? (
+                      <p className="truncate text-xs text-surface-500 dark:text-slate-400">{a.detail}</p>
+                    ) : null}
+                  </div>
+                  <span className="shrink-0 text-xs text-surface-400 dark:text-slate-500">{shortDate(a.date)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+        <Card>
+          <CardHead title={L("pmd_my_land")} right={<Link href="/portal/farms" className="rounded-lg border border-surface-200 px-3 py-1.5 text-xs font-semibold text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-slate-200 dark:hover:bg-surface-800">{L("pmd_add_farm")}</Link>} />
+          {d.farms.length === 0 ? (
+            <Empty icon={<LandPlot className="h-6 w-6" />} text={L("pmd_no_farms")} />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-wide text-surface-500 dark:text-slate-400">
+                    <th className="py-2 pr-2 font-semibold">{L("pmd_col_farm")}</th>
+                    <th className="py-2 pr-2 font-semibold">{L("pmd_col_acres")}</th>
+                    <th className="py-2 pr-2 font-semibold">{L("pmd_col_crop")}</th>
+                    <th className="py-2 pr-2 font-semibold">{L("pmd_col_loc")}</th>
+                    <th className="py-2" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
+                  {d.farms.map((f) => (
+                    <tr key={f.id}>
+                      <td className="py-2.5 pr-2 font-semibold text-surface-900 dark:text-white">{f.name}</td>
+                      <td className="py-2.5 pr-2 text-surface-700 dark:text-slate-300">{f.acres}</td>
+                      <td className="py-2.5 pr-2 text-surface-700 dark:text-slate-300">{f.crop ?? "—"}</td>
+                      <td className="py-2.5 pr-2">
+                        {f.pinned ? (
+                          <span className="inline-flex items-center gap-1 text-xs text-surface-600 dark:text-slate-300"><MapPin className="h-3.5 w-3.5 text-rose-500" />{L("pmd_pin_set")}</span>
+                        ) : (
+                          <Badge tone="amber">{L("pmd_pin_missing")}</Badge>
+                        )}
+                      </td>
+                      <td className="py-2.5 text-right">{f.verified ? <Badge tone="green">{L("pmd_verified")}</Badge> : <Badge tone="slate">{L("pmd_unverified")}</Badge>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
+          <p className="mt-3 text-xs text-surface-500 dark:text-slate-400">{L("pmd_next_season")}</p>
+        </Card>
+      </section>
 
-          <div className="mt-6">
-            <ForecastWidget fixedDistrict={farmer.district} title={`${farmer.district ?? "Aapka"} - 5 Din Ka Mausam`} />
-          </div>
-
-          <h2 className="mt-8 font-display text-lg font-semibold text-surface-900">{t("recent_activity", lang)}</h2>
-          <p className="mt-1 text-sm text-surface-500">{t("activity_subtitle", lang)}</p>
-          <div className="mt-3 space-y-2">
-            {activity.length === 0 ? (
-              <p className="rounded-card border border-dashed border-surface-200 bg-white p-6 text-center text-sm text-surface-400">
-                {t("no_activity_yet", lang)}
-              </p>
-            ) : (
-              activity.map((a, i) => (
-                <div key={i} className="flex items-start gap-3 rounded-card border border-surface-200 bg-white p-4 shadow-card">
-                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
-                    {a.type === "machinery" && <Tractor className="h-4 w-4" />}
-                    {a.type === "fertilizer" && <Sprout className="h-4 w-4" />}
-                    {a.type === "livestock" && <Landmark className="h-4 w-4" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-surface-900">{a.label}</p>
-                    <p className="text-xs text-surface-500">{a.detail}</p>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-surface-400">
-                    <Clock className="h-3 w-3" />
-                    {new Date(a.date).toLocaleDateString()}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-surface-200 bg-white p-5 text-center shadow-card">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-600 text-lg font-bold text-white">
-              {initials}
-            </div>
-            <p className="mt-3 font-display text-base font-semibold text-surface-900">{farmer.full_name ?? "Farmer"}</p>
-            <p className="text-xs text-surface-500">{farmer.farmer_code}</p>
-
-            <div className="mt-4 space-y-2 border-t border-surface-100 pt-4 text-left">
-              <div className="flex items-center gap-2 text-sm text-surface-600">
-                <MapPin className="h-4 w-4 text-surface-400" />
-                {farmer.district ?? t("district_not_set", lang)}
+      {/* ---- Official score + weather ---- */}
+      <section className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.6fr]">
+        <Card>
+          <CardHead title={L("pmd_score_title")} right={d.score.snapshotDate ? <span className="text-xs text-surface-400">{L("pmd_score_updated")}: {shortDate(d.score.snapshotDate)}</span> : null} />
+          {d.score.score === null ? (
+            <Empty icon={<CreditCard className="h-6 w-6" />} text={L("pmd_score_none")} />
+          ) : (
+            <div>
+              <div className="flex items-end gap-3">
+                <span className="text-4xl font-extrabold tracking-tight text-surface-900 dark:text-white">{d.score.score}</span>
+                <span className="pb-1 text-sm text-surface-500">/ 100</span>
+                {bandKey && <Badge tone={BAND_TONE[d.score.band ?? ""] ?? "slate"}>{L(bandKey)}</Badge>}
               </div>
-              <div className="flex items-center gap-2 text-sm text-surface-600">
-                <Phone className="h-4 w-4 text-surface-400" />
-                {farmer.phone_number ?? t("mobile_not_set", lang)}
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-100 dark:bg-surface-800">
+                <div className="h-full rounded-full bg-gradient-to-r from-amber-400 via-lime-500 to-emerald-600" style={{ width: `${Math.max(0, Math.min(100, d.score.score))}%` }} />
               </div>
+              {levelKey && (
+                <p className="mt-3 flex items-center gap-2 text-sm font-medium text-surface-700 dark:text-slate-200">
+                  <HandCoins className="h-4 w-4 text-emerald-600" /> {L(levelKey)}
+                </p>
+              )}
+              <p className="mt-1 text-xs text-surface-500 dark:text-slate-400">{L("pmd_score_hint")}</p>
             </div>
-          </div>
-
-          <div className="rounded-2xl border border-surface-200 bg-white p-5 shadow-card">
-            <h3 className="mb-3 text-sm font-semibold text-surface-900">{t("quick_links", lang)}</h3>
-            <div className="space-y-2">
-              <Link
-                href="/portal/wallet"
-                className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-surface-700 transition hover:bg-brand-50 hover:text-brand-700"
-              >
-                <span className="flex items-center gap-2">
-                  <Wallet className="h-4 w-4" /> {t("my_wallet_stat", lang)}
-                </span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-              <Link
-                href="/portal/sell-produce"
-                className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-green-700 transition hover:bg-green-50"
-              >
-                <span className="flex items-center gap-2">
-                  <Wheat className="h-4 w-4" /> {t("sell_produce", lang)}
-                </span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-              <Link
-                href="/portal/marketplace"
-                className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-brand-700 transition hover:bg-brand-50"
-              >
-                <span className="flex items-center gap-2">
-                  <Store className="h-4 w-4" /> {t("marketplace", lang)}
-                </span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-              <Link
-                href="/portal/orders"
-                className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-surface-700 transition hover:bg-brand-50 hover:text-brand-700"
-              >
-                <span className="flex items-center gap-2">
-                  <ShoppingBag className="h-4 w-4" /> {t("place_order_bridge", lang)}
-                </span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-              <Link
-                href="/portal/crops"
-                className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-surface-700 transition hover:bg-brand-50 hover:text-brand-700"
-              >
-                <span className="flex items-center gap-2">
-                  <Wheat className="h-4 w-4" /> {t("my_crops_stat", lang)}
-                </span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-              <Link
-                href="/portal/farms"
-                className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-surface-700 transition hover:bg-brand-50 hover:text-brand-700"
-              >
-                <span className="flex items-center gap-2">
-                  <LandPlot className="h-4 w-4" /> {t("my_farms_stat", lang)}
-                </span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-              <Link
-                href="/portal/harvest"
-                className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-surface-700 transition hover:bg-brand-50 hover:text-brand-700"
-              >
-                <span className="flex items-center gap-2">
-                  <ClipboardList className="h-4 w-4" /> {t("harvest_link", lang)}
-                </span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
+          )}
+        </Card>
+        <ForecastWidget fixedDistrict={farmer.district} title={`${farmer.district ? `${farmer.district} · ` : ""}${L("pmd_forecast")}`} />
+      </section>
     </div>
   );
 }
 
-const COLOR_MAP: Record<string, string> = {
-  green: "from-emerald-400 to-emerald-600",
-  red: "from-rose-400 to-rose-600",
-  blue: "from-sky-400 to-blue-600",
-  amber: "from-amber-400 to-orange-500",
-  purple: "from-violet-400 to-purple-600",
-  teal: "from-teal-400 to-cyan-600",
-  lime: "from-lime-400 to-green-600",
-  cyan: "from-cyan-400 to-teal-500",
+const ACT_TITLE: Record<ActivityKind, TranslationKey> = {
+  khata_udhaar: "pmd_act_udhaar",
+  khata_adaigi: "pmd_act_adaigi",
+  milk: "pmd_act_milk",
+  milk_payment: "pmd_act_milk_pay",
+  fertilizer: "pmd_act_fert",
+  machinery: "pmd_act_mach",
+  demand: "pmd_act_demand",
+  crop: "pmd_act_crop",
+  harvest: "pmd_act_harvest",
+  livestock_loan: "pmd_act_loan",
+  campaign: "pmd_act_campaign",
 };
 
-function StatCard({ color, icon, label, value }: { color: string; icon: React.ReactNode; label: string; value: string }) {
+const ACT_STYLE: Record<ActivityKind, [string, React.ReactNode]> = {
+  khata_udhaar: ["bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300", <ShoppingBag key="i" className="h-4 w-4" />],
+  khata_adaigi: ["bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300", <HandCoins key="i" className="h-4 w-4" />],
+  milk: ["bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-300", <Droplets key="i" className="h-4 w-4" />],
+  milk_payment: ["bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300", <Coins key="i" className="h-4 w-4" />],
+  fertilizer: ["bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300", <Sprout key="i" className="h-4 w-4" />],
+  machinery: ["bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300", <Tractor key="i" className="h-4 w-4" />],
+  demand: ["bg-violet-100 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300", <PackageSearch key="i" className="h-4 w-4" />],
+  crop: ["bg-lime-100 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300", <Wheat key="i" className="h-4 w-4" />],
+  harvest: ["bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300", <Wheat key="i" className="h-4 w-4" />],
+  livestock_loan: ["bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-300", <PawPrint key="i" className="h-4 w-4" />],
+  campaign: ["bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-300", <CalendarClock key="i" className="h-4 w-4" />],
+};
+
+function ActIcon({ kind }: { kind: ActivityKind }) {
+  const [c, icon] = ACT_STYLE[kind];
+  return <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${c}`}>{icon}</span>;
+}
+
+const TASK_STYLE: Record<TaskItem["kind"], [string, React.ReactNode, TranslationKey]> = {
+  late: ["bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300", <AlertTriangle key="i" className="h-4 w-4" />, "pmd_task_late"],
+  promise: ["bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300", <HandCoins key="i" className="h-4 w-4" />, "pmd_task_promise"],
+  fert_reply: ["bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300", <Sprout key="i" className="h-4 w-4" />, "pmd_task_fert"],
+  mach_pay: ["bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300", <Tractor key="i" className="h-4 w-4" />, "pmd_task_mach"],
+  campaign: ["bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300", <Wheat key="i" className="h-4 w-4" />, "pmd_task_campaign"],
+  profile: ["bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-300", <UserCircle key="i" className="h-4 w-4" />, "pmd_task_profile"],
+  pin: ["bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300", <MapPin key="i" className="h-4 w-4" />, "pmd_task_pin"],
+};
+
+const TASK_HREF: Record<TaskItem["kind"], string> = {
+  late: "/portal/wallet",
+  promise: "/portal/wallet",
+  fert_reply: "/portal/services/fertilizer",
+  mach_pay: "/portal/services/machinery",
+  campaign: "/portal/campaigns",
+  profile: "/portal/profile",
+  pin: "/portal/farms",
+};
+
+function TaskRow({ task, L }: { task: TaskItem; L: (k: TranslationKey) => string }) {
+  const [c, icon, key] = TASK_STYLE[task.kind];
+  const sub =
+    task.kind === "late"
+      ? `${rs(task.amount ?? 0)} · ${L("pmd_task_late_sub")}`
+      : task.kind === "promise"
+      ? rs(task.amount ?? 0)
+      : task.kind === "campaign"
+      ? `${task.subject} · ${L("pmd_task_campaign_sub")}`
+      : task.subject ?? "";
   return (
-    <div
-      className={`relative flex min-h-[150px] flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br ${COLOR_MAP[color]} p-5 text-white shadow-lg transition duration-200 hover:-translate-y-0.5 hover:shadow-xl`}
-    >
-      <div className="flex items-start justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-white/80">{label}</span>
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
-          {icon}
+    <li>
+      <Link href={TASK_HREF[task.kind]} className="flex items-center gap-3 py-2.5 hover:opacity-90">
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${c}`}>{icon}</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-surface-900 dark:text-white">{L(key)}</p>
+          {sub && <p className="truncate text-xs text-surface-500 dark:text-slate-400">{sub}</p>}
         </div>
+        {task.date ? (
+          <Badge tone={task.urgent ? "rose" : "indigo"}>{shortDate(task.date)}</Badge>
+        ) : task.urgent ? (
+          <Badge tone="rose">{L("pmd_today")}</Badge>
+        ) : (
+          <ArrowRight className="h-4 w-4 text-surface-300" />
+        )}
+      </Link>
+    </li>
+  );
+}
+
+const TONES: Record<string, string> = {
+  rose: "from-rose-500 to-rose-700",
+  sky: "from-sky-500 to-cyan-700",
+  violet: "from-violet-500 to-purple-700",
+  teal: "from-teal-500 to-teal-700",
+  lime: "from-lime-500 to-green-700",
+  amber: "from-amber-500 to-orange-700",
+};
+
+function Kpi({ href, tone, icon, label, value, sub }: { href: string; tone: string; icon: React.ReactNode; label: string; value: string; sub: string }) {
+  return (
+    <Link href={href} className={`group relative block min-h-[118px] overflow-hidden rounded-2xl bg-gradient-to-br ${TONES[tone]} p-4 text-white shadow-[0_8px_20px_-10px_rgba(0,0,0,.45)] transition hover:-translate-y-0.5`}>
+      <div className="flex items-start justify-between">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-white/85">{label}</span>
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">{icon}</span>
       </div>
-      <p className="mt-4 text-3xl font-bold tracking-tight">{value}</p>
-      <div className="absolute -bottom-4 -right-4 h-20 w-20 rounded-full bg-white/10" />
+      <p className="mt-2 text-2xl font-bold tracking-tight">{value}</p>
+      {sub && <p className="mt-1 truncate text-[11.5px] text-white/90" title={sub}>{sub}</p>}
+      <span className="pointer-events-none absolute -bottom-6 -right-5 h-20 w-20 rounded-full bg-white/12 bg-white/10" />
+    </Link>
+  );
+}
+
+function MiniKpi({ href, icon, color, label, value, sub }: { href: string; icon: React.ReactNode; color: string; label: string; value: string; sub: string }) {
+  return (
+    <Link href={href} className="flex items-center gap-3 rounded-2xl border border-surface-200 bg-white p-3.5 shadow-sm transition hover:shadow-md dark:border-surface-800 dark:bg-surface-900">
+      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color}`}>{icon}</span>
+      <div className="min-w-0">
+        <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-surface-500 dark:text-slate-400">{label}</p>
+        <p className="text-lg font-bold text-surface-900 dark:text-white">{value}</p>
+        <p className="truncate text-xs text-surface-500 dark:text-slate-400" title={sub}>{sub}</p>
+      </div>
+    </Link>
+  );
+}
+
+function Card({ children }: { children: React.ReactNode }) {
+  return <div className="rounded-2xl border border-surface-200 bg-white p-5 shadow-sm dark:border-surface-800 dark:bg-surface-900">{children}</div>;
+}
+
+function CardHead({ title, sub, right }: { title: string; sub?: string; right?: React.ReactNode }) {
+  return (
+    <div className="mb-3 flex items-start justify-between gap-3">
+      <div>
+        <h3 className="text-[15px] font-semibold text-surface-900 dark:text-white">{title}</h3>
+        {sub && <p className="text-xs text-surface-500 dark:text-slate-400">{sub}</p>}
+      </div>
+      {right}
     </div>
+  );
+}
+
+function Empty({ icon, text, extra }: { icon: React.ReactNode; text: string; extra?: string }) {
+  return (
+    <div className="flex min-h-[150px] flex-col items-center justify-center rounded-xl border border-dashed border-surface-200 bg-surface-50/60 px-6 py-6 text-center dark:border-surface-700 dark:bg-surface-800/40">
+      <span className="mb-2 text-surface-400 dark:text-slate-500">{icon}</span>
+      <p className="max-w-sm text-sm text-surface-500 dark:text-slate-400">{text}</p>
+      {extra && <p className="mt-2 text-sm font-semibold text-sky-600 dark:text-sky-300">{extra}</p>}
+    </div>
+  );
+}
+
+const BADGE: Record<string, string> = {
+  rose: "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200",
+  amber: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200",
+  green: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200",
+  indigo: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200",
+  slate: "bg-surface-100 text-surface-700 dark:bg-surface-800 dark:text-slate-200",
+  violet: "bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200",
+};
+const BAND_TONE: Record<string, string> = { platinum: "violet", gold: "amber", silver: "slate", bronze: "amber", low: "rose" };
+
+function Badge({ tone, children }: { tone: string; children: React.ReactNode }) {
+  return <span className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${BADGE[tone] ?? BADGE.slate}`}>{children}</span>;
+}
+
+function HeroPill({ children }: { children: React.ReactNode }) {
+  return <span className="rounded-full border border-white/35 bg-white/15 px-3 py-1">{children}</span>;
+}
+
+function Quick({ href, icon, c, label }: { href: string; icon: React.ReactNode; c: string; label: string }) {
+  return (
+    <Link href={href} className="flex items-center gap-2.5 rounded-xl border border-surface-200 bg-surface-50 p-3 text-[12.5px] font-semibold text-surface-800 transition hover:border-green-300 hover:bg-white dark:border-surface-700 dark:bg-surface-800/60 dark:text-slate-100 dark:hover:bg-surface-800">
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${c}`}>{icon}</span>
+      <span className="leading-tight">{label}</span>
+    </Link>
   );
 }

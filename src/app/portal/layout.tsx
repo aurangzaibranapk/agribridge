@@ -1,4 +1,4 @@
-﻿import { redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PortalSidebar } from "@/components/portal/sidebar";
 import { PortalMobileSidebar } from "@/components/portal/mobile-sidebar";
@@ -9,6 +9,8 @@ import { checkFarmerSubscriptionAccess } from "@/actions/subscriptions";
 import { getActiveAnnouncementForFarmer } from "@/actions/announcements";
 import { SubscriptionLockedScreen } from "@/components/portal/subscription-locked-screen";
 import { AnnouncementPopup } from "@/components/portal/announcement-popup";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { CustomerShell } from "@/components/portal/customer/customer-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +21,8 @@ export default async function PortalLayout({ children }: { children: React.React
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { data: farmer } = await supabase.from("farmers").select("id, full_name, farmer_code, member_photo_url, preferred_language").eq("user_id", user.id).single();
-  if (!farmer) redirect("/login");
+  // Phase 5: jo kisan nahi magar gahak (customers.user_id) hai, us ka apna Customer Portal.
+  if (!farmer) return <CustomerShell userId={user.id}>{children}</CustomerShell>;
   // Kisan ne apni profile mein jo zaban chuni hai wohi shuru mein lagti
   // hai. Cookie us se upar rehti hai: jis ne abhi switch dabaya hai us ki
   // marzi is waqt ki hai, aur profile ka jawab purana.
@@ -50,12 +53,13 @@ export default async function PortalLayout({ children }: { children: React.React
           hai. Kisan ke portal par ye aur bura hai: wahan safha aksar
           phone par khulta hai, jahan chaurai pehle hi kam hoti hai. */}
       <div className="min-w-0 flex-1">
-        <header className="flex items-center justify-between border-b border-surface-200 bg-white px-4 py-3 sm:px-6 dark:bg-surface-900 dark:border-surface-800">
+        <header className="print:hidden flex items-center justify-between border-b border-surface-200 bg-white px-4 py-3 sm:px-6 dark:bg-surface-900 dark:border-surface-800">
           <div className="flex items-center gap-2">
             <PortalMobileSidebar lang={lang} />
             <p className="font-display text-sm font-medium text-surface-900 sm:hidden">{t("app_name", lang)}</p>
           </div>
           <div className="ml-auto flex items-center gap-3">
+            <ThemeToggle />
             <div className="text-right">
               <p className="text-sm font-medium text-surface-900 dark:text-white">{farmer.full_name}</p>
               <p className="text-xs text-surface-400">{farmer.farmer_code}</p>
