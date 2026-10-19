@@ -99,6 +99,12 @@ export async function saveReportingLine(_prev: AttState, formData: FormData): Pr
   const profileId = String(formData.get("profile_id") ?? "");
   if (!profileId) return { error: "Kaun sa mulazim, wo chunein." };
 
+  // Apni reporting koi khud nahi badalta -- HR/Admin bhi nahi. Afsar hi
+  // to apni chhutti/hazri manzoor karta hai (S4; DB mein 592 bhi rokta hai).
+  if (profileId === user.id) {
+    return { error: "Apni reporting (afsar) khud nahi badli ja sakti. Ye kaam doosra HR/Admin karega." };
+  }
+
   const reportsTo = (formData.get("reports_to") as string) || null;
   if (reportsTo && reportsTo === profileId) {
     return { error: "Koi apna afsar khud nahi ho sakta." };
