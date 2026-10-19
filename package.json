@@ -37,7 +37,8 @@
     "test:admin-review": "npx --yes tsx scripts/test-admin-review.ts",
     "test:salary-qist": "npx --yes tsx scripts/test-salary-qist.ts && node tests/salary-qist-wiring.cjs && node tests/salary-qist-sql.mjs",
     "test:password-reset": "npx --yes tsx scripts/test-password-reset.ts && node tests/password-reset-sql.mjs",
-    "test:auto-profile": "npx --yes tsx scripts/test-auto-profile.ts && node tests/auto-profile-sql.mjs"
+    "test:auto-profile": "npx --yes tsx scripts/test-auto-profile.ts && node tests/auto-profile-sql.mjs",
+    "test:login-crash": "npx --yes tsx scripts/test-login-crash.ts"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",
