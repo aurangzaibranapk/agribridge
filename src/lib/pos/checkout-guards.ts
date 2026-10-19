@@ -15,7 +15,7 @@ export interface CheckoutTotalsInput {
 }
 
 export type CheckoutTotals =
-  | { ok: true; gross: number; discount: number; net: number; nonKhataPaid: number; khata: number; overpayment: number }
+  | { ok: true; gross: number; discount: number; net: number; nonKhataPaid: number; cashOnly: number; khata: number; overpayment: number }
   | { ok: false; error: string };
 
 const r2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
@@ -33,6 +33,12 @@ export function validateCheckoutTotals(input: CheckoutTotalsInput): CheckoutTota
     if (!Number.isFinite(amt) || amt < 0) return { ok: false, error: "Payment line ki raqam ghalat hai." };
   }
   const nonKhataPaid = r2(input.paymentLines.filter((l) => l.method !== "khata").reduce((s, l) => s + Number(l.amount || 0), 0));
+  // fix/pos-card-cash-dupes (19 October): pos_sales.cash_paid mein ab SIRF
+  // "cash" line jaati hai. Waseela Card / bank / wallet pehle isi khane mein
+  // jama ho kar "Naqad aaya" ko phula dete the (bill 3C711691 = Rs 230
+  // Waseela Card, magar cash_paid 230). Asal tareeqa-wari tafseel
+  // pos_sale_payment_details mein pehle se sahi thi.
+  const cashOnly = r2(input.paymentLines.filter((l) => l.method === "cash").reduce((s, l) => s + Number(l.amount || 0), 0));
   const khataLines = r2(input.paymentLines.filter((l) => l.method === "khata").reduce((s, l) => s + Number(l.amount || 0), 0));
   const khata = r2(input.khataAmount);
   const cash = r2(input.cashPaid);
@@ -55,8 +61,54 @@ export function validateCheckoutTotals(input: CheckoutTotalsInput): CheckoutTota
   if (Math.abs(r2(nonKhataPaid + khata - overpayment) - net) > 0.01) {
     return { ok: false, error: `Cash + khata (Rs ${r2(nonKhataPaid + khata)}) bill (Rs ${net}) ke barabar nahi.` };
   }
-  return { ok: true, gross, discount, net, nonKhataPaid, khata, overpayment };
+  return { ok: true, gross, discount, net, nonKhataPaid, cashOnly, khata, overpayment };
 }
+
+/**
+ * Do-bara bana bill (double-submit) pakadne ke liye bill ka "nishan".
+ * Live par 16 October 19:24 PKT ko Mujahid Abbas ke Rs 230 ke do bilkul ek
+ * jaise bill 24 second ke farq se bane (0516B948, 405AB0F2). Nishan:
+ * customer + bill ki raqam + har cheez ki tadaad aur rate (tarteeb se
+ * azaad).
+ */
+export interface SaleSignatureInput {
+  customerId: string | null;
+  total: number;
+  items: { product_id: string; quantity: number; unit_price: number }[];
+}
+
+export function saleSignature(s: SaleSignatureInput): string {
+  const lines = s.items
+    .map((i) => `${i.product_id}:${r2(i.quantity)}@${r2(i.unit_price)}`)
+    .sort()
+    .join("|");
+  return `${s.customerId ?? "-"}#${r2(s.total)}#${lines}`;
+}
+
+/** Itne second ke andar wohi bill dobara aaye to pehle poocha jata hai. */
+export const DUPLICATE_WINDOW_SECONDS = 120;
+
+/**
+ * Haal hi ke bilon mein se wo jo isi naye bill jaisa hai (wohi nishan, aur
+ * DUPLICATE_WINDOW_SECONDS ke andar). Pure function -- DB nahi chhoti.
+ */
+export function findRecentDuplicate<T extends SaleSignatureInput & { id: string; createdAt: string }>(
+  candidate: SaleSignatureInput,
+  recent: T[],
+  now: Date = new Date(),
+  windowSeconds: number = DUPLICATE_WINDOW_SECONDS
+): T | null {
+  const sig = saleSignature(candidate);
+  for (const r of recent) {
+    const age = (now.getTime() - new Date(r.createdAt).getTime()) / 1000;
+    if (!(age >= -5 && age <= windowSeconds)) continue;
+    if (saleSignature(r) === sig) return r;
+  }
+  return null;
+}
+
+/** Duplicate-guard ka error text -- client isi nishani se confirm poochta hai. */
+export const DUPLICATE_SALE_MARKER = "DUPLICATE_SALE:";
 
 /** WhatsApp ke liye "92XXXXXXXXXX" -- 92 sirf ek dafa. */
 export function normalizePkPhone(raw: string | null | undefined): string {

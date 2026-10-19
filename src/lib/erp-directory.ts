@@ -57,6 +57,7 @@ const CURATED_FEATURES: ErpFeature[] = [
   { section: "Purchases", label: "Supplier Purchase Bill", href: "/admin/purchases/supplier-bill", description: "Naya bill banao — supplier se maal aaya, qeemat aur miqdar darj karo. Bill save hone par GRN queue mein jata hai.", who: "Purchase Staff / Admin", addedDate: "2026-09-25" },
   { section: "Purchases", label: "Kharid (Purchases)", href: "/admin/purchases", description: "Tamam purchase orders ki fehrist — draft, received, aur approved.", who: "Admin / Purchase Staff" },
   { section: "Purchases", label: "Anaj ka Dashboard", href: "/admin/grain-procurement/dashboard", description: "Anaj kharid ka overview — total aaya, becha, baqi, aur nafa.", who: "Malik / Admin" },
+  { section: "Purchases", label: "Anaj ka Mukammal Dashboard", href: "/admin/grain-procurement/unified", description: "Anaj ka poora karobar ek jagah: kharid, bikri, godam, kisanon ka baqaya aur buyers se wasooli.", who: "Malik / Admin", addedDate: "2026-10-19" },
   { section: "Purchases", label: "Anaj ki Kharid", href: "/admin/grain-procurement", description: "Kisanon se anaj (grain) khareedna — rates, miqdar, aur payment.", who: "Procurement Staff" },
   { section: "Purchases", label: "Anaj Entry -- Admin Approval", href: "/admin/grain-procurement/approvals", description: "Pending (Admin approval) par save hui anaj ki khareed -- poora hisaab parh kar Approve, Edit ya Reject. Approve se pehle stock/ledger/payment kuch darj nahi hota.", who: "Owner / Admin", addedDate: "2026-10-09" },
   { section: "Sales", label: "Anaj Bikri -- Admin Approval", href: "/admin/grain-procurement/sale-approvals", description: "Draft (Admin approval) par save hui anaj ki bikri -- buyer, wazan, rate, godam ka stock aur andaza-e-munafa parh kar Approve, Edit ya Reject. Approve se pehle stock/lagat/kharcha kuch darj nahi hota.", who: "Owner / Admin", addedDate: "2026-10-09" },
@@ -103,6 +104,8 @@ const CURATED_FEATURES: ErpFeature[] = [
   { section: "Dairy", label: "Gaari aur Marammat", href: "/admin/milk-collection/maintenance", description: "Gaari ki maintenance — kab kya theek hua, kitna kharcha aaya.", who: "Dairy Staff / Finance" },
   { section: "Dairy", label: "Fi Litre Kharcha", href: "/admin/milk-collection/cost-per-liter", description: "Har litre doodh jama karne ki total cost — tel, mazdoori, sab milake.", who: "Malik / Dairy Head" },
   { section: "Dairy", label: "Company Billing aur Nafa", href: "/admin/milk-collection/billing", description: "Dairy company ko doodh ka bill aur nafa nuqsan.", who: "Malik / Finance" },
+  { section: "Dairy", label: "Dairy Nafa Nuqsan (Sab Kisan)", href: "/admin/dairy", description: "Har kisan ki dairy ka hisaab — chara, wanda, khal, tori aur doosre kharche bamuqabla doodh ki aamdani, nafa/nuqsan rupay tak; sab ka total aur sheet export.", who: "Malik / Dairy Head", addedDate: "2026-10-19" },
+  { section: "Dairy", label: "Nasal aur Sehat (Sab Kisan)", href: "/admin/dairy/breeding", description: "Sab kisanon ke janwar — garabh, AI, bachay ki tareekh, teeke aur dawai ke baad doodh rokne ki warning; sheet export.", who: "Malik / Dairy Head", addedDate: "2026-10-19" },
 
   // ── FINANCE ─────────────────────────────────────────────────────────────────
   { section: "Finance", label: "Paisa Kahan Hai (Money Trail)", href: "/admin/money-trail", description: "Paisa kahan se aaya, kahan gaya — complete trail.", who: "Malik / Finance" },
@@ -124,6 +127,7 @@ const CURATED_FEATURES: ErpFeature[] = [
   { section: "Finance", label: "Cash Book", href: "/admin/finance", description: "GL accounts, journal entries, aur cashbook — poora finance ledger.", who: "Finance / Accounts" },
   { section: "Finance", label: "Bank", href: "/admin/finance/banks", description: "Bank accounts ka record — balance, transactions.", who: "Finance / Admin" },
   { section: "Finance", label: "Khata (Party Ledger)", href: "/admin/khata", description: "Parties (suppliers, dealers) ka khata — kitna dena, kitna lena.", who: "Finance / Admin" },
+  { section: "Finance", label: "Customer Portal (gahak requests)", href: "/admin/customer-portal", description: "Gahak portal: kis ka login hai, adaigi saboot / wade / profile tabdeeli / khata aitraaz ki checker queue (apni entry khud approve nahi).", who: "Admin / Finance" },
   { section: "Finance", label: "Staff Khata", href: "/admin/staff-khata", description: "Staff ki salary ka khata — baqi, advance, aur katauti.", who: "HR / Finance" },
   { section: "Finance", label: "Shop ka Udhaar aur Advance", href: "/admin/branch-credit", description: "Dukan ko diya hua advance aur unse milna wala udhaar.", who: "Finance / Admin" },
   { section: "Finance", label: "Udhaar ki Darkhwastein", href: "/admin/credit-requests", description: "Udhaar ki requests — kaun ne maanga, kitna, approve ya reject.", who: "Finance Head / Malik" },
@@ -172,6 +176,7 @@ const CURATED_FEATURES: ErpFeature[] = [
   { section: "Administration", label: "AI ka Khata", href: "/admin/ai-usage", description: "AI usage aur cost — kitne tokens kharch hue.", who: "Malik" },
   { section: "Administration", label: "Platform / Clients", href: "/admin/platform", description: "Platform clients aur integrations ka management.", who: "Admin" },
   { section: "Administration", label: "Naukri ki Jagahein", href: "/admin/job-vacancies", description: "Naukri ki khali jagahein post karo — recruitment.", who: "HR / Admin" },
+  { section: "Administration", label: "Meetings", href: "/admin/hr/meetings", description: "Meetings ka calendar — agenda, Google Meet link, faisle aur kaam (follow-up).", who: "HR / Admin / shamil staff" },
   { section: "Administration", label: "Naukri ki Darkhwastein", href: "/admin/job-applications", description: "Job applications — kaun ne apply kiya, interview status.", who: "HR / Admin" },
   { section: "Administration", label: "HR Dashboard", href: "/admin/hr-dashboard", description: "HR ka overview — staff count, attendance, pending salaries.", who: "HR Head / Admin" },
   { section: "Administration", label: "Staff (HR)", href: "/admin/hr", description: "Tamam staff ka record — joining, salary, role.", who: "HR / Admin" },
