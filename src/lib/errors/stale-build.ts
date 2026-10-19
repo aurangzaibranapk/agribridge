@@ -1,3 +1,5 @@
+import { aarziNetworkKharabi } from "@/lib/errors/recover";
+
 /**
  * Purane build ka khula hua safha -- aur us ka apne aap theek ho jana.
  *
@@ -90,7 +92,9 @@ export function puranaBuildKiKharabi(error: unknown): boolean {
  */
 export function puranaSafhaKhudTheekKarein(error: unknown): boolean {
   if (typeof window === "undefined") return false;
-  if (!puranaBuildKiKharabi(error)) return false;
+  // Raaste ki aarzi kharabi (jawab beech mein toota) ka ilaaj bhi wohi
+  // hai: ek dafa naya safha. Wohi das second wala pehra yahan bhi.
+  if (!puranaBuildKiKharabi(error) && !aarziNetworkKharabi(error)) return false;
 
   try {
     const pichhla = Number(window.sessionStorage.getItem(KEY) ?? "0");

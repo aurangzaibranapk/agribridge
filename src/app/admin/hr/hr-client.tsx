@@ -244,7 +244,9 @@ function BulkActionBar({ selectedIds, onDone }: { selectedIds: string[]; onDone:
 function InviteStaffModal({ branches, onClose }: { branches: Branch[]; onClose: () => void }) {
   const lang = useLang();
   const [state, formAction] = useFormState(inviteStaffMember, initialState);
-  if (state.success) setTimeout(() => window.location.reload(), 900);
+  // Email na gayi ho to HR ko wo baat parhne ka waqt milna chahiye --
+  // is liye us soorat mein safha khud reload nahi hota.
+  if (state.success && !state.notice) setTimeout(() => window.location.reload(), 900);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -255,6 +257,7 @@ function InviteStaffModal({ branches, onClose }: { branches: Branch[]; onClose: 
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("hr_invite_sent", lang)}</p>}
+        {state.notice && <p className="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{state.notice}</p>}
         <form action={formAction} className="space-y-2">
           <Input name="full_name" required placeholder={t("hr_name_req", lang)} />
           <Input type="email" name="email" required placeholder={t("hr_email_req", lang)} />

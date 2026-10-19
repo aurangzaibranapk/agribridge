@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { createClient } from "@/lib/supabase/client";
@@ -10,16 +10,13 @@ import { Button, Input, Label } from "@/components/ui/form";
 import { PasswordInput } from "@/components/ui/password-input";
 import { requestFarmerOtp, verifyFarmerOtp, loginWithIdentifier, type FarmerAuthState, type IdentifierLoginState } from "@/actions/farmer-auth";
 import { getRoleRedirectPath } from "@/lib/utils/roles";
+import { loadOrHealProfile } from "@/lib/auth/ensure-profile";
+import { goAfterLogin, routeAfterLogin, OFFLINE_ROUTE_KEY } from "@/lib/navigation/after-login";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
 const FIELD = "h-12 rounded-xl border-surface-200 bg-white px-3.5 text-[15px] shadow-sm outline-none transition focus:border-[#2E6840] focus:ring-2 focus:ring-[#2E6840]/10 placeholder:text-surface-400 dark:border-slate-600 dark:bg-[#0B1426] dark:text-white";
 const BIG_BTN = "h-12 w-full rounded-xl bg-[#174B2B] text-[15px] font-semibold tracking-wide text-white shadow-sm transition hover:bg-[#123D23] disabled:cursor-not-allowed disabled:opacity-60";
-const OFFLINE_ROUTE_KEY = "agribridge:last-login-route";
-
-function rememberLoginRoute(route: string) {
-  try { window.localStorage.setItem(OFFLINE_ROUTE_KEY, route); } catch {}
-}
 
 export function LoginForm({ tenantName = "AgriBridge" }: { tenantName?: string }) {
   return <UnifiedLogin tenantName={tenantName} />;
@@ -35,7 +32,6 @@ const identifierEmptyState: IdentifierLoginState = {};
  */
 function UnifiedLogin({ tenantName }: { tenantName: string }) {
   const lang = useLang();
-  const router = useRouter();
   const supabase = createClient();
   const [identifier, setIdentifier] = useState("");
   const [tab, setTab] = useState<"login" | "signup">("login");
@@ -90,21 +86,15 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
 
   useEffect(() => {
     if (passwordState.success) {
-      const route = passwordState.redirectPath ?? "/";
-      rememberLoginRoute(route);
-      router.push(route);
-      router.refresh();
+      goAfterLogin(routeAfterLogin(null, passwordState.redirectPath));
     }
-  }, [passwordState.success, passwordState.redirectPath, router]);
+  }, [passwordState.success, passwordState.redirectPath]);
 
   useEffect(() => {
     if (checkState.success) {
-      const route = checkState.hasUsername ? "/portal/dashboard" : "/portal/profile";
-      rememberLoginRoute(route);
-      router.push(route);
-      router.refresh();
+      goAfterLogin(checkState.hasUsername ? "/portal/dashboard" : "/portal/profile");
     }
-  }, [checkState.success, checkState.hasUsername, router]);
+  }, [checkState.success, checkState.hasUsername]);
 
   async function sendEmailOtp() {
     setEmailBusy(true);
@@ -134,21 +124,14 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
       setEmailError(error?.message ?? "Code theek nahi.");
       return;
     }
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, is_active")
-      .eq("id", data.user.id)
-      .single();
+    const profile = await loadOrHealProfile(supabase, data.user.id);
     setEmailBusy(false);
     if (!profile || !profile.is_active) {
       await supabase.auth.signOut();
       setEmailError("Account active nahi hai. Admin se rabta karein.");
       return;
     }
-    const route = getRoleRedirectPath(profile.role);
-    rememberLoginRoute(route);
-    router.push(route);
-    router.refresh();
+    goAfterLogin(getRoleRedirectPath(profile.role));
   }
 
   const otpSent = otpState.otpSent;
@@ -294,7 +277,6 @@ function StepHints({ active }: { active: 1 | 2 | 3 }) {
 
 function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () => void }) {
   const lang = useLang();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [state, action] = useFormState(loginWithIdentifier, identifierEmptyState);
 
@@ -302,10 +284,8 @@ function PasswordLogin({ backLabel, onBack }: { backLabel?: string; onBack?: () 
     if (!state.success) return;
     // Login se pehle jo safha khulna tha wahi jeetta hai -- role ke
     // hisaab se ghar sirf tab, jab koi khaas manzil na ho.
-    const redirectTo = searchParams.get("redirectTo");
-    router.push(redirectTo && redirectTo !== "/login" ? redirectTo : state.redirectPath ?? "/");
-    router.refresh();
-  }, [state.success, state.redirectPath, searchParams, router]);
+    goAfterLogin(routeAfterLogin(searchParams?.get("redirectTo"), state.redirectPath));
+  }, [state.success, state.redirectPath, searchParams]);
 
   return (
     <>
@@ -343,7 +323,6 @@ const emptyState: FarmerAuthState = {};
 
 function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; onPassword: () => void }) {
   const lang = useLang();
-  const router = useRouter();
   const supabase = createClient();
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -369,9 +348,8 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
     // page khule jahan password aur User ID banti hai -- dashboard nahi.
     // Jis ki User ID pehle se bani hui hai us ke liye ye qadam guzar
     // chuka, seedha dashboard.
-    router.push(checkState.hasUsername ? "/portal/dashboard" : "/portal/profile");
-    router.refresh();
-  }, [checkState.success, checkState.hasUsername, router]);
+    goAfterLogin(checkState.hasUsername ? "/portal/dashboard" : "/portal/profile");
+  }, [checkState.success, checkState.hasUsername]);
   useEffect(() => {
     if (askState.retryAfterSeconds) setCooldown(askState.retryAfterSeconds);
   }, [askState]);
@@ -398,9 +376,9 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
     setEmailBusy(true); setEmailError(null);
     const { data, error } = await supabase.auth.verifyOtp({ email: email.trim(), token: code, type: "email" });
     if (error || !data.user) { setEmailBusy(false); setEmailError(error?.message ?? "Code theek nahi."); return; }
-    const { data: profile } = await supabase.from("profiles").select("role, is_active").eq("id", data.user.id).single();
+    const profile = await loadOrHealProfile(supabase, data.user.id);
     if (!profile || !profile.is_active) { await supabase.auth.signOut(); setEmailBusy(false); setEmailError(profile ? "Ye account deactivate ho chuka hai. Admin se rabta karein." : "Account setup adhoora hai. Support se rabta karein."); return; }
-    router.push(getRoleRedirectPath(profile.role)); router.refresh();
+    goAfterLogin(getRoleRedirectPath(profile.role));
   }
 
   if (emailStage === "sent") return (
@@ -465,9 +443,8 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
 
 function FarmerUsernameLogin({ onBack }: { onBack: () => void }) {
   const lang = useLang();
-  const router = useRouter();
   const [state, action] = useFormState(loginWithIdentifier, identifierEmptyState);
-  useEffect(() => { if (state.success) { router.push(state.redirectPath ?? "/portal/dashboard"); router.refresh(); } }, [state.success, state.redirectPath, router]);
+  useEffect(() => { if (state.success) goAfterLogin(routeAfterLogin(null, state.redirectPath ?? "/portal/dashboard")); }, [state.success, state.redirectPath]);
   return <div><div className="mb-4"><StepBadge>↳</StepBadge><span className="ml-2 text-sm font-semibold text-surface-800">User ID se login</span></div><form action={action} className="space-y-4">{state.error && <Alert tone="error">{state.error}</Alert>}<div><Label htmlFor="identifier">{t("pm_user_id", lang)}</Label><Input id="identifier" name="identifier" required autoComplete="username" placeholder={t("pm_eg_username", lang)} className={FIELD} /></div><div><Label htmlFor="fpassword">{t("pm_password", lang)}</Label><PasswordInput id="fpassword" name="password" required placeholder="••••••••" className={FIELD} /></div><SubmitBtn label={t("au_go_in", lang)} busy="Check ho raha hai..." /></form><button type="button" onClick={onBack} className="mt-4 w-full text-center text-xs font-semibold text-[#1E4A2E] hover:underline">Mobile / OTP login par wapas</button></div>;
 }
 
