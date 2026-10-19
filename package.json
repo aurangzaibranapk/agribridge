@@ -28,6 +28,7 @@
     "test:recovery-guard": "npx --yes tsx scripts/test-recovery-party-guard.ts",
     "test:support-departments": "npx --yes tsx scripts/test-support-departments.ts",
     "test:overdue-policy": "npx --yes tsx scripts/test-overdue-policy.ts",
+    "test:revoke-anon-trigger-proposal": "bash tests/revoke-anon-trigger-proposal.sh",
     "test:erp-directory": "npx --yes tsx scripts/test-erp-directory.ts",
     "test:sales-shop-filter": "npx --yes tsx scripts/test-sales-shop-filter.ts",
     "test:lightbox": "node tests/support-screenshot-lightbox.cjs",
