@@ -8,6 +8,7 @@ import { BINA_QISM } from "@/lib/pos/constants";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { posCheckout } from "@/actions/pos";
+import { createSubmitGate, createCheckoutKey, runOnce, isDuplicateSaleError, duplicateSaleMessage } from "@/lib/pos/checkout-submit";
 import { enqueue, allActions } from "@/lib/offline/queue";
 import { registerSender, syncQueue } from "@/lib/offline/sync";
 import { Button, Input, Select, Label } from "@/components/ui/form";
@@ -203,6 +204,9 @@ export function PosClient({
     { id: "1", method: "cash", amount: "", reference: "", receiptFile: null, receiptUrl: null, uploading: false },
   ]);
   const [submitting, setSubmitting] = useState(false);
+  // Double-submit bachao: foran band hone wala gate + har cart ki ek key.
+  const submitGate = useRef(createSubmitGate()).current;
+  const checkoutKey = useRef(createCheckoutKey(() => crypto.randomUUID())).current;
   const [overdueDialog, setOverdueDialog] = useState<{ info: CreditBlockInfo | null; text: string; resolve: (c: OverdueChoice) => void } | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [completedSaleId, setCompletedSaleId] = useState<string | null>(null);
@@ -223,7 +227,9 @@ export function PosClient({
   useEffect(() => {
     registerSender("pos.sale", async (action) => {
       try {
-        const result = await posCheckout({ ...(action.payload as any), clientActionId: action.client_action_id });
+        // Offline bill ki apni client_action_id kaafi hai -- sync par sab
+        // ek sath jate hain, is liye "abhi abhi aisa hi bill" wala sawal nahi.
+        const result = await posCheckout({ ...(action.payload as any), clientActionId: action.client_action_id, allowDuplicate: true });
         if (result.error) return { ok: false, retryable: false, error: result.error };
         return { ok: true };
       } catch (e) {
@@ -460,6 +466,7 @@ export function PosClient({
   }
 
   function resetSale() {
+    checkoutKey.reset();
     setCart([]);
     setSelectedId(null);
     setCustomerId("");
@@ -535,7 +542,11 @@ export function PosClient({
     updatePaymentLine(id, "uploading", false);
   }
 
-  async function handleCheckout() {
+  function handleCheckout() {
+    return runOnce(submitGate, runCheckout);
+  }
+
+  async function runCheckout() {
     setMessage(null);
     if (cart.length === 0) {
       setMessage({ type: "error", text: t("pos_cart_empty_error", lang) });
@@ -610,20 +621,34 @@ export function PosClient({
     }
 
     setSubmitting(true);
-    let result = await posCheckout(salePayload);
+    const onlinePayload = { ...salePayload, clientActionId: checkoutKey.current() };
+    // Abhi abhi bilkul aisa hi bill bana -- staff se poochein (do-bara
+    // click / dobara enter). "Haan" par hi naya bill banta hai.
+    let dupDeclined = false;
+    const checkoutWithDupConfirm = async (payload: Parameters<typeof posCheckout>[0]) => {
+      const first = await posCheckout(payload);
+      if (!first.error || !isDuplicateSaleError(first.error)) return first;
+      const naya = typeof window !== "undefined" && window.confirm(duplicateSaleMessage(first.error));
+      if (!naya) {
+        dupDeclined = true;
+        return { error: "Dobara bill nahi banaya gaya." };
+      }
+      return posCheckout({ ...payload, allowDuplicate: true });
+    };
+    let result = await checkoutWithDupConfirm(onlinePayload);
     // 30 din wali udhaar rok: Admin/Owner wajah likh kar ijazat de sakta hai
     // (server hi role jaanchta aur override log karta hai).
-    if (result.error && result.error.includes("wajah likh kar ijazat")) {
+    if (!dupDeclined && result.error && result.error.includes("wajah likh kar ijazat")) {
       const blockedError = result.error;
       const choice = await new Promise<OverdueChoice>((resolve) =>
         setOverdueDialog({ info: result.creditBlock ?? null, text: blockedError, resolve })
       );
       setOverdueDialog(null);
       if (choice.kind === "override") {
-        result = await posCheckout({ ...(salePayload as any), creditOverrideReason: choice.reason });
+        result = await checkoutWithDupConfirm({ ...onlinePayload, creditOverrideReason: choice.reason });
       } else if (choice.kind === "promised") {
         // 541: waada isi popup mein darj hua -- ab sale dobara (server khud jaanchta hai).
-        result = await posCheckout(salePayload);
+        result = await checkoutWithDupConfirm(onlinePayload);
       } else {
         const custParam = encodeURIComponent(customerId);
         if (choice.kind === "cash") {

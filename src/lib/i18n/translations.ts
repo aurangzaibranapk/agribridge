@@ -1,4 +1,10 @@
 import { portalDict } from "./dict/portal";
+import { portalMunshiDict } from "./dict/portal-munshi";
+import { portalKhataDict } from "./dict/portal-khata";
+import { portalDairyDict } from "./dict/portal-dairy";
+import { portalDairyPlDict } from "./dict/portal-dairy-pl";
+import { portalBreedingDict } from "./dict/portal-breeding";
+import { portalCustomerDict } from "./dict/portal-customer";
 import { posDict } from "./dict/pos";
 import { machineryDict } from "./dict/machinery";
 import { myWorkDict } from "./dict/my-work";
@@ -40,6 +46,7 @@ import { tailADict } from "./dict/tail-a";
 import { vendorDict } from "./dict/vendor";
 import { arhtiDict } from "./dict/arhti";
 import { hrAttendanceDict } from "./dict/hr-attendance";
+import { hrMeetingsDict } from "./dict/hr-meetings";
 import { siteHomeDict } from "./dict/site-home";
 import { sitePagesDict } from "./dict/site-pages";
 import { trustDict } from "./dict/trust";
@@ -146,6 +153,7 @@ const dict = {
   ...vendorDict,
   ...arhtiDict,
   ...hrAttendanceDict,
+  ...hrMeetingsDict,
   ...siteHomeDict,
   ...sitePagesDict,
   ...trustDict,
@@ -161,6 +169,12 @@ const dict = {
   ...staffPerformanceDict,
   ...intelligenceDict,
   ...business360OwnerDict,
+  ...portalMunshiDict,
+  ...portalKhataDict,
+  ...portalDairyDict,
+  ...portalDairyPlDict,
+  ...portalBreedingDict,
+  ...portalCustomerDict,
 };
 
 export type TranslationKey = keyof typeof dict;

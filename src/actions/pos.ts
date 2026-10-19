@@ -1,5 +1,5 @@
 "use server";
-import { validateCheckoutTotals } from "@/lib/pos/checkout-guards";
+import { validateCheckoutTotals, findRecentDuplicate, DUPLICATE_SALE_MARKER, DUPLICATE_WINDOW_SECONDS } from "@/lib/pos/checkout-guards";
 import { createClient } from "@/lib/supabase/server";
 import { checkOverdueCreditBlock, getCreditBlockInfo } from "@/lib/recovery/credit-block";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -16,6 +16,8 @@ export interface PosCheckoutState {
   saleId?: string;
   /** Purane baqaye ki rok -- POS dialog ke liye poori tafseel (538). */
   creditBlock?: import("@/lib/recovery/credit-position").CreditBlockInfo;
+  /** Abhi abhi bilkul aisa hi bill bana -- client confirm kar ke allowDuplicate bheje. */
+  duplicateOf?: { saleId: string; createdAt: string; total: number };
 }
 
 export interface PosCartItem {
@@ -81,11 +83,26 @@ export async function posCheckout(input: {
   clientActionId?: string;
   /** 30 din wali udhaar rok ka Admin override -- wajah lazmi (migration 523). */
   creditOverrideReason?: string | null;
+  /**
+   * fix/pos-card-cash-dupes: staff ne "haan, ye naya bill hai" confirm kiya
+   * (ya offline sync hai, jahan client_action_id hi kaafi hai).
+   */
+  allowDuplicate?: boolean;
 }): Promise<PosCheckoutState> {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Idempotency: wohi client_action_id dobara aaye (double click, network
+  // retry, offline sync) to naya bill nahi -- pehle wala wapas. DB par bhi
+  // unique index idx_pos_sales_client_action (504) yehi rokta hai; yahan
+  // pehle pakadne se credit/rate jaanch dobara nahi chalti.
+  const clientActionId = input.clientActionId && UUID_RE.test(input.clientActionId) ? input.clientActionId : undefined;
+  if (clientActionId && user) {
+    const existing = await findSaleByClientAction(clientActionId, user.id);
+    if (existing) return { saleId: existing };
+  }
 
   // Farmer ko POS ki customer fehrist mein dikhaya jata hai "farmer:<id>"
   // jaisi banawati ID se (384) -- asal customers.id nahi, kyunke us waqt
@@ -180,18 +197,33 @@ export async function posCheckout(input: {
   // 1 bottle ghatta tha -- stock zyada aur nafa phoola hua dikhta tha.
   const itemsWithUnit = await markSaleUnits(input.items);
 
+  // Double-submit ki rok: isi staff ne pichhle 2 minute mein bilkul yehi
+  // bill (customer + raqam + cheezein) banaya ho to pehle poocha jata hai.
+  if (!input.allowDuplicate && user) {
+    const dup = await findDuplicateSale(user.id, input.customerId, totals.net, input.items);
+    if (dup) {
+      const secs = Math.max(0, Math.round((Date.now() - new Date(dup.createdAt).getTime()) / 1000));
+      return {
+        error: `${DUPLICATE_SALE_MARKER} Bilkul aisa hi bill (Rs ${dup.total.toLocaleString()}) ${secs} second pehle ban chuka hai (#${dup.id.slice(0, 8).toUpperCase()}). Kya ye naya, alag bill hai?`,
+        duplicateOf: { saleId: dup.id, createdAt: dup.createdAt, total: dup.total },
+      };
+    }
+  }
+
   const rpcArgs = {
     p_customer_id: input.customerId as string,
     p_credit_override_reason: input.creditOverrideReason?.trim() || null,
     p_payment_mode: input.paymentMode,
-    p_cash_paid: totals.nonKhataPaid,
+    // Sirf asal CASH -- Waseela Card/bank/wallet ab cash_paid mein nahi
+    // (tafseel pos_sale_payment_details mein, ledger bhi wahin se).
+    p_cash_paid: totals.cashOnly,
     p_khata_amount: totals.khata,
     p_items: itemsWithUnit as unknown as Json,
     p_payment_lines: input.paymentLines as unknown as Json,
     p_discount: discount,
     p_discount_reason: discount > 0 ? discountReason : undefined,
     p_counter_id: input.counterId ?? undefined,
-    ...(input.clientActionId ? { p_client_action_id: input.clientActionId } : {}),
+    ...(clientActionId ? { p_client_action_id: clientActionId } : {}),
   };
   const { data: saleIdRaw, error } = await (supabase as any).rpc("create_pos_sale_with_credit_approval", rpcArgs);
 
@@ -643,4 +675,53 @@ async function postSaleToLedger(saleId: string, userId: string | null, overpayme
   }
 
   return null;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Isi staff ka, isi client_action_id wala bill (agar pehle ban chuka). */
+async function findSaleByClientAction(clientActionId: string, userId: string): Promise<string | null> {
+  const service = createServiceClient();
+  const { data } = await (service as any)
+    .from("pos_sales")
+    .select("id")
+    .eq("client_action_id", clientActionId)
+    .eq("created_by", userId)
+    .maybeSingle();
+  return (data?.id as string | undefined) ?? null;
+}
+
+/** Pichhle DUPLICATE_WINDOW_SECONDS mein isi staff ka bilkul aisa hi bill. */
+async function findDuplicateSale(
+  userId: string,
+  customerId: string | null,
+  total: number,
+  items: PosCartItem[]
+): Promise<{ id: string; createdAt: string; total: number } | null> {
+  const service = createServiceClient();
+  const since = new Date(Date.now() - DUPLICATE_WINDOW_SECONDS * 1000).toISOString();
+  const { data: recent, error } = await (service as any)
+    .from("pos_sales")
+    .select("id, created_at, total_amount, crm_customer_id, customer_id, pos_sale_items(product_id, quantity, unit_price)")
+    .eq("created_by", userId)
+    .eq("status", "completed")
+    .eq("total_amount", total)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(10);
+  // Jaanch na ho sake to bikri nahi rokte -- ye sirf hifazati sawal hai.
+  if (error || !recent?.length) return null;
+  const rows = (recent as any[]).map((r) => ({
+    id: r.id as string,
+    createdAt: r.created_at as string,
+    customerId: (r.crm_customer_id ?? r.customer_id ?? null) as string | null,
+    total: Number(r.total_amount ?? 0),
+    items: ((r.pos_sale_items ?? []) as any[]).map((i) => ({
+      product_id: i.product_id as string,
+      quantity: Number(i.quantity),
+      unit_price: Number(i.unit_price),
+    })),
+  }));
+  const hit = findRecentDuplicate({ customerId, total, items }, rows);
+  return hit ? { id: hit.id, createdAt: hit.createdAt, total: hit.total } : null;
 }
