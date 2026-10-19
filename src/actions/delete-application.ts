@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { removeLoginSafely } from "@/lib/auth/remove-login";
 import { logAudit } from "@/lib/audit";
 
 export interface ActionState {
@@ -27,9 +28,22 @@ export async function deleteApplication(_prev: ActionState, formData: FormData):
   if (!application) return { error: "Application not found." };
 
   if (application.created_profile_id) {
-    await serviceClient.from("staff_details").delete().eq("profile_id", application.created_profile_id);
-    await serviceClient.from("profiles").delete().eq("id", application.created_profile_id);
-    await serviceClient.auth.admin.deleteUser(application.created_profile_id);
+    // Pehle login: hata to profile + staff_details cascade se saath jate
+    // hain. Na hata (data juRa hai) to kuch nahi mitta -- login band kar
+    // ke application bhi rehne dete hain, taake "ghost" login na bane.
+    const removal = await removeLoginSafely(serviceClient, application.created_profile_id);
+    if (!removal.removed) {
+      await serviceClient
+        .from("profiles")
+        .update({
+          status: "suspended",
+          status_reason: "Job application delete ki koshish: login se data juRa hai, is liye sirf band kiya",
+          status_changed_at: new Date().toISOString(),
+          is_active: false,
+        })
+        .eq("id", application.created_profile_id);
+      return { error: "Is login se data juRa hai, is liye delete nahi hua -- login band (suspend) kar diya gaya hai." };
+    }
   }
 
   await supabase.from("job_offers").delete().eq("application_id", applicationId);

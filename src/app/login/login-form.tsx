@@ -10,6 +10,7 @@ import { Button, Input, Label } from "@/components/ui/form";
 import { PasswordInput } from "@/components/ui/password-input";
 import { requestFarmerOtp, verifyFarmerOtp, loginWithIdentifier, type FarmerAuthState, type IdentifierLoginState } from "@/actions/farmer-auth";
 import { getRoleRedirectPath } from "@/lib/utils/roles";
+import { loadOrHealProfile } from "@/lib/auth/ensure-profile";
 import { goAfterLogin, routeAfterLogin, OFFLINE_ROUTE_KEY } from "@/lib/navigation/after-login";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
@@ -123,11 +124,7 @@ function UnifiedLogin({ tenantName }: { tenantName: string }) {
       setEmailError(error?.message ?? "Code theek nahi.");
       return;
     }
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, is_active")
-      .eq("id", data.user.id)
-      .single();
+    const profile = await loadOrHealProfile(supabase, data.user.id);
     setEmailBusy(false);
     if (!profile || !profile.is_active) {
       await supabase.auth.signOut();
@@ -379,7 +376,7 @@ function PublicMainLogin({ onUsername, onPassword }: { onUsername: () => void; o
     setEmailBusy(true); setEmailError(null);
     const { data, error } = await supabase.auth.verifyOtp({ email: email.trim(), token: code, type: "email" });
     if (error || !data.user) { setEmailBusy(false); setEmailError(error?.message ?? "Code theek nahi."); return; }
-    const { data: profile } = await supabase.from("profiles").select("role, is_active").eq("id", data.user.id).single();
+    const profile = await loadOrHealProfile(supabase, data.user.id);
     if (!profile || !profile.is_active) { await supabase.auth.signOut(); setEmailBusy(false); setEmailError(profile ? "Ye account deactivate ho chuka hai. Admin se rabta karein." : "Account setup adhoora hai. Support se rabta karein."); return; }
     goAfterLogin(getRoleRedirectPath(profile.role));
   }

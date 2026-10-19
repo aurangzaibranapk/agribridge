@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { ensureProfileFor } from "@/lib/auth/ensure-profile";
 import { alreadyRegisteredMessage, findFarmerByPhone } from "@/lib/farmers/identity";
 import { resolveRequestOrganizationId } from "@/lib/tenant/request-organization";
 
@@ -97,6 +98,9 @@ export async function registerFarmer(_prev: RegisterState, formData: FormData): 
     if (farmerError.message.includes("farmers_email_key")) return { error: "A farmer with this email is already registered." };
     return { error: farmerError.message };
   }
+
+  // Profile yaqeeni (560): trigger ne bana di ho to kuch nahi badalta.
+  await ensureProfileFor(serviceClient, createData.user.id);
 
   const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
   if (signInError) return { error: "Account created, but automatic sign-in failed. Please sign in manually." };
