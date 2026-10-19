@@ -70,7 +70,7 @@ export function SourceCard({ tone, label, value, sub, href }: { tone: string; la
       <span className="text-[11px] font-semibold uppercase tracking-wider text-white/85">{label}</span>
       <p className="mt-2 text-2xl font-bold tracking-tight">{value}</p>
       <p className="mt-1 truncate text-[11.5px] text-white/90" title={sub}>{sub}</p>
-      <span className="pointer-events-none absolute -bottom-6 -right-5 h-20 w-20 rounded-full bg-white/10" />
+      <span className="pointer-events-none absolute -bottom-6 -end-5 h-20 w-20 rounded-full bg-white/10" />
     </>
   );
   const cls = `relative block min-h-[104px] overflow-hidden rounded-2xl bg-gradient-to-br ${TONES[tone]} p-4 text-white shadow-[0_8px_20px_-10px_rgba(0,0,0,.45)]`;

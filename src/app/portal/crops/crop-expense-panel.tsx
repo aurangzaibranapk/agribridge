@@ -186,7 +186,7 @@ function ExpenseModal({
       <div className="w-full max-w-sm rounded-card bg-white p-5 shadow-xl">
         <div className="mb-1 flex items-center justify-between">
           <h3 className="font-display text-base font-semibold text-surface-900">{t("pm_add_expense", lang)}</h3>
-          <button onClick={onClose} className="text-surface-400 hover:text-surface-700">
+          <button type="button" onClick={onClose} aria-label={t("ph6_a_close", lang)} className="grid h-11 w-11 place-items-center rounded-lg text-surface-400 hover:text-surface-700">
             <X className="h-5 w-5" />
           </button>
         </div>

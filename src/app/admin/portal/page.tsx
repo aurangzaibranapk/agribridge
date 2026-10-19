@@ -11,7 +11,7 @@ import {
   Monitor, Truck, Store, ClipboardList, CreditCard,
   Building2, LayoutDashboard, Star, ChevronRight,
   BriefcaseMedical, Tractor, Wallet, FileText, MessageSquare,
-  ArrowRight,
+  ArrowRight, ShieldCheck, Beef, HeartPulse, KeyRound,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -175,6 +175,51 @@ const PORTAL_MODULES: PortalModule[] = [
   },
 
   // ── Ops / Quick Links ─────────────────────────────────────────────────
+  // Phase 6 (581): Portal aur Dairy -- sidebar ke "Portal & Dairy" group jaise.
+  {
+    label: "Customer Portal",
+    sublabel: "Darkhwastein · maker ≠ checker",
+    route: "/admin/customer-portal",
+    checkRoutes: ["/admin/customer-portal"],
+    icon: ShieldCheck,
+    gradient: "from-blue-600 to-violet-600",
+    iconBg: "bg-blue-500/20",
+    iconColor: "text-white",
+    section: "main",
+  },
+  {
+    label: "Dairy",
+    sublabel: "Sab kisan · nafa nuqsan",
+    route: "/admin/dairy",
+    checkRoutes: ["/admin/dairy"],
+    icon: Beef,
+    gradient: "from-green-600 to-teal-600",
+    iconBg: "bg-green-500/20",
+    iconColor: "text-white",
+    section: "main",
+  },
+  {
+    label: "Nasal aur Sehat",
+    sublabel: "Byaant · PD · doodh ki rok",
+    route: "/admin/dairy/breeding",
+    checkRoutes: ["/admin/dairy/breeding"],
+    icon: HeartPulse,
+    gradient: "from-rose-500 to-pink-600",
+    iconBg: "bg-rose-500/20",
+    iconColor: "text-white",
+    section: "main",
+  },
+  {
+    label: "Portal Accounts",
+    sublabel: "Invite sirf admin ki tasdeeq par",
+    route: "/admin/customer-portal?f=on",
+    checkRoutes: ["/admin/customer-portal"],
+    icon: KeyRound,
+    gradient: "from-indigo-600 to-blue-700",
+    iconBg: "bg-indigo-500/20",
+    iconColor: "text-white",
+    section: "main",
+  },
   {
     label: "Mera Kaam",
     sublabel: "Pending tasks",

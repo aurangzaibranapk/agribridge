@@ -143,13 +143,13 @@ export function CampaignBookingForm({ campaign, open, products, farmerCode, init
           </div>
           <div className="mt-4 grid gap-5 lg:grid-cols-2">
             <div>
-              <label className="relative block"><Search className="absolute left-3 top-2.5 h-4 w-4 text-surface-400" />
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`${KIND_UI[tab].label} talash karein…`} className={`${inp} pl-9`} disabled={!open} />
+              <label className="relative block"><Search className="absolute start-3 top-2.5 h-4 w-4 text-surface-400" />
+                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`${KIND_UI[tab].label} talash karein…`} className={`${inp} ps-9`} disabled={!open} />
               </label>
               <ul className="mt-2 max-h-64 divide-y divide-surface-100 overflow-auto rounded-xl border border-surface-200 dark:divide-surface-800 dark:border-surface-700">
                 {list.map((p) => { const added = lines.some((l) => l.productId === p.id); return (
-                  <li key={p.id}><button type="button" disabled={!open || added} onClick={() => addProduct(p)} className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm hover:bg-surface-50 disabled:cursor-default dark:hover:bg-surface-800/60">
-                    <span className="text-surface-800 dark:text-surface-100">{p.name}{p.pack_size && <span className="ml-1 text-xs text-surface-500">({p.pack_size})</span>}</span>
+                  <li key={p.id}><button type="button" disabled={!open || added} onClick={() => addProduct(p)} className="flex w-full items-center justify-between px-3 py-2.5 text-start text-sm hover:bg-surface-50 disabled:cursor-default dark:hover:bg-surface-800/60">
+                    <span className="text-surface-800 dark:text-surface-100">{p.name}{p.pack_size && <span className="ms-1 text-xs text-surface-500">({p.pack_size})</span>}</span>
                     {added ? <span className="text-xs font-semibold text-emerald-600">✓ Shamil</span> : <Plus className="h-4 w-4 text-surface-400" />}
                   </button></li>); })}
                 {!list.length && <li className="px-3 py-4 text-center text-sm text-surface-500">{tab === "seed" ? "Gandum ka beej list mein nahi — neeche apna likhein." : "Koi product nahi mili."}</li>}
@@ -163,17 +163,17 @@ export function CampaignBookingForm({ campaign, open, products, farmerCode, init
             <div>
               <div className="overflow-hidden rounded-xl border border-surface-200 dark:border-surface-700">
                 <table className="w-full text-sm">
-                  <thead className="bg-surface-50 text-xs text-surface-500 dark:bg-surface-950"><tr><th className="px-3 py-2 text-left font-medium">Item</th><th className="px-2 py-2 text-left font-medium">Qism</th><th className="px-2 py-2 text-left font-medium">Miqdar</th><th /></tr></thead>
+                  <thead className="bg-surface-50 text-xs text-surface-500 dark:bg-surface-950"><tr><th className="px-3 py-2 text-start font-medium">Item</th><th className="px-2 py-2 text-start font-medium">Qism</th><th className="px-2 py-2 text-start font-medium">Miqdar</th><th /></tr></thead>
                   <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
                     {lines.map((l) => (
                       <tr key={l.key}>
-                        <td className="px-3 py-2 text-surface-800 dark:text-surface-100">{l.productId ? nameOf(l.productId) : l.customName}{!l.productId && <span className="ml-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">Admin review</span>}</td>
+                        <td className="px-3 py-2 text-surface-800 dark:text-surface-100">{l.productId ? nameOf(l.productId) : l.customName}{!l.productId && <span className="ms-1.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">Admin review</span>}</td>
                         <td className="px-2 py-2 text-xs text-surface-500">{KIND_UI[l.kind].label}</td>
                         <td className="px-2 py-2"><div className="flex gap-1">
                           <input aria-label="Miqdar" value={l.quantity} onChange={(e) => setLines(lines.map((x) => (x.key === l.key ? { ...x, quantity: e.target.value } : x)))} inputMode="decimal" disabled={!open} className={`${inp} w-16 px-2 py-1`} />
                           <select aria-label="Unit" value={l.unit} onChange={(e) => setLines(lines.map((x) => (x.key === l.key ? { ...x, unit: e.target.value } : x)))} disabled={!open} className={`${inp} w-20 px-1 py-1`}>{UNITS.map((u) => <option key={u}>{u}</option>)}</select>
                         </div></td>
-                        <td className="pr-2">{open && <button type="button" aria-label="Hatayein" onClick={() => setLines(lines.filter((x) => x.key !== l.key))} className="p-1 text-surface-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>}</td>
+                        <td className="pe-2">{open && <button type="button" aria-label="Hatayein" onClick={() => setLines(lines.filter((x) => x.key !== l.key))} className="p-1 text-surface-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>}</td>
                       </tr>
                     ))}
                     {!lines.length && <tr><td colSpan={4} className="px-3 py-6 text-center text-sm text-surface-500">Bayen list se beej, khaad aur spray chunein.</td></tr>}

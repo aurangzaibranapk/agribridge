@@ -9,6 +9,8 @@ import { ErrorNote, Hero, Kpi, fmtL } from "@/components/portal/dairy/dairy-part
 import { CategoryRows, Chips, GroupBars, Money } from "@/components/portal/dairy/pl-parts";
 import { SheetsButton } from "@/components/portal/dairy/sheets-button";
 import { Denied } from "@/components/portal/dairy/denied";
+import { EmptyState } from "@/components/portal/empty-state";
+import { ResponsiveTable } from "@/components/portal/responsive-table";
 
 export const dynamic = "force-dynamic";
 
@@ -58,29 +60,32 @@ export default async function AdminDairy({ searchParams }: { searchParams: Recor
             <SheetsButton href={csvHref} label={L("ad_sheets")} help={L("ad_sheets_help")} />
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-[13px]">
+        {rows.length === 0 ? (
+          <EmptyState icon="🥛" lang={lang} titleKey="ph6_es_adm_dairy_t" bodyKey="ph6_es_adm_dairy_b"
+            cta={f !== "all" || q ? { href: `/admin/dairy?p=${per.key}`, label: L("ph6_es_clear") } : undefined} />
+        ) : (
+          <ResponsiveTable className="w-full text-[13px] sm:min-w-[860px]" titleCol={1}>
             <thead><tr className="border-b border-surface-200 text-[11px] uppercase tracking-wide text-surface-500 dark:border-surface-800">
-              <th className="py-2 text-left">{L("ad_c_code")}</th><th className="text-left">{L("ad_c_name")}</th><th className="text-left">{L("ad_c_village")}</th><th className="text-right">{L("ad_c_animals")}</th><th className="text-right">{L("ad_c_milk")}</th><th className="text-right">{L("dy2_expense")}</th><th className="text-right">{L("dy2_income")}</th><th className="text-right">{L("ad_c_pl")}</th><th className="text-right">{L("ad_c_cpl")}</th><th />
+              <th className="py-2 text-start">{L("ad_c_code")}</th><th className="text-start">{L("ad_c_name")}</th><th className="text-start">{L("ad_c_village")}</th><th className="text-end">{L("ad_c_animals")}</th><th className="text-end">{L("ad_c_milk")}</th><th className="text-end">{L("dy2_expense")}</th><th className="text-end">{L("dy2_income")}</th><th className="text-end">{L("ad_c_pl")}</th><th className="text-end">{L("ad_c_cpl")}</th><th />
             </tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.farmer_id} className="border-b border-surface-100 text-surface-700 dark:border-surface-800 dark:text-slate-200">
                   <td className="py-2.5"><span className="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 font-mono text-[11px] text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">{code(r)}</span></td>
                   <td className="font-semibold text-surface-900 dark:text-white">{r.full_name}{r.customer_name ? ` (${r.customer_name})` : ""}</td>
-                  <td>{r.village ?? "—"}</td><td className="text-right">{r.animals}</td><td className="text-right">{Math.round(r.litres).toLocaleString("en-IN")}</td>
-                  <td className="text-right">{rs(r.expense)}</td><td className="text-right">{rs(r.income)}</td><td className="text-right"><Money v={r.profit} /></td>
-                  <td className="text-right">{r.cost_per_litre === null ? "—" : `Rs ${Math.round(r.cost_per_litre)}`}</td>
-                  <td className="text-right"><Link href={`/admin/dairy/${r.farmer_id}${qs({})}`} className="rounded-lg border border-surface-200 px-2.5 py-1 text-xs font-semibold dark:border-surface-700">{L("ad_open")} →</Link></td>
+                  <td>{r.village ?? "—"}</td><td className="text-end">{r.animals}</td><td className="text-end">{Math.round(r.litres).toLocaleString("en-IN")}</td>
+                  <td className="text-end">{rs(r.expense)}</td><td className="text-end">{rs(r.income)}</td><td className="text-end"><Money v={r.profit} /></td>
+                  <td className="text-end">{r.cost_per_litre === null ? "—" : `Rs ${Math.round(r.cost_per_litre)}`}</td>
+                  <td className="text-end"><Link href={`/admin/dairy/${r.farmer_id}${qs({})}`} className="rounded-lg border border-surface-200 px-2.5 py-1 text-xs font-semibold dark:border-surface-700">{L("ad_open")} →</Link></td>
                 </tr>
               ))}
               <tr className="bg-surface-50 font-bold text-surface-900 dark:bg-surface-800/60 dark:text-white">
-                <td className="py-2.5" colSpan={3}>{L("ad_grand")}</td><td className="text-right">{g.animals}</td><td className="text-right">{Math.round(g.litres).toLocaleString("en-IN")}</td>
-                <td className="text-right">{rs(g.expense)}</td><td className="text-right">{rs(g.income)}</td><td className="text-right"><Money v={g.profit} /></td><td className="text-right">{g.cost_per_litre === null ? "—" : `Rs ${Math.round(g.cost_per_litre)}`}<div className="text-[10px] font-normal text-surface-500 dark:text-slate-400">{g.milk_farmers} {L("ad_cpl_basis")}{g.avg_cost_per_litre === null ? "" : ` · ${L("ad_cpl_avg")} Rs ${Math.round(g.avg_cost_per_litre)}`}</div></td><td />
+                <td className="py-2.5" colSpan={3}>{L("ad_grand")}</td><td className="text-end">{g.animals}</td><td className="text-end">{Math.round(g.litres).toLocaleString("en-IN")}</td>
+                <td className="text-end">{rs(g.expense)}</td><td className="text-end">{rs(g.income)}</td><td className="text-end"><Money v={g.profit} /></td><td className="text-end">{g.cost_per_litre === null ? "—" : `Rs ${Math.round(g.cost_per_litre)}`}<div className="text-[10px] font-normal text-surface-500 dark:text-slate-400">{g.milk_farmers} {L("ad_cpl_basis")}{g.avg_cost_per_litre === null ? "" : ` · ${L("ad_cpl_avg")} Rs ${Math.round(g.avg_cost_per_litre)}`}</div></td><td />
               </tr>
             </tbody>
-          </table>
-        </div>
+          </ResponsiveTable>
+        )}
       </Card>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card><CardHead title={L("ad_chart_farmer")} /><GroupBars height={220} groups={top.map((r) => ({ label: code(r).slice(-3), a: r.income, b: r.expense }))} names={[L("dy2_income"), L("dy2_expense")]} /></Card>

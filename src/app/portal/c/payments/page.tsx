@@ -71,13 +71,13 @@ export default async function CustomerPayments({ searchParams }: { searchParams:
           <div id="promise" />
           <PanelHead title={<L3 k="pc_my_promises" lang={lang} />} />
           <table className="w-full text-[12.5px]">
-            <thead><tr className="border-b border-surface-200 text-left text-[10.5px] uppercase tracking-wide text-surface-500 dark:border-[#1e3160] dark:text-slate-400">
-              <th className="py-2">{L("pc_c_date")}</th><th className="text-right">{L("pc_c_amount")}</th><th className="text-right">{L("pc_c_paid")}</th><th className="ps-3">{L("pc_c_status")}</th>
+            <thead><tr className="border-b border-surface-200 text-start text-[10.5px] uppercase tracking-wide text-surface-500 dark:border-[#1e3160] dark:text-slate-400">
+              <th className="py-2">{L("pc_c_date")}</th><th className="text-end">{L("pc_c_amount")}</th><th className="text-end">{L("pc_c_paid")}</th><th className="ps-3">{L("pc_c_status")}</th>
             </tr></thead>
             <tbody>
               {pend.map((p) => (
                 <tr key={p.id} className="border-b border-surface-100 text-surface-800 dark:border-[#1e3160] dark:text-slate-100">
-                  <td className="py-2.5">{shortDate(p.promise_date, lang, year)}</td><td className="text-right">{rs(p.amount).replace("Rs ", "")}</td><td className="text-right">—</td>
+                  <td className="py-2.5">{shortDate(p.promise_date, lang, year)}</td><td className="text-end">{rs(p.amount).replace("Rs ", "")}</td><td className="text-end">—</td>
                   <td className="ps-3"><Pill tone={STATUS_TONE[p.status] ?? "amber"}>{L(stK(p.status))}</Pill></td>
                 </tr>
               ))}
@@ -85,8 +85,8 @@ export default async function CustomerPayments({ searchParams }: { searchParams:
                 const st = promiseState(p);
                 return (
                   <tr key={p.id} className="border-b border-surface-100 text-surface-800 dark:border-[#1e3160] dark:text-slate-100">
-                    <td className="py-2.5">{shortDate(p.date, lang, year)}</td><td className="text-right">{rs(p.amount).replace("Rs ", "")}</td>
-                    <td className={`text-right ${p.fulfilled > 0 ? "font-semibold text-emerald-600 dark:text-emerald-400" : ""}`}>{rs(p.fulfilled).replace("Rs ", "")}</td>
+                    <td className="py-2.5">{shortDate(p.date, lang, year)}</td><td className="text-end">{rs(p.amount).replace("Rs ", "")}</td>
+                    <td className={`text-end ${p.fulfilled > 0 ? "font-semibold text-emerald-600 dark:text-emerald-400" : ""}`}>{rs(p.fulfilled).replace("Rs ", "")}</td>
                     <td className="ps-3"><Pill tone={STATUS_TONE[st] ?? "amber"}>{L(stK(st))}</Pill></td>
                   </tr>
                 );
@@ -113,15 +113,15 @@ export default async function CustomerPayments({ searchParams }: { searchParams:
         <PanelHead title={<L3 k="pc_history" lang={lang} />} right={<Sub>{L("pc_history_sub")}</Sub>} />
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] text-[12.5px]">
-            <thead><tr className="border-b border-surface-200 text-left text-[10.5px] uppercase tracking-wide text-surface-500 dark:border-[#1e3160] dark:text-slate-400">
-              <th className="py-2">{L("pc_c_date")}</th><th>{L("pc_c_method")}</th><th>{L("pc_c_ref")}</th><th className="text-right">{L("pc_c_amount")}</th><th className="ps-3">{L("pc_c_status")}</th>
+            <thead><tr className="border-b border-surface-200 text-start text-[10.5px] uppercase tracking-wide text-surface-500 dark:border-[#1e3160] dark:text-slate-400">
+              <th className="py-2">{L("pc_c_date")}</th><th>{L("pc_c_method")}</th><th>{L("pc_c_ref")}</th><th className="text-end">{L("pc_c_amount")}</th><th className="ps-3">{L("pc_c_status")}</th>
             </tr></thead>
             <tbody>
               {hist.length === 0 && <tr><td colSpan={5} className="py-4 text-center text-surface-500">{L("pc_empty")}</td></tr>}
               {hist.slice(0, 40).map((h) => (
                 <tr key={h.key} className="border-b border-surface-100 text-surface-800 dark:border-[#1e3160] dark:text-slate-100">
                   <td className="py-2.5">{shortDate(h.date, lang, year)}</td><td>{h.method}</td><td>{h.ref}</td>
-                  <td className={`text-right ${h.status === "verified" ? "font-semibold text-emerald-600 dark:text-emerald-400" : ""}`}>{rs(h.amount).replace("Rs ", "")}</td>
+                  <td className={`text-end ${h.status === "verified" ? "font-semibold text-emerald-600 dark:text-emerald-400" : ""}`}>{rs(h.amount).replace("Rs ", "")}</td>
                   <td className="ps-3"><Pill tone={STATUS_TONE[h.status] ?? "amber"}>{L(stK(h.status))}</Pill></td>
                 </tr>
               ))}
