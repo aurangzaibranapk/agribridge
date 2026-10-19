@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { HrMeetingsTodayWidget } from "@/components/hr-meetings/today-widget";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,8 @@ export default async function HrDashboardPage() {
   return (
     <div>
       <PageHeader title={t("at_hr_dashboard", lang)} description="Recruitment pipeline overview" />
+
+      <HrMeetingsTodayWidget lang={lang} />
 
       <div className="mb-6 rounded-card border border-brand-200 bg-brand-50 p-5 dark:border-brand-900/40 dark:bg-brand-950/30">
         <div className="flex items-center gap-2 text-brand-600">

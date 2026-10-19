@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { puranaSafhaKhudTheekKarein } from "@/lib/errors/stale-build";
+import { poraSafhaDobara, wapsiKaRaasta } from "@/lib/errors/recover";
 
 /**
  * Sab se upar wala jaal -- jahan aur koi jaal nahi pahunchta.
@@ -29,11 +30,16 @@ import { puranaSafhaKhudTheekKarein } from "@/lib/errors/stale-build";
  */
 export default function GlobalError({
   error,
-  reset,
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // reset() yahan istemal nahi hota -- Next 14.2 mein global-error ka
+  // reset router ko null ke saath dobara banata hai aur "reading 'get'"
+  // wali nayi kharabi deta hai (17 October, login ke baad). Poora safha
+  // naya lena hi pakka raasta hai.
+  const [wapsi, setWapsi] = useState(() => wapsiKaRaasta(null));
+  useEffect(() => setWapsi(wapsiKaRaasta(window.location.pathname)), []);
   useEffect(() => {
     // Purane build ki baat ho to safha khud naya le aata hai -- bande ko
     // kuch dikhane ki zaroorat hi nahi.
@@ -126,7 +132,7 @@ export default function GlobalError({
             <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
               <button
                 type="button"
-                onClick={reset}
+                onClick={() => poraSafhaDobara()}
                 style={{
                   background: "#b91c1c",
                   color: "#fff",
@@ -140,7 +146,7 @@ export default function GlobalError({
                 Dobara koshish karein
               </button>
               <a
-                href="/admin/my-work"
+                href={wapsi.href}
                 style={{
                   border: "1px solid #e7e5e4",
                   borderRadius: "0.5rem",
@@ -150,7 +156,7 @@ export default function GlobalError({
                   textDecoration: "none",
                 }}
               >
-                Mera Kaam par wapas
+                {wapsi.label}
               </a>
             </div>
           </div>

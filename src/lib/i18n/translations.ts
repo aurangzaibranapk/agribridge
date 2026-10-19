@@ -47,6 +47,7 @@ import { tailADict } from "./dict/tail-a";
 import { vendorDict } from "./dict/vendor";
 import { arhtiDict } from "./dict/arhti";
 import { hrAttendanceDict } from "./dict/hr-attendance";
+import { hrMeetingsDict } from "./dict/hr-meetings";
 import { siteHomeDict } from "./dict/site-home";
 import { sitePagesDict } from "./dict/site-pages";
 import { trustDict } from "./dict/trust";
@@ -153,6 +154,7 @@ const dict = {
   ...vendorDict,
   ...arhtiDict,
   ...hrAttendanceDict,
+  ...hrMeetingsDict,
   ...siteHomeDict,
   ...sitePagesDict,
   ...trustDict,
