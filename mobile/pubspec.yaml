@@ -1,7 +1,7 @@
 name: agribridge
 description: Al Rana Traders role-aware customer, farmer, dealer and staff application.
 publish_to: "none"
-version: 1.0.0+1
+version: 2.0.0+2
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
