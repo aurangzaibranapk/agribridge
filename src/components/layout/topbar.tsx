@@ -1,4 +1,5 @@
 import { Search, Bell } from "lucide-react";
+import { adminTint } from "@/lib/ui/admin-tint";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/layout/logout-button";
@@ -40,7 +41,7 @@ export async function Topbar({
   }
   const businessContext = await getBusinessContext();
   return (
-    <header className="flex h-16 items-center justify-between border-b border-surface-200 bg-white px-4 sm:px-6 dark:border-surface-800 dark:bg-surface-900">
+    <header className={`flex h-16 items-center justify-between border-b px-4 sm:px-6 ${adminTint().header}`}>
       <div className="flex flex-1 items-center gap-3">
         <MobileSidebar subtitle={subtitle} groups={navGroups} />
         <BusinessSelector current={businessContext} />
