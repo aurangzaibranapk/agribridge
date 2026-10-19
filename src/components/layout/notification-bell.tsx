@@ -5,6 +5,10 @@ import { Bell, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
+import { usePending } from "@/components/pending/pending-context";
+import { PendingBellList } from "@/components/pending/pending-bell-panel";
+import { RedBadge, NayaPill } from "@/components/pending/pending-ui";
+import type { PendingItem } from "@/lib/pending/categories";
 
 /**
  * Ghanti -- ab sirf adad nahi, khud ittila'at bhi.
@@ -45,6 +49,11 @@ function waqt(iso: string): string {
 
 export function NotificationBell({ initialCount, href }: { initialCount: number; href: string }) {
   const lang = useLang();
+  // 582: ghanti par "Naya / Pending" (malik ki manzoori, mock_badge_bell_*).
+  // Migration na ho to `enabled=false` -- ghanti bilkul pehle jaisi.
+  const pend = usePending();
+  const [tab, setTab] = useState<"new" | "pending" | "notes">("pending");
+  const [pItems, setPItems] = useState<PendingItem[] | null>(null);
   const [count, setCount] = useState(initialCount);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Item[] | null>(null);
@@ -151,6 +160,11 @@ export function NotificationBell({ initialCount, href }: { initialCount: number;
       setItems(null);
       void load();
       void refreshCount();
+      if (pend.enabled) {
+        setTab(pend.totals.naya > 0 ? "new" : "pending");
+        setPItems(null);
+        void pend.loadItems(10).then(setPItems);
+      }
     }
   }
 
@@ -214,7 +228,13 @@ export function NotificationBell({ initialCount, href }: { initialCount: number;
         className="relative rounded-lg p-2 text-surface-500 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800"
       >
         <Bell className="h-5 w-5" />
-        {count > 0 && (
+        {pend.enabled && pend.totals.pending > 0 && (
+          <>
+            <RedBadge n={pend.totals.pending} className="absolute -right-2.5 -top-2 h-[18px] min-w-[18px] text-[10px]" />
+            {pend.totals.naya > 0 && <span data-bell-new className="absolute -left-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-surface-900" />}
+          </>
+        )}
+        {!(pend.enabled && pend.totals.pending > 0) && count > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-green-500 px-1 text-[10px] font-bold text-white">
             {count > 9 ? "9+" : count}
           </span>
@@ -222,7 +242,46 @@ export function NotificationBell({ initialCount, href }: { initialCount: number;
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-1 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-surface-200 bg-white shadow-lg dark:border-surface-800 dark:bg-surface-900">
+        <div className={`absolute right-0 z-50 mt-1 ${pend.enabled ? "w-[29rem] rounded-2xl" : "w-[22rem] rounded-xl"} max-w-[calc(100vw-2rem)] overflow-hidden border border-surface-200 bg-white shadow-lg dark:border-surface-800 dark:bg-surface-900`}>
+          {pend.enabled && (
+            <div data-bell-tabs className="border-b border-surface-200 px-3 pb-2 pt-3 dark:border-surface-800">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold text-surface-900 dark:text-white">{t("apb_bell_title", lang)}</p>
+                {pend.totals.naya > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => void pend.markSeen(pend.counts.filter((c) => (c.naya ?? 0) > 0).map((c) => c.category)).then(() => pend.loadItems(10).then(setPItems))}
+                    className="rounded-full bg-surface-100 px-2.5 py-1 text-[11px] font-semibold text-surface-600 dark:bg-white/5 dark:text-surface-300"
+                  >
+                    {t("apb_all_seen", lang)}
+                  </button>
+                )}
+              </div>
+              <div role="tablist" className="mt-2 flex gap-1.5">
+                {(["new", "pending", "notes"] as const).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === k}
+                    onClick={() => setTab(k)}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${tab === k ? "bg-gradient-to-r from-[#1e3a8a] to-[#2563eb] text-white" : "bg-surface-100 text-surface-600 dark:bg-white/5 dark:text-surface-300"}`}
+                  >
+                    {k === "new" && <NayaPill n={pend.totals.naya} lang={lang} short className="h-4" />}
+                    {k === "pending" && <RedBadge n={pend.totals.pending} className="h-[18px] min-w-[18px] text-[10px] ring-0" />}
+                    {t(k === "new" ? "apb_tab_new" : k === "pending" ? "apb_tab_pending" : "apb_tab_notes", lang)}
+                    {k === "notes" && unread.length > 0 ? ` · ${unread.length}` : ""}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {pend.enabled && tab !== "notes" ? (
+            <div className="max-h-[28rem] overflow-y-auto">
+              <PendingBellList items={pItems} mode={tab} lang={lang} onNavigate={() => setOpen(false)} />
+            </div>
+          ) : (
+          <>
           <div className="flex items-center justify-between border-b border-surface-200 px-3 py-2 dark:border-surface-800">
             <p className="text-sm font-semibold text-surface-900 dark:text-white">{t("nbell_title", lang)}</p>
             {unread.length > 0 && (
@@ -277,6 +336,8 @@ export function NotificationBell({ initialCount, href }: { initialCount: number;
           >
             {t("nbell_see_all", lang)}
           </Link>
+          </>
+          )}
         </div>
       )}
     </div>
