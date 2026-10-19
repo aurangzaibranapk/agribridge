@@ -2,6 +2,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Minus, Plus, LocateFixed } from "lucide-react";
 import { project, unproject, fitView, TILE } from "@/lib/maps/mercator";
+import { tileConfig, tileUrl, TILE_REFERRER_POLICY } from "@/lib/maps/tiles";
+
+const TILES = tileConfig();
 
 export interface MapPin { id: string; lat: number; lng: number; color?: string; label?: string; active?: boolean }
 
@@ -10,18 +13,24 @@ export interface MapPin { id: string; lat: number; lng: number; color?: string; 
  * (kamzor internet) to bhi grid par pins sahi jagah dikhti hain.
  * onPick diya ho to tap se pin lagti hai.
  */
-export function PinMap({ pins, onPick, height = 280, className = "", fitKey }: {
+export function PinMap({ pins, onPick, height: fixedHeight = 280, className = "", fitKey, fill = false }: {
   pins: MapPin[]; onPick?: (lat: number, lng: number) => void; height?: number; className?: string; fitKey?: string;
+  /** true: parent ki poori oonchai le (ek-screen layout); warna `height` px. */
+  fill?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(640);
+  const [fillH, setFillH] = useState(fixedHeight);
+  const height = fill ? fillH : fixedHeight;
   const [view, setView] = useState(() => fitView(pins, 640, height));
   const drag = useRef<{ x: number; y: number; cx: number; cy: number; moved: boolean } | null>(null);
 
   useEffect(() => {
     const el = ref.current; if (!el) return;
-    const ro = new ResizeObserver(() => setW(el.clientWidth || 640)); ro.observe(el); setW(el.clientWidth || 640);
+    const measure = () => { setW(el.clientWidth || 640); if (fill) setFillH(el.clientHeight || fixedHeight); };
+    const ro = new ResizeObserver(measure); ro.observe(el); measure();
     return () => ro.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setView(fitView(pins, w, height)); }, [fitKey, w, height]);
@@ -34,7 +43,7 @@ export function PinMap({ pins, onPick, height = 280, className = "", fitKey }: {
       for (let ty = Math.floor(oy / TILE); ty <= Math.floor((oy + height) / TILE); ty++) {
         if (ty < 0 || ty >= n) continue;
         const wx = ((tx % n) + n) % n;
-        out.push({ key: `${view.zoom}/${tx}/${ty}`, x: tx * TILE - ox, y: ty * TILE - oy, url: `https://tile.openstreetmap.org/${view.zoom}/${wx}/${ty}.png` });
+        out.push({ key: `${view.zoom}/${tx}/${ty}`, x: tx * TILE - ox, y: ty * TILE - oy, url: tileUrl(TILES.template, view.zoom, wx, ty) });
       }
     return out;
   }, [ox, oy, w, height, view.zoom]);
@@ -56,11 +65,11 @@ export function PinMap({ pins, onPick, height = 280, className = "", fitKey }: {
   };
 
   return (
-    <div ref={ref} style={{ height }} className={`relative touch-none select-none overflow-hidden rounded-xl border border-surface-200 bg-[#e8f0ea] bg-[linear-gradient(rgba(15,80,50,.07)_1px,transparent_1px),linear-gradient(90deg,rgba(15,80,50,.07)_1px,transparent_1px)] bg-[size:32px_32px] dark:border-surface-700 dark:bg-[#15263d] ${onPick ? "cursor-crosshair" : "cursor-grab"} ${className}`}
+    <div ref={ref} style={{ height: fill ? "100%" : height }} className={`relative touch-none select-none overflow-hidden rounded-xl border border-surface-200 bg-[#e8f0ea] bg-[linear-gradient(rgba(15,80,50,.07)_1px,transparent_1px),linear-gradient(90deg,rgba(15,80,50,.07)_1px,transparent_1px)] bg-[size:32px_32px] dark:border-surface-700 dark:bg-[#15263d] ${onPick ? "cursor-crosshair" : "cursor-grab"} ${className}`}
       onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} role="application" aria-label="Farm map">
       {tiles.map((t) => (
         // eslint-disable-next-line @next/next/no-img-element
-        <img key={t.key} src={t.url} alt="" draggable={false} loading="lazy" referrerPolicy="no-referrer"
+        <img key={t.key} src={t.url} alt="" draggable={false} loading="lazy" referrerPolicy={TILE_REFERRER_POLICY}
           onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }}
           className="pointer-events-none absolute h-64 w-64 max-w-none dark:brightness-[.72] dark:contrast-[1.1] dark:hue-rotate-180 dark:invert" style={{ left: t.x, top: t.y }} />
       ))}
@@ -81,7 +90,8 @@ export function PinMap({ pins, onPick, height = 280, className = "", fitKey }: {
         <button type="button" aria-label="Zoom out" onClick={() => zoom(-1)} className="border-t border-surface-200 p-1.5 text-surface-700 hover:bg-surface-100 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"><Minus className="h-4 w-4" /></button>
         <button type="button" aria-label="Fit" onClick={() => setView(fitView(pins, w, height))} className="border-t border-surface-200 p-1.5 text-surface-700 hover:bg-surface-100 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"><LocateFixed className="h-4 w-4" /></button>
       </div>
-      <span className="pointer-events-none absolute bottom-1 right-2 text-[10px] text-surface-500">© OpenStreetMap</span>
+      <a href={TILES.attributionUrl} target="_blank" rel="noopener noreferrer" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()}
+        className="absolute bottom-0 right-0 rounded-tl-md bg-white/85 px-1.5 py-0.5 text-[10px] text-surface-600 hover:underline dark:bg-surface-900/85 dark:text-surface-300">{TILES.attribution}</a>
     </div>
   );
 }
