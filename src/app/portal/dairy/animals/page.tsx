@@ -4,7 +4,8 @@ import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { loadDairy, todayPk } from "@/lib/portal/dairy-load";
 import { STATUS_TONE, SPECIES_EMOJI, ageText, animalStats, sortByTag, statusFilter } from "@/lib/portal/dairy";
 import { Badge, Card } from "@/components/portal/khata/khata-parts";
-import { Footer, Hero, HeroBtn, Kpi, Spark, TagChip, Tabs } from "@/components/portal/dairy/dairy-parts";
+import { Footer, Hero, HeroBtn, Kpi, Spark, TagChip, Tabs, Thumb } from "@/components/portal/dairy/dairy-parts";
+import { signedUrls } from "@/lib/portal/dairy-pl-load";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function AnimalList({ searchParams }: { searchParams: Recor
   const stats = animalStats(animals, yields, asOf);
   let rows = sortByTag(statusFilter(animals, f));
   if (q) rows = rows.filter((a) => a.tag_no.toLowerCase().includes(q) || (a.name ?? "").toLowerCase().includes(q));
+  const urls = await signedUrls(rows.map((a) => a.photo_thumb_path ?? a.photo_path));
   const count = (s: string) => statusFilter(animals, s).length;
   const active = statusFilter(animals, "all");
   const milkingNow = active.filter((a) => a.status === "milking" || a.status === "pregnant").length;
@@ -50,7 +52,7 @@ export default async function AnimalList({ searchParams }: { searchParams: Recor
                 return (
                   <tr key={a.id} className="border-b border-surface-100 text-surface-800 dark:border-surface-800 dark:text-slate-200">
                     <td className="px-2 py-2.5"><TagChip tag={a.tag_no} /></td>
-                    <td className="px-2 py-2.5"><div className="flex items-center gap-2.5"><span className="grid h-9 w-9 place-items-center rounded-xl border border-surface-200 bg-surface-50 text-lg dark:border-surface-700 dark:bg-surface-800">{SPECIES_EMOJI[a.species]}</span><b>{a.name ?? "—"}</b></div></td>
+                    <td className="px-2 py-2.5"><div className="flex items-center gap-2.5"><Thumb url={urls[(a.photo_thumb_path ?? a.photo_path) ?? ""]} emoji={SPECIES_EMOJI[a.species]} /><b>{a.name ?? "—"}</b></div></td>
                     <td className="px-2 py-2.5">{a.breed ?? "—"}</td>
                     <td className="px-2 py-2.5">{ageText(a.dob, asOf)}</td>
                     <td className="px-2 py-2.5"><Badge tone={STATUS_TONE[a.status]}>{L(`st_${a.status}` as TranslationKey)}</Badge></td>

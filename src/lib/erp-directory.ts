@@ -104,6 +104,7 @@ const CURATED_FEATURES: ErpFeature[] = [
   { section: "Dairy", label: "Gaari aur Marammat", href: "/admin/milk-collection/maintenance", description: "Gaari ki maintenance — kab kya theek hua, kitna kharcha aaya.", who: "Dairy Staff / Finance" },
   { section: "Dairy", label: "Fi Litre Kharcha", href: "/admin/milk-collection/cost-per-liter", description: "Har litre doodh jama karne ki total cost — tel, mazdoori, sab milake.", who: "Malik / Dairy Head" },
   { section: "Dairy", label: "Company Billing aur Nafa", href: "/admin/milk-collection/billing", description: "Dairy company ko doodh ka bill aur nafa nuqsan.", who: "Malik / Finance" },
+  { section: "Dairy", label: "Dairy Nafa Nuqsan (Sab Kisan)", href: "/admin/dairy", description: "Har kisan ki dairy ka hisaab — chara, wanda, khal, tori aur doosre kharche bamuqabla doodh ki aamdani, nafa/nuqsan rupay tak; sab ka total aur sheet export.", who: "Malik / Dairy Head", addedDate: "2026-10-19" },
 
   // ── FINANCE ─────────────────────────────────────────────────────────────────
   { section: "Finance", label: "Paisa Kahan Hai (Money Trail)", href: "/admin/money-trail", description: "Paisa kahan se aaya, kahan gaya — complete trail.", who: "Malik / Finance" },

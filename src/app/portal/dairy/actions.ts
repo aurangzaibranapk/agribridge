@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { dairyContext, todayPk } from "@/lib/portal/dairy-load";
 import { STATUSES, parseLiters, validateAnimal, validateDate } from "@/lib/portal/dairy";
+import { savePhoto } from "@/lib/portal/dairy-pl-load";
 
 // 566/567 abhi generated types mein nahi.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,8 +25,18 @@ export async function addAnimalAction(fd: FormData) {
   if (!v.ok) redirect(`/portal/dairy/animals/new?e=${v.error}`);
   const { data, error } = await sb.from("dairy_animals").insert({ ...v.value, farmer_id: farmer.id }).select("id").single();
   if (error) redirect(`/portal/dairy/animals/new?e=${/unique|duplicate/i.test(error.message) ? "dy_err_tag_dup" : "dy_err_generic"}`);
+  const ph = await savePhoto(farmer.id, data.id, fd);
   revalidatePath("/portal/dairy");
-  redirect(`/portal/dairy/animals/${data.id}?ok=1`);
+  redirect(`/portal/dairy/animals/${data.id}?${ph === "bad" || ph === "fail" ? "e=dy2_err_photo" : "ok=1"}`);
+}
+
+export async function uploadPhotoAction(fd: FormData) {
+  const farmer = await me();
+  const id = String(fd.get("id") ?? "");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) redirect("/portal/dairy/animals");
+  const ph = await savePhoto(farmer.id, id, fd);
+  revalidatePath("/portal/dairy");
+  redirect(`/portal/dairy/animals/${id}?${ph === "ok" ? "ok=1" : "e=dy2_err_photo"}`);
 }
 
 export async function setStatusAction(fd: FormData) {

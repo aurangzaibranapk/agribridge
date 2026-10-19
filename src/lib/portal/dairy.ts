@@ -20,7 +20,7 @@ export const SPECIES_EMOJI: Record<Species, string> = { cow: "üêÑ", buffalo: "
 export interface Animal {
   id: string; tag_no: string; rfid_tag: string | null; name: string | null; species: Species; breed: string | null; sex: "F" | "M";
   dob: string | null; dob_estimated: boolean; dam_id: string | null; sire_text: string | null; source: "born" | "purchased";
-  purchase_price: number | null; status: Status; photo_path: string | null; lactation_no: number; last_calving_date: string | null;
+  purchase_price: number | null; status: Status; photo_path: string | null; photo_thumb_path: string | null; lactation_no: number; last_calving_date: string | null;
   farm_id: string | null; created_at: string;
 }
 export interface Yield { animal_id: string; yield_date: string; shift: Shift; liters: number; fat: number | null; withheld: boolean; note: string | null }
@@ -38,7 +38,7 @@ export function parseAnimals(raw: unknown): Animal[] {
     breed: (a.breed as string) ?? null, sex: a.sex === "M" ? "M" : "F", dob: (a.dob as string) ?? null, dob_estimated: !!a.dob_estimated,
     dam_id: (a.dam_id as string) ?? null, sire_text: (a.sire_text as string) ?? null, source: a.source === "purchased" ? "purchased" : "born",
     purchase_price: numOrNull(a.purchase_price), status: (STATUSES as readonly string[]).includes(a.status as string) ? (a.status as Status) : "milking",
-    photo_path: (a.photo_path as string) ?? null, lactation_no: num(a.lactation_no), last_calving_date: (a.last_calving_date as string) ?? null,
+    photo_path: (a.photo_path as string) ?? null, photo_thumb_path: (a.photo_thumb_path as string) ?? null, lactation_no: num(a.lactation_no), last_calving_date: (a.last_calving_date as string) ?? null,
     farm_id: (a.farm_id as string) ?? null, created_at: String(a.created_at ?? ""),
   }));
 }

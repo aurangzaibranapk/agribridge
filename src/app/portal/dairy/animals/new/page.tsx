@@ -6,6 +6,8 @@ import { ACTIVE_STATUSES, BREEDS, nextTag, sortByTag } from "@/lib/portal/dairy"
 import { Card } from "@/components/portal/khata/khata-parts";
 import { Footer, Hero, Tri } from "@/components/portal/dairy/dairy-parts";
 import { Field, Seg, inputCls } from "@/components/portal/dairy/form-parts";
+import { PhotoPicker } from "@/components/portal/dairy/photo-picker";
+import { ErrorNote } from "@/components/portal/dairy/dairy-parts";
 import { addAnimalAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +25,7 @@ export default async function NewAnimal({ searchParams }: { searchParams: Record
   return (
     <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
       <Hero title={<>➕ {L("dy_add_title")}</>} sub={L("dy_add_sub")} />
-      {err && <p className="rounded-xl bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">{L((err.startsWith("dy_err_") ? err : "dy_err_generic") as TranslationKey)}</p>}
+      <ErrorNote e={err} lang={lang} />
       <form action={addAnimalAction} className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
         <Card className="space-y-4">
           <h3 className="text-[15px] font-semibold text-surface-900 dark:text-white"><Tri k="dy_add_details" lang={lang} /></h3>
@@ -57,7 +59,8 @@ export default async function NewAnimal({ searchParams }: { searchParams: Record
         <div className="space-y-4">
           <Card>
             <h3 className="mb-3 text-[15px] font-semibold text-surface-900 dark:text-white"><Tri k="dy_photo" lang={lang} /></h3>
-            <div className="grid place-items-center rounded-2xl border-2 border-dashed border-surface-200 p-8 text-center text-xs text-surface-500 dark:border-surface-700 dark:text-slate-400"><div className="text-4xl">📷</div>{L("dy_photo_note")}</div>
+            <PhotoPicker title={L("dy2_photo_new")} hint={L("dy2_photo_hint")} shrunkWord={L("dy2_photo_shrunk")} />
+            <p className="mt-2 text-[11px] text-surface-500 dark:text-slate-400">🔒 {L("dy2_photo_private")}</p>
           </Card>
           <Card className="space-y-3">
             <div className="rounded-xl border border-dashed border-violet-400 bg-violet-500/5 p-3 text-xs text-surface-700 dark:text-slate-200">🧬 {L("dy_hook_p4")}</div>

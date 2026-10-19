@@ -4,7 +4,7 @@ import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { loadDairy, todayPk } from "@/lib/portal/dairy-load";
 import { addDays, r1, sortByTag, validateDate } from "@/lib/portal/dairy";
 import { Card, longDate } from "@/components/portal/khata/khata-parts";
-import { Footer, Hero, TagChip, Tabs, Tri, fmtL } from "@/components/portal/dairy/dairy-parts";
+import { ErrorNote, Footer, Hero, TagChip, Tabs, Tri, fmtL } from "@/components/portal/dairy/dairy-parts";
 import { Field, Seg, inputCls } from "@/components/portal/dairy/form-parts";
 import { bulkMilkAction, singleMilkAction } from "../actions";
 
@@ -36,7 +36,7 @@ export default async function MilkEntry({ searchParams }: { searchParams: Record
       </Hero>
       {searchParams?.n && <p className="rounded-xl bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200">{searchParams.n} {L("dy_saved_n")}</p>}
       {searchParams?.ok && <p className="rounded-xl bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200">{L("dy_saved")}</p>}
-      {searchParams?.e && <p className="rounded-xl bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">{L((searchParams.e.startsWith("dy_err_") ? searchParams.e : "dy_err_generic") as TranslationKey)}</p>}
+      <ErrorNote e={searchParams?.e} lang={lang} />
 
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
         <Card>

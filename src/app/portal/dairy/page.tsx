@@ -35,6 +35,7 @@ export default async function DairyDashboard({ searchParams }: { searchParams: R
       <Hero title={<>🐄 {L("dy_dash_title")}</>} sub={`${L("dy_dash_sub")} · ${ctx?.farmer?.farmer_code ?? ""}`}>
         <HeroBtn href="/portal/dairy/milk" primary>🥛 {L("dy_btn_milk")}</HeroBtn>
         <HeroBtn href="/portal/dairy/animals/new">➕ {L("dy_btn_add")}</HeroBtn>
+        <HeroBtn href="/portal/dairy/hisaab">📒 {t("nav_dairy_hisaab", lang)}</HeroBtn>
       </Hero>
 
       <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3 xl:grid-cols-6">
