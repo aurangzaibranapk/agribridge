@@ -55,6 +55,7 @@ export const ERP_HIDDEN_ROUTES: string[] = [
   "/admin/inbox",
   "/admin/intelligence/party",
   "/admin/inventory/product/statement",
+  "/admin/khata/qist/new",
   "/admin/load-bill/accounts",
   "/admin/load-bill/reconcile",
   "/admin/machinery-rental/advance-claims",
