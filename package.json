@@ -40,7 +40,8 @@
     "test:sales-secrets": "npx --yes tsx scripts/test-sales-secrets.ts && node tests/sales-secrets-sql.mjs",
     "test:hr-self-approval-db": "node tests/hr-self-approval-db.mjs && node tests/hr-self-approval-wiring.cjs && node tests/hr-self-approval-guards.cjs && npx --yes tsx tests/hr-whatsapp-checkin-message.ts",
     "test:auto-profile": "npx --yes tsx scripts/test-auto-profile.ts && node tests/auto-profile-sql.mjs",
-    "test:login-crash": "npx --yes tsx scripts/test-login-crash.ts"
+    "test:login-crash": "npx --yes tsx scripts/test-login-crash.ts",
+    "test:pos-card-cash": "npx --yes tsx scripts/test-pos-card-cash-dupes.ts"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",

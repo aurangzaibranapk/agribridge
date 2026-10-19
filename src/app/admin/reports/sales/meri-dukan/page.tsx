@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buildSaleCashIndex, saleCash, type SalePaymentRow } from "@/lib/pos/sale-cash";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { StatCard } from "@/components/dashboard/stat-card";
@@ -95,11 +96,13 @@ export default async function MeriDukanReportPage({
 
   const saleIds = sales.map((s) => s.id);
   const byMethod = new Map<string, number>();
+  const paymentRows: SalePaymentRow[] = [];
   for (let i = 0; i < saleIds.length; i += 300) {
     const { data } = await supabase
       .from("pos_sale_payment_details")
-      .select("payment_method, amount")
+      .select("sale_id, payment_method, amount")
       .in("sale_id", saleIds.slice(i, i + 300));
+    paymentRows.push(...((data ?? []) as SalePaymentRow[]));
     for (const a of (data ?? []) as { payment_method: string; amount: number }[]) {
       const amt = Number(a.amount ?? 0);
       if (amt <= 0) continue;
@@ -119,7 +122,9 @@ export default async function MeriDukanReportPage({
   const stockLines = new Set((stock ?? []).filter((r: any) => Number(r.quantity_on_hand ?? 0) > 0).map((r: any) => r.product_id)).size;
 
   const total = sales.reduce((s, x) => s + Number(x.total_amount ?? 0), 0);
-  const naqad = sales.reduce((s, x) => s + Number(x.cash_paid ?? 0), 0);
+  // Sirf asal cash -- Waseela Card/bank/wallet nahi (fix/pos-card-cash-dupes).
+  const cashIdx = buildSaleCashIndex(paymentRows);
+  const naqad = sales.reduce((s, x) => s + saleCash(x, cashIdx), 0);
   const udhaar = sales.reduce((s, x) => s + Number(x.khata_amount ?? 0), 0);
   const sehat = cashHealth(total, naqad, udhaar);
 
