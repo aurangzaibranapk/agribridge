@@ -52,7 +52,7 @@ export default async function AddExpense({ searchParams }: { searchParams: Recor
                 <select name="animal_id" className={inputCls}><option value="">🐄 {L("dy2_f_herd")}</option>{active.map((a) => <option key={a.id} value={a.id}>#{a.tag_no}{a.name ? ` · ${a.name}` : ""}</option>)}</select>
               </Field>
               <Field k="dy2_f_paid_to" lang={lang}><input name="paid_to" maxLength={80} className={inputCls} /></Field>
-              <Field k="dy2_f_payment" lang={lang}><Seg name="payment" value="cash" lang={lang} options={PAYMENTS.map((p) => ({ v: p, k: `pay_${p}` as TranslationKey }))} /></Field>
+              <Field k="dy2_f_payment" lang={lang}><Seg name="payment" value="cash" lang={lang} options={PAYMENTS.map((p) => ({ v: p, k: `dy2_pay_${p}` as TranslationKey }))} /></Field>
             </div>
             <Field k="dy2_f_note" lang={lang}><input name="note" maxLength={300} className={inputCls} /></Field>
             <div className="flex justify-end gap-2">
