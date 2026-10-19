@@ -1,4 +1,5 @@
 "use server";
+import { loadOrHealProfile, ensureProfileFor } from "@/lib/auth/ensure-profile";
 
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -215,6 +216,10 @@ export async function verifyFarmerOtp(
   });
   if (sessionError) return { error: "Session nahi ban saka. Dobara koshish karein." };
 
+  // Login aur kisan record ab juRe hain -- profile bhi yaqeeni ho (560).
+  // Pehle se ho to kuch nahi badalta.
+  await ensureProfileFor(service, userId);
+
   // Naya kisan ho ya username kabhi banaya hi na ho -- dono soorat mein
   // "nahi bani". Purane kisan ke liye seedha poochh lete hain.
   let hasUsername = false;
@@ -397,7 +402,8 @@ export async function loginWithIdentifier(
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error || !data.user) return ghalat;
 
-  const { data: profile } = await supabase.from("profiles").select("role, is_active").eq("id", data.user.id).maybeSingle();
+  // Profile gum ho to juRe record se khud ban jati hai (560) -- staff kabhi nahi.
+  const profile = await loadOrHealProfile(supabase, data.user.id);
   if (!profile) return { error: "Account setup adhoora hai. Support se rabta karein." };
   if (!profile.is_active) {
     await supabase.auth.signOut();

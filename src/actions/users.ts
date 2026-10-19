@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { profileKaKhanaBadlein } from "@/lib/profile-write";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { removeLoginSafely } from "@/lib/auth/remove-login";
 import type { UserRole } from "@/lib/utils/roles";
 import { DEPARTMENTS } from "@/lib/departments";
 import { logAudit } from "@/lib/audit";
@@ -213,9 +214,11 @@ export async function deleteStaff(_prev: ActionState, formData: FormData): Promi
   if ("error" in who) return { error: who.error };
 
   const serviceClient = createServiceClient();
-  const { error: profileError } = await serviceClient.from("profiles").delete().eq("id", userId);
+  // Pehle login hatao -- profile us ke saath cascade se jati hai. Pehle
+  // profile mitane se login baqi reh jata tha (remove-login.ts dekhein).
+  const removal = await removeLoginSafely(serviceClient, userId);
 
-  if (profileError) {
+  if (!removal.removed) {
     const { error: suspendError } = await serviceClient
       .from("profiles")
       .update({
@@ -236,7 +239,6 @@ export async function deleteStaff(_prev: ActionState, formData: FormData): Promi
     return { error: "Is staff se data (attendance/sales/salary) juda hai, is liye delete nahi ho saka - isay permanently suspend kar diya gaya hai." };
   }
 
-  await serviceClient.auth.admin.deleteUser(userId).catch(() => {});
   await logAudit({
     actionType: "delete",
     module: "user_status",
