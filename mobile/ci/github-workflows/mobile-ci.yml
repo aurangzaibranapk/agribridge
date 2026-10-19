@@ -1,0 +1,88 @@
+name: Mobile CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-ci.yml'
+      - 'mobile/ci/**'
+      - 'supabase/migrations/58[3-9]_*.sql'
+      - 'tests/mobile-app-sql.mjs'
+      - 'tests/sql/mobile-app-stubs.sql'
+      - 'scripts/test-mobile-api.ts'
+      - 'src/app/api/mobile/**'
+      - 'src/lib/mobile/**'
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-ci.yml'
+      - 'mobile/ci/**'
+      - '.github/workflows/mobile-release.yml'
+      - 'supabase/migrations/58[3-9]_*.sql'
+      - 'tests/mobile-app-sql.mjs'
+      - 'tests/sql/mobile-app-stubs.sql'
+      - 'scripts/test-mobile-api.ts'
+      - 'src/app/api/mobile/**'
+      - 'src/lib/mobile/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flutter:
+    name: Flutter analyze, test, debug APK (demo mode)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+          cache: true
+      - name: Generate Android platform
+        run: |
+          flutter create --platforms=android --project-name agribridge --org pk.alranatraders .
+          rm -f test/widget_test.dart
+          python3 tool/configure_android.py
+      - name: Dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+      - name: Test
+        run: flutter test
+      - name: Debug APK (demo mode, no database keys)
+        run: flutter build apk --debug --dart-define=APP_ENV=testing
+      - name: Verify package and targetSdk >= 35
+        run: bash tool/check_apk.sh build/app/outputs/flutter-apk/app-debug.apk
+      - name: Upload demo APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: agribridge-demo-debug-apk
+          path: mobile/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 14
+
+  mobile-db-api:
+    name: Mobile SQL (583-588, PGlite) + API tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test:mobile-app
