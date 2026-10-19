@@ -1,4 +1,4 @@
-﻿import { redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PortalSidebar } from "@/components/portal/sidebar";
 import { PortalMobileSidebar } from "@/components/portal/mobile-sidebar";
@@ -51,7 +51,7 @@ export default async function PortalLayout({ children }: { children: React.React
           hai. Kisan ke portal par ye aur bura hai: wahan safha aksar
           phone par khulta hai, jahan chaurai pehle hi kam hoti hai. */}
       <div className="min-w-0 flex-1">
-        <header className="flex items-center justify-between border-b border-surface-200 bg-white px-4 py-3 sm:px-6 dark:bg-surface-900 dark:border-surface-800">
+        <header className="print:hidden flex items-center justify-between border-b border-surface-200 bg-white px-4 py-3 sm:px-6 dark:bg-surface-900 dark:border-surface-800">
           <div className="flex items-center gap-2">
             <PortalMobileSidebar lang={lang} />
             <p className="font-display text-sm font-medium text-surface-900 sm:hidden">{t("app_name", lang)}</p>
