@@ -76,7 +76,7 @@ export default async function AdminDairy({ searchParams }: { searchParams: Recor
               ))}
               <tr className="bg-surface-50 font-bold text-surface-900 dark:bg-surface-800/60 dark:text-white">
                 <td className="py-2.5" colSpan={3}>{L("ad_grand")}</td><td className="text-right">{g.animals}</td><td className="text-right">{Math.round(g.litres).toLocaleString("en-IN")}</td>
-                <td className="text-right">{rs(g.expense)}</td><td className="text-right">{rs(g.income)}</td><td className="text-right"><Money v={g.profit} /></td><td className="text-right">{g.cost_per_litre === null ? "—" : `Rs ${Math.round(g.cost_per_litre)}`}</td><td />
+                <td className="text-right">{rs(g.expense)}</td><td className="text-right">{rs(g.income)}</td><td className="text-right"><Money v={g.profit} /></td><td className="text-right">{g.cost_per_litre === null ? "—" : `Rs ${Math.round(g.cost_per_litre)}`}<div className="text-[10px] font-normal text-surface-500 dark:text-slate-400">{g.milk_farmers} {L("ad_cpl_basis")}{g.avg_cost_per_litre === null ? "" : ` · ${L("ad_cpl_avg")} Rs ${Math.round(g.avg_cost_per_litre)}`}</div></td><td />
               </tr>
             </tbody>
           </table>

@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import {
-  adminCsv, adminFilter, addMonths, categoryShares, changePct, csvCell, fitSize, grandTotal, parseAdminRows, parsePnl, photoOk, photoPath,
+  adminCsv, adminFilter, addMonths, avgCostPerLitre, costPerLitre, withMilk, categoryShares, changePct, csvCell, fitSize, grandTotal, parseAdminRows, parsePnl, photoOk, photoPath,
   resolvePeriod, sumPnl, validateExpense, validateIncome, PHOTO_MAX_BYTES,
 } from "../src/lib/portal/dairy-pl";
 import { portalDairyPlDict } from "../src/lib/i18n/dict/portal-dairy-pl";
@@ -77,6 +77,33 @@ test("admin totals, filter, CSV (formula injection guarded)", () => {
   const csv = adminCsv(rows, "2026-10-01", AS);
   assert.ok(csv.startsWith("\uFEFF")); assert.ok(csv.includes("GRAND TOTAL")); assert.ok(csv.includes(`"'=HYPERLINK(""http://x"")"`)); assert.ok(csv.includes('"Malik, Dairy"'));
   assert.ok(!/\n=/.test(csv));
+});
+test("cost per litre skips farmers/periods with zero milk records", () => {
+  const base = { farmer_code: null, full_name: "X", village: null, customer_name: null, animals: 1, milking: 1, centre_litres: 0, income: 0, profit: 0, cost_per_litre: null };
+  const rows = [
+    { ...base, farmer_id: "a", litres: 100, expense: 5000 },   // 50/L
+    { ...base, farmer_id: "b", litres: 300, expense: 9000 },   // 30/L
+    { ...base, farmer_id: "c", litres: 0, expense: 80000 },    // koi doodh record nahi
+    { ...base, farmer_id: "d", litres: Number.NaN, expense: 7000 },
+  ];
+  const g = grandTotal(rows);
+  assert.equal(g.cost_per_litre, 35);          // (5000+9000)/400 -- c aur d ka kharcha shamil nahi
+  assert.equal(g.avg_cost_per_litre, 40);      // (50+30)/2 -- 0-litre kisan average nahi bigaarta
+  assert.equal(g.milk_farmers, 2);
+  assert.equal(g.expense, 5000 + 9000 + 80000 + 7000); // kul kharcha phir bhi poora dikhta hai
+  assert.equal(withMilk(rows).length, 2);
+  // sab zero litre: null (divide-by-zero nahi, NaN/Infinity nahi)
+  const z = grandTotal([{ ...base, farmer_id: "z", litres: 0, expense: 100 }]);
+  assert.equal(z.cost_per_litre, null); assert.equal(z.avg_cost_per_litre, null); assert.equal(z.milk_farmers, 0);
+  assert.equal(grandTotal([]).cost_per_litre, null); assert.equal(grandTotal([]).avg_cost_per_litre, null);
+  assert.equal(costPerLitre([{ litres: -5, expense: 10 }]), null); assert.equal(avgCostPerLitre([]), null);
+  // farmer ke kai maheene: jis maheene doodh record nahi, us ka kharcha lagat/L mein nahi
+  const S = sumPnl(parsePnl([
+    { period: "2026-09-01", income: {}, income_total: 0, expense: { chara: 20000 }, expense_total: 20000, profit: -20000, litres: 0, animals: 4 },
+    { period: "2026-10-01", income: {}, income_total: 0, expense: { chara: 6000 }, expense_total: 6000, profit: -6000, litres: 200, animals: 4 },
+  ]));
+  assert.equal(S.cost_per_litre, 30); assert.equal(S.expense_total, 26000);
+  assert.equal(sumPnl(parsePnl([{ period: "2026-10-01", income: {}, income_total: 0, expense: {}, expense_total: 500, profit: -500, litres: 0, animals: 1 }])).cost_per_litre, null);
 });
 test("photo limits and paths", () => {
   assert.ok(photoOk({ size: 500000, type: "image/webp" }));

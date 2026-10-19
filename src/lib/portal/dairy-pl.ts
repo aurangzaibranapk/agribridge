@@ -77,7 +77,7 @@ export function sumPnl(rows: PnlRow[]) {
   const feed = FEED_CATS.reduce((s, c) => s + (expense[c] ?? 0), 0);
   return {
     income, expense, income_total: r2(it), expense_total: r2(et), profit: r2(it - et), litres: r2(lit),
-    cost_per_litre: lit > 0 ? r2(et / lit) : null, feed_per_animal: animals > 0 ? r2(feed / animals) : null, animals,
+    cost_per_litre: costPerLitre(rows.map((r) => ({ litres: r.litres, expense: r.expense_total }))), feed_per_animal: animals > 0 ? r2(feed / animals) : null, animals,
     centre_litres: income.centre_litres ?? 0,
   };
 }
@@ -154,11 +154,26 @@ export function parseAdminRows(raw: unknown): AdminRow[] {
     expense: n(r.expense), income: n(r.income), profit: n(r.profit), cost_per_litre: nn(r.cost_per_litre),
   }));
 }
+/** Doodh-record wali entries (litres > 0, finite) -- lagat/L sirf inhi par. */
+export function withMilk<T extends { litres: number }>(rows: T[]): T[] {
+  return rows.filter((r) => Number.isFinite(r.litres) && r.litres > 0);
+}
+/** Kul lagat/L = (doodh-record walon ka kharcha) / (un ka doodh). Koi record nahi to null (0 se taqseem nahi). */
+export function costPerLitre(rows: { litres: number; expense: number }[]): number | null {
+  const m = withMilk(rows);
+  const lit = m.reduce((a, r) => a + r.litres, 0);
+  return lit > 0 ? r2(m.reduce((a, r) => a + (Number.isFinite(r.expense) ? r.expense : 0), 0) / lit) : null;
+}
+/** Kisanon ki lagat/L ka seedha average -- be-record (0 litre) kisan shamil nahi. */
+export function avgCostPerLitre(rows: { litres: number; expense: number }[]): number | null {
+  const m = withMilk(rows);
+  return m.length ? r2(m.reduce((a, r) => a + (Number.isFinite(r.expense) ? r.expense : 0) / r.litres, 0) / m.length) : null;
+}
 export function grandTotal(rows: AdminRow[]) {
   const t = rows.reduce((a, r) => ({ animals: a.animals + r.animals, milking: a.milking + r.milking, litres: a.litres + r.litres, centre_litres: a.centre_litres + r.centre_litres,
     expense: a.expense + r.expense, income: a.income + r.income, profit: a.profit + r.profit }), { animals: 0, milking: 0, litres: 0, centre_litres: 0, expense: 0, income: 0, profit: 0 });
   return { ...t, litres: r2(t.litres), expense: r2(t.expense), income: r2(t.income), profit: r2(t.profit), // lagat/L sirf un kisanon par jinke doodh ka record hai (warna be-record kharcha average bigaarta hai)
-    cost_per_litre: t.litres > 0 ? r2(rows.filter((r) => r.litres > 0).reduce((a, r) => a + r.expense, 0) / t.litres) : null, losses: rows.filter((r) => r.profit < 0).length };
+    cost_per_litre: costPerLitre(rows), avg_cost_per_litre: avgCostPerLitre(rows), milk_farmers: withMilk(rows).length, losses: rows.filter((r) => r.profit < 0).length };
 }
 export function adminFilter(rows: AdminRow[], f: string, q: string): AdminRow[] {
   let out = rows;
