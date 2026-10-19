@@ -22,12 +22,18 @@ const IDS: Record<string, Record<string, unknown>> = {
   "3000000000": { kind: "unknown", user_id: null },
 };
 
-function mk(opts: { resolveError?: boolean; transcript?: string | null; routes?: string[] | null } = {}) {
+const claimed = new Set<string>();
+function mk(opts: { resolveError?: boolean; claimError?: boolean; transcript?: string | null; routes?: string[] | null } = {}) {
   const calls: { fn: string; args: Record<string, unknown> }[] = [];
   const deps: ParityDeps = {
     now: () => NOW,
     rpc: async (fn, args = {}) => {
       calls.push({ fn, args });
+      if (fn === "fn_wa_claim_message") {
+        if (opts.claimError) return { data: null, error: { message: "missing" } };
+        const id = String(args.p_wa_message_id); if (claimed.has(id)) return { data: false, error: null };
+        claimed.add(id); return { data: true, error: null };
+      }
       if (fn === "fn_wa_resolve_identity") {
         if (opts.resolveError) return { data: null, error: { message: "function does not exist" } };
         return { data: [IDS[String(args.p_phone_key)] ?? { kind: "unknown" }], error: null };
@@ -194,13 +200,32 @@ const voice = (phoneKey: string, ts: string = TS) => ({ phoneKey, messageType: "
   await t("runParity: sends only when signed AND inside window", async () => {
     const sent: string[] = [];
     const extra = { download: async () => ({ base64: "A", mimeType: "audio/ogg" }), send: async (x: string) => { sent.push(x); } };
-    const msg = (ts: string) => ({ type: "text", timestamp: ts, text: { body: "aaj ki sale" } });
+    let i = 0;
+    const msg = (ts: string) => ({ id: "wamid.T" + i++, type: "text", timestamp: ts, text: { body: "aaj ki sale" } });
     assert.equal((await runParity(msg(TS), "3226275476", true, { ...mk().deps, ...extra })).sent, true);
     assert.equal((await runParity(msg(TS), "3226275476", false, { ...mk().deps, ...extra })).sent, false);
     const old = String(Math.floor(NOW / 1000) - 25 * 3600);
     const r = await runParity(msg(old), "3226275476", true, { ...mk().deps, ...extra });
     assert.equal(r.sent, false); assert.equal(r.handled, true);
     assert.equal(sent.length, 1);
+  });
+  await t("idempotency: Meta retry of same wamid -> one reply only", async () => {
+    const sent: string[] = [];
+    const extra = { download: async () => null, send: async (x: string) => { sent.push(x); } };
+    const m = { id: "wamid.RETRY1", type: "text", timestamp: TS, text: { body: "aaj ki sale" } };
+    const a = await runParity(m, "3226275476", true, { ...mk().deps, ...extra });
+    const b = await runParity(m, "3226275476", true, { ...mk().deps, ...extra });
+    const c = await runParity({ ...m }, "3226275476", true, { ...mk().deps, ...extra });
+    assert.equal(a.sent, true); assert.equal(b.sent, false); assert.equal(b.duplicate, true); assert.equal(c.sent, false);
+    assert.equal(b.handled, true, "duplicate is swallowed, old flow does not reply either");
+    assert.equal(sent.length, 1);
+  });
+  await t("idempotency: no wamid or claim error -> stay silent", async () => {
+    const sent: string[] = [];
+    const extra = { download: async () => null, send: async (x: string) => { sent.push(x); } };
+    await runParity({ type: "text", timestamp: TS, text: { body: "aaj ki sale" } }, "3226275476", true, { ...mk().deps, ...extra });
+    await runParity({ id: "wamid.E", type: "text", timestamp: TS, text: { body: "aaj ki sale" } }, "3226275476", true, { ...mk({ claimError: true }).deps, ...extra });
+    assert.equal(sent.length, 0);
   });
   await t("flag default off", () => {
     assert.equal(parityEnabled({}), false);

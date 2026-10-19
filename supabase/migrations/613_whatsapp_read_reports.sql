@@ -116,7 +116,10 @@ begin
 end $$;
 
 -- Har staff / admin: baqi kaam (582 fn_admin_pending_counts, usi user ki
--- pehchan aur branch scope par). Route ki ijazat app (loadNav) lagata hai.
+-- pehchan aur 582 ke branch scope par). DB mein department rok bhi:
+-- owner / super_admin / admin ke ilawa har role ko sirf wo categories
+-- jin ka safha us ki APNI feature ijazat (v_user_feature_access, 'view')
+-- mein hai -- wohi qaida jo app ka menu (loadNav / routeAllowed) lagata hai.
 create or replace function public.fn_wa_pending_counts(p_user uuid)
 returns table (category text, group_key text, route text, pending int, mine_to_act int,
                oldest_at timestamptz, amount numeric, readable boolean, is_info boolean)
@@ -130,7 +133,13 @@ begin
   perform public.fn_wa_act_as(p_user);
   return query
     select c.category, c.group_key, c.route, c.pending, c.mine_to_act, c.oldest_at, c.amount, c.readable, c.is_info
-      from public.fn_admin_pending_counts() c;
+      from public.fn_admin_pending_counts() c
+     where v_role in ('owner', 'super_admin', 'admin')
+        or exists (select 1 from public.v_user_feature_access v
+                    where v.profile_id = p_user
+                      and 'view' = any(coalesce(v.actions, array[]::text[]))
+                      and v.route is not null and length(v.route) > 1
+                      and (c.route = v.route or c.route like v.route || '/%'));
 end $$;
 
 do $$

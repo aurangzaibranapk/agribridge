@@ -88,3 +88,36 @@ revoke all on function public.fn_wa_identity_candidates(text) from public, anon,
 revoke all on function public.fn_wa_resolve_identity(text) from public, anon, authenticated;
 grant execute on function public.fn_wa_identity_candidates(text) to service_role;
 grant execute on function public.fn_wa_resolve_identity(text) to service_role;
+
+-- ---------------------------------------------------------------------
+-- Idempotency: Meta wohi paigham (wamid) dobara bhejta hai. Har wamid ka
+-- jawab sirf EK baar. Naya, alag table (koi purana table nahi chhua).
+-- Sirf service_role; RLS on, koi policy nahi (anon/authenticated ko kuch nahi).
+-- ---------------------------------------------------------------------
+create table if not exists public.whatsapp_processed_messages (
+  wa_message_id text primary key,
+  phone_key     text,
+  created_at    timestamptz not null default now()
+);
+alter table public.whatsapp_processed_messages enable row level security;
+revoke all on table public.whatsapp_processed_messages from public, anon, authenticated;
+grant select, insert on table public.whatsapp_processed_messages to service_role;
+
+-- true = pehli baar (jawab do); false = dobara aaya (kuch na bhejo).
+create or replace function public.fn_wa_claim_message(p_wa_message_id text, p_phone_key text default null)
+returns boolean
+language plpgsql volatile security definer set search_path = public
+as $$
+declare v_n int;
+begin
+  if p_wa_message_id is null or length(trim(p_wa_message_id)) = 0 then
+    raise exception 'wa: message id zaroori';
+  end if;
+  insert into public.whatsapp_processed_messages (wa_message_id, phone_key)
+  values (left(trim(p_wa_message_id), 200), left(p_phone_key, 10))
+  on conflict (wa_message_id) do nothing;
+  get diagnostics v_n = row_count;
+  return v_n = 1;
+end $$;
+revoke all on function public.fn_wa_claim_message(text, text) from public, anon, authenticated;
+grant execute on function public.fn_wa_claim_message(text, text) to service_role;

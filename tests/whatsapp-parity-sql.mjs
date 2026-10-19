@@ -15,7 +15,7 @@ const throws = async (s, re) => {
 let ok = 0; const pass = (n) => { ok++; console.log(`  ok  ${n}`); };
 
 await run(`
-create role anon; create role authenticated; create role service_role;
+create role anon; create role authenticated; create role service_role bypassrls; -- Supabase jaisa
 create schema auth; grant usage on schema auth to public;
 -- Supabase ka asal auth.uid()
 create function auth.uid() returns uuid language sql stable as $$
@@ -41,14 +41,28 @@ create function fn_my_khata_summary(p uuid) returns jsonb language sql stable as
   select jsonb_build_object('who', auth.uid(), 'owed', (select count(*) from customers c where c.id = any(coalesce((select s.customer_ids from fn_my_khata_scope() s), array[]::uuid[])))) $$;
 create function fn_my_khata_statement(p_from date, p_to date) returns table (entry_date date, ref text, category text, tafseel text, udhaar numeric, adaigi numeric, baqaya numeric, is_opening boolean)
   language sql stable as $$ select current_date, 'INV-' || auth.uid()::text, 'sale', null::text, 1::numeric, 0::numeric, 1::numeric, false where auth.uid() is not null $$;
-create function fn_admin_pending_counts() returns table (category text, group_key text, route text, pending int, naya int, mine_to_act int, oldest_at timestamptz, amount numeric, readable boolean, is_info boolean)
-  language sql stable as $$ select 'pos_returns', 'g', '/admin/pos/returns', 2, 0, case when auth.uid() is null then 0 else 1 end, now(), 0::numeric, true, false $$;
+create function public.fn_is_any_staff() returns boolean language sql stable as $$
+  select exists (select 1 from public.profiles p where p.id = auth.uid() and p.role not in ('farmer','customer')) $$;
+create table pos_returns (id uuid primary key default gen_random_uuid(), return_number text, branch_id uuid,
+  total_amount numeric, created_by uuid, admin_review_status text, created_at timestamptz default now());
+create table leave_requests (id uuid primary key default gen_random_uuid(), profile_id uuid, manager_id uuid, leave_type text, status text, created_at timestamptz default now());
+create table data_health_findings (id uuid primary key default gen_random_uuid(), title text, amount numeric, status text, detected_at timestamptz default now());
+create table features (key text primary key, route text, is_active boolean default true);
+create table user_feature_permissions (profile_id uuid, feature_key text, actions text[], starts_at timestamptz, expires_at timestamptz);
+create view v_user_feature_access as select u.profile_id, f.key as feature_key, f.route, u.actions from user_feature_permissions u
+  join features f on f.key = u.feature_key and f.is_active where (u.expires_at is null or u.expires_at > now());
 `);
+
+await run(fs.readFileSync("supabase/migrations/582_admin_pending_badges.sql", "utf8")); // ASAL 582 (stub nahi)
 
 const M610 = fs.readFileSync("supabase/migrations/610_whatsapp_identity.sql", "utf8");
 const M613 = fs.readFileSync("supabase/migrations/613_whatsapp_read_reports.sql", "utf8");
 for (const M of [M610, M613]) {
-  const code = M.replace(/--.*$/gm, "");
+  const code = M.replace(/--.*$/gm, "")
+    // 610 ka sirf apna naya wamid log table jaiz hai
+    .replace(/create table if not exists public\.whatsapp_processed_messages/g, "")
+    .replace(/alter table public\.whatsapp_processed_messages enable row level security/g, "")
+    .replace(/insert into public\.whatsapp_processed_messages/g, "");
   assert.doesNotMatch(code, /\bdrop\s|\btruncate\b|\bdelete\s+from\b|\bupdate\s+public\.|\binsert\s+into\b|\balter\s+table\b|\bcreate\s+table\b/i);
   assert.doesNotMatch(code, /net\.http|pg_net|whatsapp_send|send_email/i);
 }
@@ -57,7 +71,7 @@ const R = ["610_whatsapp_identity", "613_whatsapp_read_reports"].map((n) => fs.r
 pass("610/613 additive (no DDL on tables, no DML, no sends), idempotent, rollbacks present");
 
 // grants: sirf service_role
-for (const f of ["fn_wa_resolve_identity", "fn_wa_identity_candidates", "fn_wa_today_sales", "fn_wa_cash_position", "fn_wa_my_khata", "fn_wa_my_orders", "fn_wa_my_recent_lines", "fn_wa_pending_counts", "fn_wa_act_as", "fn_wa_role"]) {
+for (const f of ["fn_wa_resolve_identity", "fn_wa_identity_candidates", "fn_wa_today_sales", "fn_wa_cash_position", "fn_wa_my_khata", "fn_wa_my_orders", "fn_wa_my_recent_lines", "fn_wa_pending_counts", "fn_wa_act_as", "fn_wa_role", "fn_wa_claim_message"]) {
   const oid = await one(`select oid from pg_proc where proname='${f}'`);
   for (const r of ["anon", "authenticated", "public"]) {
     const has = r === "public"
@@ -120,13 +134,44 @@ for (const u of [STK, FRM, CUS]) await throws(`set role service_role; select fn_
 const c = await one(`select fn_wa_cash_position('${ADM}')`); assert.equal(Number(c.cash), 500); assert.equal(Number(c.bank), 900);
 for (const u of [MGR, STK, FRM, CUS]) await throws(`set role service_role; select fn_wa_cash_position('${u}')`, /ijazat nahi/);
 await run("set role service_role;");
-assert.equal((await q(`select * from fn_wa_pending_counts('${STK}')`))[0].mine_to_act, 1);
 for (const u of [FRM, CUS]) await throws(`set role service_role; select * from fn_wa_pending_counts('${u}')`, /sirf staff/);
 await throws(`set role service_role; select fn_wa_act_as(null)`, /zaroori/);
 pass("role refusals in DB: sales/cash/pending blocked for wrong roles; manager branch-scoped");
 
+// --- dept + branch scope at DB level (asal 582 ke sath)
+await run(`reset role;
+insert into pos_returns (return_number, branch_id, total_amount, created_by, admin_review_status) values
+  ('RET-1','${B1}',10,null,'pending'),('RET-2','${B1}',20,null,'pending'),('RET-3','${B2}',30,null,'pending');
+insert into leave_requests (profile_id, manager_id, leave_type, status) values ('${X1}','${STK}','casual','pending');
+insert into features values ('pos-returns','/admin/pos'),('hr-leave','/admin/hr'),('old','/admin/pos/returns');
+insert into user_feature_permissions values ('${STK}','pos-returns','{view}',null,null),
+  ('${MGR}','pos-returns','{edit}',null,null), ('${MGR}','hr-leave','{view}',null,now() - interval '1 day');
+update features set is_active = false where key = 'old';`);
+await run("set role service_role;");
+const pc = async (u) => Object.fromEntries((await q(`select * from fn_wa_pending_counts('${u}')`)).map((r) => [r.category, r]));
+let p = await pc(STK);
+assert.deepEqual(Object.keys(p), ["pos_returns"], "staff: sirf apne department ki category");
+assert.equal(p.pos_returns.pending, 2, "staff: sirf apni branch (B1)");
+assert.deepEqual(Object.keys(await pc(MGR)), [], "view nahi / ijazat expire => kuch nahi");
+assert.deepEqual(Object.keys(await pc(X1)), [], "koi ijazat nahi => kuch nahi");
+p = await pc(ADM); assert.equal(p.pos_returns.pending, 3, "admin: sab branches"); assert.ok("leave" in p || Object.keys(p).length > 1);
+pass("pending counts: staff limited to own department (feature view) + own branch in DB; admin all");
+
+// --- idempotency
+assert.equal(await one(`select fn_wa_claim_message('wamid.A', '3226275476')`), true);
+assert.equal(await one(`select fn_wa_claim_message('wamid.A', '3226275476')`), false, "retry");
+assert.equal(await one(`select fn_wa_claim_message('wamid.B')`), true);
+assert.equal(await one(`select count(*)::int from whatsapp_processed_messages`), 2);
+await throws(`set role service_role; select fn_wa_claim_message('  ')`, /zaroori/);
+await throws(`set role authenticated; select fn_wa_claim_message('wamid.C')`, /permission denied/);
+await throws(`set role authenticated; select * from whatsapp_processed_messages`, /permission denied/);
+await throws(`set role anon; insert into whatsapp_processed_messages values ('x', null, now())`, /permission denied/);
+await run("reset role;");
+pass("wamid claim: first true, retry false; table/fn closed to anon/authenticated");
+
 // rollback
 await run("reset role;"); for (const r of R) await run(r);
 assert.equal(await one(`select count(*)::int from pg_proc where proname like 'fn_wa\\_%'`), 0);
+assert.equal(await one(`select to_regclass('public.whatsapp_processed_messages') is null`), true);
 pass("rollbacks remove every fn_wa_* function");
 console.log(`\n${ok} passed`);

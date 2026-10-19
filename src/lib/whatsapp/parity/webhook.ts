@@ -7,6 +7,7 @@ export function parityEnabled(env: Record<string, string | undefined> = process.
 }
 
 type Msg = {
+  id?: string;
   type: string;
   timestamp?: string | number;
   text?: { body?: string };
@@ -28,7 +29,7 @@ export async function runParity(
     download: (mediaId: string) => Promise<{ base64: string; mimeType: string } | null>;
     send: (text: string) => Promise<unknown>;
   },
-): Promise<{ handled: boolean; sent: boolean; result: ParityResult }> {
+): Promise<{ handled: boolean; sent: boolean; duplicate: boolean; result: ParityResult }> {
   const isVoice = message.type === "audio" || message.type === "voice";
   let audio: { base64: string; mimeType: string } | null = null;
   if (isVoice) {
@@ -40,9 +41,28 @@ export async function runParity(
     deps,
   );
   let sent = false;
+  let duplicate = false;
   if (result.handled && result.reply && result.canSend && signed) {
-    await deps.send(result.reply);
-    sent = true;
+    // Idempotency (610 fn_wa_claim_message): Meta ki retry par dobara jawab nahi.
+    // Bina wamid, ya claim na ho sake (error), to bhi NAHI bhejte -- shak mein chup.
+    const claimed = await claimMessage(deps.rpc, message.id, phoneKey);
+    if (claimed) {
+      await deps.send(result.reply);
+      sent = true;
+    } else {
+      duplicate = true;
+    }
   }
-  return { handled: result.handled, sent, result };
+  return { handled: result.handled, sent, duplicate, result };
+}
+
+export async function claimMessage(rpc: ParityDeps["rpc"], wamid: string | undefined, phoneKey: string | null): Promise<boolean> {
+  if (!wamid) return false;
+  try {
+    const { data, error } = await rpc("fn_wa_claim_message", { p_wa_message_id: wamid, p_phone_key: phoneKey });
+    if (error) return false;
+    return data === true;
+  } catch {
+    return false;
+  }
 }
