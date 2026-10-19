@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:hr-meetings": "npx --yes tsx tests/hr-meetings-lib.ts && node tests/hr-meetings-db.mjs",
     "test:finance": "npx --yes tsx scripts/test-finance.ts",
     "test:supplier-csv": "npx --yes tsx scripts/test-supplier-bill-csv.ts",
     "test:recovery": "npx --yes tsx scripts/test-receivable-recovery.ts && npx --yes tsx scripts/test-branch-credit-recovery.ts",

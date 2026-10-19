@@ -47,6 +47,8 @@ export const ERP_HIDDEN_ROUTES: string[] = [
   "/admin/hr/corrections",
   "/admin/hr/leave/calendar",
   "/admin/hr/leave",
+  "/admin/hr/meetings/actions",
+  "/admin/hr/meetings/new",
   "/admin/hr/probation",
   "/admin/hr/settings",
   "/admin/hr/team",

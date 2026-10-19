@@ -176,6 +176,7 @@ const CURATED_FEATURES: ErpFeature[] = [
   { section: "Administration", label: "AI ka Khata", href: "/admin/ai-usage", description: "AI usage aur cost — kitne tokens kharch hue.", who: "Malik" },
   { section: "Administration", label: "Platform / Clients", href: "/admin/platform", description: "Platform clients aur integrations ka management.", who: "Admin" },
   { section: "Administration", label: "Naukri ki Jagahein", href: "/admin/job-vacancies", description: "Naukri ki khali jagahein post karo — recruitment.", who: "HR / Admin" },
+  { section: "Administration", label: "Meetings", href: "/admin/hr/meetings", description: "Meetings ka calendar — agenda, Google Meet link, faisle aur kaam (follow-up).", who: "HR / Admin / shamil staff" },
   { section: "Administration", label: "Naukri ki Darkhwastein", href: "/admin/job-applications", description: "Job applications — kaun ne apply kiya, interview status.", who: "HR / Admin" },
   { section: "Administration", label: "HR Dashboard", href: "/admin/hr-dashboard", description: "HR ka overview — staff count, attendance, pending salaries.", who: "HR Head / Admin" },
   { section: "Administration", label: "Staff (HR)", href: "/admin/hr", description: "Tamam staff ka record — joining, salary, role.", who: "HR / Admin" },
