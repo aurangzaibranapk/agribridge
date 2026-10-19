@@ -43,6 +43,7 @@
     "test:portal-dairy": "npx --yes tsx scripts/test-portal-dairy.ts && node tests/portal-dairy-sql.mjs",
     "test:portal-dairy-pl": "npx --yes tsx scripts/test-portal-dairy-pl.ts && node tests/portal-dairy-pl-sql.mjs",
     "test:portal-breeding": "npx --yes tsx scripts/test-portal-breeding.ts && node tests/portal-breeding-sql.mjs",
+    "test:portal-customer": "npx --yes tsx scripts/test-portal-customer.ts && node tests/portal-customer-sql.mjs && node tests/customer-portal-role-enum.cjs",
     "test:portal-accounts": "npx --yes tsx scripts/test-portal-accounts.ts && node tests/portal-accounts-sql.mjs",
     "test:season-booking": "npx --yes tsx scripts/test-season-booking.ts && node tests/season-booking-sql.mjs",
     "test:hr-emails": "npx --yes tsx scripts/test-hr-emails.ts",
