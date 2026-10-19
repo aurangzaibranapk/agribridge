@@ -21,16 +21,16 @@ export function BKpi({ tone, k, lang, value, sub }: { tone: string; k: Translati
     <div className={`relative min-h-[118px] overflow-hidden rounded-2xl bg-gradient-to-br ${TONES[tone]} p-4 text-white shadow-[0_8px_20px_-10px_rgba(0,0,0,.45)]`}>
       <span className="block text-[11px] font-semibold uppercase tracking-wider text-white/90">{t(k, lang)}</span>
       <Sub2 k={k} lang={lang} className="block truncate text-[10.5px] text-white/80" />
-      <p className="mt-2 text-2xl font-bold tracking-tight">{value}</p>
+      <p className="mt-2 text-2xl font-bold tracking-tight"><span dir="ltr" className="ltr-iso">{value}</span></p>
       <p className="mt-1 truncate text-[11.5px] text-white/90" title={sub}>{sub}</p>
-      <span className="pointer-events-none absolute -bottom-6 -right-5 h-20 w-20 rounded-full bg-white/10" />
+      <span className="pointer-events-none absolute -bottom-6 -end-5 h-20 w-20 rounded-full bg-white/10" />
     </div>
   );
 }
 export function BHero({ title, sub, children, admin }: { title: React.ReactNode; sub: string; children?: React.ReactNode; admin?: boolean }) {
   return (
     <section className={`relative overflow-hidden rounded-3xl p-6 text-white shadow-lg ${admin ? "bg-gradient-to-r from-blue-900 via-teal-700 to-yellow-600" : "bg-gradient-to-r from-emerald-800 via-green-700 to-yellow-600 dark:from-emerald-950 dark:via-green-900 dark:to-yellow-800"}`}>
-      <span className="pointer-events-none absolute -right-16 -top-20 h-72 w-72 rounded-full bg-white/10" />
+      <span className="pointer-events-none absolute -end-16 -top-20 h-72 w-72 rounded-full bg-white/10" />
       <div className="relative flex flex-wrap items-end justify-between gap-4">
         <div><h1 className="text-2xl font-bold tracking-tight">{title}</h1><p className="mt-1 text-sm text-white/85">{sub}</p></div>
         <div className="flex flex-wrap gap-2">{children}</div>
@@ -98,7 +98,7 @@ export function AlertRow({ task, lang, asOf, children }: { task: DueTask; lang: 
     </div>
   );
   return (
-    <div className="mb-2 flex items-center gap-3 rounded-xl border border-l-4 border-surface-200 bg-surface-50 px-3 py-2.5 text-[13px] dark:border-surface-700 dark:bg-surface-800/60" style={{ borderLeftColor: st.color }}>
+    <div className="mb-2 flex items-center gap-3 rounded-xl border border-s-4 border-surface-200 bg-surface-50 px-3 py-2.5 text-[13px] dark:border-surface-700 dark:bg-surface-800/60" style={{ borderInlineStartColor: st.color }}>
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-surface-200 bg-white text-base dark:border-surface-700 dark:bg-surface-900">{st.icon}</span>
       {href ? <Link href={href} className="min-w-0 flex-1">{body}</Link> : body}
       <div className="flex shrink-0 items-center gap-1.5"><Pill tone={b.tone}>{b.text}</Pill>{children}</div>
@@ -110,7 +110,7 @@ const LEG: [string, TranslationKey][] = [["heat", "bh_lg_heat"], ["ai", "bh_lg_a
 export function Legend({ lang }: { lang: Lang }) {
   return (
     <div className="mt-3 flex flex-wrap gap-3 text-[11.5px] text-surface-500 dark:text-slate-400">
-      {LEG.map(([k, key]) => <span key={k}><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm align-[-1px]" style={{ background: EVENT_COLOR[k] }} />{t(key, lang)}</span>)}
+      {LEG.map(([k, key]) => <span key={k}><span className="me-1.5 inline-block h-2.5 w-2.5 rounded-sm align-[-1px]" style={{ background: EVENT_COLOR[k] }} />{t(key, lang)}</span>)}
     </div>
   );
 }
@@ -148,8 +148,8 @@ export function Ring({ pct, color }: { pct: number | null; color: string }) {
 export function TLItem({ color, date, title, sub }: { color: string; date: string; title: React.ReactNode; sub?: React.ReactNode }) {
   return (
     <div className="relative pb-4">
-      <span className="absolute -left-[23px] top-0.5 h-3.5 w-3.5 rounded-full ring-[3px] ring-white dark:ring-surface-900" style={{ background: color, boxShadow: `0 0 0 5px ${color}33` }} />
-      <span className="float-right text-[11.5px] text-surface-500 dark:text-slate-400">{date}</span>
+      <span className="absolute -start-[23px] top-0.5 h-3.5 w-3.5 rounded-full ring-[3px] ring-white dark:ring-surface-900" style={{ background: color, boxShadow: `0 0 0 5px ${color}33` }} />
+      <span className="float-end text-[11.5px] text-surface-500 dark:text-slate-400">{date}</span>
       <b className="text-[13px] text-surface-900 dark:text-white">{title}</b>
       {sub && <p className="mt-0.5 text-xs text-surface-500 dark:text-slate-400">{sub}</p>}
     </div>

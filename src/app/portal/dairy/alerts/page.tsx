@@ -71,7 +71,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: Recor
                   <input type="hidden" name="type" value={p} /><input type="hidden" name="on" value={on ? "0" : "1"} />
                   <span className="text-surface-800 dark:text-slate-200">{TASK_STYLE[p].icon} {L(`bh_t_${p}` as TranslationKey)}</span>
                   <button aria-pressed={on} aria-label={L(`bh_t_${p}` as TranslationKey)} className={`relative h-6 w-11 rounded-full transition ${on ? "bg-green-600" : "bg-surface-300 dark:bg-surface-700"}`}>
-                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${on ? "left-[22px]" : "left-0.5"}`} />
+                    <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${on ? "start-[22px]" : "start-0.5"}`} />
                   </button>
                 </form>
               );
@@ -82,7 +82,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: Recor
             <div className="flex items-center justify-between py-2 text-[13px]"><span className="text-surface-800 dark:text-slate-200">📱 {L("bh_ch_app")}</span><span className="rounded-full bg-green-100 px-2.5 py-0.5 text-[11px] font-semibold text-green-700 dark:bg-green-500/20 dark:text-green-200">{L("bh_on")}</span></div>
             <div className="flex items-center justify-between py-2 text-[13px] opacity-60" aria-disabled>
               <span className="text-surface-800 dark:text-slate-200">💬 WhatsApp <span className="block text-[11px] text-surface-500">{L("bh_ch_wa_note")}</span></span>
-              <span className="relative h-6 w-11 cursor-not-allowed rounded-full bg-surface-300 dark:bg-surface-700" title={L("bh_ch_wa_note")}><span className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow" /></span>
+              <span className="relative h-6 w-11 cursor-not-allowed rounded-full bg-surface-300 dark:bg-surface-700" title={L("bh_ch_wa_note")}><span className="absolute start-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow" /></span>
             </div>
             <p className="mt-2 text-[11.5px] text-surface-500">{L("bh_ch_note")}</p>
           </Card>

@@ -26,9 +26,9 @@ export function Kpi({ tone, label, value, sub }: { tone: string; label: string; 
   return (
     <div className={`relative min-h-[112px] overflow-hidden rounded-2xl bg-gradient-to-br ${KPI[tone]} p-4 text-white shadow-[0_8px_20px_-10px_rgba(0,0,0,.45)]`}>
       <span className="text-[11px] font-semibold uppercase tracking-wider text-white/85">{label}</span>
-      <p className="mt-2 text-2xl font-bold tracking-tight">{value}</p>
+      <p className="mt-2 text-2xl font-bold tracking-tight"><span dir="ltr" className="ltr-iso">{value}</span></p>
       <p className="mt-1 truncate text-[11.5px] text-white/90" title={sub}>{sub}</p>
-      <span className="pointer-events-none absolute -bottom-6 -right-5 h-20 w-20 rounded-full bg-white/10" />
+      <span className="pointer-events-none absolute -bottom-6 -end-5 h-20 w-20 rounded-full bg-white/10" />
     </div>
   );
 }
@@ -36,7 +36,7 @@ export function Kpi({ tone, label, value, sub }: { tone: string; label: string; 
 export function Hero({ title, sub, children }: { title: React.ReactNode; sub: string; children?: React.ReactNode }) {
   return (
     <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-emerald-800 via-green-700 to-yellow-600 p-6 text-white shadow-lg dark:from-emerald-950 dark:via-green-900 dark:to-yellow-800">
-      <span className="pointer-events-none absolute -right-16 -top-20 h-72 w-72 rounded-full bg-white/10" />
+      <span className="pointer-events-none absolute -end-16 -top-20 h-72 w-72 rounded-full bg-white/10" />
       <div className="relative flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
@@ -111,8 +111,8 @@ export function MilkChart({ series, lang, height = 250 }: { series: DayRow[]; la
 export function ChartLegend({ lang }: { lang: Lang }) {
   return (
     <div className="mt-1 flex flex-wrap gap-4 text-xs text-surface-500 dark:text-slate-400">
-      <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-sky-500" />{t("dy_morning", lang)} (AM)</span>
-      <span><span className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-violet-500" />{t("dy_evening", lang)} (PM) · {t("dy_stack_note", lang)}</span>
+      <span><span className="me-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-sky-500" />{t("dy_morning", lang)} (AM)</span>
+      <span><span className="me-1.5 inline-block h-2.5 w-2.5 rounded-sm bg-violet-500" />{t("dy_evening", lang)} (PM) · {t("dy_stack_note", lang)}</span>
     </div>
   );
 }
@@ -135,7 +135,7 @@ export function Donut({ parts, size = 170, centre, word }: { parts: { label: str
       </svg>
       <div className="grid gap-2 text-[13px] text-surface-700 dark:text-slate-200">
         {parts.map((p) => (
-          <div key={p.label}><span className="mr-2 inline-block h-2.5 w-2.5 rounded-sm" style={{ background: p.color }} />{p.label} <b>{p.value}</b></div>
+          <div key={p.label}><span className="me-2 inline-block h-2.5 w-2.5 rounded-sm" style={{ background: p.color }} />{p.label} <b>{p.value}</b></div>
         ))}
       </div>
     </div>
@@ -158,7 +158,7 @@ export const fmtL = (n: number) => `${(Math.round(n * 10) / 10).toLocaleString("
 export function ErrorNote({ e, lang }: { e?: string; lang: Lang }) {
   if (!e) return null;
   const key = (/^(dy|dy2)_err_[a-z_]+$/.test(e) && t(e as TranslationKey, lang) && t(e as TranslationKey, lang) !== e ? e : "dy_err_generic") as TranslationKey;
-  return <p className="rounded-xl bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200">{t(key, lang)}</p>;
+  return <p role="alert" className="rounded-xl bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-200"><span aria-hidden>⚠ </span>{t(key, lang)}</p>;
 }
 export function Thumb({ url, emoji, size = 38 }: { url?: string | null; emoji: string; size?: number }) {
   return url ? (

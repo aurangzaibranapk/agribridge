@@ -8,6 +8,7 @@ import { longDate } from "@/components/portal/khata/khata-parts";
 import { Field, L3, Lock, Notice, PageHead, Panel, PanelHead, Pill, Row, btnGhost, btnPrimary, inputCls } from "@/components/portal/customer/cust-parts";
 import { NoCustomer } from "@/components/portal/customer/gate";
 import { requestChangeAction } from "../actions";
+import { EmptyState } from "@/components/portal/empty-state";
 
 export const dynamic = "force-dynamic";
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
@@ -52,7 +53,7 @@ export default async function CustomerProfilePage({ searchParams }: { searchPara
             <Box label={L("pc_f_branch")} value={c.branch} /><Box label={L("pc_f_address")} value={c.address} />
             <Box label={L("pc_f_email")} value={c.email} /><Box label={L("pc_f_contact")} value={c.contact_person} />
           </div>
-          <form action={requestChangeAction} className="mt-2 rounded-xl border border-surface-200 p-3 dark:border-[#1e3160]">
+          <form id="pc-change" action={requestChangeAction} className="mt-2 rounded-xl border border-surface-200 p-3 dark:border-[#1e3160]">
             <b className="mb-2 block text-[13px] text-surface-900 dark:text-white">✏ {L("pc_req_change")}</b>
             <div className="grid gap-x-3 sm:grid-cols-2">
               <Field label={L("pc_change_field")}>
@@ -80,7 +81,7 @@ export default async function CustomerProfilePage({ searchParams }: { searchPara
             <Row><span>👨‍🌾 {L("pc_farmer_profile")} {c.farmer_code ?? ""}</span><Pill tone={c.farmer_code ? "violet" : "slate"}>{c.farmer_code ? L("pc_linked_b") : "—"}</Pill></Row>
             {animals > 0 && <Row><span>🐄 {L("pc_dairy")} ({animals})</span><Pill tone="green">{L("pc_ad_st_active")}</Pill></Row>}
             {pending.map((p) => <Row key={p.id}><span>📨 {L("pc_pending_change")}</span><Pill tone="amber">{L(`pc_fld_${p.field}` as TranslationKey)} · {L(`pc_st_${p.status}` as TranslationKey)}</Pill></Row>)}
-            {pending.length === 0 && <Row><span>📨 {L("pc_pending_change")}</span><span>—</span></Row>}
+            {pending.length === 0 && <EmptyState compact tone="blue" icon="📨" lang={lang} titleKey="ph6_es_changes_t" bodyKey="ph6_es_changes_b" cta={{ href: "#pc-change", label: `✏ ${L("pc_req_change")}` }} />}
           </Panel>
           <Panel>
             <PanelHead title={<L3 k="pc_prefs" lang={lang} />} />

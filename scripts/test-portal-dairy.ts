@@ -103,6 +103,6 @@ test("pages keep verification gate and never use service role", () => {
     assert.doesNotMatch(s, /from\("milk_entries"\)/, `${f}: ERP only via read-only RPC`);
   }
   assert.match(fs.readFileSync("src/app/portal/dairy/actions.ts", "utf8"), /gate\.allowed/);
-  assert.match(fs.readFileSync("src/components/portal/sidebar.tsx", "utf8"), /\/portal\/dairy/);
+  assert.match(fs.readFileSync("src/lib/portal/nav.ts", "utf8"), /\/portal\/dairy/); // phase 6: menu ab lib/portal/nav.ts mein
 });
 console.log(`portal-dairy: ${passed} passed`);
