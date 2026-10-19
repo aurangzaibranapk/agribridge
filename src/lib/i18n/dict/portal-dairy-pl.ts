@@ -125,6 +125,8 @@ export const portalDairyPlDict = {
   ad_home_record: { en: "home record", rm: "ghar ka record", ur: "گھر کا ریکارڈ" },
   ad_all: { en: "all farmers", rm: "sab kisan", ur: "تمام کسان" },
   ad_losses: { en: "in loss", rm: "nuqsan mein", ur: "نقصان میں" },
+  ad_cpl_basis: { en: "farmers with milk record", rm: "kisan jin ka doodh record hai", ur: "کسان جن کا دودھ ریکارڈ ہے" },
+  ad_cpl_avg: { en: "avg", rm: "ausat", ur: "اوسط" },
   ad_f_all: { en: "All", rm: "Sab", ur: "سب" },
   ad_f_profit: { en: "Profit", rm: "Munafa", ur: "منافع" },
   ad_f_loss: { en: "Loss", rm: "Nuqsan", ur: "نقصان" },

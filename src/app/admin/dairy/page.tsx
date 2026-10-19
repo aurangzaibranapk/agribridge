@@ -36,6 +36,7 @@ export default async function AdminDairy({ searchParams }: { searchParams: Recor
   return (
     <div className="mx-auto max-w-7xl space-y-5 px-4 py-6 sm:px-6">
       <Hero title={<>🐄 {L("ad_title")} {lang !== "ur" && <span dir="rtl">· {t("ad_title", "ur")}</span>}</>} sub={`${per.from} → ${per.to} · ${L("ad_sub")}`}>
+        <Link href="/admin/dairy/breeding" className="rounded-xl border border-white/30 bg-white/10 px-3.5 py-2 text-xs font-semibold text-white">🧬 {L("bh_ad_title")}</Link>
         <SheetsButton href={csvHref} label={L("ad_sheets")} help={L("ad_sheets_help")} />
       </Hero>
       {error && <ErrorNote e="dy2_err_generic" lang={lang} />}
@@ -75,7 +76,7 @@ export default async function AdminDairy({ searchParams }: { searchParams: Recor
               ))}
               <tr className="bg-surface-50 font-bold text-surface-900 dark:bg-surface-800/60 dark:text-white">
                 <td className="py-2.5" colSpan={3}>{L("ad_grand")}</td><td className="text-right">{g.animals}</td><td className="text-right">{Math.round(g.litres).toLocaleString("en-IN")}</td>
-                <td className="text-right">{rs(g.expense)}</td><td className="text-right">{rs(g.income)}</td><td className="text-right"><Money v={g.profit} /></td><td className="text-right">{g.cost_per_litre === null ? "—" : `Rs ${Math.round(g.cost_per_litre)}`}</td><td />
+                <td className="text-right">{rs(g.expense)}</td><td className="text-right">{rs(g.income)}</td><td className="text-right"><Money v={g.profit} /></td><td className="text-right">{g.cost_per_litre === null ? "—" : `Rs ${Math.round(g.cost_per_litre)}`}<div className="text-[10px] font-normal text-surface-500 dark:text-slate-400">{g.milk_farmers} {L("ad_cpl_basis")}{g.avg_cost_per_litre === null ? "" : ` · ${L("ad_cpl_avg")} Rs ${Math.round(g.avg_cost_per_litre)}`}</div></td><td />
               </tr>
             </tbody>
           </table>
