@@ -6,6 +6,9 @@ import { sendWhatsAppMessage, downloadWhatsAppMedia, normalizeWhatsAppPhone } fr
 import { handleStaffMessage } from "@/lib/staff-whatsapp-router";
 import { handleMachineryConfirmation } from "@/lib/machinery-whatsapp-confirm";
 import { parityEnabled, runParity } from "@/lib/whatsapp/parity/webhook";
+import { inboxEnabled } from "@/lib/whatsapp/inbox/flag";
+import { mirrorInbound } from "@/lib/whatsapp/inbox/ingest";
+import { draftReplyAi } from "@/lib/whatsapp/inbox/ai";
 import { transcribeVoice, classifyIntentAi } from "@/lib/whatsapp/parity/transcribe";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { buildReplyDraftRow, canAutoReplyToStaff, checkSignature, readInbound, WHATSAPP_REPLY_INTENT } from "@/lib/whatsapp/inbound-policy";
@@ -69,6 +72,34 @@ export async function POST(request: NextRequest) {
       }
       await sendWhatsAppMessage(fromPhone, text);
     };
+
+    // WhatsApp Chat Inbox (614-618): har inbound DARJ (bhejta kuch nahi).
+    // Flag band ya migration na lagi ho to chup -- purana raasta waisa hi.
+    if (inboxEnabled()) {
+      await mirrorInbound({
+        rpc: async (fn, args) => {
+          const { data, error } = await serviceClient.rpc(fn as never, args as never);
+          return { data, error: error ? { message: error.message } : null };
+        },
+        download: async (id) => {
+          const m = await downloadWhatsAppMedia(id);
+          return m ? { base64: m.base64, mimeType: m.mimeType } : null;
+        },
+        upload: async (path, b64, mime) => {
+          const { error } = await serviceClient.storage.from("wa-media").upload(path, Buffer.from(b64, "base64"), { contentType: mime, upsert: false });
+          return !error;
+        },
+        setMediaPath: async (id, path) => { await serviceClient.from("wa_messages" as never).update({ media_path: path } as never).eq("id", id); },
+        conversationOf: async (id) => {
+          const { data } = await serviceClient.from("wa_messages" as never).select("conversation_id").eq("id", id).maybeSingle();
+          return (data as { conversation_id?: string } | null)?.conversation_id ?? null;
+        },
+        transcribe: transcribeVoice,
+        draftReply: draftReplyAi,
+      }, message, phoneKey(fromPhone), fromPhone, msg.profileName ?? null).catch((e) => {
+        console.error("[whatsapp-webhook] inbox mirror error -- purana raasta", e);
+      });
+    }
 
     // WhatsApp = App (Phase 1, sirf parhna). Flag band ho, ya 610/613
     // na lage hon, to ye kuch nahi karta aur purana raasta chalta hai.
