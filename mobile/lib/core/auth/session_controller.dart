@@ -29,13 +29,14 @@ class SessionController extends AsyncNotifier<AppProfile?> {
       id: 'demo-${role.name}',
       name: switch (role) {
         AppRole.admin => 'Admin User',
-        AppRole.farmer => 'Kisan Bhai',
-        AppRole.staff => 'Anwar Ul Hassan',
+        AppRole.farmer => 'Kisan Ahmed (Demo)',
+        AppRole.staff => 'Demo Salesman',
+        AppRole.customer => 'Demo Karyana Store',
         AppRole.dealer => 'Dealer',
         _ => 'Customer',
       },
       role: role,
-      rawRole: role.name,
+      rawRole: role == AppRole.staff ? 'sales_staff' : role.name,
       branchId: 'testing-branch',
       shopId: 'testing-shop',
     ));

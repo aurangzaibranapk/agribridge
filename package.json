@@ -55,7 +55,7 @@
     "test:login-crash": "npx --yes tsx scripts/test-login-crash.ts",
     "test:pos-card-cash": "npx --yes tsx scripts/test-pos-card-cash-dupes.ts",
     "test:portal-polish": "npx --yes tsx scripts/test-portal-polish.ts && node tests/portal-polish-sql.mjs",
-    "test:mobile-app": "npx --yes tsx scripts/test-mobile-api.ts && node tests/mobile-app-sql.mjs"
+    "test:mobile-app": "npx --yes tsx scripts/test-mobile-api.ts && node tests/mobile-app-sql.mjs && node tests/mobile-roles-sql.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",

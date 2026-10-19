@@ -98,7 +98,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     style: TextStyle(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 10),
                 Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center,
-                  children: [AppRole.admin, AppRole.farmer, AppRole.staff, AppRole.dealer]
+                  children: [AppRole.farmer, AppRole.customer, AppRole.staff, AppRole.admin]
                     .map((role) => OutlinedButton(
                       onPressed: () => ref.read(sessionProvider.notifier).useDemoRole(role),
                       child: Text(role.label),

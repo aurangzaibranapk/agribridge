@@ -9,7 +9,9 @@ import '../core/connectivity/connectivity_provider.dart';
 import '../core/notifications/push_service.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/login_screen.dart';
-import '../features/dashboard/role_dashboard.dart';
+import '../features/roles/role_home.dart';
+import '../features/roles/role_prefs.dart';
+import '../features/roles/role_ui.dart';
 
 class AgriBridgeApp extends ConsumerWidget {
   const AgriBridgeApp({super.key});
@@ -22,20 +24,23 @@ class AgriBridgeApp extends ConsumerWidget {
         unawaited(PushService.syncForSignedInUser());
       }
     });
+    final lang = ref.watch(appLangProvider);
     final offline = isOffline(ref.watch(connectivityProvider).valueOrNull);
     return MaterialApp(
       title: 'Al Rana Traders — AgriBridge',
       debugShowCheckedModeBanner: false,
-      theme: buildTheme(),
-      builder: (context, child) => Column(children: [
+      theme: buildCreamTheme(),
+      darkTheme: buildNavyTheme(),
+      themeMode: ref.watch(navyDarkProvider) ? ThemeMode.dark : ThemeMode.light,
+      builder: (context, child) => LangScope(lang: lang, child: Directionality(textDirection: lang == AppLang.ur ? TextDirection.rtl : TextDirection.ltr, child: Column(children: [
         if (offline) const Material(color: Color(0xFF9A6700), child: SafeArea(bottom: false, child: SizedBox(height: 28, child: Center(child: Text('Offline — saved data hi nazar aa sakta hai', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)))))),
         Expanded(child: child ?? const SizedBox.shrink()),
-      ]),
+      ]))),
       home: session.when(
         loading: () => const _Splash(),
         error: (error, _) => LoginScreen(initialError: '$error'),
         data: (profile) =>
-            profile == null ? const LoginScreen() : RoleDashboard(profile: profile),
+            profile == null ? const LoginScreen() : RoleHome(profile: profile),
       ),
     );
   }
