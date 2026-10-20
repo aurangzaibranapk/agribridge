@@ -51,7 +51,7 @@ export function SupplierForm({ editSupplier, onDoneEditing }: { editSupplier?: S
       <h2 className="mb-3 font-display text-base font-semibold text-surface-900 dark:text-white">{editSupplier ? "Edit Supplier" : "New Supplier"}</h2>
       {safeState.error && (
         <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
-          {safeState.error}
+          {safeState.error.replace(/^DUPLICATE_PHONE:\s*/, "")}
         </p>
       )}
       {safeState.success && (
@@ -83,6 +83,12 @@ export function SupplierForm({ editSupplier, onDoneEditing }: { editSupplier?: S
             <Input ref={phoneRef} id="phone_number" name="phone_number" defaultValue={editSupplier?.phone_number ?? ""} className="flex-1" />
             <VoiceDictationButton onResult={(text) => { if (phoneRef.current) phoneRef.current.value = text; }} />
           </div>
+          {safeState.error?.startsWith("DUPLICATE_PHONE") && (
+            <label className="mt-2 flex items-start gap-2 text-xs text-amber-800">
+              <input type="checkbox" name="confirm_duplicate" value="1" className="mt-0.5" />
+              Yeh number pehle se hai. Phir bhi save karein.
+            </label>
+          )}
         </div>
         <div>
           <Label htmlFor="email">{t("c_email", lang)}</Label>

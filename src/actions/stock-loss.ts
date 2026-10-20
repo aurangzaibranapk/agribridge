@@ -15,7 +15,7 @@ const HQ_ROLES = ["super_admin", "admin", "owner"];
 async function generateLossNumber(): Promise<string> {
   const serviceClient = createServiceClient();
   const year = new Date().getFullYear() % 100;
-  const { data, error } = await (serviceClient as any).rpc("fn_next_year_counter", { p_kind: "stock_loss", p_year: year });
+  const { data, error } = await (serviceClient as any).rpc("fn_next_year_counter", { p_table: "stock_loss", p_year: year });
   if (error || data == null) throw new Error(error?.message ?? "Loss number nahi bana.");
   return `LOSS-${year}-${String(Number(data)).padStart(5, "0")}`;
 }

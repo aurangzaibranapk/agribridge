@@ -1,6 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { reverseCashBookById } from "@/lib/finance/cash-book";
 import { aajKaKhana } from "@/lib/utils/format";
 import { failed, postQistSettlement, postQistWriteOff } from "@/lib/ledger/rules";
 import { postFarmerLedger } from "@/lib/farmer-ledger";
@@ -105,26 +107,31 @@ export async function receiveQistCash(_p: QistState, fd: FormData): Promise<Qist
   const { data: plan } = await sb.from("qist_plans").select("id, code, party_type, party_id, origin, branch_id, deduct_source, status").eq("id", planId).single();
   if (!plan || plan.status !== "active") return err("Sirf chalu plan par wasooli.");
   if (plan.deduct_source !== "cash") return err("Is plan ki qist adaigi se katti hai -- naqad wasooli sirf 'Naqad' plan par.");
-  const { data: txn, error: tErr } = await sb.from("finance_transactions").insert({
+  const service = createServiceClient();
+  const { data: txn, error: tErr } = await service.from("finance_transactions").insert({
     account_id: accountId, transaction_type: "income", category: "Qist wasooli", amount, transaction_date: aajKaKhana(), notes: `Qist ${plan.code}`, created_by: user?.id ?? null,
   }).select("id").single();
-  if (tErr) return err(tErr);
+  if (tErr || !txn) return err(tErr ?? "Cash Book ki qatar nahi bani.");
   const { data: applied, error } = await sb.rpc("fn_qist_apply", {
     p_party_type: plan.party_type, p_party_id: plan.party_id, p_source: "cash", p_as_of: "2999-12-31",
     p_payout: amount, p_source_table: "finance_transactions", p_source_id: txn.id,
   });
-  if (error) { await sb.from("finance_transactions").delete().eq("id", txn.id); return err(error); }
+  if (error) { await reverseCashBookById(txn.id, "Qist apply nahi hui"); return err(error); }
   const got = Number(applied?.deduct ?? 0);
-  if (got <= 0) { await sb.from("finance_transactions").delete().eq("id", txn.id); return err("Koi qist wajib nahi."); }
-  if (got < amount) await sb.from("finance_transactions").update({ amount: got }).eq("id", txn.id);
+  if (got <= 0) { await reverseCashBookById(txn.id, "Koi qist wajib nahi"); return err("Koi qist wajib nahi."); }
+  if (got < amount) await service.from("finance_transactions").update({ amount: got }).eq("id", txn.id);
   const posted = await postQistSettlement({
     partyType: plan.party_type, partyId: plan.party_id, receivable: receivableAccount(plan.party_type, plan.origin),
     cashAccountId: accountId, amount: got, description: `Qist ${plan.code} -- naqad wasooli`,
     ctx: { createdBy: user?.id ?? null, branchId: plan.branch_id, claims: [{ table: "finance_transactions", rowId: txn.id }] },
   });
   if (failed(posted)) {
-    await sb.rpc("fn_qist_reverse_source", { p_source_table: "finance_transactions", p_source_id: txn.id, p_reason: posted.error });
-    await sb.from("finance_transactions").delete().eq("id", txn.id);
+    const reversed = await createServiceClient().rpc("fn_qist_reverse_source", {
+      p_source_table: "finance_transactions", p_source_id: txn.id, p_reason: posted.error ?? "journal nakaam",
+    });
+    const cashBack = await reverseCashBookById(txn.id, posted.error ?? "Qist ledger nahi gaya");
+    if (reversed.error) return err(`Journal nahi bana (${posted.error}). Wapsi bhi nahi hui: ${reversed.error.message}`);
+    if (cashBack) return err(`Journal nahi bana (${posted.error}). Cash book wapsi nahi hui: ${cashBack}`);
     return err(posted.error);
   }
   await sb.rpc("fn_qist_set_deduction_journal", { p_source_table: "finance_transactions", p_source_id: txn.id, p_journal: posted.id });

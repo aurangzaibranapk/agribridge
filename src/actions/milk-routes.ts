@@ -2,6 +2,8 @@
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
+import { requireAction } from "@/lib/access/guard";
+import { routeVariance } from "@/lib/dairy/rules";
 
 export interface ActionState {
   error?: string;
@@ -9,6 +11,8 @@ export interface ActionState {
 }
 
 export async function recordRouteCollection(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireAction("milk-collection.routes", "create");
+  if ("error" in gate) return { error: gate.error };
   const supabase = createClient();
   const routeName = String(formData.get("route_name") ?? "").trim();
   const branchId = (formData.get("branch_id") as string) || null;
@@ -22,18 +26,10 @@ export async function recordRouteCollection(_prev: ActionState, formData: FormDa
   if (!routeName) return { error: "Route naam zaroori hai." };
   if (!fieldVolume || fieldVolume <= 0) return { error: "Field collected volume zaroori hai." };
 
-  const { data: settings } = await supabase.from("milk_rate_settings").select("shortage_alert_threshold").limit(1).single();
-  const threshold = Number(settings?.shortage_alert_threshold ?? 0.5);
-
-  let shortageLiters: number | null = null;
-  let shortagePercentage: number | null = null;
-  let isRedAlert = false;
-
-  if (chillerVolume !== null) {
-    shortageLiters = fieldVolume - chillerVolume;
-    shortagePercentage = fieldVolume > 0 ? (shortageLiters / fieldVolume) * 100 : 0;
-    isRedAlert = shortagePercentage > threshold;
-  }
+  const { data: settings } = await supabase.from("milk_rate_settings").select("shortage_alert_threshold").limit(1).maybeSingle();
+  if (settings?.shortage_alert_threshold == null) return { error: "Kami ki hadd settings mein nahi." };
+  const threshold = Number(settings.shortage_alert_threshold);
+  const variance = routeVariance(fieldVolume, chillerVolume, threshold);
 
   const {
     data: { user },
@@ -47,9 +43,10 @@ export async function recordRouteCollection(_prev: ActionState, formData: FormDa
     shift,
     field_collected_volume: fieldVolume,
     chiller_received_volume: chillerVolume,
-    shortage_liters: shortageLiters,
-    shortage_percentage: shortagePercentage ? Math.round(shortagePercentage * 1000) / 1000 : null,
-    is_red_alert: isRedAlert,
+    shortage_liters: variance.shortageLiters,
+    shortage_percentage: variance.shortagePercentage,
+    is_red_alert: variance.isRedAlert,
+    variance_kind: variance.varianceKind,
     notes,
     created_by: user?.id ?? null,
   });
@@ -60,6 +57,8 @@ export async function recordRouteCollection(_prev: ActionState, formData: FormDa
 }
 
 export async function updateChillerReceived(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireAction("milk-collection.routes", "edit");
+  if ("error" in gate) return { error: gate.error };
   const supabase = createClient();
   const entryId = String(formData.get("entry_id") ?? "");
   const chillerVolume = Number(formData.get("chiller_received_volume") ?? 0);
@@ -69,20 +68,18 @@ export async function updateChillerReceived(_prev: ActionState, formData: FormDa
   const { data: entry } = await supabase.from("milk_route_collections").select("field_collected_volume").eq("id", entryId).single();
   if (!entry) return { error: "Entry nahi mila." };
 
-  const { data: settings } = await supabase.from("milk_rate_settings").select("shortage_alert_threshold").limit(1).single();
-  const threshold = Number(settings?.shortage_alert_threshold ?? 0.5);
-
-  const shortageLiters = entry.field_collected_volume - chillerVolume;
-  const shortagePercentage = entry.field_collected_volume > 0 ? (shortageLiters / entry.field_collected_volume) * 100 : 0;
-  const isRedAlert = shortagePercentage > threshold;
+  const { data: settings } = await supabase.from("milk_rate_settings").select("shortage_alert_threshold").limit(1).maybeSingle();
+  if (settings?.shortage_alert_threshold == null) return { error: "Kami ki hadd settings mein nahi." };
+  const variance = routeVariance(Number(entry.field_collected_volume), chillerVolume, Number(settings.shortage_alert_threshold));
 
   const { error } = await supabase
     .from("milk_route_collections")
     .update({
       chiller_received_volume: chillerVolume,
-      shortage_liters: shortageLiters,
-      shortage_percentage: Math.round(shortagePercentage * 1000) / 1000,
-      is_red_alert: isRedAlert,
+      shortage_liters: variance.shortageLiters,
+      shortage_percentage: variance.shortagePercentage,
+      is_red_alert: variance.isRedAlert,
+      variance_kind: variance.varianceKind,
     })
     .eq("id", entryId);
   if (error) return { error: error.message };

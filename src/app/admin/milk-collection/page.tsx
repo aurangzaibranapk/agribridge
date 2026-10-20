@@ -51,10 +51,21 @@ export default async function AdminMilkCollectionPage() {
   return (
     <div>
       <PageHeader title={t("mk_title", lang)} description={t("mk_subtitle", lang)} />
-      <MilkClient farmers={farmers ?? []} entries={entries} balances={normalizedBalances} branches={branches ?? []} />
+      <MilkClient
+        farmers={farmers ?? []}
+        entries={entries}
+        balances={normalizedBalances}
+        branches={branches ?? []}
+        formula={rateSettings ? { snfConstant: Number(rateSettings.snf_constant), referenceTs: Number(rateSettings.reference_ts) } : null}
+      />
       <FarmerSettingsPanel
         farmers={(farmers ?? []) as any}
-        rateSettings={rateSettings ?? { standard_rate: 145, self_dropoff_incentive: 10, snf_constant: 0.805, reference_ts: 13 }}
+        rateSettings={rateSettings ? {
+          standard_rate: Number(rateSettings.standard_rate),
+          self_dropoff_incentive: Number(rateSettings.self_dropoff_incentive),
+          snf_constant: Number(rateSettings.snf_constant),
+          reference_ts: Number(rateSettings.reference_ts),
+        } : null}
         migrations={migrations}
       />
     </div>

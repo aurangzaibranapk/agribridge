@@ -5,7 +5,7 @@ create unique index if not exists grain_sale_counters_year_uidx on public.grain_
 create unique index if not exists stock_loss_counters_year_uidx on public.stock_loss_counters (year);
 create unique index if not exists agri_dispatch_counters_year_uidx on public.agri_dispatch_counters (year);
 
-create or replace function public.fn_next_year_counter(p_kind text, p_year int)
+create or replace function public.fn_next_year_counter(p_table text, p_year int)
 returns int
 language plpgsql
 security definer
@@ -13,31 +13,38 @@ set search_path = public
 as $$
 declare
   v_next int;
+  v_table text;
 begin
-  if p_year is null then
-    raise exception 'Saal zaroori hai.';
-  end if;
-  perform pg_advisory_xact_lock(hashtextextended('counter:' || p_kind || ':' || p_year::text, 0));
-  if p_kind = 'grain_sale' then
-    insert into public.grain_sale_counters (year, last_number) values (p_year, 1)
-    on conflict (year) do update set last_number = public.grain_sale_counters.last_number + 1
-    returning last_number into v_next;
-  elsif p_kind = 'stock_loss' then
-    insert into public.stock_loss_counters (year, last_number) values (p_year, 1)
-    on conflict (year) do update set last_number = public.stock_loss_counters.last_number + 1
-    returning last_number into v_next;
-  elsif p_kind = 'agri_dispatch' then
-    insert into public.agri_dispatch_counters (year, last_number) values (p_year, 1)
-    on conflict (year) do update set last_number = public.agri_dispatch_counters.last_number + 1
-    returning last_number into v_next;
+  if p_table in (
+    'pos_deposit_counters', 'pos_shift_counters', 'agri_order_counters',
+    'agri_payment_counters', 'agri_return_counters',
+    'grain_sale_counters', 'stock_loss_counters', 'agri_dispatch_counters'
+  ) then
+    v_table := p_table;
+  elsif p_table = 'grain_sale' then
+    v_table := 'grain_sale_counters';
+  elsif p_table = 'stock_loss' then
+    v_table := 'stock_loss_counters';
+  elsif p_table = 'agri_dispatch' then
+    v_table := 'agri_dispatch_counters';
   else
-    raise exception 'Counter qism nahi mili.';
+    raise exception 'Counter table not allowed.';
   end if;
+  if p_year is null or p_year < 0 or p_year > 99 then
+    raise exception 'Counter year is wrong.';
+  end if;
+  perform pg_advisory_xact_lock(hashtextextended('counter:' || v_table || ':' || p_year::text, 0));
+  execute format(
+    'insert into public.%I as c (year, last_number) values ($1, 1)
+     on conflict (year) do update set last_number = c.last_number + 1
+     returning last_number',
+    v_table
+  ) into v_next using p_year;
   return v_next;
 end $$;
 
-revoke all on function public.fn_next_year_counter(text, int) from public, anon;
-grant execute on function public.fn_next_year_counter(text, int) to authenticated, service_role;
+revoke all on function public.fn_next_year_counter(text, int) from public, anon, authenticated;
+grant execute on function public.fn_next_year_counter(text, int) to service_role;
 
 do $$
 begin

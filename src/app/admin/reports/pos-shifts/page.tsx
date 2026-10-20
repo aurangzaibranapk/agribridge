@@ -8,6 +8,7 @@ import { isDateRangeKey, getDateRange, type DateRangeKey } from "@/lib/utils/das
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { aggregateShiftCash } from "@/lib/pos/shift-cash";
 import { Receipt, Wallet, Smartphone, HandCoins, AlertTriangle } from "lucide-react";
+import { ShortageReviews } from "./shortage-reviews";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,29 @@ export default async function PosShiftReportPage({
     ? await service.from("profiles").select("id, full_name").in("id", staffIds)
     : { data: [] as { id: string; full_name: string | null }[] };
   const staffName = new Map((staffRows ?? []).map((p) => [p.id, p.full_name ?? "—"]));
+
+  const shortageQuery = await (service as any)
+    .from("pos_shift_shortage_reviews")
+    .select("shift_id, amount, staff_id, pos_shifts(shift_number)")
+    .eq("status", "pending")
+    .limit(50);
+  const shortageRaw = shortageQuery.error
+    ? []
+    : ((shortageQuery.data ?? []) as { shift_id: string; amount: number; staff_id: string; pos_shifts?: { shift_number?: string } | { shift_number?: string }[] | null }[]);
+  const missingStaff = [...new Set(shortageRaw.map((r) => r.staff_id).filter((id) => id && !staffName.has(id)))];
+  if (missingStaff.length) {
+    const { data: extra } = await service.from("profiles").select("id, full_name").in("id", missingStaff);
+    for (const p of extra ?? []) staffName.set(p.id, p.full_name ?? "—");
+  }
+  const shortageRows = shortageRaw.map((row) => {
+    const shift = Array.isArray(row.pos_shifts) ? row.pos_shifts[0] : row.pos_shifts;
+    return {
+      id: row.shift_id,
+      shiftNumber: shift?.shift_number ?? row.shift_id.slice(0, 8),
+      staffName: staffName.get(row.staff_id) ?? "—",
+      amount: Number(row.amount),
+    };
+  });
 
   // Sab shifts ki sales ek sath -- N alag calls ke bajaye ek batch.
   const shiftIds = shifts.map((s) => s.id);
@@ -279,6 +303,8 @@ export default async function PosShiftReportPage({
           </div>
         )}
       </div>
+
+      <ShortageReviews rows={shortageRows} />
 
       <p className="mt-3 flex items-start gap-1.5 px-1 text-xs text-surface-400">
         <Smartphone className="mt-0.5 h-3.5 w-3.5 shrink-0" />

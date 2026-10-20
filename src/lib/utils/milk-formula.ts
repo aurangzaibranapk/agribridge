@@ -19,16 +19,14 @@ export function calculateMilkValue(
   snfConstant = 0.805,
   referenceTs = 13
 ): MilkCalcResult {
-  const snf = lr / 4 + fat * 0.2 + snfConstant;
-  const ts = fat + snf;
-  const adjustedVolume = volume * (ts / referenceTs);
-  const amount = adjustedVolume * ratePerLiter;
-  return {
-    snf: Math.round(snf * 100) / 100,
-    ts: Math.round(ts * 100) / 100,
-    adjustedVolume: Math.round(adjustedVolume * 100) / 100,
-    amount: Math.round(amount * 100) / 100,
-  };
+  // 0.805 tabhi jab bulane wala settings na bheje. Adaigi ka raasta
+  // (fn_apply_milk_fat) settings ke baghair yahan nahi aata.
+  // Raqam rounded adjusted volume se — SMS ka litre × rate wahi amount ho.
+  const snf = Math.round((lr / 4 + fat * 0.2 + snfConstant) * 100) / 100;
+  const ts = Math.round((fat + snf) * 100) / 100;
+  const adjustedVolume = Math.round(volume * (ts / referenceTs) * 100) / 100;
+  const amount = Math.round(adjustedVolume * ratePerLiter * 100) / 100;
+  return { snf, ts, adjustedVolume, amount };
 }
 
 export function buildMilkReceiptSms(
@@ -39,7 +37,17 @@ export function buildMilkReceiptSms(
   lr: number,
   result: MilkCalcResult
 ): string {
-  const dateStr = entryDateTime.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-  const timeStr = entryDateTime.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = entryDateTime.toLocaleDateString("en-GB", {
+    timeZone: "Asia/Karachi",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  const timeStr = entryDateTime.toLocaleTimeString("en-GB", {
+    timeZone: "Asia/Karachi",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
   return `Dear ${farmerName}\nMilk Received: ${dateStr} ${timeStr}\nVol: ${volume.toFixed(1)}L, Fat: ${fat.toFixed(1)}%\nLR: ${lr.toFixed(1)}, SNF: ${result.snf.toFixed(2)}%\nAdj Vol: ${result.adjustedVolume.toFixed(2)}L\nAmount: Rs. ${result.amount.toFixed(2)}\nSubject to Verification`;
 }

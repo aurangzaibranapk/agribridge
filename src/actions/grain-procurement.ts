@@ -8,6 +8,7 @@ import { postJournal } from "@/lib/ledger/post";
 import { grainPayableJournalLines } from "@/lib/grain/payable-journal";
 import { createBatch } from "@/lib/inventory/batch-ledger";
 import { createServiceClient } from "@/lib/supabase/service";
+import { reverseCashBookById } from "@/lib/finance/cash-book";
 import { notifyRoles } from "@/lib/notifications";
 import { sendDeptMail, mailWrapper } from "@/lib/mailer";
 import { requireGrainApprover } from "@/lib/grain/approval-guard";
@@ -445,7 +446,7 @@ async function postGrainEntry(formData: FormData, opts: GrainPostOptions): Promi
       entry_id: entry.id,
       created_by: user?.id ?? null,
     });
-    const { data: opExpRow } = await supabase
+    const { data: opExpRow, error: opErr } = await serviceClient
       .from("finance_transactions")
       .insert({
         account_id: exp.account_id,
@@ -458,20 +459,24 @@ async function postGrainEntry(formData: FormData, opts: GrainPostOptions): Promi
       })
       .select("id")
       .single();
-
-    if (opExpRow?.id) {
-      await postCashOut({
-        accountId: exp.account_id,
-        amount: Number(exp.amount),
-        description: `${exp.description || exp.category} (Grain Operations)`,
-        againstAccount: ACC.grainPurchase,
-        ctx: {
-          createdBy: user?.id ?? null,
-          entryDate,
-          backdateReason: backdateReason("Grain entry ka kharcha"),
-          claims: [{ table: "finance_transactions", rowId: opExpRow.id }],
-        },
-      });
+    if (opErr || !opExpRow?.id) {
+      return { error: `Cash Book mein grain kharcha nahi gaya: ${opErr?.message ?? "jawab nahi"}`, entryId: entry.id };
+    }
+    const opPosted = await postCashOut({
+      accountId: exp.account_id,
+      amount: Number(exp.amount),
+      description: `${exp.description || exp.category} (Grain Operations)`,
+      againstAccount: ACC.grainPurchase,
+      ctx: {
+        createdBy: user?.id ?? null,
+        entryDate,
+        backdateReason: backdateReason("Grain entry ka kharcha"),
+        claims: [{ table: "finance_transactions", rowId: opExpRow.id }],
+      },
+    });
+    if (failed(opPosted)) {
+      await reverseCashBookById(opExpRow.id, "Grain operations ledger nahi gaya");
+      return { error: `Grain kharcha kitab mein nahi gaya: ${opPosted.error}`, entryId: entry.id };
     }
     // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
     // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
@@ -734,15 +739,20 @@ export async function editGrainPayment(_prev: ActionState, formData: FormData): 
     })
     .eq("id", paymentId);
 
-  await supabase.from("finance_transactions").insert({
-    account_id: newAccountId,
-    transaction_type: "expense",
-    category: "Grain Procurement Payment (Edited)",
-    amount: newAmount - Number(payment.amount),
-    transaction_date: aajKaKhana(),
-    notes: `Payment edit hui: purana Rs ${payment.amount} -> naya Rs ${newAmount}`,
-    created_by: user?.id ?? null,
-  });
+  const farq = Math.round((newAmount - Number(payment.amount)) * 100) / 100;
+  if (farq !== 0) {
+    const serviceClient = createServiceClient();
+    const { error: cashErr } = await serviceClient.from("finance_transactions").insert({
+      account_id: newAccountId,
+      transaction_type: farq > 0 ? "expense" : "income",
+      category: "Grain Procurement Payment (Edited)",
+      amount: Math.abs(farq),
+      transaction_date: aajKaKhana(),
+      notes: `Payment edit hui: purana Rs ${payment.amount} -> naya Rs ${newAmount}`,
+      created_by: user?.id ?? null,
+    });
+    if (cashErr) return { error: `Payment update ho gayi magar Cash Book mein farq nahi gaya: ${cashErr.message}` };
+  }
 
   revalidatePath("/admin/grain-procurement");
   revalidatePath("/admin/finance");

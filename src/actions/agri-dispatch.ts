@@ -34,7 +34,7 @@ async function getOrderBranchIds(orderId: string): Promise<{ toBranchId: string 
 async function generateDispatchNumber(): Promise<string> {
   const serviceClient = createServiceClient();
   const year = new Date().getFullYear() % 100;
-  const { data, error } = await (serviceClient as any).rpc("fn_next_year_counter", { p_kind: "agri_dispatch", p_year: year });
+  const { data, error } = await (serviceClient as any).rpc("fn_next_year_counter", { p_table: "agri_dispatch", p_year: year });
   if (error || data == null) throw new Error(error?.message ?? "Dispatch number nahi bana.");
   return `DSP-AGR-${year}-${String(Number(data)).padStart(5, "0")}`;
 }

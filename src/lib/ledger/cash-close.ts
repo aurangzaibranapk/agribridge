@@ -80,15 +80,17 @@ export interface ClosingRow {
   difference: number;
   reason: string | null;
   countedByName: string | null;
+  countedBy: string | null;
+  approvalStatus: string | null;
+  journalEntryId: string | null;
   createdAt: string;
 }
 
 export async function recentClosings(limit = 30, branchId?: string | null): Promise<ClosingRow[]> {
   const service = createServiceClient();
-  let query = service
-    .from("cash_closings")
+  let query = (service.from("cash_closings") as any)
     .select(
-      "id, branch_id, close_date, expected_amount, counted_amount, difference, difference_reason, created_at, branches(name), profiles!cash_closings_counted_by_fkey(full_name)"
+      "id, branch_id, close_date, expected_amount, counted_amount, difference, difference_reason, created_at, counted_by, approval_status, journal_entry_id, branches(name), profiles!cash_closings_counted_by_fkey(full_name)"
     )
     .order("close_date", { ascending: false })
     .limit(limit);
@@ -97,7 +99,21 @@ export async function recentClosings(limit = 30, branchId?: string | null): Prom
 
   const { data } = await query;
 
-  return (data ?? []).map((r) => ({
+  return (data ?? []).map((r: {
+    id: string;
+    branch_id: string;
+    branches: { name: string } | null;
+    close_date: string;
+    expected_amount: number;
+    counted_amount: number;
+    difference: number;
+    difference_reason: string | null;
+    profiles: { full_name: string | null } | null;
+    counted_by: string | null;
+    approval_status: string | null;
+    journal_entry_id: string | null;
+    created_at: string;
+  }) => ({
     id: r.id,
     branchId: r.branch_id,
     branchName: (r.branches as { name: string } | null)?.name ?? "—",
@@ -107,6 +123,9 @@ export async function recentClosings(limit = 30, branchId?: string | null): Prom
     difference: Number(r.difference),
     reason: r.difference_reason,
     countedByName: (r.profiles as { full_name: string | null } | null)?.full_name ?? null,
+    countedBy: (r.counted_by as string | null) ?? null,
+    approvalStatus: (r.approval_status as string | null) ?? null,
+    journalEntryId: (r.journal_entry_id as string | null) ?? null,
     createdAt: r.created_at,
   }));
 }

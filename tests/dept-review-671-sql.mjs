@@ -216,6 +216,12 @@ const n1 = await q(`select public.fn_next_year_counter('stock_loss', 26) as n`);
 const n2 = await q(`select public.fn_next_year_counter('stock_loss', 26) as n`);
 assert.equal(Number(n1[0].n), 1);
 assert.equal(Number(n2[0].n), 2);
+await run(`create table if not exists public.pos_shift_counters (year int primary key, last_number int not null)`);
+const shift1 = await q(`select public.fn_next_year_counter('pos_shift_counters', 26) as n`);
+const shift2 = await q(`select public.fn_next_year_counter('pos_shift_counters', 26) as n`);
+assert.equal(Number(shift1[0].n), 1);
+assert.equal(Number(shift2[0].n), 2);
+await assert.rejects(() => q(`select public.fn_next_year_counter('not_a_counter', 26)`), /Counter table not allowed/);
 
 await assert.rejects(
   () => asRole("authenticated", ADMIN, "", `select public.fn_reject_stock_transfer('${T_REJ}','${ADMIN}')`),

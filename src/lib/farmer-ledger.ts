@@ -90,7 +90,7 @@ export interface WalletPost {
  * kisan ka wallet nahi hota, aur is wajah se doodh ki entry rok dena
  * ghalat hoga.
  */
-export async function postFarmerWallet(input: WalletPost): Promise<string | null> {
+export async function postFarmerWallet(input: WalletPost): Promise<{ id: string | null; error?: string }> {
   const service = createServiceClient();
   const { data: wallet } = await service
     .from("wallets")
@@ -98,12 +98,12 @@ export async function postFarmerWallet(input: WalletPost): Promise<string | null
     .eq("owner_type", "farmer")
     .eq("owner_id", input.farmerId)
     .maybeSingle();
-  if (!wallet) return null;
+  if (!wallet) return { id: null };
 
   const delta = input.direction === "credit" ? input.amount : -input.amount;
   const after = Math.round((Number(wallet.balance) + delta) * 100) / 100;
 
-  const { data: txn } = await service
+  const { data: txn, error } = await service
     .from("wallet_transactions")
     .insert({
       wallet_id: wallet.id,
@@ -118,7 +118,9 @@ export async function postFarmerWallet(input: WalletPost): Promise<string | null
     })
     .select("id")
     .single();
+  if (error || !txn?.id) return { id: null, error: error?.message ?? "Wallet ki qatar nahi bani." };
 
-  await service.from("wallets").update({ balance: after }).eq("id", wallet.id);
-  return txn?.id ?? null;
+  const { error: balErr } = await service.from("wallets").update({ balance: after }).eq("id", wallet.id);
+  if (balErr) return { id: txn.id, error: balErr.message };
+  return { id: txn.id };
 }

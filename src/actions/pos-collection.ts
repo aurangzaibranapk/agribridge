@@ -8,6 +8,7 @@ import { staffOutstandingByShop, staffShopOutstanding, type StaffShopOutstanding
 import { notifyRole, notifyRoles, notifyBranchManagers, notifyPositionHolders, notifyUser } from "@/lib/notifications";
 import { ACC, failed, glForFinanceAccount } from "@/lib/ledger/rules";
 import { postJournal, type JournalLine, type SourceClaim } from "@/lib/ledger/post";
+import { nextYearNumber } from "@/lib/counters";
 
 export interface ActionState {
   error?: string;
@@ -21,16 +22,7 @@ function round2(v: number): number {
 }
 
 async function nextDepositNumber(): Promise<string> {
-  const service = createServiceClient();
-  const year = new Date().getFullYear() % 100;
-  const { data: existing } = await service.from("pos_deposit_counters").select("last_number").eq("year", year).maybeSingle();
-  const next = (existing?.last_number ?? 0) + 1;
-  if (existing) {
-    await service.from("pos_deposit_counters").update({ last_number: next }).eq("year", year);
-  } else {
-    await service.from("pos_deposit_counters").insert({ year, last_number: next });
-  }
-  return `DEP-${year}-${String(next).padStart(5, "0")}`;
+  return nextYearNumber("pos_deposit_counters", "DEP-");
 }
 
 /** Staff ke apne shops ki Outstanding fehrist -- dashboard card ke liye. */

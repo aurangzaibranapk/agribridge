@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { applyFat, VERIFY_COMMENT_MAX, VERIFY_COMMENT_MIN } from "@/lib/milk-collection";
 import { logAudit } from "@/lib/audit";
 import { requireAction } from "@/lib/access/guard";
+import { fatRangeError, routeVariance, rpcError, selfApprovalError } from "@/lib/dairy/rules";
 
 export interface ActionState {
   error?: string;
@@ -47,9 +48,13 @@ export async function applyFatAction(_prev: ActionState, formData: FormData): Pr
 
   const entryId = String(formData.get("entry_id") ?? "");
   const fat = Number(formData.get("fat_percentage") ?? 0);
+  const wantsOverride = formData.get("fat_override") === "yes";
+  const manager = ["owner", "super_admin", "admin", "manager"].includes(who.role);
+  if (wantsOverride && !manager) return { error: "FAT ki hadd sirf manager hata sakta hai." };
 
   if (!entryId) return { error: "Entry nahi mili." };
-  if (!(fat > 0) || fat > 15) return { error: "FAT sahi likhein (0 se 15 ke darmiyan)." };
+  const fatError = fatRangeError(fat, wantsOverride && manager);
+  if (fatError) return { error: fatError };
 
   // Manager: sirf apni branch. `verifyOrRejectEntries` mein yehi bug
   // mil kar theek hua tha (own_branch seed hone ke bawajood kahin lagu
@@ -64,7 +69,7 @@ export async function applyFatAction(_prev: ActionState, formData: FormData): Pr
     }
   }
 
-  const result = await applyFat(entryId, fat, who.userId);
+  const result = await applyFat(entryId, fat, who.userId, { allowOverride: wantsOverride && manager });
   if ("error" in result) return { error: result.error };
 
   await logAudit({
@@ -101,8 +106,11 @@ export async function applyFatToBatch(_prev: ActionState, formData: FormData): P
   const date = String(formData.get("entry_date") ?? "");
   const shift = String(formData.get("shift") ?? "");
   const route = String(formData.get("route_name") ?? "");
-
-  if (!(fat > 0) || fat > 15) return { error: "FAT sahi likhein (0 se 15 ke darmiyan)." };
+  const wantsOverride = formData.get("fat_override") === "yes";
+  const manager = ["owner", "super_admin", "admin", "manager"].includes(who.role);
+  if (wantsOverride && !manager) return { error: "FAT ki hadd sirf manager hata sakta hai." };
+  const fatError = fatRangeError(fat, wantsOverride && manager);
+  if (fatError) return { error: fatError };
   if (!date || !shift) return { error: "Tareekh aur shift zaroori hai." };
 
   const service = createServiceClient();
@@ -128,7 +136,7 @@ export async function applyFatToBatch(_prev: ActionState, formData: FormData): P
   let done = 0;
   const failures: string[] = [];
   for (const entry of entries) {
-    const result = await applyFat(entry.id, fat, who.userId);
+    const result = await applyFat(entry.id, fat, who.userId, { allowOverride: wantsOverride && manager });
     if ("error" in result) failures.push(result.error);
     else done += 1;
   }
@@ -201,11 +209,8 @@ export async function recordChillerReceipt(_prev: ActionState, formData: FormDat
     .select("shortage_alert_threshold")
     .limit(1)
     .maybeSingle();
-  const threshold = Number(settings?.shortage_alert_threshold ?? 0.5);
-
-  const shortageLiters = Math.round((fieldVolume - received) * 100) / 100;
-  const shortagePercentage = fieldVolume > 0 ? (shortageLiters / fieldVolume) * 100 : 0;
-  const isRedAlert = shortagePercentage > threshold;
+  if (settings?.shortage_alert_threshold == null) return { error: "Kami ki hadd settings mein nahi." };
+  const variance = routeVariance(fieldVolume, received, Number(settings.shortage_alert_threshold));
 
   const routeLabel = route || "Bagair route";
 
@@ -226,9 +231,10 @@ export async function recordChillerReceipt(_prev: ActionState, formData: FormDat
     shift,
     field_collected_volume: fieldVolume,
     chiller_received_volume: received,
-    shortage_liters: shortageLiters,
-    shortage_percentage: Math.round(shortagePercentage * 1000) / 1000,
-    is_red_alert: isRedAlert,
+    shortage_liters: variance.shortageLiters,
+    shortage_percentage: variance.shortagePercentage,
+    is_red_alert: variance.isRedAlert,
+    variance_kind: variance.varianceKind,
     notes,
     created_by: who.userId,
   };
@@ -242,10 +248,28 @@ export async function recordChillerReceipt(_prev: ActionState, formData: FormDat
   revalidatePath("/admin/milk-collection/chiller");
   revalidatePath("/admin/milk-collection/routes");
 
-  const gap = `${shortageLiters > 0 ? "Kami" : "Ziyadti"} ${Math.abs(shortageLiters)} L (${Math.abs(
-    Math.round(shortagePercentage * 100) / 100
+  const gap = `${(variance.shortageLiters ?? 0) > 0 ? "Kami" : "Ziyadti"} ${Math.abs(variance.shortageLiters ?? 0)} L (${Math.abs(
+    variance.shortagePercentage ?? 0
   )}%)`;
-  return { success: true, message: isRedAlert ? `⚠️ ${gap} — hadd se zyada.` : gap };
+  return { success: true, message: variance.isRedAlert ? `⚠️ ${gap} — hadd se zyada.` : gap };
+}
+
+/** Manager duplicate ka nishan saaf karta hai. Banane wala khud nahi. */
+export async function clearMilkDuplicate(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const who = await caller(VERIFY_ROLES);
+  if ("error" in who) return { error: who.error };
+  const gate = await requireAction("milk-collection.verify", "approve");
+  if ("error" in gate) return { error: gate.error };
+  const id = String(formData.get("entry_id") ?? "");
+  const note = String(formData.get("clear_note") ?? "").trim();
+  if (!id) return { error: "Entry nahi mili." };
+  const service = createServiceClient();
+  const { error } = await (service as unknown as {
+    rpc: (name: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+  }).rpc("fn_clear_milk_duplicate", { p_entry: id, p_by: who.userId, p_note: note });
+  if (error) return { error: rpcError(error.message) };
+  revalidatePath("/admin/milk-collection/chiller");
+  return { success: true, message: "Duplicate ka nishan saaf ho gaya. Ab FAT lag sakta hai." };
 }
 
 /**
@@ -276,6 +300,10 @@ export async function verifyMilkEntries(_prev: ActionState, formData: FormData):
   }
 
   const service = createServiceClient();
+  const { data: owned } = await service.from("milk_entries").select("id, created_by").in("id", ids);
+  if ((owned ?? []).some((e) => e.created_by && e.created_by === who.userId)) {
+    return { error: selfApprovalError(who.userId, who.userId) ?? "Apni entry khud tasdeeq nahi kar sakte." };
+  }
 
   // Manager: sirf apni branch. `data_scope='own_branch'` seed to
   // migration 104 mein hai, magar ab tak kahin lagu nahi hoti thi --

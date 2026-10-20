@@ -1,7 +1,10 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { requireMoneyAdmin } from "@/lib/access/money-gate";
+import { setOpeningBalance } from "@/actions/finance";
 
 export interface ActionState {
   error?: string;
@@ -9,12 +12,15 @@ export interface ActionState {
 }
 
 export async function addBankAccount(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireMoneyAdmin("Bank khata banana");
+  if (!gate.ok) return { error: gate.error };
   const supabase = createClient();
   const serviceClient = createServiceClient();
   const name = String(formData.get("name") ?? "").trim();
   const accountNumber = (formData.get("account_number") as string) || null;
   const openingBalance = Number(formData.get("opening_balance") ?? 0);
   if (!name) return { error: "Bank naam zaroori hai." };
+  if (Number.isFinite(openingBalance) && openingBalance < 0) return { error: "Shuruati balance manfi nahi ho sakti." };
 
   let logoUrl: string | null = null;
   const logo = formData.get("logo");
@@ -27,25 +33,38 @@ export async function addBankAccount(_prev: ActionState, formData: FormData): Pr
     }
   }
 
-  const { error } = await supabase.from("finance_accounts").insert({
+  const { data: account, error } = await supabase.from("finance_accounts").insert({
     name,
     account_number: accountNumber,
-    opening_balance: openingBalance,
-    // current_balance yahan nahi bheja jata -- database khud khulne ki
-    // raqam se bhar deta hai (023). Bhejne se koi nuqsan nahi tha, magar
-    // ye us shubhe ko zinda rakhta hai ke ye adad yahan se bhi likha ja
-    // sakta hai. Wo sirf finance_transactions se nikalta hai (127).
+    // Form ki raqam yahan nahi. Khata sifar par banta hai; shuruati
+    // balance neeche setOpeningBalance se Cash Book + ledger dono mein.
+    opening_balance: 0,
     logo_url: logoUrl,
     account_type: "bank",
     is_active: true,
-  });
+  }).select("id").single();
   if (error) return { error: error.message };
+
+  if (openingBalance > 0 && account) {
+    const opening = new FormData();
+    opening.set("account_id", account.id);
+    opening.set("amount", String(openingBalance));
+    opening.set("as_of_date", String(formData.get("as_of_date") ?? aajKaKhana()));
+    const posted = await setOpeningBalance({}, opening);
+    if (posted.error) {
+      return {
+        error: `Bank khata ban gaya (${account.id}). Naya khata dobara na banayein — shuruati balance isi khate par dubara darj karein. ${posted.error}`,
+      };
+    }
+  }
 
   revalidatePath("/admin/finance/banks");
   return { success: true };
 }
 
 export async function updateBankAccount(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireMoneyAdmin("Bank khata badalna");
+  if (!gate.ok) return { error: gate.error };
   const supabase = createClient();
   const serviceClient = createServiceClient();
   const bankId = String(formData.get("bank_id") ?? "");
@@ -74,6 +93,8 @@ export async function updateBankAccount(_prev: ActionState, formData: FormData):
 }
 
 export async function deleteBankAccount(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireMoneyAdmin("Bank khata band karna");
+  if (!gate.ok) return { error: gate.error };
   const supabase = createClient();
   const bankId = String(formData.get("bank_id") ?? "");
   if (!bankId) return { error: "Missing bank id." };
