@@ -1,4 +1,5 @@
 "use client";
+import { ST, fmtAmt, fmtBal } from "@/lib/ui/statement-table";
 import { useEffect, useState, type FormEvent } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormStatus } from "react-dom";
@@ -127,26 +128,27 @@ export function SupplierStatementClient(props: Props) {
           </div>
         </div>
 
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-surface-200 text-left dark:border-surface-800">
-              <th className="px-2 py-2 font-medium text-surface-500">{t("c_date", lang)}</th>
-              <th className="px-2 py-2 font-medium text-surface-500">{t("c_description", lang)}</th>
-              <th className="px-2 py-2 text-right font-medium text-surface-500">{t("c_debit", lang)}</th>
-              <th className="px-2 py-2 text-right font-medium text-surface-500">{t("c_credit", lang)}</th>
-              <th className="px-2 py-2 text-right font-medium text-surface-500">{t("c_balance", lang)}</th>
-              <th className="px-2 py-2 font-medium text-surface-500">{t("c_slip", lang)}</th>
+        <div className={ST.wrap}>
+        <table className={ST.table}>
+          <thead className={ST.thead}>
+            <tr>
+              <th className={ST.th}>{t("c_date", lang)}</th>
+              <th className={ST.th}>{t("c_description", lang)}</th>
+              <th className={ST.thAmt}>{t("c_debit", lang)}</th>
+              <th className={ST.thAmt}>{t("c_credit", lang)}</th>
+              <th className={ST.thAmt}>{t("c_balance", lang)}</th>
+              <th className={ST.th}>{t("c_slip", lang)}</th>
             </tr>
           </thead>
           <tbody>
             {props.entries.map((e, i) => (
-              <tr key={i} className="border-b border-surface-50 last:border-0 dark:border-surface-800">
-                <td className="px-2 py-1.5 text-surface-500">{e.date}</td>
-                <td className="px-2 py-1.5 text-surface-700 dark:text-surface-300">{e.description}</td>
-                <td className="px-2 py-1.5 text-right text-red-600">{e.debit ? `Rs ${e.debit.toLocaleString()}` : "-"}</td>
-                <td className="px-2 py-1.5 text-right text-green-600">{e.credit ? `Rs ${e.credit.toLocaleString()}` : "-"}</td>
-                <td className="px-2 py-1.5 text-right text-surface-600 dark:text-surface-400">Rs {e.runningBalance.toLocaleString()}</td>
-                <td className="px-2 py-1.5">
+              <tr key={i} className={ST.tr}>
+                <td className={`${ST.td} whitespace-nowrap text-surface-500`}>{e.date}</td>
+                <td className={`${ST.td} text-surface-700 dark:text-surface-300`}>{e.description}</td>
+                <td className={`${ST.tdAmt} text-red-600 dark:text-red-400`}>{fmtAmt(e.debit)}</td>
+                <td className={`${ST.tdAmt} text-green-600 dark:text-green-400`}>{fmtAmt(e.credit)}</td>
+                <td className={`${ST.tdBal} text-surface-700 dark:text-surface-200`}>{fmtBal(e.runningBalance, "Cr")}</td>
+                <td className={ST.td}>
                   {e.slipUrl ? (
                     <a href={e.slipUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:underline">{t("c_view", lang)}</a>
                   ) : (
@@ -159,7 +161,19 @@ export function SupplierStatementClient(props: Props) {
               <tr><td colSpan={6} className="px-2 py-8 text-center text-surface-400">{t("c_no_tx_period", lang)}</td></tr>
             )}
           </tbody>
+          {props.entries.length > 0 && (
+            <tfoot className={ST.tfoot}>
+              <tr>
+                <td className={ST.td} colSpan={2}>Total</td>
+                <td className={ST.tdAmt}>{fmtAmt(props.totalDebit)}</td>
+                <td className={ST.tdAmt}>{fmtAmt(props.totalCredit)}</td>
+                <td className={ST.tdBal}>{fmtBal(props.closingBalance, "Cr")}</td>
+                <td className={ST.td}></td>
+              </tr>
+            </tfoot>
+          )}
         </table>
+        </div>
       </div>
 
       {showPayment && <PaymentModal supplierId={props.supplierId} onClose={() => setShowPayment(false)} />}

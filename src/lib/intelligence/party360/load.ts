@@ -4,6 +4,9 @@ import {
   type Party360Data, type Section, type TimelineItem,
 } from "./core";
 import { loadActivity, resolveLinks, q as aq, type LinkIds } from "./activity";
+import { loadLinkedParties, supplierGlLines } from "@/lib/party-links/load";
+import { glToStatementRows, type GlLine, type StatementRow } from "@/lib/party-links/core";
+import { fmtAmt, fmtBal } from "@/lib/ui/statement-table";
 
 /** Sirf PARHNA. Koi write nahi. Har query ki ghalti notes mein jaati hai, page nahi girta. */
 const LIMIT = 5000;
@@ -118,6 +121,7 @@ export async function loadCustomer360(id: string, now = new Date()): Promise<Par
   const db = createServiceClient() as Db; const notes: string[] = [];
   const [c] = await q(db, notes, "customers", db.from("customers").select("*").eq("id", id).maybeSingle());
   if (!c) throw new Error("Customer nahi mila.");
+  const plinks = await loadLinkedParties({ customerId: id, db }).catch(() => [] as Awaited<ReturnType<typeof loadLinkedParties>>);
   const { keys, labels } = lastMonths(now);
   const shops = await shopMap(db, notes);
   const [pos, gsales, buyers, farmer, agri] = await Promise.all([
@@ -153,6 +157,7 @@ export async function loadCustomer360(id: string, now = new Date()): Promise<Par
       { label: openPromise ? "Waada khula" : "Koi khula waada nahi", tone: openPromise ? "good" : "neutral" },
       ...(farmer[0] ? [{ label: "Kisan se linked", tone: "info" as const }] : []),
       ...(buyers.length ? [{ label: `Grain buyer se linked (${buyers.length})`, tone: "info" as const }] : []),
+      ...(plinks.length ? [{ label: "Customer + Supplier", tone: "info" as const }] : []),
     ],
     actions: [
       { label: "Statement", href: `/admin/crm/${id}/statement`, primary: true },
@@ -179,8 +184,10 @@ export async function loadCustomer360(id: string, now = new Date()): Promise<Par
     links: [
       ...(farmer[0] ? [{ label: `Kisan: ${farmer[0].full_name}`, href: `/admin/intelligence/party?type=farmer&id=${farmer[0].id}` }] : []),
       ...buyers.map((b: any) => ({ label: `Grain buyer: ${b.business_name}`, href: `/admin/intelligence/party?type=buyer&id=${b.id}` })),
+      ...plinks.map((l) => ({ label: `Supplier: ${l.supplierName}`, href: `/admin/intelligence/party?type=supplier&id=${l.supplierId}` })),
     ],
     sections: [
+      ...linkedSections(plinks, c.name ?? "—"),
       promiseSection(promises),
       { title: "Basket (kya khareedta hai)", columns: ["Category", "Raqam", "Hissa"], rows: bas, empty: "Koi item nahi." },
       { title: "Recent bills", columns: ["Tareekh", "Dukan", "Raqam", "Khata"], rows: pos.slice(0, 12).map((s: any) => [pk(s.created_at), shops.get(s.shop_id)?.name ?? "—", rs(num(s.total_amount)), rs(num(s.khata_amount))]), empty: "Koi bill nahi." },
@@ -197,6 +204,13 @@ export async function loadSupplier360(id: string, now = new Date()): Promise<Par
   const [s] = await q(db, notes, "suppliers", db.from("suppliers").select("*").eq("id", id).maybeSingle());
   if (!s) throw new Error("Supplier nahi mila.");
   const { keys, labels } = lastMonths(now);
+  const [plinks, glAll] = await Promise.all([
+    loadLinkedParties({ supplierId: id, db }).catch(() => [] as Awaited<ReturnType<typeof loadLinkedParties>>),
+    supplierGlLines(db, id).catch(() => [] as GlLine[]),
+  ]);
+  const glRows = glToStatementRows(glAll);
+  const glBills = r2(glRows.reduce((a, r) => a + r.debit, 0));
+  const glPaid = r2(glRows.reduce((a, r) => a + r.credit, 0));
   const [bills, pays] = await Promise.all([
     q(db, notes, "purchases", db.from("purchases").select("id,purchase_number,supplier_bill_no,purchase_date,due_date,status,total_amount,received_at,review_status").eq("supplier_id", id).order("purchase_date", { ascending: false }).limit(LIMIT)),
     q(db, notes, "supplier_payments", db.from("supplier_payments").select("payment_date,amount,payment_method,purchase_id").eq("supplier_id", id).limit(LIMIT)),
@@ -205,7 +219,8 @@ export async function loadSupplier360(id: string, now = new Date()): Promise<Par
   const items = live.length ? await q(db, notes, "purchase_items", db.from("purchase_items").select("purchase_id,quantity,unit_cost,products(name)").in("purchase_id", live.map((b: any) => b.id).slice(0, 500)).limit(LIMIT)) : [];
   const bought = r2(live.reduce((a: number, b: any) => a + num(b.total_amount), 0));
   const paid = r2(pays.reduce((a: number, p: any) => a + num(p.amount), 0));
-  const payable = r2(bought - paid);
+  // 622: Recovery / Kharche / settlement ki 2000/1120 qatarein bhi (purchase/supplier_payment dobara nahi).
+  const payable = r2(bought - paid + glBills - glPaid);
   const paidBy = new Map<string, number>(); for (const p of pays) if (p.purchase_id) paidBy.set(p.purchase_id, (paidBy.get(p.purchase_id) ?? 0) + num(p.amount));
   const pending = live.filter((b: any) => !b.received_at).length;
   // rate history: har product ka pichla vs naya unit cost
@@ -216,7 +231,7 @@ export async function loadSupplier360(id: string, now = new Date()): Promise<Par
   return withActivity(db, notes, {
     type: "supplier", id, name: s.name ?? "—",
     sub: [s.company_name, s.phone_number, s.ntn_number ? `NTN ${s.ntn_number}` : null].filter(Boolean),
-    badges: [{ label: payable > 0 ? "Payable" : "Saaf", tone: payable > 0 ? "bad" : "good" }, { label: s.is_active === false ? "Inactive" : "Active", tone: s.is_active === false ? "warn" : "good" }, ...(pending ? [{ label: `${pending} GRN baqi`, tone: "warn" as const }] : [])],
+    badges: [...(plinks.length ? [{ label: "Customer + Supplier", tone: "info" as const }] : []), { label: payable > 0 ? "Payable" : "Saaf", tone: payable > 0 ? "bad" : "good" }, { label: s.is_active === false ? "Inactive" : "Active", tone: s.is_active === false ? "warn" : "good" }, ...(pending ? [{ label: `${pending} GRN baqi`, tone: "warn" as const }] : [])],
     actions: [
       { label: "Statement", href: `/admin/suppliers/${id}/statement`, primary: true },
       { label: "Payment karein", href: "/admin/suppliers" },
@@ -225,7 +240,7 @@ export async function loadSupplier360(id: string, now = new Date()): Promise<Par
     ],
     kpis: [
       { label: "Kul khareed", value: bought, fmt: "rs", hint: `${live.length} bill` },
-      { label: "Payments", value: paid, fmt: "rs", hint: `${pays.length} payment` },
+      { label: "Payments", value: r2(paid + glPaid), fmt: "rs", hint: `${pays.length} payment${glPaid ? ` + ledger Rs ${rs(glPaid)}` : ""}` },
       { label: "Payable", value: payable, fmt: "rs", tone: payable > 0 ? "bad" : "good", hint: s.current_payable != null ? `suppliers.current_payable Rs ${rs(num(s.current_payable))}` : "bills – payments" },
       { label: "Akhri bill", value: live[0] ? pk(live[0].purchase_date) : null, fmt: "text", hint: live[0] ? `Rs ${rs(num(live[0].total_amount))}` : "" },
       { label: "Bara bill", value: live.length ? Math.max(...live.map((b: any) => num(b.total_amount))) : null, fmt: "rs" },
@@ -237,7 +252,13 @@ export async function loadSupplier360(id: string, now = new Date()): Promise<Par
     ] },
     aging: payable > 0 ? agingFifo(live.map((b: any) => ({ date: b.purchase_date, amount: num(b.total_amount) })), payable, now) : null,
     agingNote: "Payables FIFO (bill date se)",
+    links: plinks.map((l) => ({ label: `Customer: ${l.customerName}`, href: `/admin/intelligence/party?type=customer&id=${l.customerId}` })),
     sections: [
+      ...linkedSections(plinks, s.name ?? "—"),
+      { title: "Ledger entries (2000/1120) — Recovery, Kharche bill, settlement", note: "Purchases aur supplier payments upar/neeche apni table se; yahan sirf baqi ledger qatarein.",
+        columns: ["Tareekh", "Tafseel", "Debit (bill)", "Credit (payment)", "Balance"],
+        rows: glRunning(glRows).slice().reverse().slice(0, 30).map((r) => [pk(r.date), r.description, fmtAmt(r.debit), fmtAmt(r.credit), fmtBal(r.bal, "Cr")]),
+        amountCols: [2, 3, 4], empty: "Koi ledger qatar nahi." },
       { title: "Purchase bills / GRN", columns: ["Bill #", "Supplier bill", "Tareekh", "Due", "Raqam", "Paid (bill par)", "GRN"],
         rows: live.slice(0, 30).map((b: any) => [b.purchase_number, b.supplier_bill_no ?? "—", pk(b.purchase_date), pk(b.due_date), rs(num(b.total_amount)), rs(paidBy.get(b.id) ?? 0), b.received_at ? pk(b.received_at) : "baqi"]), empty: "Koi bill nahi." },
       { title: "Rate history", columns: ["Item", "Pichla", "Naya", "Farq", "Tareekh"], rows: rates, empty: "Items nahi mile." },
@@ -246,6 +267,7 @@ export async function loadSupplier360(id: string, now = new Date()): Promise<Par
     timeline: sortTimeline([
       ...live.map((b: any) => ({ date: b.purchase_date, label: `Bill ${b.purchase_number}`, amount: num(b.total_amount), tone: "warn" as const })),
       ...pays.map((p: any) => ({ date: p.payment_date, label: "Payment di", amount: num(p.amount), tone: "good" as const })),
+      ...glRows.map((r) => ({ date: r.date, label: r.description, amount: r.debit || r.credit, tone: (r.debit ? "warn" : "good") as "warn" | "good" })),
     ]),
     notes,
   }, { supplierIds: [id] }, now);
@@ -355,3 +377,23 @@ export async function loadDealer360(id: string, now = new Date()): Promise<Party
 
 export const LOADERS = { farmer: loadFarmer360, customer: loadCustomer360, supplier: loadSupplier360, buyer: loadBuyer360, dealer: loadDealer360 } as const;
 export type Party360Type = keyof typeof LOADERS;
+
+/** 622: "Yasir Ali: customer + supplier" — net balance ka section. */
+function linkedSections(plinks: Awaited<ReturnType<typeof loadLinkedParties>>, name: string): Section[] {
+  if (!plinks.length) return [];
+  return [{
+    title: `${name}: customer + supplier (net)`,
+    note: "Party link (622). Kuch khud nahi katta — kaatna sirf Settlements ki manzoori se (Dr 2000 / Cr 1100).",
+    columns: ["Customer", "Supplier", "Unhon ne dena (1100)", "Hum ne dena (2000)", "Net"],
+    rows: plinks.map((l) => [l.customerName, l.supplierName, fmtAmt(l.net.theyOwe), fmtAmt(l.net.weOwe),
+      `${fmtBal(l.net.net, "Dr")} · ${l.net.net > 0 ? "party ne dena" : l.net.net < 0 ? "hum ne dena" : "barabar"}`]),
+    amountCols: [2, 3, 4],
+    href: "/admin/party-links",
+  }];
+}
+
+/** Running balance (supplier: musbat = hum ne dena = Cr). */
+function glRunning(rows: StatementRow[]) {
+  let b = 0;
+  return rows.map((r) => { b = Math.round((b + r.debit - r.credit) * 100) / 100; return { ...r, bal: b }; });
+}
