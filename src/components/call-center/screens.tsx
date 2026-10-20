@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useFormState } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import Link from "next/link";
 import { Lock, Phone, Search } from "lucide-react";
 import { createCallCenterAgent, createComplaint, setComplaintStatus, type CcState } from "@/actions/call-center";
