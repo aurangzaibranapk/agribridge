@@ -5,7 +5,7 @@ import { PosClient } from "@/components/pos/pos-client";
 import { CounterShiftPicker } from "@/components/pos/counter-shift-picker";
 import { ShiftBar } from "@/components/pos/shift-bar";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
-import { aggregateGodamByProduct, centralGodams } from "@/lib/pos/godam-on-card";
+import { chunkIds, linkedGodamStock } from "@/lib/pos/godam-on-card";
 import { loadPosPermissions } from "@/lib/pos/permissions";
 import { t } from "@/lib/i18n/translations";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
@@ -241,6 +241,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
       branch = { id: profile.branch_id, name: branchRow?.name ?? "Branch" };
 
       if (profile.shop_id) {
+        shopId = profile.shop_id;
         const { data: shopRow } = await supabase.from("shops").select("name").eq("id", profile.shop_id).maybeSingle();
         shopName = shopRow?.name ?? null;
       }
@@ -532,32 +533,56 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
   }
 
   // ---- Godam mein aur kitna para hai ----
-  // Sirf isi branch ke central godam (shop_id khali, quarantine nahi).
-  // Dukan ka apna warehouse is kul mein nahi. Doosri dukan ka shelf bhi
-  // nahi. Jawab na mil sake to NULL rehta hai aur card "—" likhta hai --
-  // sifar likh dena "godam khali hai" ka jhoot hai. Ek hi sawal, saare
-  // card. Har card ka alag sawal nahi.
-  let godamByProduct: ReturnType<typeof aggregateGodamByProduct> | null = null;
-  if (!dealer && branch && inventory.length) {
-    const { data: branchWh, error: whErr } = await supabase
-      .from("warehouses")
-      .select("id, name, shop_id, is_quarantine")
-      .eq("branch_id", branch.id);
-    if (!whErr) {
-      const godams = centralGodams(branchWh ?? [], warehouseId);
-      const productIds = inventory.map((i: any) => i.product_id as string);
-      if (godams.length === 0) {
-        godamByProduct = aggregateGodamByProduct(productIds, [], [], true);
-      } else {
-        const { data: rows, error: invErr } = await supabase
-          .from("inventory")
-          .select("product_id, warehouse_id, quantity_on_hand")
-          .in("warehouse_id", godams.map((w) => w.id))
-          .in("product_id", productIds);
-        if (!invErr) {
-          godamByProduct = aggregateGodamByProduct(productIds, godams, rows ?? [], true);
+  // Sirf us dukan se jude godam (shop_godams). Branch ka saara central
+  // godam, doosri dukan ka shelf, aur juda na hua godam yahan nahi aata.
+  // Link na ho, ya sawal fail ho, to NULL rehta hai aur card "—" likhta
+  // hai. Sifar sirf tab jab link ho aur maal na ho. Stock ka sawal
+  // fn_shop_linked_godam_stock se hai — client warehouse id nahi bhejta.
+  // Ek tukra bhi fail ho to poora godam "—" , aadha sifar nahi.
+  let godamByProduct: ReturnType<typeof linkedGodamStock> = null;
+  if (!dealer && shopId && inventory.length) {
+    const productIds = inventory.map((i: any) => i.product_id as string);
+    const { data: links, error: linkErr } = await (supabase as any)
+      .from("shop_godams")
+      .select("warehouse_id")
+      .eq("shop_id", shopId);
+    const linkedWarehouseIds = linkErr
+      ? []
+      : ((links ?? []) as { warehouse_id: string }[]).map((l) => l.warehouse_id);
+    if (!linkErr && linkedWarehouseIds.length > 0) {
+      const rows: {
+        product_id: string;
+        warehouse_id: string;
+        warehouse_name: string | null;
+        quantity_on_hand: number | string | null;
+      }[] = [];
+      let stockOk = true;
+      for (const ids of chunkIds(productIds, 400)) {
+        const { data, error } = await (supabase as any).rpc("fn_shop_linked_godam_stock", {
+          p_shop_id: shopId,
+          p_product_ids: ids,
+        });
+        if (error) {
+          stockOk = false;
+          break;
+        }
+        for (const r of (data ?? []) as any[]) {
+          rows.push({
+            product_id: r.product_id,
+            warehouse_id: r.warehouse_id,
+            warehouse_name: r.warehouse_name ?? null,
+            quantity_on_hand: r.qty,
+          });
         }
       }
+      godamByProduct = linkedGodamStock({
+        shopId,
+        linksOk: true,
+        linkedWarehouseIds,
+        stockOk,
+        productIds,
+        rows: stockOk ? rows : null,
+      });
     }
   }
   for (const it of inventory as any[]) {
