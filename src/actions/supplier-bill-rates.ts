@@ -7,8 +7,8 @@ import { decideMatch } from "@/lib/product-match";
 import { logAudit } from "@/lib/audit";
 import { readSupplierBillLines } from "@/lib/ai/bill-lines-client";
 import { createClient } from "@/lib/supabase/server";
-import { payAndPost } from "@/lib/ledger/supplier-money";
 import { loadUnitAliases } from "@/lib/units";
+import { billNoKey, duplicateBillError, duplicateBillSources, escapeLikePattern, isDuplicateBillNoError } from "@/lib/purchases/bill-no-unique";
 import { looksBinary, parseDelimited } from "@/lib/csv";
 import { parsePaymentTerms } from "@/lib/purchase-terms";
 import { createHandoff } from "@/lib/work-handoff";
@@ -755,18 +755,20 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
   // September: lines batches mein ready hoti hain), magar KISI AUR bill
   // upload se yehi bill number dobara purchase nahi bana sakta -- wahi
   // 4 September wali ghalti (ek sheet teen dafa charhi, dena teen guna).
+  // Dono tables, ILIKE escape. Usi bill ki agli purchase (388) slot nahi
+  // leti; doosri upload ya workspace purchase rok jaati hai.
+  const allowRepeat = Boolean(bill.purchase_id);
   if (bill.bill_number && bill.bill_number.trim()) {
-    const { data: dupeBill } = await supabase
-      .from("supplier_bill_reads")
-      .select("id")
-      .eq("supplier_id", supplierId)
-      .ilike("bill_number", bill.bill_number.trim())
-      .not("purchase_id", "is", null)
-      .neq("id", billId)
-      .maybeSingle();
-    if (dupeBill) {
-      return { error: `Ye bill number (${bill.bill_number}) is supplier ke liye pehle hi kisi aur bill-upload se purchase ban chuki hai — dobara nahi ban sakti.` };
-    }
+    const pattern = escapeLikePattern(bill.bill_number.trim());
+    const [{ data: dupeBill, error: dupeReadErr }, { data: dupePo, error: dupePoErr }] = await Promise.all([
+      supabase.from("supplier_bill_reads").select("id, bill_number, purchase_id").eq("supplier_id", supplierId).ilike("bill_number", pattern).not("purchase_id", "is", null).neq("id", billId).limit(5),
+      allowRepeat
+        ? Promise.resolve({ data: [] as { id: string; purchase_number: string | null; supplier_bill_no: string | null; status: string | null }[], error: null })
+        : supabase.from("purchases").select("id, purchase_number, supplier_bill_no, status").eq("supplier_id", supplierId).neq("status", "cancelled").ilike("supplier_bill_no", pattern).limit(5),
+    ]);
+    if (dupeReadErr || dupePoErr) return { error: `Bill number check nahi ho saka: ${dupeReadErr?.message ?? dupePoErr?.message}` };
+    const hit = duplicateBillSources({ billNo: bill.bill_number, purchases: dupePo ?? [], billReads: dupeBill ?? [], ignoreBillId: billId });
+    if (hit) return { error: duplicateBillError(bill.bill_number, hit) };
   }
 
   // Branch: wohi qaida jo purchases/new par hai.
@@ -815,113 +817,61 @@ export async function createPurchaseFromBill(_prev: BillRateState, formData: For
   const terms = parsePaymentTerms(formData, totalAmount, purchaseDate);
   if ("error" in terms) return { error: terms.error };
 
-  const { data: po, error: poErr } = await supabase
-    .from("purchases")
-    .insert({
+  if (terms.paidNow > 0 && !String(formData.get("finance_account_id") ?? "").trim()) {
+    return { error: "Paid From Account chunein — adaigi manzoori par post hoti hai, account ke baghair nahi." };
+  }
+  // Owner/Admin ki bill purchase seedha approved rehti hai (13 Oct self-approve,
+  // policy change nahi). Adaigi phir bhi held rehti hai aur reviewPurchase
+  // par post hoti hai — yahan payAndPost nahi.
+  const { data: created, error: poErr } = await (supabase as any).rpc("fn_create_purchase_atomic", {
+    p_purchase: {
       purchase_number: purchaseNumber,
       supplier_id: supplierId,
       branch_id: branchId,
       purchase_date: purchaseDate,
-      // PENDING: kaghaz par aa gaya, haqeeqat mein nahi. Receive tak
-      // na stock, na dena.
       status: "pending",
-      // AI ka draft: manzoori ke baghair receive nahi (259) -- magar jo
-      // khud approver hai (Owner/Admin) us se dobara khud se manzoori
-      // maangna faaltu qadam hai; /admin/purchases/new isi tarah karta
-      // hai, ye bhi wahi karta hai.
       review_status: isAdminLevel ? "approved" : "submitted",
       total_amount: totalAmount,
       payment_terms: terms.terms,
       credit_days: terms.creditDays,
       due_date: terms.dueDate,
-      // Bill ka number khane mein bhi jata hai, sirf note mein nahi --
-      // note par koi taala nahi lagta. Isi khane par 289 ka taala hai
-      // jo ek bill se do purchase banne se rokta hai.
       supplier_bill_no: bill.bill_number || null,
+      bill_no_key: billNoKey(bill.bill_number, allowRepeat),
       notes: bill.bill_number ? `Supplier bill #${bill.bill_number} (${bill.source})` : `Supplier bill (${bill.source})`,
       created_by: user.id,
-      // Poore bill ka discount/tax sirf ISI bill ki PEHLI purchase par
-      // (10 September) -- agar bill.purchase_id pehle se hai to matlab
-      // ye is bill ki doosri/teesri purchase hai (388), aur raqam pehli
-      // par likhi ja chuki hai -- dobara likhna 2-3 guna dikha deta.
       discount_amount: bill.purchase_id ? null : bill.discount_amount,
       tax_amount: bill.purchase_id ? null : bill.tax_amount,
       tax_label: bill.purchase_id ? null : bill.tax_label,
-    })
-    .select("id")
-    .single();
-  if (poErr || !po) return { error: `Purchase nahi ban saki: ${poErr?.message ?? "wajah maloom nahi"}` };
-
-  // Jo abhi diya, supplier_payments mein -- adaigi ka ek hi darwaza (139).
-  if (terms.paidNow > 0) {
-    const paid = await payAndPost(supabase, {
-      supplierId,
-      purchaseId: po.id,
-      amount: terms.paidNow,
-      paymentDate: purchaseDate,
-      paymentMethod: (formData.get("payment_method") as string) || null,
-      accountId: String(formData.get("finance_account_id") ?? "").trim() || null,
-      notes: `Kharid ${purchaseNumber} ke waqt (bill se)`,
-      createdBy: user.id,
-      // Bill ki apni tareekh purani ho sakti hai (jis din bill mila
-      // us din ki) -- wo khud hi wajah hai, alag se kisi se poochne ki
-      // zaroorat nahi.
-      backdateReason:
-        purchaseDate < aajKaKhana()
-          ? `Supplier bill ${bill.bill_number || billId} ki apni tareekh — adaigi bhi usi din ki hai.`
-          : null,
-    });
-    if ("error" in paid) return { error: `Purchase ban gayi magar: ${paid.error}` };
+      held_payment: terms.paidNow > 0
+        ? {
+            amount: terms.paidNow,
+            payment_date: purchaseDate,
+            payment_method: (formData.get("payment_method") as string) || null,
+            finance_account_id: String(formData.get("finance_account_id") ?? "").trim() || null,
+            requested_by: user.id,
+            posted: false,
+          }
+        : null,
+    },
+    p_lines: ready.map((l) => ({
+      product_id: l.product_id,
+      quantity: Number(l.qty),
+      unit_cost: Number(l.applied_rate ?? l.rate ?? 0),
+      batch_number: `${purchaseNumber}-${(l.product_id as string).slice(0, 8)}-${(l.id as string).slice(0, 6)}`,
+    })),
+  });
+  if (poErr || !created?.id) {
+    if (isDuplicateBillNoError(poErr)) return { error: duplicateBillError(bill.bill_number || "", { purchaseNumber: null, billReadId: null }) };
+    return { error: `Purchase nahi ban saki: ${poErr?.message ?? "wajah maloom nahi"}` };
   }
+  const po = { id: created.id as string };
 
-  let made = 0;
   const problems: string[] = [];
-
   for (const l of ready) {
-    const qty = Number(l.qty);
-    const cost = Number(l.applied_rate ?? l.rate ?? 0);
-
-    // Batch ka naam sirf product se banta tha -- ek hi bill mein wohi
-    // product DO qataron mein aaye (do alag lot, do alag rate) to
-    // dusra naam pehle jaisa hi ban jata aur uska batch banna hi nahi
-    // (naam takra jata). Ginti aur paisa dono theek darj hote the,
-    // magar wo doosri qatar ka lot kabhi kisi batch mein nahi jata --
-    // aur us ka pata mahino baad "godam ki ginti aur khata barabar
-    // nahi" wale farq se chalta (13 September). Har qatar ki apni id
-    // bhi naam mein shamil kar ke ye takraaw hamesha ke liye khatam.
-    const { data: batch, error: batchErr } = await supabase
-      .from("stock_batches")
-      .insert({
-        product_id: l.product_id as string,
-        batch_number: `${purchaseNumber}-${(l.product_id as string).slice(0, 8)}-${(l.id as string).slice(0, 6)}`,
-        initial_quantity: qty,
-      })
-      .select("id")
-      .single();
-    if (batchErr || !batch) {
-      problems.push(`${l.item_name ?? "qatar"} ka batch nahi bana: ${batchErr?.message ?? "wajah maloom nahi"}`);
-      continue;
-    }
-
-    const { error: itemErr } = await supabase.from("purchase_items").insert({
-      purchase_id: po.id,
-      product_id: l.product_id as string,
-      batch_id: batch.id,
-      quantity: qty,
-      unit_cost: cost,
-      line_total: qty * cost,
-    });
-    if (itemErr) {
-      problems.push(`${l.item_name ?? "qatar"}: ${itemErr.message}`);
-      continue;
-    }
-
-    // Trade rate usi darwaze se (248) -- rate, nishan, indraj.
     const { error: rateErr } = await supabase.rpc("fn_apply_bill_line_rate", { p_line_id: l.id });
     if (rateErr) problems.push(`${l.item_name ?? "qatar"} ka rate: ${rateErr.message}`);
-
-    made += 1;
   }
+  const made = ready.length;
 
   // Bill sirf tab "applied" (band) hota hai jab uski koi line na "draft"
   // na "ready" mein bachi ho -- warna jo lines abhi tayyar nahi thi

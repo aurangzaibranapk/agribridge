@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { sendWhatsAppTemplate } from "@/lib/whatsapp-client";
 import { getRecoverySettings } from "@/lib/recovery/credit-block";
 import { buildReminderMessage, formatDatePk, formatRs, reminderStageFor, recoveryPolicyActive, reminderDue } from "@/lib/recovery/aging";
+import { deliverRecoveryNotice, recoveryChannelReady } from "@/lib/sms/deliver";
+import { veevoEnv } from "@/lib/sms/veevo";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +30,14 @@ export async function GET(req: NextRequest) {
   if (!settings.reminders_enabled) {
     return NextResponse.json({ skipped: true, reason: "Yaad-dihani band hai (reminders_enabled = false)." });
   }
-  if (!process.env.WHATSAPP_PHONE_NUMBER_ID || !process.env.WHATSAPP_ACCESS_TOKEN || !process.env.WHATSAPP_RECOVERY_TEMPLATE) {
-    return NextResponse.json({ error: "WhatsApp keys aur approved recovery template zaroori hain; koi message nahi bheja." }, { status: 503 });
+  const channel = recoveryChannelReady({
+    ...veevoEnv(),
+    WHATSAPP_PHONE_NUMBER_ID: process.env.WHATSAPP_PHONE_NUMBER_ID,
+    WHATSAPP_ACCESS_TOKEN: process.env.WHATSAPP_ACCESS_TOKEN,
+    WHATSAPP_RECOVERY_TEMPLATE: process.env.WHATSAPP_RECOVERY_TEMPLATE,
+  });
+  if (channel === "none") {
+    return NextResponse.json({ error: "Veevo SMS (SMS_PROVIDER=veevo, VEEVO_API_KEY) ya WhatsApp keys aur approved recovery template zaroori hain; koi message nahi bheja." }, { status: 503 });
   }
 
   const service = createServiceClient() as any;
@@ -98,9 +105,14 @@ export async function GET(req: NextRequest) {
     if (!phone) { skipped++; continue; }
 
     try {
-      await sendWhatsAppTemplate(phone, template, lang, [
-        name, formatRs(amount), formatDatePk(dueDate), shopName, stage === "day30" ? "Aakhri notice" : "Yaad-dihani",
-      ]);
+      const notice = await deliverRecoveryNotice({
+        phone,
+        message,
+        template,
+        lang,
+        params: [name, formatRs(amount), formatDatePk(dueDate), shopName, stage === "day30" ? "Aakhri notice" : "Yaad-dihani"],
+      });
+      if (!notice.ok) throw new Error(notice.error || "Send failed");
       sent++;
       await service.from("receivable_reminders").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", claimed.id);
     } catch (err) {

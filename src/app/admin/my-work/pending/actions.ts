@@ -1,67 +1,62 @@
 "use server";
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { approveProductEdit, rejectProductEdit } from "@/actions/product-permissions";
 import { approveProductMerge, rejectProductMerge } from "@/actions/product-merge";
 import { reviewPosReturn } from "@/actions/pos-returns";
-import { CODE_MAKER_COLS, INLINE_DECISIONS, type PendingItem } from "@/lib/pending/categories";
+import { CODE_MAKER_COLS, type PendingItem } from "@/lib/pending/categories";
+import { runDecidePending, type DecidePorts, type DecideResult } from "@/lib/pending/decide";
 
 /**
  * "Mere Kaam" se faisla -- KOI NAYI manzoori ki logic nahi. Ye sirf purane
- * server action ko wahi FormData de deta hai jo us ka apna safha deta hai;
+ * server action ko wahi FormData deta hai jo us ka apna safha deta hai;
  * har rok (ijazat, maker-checker, DB trigger) wahin lagti hai.
+ *
+ * Natija redirect nahi: caller ko `{ ok }` ya asal wajah milti hai, taake
+ * qataar aur ginti usi waqt badal jayein. Save ke baad `revalidatePath`
+ * agla load taaza rakhta hai.
  *
  * Upar se ek aur rok: apni entry (auth.uid() = darj karne wala) par
  * Approve/Reject yahan se chalta hi nahi. Koi message / WhatsApp / email nahi.
  */
 type Rpc = (fn: string, a?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
-const UUID = /^[0-9a-f-]{36}$/i;
 const P = "/admin/my-work/pending";
-const back = (q: string): never => redirect(`${P}?${q}`);
 
-export async function decidePending(fd: FormData) {
-  const category = String(fd.get("category") ?? "");
-  const id = String(fd.get("id") ?? "");
-  const decision = String(fd.get("decision") ?? "");
-  const note = String(fd.get("note") ?? "").trim().slice(0, 300);
-  const rule = INLINE_DECISIONS[category];
-  if (!rule || !UUID.test(id) || !["approve", "reject"].includes(decision)) back("e=bad");
-  if (decision === "reject" && rule.rejectNeedsReason && note.length < 5) back("e=reason");
-
-  const sb = createClient();
+function ports(sb: ReturnType<typeof createClient>): DecidePorts {
   const rpc = sb.rpc.bind(sb) as unknown as Rpc;
-  const { data } = await rpc("fn_admin_pending_items", { p_limit: 200, p_category: category });
-  const row = ((data as PendingItem[] | null) ?? []).find((r) => r.item_id === id);
-  if (!row) back("e=gone");
-  if (row!.is_own) back("e=own");
-  const codeSrc = CODE_MAKER_COLS[category];
-  if (codeSrc) {
-    const {
-      data: { user },
-    } = await sb.auth.getUser();
-    const { data: rec } = await (sb.from(codeSrc.table as never) as unknown as {
-      select: (c: string) => { eq: (k: string, v: string) => { maybeSingle: () => Promise<{ data: Record<string, string | null> | null }> } };
-    }).select(codeSrc.col).eq("id", id).maybeSingle();
-    if (user && rec?.[codeSrc.col] === user.id) back("e=code");
-  }
+  return {
+    async loadRow(category, id) {
+      const { data } = await rpc("fn_admin_pending_items", { p_limit: 200, p_category: category });
+      return ((data as PendingItem[] | null) ?? []).find((r) => r.item_id === id) ?? null;
+    },
+    async actorId() {
+      const {
+        data: { user },
+      } = await sb.auth.getUser();
+      return user?.id ?? null;
+    },
+    async codeMakerId(category, id) {
+      const codeSrc = CODE_MAKER_COLS[category];
+      if (!codeSrc) return null;
+      const { data: rec } = await (sb.from(codeSrc.table as never) as unknown as {
+        select: (c: string) => { eq: (k: string, v: string) => { maybeSingle: () => Promise<{ data: Record<string, string | null> | null }> } };
+      })
+        .select(codeSrc.col)
+        .eq("id", id)
+        .maybeSingle();
+      return rec?.[codeSrc.col] ?? null;
+    },
+    reviewPosReturn: (f) => reviewPosReturn({}, f),
+    approveProductEdit: (f) => approveProductEdit({}, f),
+    rejectProductEdit: (f) => rejectProductEdit({}, f),
+    approveProductMerge: (f) => approveProductMerge({}, f),
+    rejectProductMerge: (f) => rejectProductMerge({}, f),
+  };
+}
 
-  const f = new FormData();
-  let res: { error?: string } = {};
-  if (category === "pos_returns") {
-    f.set("return_id", id);
-    f.set("decision", decision === "approve" ? "approved" : "flagged");
-    if (note) f.set("note", note);
-    res = await reviewPosReturn({}, f);
-  } else if (category === "product_edits") {
-    f.set("request_id", id);
-    if (note) f.set("review_notes", note);
-    res = decision === "approve" ? await approveProductEdit({}, f) : await rejectProductEdit({}, f);
-  } else if (category === "product_merge") {
-    f.set("request_id", id);
-    if (note) f.set("review_notes", note);
-    res = decision === "approve" ? await approveProductMerge({}, f) : await rejectProductMerge({}, f);
-  }
-  revalidatePath(P);
-  back(res.error ? `e=${encodeURIComponent(res.error.slice(0, 140))}` : "ok=1");
+export async function decidePending(fd: FormData): Promise<DecideResult> {
+  const sb = createClient();
+  const result = await runDecidePending(fd, ports(sb));
+  if (result.ok) revalidatePath(P);
+  return result;
 }

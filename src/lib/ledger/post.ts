@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { callCenterWriteBlock } from "@/lib/call-center/guard";
 
 /**
  * Double-entry ka darwaza -- har rupya yahin se guzarta hai.
@@ -168,6 +169,8 @@ export async function postJournal(input: JournalInput): Promise<PostedEntry | { 
   }
 
   const service = createServiceClient();
+  const blocked = await callCenterWriteBlock(input.createdBy);
+  if (blocked) return { error: blocked };
   // A source row already claimed cannot be claimed again. The database
   // returns the first entry, so the caller used to see success. An offline
   // replay with the same clientActionId still keeps the first entry.
@@ -212,6 +215,8 @@ export async function reverseJournal(
   byProfileId: string | null
 ): Promise<PostedEntry | { error: string }> {
   if (reason.trim().length < 5) return { error: "Reversal ki wajah likhna zaroori hai." };
+  const blocked = await callCenterWriteBlock(byProfileId);
+  if (blocked) return { error: blocked };
 
   const { data, error } = await (createServiceClient() as any).rpc("reverse_journal_atomic", {
     p_id: entryId, p_reason: reason.trim(), p_by: byProfileId,
