@@ -1,6 +1,7 @@
 "use server";
 import { purchaseApproveCheck, isSelfApproval, shouldPostHeldPayment } from "@/lib/approval/guards";
-import { escapeLikePattern, findDuplicateBillNo, isDuplicateBillNoError } from "@/lib/purchases/bill-no-unique";
+import { existingHeldPost, heldPaymentPostPlan, purchaseBatchDedupeKey, purchaseHeaderMatchesLines, purchaseMovementDedupeKey, receiveLockOutcome } from "@/lib/purchases/procurement-guards";
+import { billNoKey, duplicateBillError, duplicateBillSources, escapeLikePattern, isDuplicateBillNoError } from "@/lib/purchases/bill-no-unique";
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
@@ -151,23 +152,34 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
   if (supplierBillWorkspace && !supplierBillNo) {
     return { error: "Supplier invoice ka bill number zaroor likhein taa-ke wohi bill dobara save na ho." };
   }
-  // 388 ne purchases wala unique index hata diya (bill-read upload ki kai
-  // purchases ke liye). Is raaste par ab code khud dohra bill pakarta hai.
+  // Dono tables: purchases aur supplier_bill_reads. ILIKE escape, aur
+  // race ka taala bill_no_key (629) hai — check-then-insert akela kaafi nahi.
   if (supplierBillWorkspace && supplierBillNo) {
-    const { data: sameBill, error: sameBillError } = await supabase
-      .from("purchases")
-      .select("purchase_number, supplier_bill_no, status")
-      .eq("supplier_id", supplierId)
-      .neq("status", "cancelled")
-      .ilike("supplier_bill_no", escapeLikePattern(supplierBillNo.trim()))
-      .limit(5);
-    if (sameBillError) return { error: `Bill number check nahi ho saka: ${sameBillError.message}` };
-    const dup = findDuplicateBillNo(sameBill ?? [], supplierBillNo);
-    if (dup !== null) return { error: `Supplier bill ${supplierBillNo} pehle se save hai${dup ? ` (${dup})` : ""}. Duplicate bill dobara nahi banaya.` };
+    const pattern = escapeLikePattern(supplierBillNo.trim());
+    const [{ data: sameBill, error: sameBillError }, { data: sameRead, error: sameReadError }] = await Promise.all([
+      supabase.from("purchases").select("id, purchase_number, supplier_bill_no, status").eq("supplier_id", supplierId).neq("status", "cancelled").ilike("supplier_bill_no", pattern).limit(5),
+      supabase.from("supplier_bill_reads").select("id, bill_number, purchase_id").eq("supplier_id", supplierId).ilike("bill_number", pattern).not("purchase_id", "is", null).limit(5),
+    ]);
+    if (sameBillError || sameReadError) return { error: `Bill number check nahi ho saka: ${sameBillError?.message ?? sameReadError?.message}` };
+    const hit = duplicateBillSources({ billNo: supplierBillNo, purchases: sameBill ?? [], billReads: sameRead ?? [] });
+    if (hit) return { error: duplicateBillError(supplierBillNo, hit) };
   }
-  const { data: purchase, error: purchaseError } = await supabase
-    .from("purchases")
-    .insert({
+  // Header + lines + held payment EK transaction (630). Koi line giri
+  // to purchase bhi nahi banti — total aur adaigi aadhi lines par nahi tikte.
+  // paidNow yahin held rehta hai; post sirf reviewPurchase ki manzoori par.
+  const headerTotal = supplierBillWorkspace ? invoiceTotal : totalAmount;
+  const held = terms.paidNow > 0
+    ? {
+        amount: terms.paidNow,
+        payment_date: purchaseDate,
+        payment_method: (formData.get("payment_method") as string) || null,
+        finance_account_id: String(formData.get("finance_account_id") ?? "").trim() || null,
+        requested_by: user?.id ?? null,
+        posted: false,
+      }
+    : null;
+  const { data: created, error: purchaseError } = await (supabase as any).rpc("fn_create_purchase_atomic", {
+    p_purchase: {
       purchase_number: purchaseNumber,
       supplier_id: supplierId,
       branch_id: branchId,
@@ -176,9 +188,7 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
       warehouse_id: warehouseId,
       status: "pending",
       review_status: "submitted",
-      // New supplier-bill workspace records the bill's net payable here.
-      // Legacy purchases keep their original merchandise subtotal model.
-      total_amount: supplierBillWorkspace ? invoiceTotal : totalAmount,
+      total_amount: headerTotal,
       invoice_total: supplierBillWorkspace ? invoiceTotal : null,
       discount_amount: supplierBillWorkspace ? discountAmount : null,
       tax_amount: supplierBillWorkspace ? taxAmount : null,
@@ -189,15 +199,25 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
       notes,
       payment_proof_url: supplierBillWorkspace ? (String(formData.get("payment_proof_url") ?? "").trim() || null) : null,
       created_by: user?.id ?? null,
-    })
-    .select("id")
-    .single();
-  if (purchaseError || !purchase) {
+      held_payment: held,
+      bill_no_key: supplierBillWorkspace ? billNoKey(supplierBillNo, false) : null,
+    },
+    p_lines: items.map((item) => ({
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_cost: item.unit_cost,
+      batch_number: item.batch_number?.trim() || `${purchaseNumber}-${item.product_id.slice(0, 8)}`,
+      manufacture_date: item.manufacture_date || null,
+      expiry_date: item.expiry_date || null,
+    })),
+  });
+  if (purchaseError || !created?.id) {
     if (supplierBillWorkspace && supplierBillNo && isDuplicateBillNoError(purchaseError)) {
       return { error: `Supplier bill ${supplierBillNo} pehle se save hai. Duplicate bill dobara nahi banaya.` };
     }
     return { error: purchaseError?.message ?? "Failed to create purchase." };
   }
+  const purchase = { id: created.id as string };
   if (!approver && user) {
     await supabase.from("purchase_comments").insert({
       purchase_id: purchase.id,
@@ -206,25 +226,7 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
       body: "Manzoori ke liye bheji",
     });
   }
-
-  // Jo abhi diya wo supplier_payments mein -- wahi jagah jahan har
-  // adaigi jati hai (139). Purchase par adad NAHI likha jata; warna
-  // ek din do jagah ka adad alag nikalta hai.
-  // Approval guard: paidNow ab foran post NAHI hota. Irada purchases.held_payment
-  // mein mehfooz hota hai aur reviewPurchase (approve) par post hota hai.
-  let heldWarning: string | null = null;
-  if (terms.paidNow > 0) {
-    const held = {
-      amount: terms.paidNow,
-      payment_date: purchaseDate,
-      payment_method: (formData.get("payment_method") as string) || null,
-      finance_account_id: String(formData.get("finance_account_id") ?? "").trim() || null,
-      requested_by: user?.id ?? null,
-      posted: false,
-    };
-    const { error: holdErr } = await supabase.from("purchases").update({ held_payment: held } as never).eq("id", purchase.id);
-    if (holdErr) heldWarning = `Purchase ban gayi, magar adaigi (Rs ${terms.paidNow.toLocaleString()}) ka irada mehfooz nahi hua: ${holdErr.message}. Manzoori ke baad payment alag se record karein.`;
-  }
+  const heldWarning: string | null = null;
 
   // Adaigi ki slips (436): har slip raqam + tareekh + tasveer ke sath.
   // Slip SABOOT hai, hisaab nahi -- supplier ka dena supplier_payments
@@ -262,33 +264,6 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
   }
 
   for (const item of items) {
-    const batchNumber = item.batch_number?.trim() || `${purchaseNumber}-${item.product_id.slice(0, 8)}`;
-    const { data: batch, error: batchError } = await supabase
-      .from("stock_batches")
-      .insert({
-        product_id: item.product_id,
-        batch_number: batchNumber,
-        manufacture_date: item.manufacture_date || null,
-        expiry_date: item.expiry_date || null,
-        initial_quantity: item.quantity,
-      })
-      .select("id")
-      .single();
-    if (batchError || !batch) {
-      return { error: `Failed to create batch for a product: ${batchError?.message}` };
-    }
-    const { error: itemError } = await supabase.from("purchase_items").insert({
-      purchase_id: purchase.id,
-      product_id: item.product_id,
-      batch_id: batch.id,
-      quantity: item.quantity,
-      unit_cost: item.unit_cost,
-      line_total: purchaseLineTotal(item.quantity, item.unit_cost)!,
-    });
-    if (itemError) {
-      return { error: `Failed to save a purchase line: ${itemError.message}` };
-    }
-
     // Malik (19 September): "wholesale k rate, mrp k rate, sale k rate
     // yahin daal dein to product par bhi lag jayen" -- order banate
     // waqt hi cheez ke sale rate update ho jayein taake maal receive
@@ -445,28 +420,23 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
 
   const invoiceGoodsSubtotal = rows.reduce((sum, r) => sum + r.quantity * r.unit_cost, 0);
   const inventoryDiscountRatio = invoiceGoodsSubtotal > 0 ? Math.min(1, Math.max(0, Number(purchase.discount_amount ?? 0) / invoiceGoodsSubtotal)) : 0;
+  const prepared: Record<string, unknown>[] = [];
   for (const row of rows) {
     const stockUnitCost = Math.round(row.unit_cost * (1 - inventoryDiscountRatio) * 10000) / 10000;
-    // Ginti ke adad pehle likhe jate hain, stock baad mein. Agar rok
-    // (received + damaged + short = quantity) yahan tooti to stock
-    // chhua hi nahi gaya.
-    const { error: lineErr } = await supabase
-      .from("purchase_items")
-      .update({
-        received_qty: row.received,
-        damaged_qty: row.damaged,
-        short_qty: row.short,
-        grn_note: row.note,
-        line_total: row.received * row.unit_cost,
-      })
-      .eq("id", row.id);
-    if (lineErr) return { error: `${row.name}: ginti likhi nahi ja saki: ${lineErr.message}` };
-
     if (row.received <= 0) {
-      // Kuch aaya hi nahi: batch khali, stock mein koi harkat nahi.
-      if (row.batch_id) {
-        await supabase.from("stock_batches").update({ initial_quantity: 0, remaining_quantity: 0, unit_cost: stockUnitCost }).eq("id", row.batch_id);
-      }
+      prepared.push({
+        item_id: row.id,
+        product_id: row.product_id,
+        batch_id: row.batch_id,
+        received: row.received,
+        damaged: row.damaged,
+        short: row.short,
+        note: row.note,
+        unit_cost: row.unit_cost,
+        stock_unit_cost: stockUnitCost,
+        dedupe_key: purchaseMovementDedupeKey(purchaseId, row.id),
+        batch_dedupe_key: purchaseBatchDedupeKey(row.id),
+      });
       continue;
     }
 
@@ -496,83 +466,22 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     if (!warehouseId) {
       return { error: "Is product ki shop/branch ke liye koi warehouse set up nahi hai." };
     }
-
-    // Batch kabhi kabhi bana hi nahi (purani ghalti: ek hi bill mein
-    // ek product do qataron mein aaye to naam takra jata, batch nahi
-    // banta) -- us waqt maal ki ginti to yahan se aage barh jati thi,
-    // magar wo lot kisi batch mein kabhi darj nahi hota. Ab agar
-    // qatar ke paas batch nahi hai, wahi yahan bana dete hain -- taake
-    // stock hamesha kisi na kisi batch se aaye, kabhi hawa se nahi.
-    let batchId = row.batch_id;
-    if (batchId) {
-      await supabase
-        .from("stock_batches")
-        .update({ warehouse_id: warehouseId, initial_quantity: row.received, remaining_quantity: row.received, unit_cost: stockUnitCost })
-        .eq("id", batchId);
-    } else {
-      const { data: newBatch, error: batchErr } = await supabase
-        .from("stock_batches")
-        .insert({
-          product_id: row.product_id,
-          warehouse_id: warehouseId,
-          batch_number: `${purchase.purchase_number}-${row.id.slice(0, 8)}`,
-          initial_quantity: row.received,
-          remaining_quantity: row.received,
-          unit_cost: stockUnitCost,
-        })
-        .select("id")
-        .single();
-      if (batchErr || !newBatch) {
-        return { error: `${row.name}: batch nahi ban saka, maal receive nahi hua: ${batchErr?.message ?? "wajah maloom nahi"}` };
-      }
-      batchId = newBatch.id;
-      await supabase.from("purchase_items").update({ batch_id: batchId }).eq("id", row.id);
-    }
-
-    const { data: existingInventory } = await supabase
-      .from("inventory")
-      .select("id, quantity_on_hand, batch_id")
-      .eq("product_id", row.product_id)
-      .eq("warehouse_id", warehouseId)
-      .maybeSingle();
-
-    // Ginti yahan se NAHI badalti -- wo neeche wali harkat par trigger
-    // karta hai (129). Nayi qatar bhi sifar se banti hai; maal us mein
-    // usi harkat se aata hai.
-    let inventoryId: string;
-    if (existingInventory) {
-      inventoryId = existingInventory.id;
-      if (!existingInventory.batch_id && batchId) {
-        await supabase.from("inventory").update({ batch_id: batchId }).eq("id", inventoryId);
-      }
-    } else {
-      const { data: newInventory, error: invError } = await supabase
-        .from("inventory")
-        .insert({
-          product_id: row.product_id,
-          warehouse_id: warehouseId,
-          batch_id: batchId ?? null,
-        })
-        .select("id")
-        .single();
-      if (invError || !newInventory) {
-        return { error: `Failed to set up inventory row: ${invError?.message}` };
-      }
-      inventoryId = newInventory.id;
-    }
-
-    const { error: movementError } = await supabase.from("stock_movements").insert({
-      inventory_id: inventoryId,
-      movement_type: "purchase_in",
-      quantity: row.received,
-      reference_type: "purchase",
-      reference_id: purchaseId,
-      notes: row.damaged + row.short > 0 ? `Invoice ${row.quantity}, aaya ${row.received}, toota ${row.damaged}, kam ${row.short}` : null,
-      created_by: user?.id ?? null,
+    prepared.push({
+      item_id: row.id,
+      product_id: row.product_id,
+      batch_id: row.batch_id,
+      warehouse_id: warehouseId,
+      received: row.received,
+      damaged: row.damaged,
+      short: row.short,
+      note: row.note,
+      unit_cost: row.unit_cost,
+      stock_unit_cost: stockUnitCost,
+      batch_number: `${purchase.purchase_number}-${row.id.slice(0, 8)}`,
+      movement_note: row.damaged + row.short > 0 ? `Invoice ${row.quantity}, aaya ${row.received}, toota ${row.damaged}, kam ${row.short}` : null,
+      dedupe_key: purchaseMovementDedupeKey(purchaseId, row.id),
+      batch_dedupe_key: purchaseBatchDedupeKey(row.id),
     });
-    if (movementError) {
-      return { error: `Failed to record stock movement: ${movementError.message}` };
-    }
   }
 
   // Dena utne ka jitna theek aaya. Invoice ka asal kul ek dafa mehfooz
@@ -585,19 +494,33 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     : 0;
   const acceptedTax = purchase.tax_amount != null ? Number(purchase.tax_amount) * receivedRatio : 0;
   const acceptedPayable = Math.round((acceptedTotal - acceptedDiscount + acceptedTax) * 100) / 100;
-  const { error: statusError } = await supabase
-    .from("purchases")
-    .update({
-      status: "received",
+  // Lock pehle (pending -> receiving). Doosri call ya to resume hai ya
+  // pehle hi received. Stock + status uske baad EK transaction (630).
+  const gate = receiveLockOutcome(purchase.status, purchase.review_status);
+  if (!gate.ok) return { error: gate.error };
+  const { data: lockState, error: lockError } = await (supabase as any).rpc("fn_lock_purchase_receiving", { p_id: purchaseId });
+  if (lockError) return { error: lockError.message };
+  if (lockState === "received") return { error: "This purchase is already marked received." };
+  if (lockState === "not_approved") return { error: "Ye purchase abhi manzoor nahi hui. Pehle Owner/Admin manzoor karein, phir maal ginein." };
+  if (lockState === "cancelled") return { error: "Cancelled purchase receive nahi ho sakti." };
+  if (lockState === "missing") return { error: "Purchase not found." };
+  if (lockState !== "locked" && lockState !== "resume") return { error: "Purchase receive nahi ho sakti." };
+  const { data: committed, error: commitError } = await (supabase as any).rpc("fn_commit_purchase_receive", {
+    p_id: purchaseId,
+    p_lines: prepared,
+    p_patch: {
       invoice_total: purchase.invoice_total ?? Number(purchase.total_amount ?? 0),
       total_amount: purchase.warehouse_id ? acceptedPayable : acceptedTotal,
       grn_photo_url: grnPhotoUrl,
       grn_note: grnNote,
-      received_at: new Date().toISOString(),
       received_by: user?.id ?? null,
-    })
-    .eq("id", purchaseId);
-  if (statusError) return { error: statusError.message };
+    },
+  });
+  if (commitError || !committed?.ok) {
+    if (committed?.code === "received") return { error: "This purchase is already marked received." };
+    await (supabase as any).rpc("fn_release_purchase_receiving", { p_id: purchaseId });
+    return { error: commitError?.message ?? committed?.error ?? "Receive save nahi hua. Dobara koshish karein — stock dobara nahi barhega." };
+  }
 
   // ===== Cheez ka MAUJOODA hawala rate =====
   //
@@ -838,82 +761,168 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
 
   const { data: purchase } = await supabase
     .from("purchases")
-    .select("id, purchase_number, status, review_status, branch_id, total_amount, created_by, verified_by, supplier_id, held_payment")
+    .select("id, purchase_number, status, review_status, branch_id, total_amount, discount_amount, tax_amount, created_by, verified_by, supplier_id, held_payment")
     .eq("id", purchaseId)
     .maybeSingle();
   if (!purchase) return { error: "Purchase not found." };
-  if (purchase.status !== "pending") return { error: "Sirf jo purchase abhi receive nahi hui, us par faisla ho sakta hai." };
+  type Held = { amount: number; payment_date: string; payment_method: string | null; finance_account_id: string | null; posted?: boolean; client_action_id?: string | null; supplier_payment_id?: string | null; journal_entry_id?: string | null };
+  const held = (purchase.held_payment as unknown as Held | null) ?? null;
+  // shouldPostHeldPayment sirf "approve + amount + abhi posted nahi".
+  // heldPaymentPostPlan us par UUID key aur account ki kami rokta hai —
+  // purani `purchase-held-` key ledger ki ::uuid cast par girti thi aur
+  // warning UI mein chup jati thi (PO-1792495620885, 20 Oct).
+  const plan = held && shouldPostHeldPayment(decision, held) ? heldPaymentPostPlan(decision, held, purchaseId) : ({ post: false } as const);
+  if ("error" in plan && typeof plan.error === "string" && plan.error) return { error: plan.error };
+  const finishingHeld = purchase.review_status === "approved" && plan.post === true;
+  if (purchase.status === "cancelled") return { error: "Radd shuda purchase par faisla nahi." };
+  if (!finishingHeld && purchase.status !== "pending") return { error: "Sirf jo purchase abhi receive nahi hui, us par faisla ho sakta hai." };
   // Staff ke liye maker-checker lazmi hai. Owner/Super Admin/Admin boss
   // accounts hain: in par kisi doosre login ki dependency nahi (13 Oct).
+  // Ye policy NAHI badli — sirf staff par self-approve rok hai.
   if (isSelfApproval(purchase.created_by, user.id) && !guard.caller.unrestricted) {
     return { error: "Apni banayi hui purchase par khud faisla nahi kar sakte — doosra Owner/Admin kare." };
   }
   // Maker-checker (fix/approval-queue-gaps): staff purchase verify ke baghair
   // approve nahi; verifier khud approve nahi; dobara approve nahi.
-  if (decision === "approve") {
+  // Pehle se manzoor + adaigi abhi posted nahi: dobara approve nahi, sirf post.
+  if (decision === "approve" && !finishingHeld) {
     const { data: creator } = purchase.created_by
       ? await supabase.from("profiles").select("role").eq("id", purchase.created_by).maybeSingle()
       : { data: null };
     const chk = purchaseApproveCheck(purchase as { review_status: string | null; verified_by?: string | null }, creator?.role ?? null, user.id);
     if (!chk.ok) return { error: chk.error };
-  } else if (purchase.review_status === "rejected") {
+  } else if (!finishingHeld && purchase.review_status === "rejected") {
     return { error: "Ye purchase pehle hi radd ho chuki hai." };
   }
   if ((decision === "send_back" || decision === "reject") && !comment) {
     return { error: "Wapas bhejne ya radd karne ki wajah likhein -- banane wale ko yehi parhna hai." };
   }
 
-  const update: Record<string, unknown> = {
-    review_status: decision === "approve" ? "approved" : decision === "send_back" ? "sent_back" : "rejected",
-    reviewed_by: user.id,
-    reviewed_at: new Date().toISOString(),
-  };
-  if (decision === "reject") update.status = "cancelled";
-
-  const { error } = await supabase.from("purchases").update(update).eq("id", purchaseId);
-  if (error) return { error: error.message };
-
-  // Ruki hui adaigi (held_payment) sirf manzoori par post hoti hai.
-  let heldMsg: string | undefined;
-  let heldWarn: string | undefined;
-  type Held = { amount: number; payment_date: string; payment_method: string | null; finance_account_id: string | null; posted?: boolean };
-  const held = (purchase.held_payment as unknown as Held | null) ?? null;
-  if (held && shouldPostHeldPayment(decision, held)) {
-    const paid = await payAndPost(supabase, {
-      supplierId: purchase.supplier_id,
-      purchaseId,
-      amount: Number(held.amount),
-      paymentDate: held.payment_date,
-      paymentMethod: held.payment_method,
-      accountId: held.finance_account_id,
-      clientActionId: `purchase-held-${purchaseId}`,
-      notes: `Kharid ${purchase.purchase_number} ke waqt (manzoori par post)`,
-      branchId: purchase.branch_id ?? null,
-      createdBy: user.id,
-      backdateReason: held.payment_date < aajKaKhana() ? `Purchase ${purchase.purchase_number} ki apni tareekh (${held.payment_date}) — adaigi manzoori tak ruki rahi.` : null,
+  if (decision === "approve") {
+    const { data: lineRows, error: lineErr } = await supabase.from("purchase_items").select("quantity, unit_cost").eq("purchase_id", purchaseId);
+    if (lineErr) return { error: lineErr.message };
+    const totals = purchaseHeaderMatchesLines({
+      lines: (lineRows ?? []).map((l) => ({ quantity: Number(l.quantity), unit_cost: Number(l.unit_cost) })),
+      totalAmount: Number(purchase.total_amount),
+      discountAmount: purchase.discount_amount == null ? null : Number(purchase.discount_amount),
+      taxAmount: purchase.tax_amount == null ? null : Number(purchase.tax_amount),
+      heldAmount: plan.post ? plan.amount : null,
     });
-    if ("error" in paid) {
-      heldWarn = `Purchase manzoor ho gayi, magar ruki hui adaigi post nahi hui: ${paid.error}`;
+    if (!totals.ok) return { error: totals.error };
+  }
+
+  // Post PEHLE. Nakami par manzoori nahi badalti, aur error seedha UI ko
+  // jata hai — success + chhupi warning nahi. Key UUID hai, is liye
+  // dobara click wahi journal dubara nahi likhta.
+  // Pehle se supplier_payment ya journal ho (haath ki posting, doosri
+  // key) to payAndPost nahi — sirf posted nishan. PO-1792495620885.
+  let heldMsg: string | undefined;
+  let postedHeld: Held | null = null;
+  if (plan.post) {
+    const { data: payRows, error: payErr } = await supabase.from("supplier_payments").select("id, purchase_id, amount").eq("purchase_id", purchaseId);
+    if (payErr) return { error: `Ruki hui adaigi ki pehli payment nahi dekhi: ${payErr.message}` };
+    const payments = (payRows ?? []).map((row) => ({ id: row.id, purchaseId: row.purchase_id, amount: row.amount }));
+    const journalSelect = "id, client_action_id, source_module, source_id, description, is_reversal";
+    const { data: byKey, error: keyErr } = await supabase.from("journal_entries").select(journalSelect).eq("client_action_id", plan.clientActionId);
+    if (keyErr) return { error: `Ruki hui adaigi ka journal nahi dekha: ${keyErr.message}` };
+    const { data: byPo, error: poErr } = await supabase
+      .from("journal_entries")
+      .select(journalSelect)
+      .eq("source_module", "supplier_payment")
+      .ilike("description", `%${escapeLikePattern(purchase.purchase_number)}%`);
+    if (poErr) return { error: `Ruki hui adaigi ka journal nahi dekha: ${poErr.message}` };
+    const payIds = payments.map((row) => row.id);
+    const { data: byPay, error: byPayErr } = payIds.length
+      ? await supabase.from("journal_entries").select(journalSelect).eq("source_module", "supplier_payment").in("source_id", payIds)
+      : { data: [], error: null };
+    if (byPayErr) return { error: `Ruki hui adaigi ka journal nahi dekha: ${byPayErr.message}` };
+    const journalById = new Map<string, { id: string; client_action_id: string | null; source_module: string; source_id: string | null; description: string; is_reversal: boolean }>();
+    for (const row of [...(byKey ?? []), ...(byPo ?? []), ...(byPay ?? [])]) journalById.set(row.id, row);
+    const prior = existingHeldPost({
+      purchaseId,
+      purchaseNumber: purchase.purchase_number,
+      heldAmount: plan.amount,
+      clientActionId: plan.clientActionId,
+      payments,
+      journals: [...journalById.values()].map((row) => ({
+        id: row.id,
+        clientActionId: row.client_action_id,
+        sourceModule: row.source_module,
+        sourceId: row.source_id,
+        description: row.description,
+        isReversal: row.is_reversal,
+      })),
+    });
+    if (prior.already) {
+      postedHeld = {
+        ...(held as Held),
+        posted: true,
+        client_action_id: plan.clientActionId,
+        supplier_payment_id: prior.paymentId,
+        journal_entry_id: prior.journalId,
+        payment_date: plan.paymentDate,
+        payment_method: plan.paymentMethod,
+        finance_account_id: plan.accountId,
+        amount: plan.amount,
+      };
+      heldMsg = `Ruki hui adaigi Rs ${plan.amount.toLocaleString()} pehle se lagi hui hai — dobara nahi kati.`;
     } else {
-      await supabase.from("purchases").update({ held_payment: { ...held, posted: true, posted_at: new Date().toISOString(), posted_by: user.id } } as never).eq("id", purchaseId);
-      heldMsg = `Ruki hui adaigi Rs ${Number(held.amount).toLocaleString()} post ho gayi.`;
+      const paid = await payAndPost(supabase, {
+        supplierId: purchase.supplier_id,
+        purchaseId,
+        amount: plan.amount,
+        paymentDate: plan.paymentDate,
+        paymentMethod: plan.paymentMethod,
+        accountId: plan.accountId,
+        clientActionId: plan.clientActionId,
+        notes: `Kharid ${purchase.purchase_number} ke waqt (manzoori par post)`,
+        branchId: purchase.branch_id ?? null,
+        createdBy: user.id,
+        backdateReason: plan.paymentDate < aajKaKhana() ? `Purchase ${purchase.purchase_number} ki apni tareekh (${plan.paymentDate}) — adaigi manzoori tak ruki rahi.` : null,
+      });
+      if ("error" in paid) {
+        return { error: `Ruki hui adaigi post nahi hui: ${paid.error}` };
+      }
+      postedHeld = { ...(held as Held), posted: true, client_action_id: plan.clientActionId, supplier_payment_id: paid.paymentId, payment_date: plan.paymentDate, payment_method: plan.paymentMethod, finance_account_id: plan.accountId, amount: plan.amount };
+      heldMsg = `Ruki hui adaigi Rs ${plan.amount.toLocaleString()} post ho gayi.`;
     }
   }
 
+  const update: Record<string, unknown> = finishingHeld
+    ? {}
+    : {
+        review_status: decision === "approve" ? "approved" : decision === "send_back" ? "sent_back" : "rejected",
+        reviewed_by: user.id,
+        reviewed_at: new Date().toISOString(),
+      };
+  if (!finishingHeld && decision === "reject") update.status = "cancelled";
+  if (postedHeld) {
+    update.held_payment = { ...postedHeld, posted_at: new Date().toISOString(), posted_by: user.id };
+  }
+  if (Object.keys(update).length > 0) {
+    const { error } = await supabase.from("purchases").update(update).eq("id", purchaseId);
+    if (error) {
+      return { error: plan.post ? `Adaigi post ho chuki hai magar purchase par nishan nahi laga: ${error.message}. Dobara Approve dabayein — doosri dafa nahi kategi.` : error.message };
+    }
+  }
+
+  if (!finishingHeld) {
   await supabase.from("purchase_comments").insert({
     purchase_id: purchaseId,
     author_id: user.id,
     kind: decision,
     body: comment || (decision === "approve" ? "Manzoor" : ""),
   });
+  }
 
   await logAudit({
     actionType: "update",
     module: "purchases",
     recordId: purchaseId,
     recordLabel: purchase.purchase_number,
-    description:
-      decision === "approve"
+    description: finishingHeld
+      ? heldMsg ?? "Ruki hui adaigi post hui"
+      : decision === "approve"
         ? `Purchase manzoor hui${comment ? `: ${comment}` : ""}`
         : decision === "send_back"
           ? `Purchase wapas bheji: ${comment}`
@@ -924,7 +933,8 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
   // manzoor karne wale ko maloom hoti thi -- warehouse wala tab tak
   // intezar karta jab tak koi usay phone na kare. Ab khabar khud
   // jati hai: sidebar, dashboard aur ghanti, teenon par.
-  if (decision === "approve") {
+  // Sirf adaigi ki dobara koshish par doosri khabar nahi jati.
+  if (decision === "approve" && !finishingHeld) {
     await createHandoff({
       from: "purchases",
       to: "inventory.receiving",
@@ -951,7 +961,7 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
   revalidatePath("/admin/purchases/bills");
   revalidatePath("/admin/finance");
   revalidatePath("/admin/inventory/receiving");
-  return { success: true, message: heldMsg, warning: heldWarn };
+  return { success: true, message: heldMsg ?? (decision === "approve" ? "Manzoor ho gayi." : undefined) };
 }
 
 /**

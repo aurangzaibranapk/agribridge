@@ -47,8 +47,8 @@ export interface StageMoveInput {
 }
 
 /**
- * Assignee ek qadam aage (Assigned → Kaam jari → Check) aur Review se Mukammal.
- * Mukammal: Admin jo maker nahi, ya assignee jo maker nahi.
+ * Assignee ek qadam aage (Assigned → Kaam jari → Check). Mukammal nahi.
+ * Mukammal sirf Owner, super admin, ya Admin, aur sirf Check ke baad.
  * Banane wala, chahe Admin ho, band nahi karta. Call-center agent stage nahi chheRta.
  */
 export function decideComplaintStage(input: StageMoveInput): { ok: true } | { ok: false; reason: string } {
@@ -64,7 +64,8 @@ export function decideComplaintStage(input: StageMoveInput): { ok: true } | { ok
   if (to === from) return { ok: false, reason: "same" };
   if (to === "rejected") return { ok: true };
   if (to === "completed") {
-    if (assignee && !admin && from !== "review") return { ok: false, reason: "review-first" };
+    if (!admin) return { ok: false, reason: "admin-only" };
+    if (from !== "review") return { ok: false, reason: "review-first" };
     return { ok: true };
   }
   const fromI = COMPLAINT_STAGE_ORDER.indexOf(from as (typeof COMPLAINT_STAGE_ORDER)[number]);

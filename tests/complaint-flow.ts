@@ -44,9 +44,13 @@ ok("stage bar and maker-checker", () => {
   assert.equal(decideComplaintStage({ ...base, to: "in_progress" }).ok, true);
   assert.equal(decideComplaintStage({ ...base, to: "review" }).ok, false);
   assert.equal(decideComplaintStage({ ...base, to: "completed" }).ok, false);
-  assert.equal(decideComplaintStage({ ...base, from: "review", to: "completed" }).ok, true);
+  assert.equal(decideComplaintStage({ ...base, from: "review", to: "completed" }).ok, false);
   assert.equal(decideComplaintStage({ actorId: "staff", submitterId: "staff", actorRole: "admin", assigneeId: null, from: "review", to: "completed" }).ok, false);
-  assert.equal(decideComplaintStage({ actorId: "admin", submitterId: "staff", actorRole: "admin", assigneeId: null, from: "assigned", to: "completed" }).ok, true);
+  assert.equal(decideComplaintStage({ actorId: "admin", submitterId: "staff", actorRole: "admin", assigneeId: null, from: "assigned", to: "completed" }).ok, false);
+  assert.equal(decideComplaintStage({ actorId: "admin", submitterId: "staff", actorRole: "admin", assigneeId: "fin", from: "review", to: "completed" }).ok, true);
+  assert.equal(decideComplaintStage({ actorId: "own", submitterId: "staff", actorRole: "owner", assigneeId: null, from: "review", to: "completed" }).ok, true);
+  assert.equal(decideComplaintStage({ actorId: "sa", submitterId: "staff", actorRole: "super_admin", assigneeId: null, from: "review", to: "completed" }).ok, true);
+  assert.equal(decideComplaintStage({ actorId: "mgr", submitterId: "staff", actorRole: "manager", assigneeId: "mgr", from: "review", to: "completed" }).ok, false);
   assert.equal(decideComplaintStage({ actorId: "ag", submitterId: "staff", actorRole: "call_center_agent", assigneeId: "ag", from: "assigned", to: "in_progress" }).ok, false);
   assert.equal(decideComplaintStage({ actorId: "other", submitterId: "staff", actorRole: "sales_staff", assigneeId: "fin", from: "assigned", to: "in_progress" }).ok, false);
 });

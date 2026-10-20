@@ -505,7 +505,10 @@ begin
   if v_stage = 'rejected' then
     null;
   elsif v_stage = 'completed' then
-    if v_is_assignee and not v_admin and v_from is distinct from 'review' then
+    if not v_admin then
+      raise exception 'Mukammal sirf Owner ya Admin karta hai.';
+    end if;
+    if v_from is distinct from 'review' then
       raise exception 'Pehle Check tak le aayein.';
     end if;
   else
@@ -800,14 +803,14 @@ insert into public.feature_help (feature_key, lang, purpose, who_uses, when_use,
  'Owner, Admin, aur ijazat-yafta Manager. Staff apni shikayat ka stage dekhta hai.',
  'Jab nayi shikayat aaye, stage badle, ya Manager ko ijazat deni ho.',
  array['Queue mein Forwarded by Manager wala label dekhein.','Department, user, agent ya developer ko aage bhejein.','Assignee stage aage barhaye aur note likhe.','Tasveer sirf unhein dikhe jinhein ticket dikhti hai.','AI button tab kaam karta hai jab server par webhook URL ho.'],
- 'Mukammal Admin ya koi doosra banda kare. Banane wala khud band nahi karta.',
+ 'Mukammal sirf Owner, super admin ya Admin kare, Check ke baad. Assignee band nahi karta. Banane wala khud band nahi karta.',
  array['Manager ko baghair ijazat assign na samjhein. Toggle default band hai.','Staff ke form par department na dikhayein.','Stage par naya SMS na bhejein.']),
 ('support.dashboard', 'en',
  'Caller and staff complaints land here. Owner, super admin and Admin assign them. A Manager assigns only after the Owner turns on Complaint assign kar sakta hai.',
  'Owner, Admin, and a Manager who was granted. Staff watch their own stage.',
  'When a complaint arrives, a stage changes, or a Manager needs the grant.',
  array['Read the Forwarded by Manager label on the queue.','Forward to a department, user, agent or developer.','The assignee moves the stage and adds a note.','Images stay private to people who can see the ticket.','The AI button works only when the webhook URL is set.'],
- 'Completed is by Admin or someone other than the maker.',
+ 'Mukammal is Owner, super admin or Admin only, after Check. The assignee does not close it.',
  array['A Manager without the grant cannot assign. The toggle is off by default.','Do not show a department picker on the staff form.','Do not send a new SMS on a stage change.']),
 ('support.dashboard', 'ur',
  'کال سینٹر اور سٹاف کی شکایت یہیں آتی ہے۔ تفویض اونر، سپر ایڈمن اور ایڈمن کرتے ہیں۔ مینیجر صرف اجازت کے بعد۔',
