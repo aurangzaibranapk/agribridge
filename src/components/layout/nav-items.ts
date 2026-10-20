@@ -194,6 +194,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/erp-directory", label: "ERP ka Naqsha", icon: LayoutGrid },
       { href: "/admin/messages", label: "Paighaam", icon: MessageCircle },
       { href: "/admin/broadcast", label: "Elaan / Broadcast", icon: Megaphone },
+      { href: "/admin/whatsapp-inbox", label: "WhatsApp Inbox", icon: MessageCircle },
       { href: "/admin/bridge-ai", label: "Abram", icon: Sparkles },
       { href: "/admin/bridge-ai/activity-log", label: "Abram Activity Log", icon: History },
       { href: "/admin/bridge-ai/action-requests", label: "Abram Action Requests", icon: ClipboardCheck },
