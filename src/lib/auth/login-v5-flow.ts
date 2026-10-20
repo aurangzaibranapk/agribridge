@@ -1,5 +1,5 @@
 import {
-  allowedChannels, classifyIdentifier, defaultChannel, identHash, isMemberRole, loginStateFor, maskEmail, maskPhoneKey,
+  allowedChannels, classifyIdentifier, cnicKey, codeLengthFor, userIdProblem, defaultChannel, identHash, isMemberRole, loginStateFor, maskEmail, maskPhoneKey,
   passwordProblem, redirectForRole, type Identifier, type LoginState, type OtpChannel, type OtpPurpose,
 } from "@/lib/auth/login-v5";
 
@@ -34,7 +34,11 @@ export interface Deps {
   consumeResetGrant(token: string): Promise<string | null>;
   issueSignupGrant(channel: OtpChannel, phoneKey: string | null, email: string | null): Promise<string | null>;
   consumeSignupGrant(token: string): Promise<{ channel: string; phone_key: string | null; email: string | null } | null>;
-  createMember(input: { fullName: string; phoneKey: string; email: string | null; password: string }): Promise<{ ok: true; loginEmail: string } | { ok: false; error: string }>;
+  /** Login v6: signup se pehle -- kaun si cheez pehle se register hai. */
+  identityTaken?(phoneKey: string | null, email: string | null, cnic: string | null): Promise<("phone" | "email" | "cnic")[]>;
+  userIdAvailable?(name: string): Promise<string>;
+  saveUserId?(userId: string, name: string): Promise<string>;
+  createMember(input: { fullName: string; phoneKey: string; email: string | null; password: string; cnic?: string | null }): Promise<{ ok: true; loginEmail: string } | { ok: false; error: string }>;
   setPassword(userId: string, password: string): Promise<boolean>;
 }
 
@@ -46,6 +50,7 @@ export type LookupOk = {
 };
 
 function masked(id: Identifier): string {
+  if (id.kind === "cnic") return `•••••-•••••${id.value.slice(-3, -1)}-${id.value.slice(-1)}`;
   return id.kind === "phone" ? maskPhoneKey(id.value) : id.kind === "email" ? maskEmail(id.value) : id.value;
 }
 
@@ -68,7 +73,7 @@ export async function lookup(d: Deps, raw: unknown): Promise<LookupOk | Fail> {
   await d.log("lookup", h);
   const acc = await d.resolve(id.kind, id.value);
   const state = loginStateFor(acc);
-  if (state === "new" && id.kind === "username") return { ok: false, error: "e_not_found" };
+  if (state === "new" && (id.kind === "username" || id.kind === "cnic")) return { ok: false, error: "e_not_found" };
   // password state: channels "Password bhool gaye?" ke liye (reset).
   const purpose: OtpPurpose = state === "new" ? "signup" : state === "first_time" ? "first_time" : "reset";
   const { list } = await channelsFor(d, purpose, id, acc);
@@ -111,7 +116,7 @@ async function targetFor(d: Deps, purpose: OtpPurpose, raw: unknown, channel: Ot
   const acc = await d.resolve(id.kind, id.value);
   if (purpose === "signup") {
     if (acc) return { ok: false, error: "e_exists", state: loginStateFor(acc) };
-    if (id.kind === "username") return { ok: false, error: "e_not_found" };
+    if (id.kind === "username" || id.kind === "cnic") return { ok: false, error: "e_not_found" };
     if (id.kind === "phone" && (await d.phoneIsStaff(id.value))) return { ok: false, error: "e_exists", state: "first_time" };
     if (channel === "email" || id.kind === "email") {
       const e = id.kind === "email" ? id.value : classifyIdentifier(email ?? "")?.kind === "email" ? classifyIdentifier(email)!.value : null;
@@ -152,7 +157,8 @@ const VERDICT_ERROR: Record<string, string> = { ghalat: "e_code_wrong", band: "e
 export async function verifyCode(d: Deps, purpose: OtpPurpose, raw: unknown, channel: OtpChannel, code: string, email?: string | null):
   Promise<{ ok: true; grant: string; verifiedPhone: boolean; verifiedEmail: string | null } | Fail> {
   const clean = String(code ?? "").replace(/\D/g, "");
-  if (clean.length !== 6) return { ok: false, error: "e_code_len" };
+  // SMS = 4 hindse, WhatsApp/email = 6. Server par hi pakka (UI par bharosa nahi).
+  if (clean.length !== codeLengthFor(channel) || String(code ?? "").trim().length !== clean.length) return { ok: false, error: "e_code_len" };
   const t = await targetFor(d, purpose, raw, channel, email);
   if ("ok" in t) return t.error === "e_generic_sent" ? { ok: false, error: "e_code_expired" } : t;
   const verdict = await d.verifyOtp(t.email ? { email: t.email } : { phoneKey: t.phoneKey }, clean);
@@ -168,7 +174,7 @@ export async function verifyCode(d: Deps, purpose: OtpPurpose, raw: unknown, cha
 }
 
 /** Naya member: naam + (mobile) + password. Ek banda = ek account. Staff kabhi member nahi. */
-export async function completeSignup(d: Deps, input: { grant: string; fullName: string; phone?: string; email?: string; password: string; confirm: string }):
+export async function completeSignup(d: Deps, input: { grant: string; fullName: string; phone?: string; email?: string; cnic?: string; password: string; confirm: string }):
   Promise<{ ok: true; redirect: string } | Fail> {
   const name = String(input.fullName ?? "").trim().replace(/\s+/g, " ");
   if (name.length < 2 || name.length > 80) return { ok: false, error: "e_name" };
@@ -187,7 +193,16 @@ export async function completeSignup(d: Deps, input: { grant: string; fullName: 
   const byPhone = await d.resolve("phone", phoneKey);
   if (byPhone || (await d.phoneIsStaff(phoneKey))) return { ok: false, error: "e_phone_taken" };
   if (email && (await d.resolve("email", email))) return { ok: false, error: "e_email_taken" };
-  const made = await d.createMember({ fullName: name, phoneKey, email, password: input.password });
+  const cnic = input.cnic ? cnicKey(input.cnic) : null;
+  if (input.cnic && !cnic) return { ok: false, error: "e_cnic" };
+  if (cnic && (await d.resolve("cnic", cnic))) return { ok: false, error: "e_cnic_taken" };
+  if (d.identityTaken) {
+    const taken = await d.identityTaken(phoneKey, email, cnic);
+    if (taken.includes("phone")) return { ok: false, error: "e_phone_taken" };
+    if (taken.includes("email")) return { ok: false, error: "e_email_taken" };
+    if (taken.includes("cnic")) return { ok: false, error: "e_cnic_taken" };
+  }
+  const made = await d.createMember({ fullName: name, phoneKey, email, password: input.password, cnic });
   if (!made.ok) return made;
   if (!(await d.signIn(made.loginEmail, input.password))) return { ok: false, error: "e_try_again" };
   const acc = await d.resolve("phone", phoneKey);
@@ -209,4 +224,64 @@ export async function setNewPassword(d: Deps, input: { grant: string; password: 
   const loginEmail = await input.email(userId);
   if (!loginEmail || !(await d.signIn(loginEmail, input.password))) return { ok: false, error: "e_try_again" };
   return finishLogin(d, userId);
+}
+
+// ------------------------------------------------------------------ Login v6
+
+export type SignupField = "name" | "email" | "phone" | "cnic" | "password";
+export type SignupCheck = { ok: true; phoneKey: string } | { ok: false; fields: Partial<Record<SignupField, string>> };
+
+/**
+ * Signup form ki jaanch -- OTP bhejne se PEHLE. Mobile/email/CNIC pehle se
+ * kisi account ke hon to field par error (screen "Password reset karein" link dikhati hai).
+ */
+export async function checkSignup(d: Deps, input: { fullName: string; email?: string; phone: string; cnic?: string; password: string }): Promise<SignupCheck> {
+  const fields: Partial<Record<SignupField, string>> = {};
+  const name = String(input.fullName ?? "").trim().replace(/\s+/g, " ");
+  if (name.length < 2 || name.length > 80) fields.name = "e_name";
+  const ph = classifyIdentifier(input.phone);
+  const phoneKey = ph?.kind === "phone" ? ph.value : null;
+  if (!phoneKey) fields.phone = "e_phone_needed";
+  let email: string | null = null;
+  if (String(input.email ?? "").trim()) {
+    const e = classifyIdentifier(input.email);
+    if (e?.kind === "email") email = e.value; else fields.email = "e_email_bad";
+  }
+  let cnic: string | null = null;
+  if (String(input.cnic ?? "").trim()) {
+    cnic = cnicKey(input.cnic);
+    if (!cnic) fields.cnic = "e_cnic";
+  }
+  const pw = passwordProblem(input.password ?? "", input.password ?? "", phoneKey);
+  if (pw) fields.password = pw;
+  if (phoneKey && !fields.phone && ((await d.resolve("phone", phoneKey)) || (await d.phoneIsStaff(phoneKey)))) fields.phone = "e_phone_taken";
+  if (email && !fields.email && (await d.resolve("email", email))) fields.email = "e_email_taken";
+  if (cnic && !fields.cnic && (await d.resolve("cnic", cnic))) fields.cnic = "e_cnic_taken";
+  if (d.identityTaken && phoneKey) {
+    const taken = await d.identityTaken(phoneKey, email, cnic);
+    if (taken.includes("phone")) fields.phone ??= "e_phone_taken";
+    if (taken.includes("email")) fields.email ??= "e_email_taken";
+    if (taken.includes("cnic")) fields.cnic ??= "e_cnic_taken";
+  }
+  return Object.keys(fields).length || !phoneKey ? { ok: false, fields } : { ok: true, phoneKey };
+}
+
+const UID_ERR: Record<string, string> = { shape: "e_uid_shape", reserved: "e_uid_taken", taken: "e_uid_taken", already: "e_uid_already", no_profile: "e_try_again" };
+
+/** User ID dastiyab hai? (sirf jawab, kuch save nahi) */
+export async function checkUserId(d: Deps, raw: unknown): Promise<{ ok: true; name: string } | Fail> {
+  const shape = userIdProblem(raw);
+  if (shape) return { ok: false, error: shape };
+  const name = String(raw).trim().toLowerCase();
+  const r = d.userIdAvailable ? await d.userIdAvailable(name) : "ok";
+  return r === "ok" ? { ok: true, name } : { ok: false, error: UID_ERR[r] ?? "e_try_again" };
+}
+
+/** Login ke baad apni User ID -- sirf apne liye (userId session se aata hai). */
+export async function saveUserId(d: Deps, userId: string | null, raw: unknown): Promise<{ ok: true; name: string } | Fail> {
+  if (!userId) return { ok: false, error: "e_grant" };
+  const c = await checkUserId(d, raw);
+  if (!c.ok) return c;
+  const r = d.saveUserId ? await d.saveUserId(userId, c.name) : "no_profile";
+  return r === "ok" ? { ok: true, name: c.name } : { ok: false, error: UID_ERR[r] ?? "e_try_again" };
 }

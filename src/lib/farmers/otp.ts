@@ -34,12 +34,14 @@ export type OtpRequest =
   | { ok: true; sentVia: "whatsapp" | "sms"; phoneKey: string }
   | { ok: false; error: string; retryAfterSeconds?: number };
 
-function sixDigits(): string {
+/** N hindse ka code (4 = SMS login v6, 6 = baqi sab). */
+export function otpDigits(n: 4 | 6 = 6): string {
   // Math.random() yahan kaafi nahi. Ye chaabi hai, aur chaabi ka andaza
   // lagaya ja sakna us ki sab se buri khaami hoti hai.
   const bytes = new Uint32Array(1);
   crypto.getRandomValues(bytes);
-  return String(100000 + (bytes[0] % 900000));
+  const lo = 10 ** (n - 1);
+  return String(lo + (bytes[0] % (9 * lo)));
 }
 
 /**
@@ -57,7 +59,14 @@ function sixDigits(): string {
  */
 export async function sendFarmerOtp(
   rawPhone: string,
-  prefer: "whatsapp" | "sms" = "whatsapp"
+  prefer: "whatsapp" | "sms" = "whatsapp",
+  /**
+   * Login v6: `digits` = code ki lambai; `only` = sirf chuna hua raasta.
+   * SMS ka code 4 hindse aur WhatsApp ka 6 hai, is liye v6 mein fallback
+   * nahi (warna 4 hindse wala code WhatsApp par chala jata aur screen 6
+   * khane dikhati). Purane callers par koi asar nahi.
+   */
+  opts: { digits?: 4 | 6; only?: boolean } = {}
 ): Promise<OtpRequest> {
   const key = phoneKey(rawPhone);
   if (!key) return { ok: false, error: "Mobile number poora likhein — gyarah hindse." };
@@ -90,7 +99,7 @@ export async function sendFarmerOtp(
     }
   }
 
-  const code = sixDigits();
+  const code = otpDigits(opts.digits ?? 6);
 
   // Qatar PEHLE banti hai, bhejne se pehle.
   //
@@ -136,7 +145,9 @@ export async function sendFarmerOtp(
   };
 
   // Chuna hua raasta pehle, doosra sahare ke tor par.
-  const order = prefer === "sms" ? [trySms, tryWhatsapp] : [tryWhatsapp, trySms];
+  const order = opts.only
+    ? [prefer === "sms" ? trySms : tryWhatsapp]
+    : prefer === "sms" ? [trySms, tryWhatsapp] : [tryWhatsapp, trySms];
   for (const attempt of order) {
     if (sentVia) break;
     await attempt();

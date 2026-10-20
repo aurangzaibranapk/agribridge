@@ -7,7 +7,7 @@ import { ensureProfileFor } from "@/lib/auth/ensure-profile";
 import { requestMeta } from "@/lib/auth/password-reset-server";
 import { newResetToken, sha256, GRANT_VALID_MINUTES } from "@/lib/auth/password-reset";
 import { resolveRequestOrganizationId } from "@/lib/tenant/request-organization";
-import { emailOtpKey, resetTokenChannel, syntheticEmailFor, type OtpChannel, type OtpPurpose } from "@/lib/auth/login-v5";
+import { codeLengthFor, formatCnic, emailOtpKey, resetTokenChannel, syntheticEmailFor, type OtpChannel, type OtpPurpose } from "@/lib/auth/login-v5";
 import * as Flow from "@/lib/auth/login-v5-flow";
 import type { Deps } from "@/lib/auth/login-v5-flow";
 
@@ -60,7 +60,8 @@ async function deps(): Promise<Deps> {
     },
     async sendPhoneOtp(key, channel) {
       // Purana raasta: chuna hua pehle, doosra fallback (WhatsApp -> SMS).
-      const r = await sendFarmerOtp("0" + key, channel);
+      // v6: SMS 4 hindse, WhatsApp 6 -- sirf chuna hua raasta (code ki lambai raaste se bandhi hai).
+      const r = await sendFarmerOtp("0" + key, channel, { digits: codeLengthFor(channel) as 4 | 6, only: true });
       return r.ok ? { ok: true } : { ok: false, error: r.retryAfterSeconds ? "e_wait" : "e_send", retryAfterSeconds: r.retryAfterSeconds };
     },
     async sendEmailOtp(email) {
@@ -86,7 +87,14 @@ async function deps(): Promise<Deps> {
       const rows = (await rpc("fn_login_signup_grant_consume", { p_hash: sha256(token) })) as any[];
       return rows?.[0] ?? null;
     },
-    async createMember({ fullName, phoneKey, email, password }) {
+    async identityTaken(phoneKey, email, cnic) {
+      try {
+        return ((await rpc("fn_login_identity_taken", { p_phone_key: phoneKey ?? "", p_email: email ?? "", p_cnic: cnic ?? "" })) as any[]) ?? [];
+      } catch { return []; } // 686 abhi live nahi: baqi jaanch (resolve) phir bhi chalti hai
+    },
+    async userIdAvailable(name) { return String(await rpc("fn_login_userid_available", { p_name: name })); },
+    async saveUserId(user, name) { return String(await rpc("fn_login_set_userid", { p_user: user, p_name: name })); },
+    async createMember({ fullName, phoneKey, email, password, cnic }) {
       const organizationId = await resolveRequestOrganizationId();
       if (!organizationId) return { ok: false, error: "e_try_again" };
       const loginEmail = email ?? syntheticEmailFor(phoneKey);
@@ -98,12 +106,14 @@ async function deps(): Promise<Deps> {
       const { error: insErr } = await service.from("farmers").insert({
         user_id: made.user.id, organization_id: organizationId, full_name: fullName, phone_number: "0" + phoneKey,
         email, registration_source: "SELF", signup_approval_status: "pending",
+        ...(cnic ? { cnic: formatCnic(cnic) } : {}),
       });
       if (insErr) {
         await service.auth.admin.deleteUser(made.user.id); // abhi bana login, adhoora na chhoro
         return { ok: false, error: /staff_cannot_be_member|phone_key_uniq/.test(insErr.message) ? "e_phone_taken" : "e_try_again" };
       }
       await ensureProfileFor(service, made.user.id);
+      if (cnic) await service.from("profiles").update({ cnic }).eq("id", made.user.id); // 686 ke baad; pehle ho to chup
       return { ok: true, loginEmail };
     },
     async setPassword(user, password) {
@@ -127,7 +137,7 @@ export async function v5SendCode(purpose: OtpPurpose, identifier: string, channe
 export async function v5VerifyCode(purpose: OtpPurpose, identifier: string, channel: OtpChannel, code: string, email?: string) {
   return safe(async () => Flow.verifyCode(await deps(), purpose, identifier, channel, code, email));
 }
-export async function v5CompleteSignup(input: { grant: string; fullName: string; phone?: string; email?: string; password: string; confirm: string }) {
+export async function v5CompleteSignup(input: { grant: string; fullName: string; phone?: string; email?: string; cnic?: string; password: string; confirm: string }) {
   return safe(async () => Flow.completeSignup(await deps(), input));
 }
 export async function v5SetPassword(input: { grant: string; password: string; confirm: string }) {
@@ -138,4 +148,27 @@ export async function v5SetPassword(input: { grant: string; password: string; co
       email: async (user) => (await service.auth.admin.getUserById(user)).data.user?.email ?? null,
     });
   });
+}
+
+// ------------------------------------------------------------------ Login v6
+export async function v6CheckSignup(input: { fullName: string; email?: string; phone: string; cnic?: string; password: string }) {
+  return safe(async () => Flow.checkSignup(await deps(), input));
+}
+async function sessionUserId(): Promise<string | null> {
+  const { data } = await createClient().auth.getUser();
+  return data.user?.id ?? null;
+}
+export async function v6UserIdCheck(name: string) { return safe(async () => Flow.checkUserId(await deps(), name)); }
+export async function v6SaveUserId(name: string) { return safe(async () => Flow.saveUserId(await deps(), await sessionUserId(), name)); }
+/** Login ke baad: kya "Apni User ID banayein" dikhana hai? (sirf jab abhi User ID na ho) */
+export async function v6NeedsUserId(): Promise<boolean> {
+  try {
+    const uid = await sessionUserId();
+    if (!uid) return false;
+    const service = createServiceClient() as any;
+    const { data: p, error } = await service.from("profiles").select("username").eq("id", uid).maybeSingle();
+    if (error || !p || p.username) return false;
+    const { data: f } = await service.from("farmers").select("username").eq("user_id", uid).maybeSingle();
+    return !f?.username;
+  } catch { return false; }
 }

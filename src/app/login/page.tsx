@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Suspense } from "react";
 import { LoginV5 } from "@/app/login/login-v5";
+import { LoginV6 } from "@/app/login/login-v6";
 import { LegacyLoginPage } from "@/app/login/legacy-page";
 import { tx, type V5Lang } from "@/app/login/v5-text";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -18,6 +19,7 @@ const urdu = localFont({ src: [{ path: "./fonts/noto-nastaliq-urdu.woff2", weigh
 /**
  * Login v5 (malik ki manzoori, 20 Oct): mobile / User ID / email + password.
  * OTP sirf naye signup, pehli dafa password aur password bhool gaye par.
+ * Login v6 (design1, 20 Oct 2026) ab default; LOGIN_UI=v5 -> v5 screen.
  * Wapsi ka raasta: server .env mein LOGIN_V5=0 -> purana login (legacy-page.tsx).
  */
 export default async function LoginPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
@@ -54,7 +56,7 @@ export default async function LoginPage({ searchParams }: { searchParams?: Recor
         <div aria-hidden="true" className="pointer-events-none absolute -left-16 -top-24 h-[380px] w-[380px] rounded-full bg-[#7fd6a6] opacity-55 blur-[80px] dark:opacity-20" />
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 -right-10 h-[340px] w-[340px] rounded-full bg-[#9db4e6] opacity-55 blur-[80px] dark:opacity-20" />
         <div className="relative z-10 mb-6 flex w-full max-w-[440px] items-center gap-3 lg:hidden"><Logo id="ablg-m" /><div><p className="font-v5display text-[19px] font-semibold">AgriBridge</p><p className={`text-[12px] text-[#5d6b7e] dark:text-[#93a3bd] ${rtl ? "font-urdu" : ""}`}>{tr("tag")}</p></div></div>
-        <div className="relative z-10 w-full max-w-[440px]"><Suspense fallback={null}><LoginV5 initialLang={lang} preview={otpPreview} /></Suspense></div>
+        <div className="relative z-10 w-full max-w-[440px]"><Suspense fallback={null}>{process.env.LOGIN_UI === "v5" || otpPreview ? <LoginV5 initialLang={lang} preview={otpPreview} /> : <LoginV6 initialLang={lang} />}</Suspense></div>
       </section>
     </main>
   );

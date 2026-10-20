@@ -8,7 +8,7 @@ import { getRoleRedirectPath, type UserRole } from "@/lib/utils/roles";
  * signup, pehli dafa password aur password bhool gaye ke liye.
  */
 
-export type IdKind = "phone" | "email" | "username";
+export type IdKind = "phone" | "email" | "username" | "cnic";
 export type Identifier = { kind: IdKind; value: string };
 export type OtpChannel = "whatsapp" | "sms" | "email";
 export type OtpPurpose = "signup" | "first_time" | "reset";
@@ -26,6 +26,9 @@ export function classifyIdentifier(raw: unknown): Identifier | null {
     const e = v.toLowerCase();
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.length <= 254 ? { kind: "email", value: e } : null;
   }
+  // CNIC: 12345-1234567-1 ya 13 hindse (0092... wala 13 hindse ka number phone hai).
+  const cnic = cnicKey(v);
+  if (cnic && !/^\+?0092/.test(v.replace(/[\s\-()]/g, ""))) return { kind: "cnic", value: cnic };
   if (/^[+\d][\d\s\-()]*$/.test(v)) {
     const d = v.replace(/\D/g, "");
     // Pakistani mobile: 03xx xxxxxxx / 923xx / 3xx -- aakhri das hindse, 3 se shuru.
@@ -132,4 +135,24 @@ export function redirectForRole(role: string | null | undefined): string {
 /** Member (khud-registration) sirf farmer/customer. */
 export function isMemberRole(role: string | null | undefined): boolean {
   return role === "farmer" || role === "customer";
+}
+
+/** CNIC -> 13 hindse (sirf 12345-1234567-1 ya 13 seedhe hindse), warna null. */
+export function cnicKey(raw: unknown): string | null {
+  const v = String(raw ?? "").trim();
+  if (/^\d{5}-\d{7}-\d$/.test(v) || /^\d{13}$/.test(v)) return v.replace(/\D/g, "");
+  return null;
+}
+export function formatCnic(key: string): string {
+  const d = key.replace(/\D/g, "");
+  return d.length === 13 ? `${d.slice(0, 5)}-${d.slice(5, 12)}-${d.slice(12)}` : key;
+}
+
+/** Login v6: SMS ka code 4 hindse, WhatsApp/email 6 (malik, 20 Oct). Client-safe copy: login-v6-ui.ts */
+export { SMS_CODE_LENGTH, WHATSAPP_CODE_LENGTH, OTP_VALID_MINUTES, OTP_MAX_TRIES, OTP_RESEND_SECONDS, codeLengthFor } from "@/lib/auth/login-v6-ui";
+
+/** User ID ki shakl (DB chk_farmer_username_shakl / chk_profiles_username_shakl jaisi). */
+export function userIdProblem(raw: unknown): string | null {
+  const v = String(raw ?? "").trim().toLowerCase();
+  return /^[a-z][a-z0-9._]{3,19}$/.test(v) ? null : "e_uid_shape";
 }
