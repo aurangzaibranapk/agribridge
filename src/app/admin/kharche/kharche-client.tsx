@@ -795,7 +795,13 @@ export function KharcheClient({
                 </span>
               </label>
 
-              {/* 5) Khata */}
+              {/* 5) Khata — 621: udhaar bill par cash nahi hilta */}
+              {qism?.udhaarPar ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+                  <p className="font-medium">{t("kh_udhaar_bill_title", lang)}</p>
+                  <p className="mt-1">{t("kh_udhaar_bill_hint", lang)}</p>
+                </div>
+              ) : (
               <label className="text-sm">
                 <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">
                   {t("kh_paisa_kis_khate_se", lang)}
@@ -817,6 +823,7 @@ export function KharcheClient({
                   {isUnrestricted ? t("kh_is_ke_baghair_finance", lang) : "Sirf cash hand se — bank/wallet/card sirf admin/owner ke paas."}
                 </span>
               </label>
+              )}
 
               <label className="sm:col-span-2 text-sm">
                 <span className="mb-1 block font-medium text-surface-700 dark:text-surface-300">{t("kh_tafseel", lang)}</span>

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
 import { postJournal } from "@/lib/ledger/post";
+import { canApprove, linkedSettlementLimit, linkedSettlementLines } from "@/lib/party-links/core";
 
 export interface ActionState {
   error?: string;
@@ -213,6 +214,7 @@ export async function settlementManzoor(_prev: ActionState, formData: FormData):
   if (s.status === "rejected") return { error: "Ye radd ho chuka hai." };
 
   const amount = Number(s.amount ?? 0);
+  if (s.party_link_id) return linkedManzoor(s, id, raye, who);
   const [lena, dena] = await Promise.all([
     khatePaBaqi(String(s.party_type), String(s.party_id), String(s.lena_khata)),
     khatePaBaqi(String(s.party_type), String(s.party_id), String(s.dena_khata)),
@@ -321,4 +323,110 @@ export async function settlementRadd(_prev: ActionState, formData: FormData): Pr
 
   revalidatePath("/admin/settlements");
   return { success: true, message: "Radd kar diya." };
+}
+
+/**
+ * 621: Do LINKED party ka adjustment — customer (1100) ka lena aur
+ * supplier (2000) ka dena, jab dono ek hi banda hon (party_links).
+ * Dr 2000 supplier / Cr 1100 customer. Wajah lazmi, aur banane wala khud
+ * manzoor nahi kar sakta (DB constraint bhi yehi rokta hai).
+ */
+export async function linkedSettlementMaangein(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const who = await main();
+  if ("error" in who) return { error: who.error };
+  if (!MAANG_SAKTE.includes(who.role) && !SAB_KUCH.includes(who.role)) {
+    return { error: "Ye darkhwast Manager, Finance ya Admin de sakta hai." };
+  }
+  const linkId = String(formData.get("party_link_id") ?? "").trim();
+  const amount = Number(formData.get("amount") ?? 0);
+  const wajah = String(formData.get("wajah") ?? "").trim();
+  if (!linkId) return { error: "Linked party chunein." };
+  if (!Number.isFinite(amount) || amount <= 0) return { error: "Raqam sahi likhein." };
+  if (!wajah) return { error: "Wajah likhein — chhe mahine baad yehi batati hai ke ye raqam kahan gayi." };
+
+  const { data: link } = (await loose().from("party_links").select("id, customer_id, supplier_id, is_active").eq("id", linkId).maybeSingle()) as { data: any };
+  if (!link?.is_active) return { error: "Ye link fa'aal nahi hai." };
+
+  const [lena, dena] = await Promise.all([
+    khatePaBaqi("customer", link.customer_id, "1100"),
+    khatePaBaqi("supplier", link.supplier_id, "2000"),
+  ]);
+  const hadd = linkedSettlementLimit(lena, dena);
+  if (hadd <= 0) {
+    return { error: `Adjust karne ke liye dono taraf raqam honi chahiye. Customer se lena Rs ${lena.toLocaleString()}, supplier ko dena Rs ${dena.toLocaleString()}.` };
+  }
+  if (amount > hadd) {
+    return { error: `Rs ${amount.toLocaleString()} zyada hai. Hadd Rs ${hadd.toLocaleString()} hai — us se zyada se ek khata ULTA ho jayega.` };
+  }
+
+  const number = await nextNumber();
+  const { data: row, error } = await loose().from("party_settlements").insert({
+    settlement_number: number,
+    party_type: "customer", party_id: link.customer_id, lena_khata: "1100",
+    dena_party_type: "supplier", dena_party_id: link.supplier_id, dena_khata: "2000",
+    party_link_id: link.id,
+    amount, wajah, branch_id: who.branchId, created_by: who.userId, status: "pending",
+  }).select("id").single();
+  if (error) return { error: error.message };
+
+  await logAudit({ actionType: "create", module: "settlements", recordId: row?.id, recordLabel: number,
+    description: `Linked adjustment maanga: Rs ${amount.toLocaleString()} — supplier 2000 ke against customer 1100. Wajah: ${wajah}` });
+  revalidatePath("/admin/settlements");
+  return { success: true, message: `${number} darj — kisi DOOSRE Finance/Admin ki manzoori ka intezar.` };
+}
+
+async function linkedManzoor(s: any, id: string, raye: string, who: { userId: string; branchId: string | null }): Promise<ActionState> {
+  if (!canApprove(s.created_by, who.userId)) {
+    return { error: "Apni banayi hui darkhwast khud manzoor nahi kar sakte — doosra Finance/Admin kare." };
+  }
+  const amount = Number(s.amount ?? 0);
+  const [lena, dena] = await Promise.all([
+    khatePaBaqi("customer", String(s.party_id), "1100"),
+    khatePaBaqi("supplier", String(s.dena_party_id), "2000"),
+  ]);
+  const hadd = linkedSettlementLimit(lena, dena);
+  if (amount > hadd) {
+    return { error: `Ab ye raqam adjust nahi ho sakti: customer se lena Rs ${lena.toLocaleString()}, supplier ko dena Rs ${dena.toLocaleString()} (hadd Rs ${hadd.toLocaleString()}). Nayi darkhwast banayein.` };
+  }
+  const tafseel = `${s.settlement_number} — Linked party adjustment: ${s.wajah}`;
+  const posted = await postJournal({
+    description: tafseel, sourceModule: "settlement", sourceId: id,
+    branchId: s.branch_id ?? who.branchId, createdBy: who.userId,
+    claims: [{ table: "party_settlements", rowId: id }],
+    lines: linkedSettlementLines({ amount, customerId: String(s.party_id), supplierId: String(s.dena_party_id), memo: tafseel }),
+  });
+  if ("error" in posted) return { error: `Kitab mein qatar nahi bani, is liye manzoori bhi nahi di gayi: ${posted.error}` };
+
+  const { error: halatError } = await loose().from("party_settlements").update({
+    status: "approved", approved_by: who.userId, approved_at: new Date().toISOString(),
+    journal_entry_id: (posted as { id?: string }).id ?? null,
+  }).eq("id", id);
+  if (halatError) {
+    return { error: `Kitab mein qatar ban gayi magar halat "manzoor" nahi ho saki: ${halatError.message}. Kisi ko batayein — dobara manzoori se dohri qatar ban jayegi.` };
+  }
+  // Stored balances bhi foran theek (recovery function ka wohi tareeqa).
+  const db = createServiceClient() as any;
+  const [cust, supp] = await Promise.all([
+    khatePaBaqiSigned("customer", String(s.party_id), "1100"),
+    khatePaBaqiSigned("supplier", String(s.dena_party_id), "2000"),
+  ]);
+  await Promise.all([
+    db.from("customers").update({ current_balance: cust }).eq("id", s.party_id),
+    db.from("suppliers").update({ current_payable: supp }).eq("id", s.dena_party_id),
+  ]);
+
+  await logAudit({ actionType: "approve", module: "settlements", recordId: id, recordLabel: s.settlement_number,
+    description: `Linked manzoor: Rs ${amount.toLocaleString()} — Dr 2000 supplier / Cr 1100 customer. Raye: ${raye}` });
+  revalidatePath("/admin/settlements");
+  return { success: true, message: `Manzoor. Supplier ka dena aur customer ka lena dono Rs ${amount.toLocaleString()} kam.` };
+}
+
+async function khatePaBaqiSigned(partyType: string, partyId: string, khata: string): Promise<number> {
+  const { data: lines } = await createServiceClient().from("journal_lines").select("debit, credit")
+    .eq("party_type", partyType).eq("party_id", partyId).eq("account_code", khata);
+  let v = 0;
+  for (const l of (lines ?? []) as { debit: number | null; credit: number | null }[]) {
+    v += khata === "2000" ? Number(l.credit ?? 0) - Number(l.debit ?? 0) : Number(l.debit ?? 0) - Number(l.credit ?? 0);
+  }
+  return Math.round(v * 100) / 100;
 }

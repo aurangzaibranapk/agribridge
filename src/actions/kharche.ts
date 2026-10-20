@@ -7,6 +7,7 @@ import { requireAction } from "@/lib/access/guard";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { nextExpenseNumber } from "@/lib/expense-number";
 import { postJournal } from "@/lib/ledger/post";
+import { supplierBillLines } from "@/lib/party-links/core";
 import { glForFinanceAccount, expenseAccountFor, ACC } from "@/lib/ledger/rules";
 import { cashBookLikhein } from "@/lib/ledger/cash-book";
 import { qismDhoondein, qismKaNaamSaaf, APNI_QISM } from "@/lib/kharche";
@@ -147,8 +148,8 @@ export async function kharchaDarj(_prev: ActionState, formData: FormData): Promi
   const expenseDate = String(formData.get("expense_date") ?? "").trim();
   if (!expenseDate) return { error: "Tareekh likhein." };
 
-  const accountId = String(formData.get("paid_from_account_id") ?? "").trim();
-  if (!accountId) {
+  const accountId = qism.udhaarPar ? "" : String(formData.get("paid_from_account_id") ?? "").trim();
+  if (!accountId && !qism.udhaarPar) {
     // Khali chhorne dena yahan sab se mehngi khamoshi hoti: kitab
     // barabar rehti aur Finance ke safhe par khate ka adad hilta hi
     // nahi -- aur wohi adad malik parhte hain.
@@ -218,7 +219,7 @@ export async function kharchaDarj(_prev: ActionState, formData: FormData): Promi
    * (kharche-client.tsx) -- ye yahan dobara check hai taake koi seedha
    * request bana kar us rok ko na toR sake.
    */
-  if (!UNRESTRICTED_ROLES.includes(who.role)) {
+  if (!qism.udhaarPar && !UNRESTRICTED_ROLES.includes(who.role)) {
     const { data: account } = await service.from("finance_accounts").select("account_type").eq("id", accountId).maybeSingle();
     if (account?.account_type !== "cash") {
       return { error: "Aap sirf cash hand (nagad) se kharcha/bill darj kar sakte hain — bank, wallet ya card sirf admin/owner istemal kar sakte hain." };
@@ -251,7 +252,7 @@ export async function kharchaDarj(_prev: ActionState, formData: FormData): Promi
       party_type: partyType,
       party_id: partyId,
       party_name: partyName,
-      paid_from_account_id: accountId,
+      paid_from_account_id: accountId || null,
       // `supplier_id` purane safhe ke liye bhara ja raha hai -- wahan ki
       // report abhi usi khane se supplier ka naam nikalti hai.
       supplier_id: partyType === "supplier" ? partyId : null,
@@ -383,6 +384,8 @@ export async function kharchaManzoor(_prev: ActionState, formData: FormData): Pr
 
   const amount = Number(kharcha.amount ?? 0);
   if (amount <= 0) return { error: "Raqam sifar ya manfi hai — ye qatar post nahi ho sakti." };
+
+  if (qism.udhaarPar) return supplierBillManzoor(kharcha, qism, id, who);
 
   const accountId = kharcha.paid_from_account_id as string | null;
   if (!accountId) return { error: "Is qatar par khata darj nahi hai. Pehle wo theek karwayein." };
@@ -598,4 +601,55 @@ export async function kharchaRadd(_prev: ActionState, formData: FormData): Promi
 
   revalidatePath("/admin/kharche");
   return { success: true, message: "Radd kar diya." };
+}
+
+/**
+ * 621: Supplier bill (udhaar par kharcha) ki manzoori.
+ * Dr kharcha (diesel -> 6010) / Cr 2000, dono supplier ke naam. Cash Book
+ * mein KUCH nahi -- paisa abhi gaya hi nahi. Adaigi baad mein "Payment Send
+ * Karein" (2000) ya "Supplier ko adaigi" se.
+ */
+async function supplierBillManzoor(kharcha: any, qism: { label: string; asar: string; bandaKahanSe: string | null }, id: string, who: { userId: string; branchId: string | null }): Promise<ActionState> {
+  if (kharcha.requested_by && kharcha.requested_by === who.userId) {
+    return { error: "Apni banayi hui request khud manzoor nahi kar sakte — doosra authorized banda kare." };
+  }
+  if (kharcha.party_type !== "supplier" || !kharcha.party_id) {
+    return { error: "Supplier bill ke liye banda supplier ki fehrist se hona chahiye." };
+  }
+  const amount = Number(kharcha.amount ?? 0);
+  const tafseel = `${kharcha.expense_number} — ${qism.label}: ${kharcha.description}`;
+  let lines;
+  try {
+    lines = supplierBillLines({ amount, expenseAccount: expenseAccountFor(kharcha.category), supplierId: String(kharcha.party_id), memo: tafseel });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Qatarein nahi ban sakin." };
+  }
+  const posted = await postJournal({
+    description: tafseel, sourceModule: "kharche", sourceId: id,
+    branchId: (kharcha.branch_id as string | null) ?? who.branchId,
+    entryDate: (kharcha.expense_date as string | null) ?? undefined,
+    createdBy: who.userId,
+    claims: [{ table: "company_expense_requests", rowId: id }],
+    lines,
+  });
+  if ("error" in posted) return { error: `Kitab mein qatar nahi bani, is liye manzoori bhi nahi di gayi: ${posted.error}` };
+
+  const service = createServiceClient();
+  const { error: halatError } = await service.from("company_expense_requests")
+    .update({ status: "approved", approved_by: who.userId, approved_at: new Date().toISOString() }).eq("id", id);
+  if (halatError) {
+    return { error: `Kitab mein qatar to ban gayi magar halat "manzoor" nahi ho saki: ${halatError.message}. Kisi ko batayein — dobara manzoori se dohri qatar ban jayegi.` };
+  }
+  // Supplier ka stored payable (2000) foran theek -- recovery function ka wohi tareeqa.
+  const { data: gl } = await service.from("journal_lines").select("debit, credit")
+    .eq("party_type", "supplier").eq("party_id", kharcha.party_id).eq("account_code", "2000");
+  const payable = Math.round(((gl ?? []) as any[]).reduce((a, l) => a + Number(l.credit ?? 0) - Number(l.debit ?? 0), 0) * 100) / 100;
+  await (service.from("suppliers") as any).update({ current_payable: payable }).eq("id", kharcha.party_id);
+
+  await logAudit({ actionType: "approve", module: "kharche", recordId: id, recordLabel: kharcha.expense_number,
+    description: `${qism.label} — Rs ${amount.toLocaleString()} manzoor (udhaar). ${qism.asar}` });
+  revalidatePath("/admin/kharche");
+  revalidatePath("/admin/finance");
+  revalidatePath(`/admin/suppliers/${kharcha.party_id}/statement`);
+  return { success: true, message: `${kharcha.expense_number} manzoor. ${qism.asar}` };
 }
