@@ -1,3 +1,22 @@
+## Pending — 20 October 2026: Dairy review migrations 650–659
+
+Not applied. Files only, on branch `cursor/dairy-review-fixes-fa47`. Do not run them on testing or live until the owner says so, and do not run them on live until a fresh backup size is confirmed in chat.
+
+Order when the owner approves: testing first, counts checked, then live (backup already verified), then the web build. The milk, fuel, billing, and receipt screens call `fn_apply_milk_fat`, `fn_record_milk_payment`, `fn_next_milk_collection_number`, `fn_dairy_month_pnl`, and `fn_correct_milk_receipt`. Deploying the build before the migrations will make those screens fail. 658 replaces the old payment function, so 652 and 658 must both be applied before the new payment screen is used.
+
+- 650 quality bounds, collection number, variance, indexes
+- 651 atomic FAT + khata + wallet + GL 5010/1150
+- 652 atomic milk payment and priced/verified balance
+- 653 maker-checker (nobody approves their own entry)
+- 654 counter and dispatch RLS
+- 655 monthly bill function
+- 656 private rates and private meter bucket (drops both public rate policy names)
+- 657 drops live policy `public_read_milk_rates` again
+- 658 payment, qist, khata, wallet, and cash GL 1150/1000 in one transaction; qist reverse is service-role only; farmer credit lock
+- 659 owner correction of someone else's company receipt
+
+No data cleanup was run. Rewriting old public meter URLs into paths is proposed SQL in `docs/DAIRY-REVIEW-FIXES-2026-10-20.md`, marked needs owner approval. SNF constant stays 0.805 until the owner confirms the Wasela contract.
+
 ## Pending — Finance fixes (migrations 640, 641, 642, 643) — NOT applied
 
 Files only. Do not run on Testing (`hwaiuwxqldxsoukkfefn`) or Live (`ktskwawkslaznkjjacni`) until a fresh backup is verified in chat. These run after 631–633 below. Order: backup size confirmed → 631 then 632 then 633, then these four migrations on Testing → counts → then Live → then the new build. 640 locks finance writes to owner/super_admin/admin and blocks direct journal inserts. Customer balance trigger allows security-definer RPCs (POS udhaar) and a transaction-local trusted flag. 641 adds maker-checker columns, GL 2016/1180/2018, and unique indexes. Before the indexes, `fn_finance_race_duplicate_counts()` is read-only — if a group is not zero the index is skipped (notice only). Do not delete duplicate rows. 642 is the drift function. 643 blocks finance_transactions delete, sets the POS-return balance flag, adds owner on purchase_returns, and counts `approving` in pending badges. Cron: `Authorization: Bearer CRON_SECRET` on `/api/cron/customer-balance-drift`. No customer or dealer balances are rewritten by these files.

@@ -126,8 +126,12 @@ export async function receiveQistCash(_p: QistState, fd: FormData): Promise<Qist
     ctx: { createdBy: user?.id ?? null, branchId: plan.branch_id, claims: [{ table: "finance_transactions", rowId: txn.id }] },
   });
   if (failed(posted)) {
-    await sb.rpc("fn_qist_reverse_source", { p_source_table: "finance_transactions", p_source_id: txn.id, p_reason: posted.error });
-    await reverseCashBookById(txn.id, posted.error ?? "Qist ledger nahi gaya");
+    const reversed = await createServiceClient().rpc("fn_qist_reverse_source", {
+      p_source_table: "finance_transactions", p_source_id: txn.id, p_reason: posted.error ?? "journal nakaam",
+    });
+    const cashBack = await reverseCashBookById(txn.id, posted.error ?? "Qist ledger nahi gaya");
+    if (reversed.error) return err(`Journal nahi bana (${posted.error}). Wapsi bhi nahi hui: ${reversed.error.message}`);
+    if (cashBack) return err(`Journal nahi bana (${posted.error}). Cash book wapsi nahi hui: ${cashBack}`);
     return err(posted.error);
   }
   await sb.rpc("fn_qist_set_deduction_journal", { p_source_table: "finance_transactions", p_source_id: txn.id, p_journal: posted.id });

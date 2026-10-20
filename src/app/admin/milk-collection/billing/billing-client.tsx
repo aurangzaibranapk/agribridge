@@ -81,7 +81,7 @@ export function BillingClient(props: Props) {
 function InvoiceCard(props: Props) {
   const lang = useLang();
   const invoiceText = () =>
-    `${props.companyName} - Milk Collection Invoice\n${props.selectedBranchName}\n${props.months[props.month - 1]} ${props.year}\n\nTotal Milk Handled: ${props.totalAdjustedVolume.toFixed(1)}L\nService Rate: Rs ${props.serviceRate}/L\nTotal Payable: Rs ${props.grossIncome.toLocaleString()}`;
+    `${props.companyName} - Milk Collection Invoice\n${props.selectedBranchName}\n${props.months[props.month - 1]} ${props.year}\n\nCompany ne mana: ${props.totalAdjustedVolume.toFixed(1)}L\nService Rate: Rs ${props.serviceRate}/L\nTotal Payable: Rs ${props.grossIncome.toLocaleString()}`;
 
   function handlePrint() {
     window.print();
@@ -123,6 +123,7 @@ function InvoiceCard(props: Props) {
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-brand-600 dark:text-brand-300">{t("mo_total_milk_handled", lang)}</p>
               <p className="font-display text-2xl font-bold text-brand-900 dark:text-brand-100">{props.totalAdjustedVolume.toFixed(1)} L</p>
+              <p className="text-[11px] text-brand-700/80">Company ne jitne litre mane</p>
             </div>
             <div className="text-right">
               <p className="text-xs font-medium uppercase tracking-wide text-brand-600 dark:text-brand-300">{t("c_rate", lang)}</p>

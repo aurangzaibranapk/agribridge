@@ -1,9 +1,14 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { aajKaKhana } from "@/lib/utils/format";
-import { calculateMilkValue, buildMilkReceiptSms } from "@/lib/utils/milk-formula";
+import { buildMilkReceiptSms } from "@/lib/utils/milk-formula";
 import { sendMilkSms } from "@/lib/sms";
-import { postFarmerLedger, postFarmerWallet } from "@/lib/farmer-ledger";
-import { postFarmerCreditRepaid, ACC, failed } from "@/lib/ledger/rules";
+import {
+  karachiShift,
+  karachiYear2,
+  lrRangeError,
+  milkInsertConflictMessage,
+  rpcError,
+} from "@/lib/dairy/rules";
 
 /**
  * Doodh jama karne ka WAHID engine.
@@ -72,24 +77,16 @@ export const VERIFY_COMMENT_MIN = 5;
 /** LR ki photo ka private bucket -- signed URL ke baghair nahi khulta. */
 export const LR_BUCKET = "milk-lr";
 
-async function nextCollectionNumber(): Promise<string> {
+async function nextCollectionNumber(now = new Date()): Promise<string | { error: string }> {
   const service = createServiceClient();
-  const year = new Date().getFullYear() % 100;
-
-  const { data: existing } = await service
-    .from("milk_collection_counters")
-    .select("last_number")
-    .eq("year", year)
-    .maybeSingle();
-  const next = (existing?.last_number ?? 0) + 1;
-
-  if (existing) {
-    await service.from("milk_collection_counters").update({ last_number: next }).eq("year", year);
-  } else {
-    await service.from("milk_collection_counters").insert({ year, last_number: next });
+  const year = karachiYear2(now);
+  const { data, error } = await (service as unknown as {
+    rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+  }).rpc("fn_next_milk_collection_number", { p_year: year });
+  if (error || typeof data !== "string" || !data) {
+    return { error: error ? rpcError(error.message) : "Collection number nahi bana." };
   }
-
-  return `MC-${year}-${String(next).padStart(6, "0")}`;
+  return data;
 }
 
 /**
@@ -169,6 +166,8 @@ export interface CollectionInput {
   /** LR ki photo -- base64 mein. */
   lrImage?: { base64: string; mimeType: string } | null;
   notes?: string | null;
+  /** Manager ne LR 15–40 se bahar jaan boojh kar mana. */
+  qualityOverride?: boolean;
 }
 
 export interface CollectionSaved {
@@ -230,7 +229,9 @@ export async function recordCollection(input: CollectionInput): Promise<Collecti
   if (!farmerId) return { error: "Farmer batana zaroori hai." };
 
   const entryDate = input.entryDate ?? aajKaKhana();
-  const shift = input.shift ?? (new Date().getHours() < 14 ? "morning" : "evening");
+  const shift = input.shift ?? karachiShift();
+  const lrError = lrRangeError(input.lr, Boolean(input.qualityOverride));
+  if (lrError) return { error: lrError };
 
   // ---- Pehle se to nahi aa chuki? ----
   // Offline mein network toot jane par ek hi entry kai dafa bheji jati
@@ -287,6 +288,7 @@ export async function recordCollection(input: CollectionInput): Promise<Collecti
   // Photo na chadhe to bhi entry banti hai. Saboot ki photo kho jana
   // bura hai, magar poori entry kho dena us se zyada bura.
   const collectionNumber = await nextCollectionNumber();
+  if (typeof collectionNumber !== "string") return collectionNumber;
   let lrImagePath: string | null = null;
   if (input.lrImage) {
     const ext = input.lrImage.mimeType.split("/")[1]?.replace(/[^a-z0-9]/gi, "") || "jpg";
@@ -330,6 +332,7 @@ export async function recordCollection(input: CollectionInput): Promise<Collecti
       collected_at: input.collectedAt ?? new Date().toISOString(),
       synced_at: new Date().toISOString(),
       possible_duplicate_of: duplicateOf,
+      lr_override: Boolean(input.qualityOverride) && input.lr != null && (input.lr < 15 || input.lr > 40),
       flags: flags as never,
       notes: input.notes ?? null,
       created_by: selfDelivery ? (input.receivedByProfileId ?? null) : input.mcaProfileId,
@@ -340,9 +343,8 @@ export async function recordCollection(input: CollectionInput): Promise<Collecti
   if (error) {
     // client_uuid ka taala -- do sync ek sath aa gaye. Ye ghalti nahi,
     // yahi taale ka kaam hai.
-    if (error.code === "23505") {
-      return { error: "Ye entry pehle se mahfooz ho chuki hai." };
-    }
+    const conflict = milkInsertConflictMessage(error.code, error.message, (error as { details?: string }).details);
+    if (conflict) return { error: conflict };
     return { error: error.message };
   }
 
@@ -383,146 +385,65 @@ export interface FatResult {
 export async function applyFat(
   entryId: string,
   fat: number,
-  byProfileId: string
+  byProfileId: string,
+  opts?: { allowOverride?: boolean }
 ): Promise<FatResult | { error: string }> {
   const service = createServiceClient();
 
   if (!(fat > 0)) return { error: "FAT sahi likhein." };
 
-  const { data: entry } = await service
-    .from("milk_entries")
-    .select("id, collection_number, farmer_id, quantity_liters, lr, entry_date, shift, status")
-    .eq("id", entryId)
-    .maybeSingle();
-  if (!entry) return { error: "Entry nahi mili." };
-  if (entry.status !== "pending_fat") return { error: "Is par FAT pehle hi lag chuka hai." };
-  if (entry.lr == null) return { error: "LR ke baghair rate nahi ban sakta -- pehle LR bharein." };
-
-  const { data: farmer } = await service
-    .from("farmers")
-    .select("full_name, phone_number, milk_collection_type")
-    .eq("id", entry.farmer_id)
-    .maybeSingle();
-  if (!farmer) return { error: "Farmer nahi mila." };
-
-  const { data: settings } = await service
-    .from("milk_rate_settings")
-    .select("standard_rate, self_dropoff_incentive, snf_constant, reference_ts")
-    .limit(1)
-    .maybeSingle();
-
-  const standardRate = Number(settings?.standard_rate ?? 145);
-  const incentive = Number(settings?.self_dropoff_incentive ?? 10);
-  const snfConstant = Number(settings?.snf_constant ?? 0.805);
-  const referenceTs = Number(settings?.reference_ts ?? 13);
-
-  const effectiveRate = farmer.milk_collection_type === "self_dropoff" ? standardRate + incentive : standardRate;
-  const liters = Number(entry.quantity_liters);
-  const lr = Number(entry.lr);
-  const result = calculateMilkValue(liters, fat, lr, effectiveRate, snfConstant, referenceTs);
-
-  // Halat pehle badalti hai. Agar khate ki entry nakaam ho jaye to
-  // update wapas mor diya jata hai -- adhoori soorat (rate lag gaya
-  // magar khate mein kuch nahi gaya) sab se buri hoti hai, kyunke wo
-  // kisi report mein nazar nahi aati.
-  const { error: updateError } = await service
-    .from("milk_entries")
-    .update({
-      fat_percentage: fat,
-      snf_percentage: result.snf,
-      ts_value: result.ts,
-      adjusted_volume: result.adjustedVolume,
-      rate_per_liter: effectiveRate,
-      total_amount: result.amount,
-      status: "priced",
-      fat_by_profile_id: byProfileId,
-      fat_at: new Date().toISOString(),
-    })
-    .eq("id", entryId)
-    .eq("status", "pending_fat");
-
-  if (updateError) return { error: updateError.message };
-
-  const label = `Milk: ${liters}L, Fat ${fat}%, ${entry.entry_date} (${entry.shift}) — ${entry.collection_number}`;
-
-  const ledger = await postFarmerLedger({
-    farmerId: entry.farmer_id,
-    sourceType: "milk",
-    ledgerType: "credit",
-    amount: result.amount,
-    notes: label,
-    referenceId: entryId,
-    createdBy: byProfileId,
+  // Ek hi database transaction: lock, rate, khata, wallet, GL.
+  // Koi qadam nakaam ho to entry pending_fat hi rehti hai aur doosri
+  // dafa credit nahi banta.
+  const { data, error } = await (service as unknown as {
+    rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: FatRpcRow | null; error: { message: string } | null }>;
+  }).rpc("fn_apply_milk_fat", {
+    p_entry_id: entryId,
+    p_fat: fat,
+    p_by: byProfileId,
+    p_allow_override: Boolean(opts?.allowOverride),
   });
 
-  if (ledger.error) {
-    await service
-      .from("milk_entries")
-      .update({
-        fat_percentage: null,
-        snf_percentage: null,
-        ts_value: null,
-        adjusted_volume: null,
-        rate_per_liter: null,
-        total_amount: null,
-        status: "pending_fat",
-        fat_by_profile_id: null,
-        fat_at: null,
-      })
-      .eq("id", entryId);
-    return { error: `Khate mein nahi ja saka: ${ledger.error}` };
-  }
+  if (error || !data) return { error: error ? rpcError(error.message) : "FAT nahi laga." };
 
-  const walletPost = await postFarmerWallet({
-    farmerId: entry.farmer_id,
-    type: "milk_income",
-    direction: "credit",
-    amount: result.amount,
-    notes: label,
-    referenceType: "milk_entry",
-    referenceId: entryId,
-    createdBy: byProfileId,
-  });
-  if (walletPost.error) return { error: `Wallet mein nahi gaya: ${walletPost.error}` };
+  const result = {
+    snf: Number(data.snf),
+    ts: Number(data.ts),
+    adjustedVolume: Number(data.adjusted_volume),
+    amount: Number(data.amount),
+  };
 
-  // Doodh ki EK khareed do jagah likhi jati hai: kisan ka khata (us ka
-  // bojh ghata) aur us ka wallet. Is liye double-entry bhi EK hi banti
-  // hai jo dono rows ka daawa karti hai -- warna wahi raqam do dafa gin
-  // li jayegi aur mahine ka doodh ka kharcha dugna nazar aayega.
-  //
-  // Doosri taraf 1150 hai, 2010 nahi -- taake ledger wahi dikhaye jo
-  // kisan ka khata dikhata hai. Do safhe alag alag adad dikhayen, isi se
-  // wo uljhan paida hoti hai jis mein kami chhup jati hai.
-  const claims: Array<{ table: string; rowId: string }> = [];
-  if (ledger.id) claims.push({ table: "farmer_credit_ledger", rowId: ledger.id });
-  if (walletPost.id) claims.push({ table: "wallet_transactions", rowId: walletPost.id });
-
-  const posted = await postFarmerCreditRepaid({
-    farmerId: entry.farmer_id,
-    amount: result.amount,
-    settledBy: ACC.milkPurchase,
-    description: label,
-    ctx: { createdBy: byProfileId, entryDate: entry.entry_date, claims },
-  });
-  if (failed(posted)) {
-    return { error: `Doodh darj ho gaya magar ledger mein nahi gaya: ${posted.error}` };
-  }
-
-  if (farmer.phone_number) {
+  if (data.phone_number) {
+    const when = data.collected_at ? new Date(data.collected_at) : new Date();
     await sendMilkSms(
-      farmer.phone_number,
-      buildMilkReceiptSms(farmer.full_name ?? "Kisan", new Date(entry.entry_date), liters, fat, lr, result)
+      data.phone_number,
+      buildMilkReceiptSms(data.farmer_name ?? "Kisan", when, Number(data.liters), Number(data.fat), Number(data.lr), result)
     );
   }
 
   return {
-    collectionNumber: entry.collection_number ?? "",
+    collectionNumber: data.collection_number ?? "",
     snf: result.snf,
     ts: result.ts,
     adjustedVolume: result.adjustedVolume,
     amount: result.amount,
-    ratePerLiter: effectiveRate,
+    ratePerLiter: Number(data.rate_per_liter),
   };
+}
+
+interface FatRpcRow {
+  collection_number: string;
+  snf: number;
+  ts: number;
+  adjusted_volume: number;
+  amount: number;
+  rate_per_liter: number;
+  farmer_name: string | null;
+  phone_number: string | null;
+  collected_at: string | null;
+  liters: number;
+  fat: number;
+  lr: number;
 }
 
 /** Private bucket ki LR photo dekhne ka arzi link. */

@@ -5,6 +5,7 @@ import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { signedLrUrl, NO_ROUTE } from "@/lib/milk-collection";
+import { karachiShift } from "@/lib/dairy/rules";
 import { ChillerClient, type RouteGroup, type PendingEntry } from "./chiller-client";
 
 export const dynamic = "force-dynamic";
@@ -32,12 +33,13 @@ export default async function ChillerPage({
   }
 
   const date = params.date ?? aajKaKhana();
-  const shift = params.shift ?? (new Date().getHours() < 14 ? "morning" : "evening");
+  const shift = params.shift ?? karachiShift();
+  const canManage = ["owner", "super_admin", "admin", "manager"].includes(me.role);
 
   const [{ data: entries }, { data: receipts }] = await Promise.all([
     supabase
       .from("milk_entries")
-      .select("id, collection_number, quantity_liters, lr, status, entry_channel, collection_source, route_name, lr_image_path, flags, farmers(full_name, farmer_code)")
+      .select("id, collection_number, quantity_liters, lr, status, entry_channel, collection_source, route_name, lr_image_path, flags, possible_duplicate_of, duplicate_cleared_at, farmers(full_name, farmer_code)")
       .eq("entry_date", date)
       .eq("shift", shift)
       .neq("status", "rejected")
@@ -102,6 +104,8 @@ export default async function ChillerPage({
       collectionSource: row.collection_source,
       lr_url: await signedLrUrl(row.lr_image_path),
       flags: Array.isArray(row.flags) ? (row.flags as string[]) : [],
+      needsDuplicateClear: Boolean(row.possible_duplicate_of) && !row.duplicate_cleared_at,
+      canManage,
     };
     group.entries.push(entry);
   }

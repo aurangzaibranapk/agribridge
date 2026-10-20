@@ -185,8 +185,11 @@ assert.match(read("src/app/api/cron/customer-balance-drift/route.ts"), /CRON_SEC
 assert.match(read("src/components/finance/drift-alert.tsx"), /listCustomerBalanceDrift/);
 
 const milk = read("src/actions/milk.ts");
-assert.match(fn(milk, "recordMilkPayment"), /farmerLedger\.error/);
-assert.match(fn(milk, "recordMilkPayment"), /farmerWallet\.error/);
+const milkPay = fn(milk, "recordMilkPayment");
+// Khata aur wallet ab fn_record_milk_payment ke andar hain. RPC ki
+// ghalti wapas aati hai, is liye doosri TypeScript posting nahi.
+assert.match(milkPay, /fn_record_milk_payment/);
+assert.match(milkPay, /posted\.error/);
 assert.match(read("src/lib/farmer-ledger.ts"), /if \(error \|\| !txn\?\.id\)/);
 
 const sql640 = read("supabase/migrations/640_finance_money_write_rls.sql");

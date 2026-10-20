@@ -103,40 +103,18 @@ export default async function MasterDashboardPage({
   });
   const expenseBreakdown = Object.entries(categoryTotals).map(([name, value]) => ({ name, value }));
 
-  const { data: billingSettings } = await supabase.from("company_billing_settings").select("service_rate_per_liter").limit(1).single();
-  const serviceRate = Number(billingSettings?.service_rate_per_liter ?? 10);
-
-  const { data: milkEntries } = await supabase.from("milk_entries").select("adjusted_volume, quantity_liters").gte("entry_date", monthStart).lte("entry_date", monthEnd);
-  const totalAdjustedVolume = (milkEntries ?? []).reduce((s, e) => s + Number(e.adjusted_volume ?? e.quantity_liters ?? 0), 0);
-  const milkGrossIncome = totalAdjustedVolume * serviceRate;
-
-  const { data: salaryPayments } = await supabase
-    .from("salary_payments")
-    .select("net_salary")
-    .eq("status", "paid")
-    .gte("paid_date", monthStart)
-    .lte("paid_date", monthEnd);
-  const milkStaffSalaries = (salaryPayments ?? []).reduce((s, p) => s + Number(p.net_salary ?? 0), 0);
-
-  const { data: fuelLogs } = await supabase.from("fuel_logs").select("fuel_cost").gte("log_date", monthStart).lte("log_date", monthEnd);
-  const milkPetrolCost = (fuelLogs ?? []).reduce((s, f) => s + Number(f.fuel_cost ?? 0), 0);
-
-  const { data: generatorLogs } = await supabase.from("generator_logs").select("diesel_cost").gte("log_date", monthStart).lte("log_date", monthEnd);
-  const milkDieselCost = (generatorLogs ?? []).reduce((s, g) => s + Number(g.diesel_cost ?? 0), 0);
-
-  const { data: maintenanceLogs } = await supabase.from("maintenance_logs").select("cost").gte("service_date", monthStart).lte("service_date", monthEnd);
-  const milkMaintenanceCost = (maintenanceLogs ?? []).reduce((s, m) => s + Number(m.cost ?? 0), 0);
-
-  const { data: routeCollections } = await supabase.from("milk_route_collections").select("shortage_liters").gte("collection_date", monthStart).lte("collection_date", monthEnd);
-  const { data: rateSettings } = await supabase.from("milk_rate_settings").select("standard_rate").limit(1).single();
-  const standardRate = Number(rateSettings?.standard_rate ?? 145);
-  const totalShortageLiters = (routeCollections ?? []).reduce((s, r) => s + Math.max(0, Number(r.shortage_liters ?? 0)), 0);
-  const milkShortageLoss = totalShortageLiters * standardRate;
-
-  const { data: monthlyExpenses } = await supabase.from("monthly_expenses").select("category, amount").eq("expense_month", month).eq("expense_year", year);
-  const milkExpenseMap = new Map((monthlyExpenses ?? []).map((e) => [e.category, Number(e.amount)]));
-  const milkElectricityCost = milkExpenseMap.get("electricity") ?? 0;
-  const milkChillerMaintenanceCost = milkExpenseMap.get("chiller_maintenance") ?? 0;
+  const milkPnl = await (serviceClient as unknown as {
+    rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: Record<string, number> | null; error: { message: string } | null }>;
+  }).rpc("fn_dairy_month_pnl", { p_year: year, p_month: month, p_branch: null });
+  const milkRow = milkPnl.data;
+  const milkGrossIncome = Number(milkRow?.gross_income ?? 0);
+  const milkStaffSalaries = Number(milkRow?.staff_salaries ?? 0);
+  const milkPetrolCost = Number(milkRow?.petrol_cost ?? 0);
+  const milkDieselCost = Number(milkRow?.diesel_cost ?? 0);
+  const milkMaintenanceCost = Number(milkRow?.maintenance_cost ?? 0);
+  const milkShortageLoss = Number(milkRow?.shortage_loss ?? 0);
+  const milkElectricityCost = Number(milkRow?.electricity ?? 0);
+  const milkChillerMaintenanceCost = Number(milkRow?.chiller_maintenance ?? 0);
 
   const milkTotalDeductions = milkStaffSalaries + milkPetrolCost + milkDieselCost + milkElectricityCost + milkChillerMaintenanceCost + milkMaintenanceCost + milkShortageLoss;
   const milkNetProfit = milkGrossIncome - milkTotalDeductions;
