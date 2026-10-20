@@ -75,12 +75,16 @@ test("POS wapsi: manager code wala (authorized_by) Approve nahi kar sakta, magar
   assert.equal(adjustMineForCode([row({ category: "pos_returns", pending: 50, mine_to_act: 40 })], asAdmin)[0].mine_to_act, 40);
   assert.ok(dict.apb_code_tip.en && dict.apb_code_tip.rm && dict.apb_code_tip.ur);
 });
-test("Mere Kaam action: code wala bhi server par roka jata hai (e=code)", () => {
+test("Mere Kaam action: code wala bhi server par roka jata hai (code block, redirect nahi)", () => {
+  const gate = readFileSync("src/lib/pending/decide.ts", "utf8");
+  assert.match(gate, /CODE_MAKER_COLS\[category\]/);
+  assert.match(gate, /return fail\("code"\)/);
+  assert.match(gate, /row\.is_own\) return fail\("own"\)/);
   const act = readFileSync("src/app/admin/my-work/pending/actions.ts", "utf8");
-  assert.match(act, /CODE_MAKER_COLS\[category\]/);
-  assert.match(act, /back\("e=code"\)/);
+  assert.ok(!/redirect\(/.test(act), "redirect same page par UI atka deta tha");
   const btn = readFileSync("src/app/admin/my-work/pending/decide-buttons.tsx", "utf8");
   assert.match(btn, /code_own: codeOwn/);
+  assert.ok(!/window\.confirm/.test(btn));
 });
 test("age: days + tone (blue <3, amber 3-6, red 7+)", () => {
   assert.equal(ageDays(ago(0.2), NOW), 0);
@@ -143,8 +147,9 @@ test("page wiring: approveState + own tooltip; actions reuse existing flows + re
   assert.ok(btn.includes("approveState(") && btn.includes('"apb_own_tip"') && btn.includes('"apb_code_tip"') && /disabled[\s\S]{0,40}title=\{ownTip\}/.test(btn));
   const act = readFileSync("src/app/admin/my-work/pending/actions.ts", "utf8");
   for (const f of ["approveProductEdit", "rejectProductEdit", "approveProductMerge", "rejectProductMerge", "reviewPosReturn"]) assert.ok(act.includes(f));
-  assert.ok(/is_own\)\s*back\("e=own"\)/.test(act));
+  assert.ok(/is_own\) return fail\("own"\)/.test(readFileSync("src/lib/pending/decide.ts", "utf8")));
   assert.ok(!/\.from\([^)]*\)\s*\.(update|insert|delete|upsert)\(/.test(act), "no direct writes -- only existing actions");
+  assert.ok(readFileSync("src/app/admin/my-work/pending/pending-rows.tsx", "utf8").includes('data-decision-badge'));
 });
 test("sidebar never collapses; provider polls every 60s; layout wires provider", () => {
   const sb = readFileSync("src/components/layout/sidebar.tsx", "utf8");
@@ -161,6 +166,7 @@ test("no WhatsApp / email / SMS in any new file", () => {
     "src/lib/pending/categories.ts", "src/components/pending/pending-context.tsx", "src/components/pending/pending-ui.tsx",
     "src/components/pending/pending-toast.tsx", "src/components/pending/pending-bell-panel.tsx",
     "src/app/admin/my-work/pending/page.tsx", "src/app/admin/my-work/pending/actions.ts", "src/app/admin/my-work/pending/decide-buttons.tsx",
+    "src/app/admin/my-work/pending/live-state.tsx", "src/app/admin/my-work/pending/pending-rows.tsx", "src/lib/pending/decide.ts",
   ];
   for (const f of files) {
     const s = readFileSync(f, "utf8");
