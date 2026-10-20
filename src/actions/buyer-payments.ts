@@ -4,6 +4,7 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
+import { reverseCashBookById } from "@/lib/finance/cash-book";
 import { glForFinanceAccount, ACC } from "@/lib/ledger/rules";
 import { buyerPaymentLines, paymentApproveGate, roundMoney } from "@/lib/finance/money-guards";
 
@@ -110,16 +111,39 @@ export async function approveBuyerPayment(_prev: ActionState, formData: FormData
   if (claimError) return { error: claimError.message };
   if (!claimed) return { error: "Ye adaigi pehle hi kisi ne le li hai." };
 
+  const cashType = payment.direction === "they_paid" ? "income" : "expense";
+  const { data: cashRow, error: cashErr } = await service
+    .from("finance_transactions")
+    .insert({
+      account_id: accountId,
+      transaction_type: cashType,
+      category: "Buyer adaigi",
+      amount,
+      transaction_date: payment.payment_date,
+      notes: memo,
+      created_by: who.userId,
+    })
+    .select("id")
+    .single();
+  if (cashErr || !cashRow) {
+    await (service.from("buyer_payments") as any).update({ status: "pending" }).eq("id", paymentId).eq("status", "approving");
+    return { error: `Cash Book mein adaigi nahi gayi: ${cashErr?.message ?? "jawab nahi"}` };
+  }
+
   const posted = await postJournal({
     description: memo,
     sourceModule: "buyer_payment",
     sourceId: paymentId,
     createdBy: who.userId,
     entryDate: String(payment.payment_date),
-    claims: [{ table: "buyer_payments", rowId: paymentId }],
+    claims: [
+      { table: "buyer_payments", rowId: paymentId },
+      { table: "finance_transactions", rowId: cashRow.id },
+    ],
     lines: draft.lines,
   });
   if ("error" in posted) {
+    await reverseCashBookById(cashRow.id, "Buyer adaigi kitab mein nahi gayi");
     await (service.from("buyer_payments") as any).update({ status: "pending" }).eq("id", paymentId).eq("status", "approving");
     return { error: `Kitab mein adaigi nahi gayi: ${posted.error}` };
   }

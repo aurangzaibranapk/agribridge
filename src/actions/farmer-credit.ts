@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import type { Database } from "@/lib/types/database.types";
 import { postFarmerLedger } from "@/lib/farmer-ledger";
 import { postFarmerCreditGiven, postFarmerCreditRepaid, glForFinanceAccount, failed } from "@/lib/ledger/rules";
@@ -120,7 +121,8 @@ export async function recordFarmerCreditRepayment(_prev: ActionState, formData: 
   });
   if (ledger.error) return { error: ledger.error };
 
-  const { data: cashRow } = await supabase
+  const service = createServiceClient();
+  const { data: cashRow, error: cashErr } = await service
     .from("finance_transactions")
     .insert({
       account_id: accountId,
@@ -133,6 +135,7 @@ export async function recordFarmerCreditRepayment(_prev: ActionState, formData: 
     })
     .select("id")
     .single();
+  if (cashErr || !cashRow?.id) return { error: `Cash Book mein wapsi nahi gayi: ${cashErr?.message ?? "jawab nahi"}` };
 
   // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
   // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur

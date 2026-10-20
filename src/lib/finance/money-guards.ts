@@ -112,7 +112,11 @@ export function paymentApproveGate(
   return { ok: true };
 }
 
-export function restorePayableGate(role: string | null | undefined, amount: number): Gate {
+export function restorePayableGate(
+  role: string | null | undefined,
+  amount: number,
+  originalAmount?: number | null
+): Gate {
   if (!isMoneyWriter(role)) {
     return { ok: false, error: "Customer payable restore sirf Owner, Super Admin ya Admin kar sakta hai." };
   }
@@ -124,7 +128,80 @@ export function restorePayableGate(role: string | null | undefined, amount: numb
       error: `Ek dafa mein Rs ${cap.toLocaleString()} se zyada restore nahi. Chhoti qatarein karein${role === "owner" ? "" : " — bari raqam Owner kare"}.`,
     };
   }
+  if (originalAmount == null || !Number.isFinite(originalAmount) || originalAmount <= 0) {
+    return { ok: false, error: "Asal entry ki raqam nahi mili — us se zyada restore nahi ho sakta." };
+  }
+  if (amount > originalAmount + 0.004) {
+    return { ok: false, error: `Asal entry Rs ${originalAmount.toLocaleString()} thi. Us se zyada restore nahi.` };
+  }
   return { ok: true };
+}
+
+/** Asal entry par customer line (1100) ki bari raqam. Na ho to kisi line ki bari raqam. */
+export function originalEntryAmount(
+  lines: Array<{ account_code?: string | null; debit?: number | null; credit?: number | null; party_id?: string | null }> | null,
+  customerId: string
+): number | null {
+  if (!lines || lines.length === 0) return null;
+  const customer = lines.filter(
+    (line) => line.account_code === "1100" && (!line.party_id || line.party_id === customerId)
+  );
+  const pool = customer.length > 0 ? customer : lines;
+  const max = pool.reduce((m, line) => Math.max(m, Number(line.debit ?? 0), Number(line.credit ?? 0)), 0);
+  return max > 0 ? roundMoney(max) : null;
+}
+
+/**
+ * Dealer ki purani current_payable (ledger se pehle) ko GL ke chhote net se
+ * overwrite nahi karte. Jab ledger pehle se stored se milta ho, ledger jeetta hai.
+ * movement: adaigi par manfi, reversal par musbat.
+ */
+export function dealerPayableWrite(input: {
+  stored: number | null;
+  ledgerNet: number | null;
+  movement: number;
+}): number | null {
+  const movement = roundMoney(input.movement);
+  if (input.ledgerNet != null) {
+    const impliedBefore = roundMoney(input.ledgerNet - movement);
+    if (input.stored == null || Math.abs(input.stored - impliedBefore) < 0.02) {
+      return roundMoney(input.ledgerNet);
+    }
+  }
+  if (input.stored == null) return null;
+  return roundMoney(input.stored + movement);
+}
+
+export function cappedPurchaseReturn(input: {
+  receivedQty: number;
+  unitCost: number;
+  purchaseGoods: number;
+  purchaseTax: number;
+  alreadyReturnedQty: number;
+  requestedQty: number;
+}): { quantity: number; goodsAmount: number; taxAmount: number } | { error: string } {
+  const received = Number(input.receivedQty);
+  const already = Number(input.alreadyReturnedQty);
+  const left = roundMoney(received - already);
+  if (!Number.isFinite(input.requestedQty) || input.requestedQty <= 0) {
+    return { error: "Wapas quantity sahi likhein." };
+  }
+  if (left <= 0) return { error: "Is line par wapas karne ko quantity nahi bachi." };
+  if (input.requestedQty > left + 0.0001) {
+    return { error: `Wapas quantity ${left} se zyada nahi. Rate aur tax bill se aate hain.` };
+  }
+  const quantity = roundMoney(input.requestedQty);
+  const goodsAmount = roundMoney(quantity * Number(input.unitCost));
+  if (goodsAmount <= 0) return { error: "Wapas hone wale maal ki raqam sifar se zyada honi chahiye." };
+  const purchaseGoods = Number(input.purchaseGoods) > 0 ? Number(input.purchaseGoods) : goodsAmount;
+  const lineShare = goodsAmount / purchaseGoods;
+  const alreadyGoods = roundMoney(already * Number(input.unitCost));
+  const alreadyTax = roundMoney(Number(input.purchaseTax) * (alreadyGoods / purchaseGoods));
+  let taxAmount = roundMoney(Number(input.purchaseTax) * lineShare);
+  const taxLeft = roundMoney(Math.max(0, Number(input.purchaseTax) - alreadyTax));
+  if (taxAmount > taxLeft) taxAmount = taxLeft;
+  if (taxAmount < 0) taxAmount = 0;
+  return { quantity, goodsAmount, taxAmount };
 }
 
 export function selfReversalGate(createdBy: string | null | undefined, actorId: string): Gate {
@@ -287,4 +364,39 @@ export function oppositeCashType(type: string): "income" | "expense" | null {
   if (type === "income") return "expense";
   if (type === "expense") return "income";
   return null;
+}
+
+export function cashBookReversalFields(
+  row: {
+    account_id: string;
+    transaction_type: string;
+    category?: string | null;
+    amount: number;
+    transaction_date: string;
+    notes?: string | null;
+    created_by?: string | null;
+  },
+  reason: string
+): {
+  account_id: string;
+  transaction_type: "income" | "expense";
+  category: string | null;
+  amount: number;
+  transaction_date: string;
+  notes: string;
+  created_by: string | null;
+} | { error: string } {
+  const transaction_type = oppositeCashType(row.transaction_type);
+  if (!transaction_type) return { error: "Is cash book qatar ka ulta rukh nahi banta." };
+  const amount = roundMoney(Math.abs(Number(row.amount)));
+  if (!(amount > 0)) return { error: "Ulti qatar ki raqam sifar se zyada honi chahiye." };
+  return {
+    account_id: row.account_id,
+    transaction_type,
+    category: row.category ?? null,
+    amount,
+    transaction_date: row.transaction_date,
+    notes: `Reversal — ${reason}`,
+    created_by: row.created_by ?? null,
+  };
 }

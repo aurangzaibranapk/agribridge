@@ -28,6 +28,7 @@ await run(fs.readFileSync("tests/sql/finance-fixes-stubs.sql", "utf8"));
 const m640 = fs.readFileSync("supabase/migrations/640_finance_money_write_rls.sql", "utf8");
 const m641 = fs.readFileSync("supabase/migrations/641_finance_maker_checker_and_indexes.sql", "utf8");
 const m642 = fs.readFileSync("supabase/migrations/642_customer_balance_drift.sql", "utf8");
+const m643 = fs.readFileSync("supabase/migrations/643_finance_review_followups.sql", "utf8");
 await run(m640);
 await run(m640);
 pass("640 applies twice");
@@ -36,6 +37,9 @@ await run(m641);
 pass("641 applies twice");
 await run(m642);
 pass("642 applies");
+await run(m643);
+await run(m643);
+pass("643 applies twice");
 
 await run(`insert into profiles (id, role, is_active) values
   ('${ADMIN}','admin',true), ('${MANAGER}','manager',true);`);
@@ -110,5 +114,37 @@ await throws(
   "manager dealer payable"
 );
 pass("manager cannot write dealer payable");
+
+await run(`
+  create or replace function public.trusted_customer_bump(p_id uuid) returns void
+  language plpgsql security definer set search_path = public as $$
+  begin
+    update public.customers set current_balance = coalesce(current_balance, 0) + 1 where id = p_id;
+  end $$;
+  grant execute on function public.trusted_customer_bump(uuid) to authenticated;
+`);
+const beforeBump = Number(await one(`select current_balance from customers where id = '${cust}'`));
+await run(`${asUser(MANAGER, "authenticated")} select public.trusted_customer_bump('${cust}'::uuid);`);
+await run(reset);
+assert.equal(Number(await one(`select current_balance from customers where id = '${cust}'`)), beforeBump + 1);
+pass("security definer RPC can write customer balance");
+
+await throws(
+  `delete from finance_transactions where account_id = '${ACCT}';`,
+  "finance delete blocked"
+);
+pass("finance_transactions delete blocked");
+
+const dup = new PGlite();
+await dup.exec(fs.readFileSync("tests/sql/finance-fixes-stubs.sql", "utf8"));
+await dup.exec(m640);
+const branch = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb9";
+await dup.exec(`insert into cash_closings (branch_id, close_date, difference) values ('${branch}','2026-10-01',1), ('${branch}','2026-10-01',2);`);
+await dup.exec(m641);
+const groups = await dup.query(`select duplicate_groups from fn_finance_race_duplicate_counts() where check_name = 'uq_cash_closing_original'`);
+assert.equal(Number(groups.rows[0].duplicate_groups), 1);
+const idx = await dup.query(`select 1 from pg_indexes where indexname = 'uq_cash_closing_original'`);
+assert.equal(idx.rows.length, 0);
+pass("duplicate cash close skips unique index");
 
 console.log(`PASS: finance rls sql (${ok})`);

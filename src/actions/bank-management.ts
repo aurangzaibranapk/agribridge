@@ -51,7 +51,11 @@ export async function addBankAccount(_prev: ActionState, formData: FormData): Pr
     opening.set("amount", String(openingBalance));
     opening.set("as_of_date", String(formData.get("as_of_date") ?? aajKaKhana()));
     const posted = await setOpeningBalance({}, opening);
-    if (posted.error) return { error: `Bank khata ban gaya, magar shuruati balance darj nahi hua: ${posted.error}` };
+    if (posted.error) {
+      return {
+        error: `Bank khata ban gaya (${account.id}). Naya khata dobara na banayein — shuruati balance isi khate par dubara darj karein. ${posted.error}`,
+      };
+    }
   }
 
   revalidatePath("/admin/finance/banks");

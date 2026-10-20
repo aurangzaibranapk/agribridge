@@ -4,9 +4,10 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
+import { reverseCashBookById } from "@/lib/finance/cash-book";
 import { glForFinanceAccount, ACC } from "@/lib/ledger/rules";
 import {
-  dealerOpeningLines,
+  dealerPayableWrite,
   dealerPaymentLines,
   payableFromLedger,
   paymentApproveGate,
@@ -125,47 +126,39 @@ export async function approveDealerPayment(_prev: ActionState, formData: FormDat
     await (service.from("dealer_payments") as any).update({ status: "pending" }).eq("id", paymentId).eq("status", "approving");
   };
 
-  if (ledgerNow == null && stored != null && stored > 0) {
-    const opening = await postJournal({
-      description: `Dealer baqi ka shuruati indraj — ${dealer.business_name}`,
-      sourceModule: "dealer_payable_opening",
-      sourceId: payment.dealer_id,
-      createdBy: who.userId,
-      entryDate: String(payment.payment_date),
-      claims: [{ table: "dealers", rowId: payment.dealer_id }],
-      lines: dealerOpeningLines({
-        amount: stored,
-        dealerId: payment.dealer_id,
-        memo: `Shuruati baqi — ${dealer.business_name}`,
-      }),
-    });
-    if ("error" in opening && !opening.error.includes("pehle se ledger")) {
-      await revert();
-      return { error: `Shuruati baqi kitab mein nahi gayi: ${opening.error}` };
-    }
-    const { data: openedLines } = await service
-      .from("journal_lines")
-      .select("debit, credit")
-      .eq("account_code", "2016")
-      .eq("party_type", "dealer")
-      .eq("party_id", payment.dealer_id);
-    if (payableFromLedger(openedLines ?? []) == null) {
-      await revert();
-      return { error: "Shuruati baqi kitab mein nahi mili. Adaigi nahi likhi, aur sifar nahi maana." };
-    }
+  const memo = payment.notes?.trim() || `Dealer ko adaigi — ${dealer.business_name}`;
+  const { data: cashRow, error: cashErr } = await service
+    .from("finance_transactions")
+    .insert({
+      account_id: payFrom,
+      transaction_type: "expense",
+      category: "Dealer adaigi",
+      amount,
+      transaction_date: payment.payment_date,
+      notes: memo,
+      created_by: who.userId,
+    })
+    .select("id")
+    .single();
+  if (cashErr || !cashRow) {
+    await revert();
+    return { error: `Cash Book mein adaigi nahi gayi: ${cashErr?.message ?? "jawab nahi"}` };
   }
 
-  const memo = payment.notes?.trim() || `Dealer ko adaigi — ${dealer.business_name}`;
   const posted = await postJournal({
     description: memo,
     sourceModule: "dealer_payment",
     sourceId: paymentId,
     createdBy: who.userId,
     entryDate: String(payment.payment_date),
-    claims: [{ table: "dealer_payments", rowId: paymentId }],
+    claims: [
+      { table: "dealer_payments", rowId: paymentId },
+      { table: "finance_transactions", rowId: cashRow.id },
+    ],
     lines: dealerPaymentLines({ amount, cashGl, dealerId: payment.dealer_id, memo }),
   });
   if ("error" in posted) {
+    await reverseCashBookById(cashRow.id, "Dealer adaigi kitab mein nahi gayi");
     await revert();
     return { error: `Kitab mein adaigi nahi gayi: ${posted.error}` };
   }
@@ -176,13 +169,15 @@ export async function approveDealerPayment(_prev: ActionState, formData: FormDat
     .eq("account_code", "2016")
     .eq("party_type", "dealer")
     .eq("party_id", payment.dealer_id);
-  const after = payableFromLedger(linesAfter ?? []);
-  if (after == null) {
-    await revert();
-    return { error: "Adaigi kitab mein gayi magar dealer ki baqi ledger se nahi bani. Sifar nahi likha." };
+  const after = dealerPayableWrite({
+    stored,
+    ledgerNet: payableFromLedger(linesAfter ?? []),
+    movement: -amount,
+  });
+  if (after != null) {
+    const { error: balError } = await service.from("dealers").update({ current_payable: after }).eq("id", payment.dealer_id);
+    if (balError) return { error: `Kitab theek hai magar dealer ki baqi update nahi hui: ${balError.message}` };
   }
-  const { error: balError } = await service.from("dealers").update({ current_payable: after }).eq("id", payment.dealer_id);
-  if (balError) return { error: `Kitab theek hai magar dealer ki baqi update nahi hui: ${balError.message}` };
 
   const { data: saved, error: saveError } = await (service.from("dealer_payments") as any)
     .update({
@@ -203,5 +198,8 @@ export async function approveDealerPayment(_prev: ActionState, formData: FormDat
   revalidatePath(`/admin/dealers/${payment.dealer_id}/statement`);
   revalidatePath("/admin/dealers");
   revalidatePath("/admin/money-trail");
-  return { success: true, message: `Adaigi manzoor. Dealer ki baqi ab Rs ${after.toLocaleString()} (ledger se).` };
+  if (after == null) {
+    return { error: "Adaigi Cash Book aur kitab mein darj hai. Dealer ki baqi track nahi — sifar nahi likha." };
+  }
+  return { success: true, message: `Adaigi manzoor. Dealer ki baqi ab Rs ${after.toLocaleString()}.` };
 }

@@ -126,15 +126,14 @@ export async function setOpeningBalance(_prev: ActionState, formData: FormData):
   if (Number(account.opening_balance) > 0) {
     return { error: `${account.name} ka shuruati balance pehle se darj hai (Rs ${Number(account.opening_balance).toLocaleString()}).` };
   }
-  const { data: pehleSe } = await supabase
+  const { data: pehleSe, error: pehleErr } = await supabase
     .from("finance_transactions")
     .select("id")
     .eq("account_id", accountId)
     .eq("category", "Shuruati balance")
+    .eq("transaction_type", "income")
     .maybeSingle();
-  if (pehleSe) {
-    return { error: `${account.name} ka shuruati balance pehle hi darj ho chuka hai. Badalna ho to purani entry ledger se reverse karein.` };
-  }
+  if (pehleErr) return { error: `Shuruati balance ki purani qatar nahi dekhi ja saki: ${pehleErr.message}` };
 
   const {
     data: { user },
@@ -142,20 +141,37 @@ export async function setOpeningBalance(_prev: ActionState, formData: FormData):
 
   const description = `Shuruati balance — ${account.name} (${asOf} tak)`;
 
-  const { data: row, error } = await supabase
-    .from("finance_transactions")
-    .insert({
-      account_id: accountId,
-      transaction_type: "income",
-      category: "Shuruati balance",
-      amount,
-      transaction_date: asOf,
-      notes: description,
-      created_by: user?.id ?? null,
-    })
-    .select("id")
-    .single();
-  if (error) return { error: error.message };
+  let rowId = pehleSe?.id ?? null;
+  if (rowId) {
+    const { data: claimed, error: claimRead } = await supabase
+      .from("journal_entry_sources")
+      .select("entry_id")
+      .eq("source_table", "finance_transactions")
+      .eq("source_row_id", rowId)
+      .maybeSingle();
+    if (claimRead) {
+      return { error: `Shuruati balance ki kitab nahi dekhi ja saki — naya khata na banayein: ${claimRead.message}` };
+    }
+    if (claimed?.entry_id) {
+      return { error: `${account.name} ka shuruati balance pehle hi darj ho chuka hai. Badalna ho to purani entry ledger se reverse karein.` };
+    }
+  } else {
+    const { data: row, error } = await supabase
+      .from("finance_transactions")
+      .insert({
+        account_id: accountId,
+        transaction_type: "income",
+        category: "Shuruati balance",
+        amount,
+        transaction_date: asOf,
+        notes: description,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+    if (error) return { error: error.message };
+    rowId = row.id;
+  }
 
   // Doosra rukh: ye aamdani nahi hai. Paisa kamaya nahi gaya, wo pehle
   // se malik ka tha -- is liye "Malik ka sarmaya" (3200), koi income
@@ -169,26 +185,14 @@ export async function setOpeningBalance(_prev: ActionState, formData: FormData):
     ctx: {
       createdBy: user?.id ?? null,
       entryDate: asOf,
-      claims: [{ table: "finance_transactions", rowId: row.id }],
+      claims: [{ table: "finance_transactions", rowId }],
     },
   });
 
   if (failed(posted)) {
-    // Ledger mein na gaya to Cash Book ki qatar bhi nahi rehni chahiye --
-    // warna dono kitabein usi din alag ho jatin jis din ye feature ban
-    // raha tha.
-    // Mitate NAHI (finance review #9) -- ulti qatar daalte hain, taake
-    // Cash Book barabar ho jaye aur dono qataren saboot ke taur par rahein.
-    await supabase.from("finance_transactions").insert({
-      account_id: accountId,
-      transaction_type: "expense",
-      category: "Shuruati balance",
-      amount,
-      transaction_date: asOf,
-      notes: `Reversal — ${description} (ledger mein nahi gaya)`,
-      created_by: user?.id ?? null,
-    });
-    return { error: `Ledger mein nahi ja saka, is liye shuruati balance darj nahi kiya: ${posted.error}` };
+    return {
+      error: `Ledger mein nahi ja saka. Cash Book ki qatar (${rowId}) mehfooz hai — naya khata na banayein, isi khate par shuruati balance dobara darj karein: ${posted.error}`,
+    };
   }
 
   revalidatePath("/admin/finance");

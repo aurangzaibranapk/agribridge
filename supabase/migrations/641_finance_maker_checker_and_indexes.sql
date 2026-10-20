@@ -56,7 +56,8 @@ alter table public.buyer_payments drop constraint if exists buyer_payments_statu
 alter table public.buyer_payments add constraint buyer_payments_status_check
   check (status = any (array['pending','approving','posted','rejected']));
 
--- Journal source row 'reversed'.
+-- Journal source row 'reversed', aur Cash Book ki source qatar bhi.
+alter table public.finance_transactions add column if not exists reversed_at timestamptz;
 alter table public.journal_entries add column if not exists posting_status text;
 update public.journal_entries set posting_status = 'posted' where posting_status is null;
 alter table public.journal_entries alter column posting_status set default 'posted';
@@ -77,6 +78,17 @@ begin
        set posting_status = 'reversed'
      where id = new.reversal_of
        and posting_status is distinct from 'reversed';
+    if to_regclass('public.journal_entry_sources') is not null then
+      update public.finance_transactions ft
+         set reversed_at = now()
+       where ft.reversed_at is null
+         and ft.id in (
+           select s.source_row_id
+             from public.journal_entry_sources s
+            where s.entry_id = new.reversal_of
+              and s.source_table = 'finance_transactions'
+         );
+    end if;
   end if;
   return new;
 end;
@@ -145,27 +157,12 @@ create trigger trg_guard_cash_close_approve
 create or replace function public.fn_guard_dealer_payable()
 returns trigger
 language plpgsql
-security definer
+security invoker
 set search_path = public
 as $$
-declare
-  jwt_role text;
-  session_role text;
 begin
   if tg_op = 'UPDATE' and new.current_payable is distinct from old.current_payable then
-    jwt_role := coalesce(auth.role(), '');
-    session_role := coalesce(nullif(current_setting('role', true), ''), 'none');
-    if session_role = 'none' then
-      session_role := session_user;
-    end if;
-    if jwt_role = 'service_role' or session_role in ('service_role', 'postgres', 'supabase_admin') then
-      return new;
-    end if;
-    if exists (
-      select 1 from public.profiles
-      where id = auth.uid() and is_active is true
-        and role::text in ('owner', 'super_admin', 'admin')
-    ) then
+    if public.fn_balance_write_allowed() then
       return new;
     end if;
     raise exception 'dealers.current_payable sirf Owner, Super Admin ya Admin likh sakte hain.';
@@ -174,7 +171,8 @@ begin
 end;
 $$;
 
-revoke all on function public.fn_guard_dealer_payable() from public, anon, authenticated;
+revoke all on function public.fn_guard_dealer_payable() from public, anon;
+grant execute on function public.fn_guard_dealer_payable() to authenticated, service_role;
 drop trigger if exists trg_guard_dealer_payable on public.dealers;
 create trigger trg_guard_dealer_payable
   before update on public.dealers
@@ -215,23 +213,99 @@ create policy buyer_payments_money_update on public.buyer_payments
   for update using (public.fn_is_money_writer())
   with check (public.fn_is_money_writer());
 
--- Race indexes. Do dafa click / do dafa approve yahin rukta hai.
-create unique index if not exists uq_cash_closing_original
-  on public.cash_closings (branch_id, close_date)
-  where corrects_id is null;
+-- Read-only ginti. Koi row delete nahi. Unique index tabhi banta hai jab
+-- duplicate group sifar hon — warna migration rukti nahi, notice chhodti hai.
+create or replace function public.fn_finance_race_duplicate_counts()
+returns table(check_name text, duplicate_groups bigint)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select 'uq_cash_closing_original'::text, count(*)::bigint from (
+    select 1 from public.cash_closings
+    where corrects_id is null
+    group by branch_id, close_date
+    having count(*) > 1
+  ) d
+  union all
+  select 'uq_finance_opening_once', count(*)::bigint from (
+    select 1 from public.finance_transactions
+    where category = 'Shuruati balance' and transaction_type::text = 'income'
+    group by account_id
+    having count(*) > 1
+  ) d
+  union all
+  select 'uq_finance_transfer_leg', count(*)::bigint from (
+    select 1 from public.finance_transactions
+    where related_transfer_id is not null
+    group by related_transfer_id, transaction_type
+    having count(*) > 1
+  ) d
+  union all
+  select 'uq_dealer_payment_pending', count(*)::bigint from (
+    select 1 from public.dealer_payments
+    where status = 'pending'
+    group by dealer_id, payment_date, amount, created_by
+    having count(*) > 1
+  ) d
+  union all
+  select 'uq_buyer_payment_pending', count(*)::bigint from (
+    select 1 from public.buyer_payments
+    where status = 'pending'
+    group by buyer_id, payment_date, amount, direction, created_by
+    having count(*) > 1
+  ) d;
+$$;
 
-create unique index if not exists uq_finance_opening_once
-  on public.finance_transactions (account_id)
-  where category = 'Shuruati balance' and transaction_type::text = 'income';
+revoke all on function public.fn_finance_race_duplicate_counts() from public, anon, authenticated;
+grant execute on function public.fn_finance_race_duplicate_counts() to service_role;
 
-create unique index if not exists uq_finance_transfer_leg
-  on public.finance_transactions (related_transfer_id, transaction_type)
-  where related_transfer_id is not null;
+do $$
+declare n bigint;
+begin
+  select duplicate_groups into n from public.fn_finance_race_duplicate_counts() where check_name = 'uq_cash_closing_original';
+  if coalesce(n, 0) = 0 then
+    create unique index if not exists uq_cash_closing_original
+      on public.cash_closings (branch_id, close_date)
+      where corrects_id is null;
+  else
+    raise notice 'uq_cash_closing_original skipped (% duplicate groups). Delete mat karein.', n;
+  end if;
 
-create unique index if not exists uq_dealer_payment_pending
-  on public.dealer_payments (dealer_id, payment_date, amount, created_by)
-  where status = 'pending';
+  select duplicate_groups into n from public.fn_finance_race_duplicate_counts() where check_name = 'uq_finance_opening_once';
+  if coalesce(n, 0) = 0 then
+    create unique index if not exists uq_finance_opening_once
+      on public.finance_transactions (account_id)
+      where category = 'Shuruati balance' and transaction_type::text = 'income';
+  else
+    raise notice 'uq_finance_opening_once skipped (% duplicate groups). Delete mat karein.', n;
+  end if;
 
-create unique index if not exists uq_buyer_payment_pending
-  on public.buyer_payments (buyer_id, payment_date, amount, direction, created_by)
-  where status = 'pending';
+  select duplicate_groups into n from public.fn_finance_race_duplicate_counts() where check_name = 'uq_finance_transfer_leg';
+  if coalesce(n, 0) = 0 then
+    create unique index if not exists uq_finance_transfer_leg
+      on public.finance_transactions (related_transfer_id, transaction_type)
+      where related_transfer_id is not null;
+  else
+    raise notice 'uq_finance_transfer_leg skipped (% duplicate groups). Delete mat karein.', n;
+  end if;
+
+  select duplicate_groups into n from public.fn_finance_race_duplicate_counts() where check_name = 'uq_dealer_payment_pending';
+  if coalesce(n, 0) = 0 then
+    create unique index if not exists uq_dealer_payment_pending
+      on public.dealer_payments (dealer_id, payment_date, amount, created_by)
+      where status = 'pending';
+  else
+    raise notice 'uq_dealer_payment_pending skipped (% duplicate groups). Delete mat karein.', n;
+  end if;
+
+  select duplicate_groups into n from public.fn_finance_race_duplicate_counts() where check_name = 'uq_buyer_payment_pending';
+  if coalesce(n, 0) = 0 then
+    create unique index if not exists uq_buyer_payment_pending
+      on public.buyer_payments (buyer_id, payment_date, amount, direction, created_by)
+      where status = 'pending';
+  else
+    raise notice 'uq_buyer_payment_pending skipped (% duplicate groups). Delete mat karein.', n;
+  end if;
+end $$;

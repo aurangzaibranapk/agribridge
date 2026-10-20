@@ -8,6 +8,7 @@ import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { PurchaseForm } from "@/app/admin/purchases/purchase-form";
 import { ReceiveButton } from "@/app/admin/purchases/receive-button";
+import { PurchaseReturnForm } from "@/app/admin/purchases/purchase-return-form";
 import { DeletePurchaseButton } from "@/app/admin/purchases/delete-purchase-button";
 import { NextStepStrip, purchaseSteps } from "@/components/guided/next-step";
 import { getUiMode } from "@/lib/access/ui-mode";
@@ -54,7 +55,7 @@ export default async function AdminPurchasesPage() {
     supabase
       .from("purchases")
       .select(
-        "id, purchase_number, purchase_date, status, total_amount, invoice_total, discount_amount, tax_amount, tax_label, review_status, suppliers(name), branches(name), purchase_items(id, quantity, unit_cost, products(name, pack_size, sale_rate_pending, units_per_pack)), purchase_comments(id, kind, body, created_at, profiles(full_name)), purchase_payment_slips(id, amount, paid_on, image_url)"
+        "id, purchase_number, purchase_date, status, total_amount, invoice_total, discount_amount, tax_amount, tax_label, review_status, suppliers(name), branches(name), purchase_items(id, product_id, quantity, received_qty, unit_cost, products(name, pack_size, sale_rate_pending, units_per_pack)), purchase_comments(id, kind, body, created_at, profiles(full_name)), purchase_payment_slips(id, amount, paid_on, image_url)"
       )
       .order("created_at", { ascending: false })
       .limit(50),
@@ -144,6 +145,7 @@ export default async function AdminPurchasesPage() {
       const rel = Array.isArray(i.products) ? i.products[0] : i.products;
       return {
         id: i.id as string,
+        productId: i.product_id as string,
         name: (rel?.name as string) ?? "Product",
         pack_size: (rel?.pack_size as string | null) ?? null,
         quantity: Number(i.quantity),
@@ -302,6 +304,12 @@ export default async function AdminPurchasesPage() {
                         <div className="flex flex-col items-start gap-1.5">
                           {p.status === "pending" && p.review_status === "approved" && (
                             <ReceiveButton purchaseId={p.id} purchaseNumber={p.purchase_number} items={p.items} />
+                          )}
+                          {p.status === "received" && isAdminLevel && (
+                            <PurchaseReturnForm
+                              purchaseId={p.id}
+                              items={p.items.filter((item) => item.productId).map((item) => ({ productId: item.productId, name: item.name }))}
+                            />
                           )}
                           {p.status === "pending" && (
                             <ReviewPanel

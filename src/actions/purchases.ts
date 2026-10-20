@@ -9,7 +9,7 @@ import { payAndPost } from "@/lib/ledger/supplier-money";
 import { purchaseBillTotals, parseBillNumber, purchaseLineTotal } from "@/lib/purchases/bill-math";
 import { postJournal } from "@/lib/ledger/post";
 import { postGoodsReceived, failed } from "@/lib/ledger/rules";
-import { acceptedPurchaseAmounts, purchaseReturnLines, roundMoney } from "@/lib/finance/money-guards";
+import { acceptedPurchaseAmounts, cappedPurchaseReturn, purchaseReturnLines, roundMoney } from "@/lib/finance/money-guards";
 import { requireMoneyAdmin } from "@/lib/access/money-gate";
 import { parsePaymentTerms } from "@/lib/purchase-terms";
 import { logAudit } from "@/lib/audit";
@@ -1207,38 +1207,62 @@ export async function getNextSupplierBillNo(): Promise<{ billNo: string } | { er
 export async function recordPurchaseReturn(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const gate = await requireMoneyAdmin("Purchase return kitab mein likhna");
   if (!gate.ok) return { error: gate.error };
-  const supabase = createClient();
+  const service = createServiceClient();
   const purchaseId = String(formData.get("purchase_id") ?? "").trim();
   const productId = String(formData.get("product_id") ?? "").trim();
-  const quantity = Number(formData.get("quantity") ?? 0);
-  const unitCost = Number(formData.get("unit_cost") ?? 0);
-  const taxAmount = Number(formData.get("tax_amount") ?? 0);
+  const requestedQty = Number(formData.get("quantity") ?? 0);
   const reason = String(formData.get("reason") ?? "").trim();
   if (!purchaseId || !productId) return { error: "Purchase aur product zaroori hain." };
-  if (!Number.isFinite(quantity) || quantity <= 0) return { error: "Wapas quantity sahi likhein." };
-  if (!Number.isFinite(unitCost) || unitCost < 0) return { error: "Rate sahi likhein." };
   if (reason.length < 5) return { error: "Wapas karne ki wajah likhein." };
 
-  const { data: purchase } = await supabase
+  const { data: purchase } = await service
     .from("purchases")
-    .select("id, purchase_number, supplier_id, status")
+    .select("id, purchase_number, supplier_id, status, tax_amount, warehouse_id, branch_id")
     .eq("id", purchaseId)
     .maybeSingle();
   if (!purchase) return { error: "Purchase nahi mili." };
   if (purchase.status !== "received") return { error: "Sirf receive ho chuki purchase se maal wapas hota hai." };
 
-  const goods = roundMoney(quantity * unitCost);
+  const { data: lines } = await service
+    .from("purchase_items")
+    .select("product_id, quantity, received_qty, unit_cost, batch_id")
+    .eq("purchase_id", purchaseId);
+  const mine = (lines ?? []).filter((line) => line.product_id === productId);
+  if (mine.length === 0) return { error: "Ye product is purchase par nahi." };
+  const receivedQty = mine.reduce((sum, line) => sum + Number(line.received_qty ?? line.quantity ?? 0), 0);
+  const goodsOnLine = mine.reduce((sum, line) => sum + Number(line.received_qty ?? line.quantity ?? 0) * Number(line.unit_cost), 0);
+  const unitCost = receivedQty > 0 ? goodsOnLine / receivedQty : Number(mine[0].unit_cost);
+  const purchaseGoods = (lines ?? []).reduce(
+    (sum, line) => sum + Number(line.received_qty ?? line.quantity ?? 0) * Number(line.unit_cost),
+    0
+  );
+  const { data: prior } = await service
+    .from("purchase_returns")
+    .select("quantity")
+    .eq("purchase_id", purchaseId)
+    .eq("product_id", productId);
+  const alreadyReturnedQty = (prior ?? []).reduce((sum, row) => sum + Number(row.quantity), 0);
+  const capped = cappedPurchaseReturn({
+    receivedQty,
+    unitCost,
+    purchaseGoods,
+    purchaseTax: Number(purchase.tax_amount ?? 0),
+    alreadyReturnedQty,
+    requestedQty,
+  });
+  if ("error" in capped) return { error: capped.error };
+
   const draft = purchaseReturnLines({
-    goodsAmount: goods,
-    taxAmount: Number.isFinite(taxAmount) ? taxAmount : 0,
+    goodsAmount: capped.goodsAmount,
+    taxAmount: capped.taxAmount,
     supplierId: purchase.supplier_id,
     memo: `Purchase return ${purchase.purchase_number ?? purchaseId} — ${reason}`,
   });
   if ("error" in draft) return { error: draft.error };
 
-  const { data: row, error: insErr } = await supabase
+  const { data: row, error: insErr } = await service
     .from("purchase_returns")
-    .insert({ purchase_id: purchaseId, product_id: productId, quantity, reason })
+    .insert({ purchase_id: purchaseId, product_id: productId, quantity: capped.quantity, reason })
     .select("id")
     .single();
   if (insErr || !row) return { error: insErr?.message ?? "Return row nahi bani." };
@@ -1252,11 +1276,75 @@ export async function recordPurchaseReturn(_prev: ActionState, formData: FormDat
     lines: draft.lines,
   });
   if ("error" in journal) {
-    await supabase.from("purchase_returns").delete().eq("id", row.id);
+    await service.from("purchase_returns").delete().eq("id", row.id);
     return { error: `1195 / stock ulta nahi ho saka: ${journal.error}` };
+  }
+
+  const stock = await reducePurchaseReturnStock(service, {
+    productId,
+    quantity: capped.quantity,
+    warehouseId: purchase.warehouse_id,
+    branchId: purchase.branch_id,
+    batchId: mine.find((line) => line.batch_id)?.batch_id ?? null,
+    returnId: row.id,
+    createdBy: gate.userId,
+  });
+  if (stock) {
+    return {
+      success: true,
+      message: `Return kitab mein darj (${journal.entryNumber}). Tax Recoverable 1195 ulta hua. Stock kam nahi hua: ${stock}`,
+    };
   }
 
   revalidatePath("/admin/purchases");
   revalidatePath("/admin/money-trail");
-  return { success: true, message: `Return kitab mein darj (${journal.entryNumber}). Tax Recoverable 1195 ulta hua.` };
+  return { success: true, message: `Return kitab mein darj (${journal.entryNumber}). Stock kam hua aur 1195 ulta hua.` };
+}
+
+async function reducePurchaseReturnStock(
+  service: ReturnType<typeof createServiceClient>,
+  input: {
+    productId: string;
+    quantity: number;
+    warehouseId: string | null;
+    branchId: string | null;
+    batchId: string | null;
+    returnId: string;
+    createdBy: string;
+  }
+): Promise<string | null> {
+  let warehouseId = input.warehouseId;
+  if (!warehouseId && input.branchId) {
+    const { data: main } = await service.from("warehouses").select("id").eq("branch_id", input.branchId).eq("code", "MAIN").maybeSingle();
+    warehouseId = main?.id ?? null;
+  }
+  if (!warehouseId) return "warehouse nahi mila";
+  const { data: inventory } = await service
+    .from("inventory")
+    .select("id, quantity_on_hand")
+    .eq("product_id", input.productId)
+    .eq("warehouse_id", warehouseId)
+    .maybeSingle();
+  if (!inventory) return "stock ki qatar nahi mili";
+  if (Number(inventory.quantity_on_hand) + 0.0001 < input.quantity) {
+    return `godam mein ${inventory.quantity_on_hand} hai, wapas ${input.quantity} maanga`;
+  }
+  const { error } = await service.from("stock_movements").insert({
+    inventory_id: inventory.id,
+    movement_type: "adjustment_decrease",
+    quantity: input.quantity,
+    reference_type: "purchase_return",
+    reference_id: input.returnId,
+    notes: "Supplier ko maal wapas",
+    created_by: input.createdBy,
+  });
+  if (error) return error.message;
+  if (input.batchId) {
+    const { data: batch } = await service.from("stock_batches").select("remaining_quantity").eq("id", input.batchId).maybeSingle();
+    if (batch) {
+      const left = Math.max(0, Number(batch.remaining_quantity) - input.quantity);
+      await service.from("stock_batches").update({ remaining_quantity: left }).eq("id", input.batchId);
+    }
+  }
+  return null;
 }
