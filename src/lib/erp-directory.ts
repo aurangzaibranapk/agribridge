@@ -41,6 +41,7 @@ const CURATED_FEATURES: ErpFeature[] = [
   { section: "Business", label: "Shaakhein", href: "/admin/branches", description: "Karobar ki tamam shaakhein (branches) — naam, jagah, aur in-charge.", who: "Admin" },
   { section: "Business", label: "Shaakh ki Jagah", href: "/admin/branches/locations", description: "Har shaakh ki GPS location aur address ka record.", who: "Admin" },
   { section: "Business", label: "Dukanein", href: "/admin/shops", description: "Tamam dukanen — naam, code, business type, aur status.", who: "Admin" },
+  { section: "Business", label: "Dukan ke godam", href: "/admin/shops/godam", description: "HQ godam har fa'al dukan se khud juda hai. Yahan badlein. Hataane par POS par Godam —.", who: "Admin" },
   { section: "Business", label: "Dukan ka Kiraya aur Bill", href: "/admin/shop-rent", description: "Har dukan ka mahi-wari kiraya, bijli bill, aur payment history.", who: "Admin / Finance" },
   { section: "Business", label: "Driver aur Gaariyan", href: "/admin/drivers", description: "Drivers ki fehrist, unke lisence, gaari assignment, aur transport record.", who: "Admin" },
   { section: "Business", label: "Gaariyan (Rozana)", href: "/admin/vehicles", description: "Gaariyon ka rozana ka hisaab — tel, marammat, safar.", who: "Admin / Staff" },

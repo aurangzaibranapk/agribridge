@@ -32,6 +32,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/business-360/owner", label: "Business 360 (Malik)", icon: Scale },
       { href: "/admin/branches/locations", label: "Shaakh ki Jagah", icon: MapPin },
       { href: "/admin/shops", label: "Dukanein", icon: Store },
+      { href: "/admin/shops/godam", label: "Dukan ke godam", icon: Boxes },
       { href: "/admin/shop-rent", label: "Dukan ka Kiraya aur Bill", icon: Home },
       { href: "/admin/drivers", label: "Driver aur Gaariyan", icon: IdCard },
       { href: "/admin/vehicles", label: "Gaariyan (Rozana)", icon: Bike },
