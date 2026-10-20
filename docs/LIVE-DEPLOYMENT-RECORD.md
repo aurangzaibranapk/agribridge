@@ -1,3 +1,22 @@
+## Pending — 20 October 2026: HR remaining guards (680–685)
+
+Branch `cursor/hr-remaining-fixes-7fa4`. Depends on PR #182 (`cursor/dept-review-fixes-660-c70c`). Migrations **not applied**. Files only. Backup ke baad pehle Testing, phir Live. 662 ke unique index se **pehle** ye read-only ginti (0 honi chahiye; koi update nahi):
+
+```sql
+select pay_journal_id, count(*) as kitne
+  from public.payroll_runs
+ where pay_journal_id is not null
+ group by pay_journal_id
+having count(*) > 1;
+```
+
+- 680 ek mahina / ek banda ek dafa (salary_payments + payroll). HR pay role ada kar sakti hai. Apni line aur bhejne wala ada nahi karta.
+- 681 salary insert paid/self/sifar nahi. Banane wala khud ada nahi karta.
+- 682 apna salary structure khud nahi.
+- 683 apna staff khata khud nahi (dihari basic/30).
+- 684 advance darkhwast dene wala khud ada nahi karta.
+- 685 qist: apni entry khud manzoor, schedule, kattauti, ya wapas nahi.
+
 ## Pending — 20 October 2026: department review fixes (660–670)
 
 Branch `cursor/dept-review-fixes-660-c70c`. Migrations **not applied** on Testing or Live. Do not run them until a fresh backup is confirmed in chat. Files only:
