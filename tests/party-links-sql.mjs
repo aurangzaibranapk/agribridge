@@ -112,4 +112,19 @@ pass("rollback clean");
 await run(M);
 pass("re-apply after rollback");
 
+// 623 security: invoker + search_path, still staff-only via RLS
+await run(`alter table journal_lines enable row level security; alter table journal_entries enable row level security;
+  create policy jl_staff on journal_lines for select using (public.fn_is_any_staff());
+  create policy je_staff on journal_entries for select using (public.fn_is_any_staff());
+  grant select on journal_lines, journal_entries to authenticated;
+  create or replace function public.fn_login_role_priority(p_role text) returns int language sql as $$ select 1 $$;
+  create or replace function public.fn_login_is_member_role(p_role text) returns boolean language sql as $$ select true $$;`);
+await run(fs.readFileSync("supabase/migrations/623_security_621_622.sql", "utf8"));
+assert.equal(await one(`select prosecdef from pg_proc where proname='fn_party_gl_lines'`), false);
+await run(as(FIN)); assert.equal((await q(`select * from fn_party_gl_lines('supplier','${S}', array['2000','1120'])`)).length, 2); await run(reset);
+await run(as(CUSTU)); assert.equal((await q(`select * from fn_party_gl_lines('supplier','${S}', array['2000'])`)).length, 0); await run(reset);
+await run(fs.readFileSync("supabase/migrations/623_security_621_622.rollback.sql", "utf8"));
+await run(fs.readFileSync("supabase/migrations/623_security_621_622.sql", "utf8"));
+pass("623: fn_party_gl_lines invoker, staff-only via RLS; rollback ok");
+
 console.log(`party-links-sql: ${ok} passed`);
