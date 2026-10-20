@@ -31,6 +31,14 @@ export default async function LoginPage({ searchParams }: { searchParams?: Recor
   const lang: V5Lang = cookieLang === "en" || cookieLang === "ur" ? cookieLang : "rm";
   const rtl = lang === "ur";
   const tr = (k: string) => tx(lang, k);
+  if (process.env.LOGIN_UI !== "v5" && !otpPreview) {
+    // Login v6: sliding card (hara panel) ne baayan info panel ki jagah le li.
+    return (
+      <main className={`${v5.variable} ${v5display.variable} ${urdu.variable} flex min-h-screen flex-col items-center justify-start bg-[radial-gradient(circle_at_20%_10%,#c8ecd6,transparent_45%),radial-gradient(circle_at_90%_95%,#cfdcf3,transparent_40%),linear-gradient(135deg,#eef7f1,#e2f2e8)] px-3.5 py-5 font-v5 text-[#0d1b2e] antialiased dark:bg-[#0a1324] dark:text-[#eef3f8] md:justify-center md:px-6 md:py-6`}>
+        <Suspense fallback={null}><LoginV6 initialLang={lang} /></Suspense>
+      </main>
+    );
+  }
   const trust: [string, string, string][] = [["shield", "t1a", "t1b"], ["users", "t2a", "t2b"], ["chat", "t3a", "t3b"]];
   return (
     <main className={`${v5.variable} ${v5display.variable} ${urdu.variable} min-h-screen bg-[#eef4f1] font-v5 text-[#0d1b2e] antialiased dark:bg-[#0a1324] dark:text-[#eef3f8] lg:grid lg:h-screen lg:min-h-0 lg:grid-cols-[47%_53%] lg:overflow-hidden`}>
@@ -56,7 +64,7 @@ export default async function LoginPage({ searchParams }: { searchParams?: Recor
         <div aria-hidden="true" className="pointer-events-none absolute -left-16 -top-24 h-[380px] w-[380px] rounded-full bg-[#7fd6a6] opacity-55 blur-[80px] dark:opacity-20" />
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 -right-10 h-[340px] w-[340px] rounded-full bg-[#9db4e6] opacity-55 blur-[80px] dark:opacity-20" />
         <div className="relative z-10 mb-6 flex w-full max-w-[440px] items-center gap-3 lg:hidden"><Logo id="ablg-m" /><div><p className="font-v5display text-[19px] font-semibold">AgriBridge</p><p className={`text-[12px] text-[#5d6b7e] dark:text-[#93a3bd] ${rtl ? "font-urdu" : ""}`}>{tr("tag")}</p></div></div>
-        <div className="relative z-10 w-full max-w-[440px]"><Suspense fallback={null}>{process.env.LOGIN_UI === "v5" || otpPreview ? <LoginV5 initialLang={lang} preview={otpPreview} /> : <LoginV6 initialLang={lang} />}</Suspense></div>
+        <div className="relative z-10 w-full max-w-[440px]"><Suspense fallback={null}><LoginV5 initialLang={lang} preview={otpPreview} /></Suspense></div>
       </section>
     </main>
   );

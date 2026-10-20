@@ -6,6 +6,7 @@ import { v5CompleteSignup, v5Login, v5SendCode, v5SetPassword, v5VerifyCode, v6C
 import { createClient } from "@/lib/supabase/client";
 import { goAfterLogin, routeAfterLogin } from "@/lib/navigation/after-login";
 import { t6, type V6Lang } from "@/app/login/v6-text";
+import { SlideCard } from "@/app/login/slide-card";
 import { codeLengthFor, OTP_MAX_TRIES, OTP_RESEND_SECONDS, OTP_VALID_MINUTES } from "@/lib/auth/login-v6-ui";
 
 /**
@@ -109,27 +110,28 @@ export function LoginV6({ initialLang }: { initialLang: V6Lang }) {
   const expLeft = Math.max(0, Math.ceil((sentAt + OTP_VALID_MINUTES * 60_000 - now) / 1000));
   const resendLeft = Math.max(0, Math.ceil((sentAt + OTP_RESEND_SECONDS * 1000 - now) / 1000));
   const triesLeft = Math.max(0, OTP_MAX_TRIES - fails);
-  const back = step === "signup" || step === "forgot" ? () => go("login") : step === "otp" ? () => go(purpose === "signup" ? "signup" : "forgot") : null;
+  const back = step === "forgot" ? () => go("login") : step === "otp" ? () => go(purpose === "signup" ? "signup" : "forgot") : null;
 
+  const slide = step === "login" || step === "signup";
+  const dirCls = rtl ? "font-urdu leading-[1.9]" : "font-v5";
   return (
-    <div dir={rtl ? "rtl" : "ltr"} lang={lang === "ur" ? "ur" : "en"} className={rtl ? "font-urdu leading-[1.9]" : "font-v5"}>
-      <div className="rounded-[24px] border border-[#e6efe9] bg-white px-6 py-7 shadow-[0_30px_70px_-30px_rgba(15,61,42,0.33)] dark:border-[#22324f] dark:bg-[#101c33] sm:px-[34px] sm:py-[34px]">
-        <div className="mb-1.5 flex items-center justify-between">
-          {back ? <button type="button" onClick={back} className={`text-[14px] ${LINK}`}>{rtl ? "→" : "←"} {tr("back")}</button> : <span />}
-          <LangToggle lang={lang} onChange={setLang} />
-        </div>
-        <div className="mb-4 mt-1.5 hidden flex-col items-center gap-2 text-center lg:flex">
-          <Logo />
-          <div><p className="font-v5 text-[19px] font-bold">AgriBridge</p><p className={`text-[12px] ${MUTED}`}>{tr("brand_sub")}</p></div>
-        </div>
+    <div lang={lang === "ur" ? "ur" : "en"} className={`mx-auto w-full max-w-[920px] ${dirCls}`}>
+      <header dir={rtl ? "rtl" : "ltr"} className="mb-[18px] flex items-center gap-3">
+        <Logo size={44} />
+        <div><p className="font-v5 text-[19px] font-bold">AgriBridge</p><p className={`text-[12px] ${MUTED}`}>{tr("tagline")}</p></div>
+        <div className="ms-auto"><LangToggle lang={lang} onChange={setLang} /></div>
+      </header>
+      {slide ? (
+        <SlideCard mode={step === "signup" ? "signup" : "login"} onMode={(m) => go(m)} tr={tr} logo={<Logo size={64} />}
+          login={<div dir={rtl ? "rtl" : "ltr"}>{step === "login" && error && <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13.5px] text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{error}</div>}<LoginForm tr={tr} busy={busy} ident={ident} setIdent={setIdent} password={password} setPassword={setPassword}
+            onSubmit={onLogin} onForgot={() => openForgot(ident)} onSignup={() => go("signup")} onOAuth={oauth} /></div>}
+          signup={<div dir={rtl ? "rtl" : "ltr"}>{step === "signup" && error && <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13.5px] text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{error}</div>}<SignupForm tr={tr} busy={busy} su={su} setSu={setSu} fieldErr={fieldErr} channel={channel} setChannel={setChannel}
+            onSubmit={onSignupSubmit} onReset={(v) => openForgot(v)} onLogin={() => go("login")} onOAuth={oauth} /></div>} />
+      ) : (
+      <div dir={rtl ? "rtl" : "ltr"} className="mx-auto max-w-[440px] rounded-[24px] border border-[#e6efe9] bg-white px-6 py-7 shadow-[0_30px_70px_-30px_rgba(15,61,42,0.33)] dark:border-[#22324f] dark:bg-[#101c33] sm:px-[34px] sm:py-[34px]">
+        {back && <div className="mb-1.5"><button type="button" onClick={back} className={`text-[14px] ${LINK}`}>{rtl ? "→" : "←"} {tr("back")}</button></div>}
+        <div className="mb-4 mt-1.5 flex flex-col items-center gap-2 text-center"><Logo size={52} /><div><p className="font-v5 text-[19px] font-bold">AgriBridge</p><p className={`text-[12px] ${MUTED}`}>{tr("brand_sub")}</p></div></div>
         {error && <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13.5px] text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{error}</div>}
-
-        {step === "login" && <LoginForm tr={tr} busy={busy} ident={ident} setIdent={setIdent} password={password} setPassword={setPassword}
-          onSubmit={onLogin} onForgot={() => openForgot(ident)} onSignup={() => go("signup")} onOAuth={oauth} />}
-
-        {step === "signup" && <SignupForm tr={tr} busy={busy} su={su} setSu={setSu} fieldErr={fieldErr} channel={channel} setChannel={setChannel}
-          onSubmit={onSignupSubmit} onReset={(v) => openForgot(v)} onLogin={() => go("login")} onOAuth={oauth} />}
-
         {step === "forgot" && (
           <form onSubmit={(e) => { e.preventDefault(); sendCode(purpose, otpIdent, channel); }}>
             <Steps at={1} />
@@ -151,6 +153,7 @@ export function LoginV6({ initialLang }: { initialLang: V6Lang }) {
 
         {step === "userid" && <UserIdStep tr={tr} name={su.name} onDone={() => finish(redirect)} />}
       </div>
+      )}
       <Footer tr={tr} />
     </div>
   );
@@ -180,7 +183,7 @@ export function LoginForm({ tr, busy, ident, setIdent, password, setPassword, on
             <div className="mt-2.5 text-end text-[14px]"><button type="button" className={LINK} onClick={onForgot}>{tr("forgot")}</button></div>
             <button type="submit" disabled={busy || !ident.trim() || !password} className={BTN}>{busy ? tr("wait") : tr("login")}</button>
             <Social tr={tr} onOAuth={onOAuth} />
-            <p className="mt-4 text-center text-[14px] text-[#3d4a5c] dark:text-[#c2cde0]">{tr("no_acc")} <button type="button" className={LINK} onClick={onSignup}>{tr("signup")}</button></p>
+            <p className="mt-4 text-center text-[14px] text-[#3d4a5c] dark:text-[#c2cde0] md:hidden">{tr("no_acc")} <button type="button" className={LINK} onClick={onSignup}>{tr("signup")}</button></p>
           </form>
   );
 }
@@ -191,13 +194,13 @@ export function SignupForm({ tr, busy, su, setSu, fieldErr, channel, setChannel,
   return (
           <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} noValidate>
             <Title t={tr("su_title")} p={tr("su_p")} />
-            <Field id="su-name" label={tr("name")} err={fieldErr.name && tr(fieldErr.name)}><input id="su-name" autoComplete="name" value={su.name} onChange={(e) => setSu({ ...su, name: e.target.value })} placeholder={tr("name_ph")} className={INPUT} /></Field>
+            <div className="grid gap-x-3 md:grid-cols-2"><Field id="su-name" label={tr("name")} err={fieldErr.name && tr(fieldErr.name)}><input id="su-name" autoComplete="name" value={su.name} onChange={(e) => setSu({ ...su, name: e.target.value })} placeholder={tr("name_ph")} className={INPUT} /></Field>
             <Field id="su-email" label={tr("email")} err={fieldErr.email && tr(fieldErr.email)} dupLink={fieldErr.email === "e_email_taken" ? <ResetLink tr={tr} onClick={() => onReset(su.email)} /> : null}>
               <input id="su-email" dir="ltr" type="email" autoComplete="email" value={su.email} onChange={(e) => setSu({ ...su, email: e.target.value })} placeholder={tr("email_ph")} className={INPUT} /></Field>
             <Field id="su-phone" label={tr("mobile")} err={fieldErr.phone && tr(fieldErr.phone)} dupLink={fieldErr.phone === "e_phone_taken" ? <ResetLink tr={tr} onClick={() => onReset(su.phone)} /> : null}>
               <input id="su-phone" dir="ltr" inputMode="tel" autoComplete="tel" value={su.phone} onChange={(e) => setSu({ ...su, phone: e.target.value })} placeholder="0300 1234567" className={INPUT} /></Field>
             <Field id="su-cnic" label={tr("cnic")} help={tr("cnic_help")} err={fieldErr.cnic && tr(fieldErr.cnic)} dupLink={fieldErr.cnic === "e_cnic_taken" ? <ResetLink tr={tr} onClick={() => onReset(su.cnic)} /> : null}>
-              <input id="su-cnic" dir="ltr" inputMode="numeric" value={su.cnic} onChange={(e) => setSu({ ...su, cnic: formatCnicInput(e.target.value) })} placeholder="12345-1234567-1" className={INPUT} /></Field>
+              <input id="su-cnic" dir="ltr" inputMode="numeric" value={su.cnic} onChange={(e) => setSu({ ...su, cnic: formatCnicInput(e.target.value) })} placeholder="12345-1234567-1" className={INPUT} /></Field></div>
             <label htmlFor="su-pw" className={LABEL}>{tr("pw")}</label>
             <Password id="su-pw" value={su.password} onChange={(v) => setSu({ ...su, password: v })} tr={tr} autoComplete="new-password" err={Boolean(fieldErr.password)} />
             {fieldErr.password ? <p className="mt-1.5 text-[13px] font-medium text-[#c62828]">{tr(fieldErr.password)}</p> : <p className={`mt-1.5 text-[12.5px] ${MUTED}`}>{tr("pw_rule")}</p>}
@@ -206,7 +209,7 @@ export function SignupForm({ tr, busy, su, setSu, fieldErr, channel, setChannel,
             <button type="submit" disabled={busy} className={BTN}>{busy ? tr("wait") : tr("create")}</button>
             <p className={`mt-2.5 text-center text-[12.5px] ${MUTED}`}>{tr("unique_note")}</p>
             <Social tr={tr} onOAuth={onOAuth} />
-            <p className="mt-4 text-center text-[14px] text-[#3d4a5c] dark:text-[#c2cde0]">{tr("have_acc")} <button type="button" className={LINK} onClick={onLogin}>{tr("login")}</button></p>
+            <p className="mt-4 text-center text-[14px] text-[#3d4a5c] dark:text-[#c2cde0] md:hidden">{tr("have_acc")} <button type="button" className={LINK} onClick={onLogin}>{tr("login")}</button></p>
           </form>
   );
 }
@@ -242,10 +245,10 @@ function Password({ id, value, onChange, tr, autoComplete, err }: { id: string; 
 function Channels({ value, onChange, tr }: { value: Ch; onChange: (c: Ch) => void; tr: Tr }) {
   const opts: [Ch, string, string][] = [["sms", "ch_sms", "ch_sms_p"], ["whatsapp", "ch_wa", "ch_wa_p"]];
   return (
-    <div role="radiogroup" className="flex flex-col gap-2.5">
+    <div role="radiogroup" className="flex flex-col gap-2.5 md:flex-row">
       {opts.map(([c, a, b]) => (
         <button key={c} type="button" role="radio" aria-checked={value === c} onClick={() => onChange(c)}
-          className={`flex items-center gap-3 rounded-xl border-[1.5px] px-3.5 py-3 text-start ${value === c ? "border-[#157a4b] bg-[#f1f9f4] dark:bg-[#0f2a1f]" : "border-[#d3dbe2] dark:border-[#22324f]"}`}>
+          className={`flex flex-1 items-center gap-3 rounded-xl border-[1.5px] px-3.5 py-3 text-start ${value === c ? "border-[#157a4b] bg-[#f1f9f4] dark:bg-[#0f2a1f]" : "border-[#d3dbe2] dark:border-[#22324f]"}`}>
           <span className={`h-[18px] w-[18px] flex-none rounded-full ${value === c ? "border-[5px] border-[#157a4b]" : "border-2 border-[#b8c4cf]"}`} />
           <span><b className="block text-[15px]">{tr(a)}</b><span className={`text-[12.5px] ${MUTED}`}>{tr(b)}</span></span>
         </button>
@@ -368,7 +371,7 @@ function LangToggle({ lang, onChange }: { lang: V6Lang; onChange: (l: V6Lang) =>
 }
 function Footer({ tr }: { tr: Tr }) {
   return (
-    <div className={`mt-[18px] flex flex-col items-center gap-2 px-1.5 text-[13px] sm:flex-row sm:justify-between ${MUTED}`}>
+    <div dir={tr("back") === "واپس" ? "rtl" : "ltr"} className={`mt-[18px] flex flex-col items-center gap-2 px-1.5 text-[13px] sm:flex-row sm:justify-between ${MUTED}`}>
       <a href="https://wa.me/923226275476" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#25D366" /><path fill="#fff" d="M17 14.4c-.3-.1-1.6-.8-1.8-.9-.3-.1-.4-.1-.6.1l-.8 1c-.2.2-.3.2-.6.1-1.6-.8-2.6-1.5-3.6-3.2-.3-.5.3-.4.8-1.4.1-.2 0-.3 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.8.8-1 2.1-.3 3.4.9 1.6 2.3 3.6 5.2 4.6 1.6.5 2.4.4 3 .1.5-.3 1.1-1 1.2-1.5.1-.5.1-.8-.4-1z" /></svg>
         {tr("help")} <bdi dir="ltr" className="font-semibold text-[#0d1b2e] dark:text-white">0322 6275476</bdi>
@@ -377,9 +380,9 @@ function Footer({ tr }: { tr: Tr }) {
     </div>
   );
 }
-function Logo() {
+function Logo({ size = 52 }: { size?: number }) {
   return (
-    <svg width="52" height="52" viewBox="0 0 48 48" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
       <defs><linearGradient id="v6lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#1f7a4d" /><stop offset="1" stopColor="#0f3d2a" /></linearGradient></defs>
       <rect width="48" height="48" rx="13" fill="url(#v6lg)" />
       <path d="M24 36V17" stroke="#f3d27a" strokeWidth="2.2" strokeLinecap="round" />
