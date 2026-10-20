@@ -8,6 +8,7 @@ import { computeShiftCash, type ShiftCashSummary } from "@/lib/pos/shift-cash";
 import { postJournal } from "@/lib/ledger/post";
 import { ACC } from "@/lib/ledger/rules";
 import { cashBookLikhein } from "@/lib/ledger/cash-book";
+import { nextYearNumber } from "@/lib/counters";
 
 export interface ActionState {
   error?: string;
@@ -51,20 +52,7 @@ function manageKarSaktaHai(who: { unrestricted: boolean; role: string; branchId:
 }
 
 async function nextShiftNumber(): Promise<string> {
-  const service = createServiceClient();
-  const year = new Date().getFullYear() % 100;
-  const { data: existing } = await service
-    .from("pos_shift_counters")
-    .select("last_number")
-    .eq("year", year)
-    .maybeSingle();
-  const next = (existing?.last_number ?? 0) + 1;
-  if (existing) {
-    await service.from("pos_shift_counters").update({ last_number: next }).eq("year", year);
-  } else {
-    await service.from("pos_shift_counters").insert({ year, last_number: next });
-  }
-  return `SHIFT-${year}-${String(next).padStart(5, "0")}`;
+  return nextYearNumber("pos_shift_counters", "SHIFT-");
 }
 
 /** Naya POS Counter -- Branch + Shop. Warehouse khud shop se nikal jata hai (trigger). */
@@ -299,7 +287,7 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
   catch (error) { return { error: error instanceof Error ? error.message : "Shift ka cash verify nahi hua." }; }
   const difference = Math.round((countedCash - expectedCash) * 100) / 100;
 
-  const { error } = await service
+  const { data: closedRows, error } = await service
     .from("pos_shifts")
     .update({
       status: "closed",
@@ -310,8 +298,11 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
       closing_note: closingNote,
       closed_by: who.userId,
     })
-    .eq("id", shiftId);
+    .eq("id", shiftId)
+    .eq("status", "open")
+    .select("id");
   if (error) return { error: error.message };
+  if (!closedRows?.length) return { error: "Ye shift pehle hi band ho chuka hai." };
 
   // Ginti hui cash ab is staff ki custody mein hai -- ledger mein bhi
   // yehi kehna chahiye, warna "Cash Bhejein" (my_custody) hamesha "aap
@@ -333,40 +324,31 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
       sourceId: shiftId,
       branchId: who.branchId,
       createdBy: who.userId,
+      claims: [{ table: "pos_shifts", rowId: shiftId }],
       lines: [
         { account: ACC.cashWithPerson, debit: countedCash, partyType: "staff", partyId: shift.staff_id, memo: `Shift ${shift.shift_number}` },
         { account: ACC.cash, credit: countedCash, memo: `Shift ${shift.shift_number} — golak se ${who.naam} ke haath mein` },
       ],
     });
-    // Custody entry na ban saki to bhi shift band rehti hai (staff ka
-    // kaam ruk nahi sakta) -- magar chup nahi rehte: error log hota hai
-    // taake "Cash Bhejein" par jo "Rs 0" dikhega, us ki wajah kahin
-    // darj ho.
     if ("error" in posted) {
-      await logAudit({
-        actionType: "update",
-        module: "pos-shifts",
-        recordId: shiftId,
-        recordLabel: shiftId,
-        description: `Shift ${shift.shift_number}: custody entry nahi ban saki — ${posted.error}`,
-      });
-    } else {
-      // Cash Book ka rukh bhi (19 September ka finance review): ledger
-      // mein 1000 se cash nikla to Cash Book se bhi nikle -- warna
-      // "Cash in Hand" har shift band hone par Rs itna aage nikal
-      // jata hai jitni ginti thi (16 Sep ka Rs 1,070 yehi tha).
-      await cashBookLikhein([
-        {
-          glCode: ACC.cash,
-          amount: countedCash,
-          rukh: "gaya",
-          category: "pos_shift_close",
-          notes: `Shift ${shift.shift_number} band — ginti hui cash ${who.naam} ki custody mein`,
-          createdBy: who.userId,
-          entryId: posted.id,
-        },
-      ]);
+      await service
+        .from("pos_shifts")
+        .update({ status: "open", closed_at: null, counted_cash: null, expected_cash: null, difference: null, closing_note: null, closed_by: null })
+        .eq("id", shiftId)
+        .eq("status", "closed");
+      return { error: `Shift band nahi hui — custody entry nahi bani: ${posted.error}` };
     }
+    await cashBookLikhein([
+      {
+        glCode: ACC.cash,
+        amount: countedCash,
+        rukh: "gaya",
+        category: "pos_shift_close",
+        notes: `Shift ${shift.shift_number} band — ginti hui cash ${who.naam} ki custody mein`,
+        createdBy: who.userId,
+        entryId: posted.id,
+      },
+    ]);
   }
 
   await logAudit({
@@ -377,18 +359,20 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
     description: `Shift band — expected Rs ${expectedCash.toLocaleString()}, ginti Rs ${countedCash.toLocaleString()}, farq Rs ${difference.toLocaleString()}.`,
   });
 
-  // Cash ki kami staff ke khate mein — aaj ka farq, kal ki salary se katega.
+  // Cash ki kami seedha salary se nahi kat-ti. Doosra manager manzoor kare.
   if (difference < 0 && shift.staff_id) {
     const shortage = Math.round(Math.abs(difference) * 100) / 100;
-    const { error: shortageError } = await service.from("staff_credit_ledger").insert({
-      profile_id: shift.staff_id,
-      ledger_type: "debit",
-      source_type: "shift_shortage",
+    const { error: shortageError } = await (service as any).from("pos_shift_shortage_reviews").insert({
+      shift_id: shiftId,
+      staff_id: shift.staff_id,
       amount: shortage,
-      notes: `Shift ${shift.shift_number} — expected Rs ${expectedCash.toLocaleString()}, ginti Rs ${countedCash.toLocaleString()}, kami Rs ${shortage.toLocaleString()}`,
+      note: `Shift ${shift.shift_number} — expected Rs ${expectedCash.toLocaleString()}, ginti Rs ${countedCash.toLocaleString()}, kami Rs ${shortage.toLocaleString()}`,
       created_by: who.userId,
+      status: "pending",
     });
-    if (shortageError) return { error: `Shift band hui, magar shortage/ledger posting fail hui: ${shortageError.message}`, shiftId, countedCash };
+    if (shortageError && !String(shortageError.message).includes("duplicate")) {
+      return { error: `Shift band hui, magar shortage review darj nahi hui: ${shortageError.message}`, shiftId, countedCash };
+    }
   }
 
   revalidatePath("/admin/pos");
@@ -401,7 +385,7 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
         ? "Shift band — cash poora milta hai."
         : difference > 0
           ? `Shift band — Rs ${difference.toLocaleString()} zyada mila.`
-          : `Shift band — Rs ${Math.abs(difference).toLocaleString()} ki kami — staff ke khate mein darj ho gai.`,
+          : `Shift band — Rs ${Math.abs(difference).toLocaleString()} ki kami manager ki manzoori ka intezar kar rahi hai.`,
   };
 }
 
@@ -452,4 +436,24 @@ export async function shiftCashCarriers(): Promise<
     .order("full_name");
 
   return (data ?? []).map((r) => ({ id: r.id, name: r.full_name ?? "—", role: r.role }));
+}
+
+/** Doosra manager/admin shortage manzoor ya radd kare. Apni shift nahi. */
+export async function reviewShiftShortage(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const who = await main();
+  if ("error" in who) return { error: who.error };
+  const shiftId = String(formData.get("shift_id") ?? "");
+  const decision = String(formData.get("decision") ?? "");
+  const note = String(formData.get("note") ?? "").trim();
+  if (!shiftId) return { error: "Shift nahi mila." };
+  if (decision !== "approved" && decision !== "rejected") return { error: "Faisla chunein." };
+  const supabase = createClient();
+  const { error } = await (supabase as any).rpc("fn_review_shift_shortage", {
+    p_shift_id: shiftId,
+    p_decision: decision,
+    p_note: note || null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/reports/pos-shifts");
+  return { success: true, message: decision === "approved" ? "Kami manzoor — staff ke khate mein chali gayi." : "Kami radd ho gayi." };
 }

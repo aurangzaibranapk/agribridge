@@ -1,3 +1,13 @@
+## Pending — 20 October 2026: sales/parties money guards (631–633) NOT applied
+
+Migrations `631_pos_server_price_and_refund.sql`, `632_orders_shift_counters.sql`, and `633_party_money_guards.sql` are files only. They were **not** applied to Testing (`hwaiuwxqldxsoukkfefn`) or Live (`ktskwawkslaznkjjacni`).
+
+Do not apply until Boss is on the system and a verified backup size is in chat. Order stays: backup verified → pre-migration counts → 631 then 632 then 633 on Testing → verification → same on Live → then the new web build. Code calls `fn_approve_party_settlement`, `fn_record_bridge_advance`, `fn_pay_shop_bill`, `fn_record_investor_investment`, and `fn_next_year_counter`. Shipping the build before these migrations makes those buttons fail closed.
+
+Data repairs (open shift SHIFT-26-00020, Malik Traders / Zahid balances, duplicate customers, journals TXN-26-000008/9/21/25) are **not** in these migrations. Proposed SQL is in `docs/data-fixes/2026-10-20-needs-owner-approval/` and still needs owner approval. Do not run it with the migration.
+
+624–630 are already on main from the Call Center and procurement PRs. They are still not applied; their own notes are below. These money-guard files start at 631. Deploy steps: `docs/DEPLOY-184.md` (backup of the 11-arg wrapper, then 631→632→633 with this app at low rush, then smoke, rollback 633→631).
+
 ## Pending — 20 October 2026: Call Center Agent (624 + 625 + 626 + 627 + 628)
 
 - Branch `cursor/call-center-agent-6663`. Migrations in order: `624_call_center_role.sql`, `625_call_center.sql`, `626_complaint_support_bridge.sql`, `627_complaint_stages_grants.sql`, `628_sms_retry.sql`.
