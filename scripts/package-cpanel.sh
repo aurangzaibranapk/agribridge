@@ -21,6 +21,8 @@ node tests/inventory-guards-port.cjs
 node tests/pos-return-cash-match.cjs
 node tests/safe-form-state.cjs
 node tests/my-work-products-count.cjs
+npx --yes tsx tests/shop-allowed-categories-lib.ts
+node tests/shop-allowed-categories-sql.mjs
 node tests/migration-631-phone-key.cjs
 node tests/maintenance-mode.cjs
 node tests/maintenance-copy-verify.cjs
