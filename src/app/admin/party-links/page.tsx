@@ -9,7 +9,7 @@ import { PartyLinksClient } from "./party-links-client";
 export const dynamic = "force-dynamic";
 const ROLES = ["owner", "super_admin", "admin", "finance"];
 
-/** 621: Customer + supplier ek banda (jaise Yasir Ali: saman leta, diesel deta). */
+/** 622: Customer + supplier ek banda (jaise Yasir Ali: saman leta, diesel deta). */
 export default async function PartyLinksPage() {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();

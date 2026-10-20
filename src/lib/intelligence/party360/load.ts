@@ -218,7 +218,7 @@ export async function loadSupplier360(id: string, now = new Date()): Promise<Par
   const items = live.length ? await q(db, notes, "purchase_items", db.from("purchase_items").select("purchase_id,quantity,unit_cost,products(name)").in("purchase_id", live.map((b: any) => b.id).slice(0, 500)).limit(LIMIT)) : [];
   const bought = r2(live.reduce((a: number, b: any) => a + num(b.total_amount), 0));
   const paid = r2(pays.reduce((a: number, p: any) => a + num(p.amount), 0));
-  // 621: Recovery / Kharche / settlement ki 2000/1120 qatarein bhi (purchase/supplier_payment dobara nahi).
+  // 622: Recovery / Kharche / settlement ki 2000/1120 qatarein bhi (purchase/supplier_payment dobara nahi).
   const payable = r2(bought - paid + glBills - glPaid);
   const paidBy = new Map<string, number>(); for (const p of pays) if (p.purchase_id) paidBy.set(p.purchase_id, (paidBy.get(p.purchase_id) ?? 0) + num(p.amount));
   const pending = live.filter((b: any) => !b.received_at).length;
@@ -376,12 +376,12 @@ export async function loadDealer360(id: string, now = new Date()): Promise<Party
 export const LOADERS = { farmer: loadFarmer360, customer: loadCustomer360, supplier: loadSupplier360, buyer: loadBuyer360, dealer: loadDealer360 } as const;
 export type Party360Type = keyof typeof LOADERS;
 
-/** 621: "Yasir Ali: customer + supplier" — net balance ka section. */
+/** 622: "Yasir Ali: customer + supplier" — net balance ka section. */
 function linkedSections(plinks: Awaited<ReturnType<typeof loadLinkedParties>>, name: string): Section[] {
   if (!plinks.length) return [];
   return [{
     title: `${name}: customer + supplier (net)`,
-    note: "Party link (621). Kuch khud nahi katta — kaatna sirf Settlements ki manzoori se (Dr 2000 / Cr 1100).",
+    note: "Party link (622). Kuch khud nahi katta — kaatna sirf Settlements ki manzoori se (Dr 2000 / Cr 1100).",
     columns: ["Customer", "Supplier", "Unhon ne dena (1100)", "Hum ne dena (2000)", "Net"],
     rows: plinks.map((l) => [l.customerName, l.supplierName, rs(l.net.theyOwe), rs(l.net.weOwe),
       `${rs(Math.abs(l.net.net))} ${l.net.net > 0 ? "party ne dena" : l.net.net < 0 ? "hum ne dena" : "barabar"}`]),

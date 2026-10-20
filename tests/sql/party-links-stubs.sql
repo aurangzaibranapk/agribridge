@@ -1,4 +1,4 @@
--- Test-only stubs for 621 (PGlite). Live shape ki nakal (20 Oct 2026, read-only dekha).
+-- Test-only stubs for 622 (PGlite). Live shape ki nakal (20 Oct 2026, read-only dekha).
 create role anon; create role authenticated; create role service_role;
 create schema auth;
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('test.uid', true), '')::uuid $$;
@@ -41,3 +41,5 @@ begin
   return new;
 end; $$;
 create trigger trg_settlement_taala before update on public.party_settlements for each row execute function public.fn_settlement_taala();
+create table public.dashboard_features (dashboard_key text, feature_key text, section text, section_order int, sort_order int,
+  primary key (dashboard_key, feature_key));

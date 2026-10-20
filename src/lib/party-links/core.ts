@@ -1,5 +1,5 @@
 /**
- * Party links (621) — ek hi banda customer bhi, supplier bhi.
+ * Party links (622) — ek hi banda customer bhi, supplier bhi.
  *
  * Malik (20 October): "sab kuch saaf ho, koi chhupi payment nahi."
  * Yasir Ali hum se saman leta hai (customer, 1100) aur humein diesel deta

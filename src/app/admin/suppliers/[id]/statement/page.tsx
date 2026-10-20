@@ -36,7 +36,7 @@ export default async function SupplierStatementPage({
     .gte("payment_date", startDate)
     .lte("payment_date", endDate)
     .order("payment_date", { ascending: true });
-  // 621: 2000/1120 ledger qatarein jo purchases/supplier_payments mein nahi
+  // 622: 2000/1120 ledger qatarein jo purchases/supplier_payments mein nahi
   // (Recovery "Payment Send Karein", Kharche supplier bill, settlements).
   const { data: rawGl } = await (supabase as any).rpc("fn_party_gl_lines", {
     p_party_type: "supplier", p_party_id: supplierId, p_accounts: ["2000", "1120"],

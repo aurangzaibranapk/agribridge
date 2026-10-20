@@ -1,4 +1,4 @@
-/** 621 party links — pure hisaab. npm run test:party-links */
+/** 622 party links — pure hisaab. npm run test:party-links */
 import assert from "node:assert/strict";
 import {
   glToStatementRows, supplierPayableFromGl, customerReceivableFromGl, linkedNet, linkedSettlementLimit,

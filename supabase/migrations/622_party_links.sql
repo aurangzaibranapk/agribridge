@@ -1,5 +1,5 @@
--- 621: Party links — ek hi banda customer bhi, supplier bhi (Yasir Ali: saman leta hai, diesel deta hai).
--- Sab ADDITIVE. Rollback: 621_party_links.rollback.sql
+-- 622: Party links — ek hi banda customer bhi, supplier bhi (Yasir Ali: saman leta hai, diesel deta hai).
+-- Sab ADDITIVE. Rollback: 622_party_links.rollback.sql
 -- Malik (20 Oct 2026): "sab saaf ho, koi chhupi payment nahi."
 
 -- 1) party_links ------------------------------------------------------------
@@ -17,7 +17,7 @@ create table if not exists public.party_links (
   constraint chk_party_link_off check (is_active or deactivated_at is not null)
 );
 comment on table public.party_links is
-  '621: Customer aur supplier ek hi banda. Sirf jorr kar DIKHATA hai; koi balance khud nahi kaatta (set-off sirf party_settlements ki manzoori se).';
+  '622: Customer aur supplier ek hi banda. Sirf jorr kar DIKHATA hai; koi balance khud nahi kaatta (set-off sirf party_settlements ki manzoori se).';
 
 create unique index if not exists party_links_active_pair
   on public.party_links (customer_id, supplier_id) where is_active;
@@ -119,3 +119,6 @@ values ('party-links', 'Party Links (Customer + Supplier)', 'Party Links (Custom
   'Aik banda customer bhi, supplier bhi — net hisaab', 'Same person as customer and supplier — net balance', 'ایک بندہ کسٹمر بھی، سپلائر بھی — نیٹ حساب',
   '/admin/party-links', 'Link2', true, true)
 on conflict (key) do nothing;
+insert into public.dashboard_features (dashboard_key, feature_key, section, section_order, sort_order)
+values ('admin', 'party-links', 'Operations', 2, 274)
+on conflict (dashboard_key, feature_key) do nothing;

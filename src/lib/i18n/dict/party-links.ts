@@ -1,5 +1,5 @@
 /**
- * 621 Party links — customer + supplier ek banda. EN / Roman / Urdu.
+ * 622 Party links — customer + supplier ek banda. EN / Roman / Urdu.
  * `pl_` prefix; do kharche keys `kh_udhaar_*`.
  */
 export const partyLinksDict = {

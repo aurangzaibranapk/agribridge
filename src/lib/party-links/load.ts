@@ -1,7 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { customerReceivableFromGl, linkedNet, linkedSettlementLimit, supplierPayableFromGl, type GlLine } from "./core";
 
-/** 621: Fa'aal party links + GL se dono taraf ka baqi. Sirf PARHNA. */
+/** 622: Fa'aal party links + GL se dono taraf ka baqi. Sirf PARHNA. */
 export type LinkedParty = {
   id: string; customerId: string; customerName: string; customerPhone: string | null;
   supplierId: string; supplierName: string; note: string | null; createdAt: string;

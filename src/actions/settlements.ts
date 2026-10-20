@@ -326,7 +326,7 @@ export async function settlementRadd(_prev: ActionState, formData: FormData): Pr
 }
 
 /**
- * 621: Do LINKED party ka adjustment — customer (1100) ka lena aur
+ * 622: Do LINKED party ka adjustment — customer (1100) ka lena aur
  * supplier (2000) ka dena, jab dono ek hi banda hon (party_links).
  * Dr 2000 supplier / Cr 1100 customer. Wajah lazmi, aur banane wala khud
  * manzoor nahi kar sakta (DB constraint bhi yehi rokta hai).

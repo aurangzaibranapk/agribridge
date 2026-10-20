@@ -125,7 +125,7 @@ export interface KharchaQism {
   /** Staff ke saamne ye kis khaane mein baithti hai. */
   khaana: PaisaKhaana;
   /**
-   * 621: Udhaar par bill — cash NAHI hilta. Doosri taraf cash ke bajaye
+   * 622: Udhaar par bill — cash NAHI hilta. Doosri taraf cash ke bajaye
    * supplier ka dena (2000) baithta hai: Dr kharcha (6xxx) / Cr 2000.
    */
   udhaarPar?: boolean;
@@ -146,7 +146,7 @@ export const KHARCHA_QISMEIN: KharchaQism[] = [
     asalKharcha: true,
   },
   {
-    // 621: Yasir jaisa supplier diesel udhaar par deta hai — bill aaya, paisa abhi nahi gaya.
+    // 622: Yasir jaisa supplier diesel udhaar par deta hai — bill aaya, paisa abhi nahi gaya.
     value: "supplier_bill_udhaar",
     khaana: "kharcha",
     label: "Supplier bill (udhaar par kharcha — diesel waghera)",

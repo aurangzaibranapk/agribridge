@@ -1,7 +1,8 @@
--- Rollback 621. Pehle check: koi 'supplier_bill_udhaar' kharcha ya linked settlement to nahi?
+-- Rollback 622. Pehle check: koi 'supplier_bill_udhaar' kharcha ya linked settlement to nahi?
 --   select count(*) from company_expense_requests where kind='supplier_bill_udhaar';
 --   select count(*) from party_settlements where party_link_id is not null;
 -- Agar hain to pehle un ki ulti qatarein / backup lein; warna neeche ke qadam fail honge.
+delete from public.dashboard_features where dashboard_key = 'admin' and feature_key = 'party-links';
 delete from public.features where key = 'party-links';
 drop function if exists public.fn_party_gl_lines(text, uuid, text[]);
 

@@ -1,4 +1,4 @@
-// Real SQL test: 621 (party links) PGlite par -- live DB nahi.
+// Real SQL test: 622 (party links) PGlite par -- live DB nahi.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
@@ -18,10 +18,10 @@ const throws = async (s, msg) => {
 let ok = 0; const pass = (n) => { ok++; console.log(`  ok  ${n}`); };
 
 await run(fs.readFileSync("tests/sql/party-links-stubs.sql", "utf8"));
-const M = fs.readFileSync("supabase/migrations/621_party_links.sql", "utf8");
-const R = fs.readFileSync("supabase/migrations/621_party_links.rollback.sql", "utf8");
+const M = fs.readFileSync("supabase/migrations/622_party_links.sql", "utf8");
+const R = fs.readFileSync("supabase/migrations/622_party_links.rollback.sql", "utf8");
 await run(M); await run(M); // idempotent
-pass("621 applies twice (idempotent)");
+pass("622 applies twice (idempotent)");
 
 // additive: no drop of existing tables/columns, no deletes, no sends
 assert.doesNotMatch(M, /\bdrop\s+(table|column)\b|\btruncate\b|\bdelete\s+from\b/i);
@@ -97,7 +97,8 @@ await throws(`set role anon; select * from fn_party_gl_lines('supplier','${S}', 
 pass("fn_party_gl_lines: staff only, filters account+party");
 
 assert.equal(await one(`select count(*)::int from features where key='party-links'`), 1);
-pass("feature row added");
+assert.equal(await one(`select count(*)::int from dashboard_features where dashboard_key='admin' and feature_key='party-links' and section='Operations'`), 1);
+pass("feature row + admin sidebar row added (620 pattern)");
 
 // rollback restores original
 await run(`delete from party_settlements where party_link_id is not null; delete from company_expense_requests where kind='supplier_bill_udhaar';`);
@@ -106,6 +107,7 @@ assert.equal(await one(`select count(*)::int from information_schema.tables wher
 assert.equal(await one(`select count(*)::int from information_schema.columns where table_name='party_settlements' and column_name='party_link_id'`), 0);
 await throws(`insert into company_expense_requests (kind, amount) values ('supplier_bill_udhaar', 1)`, "kind removed after rollback");
 assert.equal(await one(`select count(*)::int from features where key='party-links'`), 0);
+assert.equal(await one(`select count(*)::int from dashboard_features where feature_key='party-links'`), 0);
 pass("rollback clean");
 await run(M);
 pass("re-apply after rollback");

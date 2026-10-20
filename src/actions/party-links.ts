@@ -5,7 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
 
 /**
- * Party links (621) — customer aur supplier ko ek banda dikhana.
+ * Party links (622) — customer aur supplier ko ek banda dikhana.
  * Sirf DIKHANE ka jorr hai: koi balance khud nahi katta. Set-off sirf
  * Settlements ki manzoori (maker-checker) se.
  */

@@ -795,7 +795,7 @@ export function KharcheClient({
                 </span>
               </label>
 
-              {/* 5) Khata — 621: udhaar bill par cash nahi hilta */}
+              {/* 5) Khata — 622: udhaar bill par cash nahi hilta */}
               {qism?.udhaarPar ? (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
                   <p className="font-medium">{t("kh_udhaar_bill_title", lang)}</p>

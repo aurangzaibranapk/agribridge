@@ -14,7 +14,7 @@ function Btn({ children }: { children: React.ReactNode }) {
   return <button disabled={pending} className="inline-flex items-center gap-1.5 rounded-lg bg-[#0f2747] px-3 py-2 text-sm font-medium text-white hover:bg-[#16345e] disabled:opacity-50">{children}</button>;
 }
 
-/** 621: Dr 2000 supplier / Cr 1100 customer — linked party ka adjustment, maker-checker ke sath. */
+/** 622: Dr 2000 supplier / Cr 1100 customer — linked party ka adjustment, maker-checker ke sath. */
 export function LinkedSettlementForm({ lang, links }: { lang: Lang; links: LinkedParty[] }) {
   const [s, action] = useFormState(linkedSettlementMaangein, {} as ActionState);
   const [linkId, setLinkId] = useState(links[0]?.id ?? "");

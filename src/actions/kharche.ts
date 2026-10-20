@@ -604,7 +604,7 @@ export async function kharchaRadd(_prev: ActionState, formData: FormData): Promi
 }
 
 /**
- * 621: Supplier bill (udhaar par kharcha) ki manzoori.
+ * 622: Supplier bill (udhaar par kharcha) ki manzoori.
  * Dr kharcha (diesel -> 6010) / Cr 2000, dono supplier ke naam. Cash Book
  * mein KUCH nahi -- paisa abhi gaya hi nahi. Adaigi baad mein "Payment Send
  * Karein" (2000) ya "Supplier ko adaigi" se.
