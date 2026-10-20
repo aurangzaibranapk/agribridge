@@ -1,0 +1,1 @@
+Inter, Poppins and Noto Nastaliq Urdu are licensed under the SIL Open Font License 1.1 (https://openfontlicense.org). Files are subsets used only by the /login page.
