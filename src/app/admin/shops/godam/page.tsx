@@ -54,7 +54,7 @@ export default async function ShopGodamPage({
     <div className="mx-auto max-w-3xl">
       <PageHeader
         title={t("dgod_title", lang)}
-        description={t("dgod_blurb", lang)}
+        description={`${t("dgod_blurb", lang)} ${t("dgod_hq", lang)}`}
         actions={
           <Link href="/admin/shops" className="rounded-lg border border-surface-200 px-3 py-2 text-sm text-surface-700 hover:bg-surface-50 dark:border-white/10 dark:text-surface-200 dark:hover:bg-white/5">
             {t("at_shops", lang)}

@@ -38,15 +38,18 @@ grant execute on function public.fn_current_user_organization_id() to authentica
 create table public.shops (
   id uuid primary key,
   name text,
-  organization_id uuid
+  organization_id uuid,
+  is_active boolean not null default true
 );
 create table public.warehouses (
   id uuid primary key,
   name text,
+  code text,
   organization_id uuid,
   shop_id uuid,
   is_quarantine boolean default false,
-  is_active boolean default true
+  is_active boolean default true,
+  created_at timestamptz not null default now()
 );
 create table public.inventory (
   id uuid primary key default gen_random_uuid(),

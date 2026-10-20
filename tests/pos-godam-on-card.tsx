@@ -170,6 +170,14 @@ assert.match(mig, /create table if not exists public\.shop_godams/);
 assert.match(mig, /fn_shop_linked_godam_stock/);
 assert.doesNotMatch(mig, /\bdelete\s+from\b|\btruncate\b/i);
 assert.equal(fs.existsSync("supabase/migrations/670_shop_godams.sql"), false);
+const hq = fs.readFileSync("supabase/migrations/676_shop_hq_godam_default.sql", "utf8");
+assert.match(hq, /fn_hq_godam_id/);
+assert.match(hq, /trg_shop_link_hq_godam/);
+assert.match(hq, /on conflict \(shop_id, warehouse_id\) do nothing/i);
+assert.match(hq, /raise notice/i);
+assert.match(hq, /s\.is_active/);
+assert.doesNotMatch(hq, /\bdelete\s+from\b|\btruncate\b/i);
+assert.match(fs.readFileSync("src/actions/shops.ts", "utf8"), /676/);
 
 const client = fs.readFileSync("src/components/pos/pos-client.tsx", "utf8");
 assert.match(client, /<GodamStrip/);

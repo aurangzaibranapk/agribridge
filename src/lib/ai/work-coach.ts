@@ -41,7 +41,7 @@ export const SYSTEM_MAP = [
   "-> Owner/Admin manzoor / wapas / radd (/admin/purchases, Jaanch)",
   "-> Maal ginna: theek aaya / toota / kam (/admin/inventory/receiving ya /admin/purchases, Maal Aa Gaya) -> stock charhta hai, supplier ka dena utne ka jitna theek aaya",
   "-> Product setup: rate, barcode, tasveer, miyaad, manzoori (/admin/products/setup) -> Sale Ready",
-  "-> POS par bikri (/admin/pos); bina sale rate ke cheez bikti nahi (database ki rok). POS card ka godam sirf us dukan se jude godam hain (/admin/shops/godam). Link na ho to Godam —. Doosri dukan ya juda na hua godam nahi dikhta.",
+  "-> POS par bikri (/admin/pos); bina sale rate ke cheez bikti nahi (database ki rok). POS card ka godam sirf us dukan se jude godam hain. HQ godam har fa'al dukan se khud juda hota hai; admin /admin/shops/godam par badal sakta hai. HQ hatao to Godam —. Doosri dukan ya juda na hua godam nahi dikhta.",
   "Shop order: shop request (/admin/pos/ordering ya AI draft) -> Sales verify -> Finance verify -> Manager approve -> Warehouse dispatch (stock bhejne wale se kam) -> Shop GRN (/admin/purchases/grn; theek/toota/kam) -> shop ka stock",
   "Shop se wapas: /admin/agri-returns (HQ receive kare tab stock aur khata hilte hain)",
   "Stock ka ek hi malik: har tabdeeli stock_movements ki harkat (Stock Ledger /admin/stock-ledger); ginti haath se nahi badalti",

@@ -37,27 +37,48 @@ const ADMIN_B = "00000000-0000-0000-0000-0000000000e5";
 const CASHIER = "00000000-0000-0000-0000-0000000000e6";
 const P = "00000000-0000-0000-0000-0000000000f1";
 const COUNTER = "00000000-0000-0000-0000-0000000000c1";
+const SHOP_OFF = "00000000-0000-0000-0000-00000000a502";
+const SHOP_NEW = "00000000-0000-0000-0000-00000000a503";
+const ORG_E = "00000000-0000-0000-0000-0000000000e9";
+const SHOP_E = "00000000-0000-0000-0000-00000000e501";
+const WH_HQ = "00000000-0000-0000-0000-0000000000d6";
+const WH_MAIN = "00000000-0000-0000-0000-0000000000d7";
+const ORG_U = "00000000-0000-0000-0000-0000000000c9";
+const SHOP_U = "00000000-0000-0000-0000-00000000c502";
+const WH_COLD = "00000000-0000-0000-0000-0000000000d8";
+const WH_SIDE = "00000000-0000-0000-0000-0000000000d9";
 
 await run(fs.readFileSync("tests/sql/shop-godam-stubs.sql", "utf8"));
 const M = fs.readFileSync("supabase/migrations/675_shop_godams.sql", "utf8");
 const R = fs.readFileSync("supabase/migrations/675_shop_godams.rollback.sql", "utf8");
+const H = fs.readFileSync("supabase/migrations/676_shop_hq_godam_default.sql", "utf8");
+const HR = fs.readFileSync("supabase/migrations/676_shop_hq_godam_default.rollback.sql", "utf8");
 assert.doesNotMatch(M, /\bdelete\s+from\b|\btruncate\b|\bdrop\s+table\b/i);
+assert.doesNotMatch(H, /\bdelete\s+from\b|\btruncate\b|\bdrop\s+table\b/i);
+assert.match(H, /on conflict \(shop_id, warehouse_id\) do nothing/i);
+assert.match(H, /raise notice/i);
 await run(M);
 await run(M);
 pass("675 applies twice, no delete of business rows");
 
 await run(`
-  insert into organizations values ('${ORG_A}'), ('${ORG_B}');
-  insert into shops values
-    ('${SHOP_A}','Mahabali','${ORG_A}'),
-    ('${SHOP_B}','Doosri','${ORG_A}'),
-    ('${SHOP_C}','Door','${ORG_B}');
-  insert into warehouses (id, name, organization_id, shop_id, is_quarantine) values
-    ('${GODAM1}','Markaz','${ORG_A}',null,false),
-    ('${GODAM2}','Doosra','${ORG_A}',null,false),
-    ('${SHELF}','Shelf','${ORG_A}','${SHOP_A}',false),
-    ('${QUAR}','Quarantine','${ORG_A}',null,true),
-    ('${GODAM_B}','Door Godam','${ORG_B}',null,false);
+  insert into organizations values ('${ORG_A}'), ('${ORG_B}'), ('${ORG_E}'), ('${ORG_U}');
+  insert into shops (id, name, organization_id, is_active) values
+    ('${SHOP_A}','Mahabali','${ORG_A}',true),
+    ('${SHOP_B}','Doosri','${ORG_A}',true),
+    ('${SHOP_C}','Door','${ORG_B}',true),
+    ('${SHOP_OFF}','Band','${ORG_A}',false),
+    ('${SHOP_E}','HQ Shop','${ORG_E}',true);
+  insert into warehouses (id, name, code, organization_id, shop_id, is_quarantine) values
+    ('${GODAM1}','Markaz','MARKAZ','${ORG_A}',null,false),
+    ('${GODAM2}','Doosra','DOOSRA','${ORG_A}',null,false),
+    ('${SHELF}','Shelf','SHELF','${ORG_A}','${SHOP_A}',false),
+    ('${QUAR}','Main Quarantine','MAINQ','${ORG_A}',null,true),
+    ('${GODAM_B}','Door Godam','DOOR','${ORG_B}',null,false),
+    ('${WH_HQ}','HQ Godam','HQ','${ORG_E}',null,false),
+    ('${WH_MAIN}','Main Warehouse','MAIN','${ORG_E}',null,false),
+    ('${WH_COLD}','Cold Room','COLD','${ORG_U}',null,false),
+    ('${WH_SIDE}','Side Store','SIDE','${ORG_U}',null,false);
   insert into inventory (product_id, warehouse_id, quantity_on_hand) values
     ('${P}','${GODAM1}',10),
     ('${P}','${GODAM1}',5),
@@ -76,10 +97,30 @@ await run(`
   insert into pos_counter_staff (profile_id, counter_id, is_active) values ('${CASHIER}','${COUNTER}',true);
 `);
 
+await run(H);
+await run(H);
+const linkOf = async (shop) => (await q(`select warehouse_id::text as warehouse_id from shop_godams where shop_id = '${shop}' order by warehouse_id`)).map((r) => r.warehouse_id);
+assert.deepEqual(await linkOf(SHOP_A), [GODAM1]);
+assert.deepEqual(await linkOf(SHOP_B), [GODAM1]);
+assert.deepEqual(await linkOf(SHOP_OFF), []);
+assert.deepEqual(await linkOf(SHOP_C), [GODAM_B]);
+assert.deepEqual(await linkOf(SHOP_E), [WH_HQ]);
+pass("676: active shops get one HQ; inactive skipped; HQ beats Main; single central used; rerun does not duplicate");
+
+await run(`insert into shops (id, name, organization_id, is_active) values ('${SHOP_NEW}','Nayi','${ORG_A}',true), ('${SHOP_U}','Unnamed','${ORG_U}',true)`);
+assert.deepEqual(await linkOf(SHOP_NEW), [GODAM1]);
+assert.deepEqual(await linkOf(SHOP_U), []);
+pass("new shop links to HQ; two unnamed centrals do not guess");
+
 await run(as(ADMIN));
-await run(`insert into shop_godams (shop_id, warehouse_id, created_by) values ('${SHOP_A}','${GODAM1}','${ADMIN}')`);
+await run(`insert into shop_godams (shop_id, warehouse_id, created_by) values ('${SHOP_A}','${GODAM2}','${ADMIN}')`);
 await run(reset);
-pass("admin of the same org can link a godam");
+assert.equal((await linkOf(SHOP_A)).length, 2);
+await run(as(ADMIN));
+await run(`delete from shop_godams where shop_id = '${SHOP_A}' and warehouse_id = '${GODAM2}'`);
+await run(reset);
+assert.deepEqual(await linkOf(SHOP_A), [GODAM1]);
+pass("admin can add and remove a godam; default HQ stays unless removed");
 
 const shelfErr = await throws(
   `${as(ADMIN)} insert into shop_godams (shop_id, warehouse_id) values ('${SHOP_A}','${SHELF}')`,
@@ -112,10 +153,16 @@ assert.equal(seen[0].warehouse_name, "Markaz");
 pass("shop A sees only its linked godam (15), not godam2 100 or shelf 999");
 
 await run(as(STAFF_B));
-const none = await q(`select * from fn_shop_linked_godam_stock('${SHOP_B}', array['${P}']::uuid[])`);
+const shopB = await q(`select * from fn_shop_linked_godam_stock('${SHOP_B}', array['${P}']::uuid[])`);
 await run(reset);
-assert.equal(none.length, 0);
-pass("shop with no link returns no godam rows");
+assert.equal(shopB.length, 1);
+assert.equal(shopB[0].warehouse_id, GODAM1);
+assert.equal(Number(shopB[0].qty), 15);
+await run(as(ADMIN));
+const off = await q(`select * from fn_shop_linked_godam_stock('${SHOP_OFF}', array['${P}']::uuid[])`);
+await run(reset);
+assert.equal(off.length, 0);
+pass("default HQ is Markaz (15, not Doosra 100); inactive shop with no link stays empty");
 
 const otherShop = await throws(
   `${as(STAFF_B)} select * from fn_shop_linked_godam_stock('${SHOP_A}', array['${P}']::uuid[])`,
@@ -141,10 +188,10 @@ await run(reset);
 pass("owner, admin, and assigned counter can read");
 
 await run(as(STAFF_A));
-assert.equal((await q(`select warehouse_id from shop_godams`)).length, 1);
+assert.deepEqual((await q(`select shop_id::text as shop_id from shop_godams`)).map((r) => r.shop_id), [SHOP_A]);
 await run(reset);
 await run(as(STAFF_B));
-assert.equal((await q(`select warehouse_id from shop_godams`)).length, 0);
+assert.deepEqual((await q(`select shop_id::text as shop_id from shop_godams`)).map((r) => r.shop_id), [SHOP_B]);
 await run(reset);
 await throws(
   `${as(STAFF_A)} insert into shop_godams (shop_id, warehouse_id) values ('${SHOP_A}','${GODAM2}')`,
@@ -179,11 +226,29 @@ assert.deepEqual(still.map((r) => r.warehouse_id), [GODAM1]);
 assert.equal(Number(still[0].qty), 15);
 pass("even a forced shelf link is not returned as godam stock");
 
+await run(as(ADMIN));
+await run(`delete from shop_godams where shop_id = '${SHOP_B}'`);
+await run(reset);
+await run(as(STAFF_B));
+assert.equal((await q(`select * from fn_shop_linked_godam_stock('${SHOP_B}', array['${P}']::uuid[])`)).length, 0);
+await run(reset);
+pass("admin hata de to HQ wapas nahi judta");
+
+await run(HR);
+assert.equal(await one(`select count(*)::int from pg_trigger where tgname = 'trg_shop_link_hq_godam'`), 0);
+await run(`insert into shops (id, name, organization_id, is_active) values ('00000000-0000-0000-0000-00000000a599','Bina trigger','${ORG_A}',true)`);
+assert.equal(await one(`select count(*)::int from shop_godams where shop_id = '00000000-0000-0000-0000-00000000a599'`), 0);
+pass("676 rollback removes the auto-link trigger, leaves the table");
+
 await run(R);
 assert.equal(await one(`select count(*)::int from information_schema.tables where table_schema = 'public' and table_name = 'shop_godams'`), 0);
 assert.equal(await one(`select count(*)::int from pg_proc where proname = 'fn_shop_linked_godam_stock'`), 0);
+assert.equal(await one(`select count(*)::int from pg_proc where proname = 'fn_hq_godam_id'`), 0);
 assert.equal(await one(`select count(*)::int from features where key = 'shops.godam'`), 0);
 await run(M);
-pass("rollback drops the link, re-apply works");
+await run(H);
+assert.equal(await one(`select count(*)::int from shop_godams where shop_id = '${SHOP_A}'`), 1);
+assert.equal(await one(`select count(*)::int from shop_godams where shop_id = '${SHOP_OFF}'`), 0);
+pass("rollback drops the link, re-apply seeds HQ again");
 
-console.log(`PASS: 675 shop_godams (${ok})`);
+console.log(`PASS: 675+676 shop godam (${ok})`);
