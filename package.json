@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:kisan-wallet-v2": "npx --yes tsx scripts/test-kisan-wallet-v2.ts",
     "test:hr-meetings": "npx --yes tsx tests/hr-meetings-lib.ts && node tests/hr-meetings-db.mjs",
     "test:admin-badges": "npx --yes tsx scripts/test-admin-badges.ts && node tests/admin-badges-sql.mjs",
     "test:finance": "npx --yes tsx scripts/test-finance.ts",
