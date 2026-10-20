@@ -1,3 +1,11 @@
+## Pending — 20 October 2026: procurement guards (NOT applied)
+
+Migrations `628_procurement_unique_guards.sql` and `629_procurement_atomic_rpc.sql` are written and tested on PGlite only. They are **not** applied to Testing or Live. No Live rows were updated (PO-1792495620885 still has `held_payment.posted = false`).
+
+Before apply, run the read-only query at the top of 628 (`select * from public.fn_procurement_index_blockers();` or the raw SELECT in that file). On 20 Oct the Live read showed no `block:` groups. One shared bill (`jx0098807`, 2 purchases) and several old double stock movements are `info:` only — the new partial indexes do not use those rows as keys.
+
+Apply 628, let it commit, then 629. Then deploy the web build. Owner/Admin self-approve (13 Oct) is unchanged.
+
 ## 11 October 2026 — POS receipt print fix (web deployment pending)
 
 Receipt modals now render through a body portal so dashboard scroll containers cannot clip long receipts or reserve blank space above them. Receipt print styles explicitly retain the last table column (line total), which generic report print CSS hides as an Actions column. Online and offline receipts share this isolation. Print page size follows the selected printer paper; use the 80 mm roll setting. No database migration. Physical printer validation remains required after deploying the new build.
