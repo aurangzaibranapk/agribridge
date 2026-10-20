@@ -20,7 +20,7 @@ drop function if exists public.create_pos_sale_with_credit_approval(jsonb, text,
 drop function if exists public.fn_log_receipt_print(uuid);
 drop function if exists public.fn_refresh_customer_balance(uuid);
 drop function if exists public.fn_pick_khata_account(uuid, uuid, uuid, uuid);
-drop function if exists public.fn_phone_key(text);
+-- fn_phone_key 124 ki hai, 631 ki nahi: rollback mein drop nahi.
 
 
 create or replace function public.create_pos_sale_with_credit_approval(
