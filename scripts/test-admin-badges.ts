@@ -207,6 +207,13 @@ test("sidebar never collapses; provider polls every 60s; layout wires provider",
   const sb = readFileSync("src/components/layout/sidebar.tsx", "utf8");
   assert.ok(!/collapse|setCollapsed|w-16|w-20\b/i.test(sb.replace(/koi collapse/g, "")));
   assert.ok(sb.includes("w-72") && sb.includes("usePending"));
+  assert.ok(sb.includes("bg-[#10241c]") && sb.includes("dark:bg-[#10241c]"), "pine sidebar in both themes");
+  assert.ok(sb.includes("font-bold") && sb.includes("text-[#f5f8fc]"), "headings 700");
+  assert.ok(sb.includes("font-semibold") && sb.includes("text-[#e7eef8]"), "items 600");
+  assert.ok(sb.includes("shadow-[inset_0_1px_0_rgba(255,255,255,0.16)]"), "glassy edge");
+  assert.ok(sb.includes("RedBadge") && sb.includes("ZeroMark"));
+  const mobile = readFileSync("src/components/layout/mobile-sidebar.tsx", "utf8");
+  assert.ok(mobile.includes("bg-[#10241c]") && mobile.includes("font-bold") && mobile.includes("text-[#e7eef8]"));
   const ctx = readFileSync("src/components/pending/pending-context.tsx", "utf8");
   assert.ok(ctx.includes("PENDING_POLL_MS = 60_000") && ctx.includes("fn_admin_pending_counts"));
   assert.ok(readFileSync("src/app/admin/layout.tsx", "utf8").includes("<PendingProvider allowedRoutes={allowedPages}"));

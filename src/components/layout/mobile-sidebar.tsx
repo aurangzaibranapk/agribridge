@@ -14,8 +14,8 @@ import { RedBadge, NayaPill, PendingMeta, ZeroMark } from "@/components/pending/
 import { badgeForGroup, badgeForHref, pendingQueueHref } from "@/lib/pending/categories";
 
 const M_ACTIVE = "bg-gradient-to-r from-[#1e3a8a] to-[#2563eb] text-white";
-const M_IDLE = "text-surface-700 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-white/5 dark:hover:text-white";
-const M_PENDING = "border-l-red-500 bg-red-500/[0.07] text-surface-900 dark:border-l-red-400 dark:bg-red-500/[0.12] dark:text-white";
+const M_IDLE = "text-[#e7eef8] hover:bg-white/10 hover:text-white";
+const M_PENDING = "border-l-red-500 bg-red-500/[0.12] text-white hover:bg-red-500/[0.18]";
 
 /**
  * Chhoti screen ka menu. Pehle ye HAR group dikhata tha, chahe banday ko
@@ -75,16 +75,16 @@ export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; gro
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-[19rem] max-w-[88vw] flex-col bg-white shadow-xl dark:bg-[#0b1430]">
-            <div className="flex h-16 items-center justify-between border-b border-surface-200 px-5 dark:border-white/10">
+          <aside className="absolute inset-y-0 left-0 flex w-[19rem] max-w-[88vw] flex-col border-white/10 bg-[#10241c] shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] dark:bg-[#10241c]">
+            <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">{t("au_ar", lang)}</div>
                 <div>
-                  <p className="font-display text-sm font-semibold leading-tight text-surface-900 dark:text-white">{t("au_company", lang)}</p>
-                  <p className="text-xs text-surface-400">{subtitle}</p>
+                  <p className="font-display text-sm font-bold leading-tight text-white">{t("au_company", lang)}</p>
+                  <p className="text-xs text-[#d3deee]">{subtitle}</p>
                 </div>
               </div>
-              <button onClick={() => setOpen(false)} aria-label={t("sh_close_menu", lang)} className="rounded-lg p-1.5 text-surface-400 hover:bg-white/5">
+              <button onClick={() => setOpen(false)} aria-label={t("sh_close_menu", lang)} className="rounded-lg p-1.5 text-[#d3deee] hover:bg-white/10 hover:text-white">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -92,7 +92,7 @@ export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; gro
               <Link
                 href={DASHBOARD_ITEM.href}
                 className={cn(
-                  "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
                   isActive(DASHBOARD_ITEM.href) ? M_ACTIVE : M_IDLE
                 )}
               >
@@ -109,16 +109,16 @@ export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; gro
                 >
                   <span className="min-w-0">
                     <span className="flex items-center gap-2.5"><Inbox className="h-4 w-4" />{t("apb_menu", lang)}</span>
-                    {pend.totals.pending > 0 && <PendingMeta days={pend.totals.oldestDays} pendingWith={null} lang={lang} onDark={isActive(PENDING_PAGE)} />}
+                    {pend.totals.pending > 0 && <PendingMeta days={pend.totals.oldestDays} pendingWith={null} lang={lang} onDark />}
                   </span>
                   <span className="flex items-center gap-1">
                     <NayaPill n={pend.totals.naya} lang={lang} />
-                    {pend.totals.pending > 0 ? <RedBadge n={pend.totals.pending} /> : <ZeroMark />}
+                    {pend.totals.pending > 0 ? <RedBadge n={pend.totals.pending} /> : <ZeroMark className="text-[#d3deee]" />}
                   </span>
                 </Link>
               )}
 
-              <div className="my-2 border-t border-surface-200 dark:border-white/10" />
+              <div className="my-2 border-t border-white/10" />
 
               {groups.map((group) => {
                 const isOpen = openGroups.has(group.label);
@@ -131,13 +131,13 @@ export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; gro
                       type="button"
                       onClick={() => toggleGroup(group.label)}
                       className={cn(
-                        "flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
-                        groupActive ? "text-blue-700 dark:text-blue-300" : "text-surface-500 hover:text-surface-800 dark:text-surface-400 dark:hover:text-surface-200"
+                        "flex w-full items-center justify-between rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wide transition-colors",
+                        groupActive ? "text-[#dbeafe]" : "text-[#f5f8fc] hover:text-white"
                       )}
                     >
                       <span>{group.label}</span>
                       <span className="flex items-center gap-1 normal-case tracking-normal">
-                        {pend.enabled && (gb ? (<><NayaPill n={gb.naya} lang={lang} short /><RedBadge n={gb.pending} /></>) : <ZeroMark />)}
+                        {pend.enabled && (gb ? (<><NayaPill n={gb.naya} lang={lang} short /><RedBadge n={gb.pending} /></>) : <ZeroMark className="text-[#d3deee]" />)}
                         {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                       </span>
                     </button>
@@ -154,7 +154,7 @@ export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; gro
                           return (
                             <div key={item.href}>
                               {!!section && section !== prevSection && (
-                                <p className="px-3 pb-0.5 pl-6 pt-2 text-[10px] font-semibold uppercase tracking-wider text-surface-400 dark:text-surface-500">
+                                <p className="px-3 pb-0.5 pl-6 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[#d3deee]">
                                   {section}
                                 </p>
                               )}
@@ -162,13 +162,13 @@ export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; gro
                                 href={dest}
                                 data-pending-queue={b ? dest : undefined}
                                 className={cn(
-                                  "my-0.5 flex items-center justify-between gap-2 rounded-xl border-l-[3px] px-3 py-2.5 pl-5 text-sm font-medium transition-colors",
+                                  "my-0.5 flex items-center justify-between gap-2 rounded-xl border-l-[3px] px-3 py-2.5 pl-5 text-sm font-semibold transition-colors",
                                   active ? M_ACTIVE + " border-l-transparent" : b ? M_PENDING : "border-l-transparent " + M_IDLE
                                 )}
                               >
                                 <span className="min-w-0">
                                   <span className="flex items-center gap-2.5"><Icon className="h-4 w-4 shrink-0" /><span className="truncate">{item.label}</span></span>
-                                  {b && <PendingMeta days={b.oldestDays} pendingWith={b.pendingWith} lang={lang} onDark={active} />}
+                                  {b && <PendingMeta days={b.oldestDays} pendingWith={b.pendingWith} lang={lang} onDark />}
                                 </span>
                                 {b && (
                                   <span className="flex shrink-0 items-center gap-1">

@@ -38,8 +38,8 @@ export function NayaPill({ n, lang, short = false, className }: { n?: number; la
   );
 }
 
-export function ZeroMark() {
-  return <Check aria-hidden className="h-3.5 w-3.5 shrink-0 text-surface-400 dark:text-surface-500" />;
+export function ZeroMark({ className }: { className?: string }) {
+  return <Check aria-hidden className={cn("h-3.5 w-3.5 shrink-0", className ?? "text-surface-400 dark:text-surface-500")} />;
 }
 
 export function ageText(days: number | null, lang: Lang): string {
