@@ -21,9 +21,12 @@ export const STAFF_ROLES: UserRole[] = [
   // tha, aur us ki saza chup thi: aisa banda login kar ke /admin ke
   // bajaye website par phenk diya jata (getRoleRedirectPath).
   "machinery",
+  // Call center /admin mein aata hai, magar api-auth ki staff list mein nahi.
+  "call_center_agent",
 ];
 
 export function getRoleRedirectPath(role: UserRole): string {
+  if (role === "call_center_agent") return "/admin/call-center";
   if (STAFF_ROLES.includes(role)) return "/admin/portal";
   if (role === "farmer") return "/portal/dashboard";
   // Phase 5: gahak ka apna Customer Portal (sirf apna khata / bill / adaigi).

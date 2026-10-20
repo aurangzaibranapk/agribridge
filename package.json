@@ -18,6 +18,7 @@
     "test:recovery": "npx --yes tsx scripts/test-receivable-recovery.ts && npx --yes tsx scripts/test-branch-credit-recovery.ts",
     "check:i18n": "node scripts/check-i18n.mjs",
     "test:login-v5": "npx --yes tsx tests/login-v5-lib.ts && npx --yes tsx tests/login-v5-flow.ts && node tests/login-v5-sql.mjs && node tests/login-v5-otp-wiring.mjs",
+    "test:call-center": "npx --yes tsx tests/call-center-lib.ts && node tests/call-center-sql.mjs",
     "test:sales": "npx --yes tsx scripts/test-sales-guards.ts",
     "test:pnl": "npx --yes tsx scripts/test-pnl.ts",
     "test:grain-summary": "npx --yes tsx scripts/test-grain-summary.ts",

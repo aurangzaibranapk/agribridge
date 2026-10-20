@@ -1,3 +1,10 @@
+## Pending — 20 October 2026: Call Center Agent (624 + 625)
+
+- Branch `cursor/call-center-agent-6663`. Migrations `624_call_center_role.sql` then `625_call_center.sql`.
+- **Not applied** to Live or Testing. Backup must be verified in chat before either database. Do not run these files from the agent environment.
+- Order when the owner is on the system: Testing first, smoke the four screens with a real caller, then Live only after a fresh backup size is confirmed. Web build comes after the migration, not before. `npm run test:call-center` is the local check (PGlite + rules); it does not talk to either Supabase project.
+- New role `call_center_agent` is view-only (khata, rates, milk, complaints create). SMS queue only. No WhatsApp. Maker cannot close their own complaint.
+
 ## 11 October 2026 — POS receipt print fix (web deployment pending)
 
 Receipt modals now render through a body portal so dashboard scroll containers cannot clip long receipts or reserve blank space above them. Receipt print styles explicitly retain the last table column (line total), which generic report print CSS hides as an Actions column. Online and offline receipts share this isolation. Print page size follows the selected printer paper; use the 80 mm roll setting. No database migration. Physical printer validation remains required after deploying the new build.
