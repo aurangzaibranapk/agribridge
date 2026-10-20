@@ -74,6 +74,7 @@ export const exampleBoard: BoardData = {
 export const exampleAgents: AgentsData = {
   example: true,
   canCreate: true,
+  smsConfigured: false,
   notice: null,
   agents: [
     { code: "AGT-0001", name: "Imran Ali", status: "active", callsToday: 21 },

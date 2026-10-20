@@ -5,6 +5,7 @@ import { notifyUser } from "@/lib/notifications";
 import { dispatchSupportTicket, postSupportAgentComment, configuredSupportAgents } from "@/lib/support/agent-dispatch";
 import { handbackTarget, resolvedRecipients, validateMemberChoice, type Department, type DeptMember } from "@/lib/support/departments";
 import { canForwardComplaint } from "@/lib/support/complaint-intake";
+import { enqueueCallerStageSms } from "@/lib/sms/stage-sms";
 
 async function loadDepartments(supportDb: any, orgId: string): Promise<{ depts: Department[]; members: DeptMember[] }> {
   const { data: depts } = await supportDb.from("support_departments").select("id,name,is_default_intake,return_to_department_id,notify_scope,is_active").eq("organization_id", orgId);
@@ -79,6 +80,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
       if (moved.data?.changed && ticket.reporter_id && ticket.reporter_id !== user.id) {
         await notifyUser(ticket.reporter_id, "Shikayat ka stage", `${ticket.title}: ${stage}`, "/admin/my-work");
+      }
+      if (moved.data?.changed && intake === "call_center" && stage) {
+        try { await enqueueCallerStageSms(supportDb, ticket, stage); } catch { /* SMS queue rehti hai */ }
       }
       return NextResponse.json({ success: true, message: moved.data?.changed ? "Stage update ho gaya." : "Note lag gaya." });
     }

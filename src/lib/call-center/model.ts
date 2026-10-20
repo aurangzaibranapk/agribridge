@@ -107,4 +107,5 @@ export interface AgentsData {
   audit: AuditRow[];
   notice: string | null;
   canCreate: boolean;
+  smsConfigured?: boolean;
 }

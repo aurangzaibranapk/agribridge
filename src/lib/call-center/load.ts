@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import type { AgentsData, BoardData, ConsoleData, PartyData, SearchHit } from "@/lib/call-center/model";
 import { CATEGORY_LABEL, type ComplaintCategory, type PartyKind } from "@/lib/call-center/rules";
+import { veevoEnv, veevoReady } from "@/lib/sms/veevo";
 
 const KIND_LABEL: Record<string, string> = { farmer: "Kisan", customer: "Customer", dealer: "Dealer" };
 
@@ -159,7 +160,7 @@ export async function loadBoard(): Promise<BoardData> {
 }
 
 export async function loadAgents(): Promise<AgentsData> {
-  const empty: AgentsData = { example: false, agents: [], audit: [], notice: null, canCreate: false };
+  const empty: AgentsData = { example: false, agents: [], audit: [], notice: null, canCreate: false, smsConfigured: veevoReady(veevoEnv()) };
   const who = await db();
   if (!who.ok) return { ...empty, notice: who.error };
   const canCreate = ["owner", "super_admin", "admin"].includes(who.roles[0] ?? "");
@@ -170,6 +171,7 @@ export async function loadAgents(): Promise<AgentsData> {
   return {
     example: false,
     canCreate,
+    smsConfigured: veevoReady(veevoEnv()),
     notice: audit.error ? fail(audit.error.message) : null,
     agents: ((agents.data as Record<string, unknown>[]) ?? []).map((a) => ({
       code: String(a.code),

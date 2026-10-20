@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { storeComplaintImages } from "@/lib/support/store-attachments";
+import { drainSmsOutbox } from "@/lib/sms/outbox";
 
 export interface CcState {
   error?: string;
@@ -52,6 +53,7 @@ export async function createComplaint(_prev: CcState, formData: FormData): Promi
       await storeComplaintImages({ ticketId: row.support_ticket_id, organizationId: row.organization_id, userId: who.userId, files: images });
     }
   }
+  try { await drainSmsOutbox(); } catch { /* provider khali ho to queue rehti hai */ }
   revalidatePath("/admin/call-center");
   revalidatePath("/admin/call-center/complaints");
   const sms = data?.sms === "queued" ? "SMS queue mein hai." : "Mobile darj nahi — SMS nahi gayi.";

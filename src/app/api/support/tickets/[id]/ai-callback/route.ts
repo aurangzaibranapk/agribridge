@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { notifyUser } from "@/lib/notifications";
 import { callbackAuthorized } from "@/lib/support/ai-agent-webhook";
 import { COMPLAINT_STAGE_META, complaintStageOf } from "@/lib/support/complaint-stage";
+import { enqueueCallerStageSms } from "@/lib/sms/stage-sms";
 
 const ALLOWED = new Set(["in_progress", "review", "completed", "rejected"]);
 
@@ -43,6 +44,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       note: note || "AI agent update.",
     });
     if (ticket.reporter_id) await notifyUser(ticket.reporter_id, "AI agent ne stage badla", `${ticket.title}: ${meta.rm}`, "/admin/my-work");
+    if (ticket.intake_source === "call_center") {
+      try { await enqueueCallerStageSms(service, ticket, stage); } catch { /* SMS queue rehti hai */ }
+    }
   } else {
     await service.from("support_ticket_events").insert({
       ticket_id: ticket.id,

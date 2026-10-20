@@ -1,8 +1,10 @@
-## Pending — 20 October 2026: Call Center Agent (624 + 625 + 626 + 627)
+## Pending — 20 October 2026: Call Center Agent (624 + 625 + 626 + 627 + 628)
 
-- Branch `cursor/call-center-agent-6663`. Migrations in order: `624_call_center_role.sql`, `625_call_center.sql`, `626_complaint_support_bridge.sql`, `627_complaint_stages_grants.sql`.
+- Branch `cursor/call-center-agent-6663`. Migrations in order: `624_call_center_role.sql`, `625_call_center.sql`, `626_complaint_support_bridge.sql`, `627_complaint_stages_grants.sql`, `628_sms_retry.sql`.
 - **Not applied** to Live or Testing. Backup must be verified in chat before either database. Do not run these files from the agent environment.
-- 626 links CMP complaints into the Support Dashboard and lets staff file a complaint that lands unassigned for Admin. 627 adds the stage bar, private images, the Manager assign toggle (off until Owner/Admin grants it), and the AI webhook mark. Web build comes after 627, otherwise those columns are missing.
+- 626 links CMP complaints into the Support Dashboard and lets staff file a complaint that lands unassigned for Admin. 627 adds the stage bar, private images, the Manager assign toggle (off until Owner/Admin grants it), and the AI webhook mark. 628 adds SMS retry columns (`attempts`, `next_attempt_at`) and `fn_cc_take_sms` for the Veevo drain. Web build comes after 628, otherwise the retry columns are missing and the drain falls back to a one-shot update.
+- Veevo env (no secrets in the repo): `SMS_PROVIDER=veevo`, `VEEVO_API_KEY`, optional `VEEVO_SENDER` (approved mask; empty uses the account default). Optional: `VEEVO_API_URL` (default `https://api.veevotech.com/v3/sendsms`), `VEEVO_HEADER` (only if Veevo assigned a shared-short-code header). The adapter POSTs JSON `apikey` and the same value as `hash`. Empty provider keeps `cc_sms_outbox` queued. Cron drain: `CRON_SECRET` on `GET /api/cron/sms-outbox`. Voice OTP (`sendernum` VT-vOTP) and `/v3/sendcall` are not wired.
+- Account side before the first real SMS: VT OneID (oneid.veevotech.com) API key, approved sender ID / mask in `VEEVO_SENDER`, wallet balance, and an IP allow-list if the Veevo account has one. Unverified accounts stay on testing limits.
 - Order when the owner is on the system: Testing first, smoke the four screens with a real caller, then Live only after a fresh backup size is confirmed. Web build comes after the migration, not before. `npm run test:call-center` is the local check (PGlite + rules); it does not talk to either Supabase project.
 - New role `call_center_agent` is view-only (khata, rates, milk, complaints create). SMS queue only. No WhatsApp. Maker cannot close their own complaint.
 

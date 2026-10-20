@@ -5,6 +5,7 @@ import { useFormState } from "react-dom";
 import Link from "next/link";
 import { Lock, Phone, Search } from "lucide-react";
 import { createCallCenterAgent, createComplaint, setComplaintStatus, type CcState } from "@/actions/call-center";
+import { sendTestSms, type SmsTestState } from "@/actions/sms-test";
 import type { AgentsData, BoardData, ConsoleData, PartyData } from "@/lib/call-center/model";
 import {
   CATEGORIES, CATEGORY_LABEL, CATEGORY_ROUTE, DEPT_LABEL, ageLabel, mayResolve, routeFor, slaTone,
@@ -412,7 +413,34 @@ function StatusButton({ id, status, label }: { id: string; status: string; label
 
 export function AgentsScreen({ data }: { data: AgentsData }) {
   const [state, action] = useFormState(createCallCenterAgent, {} as CcState);
+  const [smsState, smsAction] = useFormState(sendTestSms, {} as SmsTestState);
+  const showTest = data.canCreate || data.example;
   return (
+    <div className="space-y-4">
+      {showTest && (
+        <section className={`${card} p-5`}>
+          <h2 className="font-display text-lg font-bold">Test SMS</h2>
+          <p className="mt-1 text-[12px] text-[#7b8798]">
+            Sirf Owner / Admin. Ek number par ek paighaam.
+            {data.smsConfigured ? " Veevo set hai." : " Provider abhi set nahi — paighaam queue mein rahega."}
+          </p>
+          <form
+            action={data.example ? undefined : smsAction}
+            onSubmit={data.example ? (event) => event.preventDefault() : undefined}
+            className="mt-3 flex flex-wrap items-end gap-3"
+          >
+            <label className="text-[12px] text-[#607089]">Mobile
+              <input name="phone" placeholder="03xxxxxxxxx" defaultValue={data.example ? "0300-0000000" : ""} readOnly={data.example} className="mt-1 block h-11 w-48 rounded-xl border border-[#e4eaf2] px-3 text-[14px]" />
+            </label>
+            <label className="min-w-[240px] flex-1 text-[12px] text-[#607089]">Paighaam
+              <input name="message" defaultValue="Al Rana Traders: yeh test SMS hai." readOnly={data.example} className="mt-1 block h-11 w-full rounded-xl border border-[#e4eaf2] px-3 text-[14px]" />
+            </label>
+            <button className="h-11 rounded-xl bg-[#101a4a] px-4 text-sm font-semibold text-white">Test SMS</button>
+          </form>
+          {smsState.error && <p className="mt-2 text-sm text-[#c03636]">{smsState.error}</p>}
+          {smsState.ok && <p className="mt-2 text-sm text-[#14663a]">{smsState.ok}</p>}
+        </section>
+      )}
     <div className="grid grid-cols-2 gap-4">
       <section className={`${card} p-5`}>
         <h2 className="font-display text-lg font-bold"><Tri a="Create agent" b="Naya agent" c="نیا ایجنٹ" /></h2>
@@ -481,6 +509,7 @@ export function AgentsScreen({ data }: { data: AgentsData }) {
           </table>
         </section>
       </div>
+    </div>
     </div>
   );
 }
