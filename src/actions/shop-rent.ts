@@ -288,10 +288,11 @@ export async function markBillPaid(_prev: ActionState, formData: FormData): Prom
   const billId = String(formData.get("bill_id") ?? "");
   if (!billId) return { error: "Missing bill id." };
 
-  const { error } = await supabase
-    .from("shop_bills")
-    .update({ status: "paid", paid_date: aajKaKhana() })
-    .eq("id", billId);
+  const accountId = (formData.get("account_id") as string) || null;
+  const { error } = await (supabase as any).rpc("fn_pay_shop_bill", {
+    p_bill_id: billId,
+    p_account_id: accountId,
+  });
   if (error) return { error: error.message };
 
   revalidatePath("/admin/shop-rent");

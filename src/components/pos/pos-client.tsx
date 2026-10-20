@@ -340,6 +340,7 @@ export function PosClient({
 
   const [discount, setDiscount] = useState("");
   const [discountReason, setDiscountReason] = useState("");
+  const [managerCode, setManagerCode] = useState("");
   // Khata kis ka hai aur maal kaun le kar ja raha hai alag ho sakte hain
   // (malik, 15 September: "khata Aurangzaib ka hai, lay ke jaane wala
   // Mohsin hai") -- sirf record ke liye, `sales.notes` mein.
@@ -596,6 +597,7 @@ export function PosClient({
       paymentLines: paymentLines.filter((l) => (parseFloat(l.amount) || 0) > 0).map((l) => ({ method: l.method, amount: parseFloat(l.amount) || 0, reference: l.reference || "", receipt_url: l.receiptUrl || "" })),
       discount: chhoot,
       discountReason: discountReason.trim(),
+      managerCode: managerCode.trim() || null,
       counterId,
       receivedBy: receivedBy.trim(),
     };
@@ -905,6 +907,7 @@ export function PosClient({
             <div className="rounded-lg bg-surface-50 p-2 dark:bg-surface-800/50">
               <div className="flex items-center justify-between gap-2"><label htmlFor="pos-discount" className="text-surface-500">Discount</label><input id="pos-discount" inputMode="decimal" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0" className="h-8 w-24 rounded-md border border-surface-200 bg-white px-2 text-right text-sm tabular-nums dark:border-surface-700 dark:bg-surface-900" /></div>
               {chhoot > 0 && <input value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} placeholder="Wajah — jaise: purana gahak" className="mt-1.5 h-8 w-full rounded-md border border-surface-200 bg-white px-2 text-xs dark:border-surface-700 dark:bg-surface-900" />}
+              {chhoot > 0 && <input value={managerCode} onChange={(e) => setManagerCode(e.target.value)} placeholder="Manager code — 5% ya Rs 500 se upar, ya bina ijazat" className="mt-1.5 h-8 w-full rounded-md border border-surface-200 bg-white px-2 text-xs dark:border-surface-700 dark:bg-surface-900" />}
               {chhoot > 0 && discountReason.trim().length < 3 && <p className="mt-1 text-[11px] text-amber-600">Wajah likhein — jo raqam bina wajah ke di jaye, us ka hisaab kabhi nahi milta.</p>}
             </div>
           )}

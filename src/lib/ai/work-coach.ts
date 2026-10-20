@@ -61,6 +61,7 @@ export const SYSTEM_MAP = [
   "Naqad udhaar (/admin/load-bill -> Udhaar): gahak dukan se paisa le gaya. BIKRI NAHI -- koi maal nahi gaya, is liye na aamdani na COGS; sirf 'Customer se lena' (1100) par party ke sath. Wapsi us ka ulta. Har dafa teen jagah ek sath: ledger, Cash Book (finance_transactions), aur customers.current_balance",
   "Gahak ka khata (/admin/crm/<id>/statement): ledger se banta hai (1100 par us gahak ki qatarein), is liye POS ka khata, load ka khata, naqad udhaar aur har wapsi khud-ba-khud us mein aa jate hain. Jawab fn_customer_ledger / fn_customer_baqi se; gahak na mile to NULL, sifar nahi",
   "Paise ke DO register hain: ledger (journal_lines -- Trial Balance, P&L) aur Cash Book (finance_transactions -- finance_accounts.current_balance sirf yahin se, 127). Jo kaam sirf ek mein jaye wo Finance ke safhe par ghalat adad deta hai; farq v_cash_book_ledger_farq par nazar aata hai, aur khali hona hi theek hai (338)",
+  "Maker-checker (631–633): POS rate server catalog se milata hai; discount 5 percent ya Rs 500 se upar doosre manager ka code. Settlement, investor payout, shop bill, credit request aur shift shortage — banane wala khud manzoor nahi karta. customers.current_balance journal 1100 ka cache hai.",
 ].join("\n");
 
 export async function buildCoachContext(userId: string, lang: Lang): Promise<CoachContext | null> {

@@ -1,5 +1,6 @@
 "use server";
 import { validateCheckoutTotals, findRecentDuplicate, DUPLICATE_SALE_MARKER, DUPLICATE_WINDOW_SECONDS } from "@/lib/pos/checkout-guards";
+import { discountOverCap, POS_DISCOUNT_MAX_PCT, POS_DISCOUNT_MAX_RS } from "@/lib/money/review-guards";
 import { createClient } from "@/lib/supabase/server";
 import { checkOverdueCreditBlock, getCreditBlockInfo } from "@/lib/recovery/credit-block";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -83,6 +84,8 @@ export async function posCheckout(input: {
   clientActionId?: string;
   /** 30 din wali udhaar rok ka Admin override -- wajah lazmi (migration 523). */
   creditOverrideReason?: string | null;
+  /** Hadd se upar discount, ya bina ijazat discount: doosre manager ka code (631). */
+  managerCode?: string | null;
   /**
    * fix/pos-card-cash-dupes: staff ne "haan, ye naya bill hai" confirm kiya
    * (ya offline sync hai, jahan client_action_id hi kaafi hai).
@@ -181,14 +184,19 @@ export async function posCheckout(input: {
     return { error: "Zyada payment ko customer ke Jama/Advance mein dalne ke liye customer select karein." };
   }
   const discountReason = (input.discountReason ?? "").trim();
+  const managerCode = (input.managerCode ?? "").trim();
   if (discount < 0) return { error: "Discount manfi nahi hota." };
   if (discount > 0) {
     const { canGiveDiscount } = await loadPosPermissions(user?.id ?? null);
-    if (!canGiveDiscount) {
-      return { error: "Discount dene ki ijazat aap ke paas nahi. Manager se kehein." };
-    }
+    const overCap = discountOverCap(totals.gross, discount);
     if (discountReason.length < 3) {
       return { error: "Discount ki wajah likhein — jo raqam bina wajah ke di jaye us ka hisaab kabhi nahi milta." };
+    }
+    if (overCap && !managerCode) {
+      return { error: `Discount hadd (Rs ${POS_DISCOUNT_MAX_RS.toLocaleString()} ya ${POS_DISCOUNT_MAX_PCT}%) se upar hai. Doosre manager ka code likhein.` };
+    }
+    if (!canGiveDiscount && !managerCode) {
+      return { error: "Discount dene ki ijazat aap ke paas nahi. Manager se kehein." };
     }
   }
 
@@ -222,6 +230,7 @@ export async function posCheckout(input: {
     p_payment_lines: input.paymentLines as unknown as Json,
     p_discount: discount,
     p_discount_reason: discount > 0 ? discountReason : undefined,
+    p_manager_code: managerCode || undefined,
     p_counter_id: input.counterId ?? undefined,
     ...(clientActionId ? { p_client_action_id: clientActionId } : {}),
   };
@@ -646,35 +655,25 @@ async function postSaleToLedger(saleId: string, userId: string | null, overpayme
 
   if (failed(result)) return `Bikri ho gayi magar ledger mein nahi gayi: ${result.error}`;
 
-  /**
-   * Gahak ka balance -- wohi khana jo credit-limit ki jaanch parhti hai.
-   *
-   * `checkCredit()` isi `current_balance` ko dekh kar faisla karta hai
-   * ke agli bikri hadd se guzarti hai ya nahi. Pehle ye khana POS ki
-   * kisi bhi khata-bikri par HILTA hi nahi tha -- yani jaanch hamesha
-   * purana (aksar sifar) adad dekh rahi hoti thi, aur hadd kabhi lagti
-   * hi nahi thi, chahe gahak ka asal udhaar kitna hi bara ho jata.
-   *
-   * Wohi tareeqa jo `customer-udhaar.ts` (naqad udhaar) mein hai: pehle
-   * parho, phir jorr kar wapas likho. Ledger qatar ban chuki hai; agar
-   * ye khana update na ho to sirf agli jaanch dhili paRti hai, kitab
-   * ghalat nahi hoti -- is liye ghalti par yahan safha rokna theek nahi.
-   */
+  // Balance GL se dobara banta hai (631). Parh kar jama karna race hai,
+  // aur sale ka trigger pehle hi yahi hisaab likh chuka hota hai — dobara
+  // jama karna udhaar ko dugna kar deta.
   if ((khata > 0 || overpayment > 0) && sale.crm_customer_id) {
-    const { data: cust } = await service
-      .from("customers")
-      .select("current_balance")
-      .eq("id", sale.crm_customer_id)
-      .maybeSingle();
-    const abTak = cust?.current_balance == null ? 0 : Number(cust.current_balance);
-    const nayaBalance = Math.round((abTak + khata - overpayment) * 100) / 100;
-    await service
-      .from("customers")
-      .update({ current_balance: nayaBalance })
-      .eq("id", sale.crm_customer_id);
+    const { error: balErr } = await (service as any).rpc("fn_refresh_customer_balance", {
+      p_customer_id: sale.crm_customer_id,
+    });
+    if (balErr) return `Bikri ho gayi magar gahak ka balance GL se nahi bana: ${balErr.message}`;
   }
 
   return null;
+}
+
+/** Raseed print ka log. Har print ek qatar hai, number nahi badalta. */
+export async function logReceiptPrint(saleId: string): Promise<{ count?: number; error?: string }> {
+  const supabase = createClient();
+  const { data, error } = await (supabase as any).rpc("fn_log_receipt_print", { p_sale_id: saleId });
+  if (error) return { error: error.message };
+  return { count: Number(data ?? 0) };
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

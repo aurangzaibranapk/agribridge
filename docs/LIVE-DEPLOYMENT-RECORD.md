@@ -1,3 +1,13 @@
+## Pending — 20 October 2026: sales/parties money guards (631–633) NOT applied
+
+Migrations `631_pos_server_price_and_refund.sql`, `632_orders_shift_counters.sql`, and `633_party_money_guards.sql` are files only. They were **not** applied to Testing (`hwaiuwxqldxsoukkfefn`) or Live (`ktskwawkslaznkjjacni`).
+
+Do not apply until Boss is on the system and a verified backup size is in chat. Order stays: backup verified → pre-migration counts → 631 then 632 then 633 on Testing → verification → same on Live → then the new web build. Code calls `fn_approve_party_settlement`, `fn_record_bridge_advance`, `fn_pay_shop_bill`, `fn_record_investor_investment`, and `fn_next_year_counter`. Shipping the build before these migrations makes those buttons fail closed.
+
+Data repairs (open shift SHIFT-26-00020, Malik Traders / Zahid balances, duplicate customers, journals TXN-26-000008/9/21/25) are **not** in these migrations. Proposed SQL is in `docs/data-fixes/2026-10-20-needs-owner-approval/` and still needs owner approval. Do not run it with the migration.
+
+Open PRs #177 (624–628) and #180 (629–630) are unchanged. These new files start at 631.
+
 ## 11 October 2026 — POS receipt print fix (web deployment pending)
 
 Receipt modals now render through a body portal so dashboard scroll containers cannot clip long receipts or reserve blank space above them. Receipt print styles explicitly retain the last table column (line total), which generic report print CSS hides as an Actions column. Online and offline receipts share this isolation. Print page size follows the selected printer paper; use the 80 mm roll setting. No database migration. Physical printer validation remains required after deploying the new build.

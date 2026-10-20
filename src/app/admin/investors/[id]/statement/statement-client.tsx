@@ -4,7 +4,7 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Printer, Download, Mail, MessageCircle, X, Plus, TrendingUp } from "lucide-react";
-import { recordInvestorInvestment, recordInvestorReturn, type ActionState } from "@/actions/investor-transactions";
+import { approveInvestorReturn, recordInvestorInvestment, recordInvestorReturn, type ActionState } from "@/actions/investor-transactions";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -18,6 +18,18 @@ interface Entry {
   runningBalance: number;
 }
 
+interface CashAccount {
+  id: string;
+  name: string;
+}
+
+interface PendingReturn {
+  id: string;
+  date: string;
+  amount: number;
+  notes: string | null;
+}
+
 interface Props {
   investorId: string;
   investorName: string;
@@ -28,6 +40,8 @@ interface Props {
   totalInvested: number;
   totalReturned: number;
   closingBalance: number;
+  accounts?: CashAccount[];
+  pendingReturns?: PendingReturn[];
 }
 
 export function InvestorStatementClient(props: Props) {
@@ -116,6 +130,15 @@ export function InvestorStatementClient(props: Props) {
           </div>
         </div>
 
+        {(props.pendingReturns ?? []).length > 0 && (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
+            <p className="mb-2 font-medium text-amber-800">Manzoori ka intezar — statement mein tab aayega jab doosra Finance/Admin manzoor kare.</p>
+            {(props.pendingReturns ?? []).map((row) => (
+              <PendingApprove key={row.id} investorId={props.investorId} row={row} />
+            ))}
+          </div>
+        )}
+
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-surface-200 text-left dark:border-surface-800">
@@ -143,13 +166,41 @@ export function InvestorStatementClient(props: Props) {
         </table>
       </div>
 
-      {showInvestment && <InvestmentModal investorId={props.investorId} onClose={() => setShowInvestment(false)} />}
-      {showReturn && <ReturnModal investorId={props.investorId} onClose={() => setShowReturn(false)} />}
+      {showInvestment && <InvestmentModal investorId={props.investorId} accounts={props.accounts ?? []} onClose={() => setShowInvestment(false)} />}
+      {showReturn && <ReturnModal investorId={props.investorId} accounts={props.accounts ?? []} onClose={() => setShowReturn(false)} />}
     </div>
   );
 }
 
-function InvestmentModal({ investorId, onClose }: { investorId: string; onClose: () => void }) {
+function PendingApprove({ investorId, row }: { investorId: string; row: PendingReturn }) {
+  const [state, formAction] = useFormState(approveInvestorReturn, initialState);
+  return (
+    <form action={formAction} className="mb-2 flex flex-wrap items-center gap-2">
+      <input type="hidden" name="return_id" value={row.id} />
+      <input type="hidden" name="investor_id" value={investorId} />
+      <span className="text-amber-900">{row.date} · Rs {row.amount.toLocaleString()}{row.notes ? ` · ${row.notes}` : ""}</span>
+      <input name="note" placeholder="Raye" className="rounded border border-amber-200 px-2 py-1 text-xs" />
+      <button type="submit" className="rounded bg-amber-700 px-2 py-1 text-xs text-white">Manzoor</button>
+      {state.error && <span className="text-xs text-red-700">{state.error}</span>}
+    </form>
+  );
+}
+
+function AccountPicker({ accounts }: { accounts: CashAccount[] }) {
+  if (accounts.length === 0) {
+    return <p className="text-xs text-amber-700">Naqad/bank khata nahi mila. Pehle Finance mein account banayein.</p>;
+  }
+  return (
+    <select name="account_id" required className="w-full rounded-lg border border-surface-200 p-2 text-sm" defaultValue="">
+      <option value="" disabled>Khata chunein</option>
+      {accounts.map((a) => (
+        <option key={a.id} value={a.id}>{a.name}</option>
+      ))}
+    </select>
+  );
+}
+
+function InvestmentModal({ investorId, accounts, onClose }: { investorId: string; accounts: CashAccount[]; onClose: () => void }) {
   const [state, formAction] = useFormState(recordInvestorInvestment, initialState);
   const lang = useLang();
   if (state.success) setTimeout(onClose, 800);
@@ -166,6 +217,7 @@ function InvestmentModal({ investorId, onClose }: { investorId: string; onClose:
           <input type="hidden" name="investor_id" value={investorId} />
           <input type="date" name="investment_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="number" step="0.01" name="amount" required placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <AccountPicker accounts={accounts} />
           <textarea name="notes" rows={2} placeholder={t("c_notes_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <SubmitButton label={t("st_save_investment", lang)} />
         </form>
@@ -174,7 +226,7 @@ function InvestmentModal({ investorId, onClose }: { investorId: string; onClose:
   );
 }
 
-function ReturnModal({ investorId, onClose }: { investorId: string; onClose: () => void }) {
+function ReturnModal({ investorId, accounts, onClose }: { investorId: string; accounts: CashAccount[]; onClose: () => void }) {
   const [state, formAction] = useFormState(recordInvestorReturn, initialState);
   const lang = useLang();
   if (state.success) setTimeout(onClose, 800);
@@ -191,6 +243,8 @@ function ReturnModal({ investorId, onClose }: { investorId: string; onClose: () 
           <input type="hidden" name="investor_id" value={investorId} />
           <input type="date" name="return_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="number" step="0.01" name="amount" required placeholder={t("c_amount_rs", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <AccountPicker accounts={accounts} />
+          <p className="text-xs text-surface-500">Yeh darkhwast pending rehti hai. Doosra Finance/Admin manzoor kare, tab jurnal banta hai.</p>
           <textarea name="notes" rows={2} placeholder={t("c_notes_optional", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <SubmitButton label={t("st_save_return", lang)} />
         </form>
