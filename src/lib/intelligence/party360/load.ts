@@ -126,7 +126,7 @@ export async function loadCustomer360(id: string, now = new Date()): Promise<Par
   const shops = await shopMap(db, notes);
   const [pos, gsales, buyers, farmer, agri] = await Promise.all([
     posFor(db, notes, [id]),
-    q(db, notes, "grain_sales", db.from("grain_sales").select("id,sale_number,sale_date,quantity_kg,rate_per_kg,total_amount,amount_received,grain_type").eq("customer_id", id).limit(500)),
+    q(db, notes, "grain_sales", db.from("grain_sales").select("id,sale_number,sale_date,quantity_kg,rate_per_kg,rate_unit,total_amount,amount_received,grain_type").eq("customer_id", id).limit(500)),
     q(db, notes, "buyers", db.from("buyers").select("id,business_name").eq("customer_id", id).limit(5)),
     c.farmer_id ? q(db, notes, "farmers", db.from("farmers").select("id,full_name").eq("id", c.farmer_id).maybeSingle()) : Promise.resolve([]),
     q(db, notes, "agri_orders", db.from("agri_orders").select("order_number,created_at,grand_total,status").eq("customer_id", id).limit(200)),
@@ -280,7 +280,7 @@ export async function loadBuyer360(id: string, now = new Date()): Promise<Party3
   if (!b) throw new Error("Buyer nahi mila.");
   const { keys, labels } = lastMonths(now);
   const [sales, orders, bpays] = await Promise.all([
-    q(db, notes, "grain_sales", db.from("grain_sales").select("id,sale_number,sale_date,grain_type,quantity_kg,rate_per_kg,total_amount,amount_received,profit,delivery_term").eq("buyer_id", id).order("sale_date", { ascending: false }).limit(LIMIT)),
+    q(db, notes, "grain_sales", db.from("grain_sales").select("id,sale_number,sale_date,grain_type,quantity_kg,rate_per_kg,rate_unit,total_amount,amount_received,profit,delivery_term").eq("buyer_id", id).order("sale_date", { ascending: false }).limit(LIMIT)),
     q(db, notes, "produce_orders", db.from("produce_orders").select("order_number,placed_at,subtotal,status").eq("buyer_id", id).limit(LIMIT)),
     q(db, notes, "buyer_payments", db.from("buyer_payments").select("payment_date,amount,direction").eq("buyer_id", id).limit(LIMIT)),
   ]);

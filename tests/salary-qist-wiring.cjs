@@ -5,25 +5,31 @@ const r = (p) => fs.readFileSync(p, 'utf8');
 const pay = r('src/actions/payroll.ts');
 assert.match(pay, /postPayrollApproved\(/);
 assert.match(pay, /p_action: "unapprove"/, 'journal fail -> manzoori wapas');
-assert.match(pay, /run\.created_by === user\?\.id\) return err\("Banane wala khud ada nahi kar sakta/);
+assert.match(pay, /run\.created_by === user\?\.id/);
+assert.match(pay, /Banane wala khud ada nahi kar sakta/);
+assert.match(pay, /fn_payroll_release_pay_lock/);
+assert.match(pay, /reverseCashBookById/);
 assert.match(pay, /claims: \[\{ table: "payroll_runs", rowId: runId \}\]/);
 // Qist apply is NOT a server action (no client-callable journal)
 const apply = r('src/lib/qist/apply.ts');
 assert.match(apply, /^import "server-only";/);
 assert.doesNotMatch(r('src/actions/qist.ts'), /export async function applyQistAtPayout/);
 assert.match(apply, /fn_qist_reverse_source/, 'journal fail -> kattauti wapas');
-// Milk payment deducts qist before cash, reason to skip
+// Milk payment: qist ab fn_record_milk_payment (658) ke andar kat-ti hai.
+// Action sirf RPC bulati hai aur rokne ki wajah bhejti hai.
 const milk = r('src/actions/milk.ts');
-assert.match(milk, /applyQistAtPayout\(\{\s*partyType: "farmer", partyId: farmerId, source: "milk"/);
+assert.match(milk, /fn_record_milk_payment/);
+assert.match(milk, /p_skip_qist: skipQist/);
 assert.match(milk, /Qist is dafa na kaatne ki wajah likhein/);
-assert.match(milk, /amount: cashAmount/);
+assert.doesNotMatch(milk, /finance_transactions"\)\.delete/);
+const milkSql = r('supabase/migrations/658_dairy_payment_qist_gl_ledger_lock.sql');
+assert.match(milkSql, /fn_qist_apply\(\s*'farmer', p_farmer, 'milk'/);
+assert.match(milkSql, /'qist_adjustment'/);
+assert.ok(milkSql.indexOf("'qist_adjustment'") < milkSql.indexOf('if v_cash > 0'), 'qist row cash se pehle');
 // browser check 2026-10-16: raw English status/event na dikhe
 assert.match(r('src/app/admin/khata/qist/page.tsx'), /PLAN_STATUS_LABEL\[p\.status\]/);
 assert.match(r('src/app/admin/khata/qist/[id]/plan-client.tsx'), /PLAN_EVENT_LABEL\[e\.action\]/);
 for (const a of ['created','submitted','approved','rejected','paused','resumed','rescheduled','edited','written_off','completed','cancelled','deducted','reversed']) assert.match(r('src/lib/qist/schedule.ts'), new RegExp(a + ':'), 'event label ' + a);
-// browser check 2026-10-16: qist hissa bhi doodh baqaya ghataye
-assert.match(milk, /amount: qistCut,\s*payment_method: "qist_adjustment"/);
-assert.ok(milk.indexOf('payment_method: "qist_adjustment"') < milk.indexOf('if (cashAmount <= 0)'), 'qist row cash<=0 return se pehle');
 const modal = r('src/app/admin/milk-collection/milk-client.tsx');
 assert.match(modal, /milkQistPreview\(balance\.farmer_id/);
 // Owner faisla 2026-10-16: bina record din = ghair-hazir, UI mein saaf dikhe

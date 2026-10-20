@@ -1,3 +1,26 @@
+## Pending — 20 October 2026: department review fixes (660–674, 677)
+
+Branch `cursor/dept-review-fixes-660-c70c`. Migrations **not applied** on Testing or Live. Do not run them until a fresh backup is confirmed in chat. Files only. Apply 660 through 674 and 677 together. 675 and 676 belong to another PR (`675_shop_godams.sql`). 664 and 677 must apply together: 664's sold>bought guard is replaced by 677; do not leave 664 applied on its own.
+
+- 660 CMS write = owner/super_admin/admin; shop phone `+923126513294`
+- 661 owner account cannot be suspended or deleted
+- 662 payroll pay claim (one payment)
+- 663 atomic batch deduct, row lock, check NOT VALID
+- 664 grain sale file (function replaced by 677; apply with 677)
+- 665 grain rate unit: existing sales labeled `per_kg`, new default `per_maund` (no money change)
+- 666 completed transfer cannot be cancelled
+- 667 stock loss once + maker cannot approve own loss
+- 668 expired batch cannot be sold
+- 669 statement party must be in the caller's branch
+- 670 does **not** replace `create_pos_sale_base_504`. Compare `pg_get_functiondef` with migration 525 first. See `docs/670-POS-FUNCTION-CHECK.md`
+- 671 FIFO shortfall log; consume revoked from authenticated; scope check
+- 672 stock adjust / count lock / year counters. Same `fn_next_year_counter(text, int)` as 632: sales tables stay allowed, and grain_sale, stock_loss, agri_dispatch are added. Authenticated execute stays revoked (service_role only), matching 632. Apply 672 after 632. If 632 runs later it replaces this combined function with the sales-only body.
+- 673 transfer accept, reject, cancel in one function
+- 674 stock-loss shop scope; release and undo are service_role only
+- 677 grain sale on locked warehouse on-hand; `fn_post_grain_sale` one transaction. 664 and 677 must apply together.
+
+Data fixes that change rows are only in `docs/NEEDS-OWNER-APPROVAL-660.md` and stay unrun. Address stays the placeholder. **Before merge:** owner must approve the phantom wheat batch `OPENING-OWN-20261016` (24,500 kg) diagnostic and fix. This run did not execute it.
+
 ## Pending — 20 October 2026: Dairy review migrations 650–659
 
 Not applied. Files only, on branch `cursor/dairy-review-fixes-fa47`. Do not run them on testing or live until the owner says so, and do not run them on live until a fresh backup size is confirmed in chat.

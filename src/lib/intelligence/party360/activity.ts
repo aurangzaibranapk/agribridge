@@ -1,3 +1,4 @@
+import { grainRatePresentation } from "@/lib/grain/rate-unit";
 import {
   agingFifo, lastMonths, monthlySeries, netPosition, num, r2, shopKey,
   type AgingBuckets, type Section, type ShopLine, type TimelineItem,
@@ -153,7 +154,7 @@ export async function loadActivity(db: any, notes: string[], ids: LinkIds, opts:
     { title: "Kisaan Dukan (khaad/beej/spray/wanda) + agri orders", columns: ["Tareekh", "Ref", "Raqam", "Status"],
       rows: [...posBy("dukan").slice(0, 10).map((s: any) => [pk(s.created_at), "POS", rs(num(s.total_amount)), num(s.khata_amount) > 0 ? "udhaar" : "naqad"]), ...agri.slice(0, 10).map((o: any) => [pk(o.created_at), o.order_number ?? "order", rs(num(o.grand_total)), o.status ?? "—"])],
       note: `POS Rs ${tot(posBy("dukan"))} · agri orders Rs ${rs(sum(agri.filter((o: any) => !VOID.includes(String(o.status))), "grand_total"))}`, empty: "Dukan se khareed nahi." },
-    { title: "Fasal Procurement ko", columns: ["Tareekh", "Fasal", "Kg", "Bori", "Rate/mand", "Raqam"], rows: grainL.slice(0, 12).map((g: any) => [pk(g.entry_date), g.grain_type ?? "—", rs(num(g.weight_kg)), g.bag_count ?? "—", rs(num(g.rate_per_kg) * 40), rs(num(g.total_amount))]),
+    { title: "Fasal Procurement ko", columns: ["Tareekh", "Fasal", "Kg", "Bori", "Rate/mand", "Raqam"], rows: grainL.slice(0, 12).map((g: any) => [pk(g.entry_date), g.grain_type ?? "—", rs(num(g.weight_kg)), g.bag_count ?? "—", rs(grainRatePresentation(num(g.rate_per_kg), "per_maund").perMaund), rs(num(g.total_amount))]),
       note: grainL.length ? `Kul Rs ${rs(grainAmt)} · diya Rs ${rs(grainPaid)} · baqi Rs ${rs(grainAmt - grainPaid)}` : undefined, empty: "Fasal nahi bechi." },
     { title: "Khaad credit (farmer_credit_ledger)", columns: ["Tareekh", "Source", "Qisam", "Raqam", "Baqaya"], rows: fcl.slice(0, 12).map((x: any) => [pk(x.created_at), x.source_type, x.ledger_type, rs(num(x.amount)), rs(num(x.balance_after))]), empty: "Khaad credit nahi liya." },
     { title: "Season bookings", columns: ["Campaign", "Fasal", "Acre", "Status", "Tareekh"], rows: bookings.map((b: any) => [b.booking_campaigns?.name ?? "—", b.booking_campaigns?.crop ?? "—", num(b.acres), b.status ?? "—", pk(b.created_at)]), empty: "Koi booking nahi." },

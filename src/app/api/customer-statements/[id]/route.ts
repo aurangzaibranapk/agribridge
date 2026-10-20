@@ -22,25 +22,36 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Farmer aur Customer ka khata statement ab EK hi raasta hai (424) --
   // Malik: "farmer ho ya customer, dono ek hi cheez honi chahiye."
   const partyType = body.partyType === "farmer" ? "farmer" : "customer";
+  const { data: visible, error: scopeError } = await (auth as any).rpc("fn_statement_party_visible", { p_kind: partyType, p_id: id });
+  if (scopeError) return NextResponse.json({ error: scopeError.message }, { status: 400 });
+  if (!visible) return NextResponse.json({ error: "Ye statement aap ki branch se bahar hai." }, { status: 403 });
   const service = createServiceClient() as any;
 
-  const party =
-    partyType === "farmer"
-      ? await service.from("farmers").select("id,full_name,phone_number,whatsapp_number,email").eq("id", id).maybeSingle()
-      : await service.from("customers").select("id,name,phone_number,email").eq("id", id).maybeSingle();
-  if (!party.data) return NextResponse.json({ error: partyType === "farmer" ? "Farmer not found." : "Customer not found." }, { status: 404 });
-  const partyName = partyType === "farmer" ? party.data.full_name ?? "Farmer" : party.data.name;
-  const partyPhone = partyType === "farmer" ? party.data.whatsapp_number ?? party.data.phone_number : party.data.phone_number;
-  const partyEmail = party.data.email;
+  let partyName = "";
+  let partyPhone: string | null = null;
+  let partyEmail: string | null = null;
+  if (partyType === "farmer") {
+    const party = await auth.from("farmers").select("id,full_name,phone_number,whatsapp_number,email").eq("id", id).maybeSingle();
+    if (!party.data) return NextResponse.json({ error: "Farmer not found." }, { status: 404 });
+    partyName = party.data.full_name ?? "Farmer";
+    partyPhone = party.data.whatsapp_number ?? party.data.phone_number;
+    partyEmail = party.data.email;
+  } else {
+    const party = await auth.from("customers").select("id,name,phone_number,email").eq("id", id).maybeSingle();
+    if (!party.data) return NextResponse.json({ error: "Customer not found." }, { status: 404 });
+    partyName = party.data.name;
+    partyPhone = party.data.phone_number;
+    partyEmail = party.data.email;
+  }
   const ledgerFn = partyType === "farmer" ? "fn_farmer_combined_ledger" : "fn_customer_ledger";
   const ledgerArgKey = partyType === "farmer" ? "p_farmer" : "p_customer";
 
   const openingEnd = start ? new Date(`${start}T00:00:00Z`) : null;
   if (openingEnd) openingEnd.setUTCDate(openingEnd.getUTCDate() - 1);
   const [{ data: rows, error }, { data: openingRows }] = await Promise.all([
-    service.rpc(ledgerFn, { [ledgerArgKey]: id, p_start: start, p_end: end }),
+    (auth as any).rpc(ledgerFn, { [ledgerArgKey]: id, p_start: start, p_end: end }),
     start
-      ? service.rpc(ledgerFn, { [ledgerArgKey]: id, p_start: null, p_end: openingEnd!.toISOString().slice(0, 10) })
+      ? (auth as any).rpc(ledgerFn, { [ledgerArgKey]: id, p_start: null, p_end: openingEnd!.toISOString().slice(0, 10) })
       : Promise.resolve({ data: [] }),
   ]);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

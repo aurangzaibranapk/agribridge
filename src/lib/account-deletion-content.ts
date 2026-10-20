@@ -15,9 +15,11 @@
  * Raabta: website_settings (contact_phone / contact_email), warna wahi
  * fallback jo footer/contact par hain -- koi naya number yahan nahi.
  */
+import { unwrapWebsiteSetting } from "@/lib/cms/website-setting";
+
 export type DeletionLang = "en" | "rm" | "ur";
 
-export const DELETION_FALLBACK_PHONE = "+92 333 1116727";
+export const DELETION_FALLBACK_PHONE = "+923126513294";
 export const DELETION_FALLBACK_EMAIL = "info@alranatraders.pk";
 
 export interface DeletionCopy {
@@ -135,7 +137,7 @@ export const DELETION_COPY: Record<DeletionLang, DeletionCopy> = {
 
 /** Settings ki qeemat saaf karo ("..." hatao); khali ho to fallback. */
 export function cleanSetting(raw: unknown, fallback: string): string {
-  const v = raw == null ? "" : String(raw).replace(/^"|"$/g, "").trim();
+  const v = unwrapWebsiteSetting(raw);
   return v.length > 0 ? v : fallback;
 }
 
@@ -143,7 +145,7 @@ export function cleanSetting(raw: unknown, fallback: string): string {
 export function whatsappDigits(phone: string): string {
   let d = phone.replace(/\D/g, "");
   if (d.startsWith("0")) d = "92" + d.slice(1);
-  return d || "923331116727";
+  return d || "923126513294";
 }
 
 /** Pehle cookie wali zubaan, phir baqi dono. */

@@ -12,6 +12,7 @@ import { reverseCashBookById } from "@/lib/finance/cash-book";
 import { notifyRoles } from "@/lib/notifications";
 import { sendDeptMail, mailWrapper } from "@/lib/mailer";
 import { requireGrainApprover } from "@/lib/grain/approval-guard";
+import { makerCheckerBlock } from "@/lib/hr/owner-guard";
 import { grainPayloadFromForm, formDataFromGrainPayload, GRAIN_PENDING_EDITABLE, type GrainPendingPayload } from "@/lib/grain/pending-payload";
 
 export interface ActionState {
@@ -1016,10 +1017,6 @@ export async function approveGrainPendingEntry(_prev: ActionState, formData: For
   const pendingId = String(formData.get("pending_id") ?? "").trim();
   if (!pendingId) return { error: "Pending entry nahi mili." };
   const service = createServiceClient() as any;
-  // Grain approver guard pehle hi role ko Owner / Super Admin / Admin tak
-  // mehdood karta hai. In unrestricted roles ko apni banayi entry bhi
-  // approve karne dein; self-approval ki rok aam staff ke liye hai, jo is
-  // action tak aa hi nahi sakta.
   const now = new Date().toISOString();
   const staleBefore = new Date(Date.now() - GRAIN_APPROVAL_STALE_MS).toISOString();
 
@@ -1032,6 +1029,10 @@ export async function approveGrainPendingEntry(_prev: ActionState, formData: For
     .select("id, payload, receipt_photo_url, created_by")
     .maybeSingle();
   if (claimError) return { error: claimError.message };
+  if (claimed && makerCheckerBlock(guard.userId, claimed.created_by)) {
+    await service.from("grain_pending_entries").update({ status: "pending", approval_claimed_at: null, approval_claimed_by: null }).eq("id", pendingId);
+    return { error: "Apni entry khud manzoor nahi kar sakte." };
+  }
 
   if (!claimed) {
     const { data: current } = await service.from("grain_pending_entries").select("status, approved_entry_id").eq("id", pendingId).maybeSingle();
@@ -1091,6 +1092,8 @@ export async function rejectGrainPendingEntry(_prev: ActionState, formData: Form
   if (!pendingId) return { error: "Pending entry nahi mili." };
   if (reason.length < 3) return { error: "Reject ki wajah likhein." };
   const service = createServiceClient() as any;
+  const { data: pendingRow } = await service.from("grain_pending_entries").select("created_by").eq("id", pendingId).maybeSingle();
+  if (makerCheckerBlock(guard.userId, pendingRow?.created_by)) return { error: "Apni entry khud manzoor nahi kar sakte." };
   const { data, error } = await service
     .from("grain_pending_entries")
     .update({ status: "rejected", reject_reason: reason, reviewed_by: guard.userId, reviewed_at: new Date().toISOString() })

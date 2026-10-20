@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { generateBlogDraft, type GeneratedBlogDraft } from "@/lib/ai/blog-draft-client";
+import { assertCmsEditor } from "@/lib/cms/guard";
 
 export interface ActionState {
   error?: string;
@@ -25,6 +26,13 @@ export async function generateBlogDraftAction(_prev: AIDraftState, formData: For
   return { data: result };
 }
 
+
+async function cmsGate(): Promise<ActionState | null> {
+  const gate = await assertCmsEditor();
+  if ("error" in gate) return { error: gate.error };
+  return null;
+}
+
 function slugify(text: string) {
   return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
@@ -33,6 +41,8 @@ function slugify(text: string) {
 // BLOG
 // ---------------------------------------------------------------------
 export async function saveBlogPost(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await cmsGate();
+  if (denied) return denied;
   const supabase = createClient();
   const id = formData.get("id") as string | null;
   const title = String(formData.get("title"));
@@ -61,6 +71,8 @@ export async function saveBlogPost(_prev: ActionState, formData: FormData): Prom
 }
 
 export async function deleteBlogPost(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await cmsGate();
+  if (denied) return denied;
   const supabase = createClient();
   const { error } = await supabase.from("blog_posts").delete().eq("id", String(formData.get("id")));
   if (error) return { error: error.message };
@@ -73,6 +85,8 @@ export async function deleteBlogPost(_prev: ActionState, formData: FormData): Pr
 // TESTIMONIALS
 // ---------------------------------------------------------------------
 export async function saveTestimonial(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await cmsGate();
+  if (denied) return denied;
   const supabase = createClient();
   const id = formData.get("id") as string | null;
   const payload = {
@@ -95,6 +109,8 @@ export async function saveTestimonial(_prev: ActionState, formData: FormData): P
 }
 
 export async function deleteTestimonial(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await cmsGate();
+  if (denied) return denied;
   const supabase = createClient();
   const { error } = await supabase.from("testimonials").delete().eq("id", String(formData.get("id")));
   if (error) return { error: error.message };
@@ -107,6 +123,8 @@ export async function deleteTestimonial(_prev: ActionState, formData: FormData):
 // GALLERY
 // ---------------------------------------------------------------------
 export async function saveGalleryItem(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await cmsGate();
+  if (denied) return denied;
   const supabase = createClient();
   const payload = {
     type: String(formData.get("type") ?? "photo"),
@@ -125,6 +143,8 @@ export async function saveGalleryItem(_prev: ActionState, formData: FormData): P
 }
 
 export async function deleteGalleryItem(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await cmsGate();
+  if (denied) return denied;
   const supabase = createClient();
   const { error } = await supabase.from("gallery_items").delete().eq("id", String(formData.get("id")));
   if (error) return { error: error.message };
@@ -137,6 +157,8 @@ export async function deleteGalleryItem(_prev: ActionState, formData: FormData):
 // FAQ
 // ---------------------------------------------------------------------
 export async function saveFaq(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await cmsGate();
+  if (denied) return denied;
   const supabase = createClient();
   const id = formData.get("id") as string | null;
   const payload = {
@@ -156,6 +178,8 @@ export async function saveFaq(_prev: ActionState, formData: FormData): Promise<A
 }
 
 export async function deleteFaq(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await cmsGate();
+  if (denied) return denied;
   const supabase = createClient();
   const { error } = await supabase.from("faqs").delete().eq("id", String(formData.get("id")));
   if (error) return { error: error.message };
@@ -168,6 +192,8 @@ export async function deleteFaq(_prev: ActionState, formData: FormData): Promise
 // HERO SLIDES
 // ---------------------------------------------------------------------
 export async function saveHeroSlide(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await cmsGate();
+  if (denied) return denied;
   const supabase = createClient();
   const payload = {
     image_url: String(formData.get("image_url")),
@@ -187,6 +213,8 @@ export async function saveHeroSlide(_prev: ActionState, formData: FormData): Pro
 }
 
 export async function updateHeroSlide(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await cmsGate();
+  if (denied) return denied;
   const supabase = createClient();
   const id = String(formData.get("id"));
   const payload = {
@@ -206,6 +234,8 @@ export async function updateHeroSlide(_prev: ActionState, formData: FormData): P
 }
 
 export async function deleteHeroSlide(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await cmsGate();
+  if (denied) return denied;
   const supabase = createClient();
   const { error } = await supabase.from("hero_slides").delete().eq("id", String(formData.get("id")));
   if (error) return { error: error.message };
@@ -218,10 +248,12 @@ export async function deleteHeroSlide(_prev: ActionState, formData: FormData): P
 // WEBSITE SETTINGS (key/value)
 // ---------------------------------------------------------------------
 export async function updateWebsiteSetting(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await cmsGate();
+  if (denied) return denied;
   const supabase = createClient();
   const key = String(formData.get("key"));
   const value = String(formData.get("value"));
-  const { error } = await supabase.from("website_settings").update({ value: JSON.stringify(value), updated_at: new Date().toISOString() }).eq("key", key);
+  const { error } = await supabase.from("website_settings").update({ value, updated_at: new Date().toISOString() }).eq("key", key);
   if (error) return { error: error.message };
   revalidatePath("/admin/settings");
   revalidatePath("/", "layout");
@@ -232,6 +264,8 @@ export async function updateWebsiteSetting(_prev: ActionState, formData: FormDat
 // STATIC PAGES
 // ---------------------------------------------------------------------
 export async function updateStaticPage(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await cmsGate();
+  if (denied) return denied;
   const supabase = createClient();
   const slug = String(formData.get("slug"));
   const payload = {
@@ -250,6 +284,8 @@ export async function updateStaticPage(_prev: ActionState, formData: FormData): 
 // MENUS
 // ---------------------------------------------------------------------
 export async function saveMenuItem(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await cmsGate();
+  if (denied) return denied;
   const supabase = createClient();
   const payload = {
     menu_location: String(formData.get("menu_location")),
@@ -266,6 +302,8 @@ export async function saveMenuItem(_prev: ActionState, formData: FormData): Prom
 }
 
 export async function deleteMenuItem(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const denied = await cmsGate();
+  if (denied) return denied;
   const supabase = createClient();
   const { error } = await supabase.from("menu_items").delete().eq("id", String(formData.get("id")));
   if (error) return { error: error.message };

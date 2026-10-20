@@ -4,13 +4,14 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { postCashIn, postCashOut, ACC, failed } from "@/lib/ledger/rules";
 import { postJournal } from "@/lib/ledger/post";
-import { stockOutPlan } from "@/lib/inventory/stock-math";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireGrainApprover } from "@/lib/grain/approval-guard";
 import { grainPayloadFromForm, formDataFromGrainPayload, type GrainPendingPayload } from "@/lib/grain/pending-payload";
 import { GRAIN_SALE_DRAFT_EDITABLE } from "@/lib/grain/sale-draft-payload";
 import { notifyRoles } from "@/lib/notifications";
 import { grainSaleReceivableLines, resolveGrainSaleCustomer } from "@/lib/grain/sale-receivable";
+import { grainAmountFromRate, grainMaundRateAllowed } from "@/lib/grain/rate-unit";
+import { makerCheckerBlock } from "@/lib/hr/owner-guard";
 
 export interface ActionState {
   error?: string;
@@ -93,19 +94,6 @@ async function ensureGrainSaleCustomer(
   return { customerId };
 }
 
-async function generateSaleNumber(): Promise<string> {
-  const supabase = createClient();
-  const year = new Date().getFullYear() % 100;
-  const { data: existing } = await supabase.from("grain_sale_counters").select("last_number").eq("year", year).single();
-  const nextNumber = (existing?.last_number ?? 0) + 1;
-  if (existing) {
-    await supabase.from("grain_sale_counters").update({ last_number: nextNumber }).eq("year", year);
-  } else {
-    await supabase.from("grain_sale_counters").insert({ year, last_number: nextNumber });
-  }
-  return `GRN-SALE-${year}-${String(nextNumber).padStart(5, "0")}`;
-}
-
 async function getGrainProductId(supabase: ReturnType<typeof createClient>, grainType: string): Promise<string | null> {
   const { data } = await supabase.from("grain_type_products").select("product_id").eq("grain_type", grainType).maybeSingle();
   return data?.product_id ?? null;
@@ -124,7 +112,7 @@ async function postGrainSale(formData: FormData, opts: GrainSalePostOptions): Pr
   const grainType = String(formData.get("grain_type") ?? "");
   const warehouseId = String(formData.get("warehouse_id") ?? "");
   const quantity = Number(formData.get("quantity_kg") ?? 0);
-  const rate = Number(formData.get("rate_per_kg") ?? 0);
+  const rate = Number(formData.get("rate_per_maund") ?? formData.get("rate_per_kg") ?? 0);
   const saleDate = String(formData.get("sale_date") ?? aajKaKhana());
   const deliveryTerm = (formData.get("delivery_term") as string) || null;
   const bardanaCost = Number(formData.get("bardana_cost") ?? 0);
@@ -137,6 +125,8 @@ async function postGrainSale(formData: FormData, opts: GrainSalePostOptions): Pr
   if (!warehouseId) return { error: "Warehouse select karein." };
   if (!quantity || quantity <= 0) return { error: "Quantity sahi likhein." };
   if (!rate || rate <= 0) return { error: "Rate sahi likhein." };
+  const rateError = grainMaundRateAllowed(rate);
+  if (rateError) return { error: rateError };
   if (bardanaCost < 0 || mazdooriCost < 0) return { error: "Bardana/Mazdoori cost sahi likhein." };
   if ((bardanaCost > 0 || mazdooriCost > 0) && !costAccountId) return { error: "Bardana/Mazdoori ka account select karein." };
 
@@ -160,7 +150,7 @@ async function postGrainSale(formData: FormData, opts: GrainSalePostOptions): Pr
     // Approve par asal raasta poori jaanch karta hai.
     return {
       success: true,
-      summary: { saleDate, buyerId, grainType, warehouseId, quantity, rate, totalAmount: quantity * rate, bardanaCost, mazdooriCost, notes, availableNow: available },
+      summary: { saleDate, buyerId, grainType, warehouseId, quantity, rate, totalAmount: grainAmountFromRate(quantity, rate, "per_maund"), bardanaCost, mazdooriCost, notes, availableNow: available },
     };
   }
   const backdateReason = (what: string) =>
@@ -175,71 +165,32 @@ async function postGrainSale(formData: FormData, opts: GrainSalePostOptions): Pr
     data: { user },
   } = await supabase.auth.getUser();
 
-  let remaining = quantity;
-  let totalCogs = 0;
-  const { data: batches } = await supabase
-    .from("stock_batches")
-    .select("id, remaining_quantity, unit_cost")
-    .eq("warehouse_id", warehouseId)
-    .eq("product_id", productId)
-    .gt("remaining_quantity", 0)
-    .order("created_at", { ascending: true });
-  const plan = stockOutPlan(quantity, available, (batches ?? []).map((batch) => ({ remaining: Number(batch.remaining_quantity), unitCost: Number(batch.unit_cost ?? 0) })));
-  if (!plan.ok) return { error: plan.error };
-  totalCogs = plan.cost;
-  for (const batch of batches ?? []) {
-    if (remaining <= 0) break;
-    const take = Math.min(remaining, Number(batch.remaining_quantity));
-    const { error: batchError } = await supabase.from("stock_batches").update({ remaining_quantity: Number(batch.remaining_quantity) - take }).eq("id", batch.id);
-    if (batchError) return { error: batchError.message };
-    remaining -= take;
-  }
-
-  const totalAmount = quantity * rate;
-  const profit = totalAmount - totalCogs - bardanaCost - mazdooriCost;
-  const saleNumber = await generateSaleNumber();
-
-  const { data: sale, error } = await supabase
-    .from("grain_sales")
-    .insert({
-      sale_number: saleNumber,
-      buyer_id: buyerId,
-      customer_id: customer.customerId,
-      grain_type: grainType,
-      warehouse_id: warehouseId,
-      quantity_kg: quantity,
-      rate_per_kg: rate,
-      total_amount: totalAmount,
-      total_cogs: totalCogs,
-      delivery_term: deliveryTerm,
-      bardana_cost: bardanaCost,
-      mazdoori_cost: mazdooriCost,
-      profit,
-      sale_date: saleDate,
-      notes,
-      created_by: opts.saleCreatedBy ?? user?.id ?? null,
-      ...(opts.draftId ? { draft_id: opts.draftId } : {}),
-    })
-    .select("id")
-    .single();
+  const totalAmount = grainAmountFromRate(quantity, rate, "per_maund");
+  const { data: posted, error } = await (supabase as any).rpc("fn_post_grain_sale", {
+    p_buyer: buyerId,
+    p_customer: customer.customerId,
+    p_grain_type: grainType,
+    p_warehouse: warehouseId,
+    p_product: productId,
+    p_qty: quantity,
+    p_rate: rate,
+    p_total: totalAmount,
+    p_delivery: deliveryTerm,
+    p_bardana: bardanaCost,
+    p_mazdoori: mazdooriCost,
+    p_sale_date: saleDate,
+    p_notes: notes,
+    p_actor: opts.saleCreatedBy ?? user?.id ?? null,
+    p_draft: opts.draftId ?? null,
+  });
   if (error) {
     if (opts.draftId && error.code === "23505") return { error: "Ye draft pehle hi approve ho kar asal bikri ban chuka hai." };
     return { error: error.message };
   }
-
-  if (inv) {
-    // Ginti yahan se NAHI badalti -- harkat par trigger karta hai (129).
-    // "grain_sale_out" bhi enum mein nahi tha, yani ye qatar hamesha
-    // nakaam hoti thi aur anaj ka nikalna kahin darj hi nahi hota tha.
-    await supabase.from("stock_movements").insert({
-      inventory_id: inv.id,
-      movement_type: "sale_out",
-      quantity,
-      reference_type: "grain_sale",
-      reference_id: sale.id,
-      created_by: user?.id ?? null,
-    });
-  }
+  if (!posted?.id) return { error: "Bikri darj nahi hui." };
+  const sale = { id: posted.id as string };
+  const saleNumber = String(posted.sale_number ?? "");
+  const totalCogs = Number(posted.cost ?? 0);
 
   // 527: bikri HAMESHA gahak ka udhaar banati hai -- Dr 1100 (gahak) / Cr 4010,
   // kisi bhi tareekh par. Fail ho to error (pehle ye kabhi post hi nahi hota tha).
@@ -476,6 +427,10 @@ export async function approveGrainSaleDraft(_prev: ActionState, formData: FormDa
     .select("id, payload, created_by")
     .maybeSingle();
   if (claimError) return { error: claimError.message };
+  if (claimed && makerCheckerBlock(guard.userId, claimed.created_by)) {
+    await service.from("grain_sale_drafts").update({ status: "pending", approval_claimed_at: null, approval_claimed_by: null }).eq("id", draftId);
+    return { error: "Apni entry khud manzoor nahi kar sakte." };
+  }
   if (!claimed) {
     const { data: current } = await service.from("grain_sale_drafts").select("status, approved_sale_id").eq("id", draftId).maybeSingle();
     if (!current) return { error: "Draft nahi mila." };
@@ -529,6 +484,8 @@ export async function rejectGrainSaleDraft(_prev: ActionState, formData: FormDat
   if (!draftId) return { error: "Draft nahi mila." };
   if (reason.length < 3) return { error: "Reject ki wajah likhein." };
   const service = createServiceClient() as any;
+  const { data: draftRow } = await service.from("grain_sale_drafts").select("created_by").eq("id", draftId).maybeSingle();
+  if (makerCheckerBlock(guard.userId, draftRow?.created_by)) return { error: "Apni entry khud manzoor nahi kar sakte." };
   const { data, error } = await service
     .from("grain_sale_drafts")
     .update({ status: "rejected", reject_reason: reason, reviewed_by: guard.userId, reviewed_at: new Date().toISOString() })

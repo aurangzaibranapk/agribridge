@@ -17661,6 +17661,7 @@ export type Database = {
           profit: number
           quantity_kg: number
           rate_per_kg: number
+          rate_unit: string | null
           sale_date: string
           sale_number: string
           total_amount: number
@@ -17683,6 +17684,7 @@ export type Database = {
           profit?: number
           quantity_kg: number
           rate_per_kg: number
+          rate_unit?: string | null
           sale_date?: string
           sale_number: string
           total_amount: number
@@ -17705,6 +17707,7 @@ export type Database = {
           profit?: number
           quantity_kg?: number
           rate_per_kg?: number
+          rate_unit?: string | null
           sale_date?: string
           sale_number?: string
           total_amount?: number

@@ -20,6 +20,7 @@ export function grainPayloadFromForm(formData: FormData): GrainPendingPayload {
     if (SKIP_KEYS.has(key) || key.startsWith("$ACTION")) return;
     if (typeof value === "string") payload[key] = value;
   });
+  if (payload.rate_per_maund && !payload.rate_per_kg) payload.rate_per_kg = payload.rate_per_maund;
   return payload;
 }
 
