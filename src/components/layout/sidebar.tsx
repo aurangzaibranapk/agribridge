@@ -10,7 +10,7 @@ import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { usePending, PENDING_PAGE } from "@/components/pending/pending-context";
 import { RedBadge, NayaPill, PendingMeta, ZeroMark } from "@/components/pending/pending-ui";
-import { badgeForGroup, badgeForHref } from "@/lib/pending/categories";
+import { badgeForGroup, badgeForHref, pendingQueueHref } from "@/lib/pending/categories";
 import { adminTint } from "@/lib/ui/admin-tint";
 export type { NavItem } from "@/components/layout/nav-items";
 
@@ -142,7 +142,8 @@ export function Sidebar({
         {visibleGroups.map((group) => {
           const isOpen = openGroups.has(group.label);
           const groupActive = group.items.some((item) => isActive(item.href));
-          const gb = pend.enabled ? badgeForGroup(pend.counts, group.key, group.items.map((i) => i.href)) : null;
+          const hrefs = group.items.map((i) => i.href);
+          const gb = pend.enabled ? badgeForGroup(pend.counts, group.key, hrefs) : null;
           return (
             <div key={group.key}>
               <div className={cn("flex w-full items-center rounded-lg text-xs font-semibold uppercase tracking-wide transition-colors", groupActive ? "text-blue-700 dark:text-blue-300" : "text-surface-500 hover:text-surface-800 dark:text-surface-400 dark:hover:text-surface-200")}>
@@ -172,7 +173,8 @@ export function Sidebar({
                     const section = item.section ?? null;
                     const showSection = !!section && section !== prevSection;
                     const Icon = iconByName(item.icon);
-                    const b = pend.enabled ? badgeForHref(pend.counts, item.href) : null;
+                    const b = pend.enabled ? badgeForHref(pend.counts, item.href, Date.now(), hrefs) : null;
+                    const dest = b ? pendingQueueHref(item.href) : item.href;
                     return (
                       <div key={item.href}>
                         {showSection && (
@@ -181,8 +183,9 @@ export function Sidebar({
                           </p>
                         )}
                       <Link
-                        href={item.href}
+                        href={dest}
                         data-pending-item={b ? "pending" : undefined}
+                        data-pending-queue={b ? dest : undefined}
                         className={cn(
                           "group my-0.5 flex items-center justify-between gap-2 rounded-xl border-l-[3px] px-3 py-2 pl-5 text-sm font-medium transition-colors",
                           active ? ACTIVE_CLS + (b ? " border-l-red-400" : " border-l-transparent") : b ? PENDING_CLS : "border-l-transparent " + IDLE_CLS

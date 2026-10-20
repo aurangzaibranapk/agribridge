@@ -11,7 +11,7 @@ import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { usePending, PENDING_PAGE } from "@/components/pending/pending-context";
 import { RedBadge, NayaPill, PendingMeta, ZeroMark } from "@/components/pending/pending-ui";
-import { badgeForGroup, badgeForHref } from "@/lib/pending/categories";
+import { badgeForGroup, badgeForHref, pendingQueueHref } from "@/lib/pending/categories";
 
 const M_ACTIVE = "bg-gradient-to-r from-[#1e3a8a] to-[#2563eb] text-white";
 const M_IDLE = "text-surface-700 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-white/5 dark:hover:text-white";
@@ -123,7 +123,8 @@ export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; gro
               {groups.map((group) => {
                 const isOpen = openGroups.has(group.label);
                 const groupActive = group.items.some((item) => isActive(item.href));
-                const gb = pend.enabled ? badgeForGroup(pend.counts, group.key, group.items.map((i) => i.href)) : null;
+                const hrefs = group.items.map((i) => i.href);
+                const gb = pend.enabled ? badgeForGroup(pend.counts, group.key, hrefs) : null;
                 return (
                   <div key={group.label}>
                     <button
@@ -145,7 +146,8 @@ export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; gro
                         {group.items.map((item, index) => {
                           const active = isActive(item.href);
                           const Icon = iconByName(item.icon);
-                          const b = pend.enabled ? badgeForHref(pend.counts, item.href) : null;
+                          const b = pend.enabled ? badgeForHref(pend.counts, item.href, Date.now(), hrefs) : null;
+                          const dest = b ? pendingQueueHref(item.href) : item.href;
                           // Sarkhi wahin chhapti hai jahan wo badalti hai (174).
                           const prevSection = index > 0 ? (group.items[index - 1].section ?? null) : null;
                           const section = item.section ?? null;
@@ -157,7 +159,8 @@ export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; gro
                                 </p>
                               )}
                               <Link
-                                href={item.href}
+                                href={dest}
+                                data-pending-queue={b ? dest : undefined}
                                 className={cn(
                                   "my-0.5 flex items-center justify-between gap-2 rounded-xl border-l-[3px] px-3 py-2.5 pl-5 text-sm font-medium transition-colors",
                                   active ? M_ACTIVE + " border-l-transparent" : b ? M_PENDING : "border-l-transparent " + M_IDLE

@@ -69,6 +69,8 @@ export const adminPendingDict = {
   apb_filter_all: { en: "All", rm: "Sab", ur: "سب" },
   apb_filter_mine: { en: "Waiting on me", rm: "Mere zimme", ur: "میرے ذمے" },
   apb_filter_new: { en: "New", rm: "Naya", ur: "نیا" },
+  apb_queue_for: { en: "Pending for this page — act here, or open the page.", rm: "Is safhe ka baqi kaam — yahin faisla, ya safha kholein.", ur: "اس صفحے کا باقی کام — یہیں فیصلہ، یا صفحہ کھولیں۔" },
+  apb_queue_all: { en: "All pending", rm: "Sara baqi kaam", ur: "سارا باقی کام" },
   apb_e_bad: { en: "Invalid request.", rm: "Ghalat darkhwast.", ur: "غلط درخواست۔" },
   apb_e_reason: { en: "A reason (5+ letters) is required to reject.", rm: "Reject ke liye wajah (kam az kam 5 huroof) zaroori hai.", ur: "مسترد کرنے کے لیے وجہ (کم از کم ۵ حروف) ضروری ہے۔" },
   apb_e_gone: { en: "This item is no longer pending (or you cannot see it).", rm: "Ye ab pending nahi (ya aap ko nazar nahi aata).", ur: "یہ اب زیر التوا نہیں۔" },

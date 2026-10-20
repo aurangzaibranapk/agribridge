@@ -145,15 +145,22 @@ export function useLiveNumbers(base: PendingTotals): PendingTotals {
   return applyDeltas(base, hits.map((h) => h.delta));
 }
 
-export function PendingFilterPills({ filter, base }: { filter: "all" | "mine" | "new"; base: PendingTotals }) {
+export function PendingFilterPills({ filter, base, route }: { filter: "all" | "mine" | "new"; base: PendingTotals; route?: string | null }) {
   const lang = useLang();
   const live = useLiveNumbers(base);
+  const hrefFor = (k: "all" | "mine" | "new") => {
+    const q = new URLSearchParams();
+    if (route) q.set("route", route);
+    if (k !== "all") q.set("f", k);
+    const s = q.toString();
+    return s ? `?${s}` : "?";
+  };
   return (
     <div className="flex gap-1.5" role="tablist">
       {(["all", "mine", "new"] as const).map((k) => (
         <Link
           key={k}
-          href={k === "all" ? "?" : `?f=${k}`}
+          href={hrefFor(k)}
           aria-selected={filter === k}
           className={cn(
             "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold",

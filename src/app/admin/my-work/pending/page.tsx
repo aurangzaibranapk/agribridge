@@ -13,6 +13,9 @@ import {
   markCodeOwn,
   adjustMineForCode,
   totals as calcTotals,
+  claimForHref,
+  inboxGroup,
+  parsePendingRoute,
   type PendingCount,
   type PendingItem,
 } from "@/lib/pending/categories";
@@ -30,7 +33,7 @@ export const dynamic = "force-dynamic";
 type Rpc = (fn: string, a?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
 const ERR: Record<string, "apb_e_bad" | "apb_e_reason" | "apb_e_gone" | "apb_own_tip" | "apb_code_tip"> = { bad: "apb_e_bad", reason: "apb_e_reason", gone: "apb_e_gone", own: "apb_own_tip", code: "apb_code_tip" };
 
-export default async function PendingApprovalsPage({ searchParams }: { searchParams?: { f?: string; ok?: string; e?: string } }) {
+export default async function PendingApprovalsPage({ searchParams }: { searchParams?: { f?: string; ok?: string; e?: string; route?: string } }) {
   const sb = createClient();
   const {
     data: { user },
@@ -42,9 +45,18 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
   const allowed = nav.unrestricted ? null : nav.allowedRoutes;
   const can = (route: string) => allowed === null || routeAllowed(allowed, route.split(/[?#]/, 1)[0]);
   const rpc = sb.rpc.bind(sb) as unknown as Rpc;
+  const focus = parsePendingRoute(searchParams?.route);
+  const menus = nav.groups.map((g) => ({ key: g.key, hrefs: g.items.map((i) => i.href) }));
 
-  const [cRes, iRes] = await Promise.all([rpc("fn_admin_pending_counts"), rpc("fn_admin_pending_items", { p_limit: 25 })]);
-  const rawItems = ((iRes.data as PendingItem[] | null) ?? []).filter((i) => can(i.route));
+  const cRes = await rpc("fn_admin_pending_counts");
+  const rawCounts = ((cRes.data as PendingCount[] | null) ?? []).filter((c) => can(c.route));
+  const focusGroup = focus ? nav.groups.find((g) => g.items.some((i) => i.href.split(/[?#]/, 1)[0] === focus)) : undefined;
+  const focusSiblings = focus ? (focusGroup ? focusGroup.items.map((i) => i.href) : [focus]) : [];
+  const focusCats = focus ? claimForHref(rawCounts, focus, focusSiblings).map((c) => c.category) : [];
+  const itemParts = focus
+    ? await Promise.all(focusCats.map((cat) => rpc("fn_admin_pending_items", { p_limit: 200, p_category: cat })))
+    : [await rpc("fn_admin_pending_items", { p_limit: 25 })];
+  const rawItems = itemParts.flatMap((p) => (p.data as PendingItem[] | null) ?? []).filter((i) => can(i.route));
   // Manager code wala bhi maker hai (528) -- us par Approve band, "mujh par baqi" se bahar.
   const codeBy = new Map<string, string | null>();
   for (const [cat, src] of Object.entries(CODE_MAKER_COLS)) {
@@ -56,14 +68,17 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
     for (const r of rows ?? []) codeBy.set(String(r.id), r[src.col] ?? null);
   }
   const allItems = markCodeOwn(rawItems, codeBy, user.id);
-  const counts = adjustMineForCode(((cRes.data as PendingCount[] | null) ?? []).filter((c) => can(c.route)), allItems);
-  const tot = calcTotals(counts);
+  const counts = adjustMineForCode(rawCounts, allItems);
+  const scopeCounts = focus ? counts.filter((c) => focusCats.includes(c.category)) : counts;
+  const tot = calcTotals(scopeCounts);
   const filter = searchParams?.f === "mine" ? "mine" : searchParams?.f === "new" ? "new" : "all";
-  const items = allItems.filter((i) => (filter === "mine" ? !i.is_own && !i.code_own : filter === "new" ? i.is_new : true));
-  const byCat = new Map(counts.map((c) => [c.category, c]));
+  const inScope = focus ? allItems.filter((i) => focusCats.includes(i.category)) : allItems;
+  const items = inScope.filter((i) => (filter === "mine" ? !i.is_own && !i.code_own : filter === "new" ? i.is_new : true));
+  const byCat = new Map(scopeCounts.map((c) => [c.category, c]));
   const shownPerCat = new Map<string, number>();
-  for (const i of allItems) shownPerCat.set(i.category, (shownPerCat.get(i.category) ?? 0) + 1);
-  const groups = groupItems(items);
+  for (const i of inScope) shownPerCat.set(i.category, (shownPerCat.get(i.category) ?? 0) + 1);
+  const placed = items.map((i) => ({ ...i, group_key: inboxGroup(i.route, i.group_key, menus) }));
+  const groups = groupItems(placed);
   const info = counts.filter((c) => c.is_info && c.readable && Number(c.pending) > 0);
   const unreadable = tot.unreadable;
   const errKey = searchParams?.e ? ERR[searchParams.e] : undefined;
@@ -85,8 +100,15 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-surface-900 dark:text-white">{t("apb_title", lang)}</h1>
           <p className="mt-1 max-w-2xl text-sm text-surface-500 dark:text-surface-400">{t("apb_sub", lang)}</p>
         </div>
-        <PendingFilterPills filter={filter} base={tot} />
+        <PendingFilterPills filter={filter} base={tot} route={focus} />
       </div>
+
+      {focus && (
+        <p data-pending-route={focus} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800">
+          <span>{t("apb_queue_for", lang)}</span>
+          <Link href="/admin/my-work/pending" className="font-semibold underline">{t("apb_queue_all", lang)}</Link>
+        </p>
+      )}
 
       {searchParams?.ok && (
         <p className="flex items-center gap-2 rounded-xl bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
@@ -116,7 +138,7 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
       )}
 
       {groups.map(({ group, items: list }) => {
-        const gCounts = counts.filter((c) => c.group_key === group && !c.is_info && c.readable);
+        const gCounts = scopeCounts.filter((c) => inboxGroup(c.route, c.group_key, menus) === group && !c.is_info && c.readable);
         const gPending = gCounts.reduce((s, c) => s + Number(c.pending ?? 0), 0);
         const gNew = gCounts.reduce((s, c) => s + Number(c.naya ?? 0), 0);
         const cats = [...new Set(list.map((i) => i.category))];

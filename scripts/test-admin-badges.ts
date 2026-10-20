@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import {
   CATEGORY_KEYS, ROLE_KEYS, GROUP_ORDER, INLINE_DECISIONS, approveState, markCodeOwn, adjustMineForCode, CODE_MAKER_COLS, ageDays, ageTone, live, totals,
-  badgeForHref, badgeForGroup, categoriesForPath, newArrivals, groupItems, fmtRs, catLabelKey, roleLabelKey, groupLabelKey,
+  badgeForHref, badgeForGroup, parentEqualsChildren, claimForHref, inboxGroup, pendingQueueHref, parsePendingRoute,
+  categoriesForPath, newArrivals, groupItems, fmtRs, catLabelKey, roleLabelKey, groupLabelKey,
   type PendingCount, type PendingItem,
 } from "../src/lib/pending/categories";
 import { adminPendingDict } from "../src/lib/i18n/dict/admin-pending";
@@ -112,19 +113,70 @@ test("totals: excludes info + unreadable, counts mine/naya/amount/old", () => {
   assert.deepEqual(t.unreadable, ["expenses"]);
   assert.equal(live(c).length, 2);
 });
-test("badges: item by exact route, group by key or child href", () => {
+test("badges: item by exact route, parent is the sum of its children", () => {
   const c = [
     row({ category: "a", group_key: "hr", route: "/admin/hr/leave", pending: 3, naya: 1, oldest_at: ago(5), pending_with: "manager" }),
     row({ category: "b", group_key: "hr", route: "/admin/hr/advances?tab=p", pending: 2, oldest_at: ago(1) }),
     row({ category: "c", group_key: "admin", route: "/admin/support", pending: 4 }),
   ];
-  assert.deepEqual(badgeForHref(c, "/admin/hr/leave", NOW)?.pending, 3);
-  assert.equal(badgeForHref(c, "/admin/hr/advances", NOW)?.pending, 2);
+  const hrHrefs = ["/admin/hr/leave", "/admin/hr/advances"];
+  assert.deepEqual(badgeForHref(c, "/admin/hr/leave", NOW, hrHrefs)?.pending, 3);
+  assert.equal(badgeForHref(c, "/admin/hr/advances", NOW, hrHrefs)?.pending, 2);
   assert.equal(badgeForHref(c, "/admin/hr", NOW), null);
-  const g = badgeForGroup(c, "hr", [], NOW)!;
+  const g = badgeForGroup(c, "hr", hrHrefs, NOW)!;
   assert.equal(g.pending, 5); assert.equal(g.naya, 1); assert.equal(g.oldestDays, 5); assert.equal(g.pendingWith, "manager");
+  assert.equal(badgeForGroup(c, "hr", [], NOW), null, "group_key alone must not inflate the parent");
   assert.equal(badgeForGroup(c, "ops", ["/admin/support"], NOW)?.pending, 4);
   assert.equal(badgeForGroup(c, "ops", [], NOW), null);
+  assert.equal(parentEqualsChildren(c, hrHrefs, NOW), true);
+});
+test("every department: parent equals children, zero has no badge, orphan stays off the menu", () => {
+  const salesHrefs = ["/admin/bridge-orders", "/admin/khata", "/admin/pos", "/admin/pos-counters", "/admin/pos/returns", "/admin/produce-orders", "/admin/settlements"];
+  const financeHrefs = ["/admin/kharche", "/admin/finance/recovery", "/admin/finance/queue"];
+  const purchaseHrefs = ["/admin/purchases", "/admin/season-bookings"];
+  const hrHrefs = ["/admin/hr/leave", "/admin/hr/advances"];
+  const menus = [
+    { key: "sales", hrefs: salesHrefs },
+    { key: "finance", hrefs: financeHrefs },
+    { key: "purchase", hrefs: purchaseHrefs },
+    { key: "hr", hrefs: hrHrefs },
+    { key: "inventory", hrefs: ["/admin/agri-returns", "/admin/stock-transfers"] },
+  ];
+  const c = [
+    row({ category: "pos_returns", group_key: "sales", route: "/admin/pos/returns", pending: 2 }),
+    row({ category: "settlements", group_key: "sales", route: "/admin/settlements", pending: 0 }),
+    row({ category: "payment_promises", group_key: "sales", route: "/admin/finance/recovery/promises", pending: 2, naya: 1 }),
+    row({ category: "season_import", group_key: "sales", route: "/admin/season-bookings", pending: 1 }),
+    row({ category: "custom_products", group_key: "sales", route: "/admin/season-bookings", pending: 0 }),
+    row({ category: "expenses", group_key: "finance", route: "/admin/kharche", pending: 4 }),
+    row({ category: "labour", group_key: "finance", route: "/admin/kharche", pending: 1 }),
+    row({ category: "leave", group_key: "hr", route: "/admin/hr/leave", pending: 3 }),
+    row({ category: "agri_returns", group_key: "inventory", route: "/admin/agri-returns", pending: 0 }),
+    row({ category: "stock_transfers", group_key: "inventory", route: "/admin/stock-transfers", pending: 6 }),
+  ];
+  for (const m of menus) {
+    assert.equal(parentEqualsChildren(c, m.hrefs, NOW), true, m.key);
+    const parent = badgeForGroup(c, m.key, m.hrefs, NOW)?.pending ?? 0;
+    const childSum = m.hrefs.reduce((s, h) => s + (badgeForHref(c, h, NOW, m.hrefs)?.pending ?? 0), 0);
+    assert.equal(parent, childSum, m.key);
+  }
+  assert.equal(badgeForGroup(c, "sales", salesHrefs, NOW)?.pending, 2, "sales parent is POS Returns only, not the orphan 3");
+  assert.equal(badgeForHref(c, "/admin/pos/returns", NOW, salesHrefs)?.pending, 2);
+  assert.equal(badgeForHref(c, "/admin/pos", NOW, salesHrefs), null, "POS does not swallow POS Returns");
+  assert.equal(badgeForHref(c, "/admin/finance/recovery", NOW, financeHrefs)?.pending, 2);
+  assert.equal(badgeForHref(c, "/admin/season-bookings", NOW, purchaseHrefs)?.pending, 1);
+  assert.equal(badgeForHref(c, "/admin/kharche", NOW, financeHrefs)?.pending, 5);
+  assert.equal(badgeForGroup(c, "finance", financeHrefs, NOW)?.pending, 7);
+  assert.equal(badgeForGroup(c, "inventory", menus[4].hrefs, NOW)?.pending, 6);
+  assert.equal(inboxGroup("/admin/finance/recovery/promises", "sales", menus), "finance");
+  assert.equal(inboxGroup("/admin/season-bookings", "sales", menus), "purchase");
+  assert.equal(inboxGroup("/admin/pos/returns", "sales", menus), "sales");
+  assert.equal(inboxGroup("/admin/not-in-menu", "sales", menus), "other");
+  assert.equal(pendingQueueHref("/admin/pos/returns"), "/admin/my-work/pending?route=%2Fadmin%2Fpos%2Freturns");
+  assert.equal(parsePendingRoute("/admin/pos/returns"), "/admin/pos/returns");
+  assert.equal(parsePendingRoute("https://evil.example/admin/x"), null);
+  assert.equal(parsePendingRoute("/admin/../etc"), null);
+  assert.deepEqual(claimForHref(c, "/admin/season-bookings", purchaseHrefs).map((x) => x.category), ["season_import"]);
 });
 test("seen-on-open + toast only on growth", () => {
   const prev = [row({ category: "a", route: "/admin/hr/leave", pending: 3, naya: 1 })];
@@ -160,6 +212,13 @@ test("sidebar never collapses; provider polls every 60s; layout wires provider",
   assert.ok(readFileSync("src/app/admin/layout.tsx", "utf8").includes("<PendingProvider allowedRoutes={allowedPages}"));
   assert.ok(readFileSync("src/components/layout/notification-bell.tsx", "utf8").includes("PendingBellList"));
   assert.ok(readFileSync("src/components/layout/mobile-sidebar.tsx", "utf8").includes("badgeForHref"));
+  assert.ok(readFileSync("src/components/layout/sidebar.tsx", "utf8").includes("pendingQueueHref"));
+  assert.ok(readFileSync("src/components/layout/mobile-sidebar.tsx", "utf8").includes("pendingQueueHref"));
+  const dash = readFileSync("src/components/dashboard/canonical-department-dashboard.tsx", "utf8");
+  assert.ok(dash.includes("usePending") && dash.includes("badgeForHref") && dash.includes("pendingQueueHref") && dash.includes("RedBadge"));
+  const page = readFileSync("src/app/admin/my-work/pending/page.tsx", "utf8");
+  assert.ok(page.includes("parsePendingRoute") && page.includes("inboxGroup") && page.includes("claimForHref"));
+  assert.ok(readFileSync("src/app/admin/my-work/pending/live-state.tsx", "utf8").includes("badge.refresh"));
 });
 test("no WhatsApp / email / SMS in any new file", () => {
   const files = [
