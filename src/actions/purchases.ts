@@ -7,7 +7,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { payAndPost } from "@/lib/ledger/supplier-money";
 import { purchaseBillTotals, parseBillNumber, purchaseLineTotal } from "@/lib/purchases/bill-math";
+import { postJournal } from "@/lib/ledger/post";
 import { postGoodsReceived, failed } from "@/lib/ledger/rules";
+import { acceptedPurchaseAmounts, purchaseReturnLines, roundMoney } from "@/lib/finance/money-guards";
+import { requireMoneyAdmin } from "@/lib/access/money-gate";
 import { parsePaymentTerms } from "@/lib/purchase-terms";
 import { logAudit } from "@/lib/audit";
 import { closeHandoff, createHandoff } from "@/lib/work-handoff";
@@ -577,20 +580,21 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
 
   // Dena utne ka jitna theek aaya. Invoice ka asal kul ek dafa mehfooz
   // hota hai (agar bill se pehle hi likha ho to wohi rehta hai).
-  const acceptedTotal = rows.reduce((s, r) => s + r.received * r.unit_cost, 0);
+  const acceptedTotal = roundMoney(rows.reduce((s, r) => s + r.received * r.unit_cost, 0));
   const originalGoodsTotal = rows.reduce((s, r) => s + r.quantity * r.unit_cost, 0);
   const receivedRatio = originalGoodsTotal > 0 ? Math.min(1, acceptedTotal / originalGoodsTotal) : 1;
-  const acceptedDiscount = purchase.discount_amount != null
-    ? Math.min(acceptedTotal, Number(purchase.discount_amount) * receivedRatio)
-    : 0;
-  const acceptedTax = purchase.tax_amount != null ? Number(purchase.tax_amount) * receivedRatio : 0;
-  const acceptedPayable = Math.round((acceptedTotal - acceptedDiscount + acceptedTax) * 100) / 100;
+  const { acceptedDiscount, acceptedTax, acceptedPayable } = acceptedPurchaseAmounts({
+    acceptedTotal,
+    discountAmount: purchase.discount_amount != null ? Number(purchase.discount_amount) : null,
+    taxAmount: purchase.tax_amount != null ? Number(purchase.tax_amount) : null,
+    receivedRatio,
+  });
   const { error: statusError } = await supabase
     .from("purchases")
     .update({
       status: "received",
       invoice_total: purchase.invoice_total ?? Number(purchase.total_amount ?? 0),
-      total_amount: purchase.warehouse_id ? acceptedPayable : acceptedTotal,
+      total_amount: acceptedPayable,
       grn_photo_url: grnPhotoUrl,
       grn_note: grnNote,
       received_at: new Date().toISOString(),
@@ -662,14 +666,13 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
     // Bill ka discount/tax poore invoice par likha hota hai; agar kuch
     // kam/toota nikla to yahan sirf USI hisse ka discount/tax (388) --
     // poora laga dena galat rehta agar aadha maal wapas ho gaya.
-    const ratio = receivedRatio;
     const posted = await postGoodsReceived({
       purchaseId,
       purchaseNumber: purchase.purchase_number ?? null,
       supplierId: purchase.supplier_id ?? null,
       amount: acceptedTotal,
-      discountAmount: purchase.discount_amount != null ? Number(purchase.discount_amount) * ratio : null,
-      taxAmount: purchase.tax_amount != null ? Number(purchase.tax_amount) * ratio : null,
+      discountAmount: acceptedDiscount,
+      taxAmount: acceptedTax,
       taxLabel: purchase.tax_label,
       ctx: {
         createdBy: user?.id ?? null,
@@ -1195,4 +1198,65 @@ export async function getNextSupplierBillNo(): Promise<{ billNo: string } | { er
   }
 
   return { billNo: `${prefix}${String(next).padStart(3, "0")}` };
+}
+
+/**
+ * Supplier ko maal wapas. Stock aur 1195 Tax Recoverable ulta hota hai,
+ * supplier ka dena utni raqam kam.
+ */
+export async function recordPurchaseReturn(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireMoneyAdmin("Purchase return kitab mein likhna");
+  if (!gate.ok) return { error: gate.error };
+  const supabase = createClient();
+  const purchaseId = String(formData.get("purchase_id") ?? "").trim();
+  const productId = String(formData.get("product_id") ?? "").trim();
+  const quantity = Number(formData.get("quantity") ?? 0);
+  const unitCost = Number(formData.get("unit_cost") ?? 0);
+  const taxAmount = Number(formData.get("tax_amount") ?? 0);
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!purchaseId || !productId) return { error: "Purchase aur product zaroori hain." };
+  if (!Number.isFinite(quantity) || quantity <= 0) return { error: "Wapas quantity sahi likhein." };
+  if (!Number.isFinite(unitCost) || unitCost < 0) return { error: "Rate sahi likhein." };
+  if (reason.length < 5) return { error: "Wapas karne ki wajah likhein." };
+
+  const { data: purchase } = await supabase
+    .from("purchases")
+    .select("id, purchase_number, supplier_id, status")
+    .eq("id", purchaseId)
+    .maybeSingle();
+  if (!purchase) return { error: "Purchase nahi mili." };
+  if (purchase.status !== "received") return { error: "Sirf receive ho chuki purchase se maal wapas hota hai." };
+
+  const goods = roundMoney(quantity * unitCost);
+  const draft = purchaseReturnLines({
+    goodsAmount: goods,
+    taxAmount: Number.isFinite(taxAmount) ? taxAmount : 0,
+    supplierId: purchase.supplier_id,
+    memo: `Purchase return ${purchase.purchase_number ?? purchaseId} — ${reason}`,
+  });
+  if ("error" in draft) return { error: draft.error };
+
+  const { data: row, error: insErr } = await supabase
+    .from("purchase_returns")
+    .insert({ purchase_id: purchaseId, product_id: productId, quantity, reason })
+    .select("id")
+    .single();
+  if (insErr || !row) return { error: insErr?.message ?? "Return row nahi bani." };
+
+  const journal = await postJournal({
+    description: draft.lines[0]?.memo ?? "Purchase return",
+    sourceModule: "purchase_return",
+    sourceId: row.id,
+    createdBy: gate.userId,
+    claims: [{ table: "purchase_returns", rowId: row.id }],
+    lines: draft.lines,
+  });
+  if ("error" in journal) {
+    await supabase.from("purchase_returns").delete().eq("id", row.id);
+    return { error: `1195 / stock ulta nahi ho saka: ${journal.error}` };
+  }
+
+  revalidatePath("/admin/purchases");
+  revalidatePath("/admin/money-trail");
+  return { success: true, message: `Return kitab mein darj (${journal.entryNumber}). Tax Recoverable 1195 ulta hua.` };
 }

@@ -473,7 +473,7 @@ export async function applyFat(
     return { error: `Khate mein nahi ja saka: ${ledger.error}` };
   }
 
-  const walletRowId = await postFarmerWallet({
+  const walletPost = await postFarmerWallet({
     farmerId: entry.farmer_id,
     type: "milk_income",
     direction: "credit",
@@ -483,6 +483,7 @@ export async function applyFat(
     referenceId: entryId,
     createdBy: byProfileId,
   });
+  if (walletPost.error) return { error: `Wallet mein nahi gaya: ${walletPost.error}` };
 
   // Doodh ki EK khareed do jagah likhi jati hai: kisan ka khata (us ka
   // bojh ghata) aur us ka wallet. Is liye double-entry bhi EK hi banti
@@ -494,7 +495,7 @@ export async function applyFat(
   // wo uljhan paida hoti hai jis mein kami chhup jati hai.
   const claims: Array<{ table: string; rowId: string }> = [];
   if (ledger.id) claims.push({ table: "farmer_credit_ledger", rowId: ledger.id });
-  if (walletRowId) claims.push({ table: "wallet_transactions", rowId: walletRowId });
+  if (walletPost.id) claims.push({ table: "wallet_transactions", rowId: walletPost.id });
 
   const posted = await postFarmerCreditRepaid({
     farmerId: entry.farmer_id,

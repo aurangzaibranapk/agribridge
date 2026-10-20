@@ -8,6 +8,12 @@ import { REVERSAL_REASON_MIN } from "@/lib/ledger/audit-trail";
 import { loadUserAccess, can } from "@/lib/access/permissions";
 import { ACC } from "@/lib/ledger/rules";
 import { postJournal } from "@/lib/ledger/post";
+import {
+  customerBalanceFromLedger,
+  payableFromLedger,
+  restorePayableGate,
+  selfReversalGate,
+} from "@/lib/finance/money-guards";
 
 export interface ActionState {
   error?: string;
@@ -30,7 +36,9 @@ export async function restoreCustomerPayable(_prev: ActionState, formData: FormD
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Login karein." };
   const access = await loadUserAccess(user.id);
-  if (!access || !can(access, "finance.reversal", "create")) return { error: "Is correction ki permission sirf Admin/Finance ke paas hai." };
+  if (!access) return { error: "Login karein." };
+  const restoreGate = restorePayableGate(access.role, amount);
+  if (!restoreGate.ok) return { error: restoreGate.error };
 
   const { data: customer } = await service.from("customers").select("name, current_balance").eq("id", customerId).maybeSingle();
   if (!customer) return { error: "Customer nahi mila." };
@@ -122,9 +130,11 @@ export async function reverseEntry(_prev: ActionState, formData: FormData): Prom
 
   const { data: entry } = await service
     .from("journal_entries")
-    .select("entry_number, description, source_module")
+    .select("entry_number, description, source_module, created_by")
     .eq("id", entryId)
     .maybeSingle();
+  const reversalGate = selfReversalGate(entry?.created_by, user.id);
+  if (!reversalGate.ok) return { error: reversalGate.error };
 
   // Finance review #4: reversal journal ki HAR party line ulti karta hai
   // (reverse_journal_atomic party_type/party_id samait qataren copy karta
@@ -174,7 +184,11 @@ export async function reverseEntry(_prev: ActionState, formData: FormData): Prom
       continue;
     }
     const before = Number(customer.current_balance ?? 0);
-    const after = Math.round((rows ?? []).reduce((t, r) => t + Number(r.debit ?? 0) - Number(r.credit ?? 0), 0) * 100) / 100;
+    const after = customerBalanceFromLedger(rows ?? []);
+    if (after == null) {
+      balanceErrors.push(`customer ${customerId}: ledger mein indraj nahi — sifar nahi likha`);
+      continue;
+    }
     if (Math.abs(after - before) < 0.005) continue;
     const { error: updErr } = await service.from("customers").update({ current_balance: after }).eq("id", customerId);
     if (updErr) {
@@ -190,6 +204,51 @@ export async function reverseEntry(_prev: ActionState, formData: FormData): Prom
       changes: { current_balance: { pehle: before, ab: after } },
     });
   }
+
+  for (const supplierId of parties.get("supplier") ?? []) {
+    const { data: rows, error: sumErr } = await service
+      .from("journal_lines")
+      .select("debit, credit")
+      .eq("account_code", ACC.supplierPayable)
+      .eq("party_type", "supplier")
+      .eq("party_id", supplierId);
+    if (sumErr) {
+      balanceErrors.push(`supplier ${supplierId}: ${sumErr.message}`);
+      continue;
+    }
+    const after = payableFromLedger(rows ?? []);
+    if (after == null) continue;
+    const { data: supplier } = await service.from("suppliers").select("current_payable").eq("id", supplierId).maybeSingle();
+    const before = supplier?.current_payable == null ? null : Number(supplier.current_payable);
+    if (before != null && Math.abs(after - before) < 0.005) continue;
+    const { error: updErr } = await service.from("suppliers").update({ current_payable: after }).eq("id", supplierId);
+    if (updErr) balanceErrors.push(`supplier ${supplierId}: ${updErr.message}`);
+  }
+
+  for (const dealerId of parties.get("dealer") ?? []) {
+    const { data: rows, error: sumErr } = await service
+      .from("journal_lines")
+      .select("debit, credit")
+      .eq("account_code", "2016")
+      .eq("party_type", "dealer")
+      .eq("party_id", dealerId);
+    if (sumErr) {
+      balanceErrors.push(`dealer ${dealerId}: ${sumErr.message}`);
+      continue;
+    }
+    const after = payableFromLedger(rows ?? []);
+    if (after == null) continue;
+    const { data: dealer } = await service.from("dealers").select("current_payable").eq("id", dealerId).maybeSingle();
+    const before = dealer?.current_payable == null ? null : Number(dealer.current_payable);
+    if (before != null && Math.abs(after - before) < 0.005) continue;
+    const { error: updErr } = await service.from("dealers").update({ current_payable: after }).eq("id", dealerId);
+    if (updErr) balanceErrors.push(`dealer ${dealerId}: ${updErr.message}`);
+  }
+
+  const { error: markError } = await (service.from("journal_entries") as any)
+    .update({ posting_status: "reversed" })
+    .eq("id", entryId);
+  if (markError) balanceErrors.push(`source reversed mark: ${markError.message}`);
 
   await logAudit({
     actionType: "update",

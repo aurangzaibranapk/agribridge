@@ -1,3 +1,7 @@
+## Pending — Finance fixes (migrations 640, 641, 642) — NOT applied
+
+Files only. Do not run on Testing (`hwaiuwxqldxsoukkfefn`) or Live (`ktskwawkslaznkjjacni`) until a fresh backup is verified in chat. Order: backup size confirmed → these three migrations on Testing → counts → then Live → then the new build. 640 locks finance writes to owner/super_admin/admin and blocks direct journal inserts. 641 adds maker-checker columns, GL 2016/1180/2018, and unique indexes (opening balance, one cash close per branch/day, transfer leg, pending payments) — if a unique index fails, stop and report the duplicate rows, do not delete them. 642 is a drift function only; it does not schedule a job. No customer or dealer balances are rewritten by these files.
+
 ## 11 October 2026 — POS receipt print fix (web deployment pending)
 
 Receipt modals now render through a body portal so dashboard scroll containers cannot clip long receipts or reserve blank space above them. Receipt print styles explicitly retain the last table column (line total), which generic report print CSS hides as an Actions column. Online and offline receipts share this isolation. Print page size follows the selected printer paper; use the 80 mm roll setting. No database migration. Physical printer validation remains required after deploying the new build.
