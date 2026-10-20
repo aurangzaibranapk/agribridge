@@ -46,7 +46,7 @@ export default async function BranchCreditPage() {
 
   return (
     <div>
-      <PageHeader title={t("bc_title", lang)} description="Har shop ka credit limit set karein, advance payment record karein" />
+      <PageHeader title={t("brc_title", lang)} description="Har shop ka credit limit set karein, advance payment record karein" />
       <BranchCreditClient branches={branchesWithCredit} />
     </div>
   );

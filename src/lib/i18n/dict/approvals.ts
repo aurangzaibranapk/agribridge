@@ -86,7 +86,7 @@ export const approvalsDict = {
   },
 
   // ---- Shakh ka store credit ----
-  bc_title: { en: "Store Credit & Advance Wallet", rm: "Dukan ka udhaar aur advance batwa", ur: "دکان کا ادھار اور ایڈوانس بٹوہ" },
+  brc_title: { en: "Store Credit & Advance Wallet", rm: "Dukan ka udhaar aur advance batwa", ur: "دکان کا ادھار اور ایڈوانس بٹوہ" },
   bc_advance_paid: { en: "Advance Paid", rm: "Advance diya", ur: "ایڈوانس دیا" },
   bc_available_credit: { en: "Available Credit", rm: "Kitna udhaar baqi hai", ur: "کتنا ادھار باقی ہے" },
   bc_no_active_branch: { en: "No active branch.", rm: "Koi chalti hui shakh nahi.", ur: "کوئی چلتی ہوئی شاخ نہیں۔" },
