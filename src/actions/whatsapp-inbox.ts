@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { sendWhatsAppMessage, sendWhatsAppTemplate } from "@/lib/whatsapp-client";
 import { inboxEnabled } from "@/lib/whatsapp/inbox/flag";
 import { bhejo, parseDraftPayload } from "@/lib/whatsapp/inbox/send";
@@ -30,6 +31,11 @@ export async function sendInboxReply(formData: FormData): Promise<R> {
   const res = await bhejo(
     {
       rpc,
+      // 619: mark_sent sirf service_role; bhejne wale ki shart DB ticket (sent_by) se.
+      markRpc: async (fn, args) => {
+        const { data, error } = await createServiceClient().rpc(fn as never, args as never);
+        return { data: data as unknown, error: error ? { message: error.message } : null };
+      },
       sendText: async (phone, text) => { await sendWhatsAppMessage(phone, text); return null; },
       sendTemplate: async (phone, name, lang, p) => { await sendWhatsAppTemplate(phone, name, lang, p); return null; },
     },
