@@ -6,6 +6,7 @@ import { failed, postSalaryPaid } from "@/lib/ledger/rules";
 import { createClient } from "@/lib/supabase/server";
 import { postStaffLedger } from "@/lib/ledger/rules";
 import { createServiceClient } from "@/lib/supabase/service";
+import { reverseCashBookById } from "@/lib/finance/cash-book";
 import { notifyRoles, notifyUser } from "@/lib/notifications";
 import { TENANT_PLAN_LIMITS, tenantPlan } from "@/lib/tenant/plan-limits";
 import { DEPARTMENTS } from "@/lib/departments";
@@ -209,7 +210,7 @@ export async function markSalaryPaid(_prev: ActionState, formData: FormData): Pr
   // Kuch fail ho to claim wapas -- warna tankhwah "paid" dikhti jab ke
   // paisa nikla hi nahi. Cash book ki qatar pehle hatti hai, phir claim.
   const undo = async (txnId: string | null) => {
-    if (txnId) await supabase.from("finance_transactions").delete().eq("id", txnId);
+    if (txnId) await reverseCashBookById(txnId, "Tankhwah cash book ulti");
     await supabase.rpc("fn_salary_payment_unclaim", { p_payment: paymentId });
   };
 

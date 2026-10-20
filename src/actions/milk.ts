@@ -133,7 +133,7 @@ export async function recordMilkPayment(_prev: ActionState, formData: FormData):
 
   // Doodh ki adaigi kisan ka bojh BARHATI hai (debit) -- jo raqam us ka
   // haq thi wo ab us ke haath mein hai.
-  await postFarmerLedger({
+  const farmerLedger = await postFarmerLedger({
     farmerId,
     sourceType: "milk",
     ledgerType: "debit",
@@ -141,8 +141,9 @@ export async function recordMilkPayment(_prev: ActionState, formData: FormData):
     notes: label,
     createdBy: user?.id ?? null,
   });
+  if (farmerLedger.error) return { error: `Adaigi darj hui magar kisan ke khate mein nahi gayi: ${farmerLedger.error}` };
 
-  await postFarmerWallet({
+  const farmerWallet = await postFarmerWallet({
     farmerId,
     type: "milk_payment",
     direction: "debit",
@@ -151,6 +152,7 @@ export async function recordMilkPayment(_prev: ActionState, formData: FormData):
     referenceType: "milk_payment",
     createdBy: user?.id ?? null,
   });
+  if (farmerWallet.error) return { error: `Adaigi darj hui magar wallet mein nahi gayi: ${farmerWallet.error}` };
 
   revalidatePath("/admin/milk-collection");
   revalidatePath("/admin/farmer-credit");

@@ -1,3 +1,7 @@
+## Pending — Finance fixes (migrations 640, 641, 642, 643) — NOT applied
+
+Files only. Do not run on Testing (`hwaiuwxqldxsoukkfefn`) or Live (`ktskwawkslaznkjjacni`) until a fresh backup is verified in chat. These run after 631–633 below. Order: backup size confirmed → 631 then 632 then 633, then these four migrations on Testing → counts → then Live → then the new build. 640 locks finance writes to owner/super_admin/admin and blocks direct journal inserts. Customer balance trigger allows security-definer RPCs (POS udhaar) and a transaction-local trusted flag. 641 adds maker-checker columns, GL 2016/1180/2018, and unique indexes. Before the indexes, `fn_finance_race_duplicate_counts()` is read-only — if a group is not zero the index is skipped (notice only). Do not delete duplicate rows. 642 is the drift function. 643 blocks finance_transactions delete, sets the POS-return balance flag, adds owner on purchase_returns, and counts `approving` in pending badges. Cron: `Authorization: Bearer CRON_SECRET` on `/api/cron/customer-balance-drift`. No customer or dealer balances are rewritten by these files.
+
 ## Pending — 20 October 2026: sales/parties money guards (631–633) NOT applied
 
 Migrations `631_pos_server_price_and_refund.sql`, `632_orders_shift_counters.sql`, and `633_party_money_guards.sql` are files only. They were **not** applied to Testing (`hwaiuwxqldxsoukkfefn`) or Live (`ktskwawkslaznkjjacni`).
