@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Suspense } from "react";
 import { LoginV5 } from "@/app/login/login-v5";
+import { LoginV6 } from "@/app/login/login-v6";
 import { LegacyLoginPage } from "@/app/login/legacy-page";
 import { tx, type V5Lang } from "@/app/login/v5-text";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -18,6 +19,7 @@ const urdu = localFont({ src: [{ path: "./fonts/noto-nastaliq-urdu.woff2", weigh
 /**
  * Login v5 (malik ki manzoori, 20 Oct): mobile / User ID / email + password.
  * OTP sirf naye signup, pehli dafa password aur password bhool gaye par.
+ * Login v6 (design1, 20 Oct 2026) ab default; LOGIN_UI=v5 -> v5 screen.
  * Wapsi ka raasta: server .env mein LOGIN_V5=0 -> purana login (legacy-page.tsx).
  */
 export default async function LoginPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
@@ -29,6 +31,14 @@ export default async function LoginPage({ searchParams }: { searchParams?: Recor
   const lang: V5Lang = cookieLang === "en" || cookieLang === "ur" ? cookieLang : "rm";
   const rtl = lang === "ur";
   const tr = (k: string) => tx(lang, k);
+  if (process.env.LOGIN_UI !== "v5" && !otpPreview) {
+    // Login v6: sliding card (hara panel) ne baayan info panel ki jagah le li.
+    return (
+      <main className={`${v5.variable} ${v5display.variable} ${urdu.variable} flex min-h-screen flex-col items-center justify-start bg-[radial-gradient(circle_at_20%_10%,#c8ecd6,transparent_45%),radial-gradient(circle_at_90%_95%,#cfdcf3,transparent_40%),linear-gradient(135deg,#eef7f1,#e2f2e8)] px-3.5 py-5 font-v5 text-[#0d1b2e] antialiased dark:bg-[#0a1324] dark:text-[#eef3f8] md:justify-center md:px-6 md:py-6`}>
+        <Suspense fallback={null}><LoginV6 initialLang={lang} /></Suspense>
+      </main>
+    );
+  }
   const trust: [string, string, string][] = [["shield", "t1a", "t1b"], ["users", "t2a", "t2b"], ["chat", "t3a", "t3b"]];
   return (
     <main className={`${v5.variable} ${v5display.variable} ${urdu.variable} min-h-screen bg-[#eef4f1] font-v5 text-[#0d1b2e] antialiased dark:bg-[#0a1324] dark:text-[#eef3f8] lg:grid lg:h-screen lg:min-h-0 lg:grid-cols-[47%_53%] lg:overflow-hidden`}>
