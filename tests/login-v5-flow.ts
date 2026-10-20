@@ -93,7 +93,7 @@ async function main() {
 }
 // 4. existing farmer: phone / username / linked email -> same one account; wrong password x5 -> 15 min lock
 {
-  const { d, locks } = world();
+  const { d, locks, sent } = world();
   assert.deepEqual(await F.loginWithPassword(d, "kisan1", "Kisan2026x"), { ok: true, redirect: "/portal/dashboard" });
   assert.deepEqual(await F.loginWithPassword(d, "kisan@gmail.com", "Kisan2026x"), { ok: true, redirect: "/portal/dashboard" });
   for (let i = 0; i < 4; i++) assert.deepEqual(await F.loginWithPassword(d, "03214445556", "wrong"), { ok: false, error: "e_bad" });
@@ -101,7 +101,9 @@ async function main() {
   assert.equal(locks.kisan, 900);
   assert.deepEqual(await F.loginWithPassword(d, "03214445556", "Kisan2026x"), { ok: false, error: "e_locked", retryAfterSeconds: 900 }, "even right password while locked");
   // forgot password clears the lock
-  await F.sendCode(d, "reset", "03214445556", "whatsapp");
+  const rs = await F.sendCode(d, "reset", "03214445556", "whatsapp");
+  assert.ok(rs.ok);
+  assert.ok(sent.includes("whatsapp:3214445556"), "reset OTP goes through the same sendPhoneOtp (sendFarmerOtp) path, WhatsApp default");
   const v = await F.verifyCode(d, "reset", "03214445556", "whatsapp", "123456");
   assert.ok(v.ok);
   const r = await F.setNewPassword(d, { grant: (v as any).grant, password: "Naya2026xy", confirm: "Naya2026xy", email: async () => "3214445556@phone.agribridge.local" });
