@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/utils/format";
 import { StatementActions } from "./statement-actions";
 import { CreditPositionStrip } from "@/components/recovery/credit-position-strip";
 import { loadCreditPosition } from "@/lib/recovery/credit-block";
+import { ST, fmtAmt, fmtBal } from "@/lib/ui/statement-table";
 import { partyBalanceAmount, partyBalanceLabel, partyBalanceStatus } from "@/lib/finance/party-balance";
 
 export const dynamic = "force-dynamic";
@@ -198,37 +199,29 @@ export async function CustomerStatementPage({
             kehta hai ke is ka hisaab abhi shuru hi nahi hua.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[44rem] text-sm">
-              <thead className="bg-surface-50 text-left text-xs text-surface-500 dark:bg-surface-800/50">
+          <div className={ST.wrap}>
+            <table className={ST.table}>
+              <thead className={ST.thead}>
                 <tr>
-                  <th className="px-4 py-2">Tareekh</th>
-                  <th className="px-4 py-2">Entry</th>
-                  <th className="px-4 py-2">Tafseel</th>
-                  {combined && <th className="px-4 py-2">Khata</th>}
-                  <th className="px-4 py-2 text-right">Debit</th>
-                  <th className="px-4 py-2 text-right">Credit</th>
-                  <th className="px-4 py-2 text-right">Balance</th>
+                  <th className={ST.th}>Tareekh</th>
+                  <th className={ST.th}>Entry</th>
+                  <th className={ST.th}>Tafseel</th>
+                  {combined && <th className={ST.th}>Khata</th>}
+                  <th className={ST.thAmt}>Debit</th>
+                  <th className={ST.thAmt}>Credit</th>
+                  <th className={ST.thAmt}>Balance</th>
                 </tr>
               </thead>
               <tbody>
                 {saathBalance.map((r, i) => (
-                  <tr key={`${r.entry_number}-${i}`} className="border-t border-surface-100 dark:border-surface-800">
-                    <td className="px-4 py-2 whitespace-nowrap text-xs text-surface-500">
-                      {formatDate(r.entry_date)}
-                    </td>
-                    <td className="px-4 py-2 font-mono text-xs">{r.entry_number}</td>
-                    <td className="px-4 py-2">{r.tafseel}</td>
-                    {combined && <td className="px-4 py-2 text-xs text-surface-500">{khataLabel(r.khata_code)}</td>}
-                    <td className="px-4 py-2 text-right tabular-nums">
-                      {Number(r.debit) ? rs(Number(r.debit)) : "—"}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums">
-                      {Number(r.credit) ? rs(Number(r.credit)) : "—"}
-                    </td>
-                    <td className="px-4 py-2 text-right font-medium tabular-nums">
-                      {r.balance > 0 ? `${rs(r.balance)} — Lena` : r.balance < 0 ? `${rs(Math.abs(r.balance))} — Dena` : "Rs 0 — Clear"}
-                    </td>
+                  <tr key={`${r.entry_number}-${i}`} className={ST.tr}>
+                    <td className={`${ST.td} whitespace-nowrap text-xs text-surface-500`}>{formatDate(r.entry_date)}</td>
+                    <td className={`${ST.td} font-mono text-xs`}>{r.entry_number}</td>
+                    <td className={ST.td}>{r.tafseel}</td>
+                    {combined && <td className={`${ST.td} text-xs text-surface-500`}>{khataLabel(r.khata_code)}</td>}
+                    <td className={ST.tdAmt}>{fmtAmt(Number(r.debit))}</td>
+                    <td className={ST.tdAmt}>{fmtAmt(Number(r.credit))}</td>
+                    <td className={ST.tdBal} title={r.balance > 0 ? "Lena" : r.balance < 0 ? "Dena" : "Clear"}>{fmtBal(r.balance, "Dr")}</td>
                   </tr>
                 ))}
               </tbody>

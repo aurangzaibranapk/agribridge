@@ -3,7 +3,9 @@
  */
 export type Tone = "neutral" | "good" | "bad" | "warn" | "info";
 export type Kpi = { label: string; value: number | string | null; fmt?: "rs" | "num" | "kg" | "text"; hint?: string; tone?: Tone };
-export type Section = { title: string; note?: string; columns: string[]; rows: (string | number | null)[][]; empty?: string; href?: string };
+export type Section = { title: string; note?: string; columns: string[]; rows: (string | number | null)[][]; empty?: string; href?: string;
+  /** Bank-statement amount columns (index): fixed width, end-aligned, divider. */
+  amountCols?: number[] };
 export type TimelineItem = { date: string; label: string; amount?: number | null; tone?: Tone };
 export type ShopLine = { key: string; label: string; weSold: number; weBought: number; received: number; paid: number; balance: number; note?: string };
 export type Party360Data = {
