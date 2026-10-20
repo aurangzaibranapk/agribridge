@@ -1,16 +1,28 @@
-/** Bikri khareed se aage nahi. Farq sirf report/diagnostic hai — yahan data nahi mit-ti. */
-export function grainSaleWithinBought(boughtKg: number, alreadySoldKg: number, nextKg: number): { ok: true } | { ok: false; error: string } {
-  const bought = Number(boughtKg) || 0;
-  const sold = Number(alreadySoldKg) || 0;
+/** Godam ki ginti. Khareed ka jorh yahan nahi — adjustments aur transfer bhi isi ginti mein hain. */
+export function grainSaleWithinOnHand(onHandKg: number, nextKg: number): { ok: true } | { ok: false; error: string } {
+  const onHand = Number(onHandKg) || 0;
   const next = Number(nextKg) || 0;
   if (!(next > 0)) return { ok: false, error: "Miqdar sifar se zyada honi chahiye." };
-  if (sold + next > bought + 0.001) {
-    return {
-      ok: false,
-      error: `Anaj ki bikri khareed se aage nahi ja sakti. Khareed ${bought} kg, pehle biki ${sold} kg, ab ${next} kg.`,
-    };
+  if (next > onHand + 0.001) {
+    return { ok: false, error: `Is godam mein itna anaj nahi. Maujood ${onHand} kg, darkar ${next} kg.` };
   }
   return { ok: true };
+}
+
+/** Owner/Admin purani bikri ki miqdar kam kar sakein, chahe godam ab khali ho. Barhana phir bhi stock dekhta hai. */
+export function grainSaleEditAllowed(args: {
+  role: string | null | undefined;
+  oldKg: number;
+  newKg: number;
+  onHandKg: number;
+}): { ok: true } | { ok: false; error: string } {
+  const hq = args.role === "owner" || args.role === "super_admin" || args.role === "admin";
+  const oldKg = Number(args.oldKg) || 0;
+  const newKg = Number(args.newKg) || 0;
+  if (hq && newKg <= oldKg) return { ok: true };
+  const extra = newKg - oldKg;
+  if (extra <= 0) return { ok: true };
+  return grainSaleWithinOnHand(args.onHandKg, extra);
 }
 
 export function sumKg(rows: { kg: number }[]): number {

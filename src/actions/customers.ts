@@ -6,6 +6,27 @@ import { postJournal } from "@/lib/ledger/post";
 import { ACC } from "@/lib/ledger/rules";
 import { logAudit } from "@/lib/audit";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
+import { duplicatePhoneName, phoneDuplicateKey } from "@/lib/money/review-guards";
+
+async function duplicatePhoneWarning(
+  supabase: ReturnType<typeof createClient>,
+  phone: string,
+  exceptId: string | null,
+  confirmed: boolean,
+): Promise<string | null> {
+  if (confirmed) return null;
+  const key = phoneDuplicateKey(phone);
+  if (!key) return null;
+  const tail = key.slice(-10);
+  const { data } = await supabase
+    .from("customers")
+    .select("id, name, phone_number")
+    .ilike("phone_number", `%${tail}%`)
+    .limit(30);
+  const name = duplicatePhoneName(data ?? [], phone, exceptId);
+  if (!name) return null;
+  return `DUPLICATE_PHONE: ${name} pehle se isi number par hai. Dobara save karne se pehle tasdeeq karein.`;
+}
 
 export interface ActionState {
   error?: string;
@@ -127,6 +148,8 @@ export async function saveCustomer(_prev: ActionState, formData: FormData): Prom
 
   if (!name) return { error: "Customer name is required." };
   if (!phoneNumber) return { error: "Phone number is required." };
+  const dup = await duplicatePhoneWarning(supabase, phoneNumber, null, formData.get("confirm_duplicate") === "1");
+  if (dup) return { error: dup };
 
   // Branch + organization -- RLS policy `tenant_and_branch_scoped_access`
   // chahti hai ke branch_id ho. Bina is ke naya customer NULL branch se
@@ -195,6 +218,8 @@ export async function updateCustomer(_prev: ActionState, formData: FormData): Pr
 
   if (!name) return { error: "Customer name is required." };
   if (!phoneNumber) return { error: "Phone number is required." };
+  const dup = await duplicatePhoneWarning(supabase, phoneNumber, id, formData.get("confirm_duplicate") === "1");
+  if (dup) return { error: dup };
 
   const payload = {
     name,

@@ -1,6 +1,5 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 
 export interface ActionState {
@@ -177,8 +176,15 @@ export async function adminVerifyOrder(_prev: ActionState, formData: FormData): 
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) return { error: "Missing order id." };
 
-  const { error } = await supabase.from("bridge_orders").update({ status: "staff_verified" }).eq("id", orderId);
+  const { data: updated, error } = await supabase
+    .from("bridge_orders")
+    .update({ status: "staff_verified" })
+    .eq("id", orderId)
+    .in("status", ["assigned", "dealer_accepted", "dealer_dispatched"])
+    .select("id")
+    .maybeSingle();
   if (error) return { error: error.message };
+  if (!updated) return { error: "Verify sirf assigned, dealer-accepted ya dispatched order par hota hai." };
 
   revalidatePath("/admin/bridge-orders");
   return { success: true };
@@ -192,8 +198,15 @@ export async function adminMarkDelivered(_prev: ActionState, formData: FormData)
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) return { error: "Missing order id." };
 
-  const { error } = await supabase.from("bridge_orders").update({ status: "delivered" }).eq("id", orderId);
+  const { data: updated, error } = await supabase
+    .from("bridge_orders")
+    .update({ status: "delivered" })
+    .eq("id", orderId)
+    .eq("status", "staff_verified")
+    .select("id")
+    .maybeSingle();
   if (error) return { error: error.message };
+  if (!updated) return { error: "Delivered sirf staff-verified order par hota hai." };
 
   revalidatePath("/admin/bridge-orders");
   return { success: true };
@@ -213,29 +226,15 @@ export async function recordOrderAdvancePayment(_prev: ActionState, formData: Fo
   if (!accountId) return { error: "Account select karein." };
   if (!paymentMethod) return { error: "Payment method select karein." };
 
-  const { data: order } = await supabase.from("bridge_orders").select("advance_required, advance_paid, order_number").eq("id", orderId).single();
-  if (!order) return { error: "Order nahi mili." };
-  const remaining = Number(order.advance_required) - Number(order.advance_paid);
-  if (amount > remaining) return { error: `Sirf Rs ${remaining.toLocaleString()} baaqi hai.` };
-
-  await supabase
-    .from("bridge_orders")
-    .update({ advance_paid: Number(order.advance_paid) + amount, last_payment_method: paymentMethod })
-    .eq("id", orderId);
-
-  await supabase.from("finance_transactions").insert({
-    account_id: accountId,
-    transaction_type: "income",
-    category: "Marketplace - Advance Payment",
-    amount,
-    transaction_date: aajKaKhana(),
-    notes: `Order ${order.order_number} - Advance payment (${paymentMethod})`,
-    created_by: who.userId,
+  // Lock, hadd, cash book aur journal ek hi RPC mein (632). Doosri
+  // dafa yahan se likhne se advance aur kitab dono dohre ho jate.
+  const { error } = await (supabase as any).rpc("fn_record_bridge_advance", {
+    p_order_id: orderId,
+    p_amount: amount,
+    p_account_id: accountId,
+    p_method: paymentMethod,
   });
-  // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
-  // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
-  // badalne par bhi). Pehle yahan dobara bhi hilaya jata tha, yani Rs
-  // 1,000 ka asar Rs 2,000 hota tha.
+  if (error) return { error: error.message };
 
   revalidatePath("/admin/bridge-orders");
   revalidatePath("/admin/finance");

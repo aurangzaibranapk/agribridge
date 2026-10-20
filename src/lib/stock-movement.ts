@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
 import { ACC } from "@/lib/ledger/rules";
-import { stockOutPlan } from "@/lib/inventory/stock-math";
-import { consumeSellableFifo } from "@/lib/inventory/atomic-batch";
+import { expiredConsumeAllowed } from "@/lib/inventory/atomic-batch";
 
 /**
  * Stock ki harkat ka ek hi markazi tareeqa — FEFO se batches nikalna
@@ -57,30 +57,20 @@ async function deductStock(
   userId: string | null,
   allowExpired = false
 ): Promise<{ cost: number; error: string | null }> {
-  const supabase = createClient();
-  const { data: inv } = await supabase
-    .from("inventory")
-    .select("id, quantity_on_hand")
-    .eq("warehouse_id", warehouseId)
-    .eq("product_id", productId)
-    .maybeSingle();
-  const plan = stockOutPlan(qty, Number(inv?.quantity_on_hand ?? 0), [{ remaining: Number(inv?.quantity_on_hand ?? 0), unitCost: 0 }]);
-  if (!plan.ok && Number(inv?.quantity_on_hand ?? 0) < qty) return { cost: 0, error: plan.error };
-  if (!inv) return { cost: 0, error: "Stock record nahi mila." };
-
-  const consumed = await consumeSellableFifo(supabase, { warehouseId, productId, qty, allowExpired });
-  if (consumed.error) return { cost: 0, error: consumed.error };
-
-  const { error: movementError } = await supabase.from("stock_movements").insert({
-    inventory_id: inv.id,
-    movement_type: movementType,
-    quantity: qty,
-    reference_type: referenceType,
-    reference_id: referenceId,
-    created_by: userId,
+  const service = createServiceClient();
+  const expired = allowExpired && expiredConsumeAllowed(movementType);
+  const { data, error } = await (service as any).rpc("fn_record_stock_out", {
+    p_warehouse: warehouseId,
+    p_product: productId,
+    p_qty: qty,
+    p_movement: movementType,
+    p_reference_type: referenceType,
+    p_reference_id: referenceId,
+    p_actor: userId,
+    p_allow_expired: expired,
   });
-  if (movementError) return { cost: 0, error: movementError.message };
-  return { cost: consumed.cost, error: null };
+  if (error) return { cost: 0, error: error.message };
+  return { cost: Number(data?.cost ?? 0), error: null };
 }
 
 async function addStock(
@@ -156,15 +146,16 @@ export async function moveStock(opts: StockMoveOptions): Promise<{ error: string
 
   let cost = 0;
   if (fromWarehouseId) {
+    const outType = opts.outType ?? "transfer_out";
     const moved = await deductStock(
       fromWarehouseId,
       productId,
       qty,
-      opts.outType ?? "transfer_out",
+      outType,
       referenceType,
       referenceId,
       userId,
-      (opts.outType ?? "transfer_out") !== "sale_out"
+      expiredConsumeAllowed(outType)
     );
     if (moved.error) return { error: moved.error, cost: 0 };
     cost = moved.cost;

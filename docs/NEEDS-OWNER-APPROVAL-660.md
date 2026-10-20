@@ -58,10 +58,10 @@ Jab owner asal pata de (Chak Mahabali, Dakkhana Shah Nikdar, waghera), tab:
 
 ## 3. Grain rate — paisa mat badlo jab tak owner na kahe
 
-`rate_per_kg` fi mand hai. Nayi bikri `kg / 40 * rate` se banegi.
-Purani bikri ka `total_amount` **nahi badla** (`rate_unit = legacy_as_stored`).
+`rate_per_kg` nayi bikri par fi mand hai. Nayi bikri `kg / 40 * rate` se banegi.
+Purani 4 bikri ka `total_amount` **nahi badla**. Un ka label `per_kg` hai (665 / 677). Paisa jyon ka tyon.
 
-Agar owner kahe ke purani bikri ka total bhi fi mand hona chahiye (abhi total = kg * rate hai, jo 40 guna ho sakta hai):
+Agar owner kahe ke purani bikri ka total bhi fi mand hona chahiye (abhi total = kg * rate hai):
 
 ```sql
 -- needs owner approval — YE PAISA BADALTA HAI
@@ -69,12 +69,12 @@ Agar owner kahe ke purani bikri ka total bhi fi mand hona chahiye (abhi total = 
 --    set total_amount = round(quantity_kg / 40.0 * rate_per_kg, 2),
 --        profit = round(quantity_kg / 40.0 * rate_per_kg, 2) - coalesce(total_cogs, 0) - coalesce(bardana_cost, 0) - coalesce(mazdoori_cost, 0),
 --        rate_unit = 'per_maund'
---  where rate_unit = 'legacy_as_stored';
+--  where rate_unit = 'per_kg';
 ```
 
 ## 4. Anaj zyada bika — sirf diagnostic
 
-Bikri 45,905 kg, khareed 40,530 kg. Nayi bikri rok di gayi hai. Purana farq nahi mitaya.
+Bikri 45,905 kg, khareed 40,530 kg. 664 ki sold>bought rok galat thi (adjustments, transfer, wapsi shamil nahi). 677 us ki jagah godam ki locked `quantity_on_hand` dekhti hai. 664 aur 677 ek sath lagani hain — 664 akeli wheat aur rice ki bikri rok degi. Purana farq yahan se nahi mitaya. Phantom opening (neeche §10) merge se pehle owner ke baghair mat chhoro — warna nayi rok khayali stock par bikri khol degi.
 
 ```sql
 -- needs owner approval — sirf dekho, update mat karo
@@ -169,4 +169,98 @@ select coalesce(i.product_id, b.product_id) as product_id,
 
 select coalesce(sum(remaining_quantity), 0) - coalesce((select sum(quantity_on_hand) from public.inventory), 0) as total_gap
   from public.stock_batches;
+```
+
+## 8. Batch shortfall — sirf diagnostic
+
+16 product/godam joron par on-hand batch se aage hai (andaza 213 units, 11 par bechne layak batch nahi). Code shortfall likh kar bikri nahi rokta. 42 bigri hui batches (remaining > initial) yahan rewrite nahi hotin.
+
+```sql
+-- needs owner approval — sirf dekho, update mat karo
+with sellable as (
+  select product_id, warehouse_id,
+         sum(remaining_quantity) filter (
+           where remaining_quantity <= coalesce(initial_quantity, remaining_quantity)
+             and (expiry_date is null or expiry_date >= (timezone('Asia/Karachi', now()))::date)
+         ) as sellable_qty
+    from public.stock_batches
+   where coalesce(remaining_quantity, 0) > 0
+   group by 1, 2
+), inv as (
+  select product_id, warehouse_id, sum(quantity_on_hand) as on_hand
+    from public.inventory
+   group by 1, 2
+)
+select i.product_id, i.warehouse_id, i.on_hand, coalesce(s.sellable_qty, 0) as sellable_qty,
+       i.on_hand - coalesce(s.sellable_qty, 0) as short_qty
+  from inv i
+  left join sellable s using (product_id, warehouse_id)
+ where i.on_hand > coalesce(s.sellable_qty, 0)
+ order by short_qty desc;
+```
+
+## 9. Expire batch ka write-off — tajweez, mat chalao
+
+Expire batch bikri se nahi nikalti. Malik ke kehne par alag write-off (expired_out) ho, yahan nahi.
+
+```sql
+-- needs owner approval — mat chalao
+-- select id, batch_number, product_id, warehouse_id, remaining_quantity, expiry_date
+--   from public.stock_batches
+--  where coalesce(remaining_quantity, 0) > 0
+--    and expiry_date is not null
+--    and expiry_date < (timezone('Asia/Karachi', now()))::date;
+-- Phir har tasdeeq-shuda batch par expired_out movement + fn_consume (allow expired),
+-- owner ki alag approval ke baad. Yahan koi update nahi.
+```
+
+## 10. Phantom 24,500 kg wheat + OPENING-OWN-20261016
+
+**Merge se pehle owner ye chalaye.** Is PR ne ye SQL nahi chalayi. Nayi on-hand rok is khayali stock par gandum ki bikri khol degi agar ye batch godam ki ginti mein hai.
+
+```sql
+-- needs owner approval — MERGE SE PEHLE sirf dekho
+select id, batch_number, product_id, warehouse_id, initial_quantity, remaining_quantity, created_at
+  from public.stock_batches
+ where batch_number = 'OPENING-OWN-20261016'
+    or batch_number ilike 'OPENING-OWN%'
+    or initial_quantity = 24500
+    or remaining_quantity = 24500;
+
+select p.name, i.warehouse_id, i.quantity_on_hand
+  from public.inventory i
+  join public.products p on p.id = i.product_id
+ where i.quantity_on_hand >= 24500
+    or p.name ilike '%wheat%' or p.name ilike '%gandum%';
+```
+
+Jab owner tasdeeq kare ke ye batch asal maal nahi, tab — backup ke baad — movement se ginti ghatani hai (seedha quantity_on_hand mat likho; trigger 129 ginti movement se banata hai):
+
+```sql
+-- needs owner approval — MERGE SE PEHLE, backup ke baad, owner ke id se
+-- Pehle upar wali SELECT se id tasdeeq karo. Andha update mat chalao.
+-- update public.stock_batches
+--    set remaining_quantity = 0
+--  where batch_number = 'OPENING-OWN-20261016'
+--    and remaining_quantity = 24500;
+-- insert into public.stock_movements (inventory_id, movement_type, quantity, reference_type, notes)
+-- select i.id, 'adjustment_decrease', 24500, 'opening_own_fix',
+--        'Owner approval: phantom OPENING-OWN-20261016 24500 kg'
+--   from public.inventory i
+--   join public.stock_batches b on b.product_id = i.product_id and b.warehouse_id = i.warehouse_id
+--  where b.batch_number = 'OPENING-OWN-20261016'
+--    and i.quantity_on_hand >= 24500;
+```
+
+## 11. Dispatch duplicate order — agar unique index na bani
+
+672 unique index tab nahi banati jab ek order par do dispatch pehle se hon. Sirf dekho.
+
+```sql
+-- needs owner approval — sirf dekho
+select order_id, count(*) as kitne, array_agg(id) as ids, array_agg(dispatch_number) as numbers
+  from public.agri_dispatches
+ where order_id is not null
+ group by order_id
+having count(*) > 1;
 ```

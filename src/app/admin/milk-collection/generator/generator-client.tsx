@@ -124,11 +124,15 @@ function SummaryCard({ label, value, tone = "normal" }: { label: string; value: 
 }
 
 function ApprovalForm({ logId }: { logId: string }) {
+  const [state, action] = useFormState(approveGeneratorEntry, initialState);
   return (
-    <form action={approveGeneratorEntry} className="flex min-w-[190px] items-center gap-1">
-      <input type="hidden" name="log_id" value={logId} />
-      <input name="approval_comment" required minLength={3} placeholder="Manager comment" className="min-w-0 flex-1 rounded border border-surface-200 px-2 py-1 text-[11px]" />
-      <button type="submit" className="rounded bg-amber-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-amber-700">Verify</button>
+    <form action={action} className="flex min-w-[190px] flex-col gap-1">
+      <div className="flex items-center gap-1">
+        <input type="hidden" name="log_id" value={logId} />
+        <input name="approval_comment" required minLength={5} placeholder="Manager comment" className="min-w-0 flex-1 rounded border border-surface-200 px-2 py-1 text-[11px]" />
+        <button type="submit" className="rounded bg-amber-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-amber-700">Verify</button>
+      </div>
+      {state.error && <p className="text-[11px] text-red-600">{state.error}</p>}
     </form>
   );
 }
@@ -153,14 +157,13 @@ function GeneratorLogForm({ branches }: { branches: Branch[] }) {
         )}
         <input type="date" name="log_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <div className="grid grid-cols-2 gap-2">
-          <input type="number" step="0.1" name="opening_hours" required placeholder={t("mo_opening_hours", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="number" step="0.1" min={0} name="opening_hours" required placeholder={t("mo_opening_hours", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="number" step="0.1" name="closing_hours" required placeholder={t("mo_closing_hours", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <input type="number" step="0.01" name="diesel_liters_purchased" placeholder={t("mo_diesel_litres", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
-          <input type="number" step="0.01" name="diesel_rate_per_liter" placeholder="Diesel rate / L" className="rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="number" step="0.01" name="diesel_liters_purchased" placeholder={t("mo_diesel_litres", lang)} className="col-span-2 rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
-        <p className="text-xs text-surface-400">Rate khali chhorne par saved diesel rate use hoga. Expected diesel generator plan ke hours/L se calculate hoga.</p>
+        <p className="text-xs text-surface-400">Diesel ka rate settings se lock hai. Opening hours 0 nayi machine par theek hai.</p>
         <input type="number" step="0.1" name="electricity_units" placeholder={t("mo_electricity_units", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <input type="number" step="0.1" name="milk_volume_chilled" placeholder={t("mo_milk_chilled", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <div>

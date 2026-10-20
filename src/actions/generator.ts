@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireAction } from "@/lib/access/guard";
 import { COMMENT_MIN, COMMENT_MAX } from "@/lib/whatsapp-submissions";
+import { lockedFuelRate, openingReadingError, selfApprovalError } from "@/lib/dairy/rules";
 
 export interface ActionState {
   error?: string;
@@ -12,6 +13,8 @@ export interface ActionState {
 }
 
 export async function logGeneratorEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireAction("milk-collection.generator", "create");
+  if ("error" in gate) return { error: gate.error };
   const supabase = createClient();
   const serviceClient = createServiceClient();
   const logDate = String(formData.get("log_date") ?? aajKaKhana());
@@ -24,16 +27,22 @@ export async function logGeneratorEntry(_prev: ActionState, formData: FormData):
   const milkVolume = formData.get("milk_volume_chilled") ? Number(formData.get("milk_volume_chilled")) : null;
   const notes = (formData.get("notes") as string) || null;
 
-  if (!openingHours || openingHours < 0) return { error: "Opening Hours zaroori hai." };
+  const openingError = openingReadingError(formData.get("opening_hours"), "Opening Hours");
+  if (openingError) return { error: openingError };
   if (!closingHours || closingHours <= openingHours) return { error: "Closing Hours, Opening se zyada honi chahiye." };
 
   const { data: settings } = await supabase
     .from("fuel_rate_settings")
     .select("diesel_rate, margin, generator_expected_hours_per_liter")
     .limit(1)
-    .single();
-  const rate = submittedRate > 0 ? submittedRate : Number(settings?.diesel_rate ?? 290) + Number(settings?.margin ?? 5);
-  const expectedHoursPerLiter = Number(settings?.generator_expected_hours_per_liter ?? 2.17);
+    .maybeSingle();
+  const locked = lockedFuelRate(settings?.diesel_rate, settings?.margin, submittedRate);
+  if ("error" in locked) return { error: locked.error };
+  const rate = locked.rate;
+  if (settings?.generator_expected_hours_per_liter == null) {
+    return { error: "Generator ka expected hours/litre settings mein nahi." };
+  }
+  const expectedHoursPerLiter = Number(settings.generator_expected_hours_per_liter);
 
   const hoursRun = closingHours - openingHours;
   const litersPerHour = dieselLiters > 0 && hoursRun > 0 ? dieselLiters / hoursRun : null;
@@ -51,7 +60,7 @@ export async function logGeneratorEntry(_prev: ActionState, formData: FormData):
     const path = `generator/${Date.now()}-${field}-${photo.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
     const { error: uploadError } = await serviceClient.storage.from("meter-readings").upload(path, photo);
     if (uploadError) return null;
-    return serviceClient.storage.from("meter-readings").getPublicUrl(path).data.publicUrl;
+    return path;
   }
   const openingMeterPhotoUrl = await uploadMeterPhoto("opening_meter_photo");
   const closingMeterPhotoUrl = await uploadMeterPhoto("closing_meter_photo");
@@ -88,18 +97,25 @@ export async function logGeneratorEntry(_prev: ActionState, formData: FormData):
   return { success: true };
 }
 
-export async function approveGeneratorEntry(formData: FormData): Promise<void> {
+export async function approveGeneratorEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const logId = String(formData.get("log_id") ?? "");
   const comment = String(formData.get("approval_comment") ?? "").trim();
-  if (!logId || comment.length < COMMENT_MIN || comment.length > COMMENT_MAX) return;
+  if (!logId) return { error: "Entry nahi mili." };
+  if (comment.length < COMMENT_MIN || comment.length > COMMENT_MAX) return { error: `Comment ${COMMENT_MIN} se ${COMMENT_MAX} haroof ka ho.` };
   const gate = await requireAction("generator", "approve");
-  if ("error" in gate) return;
+  if ("error" in gate) return { error: gate.error };
+  const { data: row } = await supabase.from("generator_logs").select("created_by, approval_status").eq("id", logId).maybeSingle();
+  if (!row || row.approval_status !== "pending") return { error: "Ye entry manzoori ke liye nahi hai." };
+  const sod = selfApprovalError(gate.caller.userId, row.created_by);
+  if (sod) return { error: sod };
   const { error } = await supabase.from("generator_logs").update({
     approval_status: "approved",
     approval_comment: comment,
     approved_by: gate.caller.userId,
     approved_at: new Date().toISOString(),
   }).eq("id", logId).eq("approval_status", "pending");
-  if (!error) revalidatePath("/admin/milk-collection/generator");
+  if (error) return { error: error.message };
+  revalidatePath("/admin/milk-collection/generator");
+  return { success: true };
 }

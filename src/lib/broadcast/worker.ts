@@ -21,7 +21,7 @@ export interface WorkerDeps {
   loadBroadcast: (id: string) => Promise<BroadcastRow | null>;
   mark: (id: string, status: "sent" | "failed", provider: string, msgId: string | null, error?: string | null) => Promise<void>;
   sendTemplate: (to: string, name: string, lang: string, params: string[]) => Promise<string | null>;
-  sendSms: (to: string, text: string) => Promise<{ id: string; status: "sent" | "failed"; error?: string; provider: string }>;
+  sendSms: (to: string, text: string) => Promise<{ id: string; status: "sent" | "failed" | "queued"; error?: string; provider: string }>;
   sleep: (ms: number) => Promise<void>;
 }
 
@@ -53,6 +53,7 @@ export async function runBroadcastWorker(d: WorkerDeps): Promise<WorkerResult> {
       } else {
         const text = renderText(smsTextFor(b, r.lang), r.vars ?? {});
         const s = await d.sendSms(r.phone, text);
+        if (s.status === "queued") { res.skipped++; continue; }
         await d.mark(r.id, s.status, s.provider, s.id, s.error ?? null);
         if (s.status === "sent") res.sent++; else res.failed++;
       }

@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { FuelClient } from "./fuel-client";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { signMeterPhoto } from "@/lib/dairy/meter-photo";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,7 @@ export default async function FuelTrackerPage() {
     .limit(1)
     .single();
 
-  const logs = (rawLogs ?? []).map((l: any) => ({
+  const logs = await Promise.all((rawLogs ?? []).map(async (l: any) => ({
     id: l.id,
     log_date: l.log_date,
     opening_km: Number(l.opening_km),
@@ -42,11 +43,11 @@ export default async function FuelTrackerPage() {
     km_per_liter: l.km_per_liter ? Number(l.km_per_liter) : null,
     fuel_cost_per_liter_milk: l.fuel_cost_per_liter_milk ? Number(l.fuel_cost_per_liter_milk) : null,
     is_anomaly: l.is_anomaly,
-    meter_photo_url: l.meter_photo_url,
-    opening_meter_photo_url: l.opening_meter_photo_url,
-    closing_meter_photo_url: l.closing_meter_photo_url,
+    meter_photo_url: await signMeterPhoto(l.meter_photo_url),
+    opening_meter_photo_url: await signMeterPhoto(l.opening_meter_photo_url),
+    closing_meter_photo_url: await signMeterPhoto(l.closing_meter_photo_url),
     vehicle_name: Array.isArray(l.vehicles) ? l.vehicles[0]?.vehicle_name : l.vehicles?.vehicle_name,
-  }));
+  })));
 
   const start = (days: number) => new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   const today = new Date().toISOString().slice(0, 10);
@@ -86,7 +87,7 @@ export default async function FuelTrackerPage() {
                 margin: Number(rateSettings.margin),
                 generator_expected_hours_per_liter: Number(rateSettings.generator_expected_hours_per_liter),
               }
-            : { petrol_rate: 280, diesel_rate: 290, margin: 5, generator_expected_hours_per_liter: 2.17 }
+            : null
         }
         summary={summary}
       />

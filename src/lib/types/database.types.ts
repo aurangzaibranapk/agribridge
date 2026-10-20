@@ -24495,16 +24495,21 @@ export type Database = {
           collection_source: string
           created_at: string
           created_by: string | null
+          duplicate_clear_note: string | null
+          duplicate_cleared_at: string | null
+          duplicate_cleared_by: string | null
           entry_channel: string
           entry_date: string
           farmer_id: string
           fat_at: string | null
+          fat_override: boolean
           fat_by_profile_id: string | null
           fat_percentage: number | null
           flags: Json
           id: string
           lr: number | null
           lr_image_path: string | null
+          lr_override: boolean
           mca_profile_id: string | null
           notes: string | null
           possible_duplicate_of: string | null
@@ -24532,16 +24537,21 @@ export type Database = {
           collection_source?: string
           created_at?: string
           created_by?: string | null
+          duplicate_clear_note?: string | null
+          duplicate_cleared_at?: string | null
+          duplicate_cleared_by?: string | null
           entry_channel?: string
           entry_date?: string
           farmer_id: string
           fat_at?: string | null
+          fat_override?: boolean
           fat_by_profile_id?: string | null
           fat_percentage?: number | null
           flags?: Json
           id?: string
           lr?: number | null
           lr_image_path?: string | null
+          lr_override?: boolean
           mca_profile_id?: string | null
           notes?: string | null
           possible_duplicate_of?: string | null
@@ -24569,16 +24579,21 @@ export type Database = {
           collection_source?: string
           created_at?: string
           created_by?: string | null
+          duplicate_clear_note?: string | null
+          duplicate_cleared_at?: string | null
+          duplicate_cleared_by?: string | null
           entry_channel?: string
           entry_date?: string
           farmer_id?: string
           fat_at?: string | null
+          fat_override?: boolean
           fat_by_profile_id?: string | null
           fat_percentage?: number | null
           flags?: Json
           id?: string
           lr?: number | null
           lr_image_path?: string | null
+          lr_override?: boolean
           mca_profile_id?: string | null
           notes?: string | null
           possible_duplicate_of?: string | null
@@ -24791,6 +24806,7 @@ export type Database = {
       milk_payments: {
         Row: {
           amount: number
+          client_action_id: string | null
           created_at: string
           created_by: string | null
           farmer_id: string
@@ -24801,6 +24817,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          client_action_id?: string | null
           created_at?: string
           created_by?: string | null
           farmer_id: string
@@ -24811,6 +24828,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          client_action_id?: string | null
           created_at?: string
           created_by?: string | null
           farmer_id?: string
@@ -24980,6 +24998,7 @@ export type Database = {
           shift: string
           shortage_liters: number | null
           shortage_percentage: number | null
+          variance_kind: string | null
         }
         Insert: {
           branch_id?: string | null
@@ -24995,6 +25014,7 @@ export type Database = {
           route_name: string
           shift?: string
           shortage_liters?: number | null
+          variance_kind?: string | null
           shortage_percentage?: number | null
         }
         Update: {
@@ -25012,6 +25032,7 @@ export type Database = {
           shift?: string
           shortage_liters?: number | null
           shortage_percentage?: number | null
+          variance_kind?: string | null
         }
         Relationships: [
           {
@@ -47419,6 +47440,7 @@ export type Database = {
         | "agronomist"
         | "machinery"
         | "machinery_vendor"
+        | "call_center_agent"
       wallet_owner_type:
         | "farmer"
         | "dealer"
@@ -47693,6 +47715,7 @@ export const Constants = {
         "agronomist",
         "machinery",
         "machinery_vendor",
+        "call_center_agent",
       ],
       wallet_owner_type: [
         "farmer",

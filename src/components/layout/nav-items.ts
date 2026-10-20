@@ -1,7 +1,7 @@
 ﻿import {
   LayoutDashboard, FileText, Quote, Image as ImageIcon, HelpCircle,
   Smartphone, Mail, Handshake, Sliders, Menu as MenuIcon, FileCode, UserCog, History, Package, Wheat, FolderOpen, Tag, Layers, Building2, ShoppingCart, Wallet, BarChart3, Truck, ClipboardList, Boxes, Droplet, Store, ArrowLeftRight, Users, PackageSearch, LineChart, PiggyBank, Sprout, Bug, Leaf, Beef, ShoppingBasket, Landmark, Contact, Globe, ShoppingBag, HandCoins, CircleDollarSign, CreditCard, FileCheck, Calculator, Bell, List, MapPin, Briefcase, ShieldCheck, AlertTriangle, Bike, Zap, Wrench, Receipt, ClipboardCheck, PackagePlus, WalletCards, LayoutGrid, MailPlus, Home, ClipboardType, FileBarChart, ReceiptText, Scale, FileSpreadsheet, Sparkles, IdCard, Bot, SlidersHorizontal, MessageCircle, Trash2, Undo2, Inbox, ListChecks, PackageCheck, RefreshCw, Trophy,
-  CalendarDays, Megaphone,
+  CalendarDays, Megaphone, Phone,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -32,6 +32,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/business-360/owner", label: "Business 360 (Malik)", icon: Scale },
       { href: "/admin/branches/locations", label: "Shaakh ki Jagah", icon: MapPin },
       { href: "/admin/shops", label: "Dukanein", icon: Store },
+      { href: "/admin/shops/godam", label: "Dukan ke godam", icon: Boxes },
       { href: "/admin/shop-rent", label: "Dukan ka Kiraya aur Bill", icon: Home },
       { href: "/admin/drivers", label: "Driver aur Gaariyan", icon: IdCard },
       { href: "/admin/vehicles", label: "Gaariyan (Rozana)", icon: Bike },
@@ -230,6 +231,14 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/activity-logs", label: "Kaam ka Record", icon: History },
       { href: "/admin/settings", label: "Website Settings", icon: Sliders },
       { href: "/admin/reset-test-data", label: "Test Data Reset", icon: Trash2 },
+    ],
+  },
+  {
+    label: "Call Center",
+    items: [
+      { href: "/admin/call-center", label: "Agent Console", icon: Phone },
+      { href: "/admin/call-center/complaints", label: "Complaints Board", icon: ClipboardList },
+      { href: "/admin/call-center/agents", label: "Agent Admin", icon: ShieldCheck },
     ],
   },
 ];

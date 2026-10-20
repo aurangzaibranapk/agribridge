@@ -11,6 +11,7 @@ import { getOrderPermissions } from "@/lib/order-permissions";
 import { getBranchCreditCheck, creditLimitMessage, isAdvanceOrder } from "@/lib/order-payment-gate";
 import { checkOverdueBranchCreditBlock } from "@/lib/recovery/credit-block";
 import { notifyRole, notifyRoles, notifyBranch, notifyUser } from "@/lib/notifications";
+import { nextYearNumber } from "@/lib/counters";
 
 const HQ_ROLES = ["super_admin", "admin", "owner"];
 
@@ -47,35 +48,11 @@ interface OrderItemInput {
 }
 
 async function generateOrderNumber(): Promise<string> {
-  const serviceClient = createServiceClient();
-  const year = new Date().getFullYear() % 100;
-
-  const { data: existing } = await serviceClient.from("agri_order_counters").select("last_number").eq("year", year).single();
-  const nextNumber = (existing?.last_number ?? 0) + 1;
-
-  if (existing) {
-    await serviceClient.from("agri_order_counters").update({ last_number: nextNumber }).eq("year", year);
-  } else {
-    await serviceClient.from("agri_order_counters").insert({ year, last_number: nextNumber });
-  }
-
-  return `AGR-${year}-${String(nextNumber).padStart(5, "0")}`;
+  return nextYearNumber("agri_order_counters", "AGR-");
 }
 
 async function generatePaymentNumber(): Promise<string> {
-  const serviceClient = createServiceClient();
-  const year = new Date().getFullYear() % 100;
-
-  const { data: existing } = await serviceClient.from("agri_payment_counters").select("last_number").eq("year", year).single();
-  const nextNumber = (existing?.last_number ?? 0) + 1;
-
-  if (existing) {
-    await serviceClient.from("agri_payment_counters").update({ last_number: nextNumber }).eq("year", year);
-  } else {
-    await serviceClient.from("agri_payment_counters").insert({ year, last_number: nextNumber });
-  }
-
-  return `PAY-AGR-${year}-${String(nextNumber).padStart(5, "0")}`;
+  return nextYearNumber("agri_payment_counters", "PAY-AGR-");
 }
 
 async function logTimeline(orderId: string, status: string, note: string) {
@@ -90,6 +67,25 @@ async function getOrderBranchId(orderId: string): Promise<string | null> {
   const supabase = createClient();
   const { data } = await supabase.from("agri_orders").select("order_to_branch_id").eq("id", orderId).maybeSingle();
   return data?.order_to_branch_id ?? null;
+}
+
+/** Order maangne wala (requested_by) khud verify ya approve nahi karta. */
+async function loadOrderForDecision(orderId: string) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." as const };
+  const { data: order } = await supabase
+    .from("agri_orders")
+    .select("status, requested_by, order_number, grand_total, payment_terms")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!order) return { error: "Order nahi mila." as const };
+  if (order.requested_by && order.requested_by === user.id) {
+    return { error: "Order maangne wala khud verify ya approve nahi kar sakta." as const };
+  }
+  return { supabase, user, order };
 }
 
 async function notifyNewOrder(orderId: string, orderNumber: string, shopName: string) {
@@ -360,7 +356,6 @@ export async function createBranchAgriOrder(_prev: ActionState, formData: FormDa
 }
 
 export async function salesVerifyOrder(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) return { error: "Missing order id." };
 
@@ -369,18 +364,19 @@ export async function salesVerifyOrder(_prev: ActionState, formData: FormData): 
   if (!permissions.canSalesVerify) return { error: "Aapko Sales Verify karne ki ijazat nahi hai." };
 
   const comment = String(formData.get("comment") ?? "").trim();
+  const loaded = await loadOrderForDecision(orderId);
+  if ("error" in loaded) return { error: loaded.error };
+  if (loaded.order.status !== "submitted") return { error: "Sales verify sirf submitted order par hota hai." };
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: updated, error } = await supabase
+  const { data: updated, error } = await loaded.supabase
     .from("agri_orders")
-    .update({ status: "sales_verified", sales_verified_by: user?.id ?? null, sales_verified_at: new Date().toISOString() })
+    .update({ status: "sales_verified", sales_verified_by: loaded.user.id, sales_verified_at: new Date().toISOString() })
     .eq("id", orderId)
+    .eq("status", "submitted")
     .select("order_number")
-    .single();
+    .maybeSingle();
   if (error) return { error: error.message };
+  if (!updated) return { error: "Order is stage par nahi raha — dobara load karein." };
 
   await logTimeline(orderId, "sales_verified", comment ? `Sales Verification complete hui. Comment: ${comment}` : "Sales Verification complete hui.");
   await notifyRoles(["finance", ...HQ_ROLES], "Order Sales Verify Ho Gaya", `${updated?.order_number} - ab payment verify karein.`, `/admin/agri-orders/${orderId}`);
@@ -389,7 +385,6 @@ export async function salesVerifyOrder(_prev: ActionState, formData: FormData): 
 }
 
 export async function financeVerifyOrder(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) return { error: "Missing order id." };
 
@@ -401,18 +396,16 @@ export async function financeVerifyOrder(_prev: ActionState, formData: FormData)
   // sakta hai — yahi wo maqam hai jahan Finance udhaar ki tasdeeq
   // karti hai. Advance order is check se guzarta nahi, kyunke usmein
   // paisa pehle aata hai (rok createDispatch par lagti hai).
-  const { data: orderForCredit } = await supabase
-    .from("agri_orders")
-    .select("payment_terms, grand_total")
-    .eq("id", orderId)
-    .maybeSingle();
+  const loaded = await loadOrderForDecision(orderId);
+  if ("error" in loaded) return { error: loaded.error };
+  if (loaded.order.status !== "sales_verified") return { error: "Finance verify sirf sales-verified order par hota hai." };
 
-  if (!isAdvanceOrder(orderForCredit?.payment_terms)) {
-    const credit = await getBranchCreditCheck(branchId, Number(orderForCredit?.grand_total ?? 0));
+  if (!isAdvanceOrder(loaded.order.payment_terms)) {
+    const credit = await getBranchCreditCheck(branchId, Number(loaded.order.grand_total ?? 0));
     if (!credit.isWithinLimit) return { error: creditLimitMessage(credit) };
     const purana = await checkOverdueBranchCreditBlock({
       branchId,
-      orderAmount: Number(orderForCredit?.grand_total ?? 0),
+      orderAmount: Number(loaded.order.grand_total ?? 0),
       context: "agri_order_finance_verify",
       overrideReason: (formData.get("credit_override_reason") as string) || null,
     });
@@ -421,17 +414,15 @@ export async function financeVerifyOrder(_prev: ActionState, formData: FormData)
 
   const comment = String(formData.get("comment") ?? "").trim();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: updated, error } = await supabase
+  const { data: updated, error } = await loaded.supabase
     .from("agri_orders")
-    .update({ status: "finance_verified", finance_verified_by: user?.id ?? null, finance_verified_at: new Date().toISOString() })
+    .update({ status: "finance_verified", finance_verified_by: loaded.user.id, finance_verified_at: new Date().toISOString() })
     .eq("id", orderId)
+    .eq("status", "sales_verified")
     .select("order_number")
-    .single();
+    .maybeSingle();
   if (error) return { error: error.message };
+  if (!updated) return { error: "Order is stage par nahi raha — dobara load karein." };
 
   await logTimeline(orderId, "finance_verified", comment ? `Finance Verification complete hui. Comment: ${comment}` : "Finance Verification complete hui.");
   await notifyRoles(["manager", ...HQ_ROLES], "Order Finance Verify Ho Gaya", `${updated?.order_number} - ab approve karein.`, `/admin/agri-orders/${orderId}`);
@@ -440,7 +431,6 @@ export async function financeVerifyOrder(_prev: ActionState, formData: FormData)
 }
 
 export async function approveOrder(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) return { error: "Missing order id." };
 
@@ -449,18 +439,19 @@ export async function approveOrder(_prev: ActionState, formData: FormData): Prom
   if (!permissions.canApprove) return { error: "Aapko Order Approve karne ki ijazat nahi hai." };
 
   const comment = String(formData.get("comment") ?? "").trim();
+  const loaded = await loadOrderForDecision(orderId);
+  if ("error" in loaded) return { error: loaded.error };
+  if (loaded.order.status !== "finance_verified") return { error: "Approve sirf finance-verified order par hota hai." };
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: updatedOrder, error } = await supabase
+  const { data: updatedOrder, error } = await loaded.supabase
     .from("agri_orders")
-    .update({ status: "approved", approved_by: user?.id ?? null, approved_at: new Date().toISOString() })
+    .update({ status: "approved", approved_by: loaded.user.id, approved_at: new Date().toISOString() })
     .eq("id", orderId)
+    .eq("status", "finance_verified")
     .select("order_number, grand_total")
-    .single();
+    .maybeSingle();
   if (error) return { error: error.message };
+  if (!updatedOrder) return { error: "Order is stage par nahi raha — dobara load karein." };
 
   await logTimeline(orderId, "approved", comment ? `Order Approve ho gaya. Comment: ${comment}` : "Order Approve ho gaya.");
   await logAudit({ actionType: "approve", module: "agri_orders", recordId: orderId, recordLabel: updatedOrder?.order_number, description: `Order approve hua - Rs ${Number(updatedOrder?.grand_total ?? 0).toLocaleString()}` });
@@ -471,7 +462,6 @@ export async function approveOrder(_prev: ActionState, formData: FormData): Prom
 }
 
 export async function adminApproveAllStages(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
   const orderId = String(formData.get("order_id") ?? "");
   if (!orderId) return { error: "Missing order id." };
 
@@ -481,12 +471,9 @@ export async function adminApproveAllStages(_prev: ActionState, formData: FormDa
     return { error: "Sirf Admin / Owner ye kaam kar sakte hain." };
   }
 
-  const { data: order } = await supabase
-    .from("agri_orders")
-    .select("status, order_number, grand_total, payment_terms")
-    .eq("id", orderId)
-    .maybeSingle();
-  if (!order) return { error: "Order nahi mila." };
+  const loaded = await loadOrderForDecision(orderId);
+  if ("error" in loaded) return { error: loaded.error };
+  const order = loaded.order;
   if (!["submitted", "sales_verified", "finance_verified"].includes(order.status)) {
     return { error: "Order already approve ho chuka hai ya is stage par nahi hai." };
   }
@@ -502,33 +489,39 @@ export async function adminApproveAllStages(_prev: ActionState, formData: FormDa
     if (purana) return { error: purana };
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
   const now = new Date().toISOString();
   const comment = String(formData.get("comment") ?? "").trim() || "Admin ne saary stages ek sath approve kiye.";
 
   const updateData: Record<string, string | null> = {
     status: "approved",
-    approved_by: user?.id ?? null,
+    approved_by: loaded.user.id,
     approved_at: now,
   };
   const stagesToLog: string[] = [];
 
   if (order.status === "submitted") {
-    updateData.sales_verified_by = user?.id ?? null;
+    updateData.sales_verified_by = loaded.user.id;
     updateData.sales_verified_at = now;
-    updateData.finance_verified_by = user?.id ?? null;
+    updateData.finance_verified_by = loaded.user.id;
     updateData.finance_verified_at = now;
     stagesToLog.push("sales_verified", "finance_verified", "approved");
   } else if (order.status === "sales_verified") {
-    updateData.finance_verified_by = user?.id ?? null;
+    updateData.finance_verified_by = loaded.user.id;
     updateData.finance_verified_at = now;
     stagesToLog.push("finance_verified", "approved");
   } else {
     stagesToLog.push("approved");
   }
 
-  const { error } = await supabase.from("agri_orders").update(updateData).eq("id", orderId);
+  const { data: claimed, error } = await loaded.supabase
+    .from("agri_orders")
+    .update(updateData)
+    .eq("id", orderId)
+    .in("status", ["submitted", "sales_verified", "finance_verified"])
+    .select("id")
+    .maybeSingle();
   if (error) return { error: error.message };
+  if (!claimed) return { error: "Order is stage par nahi raha — dobara load karein." };
 
   for (const stage of stagesToLog) {
     await logTimeline(orderId, stage, `Admin bypass: ${comment}`);
@@ -552,8 +545,15 @@ export async function rejectOrder(_prev: ActionState, formData: FormData): Promi
   const permissions = await getOrderPermissions(branchId);
   if (!permissions.canReject) return { error: "Aapko Order Reject karne ki ijazat nahi hai." };
 
-  const { data: updatedOrder, error } = await supabase.from("agri_orders").update({ status: "rejected", rejection_reason: reason }).eq("id", orderId).select("order_number").single();
+  const { data: updatedOrder, error } = await supabase
+    .from("agri_orders")
+    .update({ status: "rejected", rejection_reason: reason })
+    .eq("id", orderId)
+    .in("status", ["submitted", "sales_verified", "finance_verified", "approved"])
+    .select("order_number")
+    .maybeSingle();
   if (error) return { error: error.message };
+  if (!updatedOrder) return { error: "Is stage par order reject nahi hota." };
 
   await logTimeline(orderId, "rejected", `Order Reject hua: ${reason}`);
   await logAudit({ actionType: "reject", module: "agri_orders", recordId: orderId, recordLabel: updatedOrder?.order_number, description: `Order reject hua: ${reason}` });
@@ -638,19 +638,34 @@ export async function verifyOrderPayment(_prev: ActionState, formData: FormData)
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+
+  const { data: existing } = await supabase
+    .from("agri_order_payments")
+    .select("status, created_by")
+    .eq("id", paymentId)
+    .eq("order_id", orderId)
+    .maybeSingle();
+  if (!existing) return { error: "Payment nahi mili." };
+  if (existing.status !== "pending_verification") return { error: "Verify sirf pending payment par hota hai." };
+  if (existing.created_by && existing.created_by === user.id) {
+    return { error: "Payment darj karne wala khud verify nahi kar sakta." };
+  }
 
   const { data: payment, error } = await supabase
     .from("agri_order_payments")
     .update({
       status: partial ? "partially_verified" : "verified",
-      verified_by: user?.id ?? null,
+      verified_by: user.id,
       verified_at: new Date().toISOString(),
     })
     .eq("id", paymentId)
     .eq("order_id", orderId)
+    .eq("status", "pending_verification")
     .select("payment_method, paid_amount")
-    .single();
+    .maybeSingle();
   if (error) return { error: error.message };
+  if (!payment) return { error: "Payment pehle hi faisla ho chuki hai." };
 
   // Database trigger writes the branch credit, cash book and journal in
   // the verification transaction. A failed posting rejects verification.
@@ -674,8 +689,15 @@ export async function rejectOrderPayment(_prev: ActionState, formData: FormData)
   const permissions = await getOrderPermissions(branchId);
   if (!permissions.canVerifyPayment) return { error: "Aapko Payment Reject karne ki ijazat nahi hai." };
 
-  const { error } = await supabase.from("agri_order_payments").update({ status: "rejected", rejection_reason: reason }).eq("id", paymentId);
+  const { data: rejected, error } = await supabase
+    .from("agri_order_payments")
+    .update({ status: "rejected", rejection_reason: reason })
+    .eq("id", paymentId)
+    .eq("status", "pending_verification")
+    .select("id")
+    .maybeSingle();
   if (error) return { error: error.message };
+  if (!rejected) return { error: "Sirf pending payment radd hoti hai." };
 
   await logTimeline(orderId, "payment_rejected", `Payment Reject hui: ${reason}`);
   await logAudit({ actionType: "reject", module: "agri_order_payments", recordId: paymentId, description: `Payment reject hui: ${reason}` });

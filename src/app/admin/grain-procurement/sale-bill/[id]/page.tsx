@@ -30,7 +30,7 @@ export default async function GrainSaleBillPage({ params }: { params: Promise<{ 
 
   const { data: s } = await (supabase as any)
     .from("grain_sales")
-    .select("*, buyers(*), warehouses(name)")
+    .select("id, sale_number, sale_date, grain_type, quality_grade, quantity_kg, gross_weight_kg, cut_kg, rate_per_kg, rate_unit, total_amount, total_cogs, profit, amount_received, notes, buyers(*), warehouses(name)")
     .eq("id", id)
     .maybeSingle();
 

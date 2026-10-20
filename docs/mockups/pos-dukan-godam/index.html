@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>POS card — Dukan aur Godam (tajweez)</title>
+<script>
+  document.documentElement.classList.toggle("dark", location.search.indexOf("dark") !== -1);
+</script>
+<style>
+  @font-face { font-family: "Nunito Sans"; src: url("../../../src/app/fonts/nunito-sans-400.woff2") format("woff2"); font-weight: 400; font-display: block; }
+  @font-face { font-family: "Nunito Sans"; src: url("../../../src/app/fonts/nunito-sans-600.woff2") format("woff2"); font-weight: 600; font-display: block; }
+  @font-face { font-family: "Nunito Sans"; src: url("../../../src/app/fonts/nunito-sans-700.woff2") format("woff2"); font-weight: 700; font-display: block; }
+  @font-face { font-family: "Manrope"; src: url("../../../src/app/fonts/manrope-700.woff2") format("woff2"); font-weight: 700; font-display: block; }
+  @font-face { font-family: "Manrope"; src: url("../../../src/app/fonts/manrope-800.woff2") format("woff2"); font-weight: 800; font-display: block; }
+  @font-face { font-family: "Noto Naskh"; src: url("../../../src/app/fonts/urdu/NotoNaskhArabic-ur-subset.woff2") format("woff2"); font-weight: 400; font-display: block; }
+
+  :root {
+    --bg: #f4f7f4;
+    --bg-glow: radial-gradient(900px 420px at 12% -10%, rgba(31,107,58,.10), transparent 60%),
+               radial-gradient(700px 380px at 100% 0%, rgba(16,42,84,.06), transparent 55%);
+    --ink: #17221a;
+    --muted: #68736b;
+    --card: rgba(255,255,255,.86);
+    --card-border: rgba(226,232,227,.95);
+    --card-shadow: 0 1px 2px rgba(16,24,16,.04), 0 10px 28px rgba(23,34,26,.06);
+    --line: #e2e8e3;
+    --brand: #1f6b3a;
+    --brand-soft: #eaf5ec;
+    --price: #174d2b;
+    --glass: linear-gradient(180deg, rgba(255,255,255,.78), rgba(243,249,244,.62));
+    --glass-border: rgba(31,107,58,.16);
+    --glass-ink: #1a3324;
+    --tip: #ffffff;
+    --tip-border: rgba(31,107,58,.18);
+    --hint-bg: linear-gradient(180deg, rgba(255,247,230,.92), rgba(255,244,214,.78));
+    --hint-ink: #8a5a10;
+    --hint-border: rgba(184,135,34,.35);
+    --chip: rgba(255,255,255,.7);
+    --frame: rgba(255,255,255,.55);
+    --oos: #c03636;
+    --navy: #16325c;
+    --sep: rgba(23,34,26,.18);
+  }
+  html.dark {
+    --bg: #10192c;
+    --bg-glow: radial-gradient(880px 480px at 8% -8%, rgba(79,140,255,.16), transparent 58%),
+               radial-gradient(720px 420px at 100% 0%, rgba(31,107,58,.14), transparent 55%);
+    --ink: #eef3f8;
+    --muted: #93a3bd;
+    --card: linear-gradient(180deg, rgba(28,46,82,.78), rgba(16,31,66,.88));
+    --card-border: rgba(186,210,255,.16);
+    --card-shadow: 0 16px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.07);
+    --line: rgba(148,163,184,.16);
+    --brand: #7dcea0;
+    --brand-soft: rgba(31,107,58,.28);
+    --price: #b7ebc8;
+    --glass: linear-gradient(180deg, rgba(255,255,255,.10), rgba(16,31,66,.45));
+    --glass-border: rgba(186,210,255,.18);
+    --glass-ink: #e7eef8;
+    --tip: #142848;
+    --tip-border: rgba(186,210,255,.22);
+    --hint-bg: linear-gradient(180deg, rgba(184,135,34,.22), rgba(16,31,66,.45));
+    --hint-ink: #f6d98a;
+    --hint-border: rgba(229,187,84,.35);
+    --chip: rgba(16,31,66,.45);
+    --frame: rgba(16,31,66,.35);
+    --oos: #f0a0a0;
+    --navy: #c9d8f2;
+    --sep: rgba(255,255,255,.16);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Nunito Sans", system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    background-image: var(--bg-glow);
+    min-height: 100%;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 22px 28px 18px; }
+  .top {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+    margin-bottom: 14px;
+  }
+  .kicker {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--brand);
+  }
+  .kicker i {
+    width: 7px; height: 7px; border-radius: 99px; background: #d9a62e;
+    box-shadow: 0 0 0 4px rgba(217,166,46,.18);
+  }
+  h1 {
+    font-family: Manrope, "Nunito Sans", sans-serif;
+    font-weight: 800; font-size: 22px; letter-spacing: -.02em; margin: 4px 0 2px;
+  }
+  .sub { margin: 0; color: var(--muted); font-size: 13px; }
+  .langs {
+    display: flex; gap: 6px; padding: 4px; border-radius: 12px;
+    background: var(--chip); border: 1px solid var(--line);
+    backdrop-filter: blur(12px);
+  }
+  .langs span {
+    border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 700; color: var(--muted);
+  }
+  .langs span.on { background: var(--brand-soft); color: var(--brand); }
+  .langs .ur { font-family: "Noto Naskh", serif; font-weight: 400; font-size: 14px; }
+
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .card {
+    position: relative;
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+    background: var(--card);
+    box-shadow: var(--card-shadow);
+    backdrop-filter: blur(16px);
+    overflow: visible;
+  }
+  .shot {
+    position: relative; aspect-ratio: 1.05 / 1;
+    border-radius: 10px 10px 0 0; overflow: hidden;
+    background:
+      radial-gradient(120px 80px at 50% 42%, rgba(255,255,255,.55), transparent 70%),
+      linear-gradient(180deg, #f7f8f5, #e7eee8);
+  }
+  html.dark .shot {
+    background:
+      radial-gradient(120px 80px at 50% 40%, rgba(255,255,255,.08), transparent 70%),
+      linear-gradient(180deg, #1c2c4a, #15243d);
+  }
+  .art { position: absolute; inset: 18px 28px 46px; }
+  .badge {
+    position: absolute; top: 8px; left: 8px;
+    font-size: 10px; font-weight: 800; color: white;
+    background: #c03636; border-radius: 6px; padding: 2px 6px;
+    letter-spacing: .01em;
+  }
+  .strip-wrap { position: absolute; left: 8px; right: 8px; bottom: 8px; }
+  .strip {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 6px 8px; border-radius: 9px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.35);
+    backdrop-filter: blur(14px);
+    color: var(--glass-ink);
+    font-size: 12px;
+  }
+  .strip em { font-style: normal; font-weight: 600; opacity: .72; margin-right: 4px; }
+  .strip b { font-family: Manrope, sans-serif; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .dot { display: inline-block; width: 6px; height: 6px; border-radius: 99px; margin-right: 5px; vertical-align: 1px; }
+  .dot.ok { background: #1f9d55; }
+  .dot.low { background: #e0a100; }
+  .dot.out { background: #d64545; }
+  .dot.wh { background: #3d6cb5; }
+  html.dark .dot.wh { background: #8eb4f0; }
+  .sep { opacity: .35; font-weight: 700; }
+  .dash { opacity: .55; font-weight: 700; }
+
+  .tip {
+    position: relative;
+    margin-top: 8px;
+    border-radius: 10px; padding: 7px 10px 6px;
+    background: var(--tip); border: 1px solid var(--tip-border);
+    box-shadow: 0 8px 18px rgba(16,24,40,.08);
+    backdrop-filter: blur(16px);
+    font-size: 12px;
+  }
+  .tip:before {
+    content: ""; position: absolute; top: -5px; right: 36px;
+    width: 8px; height: 8px; transform: rotate(45deg);
+    background: var(--tip); border-left: 1px solid var(--tip-border); border-top: 1px solid var(--tip-border);
+  }
+  .tip p { margin: 0 0 4px; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .tip .row { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+  .tip .row b { font-variant-numeric: tabular-nums; }
+
+  .body { padding: 10px 12px 12px; }
+  .name { margin: 0; font-size: 13.5px; font-weight: 700; line-height: 1.25; min-height: 34px; }
+  .pack { color: var(--muted); font-weight: 600; }
+  .price {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+    margin-top: 4px;
+  }
+  .price b { font-family: Manrope, sans-serif; font-size: 15px; color: var(--price); font-variant-numeric: tabular-nums; }
+  .price span { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .quiet { margin: 8px 0 0; font-size: 11px; line-height: 1.35; color: var(--muted); }
+  .hint {
+    margin-top: 8px; border-radius: 8px; padding: 6px 8px;
+    background: var(--hint-bg); color: var(--hint-ink);
+    border: 1px solid var(--hint-border);
+    font-size: 11px; font-weight: 700; line-height: 1.35;
+    backdrop-filter: blur(10px);
+  }
+
+  .legend {
+    margin-top: 16px; border-radius: 12px; padding: 10px 14px;
+    border: 1px solid var(--line); background: var(--frame);
+    backdrop-filter: blur(12px);
+    display: grid; grid-template-columns: 120px 1fr 1fr 1.3fr; gap: 6px 12px;
+    font-size: 12px; align-items: baseline;
+  }
+  .legend .h { font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+  .legend .ur { font-family: "Noto Naskh", serif; font-size: 14px; direction: rtl; text-align: right; }
+  .note { margin: 8px 2px 0; color: var(--muted); font-size: 11.5px; line-height: 1.45; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div>
+        <div class="kicker"><i></i> Tajweez · abhi live nahi · manzoori baqi</div>
+        <h1>Mahabali Karyana — POS</h1>
+        <p class="sub">Card par dukan ka maal, aur usi cheez ka godam. Naam hover ya tap par.</p>
+      </div>
+      <div class="langs" aria-label="Zuban">
+        <span>EN</span>
+        <span class="on">Roman</span>
+        <span class="ur">اردو</span>
+      </div>
+    </div>
+
+    <div class="grid">
+      <article class="card">
+        <div class="shot">
+          <svg class="art" viewBox="0 0 120 120" aria-hidden="true">
+            <rect x="28" y="22" width="64" height="82" rx="8" fill="#1f6b3a"/>
+            <rect x="28" y="22" width="64" height="22" rx="8" fill="#174d2b"/>
+            <rect x="40" y="52" width="40" height="8" rx="2" fill="#eaf5ec" opacity=".9"/>
+            <rect x="46" y="66" width="28" height="5" rx="2" fill="#d6ebda" opacity=".8"/>
+          </svg>
+          <div class="strip-wrap">
+            <div class="strip">
+              <span><i class="dot ok"></i><em>Dukan</em><b>48</b></span>
+              <span class="sep">|</span>
+              <span><i class="dot wh"></i><em>Godam</em><b>120</b></span>
+            </div>
+          </div>
+        </div>
+        <div class="body">
+          <p class="name">Engro DAP <span class="pack">50 kg</span></p>
+          <div class="price"><b>Rs 8,450</b><span>MRP 8,900</span></div>
+          <div class="tip">
+            <p>Hover / tap · godam ka naam</p>
+            <div class="row"><span>Markaz Godam</span><b>90</b></div>
+            <div class="row"><span>Doosra Godam</span><b>30</b></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="shot">
+          <svg class="art" viewBox="0 0 120 120" aria-hidden="true">
+            <path d="M36 96 V40 h48 v56 a8 8 0 0 1-8 8 H44 a8 8 0 0 1-8-8z" fill="#b88722"/>
+            <path d="M36 48 h48 v10 H36z" fill="#8a6414"/>
+            <circle cx="60" cy="72" r="10" fill="#fff4d6"/>
+          </svg>
+          <div class="strip-wrap">
+            <div class="strip">
+              <span><i class="dot out"></i><em>Dukan</em><b>4</b></span>
+              <span class="sep">|</span>
+              <span><i class="dot wh"></i><em>Godam</em><b>86</b></span>
+            </div>
+          </div>
+        </div>
+        <div class="body">
+          <p class="name">Urea <span class="pack">50 kg</span></p>
+          <div class="price"><b>Rs 4,200</b><span>MRP 4,450</span></div>
+          <div class="hint">Dukan par kam hai — godam se mangwa sakte hain</div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="shot" style="filter: grayscale(.35);">
+          <svg class="art" viewBox="0 0 120 120" aria-hidden="true">
+            <rect x="48" y="28" width="24" height="10" rx="3" fill="#9aa69c"/>
+            <rect x="42" y="38" width="36" height="64" rx="10" fill="#4c554e"/>
+            <rect x="48" y="52" width="24" height="28" rx="4" fill="#dfe6e0"/>
+          </svg>
+          <span class="badge">Khatam</span>
+          <div class="strip-wrap">
+            <div class="strip">
+              <span><i class="dot out"></i><em>Dukan</em><b>0</b></span>
+              <span class="sep">|</span>
+              <span><i class="dot wh"></i><em>Godam</em><b>40</b></span>
+            </div>
+          </div>
+        </div>
+        <div class="body">
+          <p class="name">Roundup <span class="pack">1 L</span></p>
+          <div class="price"><b>Rs 1,850</b><span>MRP 1,980</span></div>
+          <div class="hint">Dukan khatam — godam mein maujood</div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="shot">
+          <svg class="art" viewBox="0 0 120 120" aria-hidden="true">
+            <rect x="34" y="30" width="52" height="68" rx="6" fill="#2b8047"/>
+            <path d="M34 46 h52" stroke="#eaf5ec" stroke-width="3"/>
+            <circle cx="60" cy="70" r="12" fill="#f3f9f4"/>
+            <path d="M60 62 v16 M54 70 h12" stroke="#1f6b3a" stroke-width="2"/>
+          </svg>
+          <div class="strip-wrap">
+            <div class="strip">
+              <span><i class="dot low"></i><em>Dukan</em><b>12</b></span>
+              <span class="sep">|</span>
+              <span><i class="dot wh"></i><em>Godam</em><b class="dash">—</b></span>
+            </div>
+          </div>
+        </div>
+        <div class="body">
+          <p class="name">Hybrid Beej <span class="pack">2 kg</span></p>
+          <div class="price"><b>Rs 6,100</b><span>MRP 6,400</span></div>
+          <p class="quiet">Godam — matlab pata nahi. Sifar nahi likha.</p>
+        </div>
+      </article>
+    </div>
+
+    <div class="legend">
+      <div class="h">Lafz</div><div class="h">EN</div><div class="h">Roman</div><div class="h ur">اردو</div>
+      <div>Dukan</div><div>Shop</div><div>Dukan</div><div class="ur">دکان</div>
+      <div>Godam</div><div>Warehouse</div><div>Godam</div><div class="ur">گودام</div>
+      <div>Kam</div><div>Shop is low — warehouse has stock</div><div>Dukan par kam hai — godam mein maujood</div><div class="ur">دکان پر کم ہے — گودام میں موجود</div>
+    </div>
+    <p class="note">Mock adad hain. Pehla card hover/tap dikha raha hai: godam ka naam aur us ka hissa. Hint sirf tab jab dukan kam ya khatam ho aur godam mein maal ho.</p>
+  </div>
+</body>
+</html>

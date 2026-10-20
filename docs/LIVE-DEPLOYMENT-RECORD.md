@@ -1,6 +1,6 @@
 ## Pending — 20 October 2026: HR remaining guards (680–685)
 
-Branch `cursor/hr-remaining-fixes-7fa4`. Depends on PR #182 (`cursor/dept-review-fixes-660-c70c`). Migrations **not applied**. Files only. Backup ke baad pehle Testing, phir Live. 662 ke unique index se **pehle** ye read-only ginti (0 honi chahiye; koi update nahi):
+Branch `cursor/hr-remaining-fixes-7fa4` (PR #186). PR #182 is already on main. Migrations **680–685 not applied**. Files only. Backup ke baad pehle Testing, phir Live. 662 ke unique index se **pehle** ye read-only ginti (0 honi chahiye; koi update nahi):
 
 ```sql
 select pay_journal_id, count(*) as kitne
@@ -17,23 +17,106 @@ having count(*) > 1;
 - 684 advance darkhwast dene wala khud ada nahi karta.
 - 685 qist: apni entry khud manzoor, schedule, kattauti, ya wapas nahi.
 
-## Pending — 20 October 2026: department review fixes (660–670)
+## Pending — 20 October 2026: department review fixes (660–674, 677)
 
-Branch `cursor/dept-review-fixes-660-c70c`. Migrations **not applied** on Testing or Live. Do not run them until a fresh backup is confirmed in chat. Files only:
+Branch `cursor/dept-review-fixes-660-c70c`. Migrations **not applied** on Testing or Live. Do not run them until a fresh backup is confirmed in chat. Files only. Apply 660 through 674 and 677 together. 675 and 676 belong to another PR (`675_shop_godams.sql`). 664 and 677 must apply together: 664's sold>bought guard is replaced by 677; do not leave 664 applied on its own.
 
 - 660 CMS write = owner/super_admin/admin; shop phone `+923126513294`
 - 661 owner account cannot be suspended or deleted
 - 662 payroll pay claim (one payment)
 - 663 atomic batch deduct, row lock, check NOT VALID
-- 664 grain sale cannot exceed purchases
-- 665 grain rate unit label (no money change)
+- 664 grain sale file (function replaced by 677; apply with 677)
+- 665 grain rate unit: existing sales labeled `per_kg`, new default `per_maund` (no money change)
 - 666 completed transfer cannot be cancelled
 - 667 stock loss once + maker cannot approve own loss
 - 668 expired batch cannot be sold
 - 669 statement party must be in the caller's branch
-- 670 POS skips expired and over-initial batches
+- 670 does **not** replace `create_pos_sale_base_504`. Compare `pg_get_functiondef` with migration 525 first. See `docs/670-POS-FUNCTION-CHECK.md`
+- 671 FIFO shortfall log; consume revoked from authenticated; scope check
+- 672 stock adjust / count lock / year counters. Same `fn_next_year_counter(text, int)` as 632: sales tables stay allowed, and grain_sale, stock_loss, agri_dispatch are added. Authenticated execute stays revoked (service_role only), matching 632. Apply 672 after 632. If 632 runs later it replaces this combined function with the sales-only body.
+- 673 transfer accept, reject, cancel in one function
+- 674 stock-loss shop scope; release and undo are service_role only
+- 677 grain sale on locked warehouse on-hand; `fn_post_grain_sale` one transaction. 664 and 677 must apply together.
 
-Data fixes that change rows are only in `docs/NEEDS-OWNER-APPROVAL-660.md` and stay unrun. Address stays the placeholder.
+Data fixes that change rows are only in `docs/NEEDS-OWNER-APPROVAL-660.md` and stay unrun. Address stays the placeholder. **Before merge:** owner must approve the phantom wheat batch `OPENING-OWN-20261016` (24,500 kg) diagnostic and fix. This run did not execute it.
+
+## Pending — 20 October 2026: Dairy review migrations 650–659
+
+Not applied. Files only, on branch `cursor/dairy-review-fixes-fa47`. Do not run them on testing or live until the owner says so, and do not run them on live until a fresh backup size is confirmed in chat.
+
+Order when the owner approves: testing first, counts checked, then live (backup already verified), then the web build. The milk, fuel, billing, and receipt screens call `fn_apply_milk_fat`, `fn_record_milk_payment`, `fn_next_milk_collection_number`, `fn_dairy_month_pnl`, and `fn_correct_milk_receipt`. Deploying the build before the migrations will make those screens fail. 658 replaces the old payment function, so 652 and 658 must both be applied before the new payment screen is used.
+
+- 650 quality bounds, collection number, variance, indexes
+- 651 atomic FAT + khata + wallet + GL 5010/1150
+- 652 atomic milk payment and priced/verified balance
+- 653 maker-checker (nobody approves their own entry)
+- 654 counter and dispatch RLS
+- 655 monthly bill function
+- 656 private rates and private meter bucket (drops both public rate policy names)
+- 657 drops live policy `public_read_milk_rates` again
+- 658 payment, qist, khata, wallet, and cash GL 1150/1000 in one transaction; qist reverse is service-role only; farmer credit lock
+- 659 owner correction of someone else's company receipt
+
+No data cleanup was run. Rewriting old public meter URLs into paths is proposed SQL in `docs/DAIRY-REVIEW-FIXES-2026-10-20.md`, marked needs owner approval. SNF constant stays 0.805 until the owner confirms the Wasela contract.
+
+## Pending — Finance fixes (migrations 640, 641, 642, 643) — NOT applied
+
+Files only. Do not run on Testing (`hwaiuwxqldxsoukkfefn`) or Live (`ktskwawkslaznkjjacni`) until a fresh backup is verified in chat. These run after 631–633 below. Order: backup size confirmed → 631 then 632 then 633, then these four migrations on Testing → counts → then Live → then the new build. 640 locks finance writes to owner/super_admin/admin and blocks direct journal inserts. Customer balance trigger allows security-definer RPCs (POS udhaar) and a transaction-local trusted flag. 641 adds maker-checker columns, GL 2016/1180/2018, and unique indexes. Before the indexes, `fn_finance_race_duplicate_counts()` is read-only — if a group is not zero the index is skipped (notice only). Do not delete duplicate rows. 642 is the drift function. 643 blocks finance_transactions delete, sets the POS-return balance flag, adds owner on purchase_returns, and counts `approving` in pending badges. Cron: `Authorization: Bearer CRON_SECRET` on `/api/cron/customer-balance-drift`. No customer or dealer balances are rewritten by these files.
+
+## Pending — 20 October 2026: sales/parties money guards (631–633) NOT applied
+
+Migrations `631_pos_server_price_and_refund.sql`, `632_orders_shift_counters.sql`, and `633_party_money_guards.sql` are files only. They were **not** applied to Testing (`hwaiuwxqldxsoukkfefn`) or Live (`ktskwawkslaznkjjacni`).
+
+Do not apply until Boss is on the system and a verified backup size is in chat. Order stays: backup verified → pre-migration counts → 631 then 632 then 633 on Testing → verification → same on Live → then the new web build. Code calls `fn_approve_party_settlement`, `fn_record_bridge_advance`, `fn_pay_shop_bill`, `fn_record_investor_investment`, and `fn_next_year_counter`. Shipping the build before these migrations makes those buttons fail closed.
+
+Data repairs (open shift SHIFT-26-00020, Malik Traders / Zahid balances, duplicate customers, journals TXN-26-000008/9/21/25) are **not** in these migrations. Proposed SQL is in `docs/data-fixes/2026-10-20-needs-owner-approval/` and still needs owner approval. Do not run it with the migration.
+
+624–630 are already on main from the Call Center and procurement PRs. They are still not applied; their own notes are below. These money-guard files start at 631. Deploy steps: `docs/DEPLOY-184.md` (backup of the 11-arg wrapper, then 631→632→633 with this app at low rush, then smoke, rollback 633→631).
+
+## Pending — 20 October 2026: Call Center Agent (624 + 625 + 626 + 627 + 628)
+
+- Branch `cursor/call-center-agent-6663`. Migrations in order: `624_call_center_role.sql`, `625_call_center.sql`, `626_complaint_support_bridge.sql`, `627_complaint_stages_grants.sql`, `628_sms_retry.sql`.
+- **Not applied** to Live or Testing. Backup must be verified in chat before either database. Do not run these files from the agent environment.
+- 626 links CMP complaints into the Support Dashboard and lets staff file a complaint that lands unassigned for Admin. 627 adds the stage bar, private images, the Manager assign toggle (off until Owner/Admin grants it), and the AI webhook mark. 628 adds SMS retry columns (`attempts`, `next_attempt_at`) and `fn_cc_take_sms` for the Veevo drain. Web build comes after 628, otherwise the retry columns are missing and the drain falls back to a one-shot update.
+- Veevo env (no secrets in the repo): `SMS_PROVIDER=veevo`, `VEEVO_API_KEY`, optional `VEEVO_SENDER` (approved mask; empty uses the account default). Optional: `VEEVO_API_URL` (default `https://api.veevotech.com/v3/sendsms`), `VEEVO_HEADER` (only if Veevo assigned a shared-short-code header). The adapter POSTs JSON `apikey` and the same value as `hash`. Empty provider keeps `cc_sms_outbox` queued. Cron drain: `CRON_SECRET` on `GET /api/cron/sms-outbox`. Voice OTP (`sendernum` VT-vOTP) and `/v3/sendcall` are not wired.
+- Account side before the first real SMS: VT OneID (oneid.veevotech.com) API key, approved sender ID / mask in `VEEVO_SENDER`, wallet balance, and an IP allow-list if the Veevo account has one. Unverified accounts stay on testing limits.
+- Order when the owner is on the system: Testing first, smoke the four screens with a real caller, then Live only after a fresh backup size is confirmed. Web build comes after the migration, not before. `npm run test:call-center` is the local check (PGlite + rules); it does not talk to either Supabase project.
+- New role `call_center_agent` is view-only (khata, rates, milk, complaints create). SMS queue only. No WhatsApp. Maker cannot close their own complaint. Mukammal is Owner, super admin, or Admin only, and only from Check. The assignee does not close. The assign toggle is Manager-only. The AI button is Owner/Admin only.
+
+## Pending — 20 October 2026: procurement guards (NOT applied)
+
+Migrations `629_procurement_unique_guards.sql` and `630_procurement_atomic_rpc.sql` are written and tested on PGlite only. They are **not** applied to Testing or Live. PO-1792495620885 (Doctor Masala, Rs 7,500) was posted by hand: supplier_payment `93d80980-fcb9-4e53-ba32-6966772d5a3d`, journal `7d0685b9-4239-4f96-b596-86d94ffd454e` (TXN-26-001302), cash book `ef176676`. `held_payment.posted` was later set true on that row. The approve button looks for an existing supplier payment or journal for the purchase and only marks the flag — it does not post a second time. Numbered 629/630 because 624–628 belong to the SMS retry migration.
+
+Read-only — approved purchases whose held payment is still not marked posted (no writes):
+
+```sql
+select p.purchase_number,
+       p.status,
+       p.reviewed_at,
+       s.name as supplier,
+       (p.held_payment->>'amount')::numeric as held_amount,
+       p.held_payment->>'payment_date' as payment_date,
+       p.held_payment->>'payment_method' as payment_method,
+       sp.id as supplier_payment_id,
+       sp.amount as payment_amount,
+       je.id as journal_id,
+       je.entry_number
+from public.purchases p
+left join public.suppliers s on s.id = p.supplier_id
+left join public.supplier_payments sp on sp.purchase_id = p.id
+left join public.journal_entries je
+  on je.source_module = 'supplier_payment'
+ and je.source_id = sp.id
+ and je.is_reversal = false
+where p.review_status = 'approved'
+  and p.held_payment is not null
+  and coalesce(p.held_payment->>'posted', 'false') <> 'true'
+order by p.reviewed_at;
+```
+
+Before apply, run the read-only query at the top of 629 (`select * from public.fn_procurement_index_blockers();` or the raw SELECT in that file). On 20 Oct the Live read showed no `block:` groups. One shared bill (`jx0098807`, 2 purchases) and several old double stock movements are `info:` only — the new partial indexes do not use those rows as keys.
+
+Apply 629, let it commit, then 630. Then deploy the web build. Owner/Admin self-approve (13 Oct) is unchanged.
 
 ## 11 October 2026 — POS receipt print fix (web deployment pending)
 

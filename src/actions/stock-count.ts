@@ -701,6 +701,13 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
   overValue = round2(overValue);
   const netValue = round2(overValue - shortValue);
 
+  const { data: claim, error: claimError } = await (service as any).rpc("fn_claim_stock_count_post", {
+    p_count: countId,
+    p_actor: user.id,
+  });
+  if (claimError) return { error: claimError.message };
+  if (claim === "already") return { success: true, message: "Ginti pehle hi post ho chuki hai." };
+
   let entryId: string | null = null;
   if (shortValue !== 0 || overValue !== 0) {
     const journalLines: Array<{ account: string; debit?: number; credit?: number; memo?: string }> = [];
@@ -721,7 +728,10 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
       createdBy: user.id,
       lines: journalLines,
     });
-    if ("error" in posted) return { error: `Nuqsan ledger mein darj nahi ho saka: ${posted.error}` };
+    if ("error" in posted) {
+      await (service as any).rpc("fn_release_stock_count_post", { p_count: countId, p_actor: user.id });
+      return { error: `Nuqsan ledger mein darj nahi ho saka: ${posted.error}` };
+    }
     entryId = posted.id;
   }
 

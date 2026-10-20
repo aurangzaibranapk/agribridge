@@ -5,6 +5,7 @@ import { PosClient } from "@/components/pos/pos-client";
 import { CounterShiftPicker } from "@/components/pos/counter-shift-picker";
 import { ShiftBar } from "@/components/pos/shift-bar";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { chunkIds, linkedGodamStock } from "@/lib/pos/godam-on-card";
 import { loadPosPermissions } from "@/lib/pos/permissions";
 import { t } from "@/lib/i18n/translations";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
@@ -240,6 +241,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
       branch = { id: profile.branch_id, name: branchRow?.name ?? "Branch" };
 
       if (profile.shop_id) {
+        shopId = profile.shop_id;
         const { data: shopRow } = await supabase.from("shops").select("name").eq("id", profile.shop_id).maybeSingle();
         shopName = shopRow?.name ?? null;
       }
@@ -288,7 +290,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     const [{ data: inv }, { data: cust }] = await Promise.all([
       supabase
         .from("dealer_inventory")
-        .select("id, product_id, stock_quantity, selling_price, products(name, pack_size, barcode, internal_barcode, image_url, unit_code, category_id, mrp_price, purchase_price, expiry_date)")
+        .select("id, product_id, stock_quantity, selling_price, products(name, pack_size, barcode, internal_barcode, image_url, unit_code, category_id, mrp_price, purchase_price, expiry_date, min_stock_threshold)")
         .eq("dealer_id", dealer.id)
         .gt("stock_quantity", 0),
       supabase
@@ -305,7 +307,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     const { data: invRows } = warehouseId
       ? await supabase
           .from("inventory")
-          .select("product_id, quantity_on_hand, batch_id, products(name, pack_size, units_per_pack, barcode, internal_barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending, mrp_price, purchase_price, expiry_date)")
+          .select("product_id, quantity_on_hand, batch_id, products(name, pack_size, units_per_pack, barcode, internal_barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending, mrp_price, purchase_price, expiry_date, min_stock_threshold)")
           .eq("warehouse_id", warehouseId)
           // Khatam (0) stock bhi laate hain taake counter par grey nazar aaye
           // aur staff demand bana sake (10 October). Cart mein jane se rok
@@ -531,37 +533,62 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
   }
 
   // ---- Godam mein aur kitna para hai ----
-  // Dukan par khatam ho raha ho to agla sawal yehi hota hai. Jawab na
-  // mil sake to NULL rehta hai aur safha "—" likhta hai -- sifar likh
-  // dena "godam khali hai" ka jhoot hai.
-  const godamStock = new Map<string, number>();
-  let godamMaloom = false;
-  if (!dealer && branch && inventory.length) {
-    const { data: otherWh, error: whErr } = await supabase
-      .from("warehouses")
-      .select("id")
-      .eq("branch_id", branch.id);
-    const otherIds = (otherWh ?? []).map((w) => w.id).filter((id) => id !== warehouseId);
-    if (!whErr) {
-      if (otherIds.length === 0) {
-        godamMaloom = true; // dekh liya: koi doosra godam hai hi nahi
-      } else {
-        const { data: rows, error: invErr } = await supabase
-          .from("inventory")
-          .select("product_id, quantity_on_hand")
-          .in("warehouse_id", otherIds)
-          .in("product_id", inventory.map((i: any) => i.product_id));
-        if (!invErr) {
-          godamMaloom = true;
-          for (const r of rows ?? []) {
-            godamStock.set(r.product_id, (godamStock.get(r.product_id) ?? 0) + Number(r.quantity_on_hand ?? 0));
-          }
+  // Sirf us dukan se jude godam (shop_godams). Branch ka saara central
+  // godam, doosri dukan ka shelf, aur juda na hua godam yahan nahi aata.
+  // Link na ho, ya sawal fail ho, to NULL rehta hai aur card "—" likhta
+  // hai. Sifar sirf tab jab link ho aur maal na ho. Stock ka sawal
+  // fn_shop_linked_godam_stock se hai — client warehouse id nahi bhejta.
+  // Ek tukra bhi fail ho to poora godam "—" , aadha sifar nahi.
+  let godamByProduct: ReturnType<typeof linkedGodamStock> = null;
+  if (!dealer && shopId && inventory.length) {
+    const productIds = inventory.map((i: any) => i.product_id as string);
+    const { data: links, error: linkErr } = await (supabase as any)
+      .from("shop_godams")
+      .select("warehouse_id")
+      .eq("shop_id", shopId);
+    const linkedWarehouseIds = linkErr
+      ? []
+      : ((links ?? []) as { warehouse_id: string }[]).map((l) => l.warehouse_id);
+    if (!linkErr && linkedWarehouseIds.length > 0) {
+      const rows: {
+        product_id: string;
+        warehouse_id: string;
+        warehouse_name: string | null;
+        quantity_on_hand: number | string | null;
+      }[] = [];
+      let stockOk = true;
+      for (const ids of chunkIds(productIds, 400)) {
+        const { data, error } = await (supabase as any).rpc("fn_shop_linked_godam_stock", {
+          p_shop_id: shopId,
+          p_product_ids: ids,
+        });
+        if (error) {
+          stockOk = false;
+          break;
+        }
+        for (const r of (data ?? []) as any[]) {
+          rows.push({
+            product_id: r.product_id,
+            warehouse_id: r.warehouse_id,
+            warehouse_name: r.warehouse_name ?? null,
+            quantity_on_hand: r.qty,
+          });
         }
       }
+      godamByProduct = linkedGodamStock({
+        shopId,
+        linksOk: true,
+        linkedWarehouseIds,
+        stockOk,
+        productIds,
+        rows: stockOk ? rows : null,
+      });
     }
   }
   for (const it of inventory as any[]) {
-    it.warehouse_stock = godamMaloom ? godamStock.get(it.product_id) ?? 0 : null;
+    const g = godamByProduct?.get(it.product_id);
+    it.warehouse_stock = g ? g.total : null;
+    it.warehouse_lines = g ? g.lines : null;
   }
 
   // Lagat sirf us ke liye jise dekhne ki ijazat hai. Chhupana safhe par

@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { consumeBatches, createBatch, postStockValueChange, unbatchedQty } from "@/lib/inventory/batch-ledger";
+import { createBatch, postStockValueChange, unbatchedQty } from "@/lib/inventory/batch-ledger";
 
 export interface ActionState {
   error?: string;
@@ -72,15 +72,6 @@ export async function adjustStock(_prev: ActionState, formData: FormData): Promi
     return { error: `Itna stock nahi — abhi sirf ${inv.quantity_on_hand} hai.` };
   }
 
-  if (clientActionId) {
-    const { data: alreadyRecorded } = await supabase
-      .from("stock_movements")
-      .select("id")
-      .eq("client_action_id", clientActionId)
-      .maybeSingle();
-    if (alreadyRecorded) return { success: true };
-  }
-
   const notesText = [billNo ? `Bill: ${billNo}` : null, notes].filter(Boolean).join(" | ") || null;
 
   // Batch + ledger ke liye product/godam aur lagat pehle se tay karo --
@@ -99,64 +90,22 @@ export async function adjustStock(_prev: ActionState, formData: FormData): Promi
     if (!(inCost > 0)) return { error: "Stock barhane ke liye khareed rate (lagat) likhein -- warna Stock Value aur ledger nahi milenge." };
   }
 
-  const { data: movement, error } = await supabase
-    .from("stock_movements")
-    .insert({
-      inventory_id: inventoryId,
-      movement_type: direction === "increase" ? "adjustment_increase" : "adjustment_decrease",
-      quantity,
-      reference_type: "manual_adjustment",
-      notes: notesText,
-      created_by: user?.id ?? null,
-      ...(clientActionId ? { client_action_id: clientActionId } : {}),
-    })
-    .select("id")
-    .single();
-
+  const service = createServiceClient();
+  const { data: adjusted, error } = await (service as any).rpc("fn_adjust_stock", {
+    p_inventory: inventoryId,
+    p_direction: direction,
+    p_qty: quantity,
+    p_actor: user.id,
+    p_notes: notesText,
+    p_client_action: clientActionId,
+    p_unit_cost: direction === "increase" ? inCost : null,
+  });
   if (error) {
     if (clientActionId && error.code === "23505") return { success: true };
     return { error: error.message };
   }
-
-  // Batch aur ledger -- ginti ke sath hi. IN: naya batch + Dr Stock / Cr 6110.
-  // OUT: FIFO se batch ghatao + Dr 6110 / Cr Stock (lagat par).
-  let value = 0;
-  if (direction === "increase") {
-    const batchNum = `ADJ-${new Date().toISOString().replace(/[-:T.]/g, "").slice(0, 14)}`;
-    const created = await createBatch(supabase, {
-      productId: invRow.product_id,
-      warehouseId: invRow.warehouse_id,
-      qty: quantity,
-      unitCost: inCost,
-      batchNumber: batchNum,
-    });
-    if (created.error) {
-      await supabase.from("stock_movements").insert({
-        inventory_id: inventoryId,
-        movement_type: "adjustment_decrease",
-        quantity,
-        reference_type: "manual_adjustment_rollback",
-        notes: "Batch na bana — pehli harkat wapas.",
-        created_by: user.id,
-      });
-      return { error: `Batch nahi bana, ginti wapas kar di: ${created.error}` };
-    }
-    value = quantity * inCost;
-  } else if (invRow.warehouse_id) {
-    const consumed = await consumeBatches(supabase, invRow.warehouse_id, invRow.product_id, quantity);
-    if (consumed.error) {
-      await supabase.from("stock_movements").insert({
-        inventory_id: inventoryId,
-        movement_type: "adjustment_increase",
-        quantity,
-        reference_type: "manual_adjustment_rollback",
-        notes: "Batch na ghata — pehli harkat wapas.",
-        created_by: user.id,
-      });
-      return { error: `Batch nahi ghata, ginti wapas kar di: ${consumed.error}` };
-    }
-    value = consumed.cost;
-  }
+  if (adjusted?.already) return { success: true };
+  const value = Number(adjusted?.cost ?? 0);
   const posted = await postStockValueChange({
     db: supabase,
     productId: invRow.product_id,
@@ -164,7 +113,7 @@ export async function adjustStock(_prev: ActionState, formData: FormData): Promi
     direction: direction as "increase" | "decrease",
     description: `Stock adjustment (${direction === "increase" ? "barha" : "ghata"}) ${quantity}${notesText ? ` -- ${notesText}` : ""}`,
     sourceModule: "stock_adjustment",
-    sourceId: movement?.id ?? null,
+    sourceId: adjusted?.movement_id ?? null,
     createdBy: user?.id ?? null,
   });
   if (posted.error) return { error: `Stock badal gaya magar ledger mein nahi gaya: ${posted.error}` };
@@ -272,13 +221,22 @@ export async function rejectTransfer(_prev: ActionState, formData: FormData): Pr
   const supabase = createClient();
   const transferId = String(formData.get("transfer_id") ?? "");
   if (!transferId) return { error: "Missing transfer id." };
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active || !["owner", "super_admin", "admin"].includes(me.role)) {
+    return { error: "Transfer reject karna sirf Owner ya Admin ka kaam hai." };
+  }
+  const { data: row } = await supabase.from("stock_transfers").select("status").eq("id", transferId).maybeSingle();
+  if (!row) return { error: "Transfer nahi mili." };
+  if (row.status !== "pending") return { error: "Sirf pending transfer reject ho sakti hai." };
 
-  const { error } = await supabase
-    .from("stock_transfers")
-    .update({ status: "cancelled" })
-    .eq("id", transferId);
-
+  const { data: rejected, error } = await (supabase as any).rpc("fn_reject_stock_transfer", {
+    p_transfer: transferId,
+    p_actor: user.id,
+  });
   if (error) return { error: error.message };
+  if (!rejected) return { error: "Sirf pending transfer reject ho sakti hai." };
 
   revalidatePath("/admin/stock-transfers");
   return { success: true };

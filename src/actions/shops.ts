@@ -65,6 +65,9 @@ export async function createShop(_prev: ActionState, formData: FormData): Promis
   const { data: branch } = await supabase.from("branches").select("organization_id").eq("id", branchId).single();
   if (!branch) return { error: "Branch nahi mili." };
 
+  // HQ godam ka link yahan nahi likha jata. Database trigger (676)
+  // nayi dukan ko HQ se jodta hai. Admin baad mein /admin/shops/godam
+  // par badal sakta hai.
   const { data: created, error } = await supabase
     .from("shops")
     .insert({

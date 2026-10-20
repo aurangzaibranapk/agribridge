@@ -19,7 +19,7 @@ export default async function SellGrainPage() {
     supabase.from("finance_accounts").select("id, name, account_type").eq("is_active", true).order("account_type"),
     supabase
       .from("grain_sales")
-      .select("*, buyers(business_name), warehouses(name)")
+      .select("id, sale_number, grain_type, quantity_kg, rate_per_kg, rate_unit, total_amount, total_cogs, profit, amount_received, sale_date, draft_id, buyers(business_name), warehouses(name)")
       .order("created_at", { ascending: false })
       .limit(100),
     supabase.from("grain_type_products").select("grain_type, product_id"),
@@ -58,6 +58,7 @@ export default async function SellGrainPage() {
       grain_type: s.grain_type,
       quantity_kg: Number(s.quantity_kg),
       rate_per_kg: Number(s.rate_per_kg),
+      rate_unit: s.rate_unit ?? null,
       total_amount: Number(s.total_amount),
       total_cogs: Number(s.total_cogs),
       profit: Number(s.profit),

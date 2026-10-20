@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { aajKaKhana } from "@/lib/utils/format";
 import { failed, postQistSettlement } from "@/lib/ledger/rules";
 import { postFarmerLedger } from "@/lib/farmer-ledger";
@@ -34,7 +35,13 @@ export async function applyQistAtPayout(a: {
       ctx: { createdBy: a.createdBy, branchId: a.branchId ?? null, claims: [{ table: `${a.sourceTable}:qist:${it.plan_id}`, rowId: a.sourceId }] },
     });
     if (failed(posted)) {
-      await sb.rpc("fn_qist_reverse_source", { p_source_table: a.sourceTable, p_source_id: a.sourceId, p_reason: `Journal nakaam: ${posted.error}` });
+      const service = createServiceClient();
+      const reversed = await service.rpc("fn_qist_reverse_source", {
+        p_source_table: a.sourceTable, p_source_id: a.sourceId, p_reason: `Journal nakaam: ${posted.error}`,
+      });
+      if (reversed.error) {
+        return { deducted: 0, error: `Qist journal nahi bana (${posted.error}). Wapsi bhi nahi hui: ${reversed.error.message}` };
+      }
       return { deducted: 0, error: `Qist journal nahi bana, kattauti wapas: ${posted.error}` };
     }
     journalIds.push(posted.id);

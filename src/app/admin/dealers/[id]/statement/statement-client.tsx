@@ -4,7 +4,7 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Printer, Download, Mail, MessageCircle, X, Plus, Landmark } from "lucide-react";
-import { recordDealerPayment, type ActionState } from "@/actions/dealer-payments";
+import { approveDealerPayment, recordDealerPayment, type ActionState } from "@/actions/dealer-payments";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -33,6 +33,30 @@ interface Props {
   totalDebit: number;
   totalCredit: number;
   closingBalance: number;
+}
+
+export function ApproveDealerPaymentForm({
+  paymentId,
+  accounts,
+}: {
+  paymentId: string;
+  accounts: { id: string; name: string }[];
+}) {
+  const [state, action] = useFormState(approveDealerPayment, initialState);
+  return (
+    <form action={action} className="flex flex-wrap items-center gap-2">
+      <input type="hidden" name="payment_id" value={paymentId} />
+      <select name="account_id" required className="rounded border px-2 py-1 text-xs">
+        <option value="">Khata</option>
+        {accounts.map((a) => (
+          <option key={a.id} value={a.id}>{a.name}</option>
+        ))}
+      </select>
+      <button type="submit" className="rounded bg-brand-600 px-2 py-1 text-xs text-white">Manzoor</button>
+      {state.error && <span className="text-xs text-red-700">{state.error}</span>}
+      {state.message && <span className="text-xs text-green-700">{state.message}</span>}
+    </form>
+  );
 }
 
 export function DealerStatementClient(props: Props) {
@@ -178,6 +202,7 @@ function PaymentModal({ dealerId, onClose }: { dealerId: string; onClose: () => 
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
+        {state.success && state.message && <p className="mb-2 rounded-lg bg-green-50 px-3 py-2 text-xs text-green-800">{state.message}</p>}
         <form action={formAction} encType="multipart/form-data" className="space-y-2">
           <input type="hidden" name="dealer_id" value={dealerId} />
           <input type="date" name="payment_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />

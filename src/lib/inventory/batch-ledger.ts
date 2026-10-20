@@ -39,7 +39,7 @@ export async function consumeBatches(
   productId: string,
   qty: number
 ): Promise<{ cost: number; error: string | null }> {
-  const consumed = await consumeSellableFifo(db, { warehouseId, productId, qty, allowExpired: true });
+  const consumed = await consumeSellableFifo(db, { warehouseId, productId, qty, allowExpired: false });
   if (consumed.error) return { cost: 0, error: consumed.error };
   return { cost: consumed.cost, error: null };
 }
