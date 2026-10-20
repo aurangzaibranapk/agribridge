@@ -138,32 +138,50 @@ declare
   v_max_pct numeric;
   v_max_rs numeric;
   v_pct numeric;
+  v_dealer uuid;
+  v_net numeric;
+  v_non numeric := 0;
+  v_line_khata numeric := 0;
+  v_over numeric;
+  v_pay jsonb;
 begin
   if auth.uid() is null then
     raise exception 'Login zaroori hai.';
   end if;
 
-  if public.current_dealer_id() is null then
-    if p_counter_id is not null then
-      select branch_id into v_branch from public.pos_counters where id = p_counter_id;
-    end if;
-    if v_branch is null then
-      v_branch := public.fn_current_user_branch_id();
-    end if;
+  v_dealer := public.current_dealer_id();
 
+  if p_counter_id is not null and v_dealer is null then
+    select branch_id into v_branch from public.pos_counters where id = p_counter_id;
+  end if;
+  if v_branch is null and v_dealer is null then
+    v_branch := public.fn_current_user_branch_id();
+  end if;
+
+  if v_dealer is null then
     select role::text into v_role from public.profiles where id = auth.uid() and is_active;
     if v_role is null then
       raise exception 'Ye account fa''aal nahi hai.';
     end if;
-
     if p_customer_id is not null then
       select customer_type = 'wholesale_shop' into v_thok
       from public.customers where id = p_customer_id;
       v_thok := coalesce(v_thok, false);
     end if;
+  end if;
 
-    for v_item in select value from jsonb_array_elements(coalesce(p_items, '[]'::jsonb)) loop
-      v_gross := v_gross + (v_item->>'quantity')::numeric * (v_item->>'unit_price')::numeric;
+  for v_item in select value from jsonb_array_elements(coalesce(p_items, '[]'::jsonb)) loop
+    if coalesce((v_item->>'quantity')::numeric, 0) <= 0 then
+      raise exception 'Miqdaar sifar ya manfi nahi hoti.';
+    end if;
+    v_gross := v_gross + (v_item->>'quantity')::numeric * (v_item->>'unit_price')::numeric;
+    if v_dealer is not null then
+      -- Dealer apna maal apni qeemat par bechta hai. Company catalog nahi.
+      -- Sifar ya manfi rate phir bhi band hai.
+      if coalesce((v_item->>'unit_price')::numeric, 0) <= 0 then
+        raise exception 'Dealer ki bikri par rate sifar ya manfi nahi ho sakta.';
+      end if;
+    else
       select name, selling_price, wholesale_price
         into v_name, v_sell, v_whole
       from public.products where id = (v_item->>'product_id')::uuid;
@@ -182,49 +200,84 @@ begin
           raise exception '"%" ka rate Rs % hai. Rate badalne ki ijazat nahi — manager ka code chahiye.', v_name, v_expected;
         end if;
       end if;
+    end if;
+  end loop;
+
+  if v_disc < 0 then
+    raise exception 'Discount manfi nahi hota.';
+  end if;
+  if v_disc > v_gross then
+    raise exception 'Discount bill se zyada nahi ho sakta.';
+  end if;
+  if v_disc > 0 then
+    if coalesce(length(btrim(p_discount_reason)), 0) < 3 then
+      raise exception 'Discount ki wajah likhna zaroori hai.';
+    end if;
+    select max_pct, max_rs into v_max_pct, v_max_rs from private.fn_pos_discount_limits();
+    v_pct := case when v_gross > 0 then (v_disc / v_gross) * 100 else 100 end;
+    if v_disc > v_max_rs or v_pct > v_max_pct then
+      if private.fn_pos_other_manager(p_manager_code, v_branch) is null then
+        raise exception 'Discount hadd se upar hai (max Rs %, max percent %). Doosre manager ka code chahiye.', v_max_rs, v_max_pct;
+      end if;
+    elsif v_dealer is null
+          and not private.fn_pos_may_edit_rate(auth.uid())
+          and private.fn_pos_other_manager(p_manager_code, v_branch) is null then
+      raise exception 'Discount dene ki ijazat nahi. Manager se kehein.';
+    end if;
+    perform set_config('agribridge.pos_discount_ok', '1', true);
+  end if;
+
+  if v_dealer is null and coalesce(p_khata_amount, 0) > 0 then
+    if p_customer_id is null then
+      raise exception 'Udhaar sale ke liye darj shuda gahak chunein.';
+    end if;
+    select name, credit_limit, current_balance
+      into v_cust_name, v_limit, v_balance
+    from public.customers where id = p_customer_id;
+    if v_cust_name is null then
+      raise exception 'Gahak ka record nahi mila — udhaar darj nahi ho sakta.';
+    end if;
+    if coalesce(v_limit, 0) > 0 and coalesce(v_balance, 0) + p_khata_amount > v_limit then
+      if coalesce(length(btrim(p_credit_override_reason)), 0) < 3
+         or v_role not in ('owner', 'super_admin', 'admin') then
+        raise exception '"%" ki udhaar ki hadd Rs % hai. Ye bikri hadd se aage hai.', v_cust_name, v_limit;
+      end if;
+      perform set_config('agribridge.credit_limit_ok', '1', true);
+    end if;
+  end if;
+
+  -- Cash + khata = bill. Card/bank payment lines mein hain, cash_paid mein nahi.
+  -- Khata ke sath zyada wasooli nahi. Sirf naqad par zyada wasooli advance hai.
+  v_net := v_gross - v_disc;
+  if jsonb_typeof(p_payment_lines) = 'array' and jsonb_array_length(p_payment_lines) > 0 then
+    for v_pay in select value from jsonb_array_elements(p_payment_lines) loop
+      if coalesce((v_pay->>'amount')::numeric, 0) < 0 then
+        raise exception 'Payment line manfi nahi hoti.';
+      end if;
+      if lower(coalesce(v_pay->>'method', '')) = 'khata' then
+        v_line_khata := v_line_khata + (v_pay->>'amount')::numeric;
+      else
+        v_non := v_non + (v_pay->>'amount')::numeric;
+      end if;
     end loop;
-
-    if v_disc < 0 then
-      raise exception 'Discount manfi nahi hota.';
+    if v_line_khata > 0 and abs(v_line_khata - coalesce(p_khata_amount, 0)) > 0.01 then
+      raise exception 'Khata payment lines se match nahi.';
     end if;
-    if v_disc > v_gross then
-      raise exception 'Discount bill se zyada nahi ho sakta.';
+    if coalesce(p_cash_paid, 0) > v_non + 0.01 then
+      raise exception 'Naqad payment lines se zyada hai.';
     end if;
-    if v_disc > 0 then
-      if coalesce(length(btrim(p_discount_reason)), 0) < 3 then
-        raise exception 'Discount ki wajah likhna zaroori hai.';
-      end if;
-      select max_pct, max_rs into v_max_pct, v_max_rs from private.fn_pos_discount_limits();
-      v_pct := case when v_gross > 0 then (v_disc / v_gross) * 100 else 100 end;
-      if v_disc > v_max_rs or v_pct > v_max_pct then
-        if private.fn_pos_other_manager(p_manager_code, v_branch) is null then
-          raise exception 'Discount hadd se upar hai (max Rs %, max percent %). Doosre manager ka code chahiye.', v_max_rs, v_max_pct;
-        end if;
-      elsif not private.fn_pos_may_edit_rate(auth.uid())
-            and private.fn_pos_other_manager(p_manager_code, v_branch) is null then
-        raise exception 'Discount dene ki ijazat nahi. Manager se kehein.';
-      end if;
-      perform set_config('agribridge.pos_discount_ok', '1', true);
-    end if;
-
-    if coalesce(p_khata_amount, 0) > 0 then
-      if p_customer_id is null then
-        raise exception 'Udhaar sale ke liye darj shuda gahak chunein.';
-      end if;
-      select name, credit_limit, current_balance
-        into v_cust_name, v_limit, v_balance
-      from public.customers where id = p_customer_id;
-      if v_cust_name is null then
-        raise exception 'Gahak ka record nahi mila — udhaar darj nahi ho sakta.';
-      end if;
-      if coalesce(v_limit, 0) > 0 and coalesce(v_balance, 0) + p_khata_amount > v_limit then
-        if coalesce(length(btrim(p_credit_override_reason)), 0) < 3
-           or v_role not in ('owner', 'super_admin', 'admin') then
-          raise exception '"%" ki udhaar ki hadd Rs % hai. Ye bikri hadd se aage hai.', v_cust_name, v_limit;
-        end if;
-        perform set_config('agribridge.credit_limit_ok', '1', true);
-      end if;
-    end if;
+  else
+    v_non := coalesce(p_cash_paid, 0);
+  end if;
+  if coalesce(p_khata_amount, 0) < 0 or coalesce(p_cash_paid, 0) < 0 then
+    raise exception 'Cash ya khata manfi nahi ho sakta.';
+  end if;
+  v_over := greatest(0, v_non + coalesce(p_khata_amount, 0) - v_net);
+  if v_over > 0.01 and coalesce(p_khata_amount, 0) > 0.01 then
+    raise exception 'Bill se zyada payment ke saath khata nahi ho sakta.';
+  end if;
+  if abs(v_non + coalesce(p_khata_amount, 0) - v_over - v_net) > 0.01 then
+    raise exception 'Cash + khata bill ke barabar nahi.';
   end if;
 
   previous_reason := coalesce(current_setting('agribridge.credit_override_reason', true), '');
@@ -277,7 +330,12 @@ declare
   v_expected numeric;
 begin
   select dealer_id, crm_customer_id into v_dealer, v_crm from public.pos_sales where id = new.sale_id;
-  if v_dealer is not null then return new; end if;
+  if v_dealer is not null then
+    if coalesce(new.unit_price, 0) <= 0 then
+      raise exception 'Dealer ki bikri par rate sifar ya manfi nahi ho sakta.';
+    end if;
+    return new;
+  end if;
   if current_setting('agribridge.pos_rate_override', true) = '1' then return new; end if;
   if v_crm is not null then
     select customer_type = 'wholesale_shop' into v_thok from public.customers where id = v_crm;
@@ -313,7 +371,6 @@ declare
   v_balance numeric;
   v_name text;
 begin
-  if new.dealer_id is not null then return new; end if;
   if v_disc > 0 then
     if current_setting('agribridge.pos_discount_ok', true) is distinct from '1' then
       raise exception 'Discount wrapper ke baghair nahi lagta.';
@@ -325,13 +382,23 @@ begin
       raise exception 'Discount hadd se upar hai.';
     end if;
   end if;
-  if coalesce(new.khata_amount, 0) > 0 and new.crm_customer_id is not null then
+  if new.dealer_id is null and coalesce(new.khata_amount, 0) > 0 and new.crm_customer_id is not null then
     select name, credit_limit, current_balance into v_name, v_limit, v_balance
     from public.customers where id = new.crm_customer_id;
     if coalesce(v_limit, 0) > 0 and coalesce(v_balance, 0) + new.khata_amount > v_limit
        and current_setting('agribridge.credit_limit_ok', true) is distinct from '1' then
       raise exception '"%" ki udhaar ki hadd se aage.', coalesce(v_name, 'gahak');
     end if;
+  end if;
+  if coalesce(new.khata_amount, 0) < 0 or coalesce(new.cash_paid, 0) < 0 then
+    raise exception 'Cash ya khata manfi nahi ho sakta.';
+  end if;
+  if coalesce(new.khata_amount, 0) > coalesce(new.total_amount, 0) + 0.009 then
+    raise exception 'Khata bill se zyada hai.';
+  end if;
+  if coalesce(new.khata_amount, 0) > 0.009
+     and coalesce(new.cash_paid, 0) + coalesce(new.khata_amount, 0) > coalesce(new.total_amount, 0) + 0.009 then
+    raise exception 'Bill se zyada payment ke saath khata nahi ho sakta.';
   end if;
   return new;
 end;
@@ -380,6 +447,8 @@ create table if not exists public.pos_receipt_counters (
   last_number int not null default 0,
   primary key (scope_id, year)
 );
+alter table public.pos_receipt_counters enable row level security;
+revoke all on table public.pos_receipt_counters from public, anon, authenticated;
 
 create table if not exists public.pos_receipt_prints (
   id uuid primary key default gen_random_uuid(),

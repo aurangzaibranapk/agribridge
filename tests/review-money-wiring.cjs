@@ -66,6 +66,12 @@ assert.match(shifts, /pos_shift_shortage_reviews/);
 assert.match(shifts, /fn_review_shift_shortage/);
 assert.match(shifts, /status: "open"/);
 
+assert.match(read("src/actions/ai-suggestions.ts"), /nextYearNumber\("agri_order_counters"/);
+assert.match(read("src/lib/utils/bridge-tools.ts"), /nextYearNumber\("agri_order_counters"/);
+assert.ok(!/from\("agri_order_counters"\)/.test(read("src/actions/ai-suggestions.ts")), "ai suggestions counter RMW hata");
+assert.ok(!/from\("agri_order_counters"\)/.test(read("src/lib/utils/bridge-tools.ts")), "bridge tools counter RMW hata");
+assert.match(read("src/actions/shop-rent.ts"), /fn_request_shop_bill/);
+assert.match(read("src/app/admin/shop-rent/shop-rent-client.tsx"), /requestShopBill/);
 assert.match(read("src/actions/customer-udhaar.ts"), /customer_ledger/);
 assert.match(read("src/lib/ai/work-coach.ts"), /Maker-checker/);
 

@@ -12,6 +12,18 @@ assert.match(s631, /trg_pos_return_cash_cap/);
 assert.match(s631, /security definer/);
 assert.match(s631, /pos_discount_ok/);
 assert.match(s631, /comment on table public.customer_ledger/i);
+assert.match(s631, /alter table public.pos_receipt_counters enable row level security/);
+assert.match(s631, /revoke all on table public.pos_receipt_counters from public, anon, authenticated/);
+assert.match(s631, /Dealer ki bikri par rate sifar ya manfi nahi ho sakta/);
+assert.match(s631, /Cash \+ khata bill ke barabar nahi/);
+assert.match(s631, /Khata bill se zyada hai/);
+assert.ok(!/if new\.dealer_id is not null then return new/.test(s631), "dealer discount ab skip nahi");
+const deploy = fs.readFileSync(new URL("../docs/DEPLOY-184.md", import.meta.url), "utf8");
+assert.match(deploy, /631/);
+assert.match(deploy, /632/);
+assert.match(deploy, /633/);
+assert.match(deploy, /backup/i);
+assert.match(deploy, /rollback/i);
 assert.match(s631, /create_pos_sale_base_504/);
 for (const name of ["631_pos_server_price_and_refund", "632_orders_shift_counters", "633_party_money_guards"]) {
   assert.ok(fs.existsSync(new URL(`../supabase/migrations/${name}.rollback.sql`, import.meta.url)));

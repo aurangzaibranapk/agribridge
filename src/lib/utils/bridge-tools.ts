@@ -3,6 +3,7 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { decideMatch } from "@/lib/product-match";
 import type { createClient } from "@/lib/supabase/server";
 import { getInventoryValue } from "@/lib/utils/inventory-value";
+import { nextYearNumber } from "@/lib/counters";
 import { getBusinessIntelligenceReport, getCategorySales, getStaffSalesPerformance } from "@/lib/ai/business-intelligence";
 
 // ===== Tool 1: Financial Summary =====
@@ -394,15 +395,8 @@ async function draftShopOrder(
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Order number: wohi ginti jo haath se banaye order par chalti hai.
-  const { createServiceClient } = await import("@/lib/supabase/service");
-  const svc = createServiceClient();
-  const year = new Date().getFullYear() % 100;
-  const { data: counter } = await svc.from("agri_order_counters").select("last_number").eq("year", year).maybeSingle();
-  const next = (counter?.last_number ?? 0) + 1;
-  if (counter) await svc.from("agri_order_counters").update({ last_number: next }).eq("year", year);
-  else await svc.from("agri_order_counters").insert({ year, last_number: next });
-  const orderNumber = `AGR-${year}-${String(next).padStart(5, "0")}`;
+  // Order number: wohi lock jo haath se banaye order par chalti hai.
+  const orderNumber = await nextYearNumber("agri_order_counters", "AGR-");
 
   const subtotal = matched.reduce((s, m) => s + m.order_qty * m.unit_price, 0);
   const paymentTerms = args.payment_terms === "Advance Payment" ? "Advance Payment" : "Credit";

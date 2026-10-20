@@ -6,7 +6,7 @@ Do not apply until Boss is on the system and a verified backup size is in chat. 
 
 Data repairs (open shift SHIFT-26-00020, Malik Traders / Zahid balances, duplicate customers, journals TXN-26-000008/9/21/25) are **not** in these migrations. Proposed SQL is in `docs/data-fixes/2026-10-20-needs-owner-approval/` and still needs owner approval. Do not run it with the migration.
 
-Open PRs #177 (624–628) and #180 (629–630) are unchanged. These new files start at 631.
+Open PRs #177 (624–628) and #180 (629–630) are unchanged. These new files start at 631. Deploy steps: `docs/DEPLOY-184.md` (backup of the 11-arg wrapper, then 631→632→633 with this app at low rush, then smoke, rollback 633→631).
 
 ## 11 October 2026 — POS receipt print fix (web deployment pending)
 

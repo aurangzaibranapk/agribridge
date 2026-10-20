@@ -280,6 +280,23 @@ export async function createShopBill(_prev: ActionState, formData: FormData): Pr
   return { success: true };
 }
 
+/**
+ * Bill banane wala Finance se maangta hai. Adaigi alag banda kare
+ * (fn_pay_shop_bill). Agar finance_requested_by khali ho to bhi adaigi
+ * tabhi hoti hai jab paid_by created_by se alag ho.
+ */
+export async function requestShopBill(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const guard = await requireAction("shop-rent", "approve");
+  if ("error" in guard) return { error: guard.error };
+  const billId = String(formData.get("bill_id") ?? "");
+  if (!billId) return { error: "Missing bill id." };
+  const supabase = createClient();
+  const { error } = await (supabase as any).rpc("fn_request_shop_bill", { p_bill_id: billId });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/shop-rent");
+  return { success: true, notice: "Darkhwast darj. Adaigi koi doosra Finance/Admin kare." };
+}
+
 export async function markBillPaid(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const guard = await requireAction("shop-rent", "approve");
   if ("error" in guard) return { error: guard.error };

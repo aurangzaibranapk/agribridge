@@ -7,6 +7,15 @@ drop trigger if exists trg_pos_sale_discount_credit_guard on public.pos_sales;
 drop trigger if exists trg_pos_return_cash_cap on public.pos_returns;
 drop trigger if exists trg_assign_pos_receipt_no on public.pos_sales;
 
+-- Receipt counter was staff-locked in 631. Rollback restores the old open grants.
+do $$
+begin
+  if to_regclass('public.pos_receipt_counters') is not null then
+    execute 'alter table public.pos_receipt_counters disable row level security';
+    execute 'grant all on table public.pos_receipt_counters to anon, authenticated, service_role';
+  end if;
+end $$;
+
 drop function if exists public.create_pos_sale_with_credit_approval(jsonb, text, numeric, numeric, uuid, uuid, jsonb, numeric, text, uuid, text, text);
 drop function if exists public.fn_log_receipt_print(uuid);
 drop function if exists public.fn_refresh_customer_balance(uuid);
