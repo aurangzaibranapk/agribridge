@@ -16,6 +16,7 @@ import { Badge, Card, CardHead, HeroPill, SourceCard, longDate, shortDate } from
 import { StatementTable } from "@/components/portal/khata/statement-table";
 import { loadKisanWalletV2 } from "@/lib/portal/kisan-wallet-load";
 import { KisanWalletV2 } from "@/components/portal/kisan-wallet/kisan-wallet-v2";
+import { KisanWalletGlass } from "@/components/portal/kisan-wallet/kisan-wallet-glass";
 import { kisanWalletV2Enabled, showWalletV2, wt } from "@/lib/portal/kisan-wallet";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +46,10 @@ export default async function FarmerWalletPage({ searchParams }: { searchParams:
   const v2Flag = kisanWalletV2Enabled();
   if (showWalletV2(process.env, searchParams?.look)) {
     const v2 = await loadKisanWalletV2(farmer.id);
-    if (v2) return <KisanWalletV2 lang={lang} data={v2.data} qr={v2.qr} links={v2.links} />;
+    // Glassy debit card (20 Oct 2026); purana v2 card ?look=card par maujood.
+    const look = Array.isArray(searchParams?.look) ? searchParams.look[0] : searchParams?.look;
+    if (v2 && look === "card") return <KisanWalletV2 lang={lang} data={v2.data} qr={v2.qr} links={v2.links} />;
+    if (v2) return <KisanWalletGlass lang={lang} data={v2.data} qr={v2.qr} links={v2.links} />;
   }
 
   const range = parseRange(searchParams ?? {});

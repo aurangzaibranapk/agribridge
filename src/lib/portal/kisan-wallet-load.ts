@@ -5,13 +5,14 @@ import { loadKhata } from "./khata-load";
 import { buildWalletV2, type BookingRow, type FarmerCardRow, type WalletV2Data } from "./kisan-wallet";
 import { KISAN_SCAN_PATH, kisanQrSecret, signKisanQr } from "./kisan-qr";
 import { encodeQr, qrSvgPath } from "@/lib/qr/qr-encode";
+import { withdrawLink } from "@/lib/glass/glass";
 
 /**
  * Kisan Wallet v2 ka data -- SIRF kisan ke apne session (RLS) se.
  * Har query apne farmer.id par; service client istemal nahi hota.
  * Koi likhai (write) nahi.
  */
-export async function loadKisanWalletV2(farmerId: string): Promise<{ data: WalletV2Data; qr: { path: string; view: number } | null; links: { khata: string; pay: string; order: string; classic: string } } | null> {
+export async function loadKisanWalletV2(farmerId: string): Promise<{ data: WalletV2Data; qr: { path: string; view: number } | null; links: { khata: string; pay: string; order: string; classic: string; statement: string; withdraw: string } } | null> {
   const sb = createClient();
   const { data: farmer } = await sb
     .from("farmers")
@@ -54,6 +55,6 @@ export async function loadKisanWalletV2(farmerId: string): Promise<{ data: Walle
   return {
     data,
     qr,
-    links: { khata: "/portal/wallet?look=classic#statement", pay: "/portal/wallet?look=classic#adaigi", order: "/portal/orders", classic: "/portal/wallet?look=classic" },
+    links: { khata: "/portal/wallet?look=classic#statement", pay: "/portal/wallet?look=classic#adaigi", order: "/portal/orders", classic: "/portal/wallet?look=classic", statement: "/portal/wallet/statement", withdraw: withdrawLink(data.code) },
   };
 }
