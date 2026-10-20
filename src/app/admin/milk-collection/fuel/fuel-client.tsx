@@ -58,7 +58,7 @@ interface FuelSummary {
   fifteenLiters: number; fifteenCost: number; monthLiters: number; pending: number; anomalies: number;
 }
 
-export function FuelClient({ vehicles, logs, rateSettings, branches, summary }: { vehicles: Vehicle[]; logs: FuelLog[]; rateSettings: RateSettings; branches: Branch[]; summary: FuelSummary }) {
+export function FuelClient({ vehicles, logs, rateSettings, branches, summary }: { vehicles: Vehicle[]; logs: FuelLog[]; rateSettings: RateSettings | null; branches: Branch[]; summary: FuelSummary }) {
   const [showAddVehicle, setShowAddVehicle] = useState(false);
   const lang = useLang();
   const [showSettings, setShowSettings] = useState(false);
@@ -84,7 +84,7 @@ export function FuelClient({ vehicles, logs, rateSettings, branches, summary }: 
         <h2 className="font-display text-base font-semibold text-surface-900 dark:text-white">Motorcycles ({vehicles.length})</h2>
         <div className="flex gap-2">
           <button onClick={() => setShowSettings(true)} className="flex items-center gap-1.5 rounded-lg border border-surface-200 px-3 py-2 text-xs font-medium text-surface-600 hover:bg-surface-50">
-            <Settings className="h-3.5 w-3.5" /> Rate Settings (Rs {rateSettings.petrol_rate + rateSettings.margin}/L)
+            <Settings className="h-3.5 w-3.5" /> Rate Settings {rateSettings ? `(Rs ${rateSettings.petrol_rate + rateSettings.margin}/L)` : "(darj nahi)"}
           </button>
           <button onClick={() => setShowAddVehicle(true)} className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-xs font-medium text-white hover:bg-brand-700">
             <Plus className="h-3.5 w-3.5" />{t("at_add_vehicle", lang)}</button>
@@ -167,11 +167,15 @@ function SummaryCard({ label, value, tone = "normal" }: { label: string; value: 
 }
 
 function ApprovalForm({ logId }: { logId: string }) {
+  const [state, action] = useFormState(approveFuelEntry, initialState);
   return (
-    <form action={approveFuelEntry} className="flex min-w-[190px] items-center gap-1">
-      <input type="hidden" name="log_id" value={logId} />
-      <input name="approval_comment" required minLength={3} placeholder="Manager comment" className="min-w-0 flex-1 rounded border border-surface-200 px-2 py-1 text-[11px]" />
-      <button type="submit" className="rounded bg-amber-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-amber-700">Verify</button>
+    <form action={action} className="flex min-w-[190px] flex-col gap-1">
+      <div className="flex items-center gap-1">
+        <input type="hidden" name="log_id" value={logId} />
+        <input name="approval_comment" required minLength={5} placeholder="Manager comment" className="min-w-0 flex-1 rounded border border-surface-200 px-2 py-1 text-[11px]" />
+        <button type="submit" className="rounded bg-amber-600 px-2 py-1 text-[11px] font-medium text-white hover:bg-amber-700">Verify</button>
+      </div>
+      {state.error && <p className="text-[11px] text-red-600">{state.error}</p>}
     </form>
   );
 }
@@ -212,7 +216,7 @@ function AddVehicleModal({ branches, onClose }: { branches: Branch[]; onClose: (
   );
 }
 
-function RateSettingsModal({ settings, onClose }: { settings: RateSettings; onClose: () => void }) {
+function RateSettingsModal({ settings, onClose }: { settings: RateSettings | null; onClose: () => void }) {
   const [state, formAction] = useFormState(saveFuelRateSettings, initialState);
   const lang = useLang();
   if (state.success) setTimeout(onClose, 800);
@@ -229,19 +233,19 @@ function RateSettingsModal({ settings, onClose }: { settings: RateSettings; onCl
         <form action={formAction} className="space-y-2">
           <div>
             <label className="text-xs text-surface-500">{t("mf_petrol_rate", lang)}</label>
-            <input type="number" step="0.01" name="petrol_rate" defaultValue={settings.petrol_rate} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+            <input type="number" step="0.01" name="petrol_rate" defaultValue={settings?.petrol_rate ?? ""} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
           </div>
           <div>
             <label className="text-xs text-surface-500">{t("mf_diesel_rate", lang)}</label>
-            <input type="number" step="0.01" name="diesel_rate" defaultValue={settings.diesel_rate} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+            <input type="number" step="0.01" name="diesel_rate" defaultValue={settings?.diesel_rate ?? ""} required className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
           </div>
           <div>
             <label className="text-xs text-surface-500">{t("mf_margin", lang)}</label>
-            <input type="number" step="0.01" name="margin" defaultValue={settings.margin} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+            <input type="number" step="0.01" name="margin" defaultValue={settings?.margin ?? ""} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
           </div>
           <div>
             <label className="text-xs text-surface-500">{t("at_generator_hours", lang)}</label>
-            <input type="number" step="0.01" name="generator_expected_hours_per_liter" defaultValue={settings.generator_expected_hours_per_liter} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
+            <input type="number" step="0.01" name="generator_expected_hours_per_liter" defaultValue={settings?.generator_expected_hours_per_liter ?? ""} className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm" />
           </div>
           <SubmitButton label={t("c_save", lang)} />
         </form>
@@ -267,14 +271,11 @@ function FuelLogForm({ vehicles }: { vehicles: Vehicle[] }) {
         </select>
         <input type="date" name="log_date" defaultValue={aajKaKhana()} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <div className="grid grid-cols-2 gap-2">
-          <input type="number" step="0.1" name="opening_km" required placeholder={t("mf_opening_km", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
+          <input type="number" step="0.1" min={0} name="opening_km" required placeholder={t("mf_opening_km", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
           <input type="number" step="0.1" name="closing_km" required placeholder={t("mf_closing_km", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <input type="number" step="0.01" name="fuel_liters_purchased" placeholder={t("mf_litres", lang)} className="rounded-lg border border-surface-200 p-2 text-sm" />
-          <input type="number" step="0.01" name="petrol_rate_per_liter" placeholder="Petrol rate / L" className="rounded-lg border border-surface-200 p-2 text-sm" />
-        </div>
-        <p className="text-xs text-surface-400">Rate khali chhorne par aaj ka saved rate use hoga. Expected fuel motorcycle ke KM/L se calculate hoga.</p>
+        <input type="number" step="0.01" name="fuel_liters_purchased" placeholder={t("mf_litres", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+        <p className="text-xs text-surface-400">Petrol ka rate settings se lock hai. Apna rate nahi chalega. Opening 0 nayi gaari par theek hai.</p>
         <input name="route_name" placeholder={t("mf_route_name", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <input type="number" step="0.1" name="milk_volume_collected" placeholder={t("mf_milk_that_day", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <div>

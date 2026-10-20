@@ -1,3 +1,19 @@
+## Pending — 20 October 2026: Dairy review migrations 650–656
+
+Not applied. Files only, on branch `cursor/dairy-review-fixes-fa47`. Do not run them on testing or live until the owner says so, and do not run them on live until a fresh backup size is confirmed in chat.
+
+Order when the owner approves: testing first, counts checked, then live (backup already verified), then the web build. The milk, fuel, and billing screens call `fn_apply_milk_fat`, `fn_record_milk_payment`, `fn_next_milk_collection_number`, and `fn_dairy_month_pnl`. Deploying the build before the migrations will make those screens fail.
+
+- 650 quality bounds, collection number, variance, indexes
+- 651 atomic FAT + khata + wallet + GL 5010/1150
+- 652 atomic milk payment and priced/verified balance
+- 653 maker-checker (nobody approves their own entry)
+- 654 counter and dispatch RLS
+- 655 monthly bill function
+- 656 private rates and private meter bucket
+
+No data cleanup was run. Rewriting old public meter URLs into paths is proposed SQL in `docs/DAIRY-REVIEW-FIXES-2026-10-20.md`, marked needs owner approval. SNF constant stays 0.805 until the owner confirms the Wasela contract.
+
 ## 11 October 2026 — POS receipt print fix (web deployment pending)
 
 Receipt modals now render through a body portal so dashboard scroll containers cannot clip long receipts or reserve blank space above them. Receipt print styles explicitly retain the last table column (line total), which generic report print CSS hides as an Actions column. Online and offline receipts share this isolation. Print page size follows the selected printer paper; use the 80 mm roll setting. No database migration. Physical printer validation remains required after deploying the new build.

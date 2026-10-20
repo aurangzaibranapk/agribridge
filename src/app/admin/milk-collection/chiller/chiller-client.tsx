@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
-import { applyFatAction, applyFatToBatch, recordChillerReceipt, type ActionState } from "@/actions/milk-chiller";
+import { applyFatAction, applyFatToBatch, clearMilkDuplicate, recordChillerReceipt, type ActionState } from "@/actions/milk-chiller";
 import { NO_ROUTE } from "@/lib/milk-collection";
 import { Droplet, AlertTriangle, ImageIcon } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
@@ -20,6 +20,8 @@ export interface PendingEntry {
   collectionSource: string;
   lr_url: string | null;
   flags: string[];
+  needsDuplicateClear?: boolean;
+  canManage?: boolean;
 }
 
 export interface RouteGroup {
@@ -30,6 +32,18 @@ export interface RouteGroup {
   received: number | null;
   shortageLiters: number | null;
   redAlert: boolean;
+}
+
+function ClearDuplicate({ entryId }: { entryId: string }) {
+  const [state, action] = useFormState(clearMilkDuplicate, initial);
+  return (
+    <form action={action} className="mt-2 flex flex-wrap items-center gap-2">
+      <input type="hidden" name="entry_id" value={entryId} />
+      <input name="clear_note" required minLength={5} placeholder="Duplicate saaf karne ki wajah" className="min-w-[12rem] flex-1 rounded-lg border border-amber-300 p-2 text-xs" />
+      <Submit label="Nishan saaf" tone="surface" />
+      <Notice state={state} />
+    </form>
+  );
 }
 
 function Notice({ state }: { state: ActionState }) {
@@ -89,12 +103,18 @@ function EntryRow({ entry }: { entry: PendingEntry }) {
               type="number"
               step="0.1"
               min={0}
-              max={15}
-              placeholder="FAT"
-              className="w-20 rounded-lg border border-surface-200 p-2 text-sm"
+              max={99}
+              placeholder="FAT 1-12"
+              className="w-24 rounded-lg border border-surface-200 p-2 text-sm"
             />
+            {entry.canManage && (
+              <label className="flex items-center gap-1 text-[11px] text-surface-500">
+                <input type="checkbox" name="fat_override" value="yes" /> override
+              </label>
+            )}
             <Submit label={t("mk_apply", lang)} />
           </form>
+          {entry.needsDuplicateClear && entry.canManage && <ClearDuplicate entryId={entry.id} />}
         </div>
       </div>
       <Notice state={state} />

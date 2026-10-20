@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/layout-primitives";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { Droplet, Wallet, DollarSign, X, AlertTriangle } from "lucide-react";
+import { calculateMilkValue } from "@/lib/utils/milk-formula";
 
 interface Farmer {
   id: string;
@@ -50,11 +51,13 @@ export function MilkClient({
   entries,
   balances,
   branches,
+  formula,
 }: {
   farmers: Farmer[];
   entries: MilkEntry[];
   balances: Balance[];
   branches: Branch[];
+  formula: { snfConstant: number; referenceTs: number } | null;
 }) {
   const lang = useLang();
   const [payTarget, setPayTarget] = useState<Balance | null>(null);
@@ -200,7 +203,7 @@ export function MilkClient({
           </div>
         </div>
 
-        <NewEntryForm farmers={farmers} balances={balances} branches={branches} />
+        <NewEntryForm farmers={farmers} balances={balances} branches={branches} formula={formula} />
       </div>
 
       {payTarget && <PaymentModal balance={payTarget} onClose={() => setPayTarget(null)} />}
@@ -213,7 +216,7 @@ function currentShift() {
   return hour >= 4 && hour < 15 ? "morning" : "evening";
 }
 
-function NewEntryForm({ farmers, balances, branches }: { farmers: Farmer[]; balances: Balance[]; branches: Branch[] }) {
+function NewEntryForm({ farmers, balances, branches, formula }: { farmers: Farmer[]; balances: Balance[]; branches: Branch[]; formula: { snfConstant: number; referenceTs: number } | null }) {
   const lang = useLang();
   const [state, formAction] = useFormState(createMilkEntry, initialState);
   const [quantity, setQuantity] = useState("");
@@ -227,11 +230,11 @@ function NewEntryForm({ farmers, balances, branches }: { farmers: Farmer[]; bala
   const qtyNum = parseFloat(quantity) || 0;
   const fatNum = parseFloat(fat) || 0;
   const lrNum = parseFloat(lr) || 0;
-  const snfConstant = 0.805;
-  const referenceTs = 13;
-  const snf = lrNum > 0 && fatNum > 0 ? lrNum / 4 + fatNum * 0.2 + snfConstant : 0;
-  const ts = fatNum + snf;
-  const adjVol = qtyNum > 0 && ts > 0 ? qtyNum * (ts / referenceTs) : 0;
+  const preview = formula && qtyNum > 0 && fatNum > 0 && lrNum > 0
+    ? calculateMilkValue(qtyNum, fatNum, lrNum, 1, formula.snfConstant, formula.referenceTs)
+    : null;
+  const snf = preview?.snf ?? 0;
+  const adjVol = preview?.adjustedVolume ?? 0;
 
   const selectedBalance = balances.find((b) => b.farmer_id === farmerId);
 
@@ -336,6 +339,7 @@ function NewEntryForm({ farmers, balances, branches }: { farmers: Farmer[]; bala
 function PaymentModal({ balance, onClose }: { balance: Balance; onClose: () => void }) {
   const lang = useLang();
   const [state, formAction] = useFormState(recordMilkPayment, initialState);
+  const [clientKey] = useState(() => crypto.randomUUID());
   // 557: is kisan ki doodh wali wajib qist -- adaigi se pehle nazar aaye
   const [payout, setPayout] = useState<number>(balance.balance_due);
   const [qist, setQist] = useState<{ due: number; deduct: number; items: { code: string; deduct: number; shortfall: number }[] } | null>(null);
@@ -366,6 +370,7 @@ function PaymentModal({ balance, onClose }: { balance: Balance; onClose: () => v
         {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("mk_payment_recorded", lang)}</p>}
         <form action={formAction} className="space-y-3">
           <input type="hidden" name="farmer_id" value={balance.farmer_id} />
+          <input type="hidden" name="client_action_id" value={clientKey} />
           <div>
             <Label>{t("mk_amount_req", lang)}</Label>
             <Input type="number" step="0.01" name="amount" max={balance.balance_due} defaultValue={balance.balance_due} required onChange={(e) => setPayout(Number(e.target.value))} />

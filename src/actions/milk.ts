@@ -2,11 +2,13 @@
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { requireMoneyAdmin } from "@/lib/access/money-gate";
+import { requireAction } from "@/lib/access/guard";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { recordCollection, applyFat } from "@/lib/milk-collection";
-import { postFarmerLedger, postFarmerWallet } from "@/lib/farmer-ledger";
 import { previewQist } from "@/actions/qist";
 import { applyQistAtPayout } from "@/lib/qist/apply";
+import { fatRangeError, lrRangeError, payableCovers, rpcError } from "@/lib/dairy/rules";
 
 export interface ActionState {
   error?: string;
@@ -29,6 +31,8 @@ export interface ActionState {
  * lagega) alag banega.
  */
 export async function createMilkEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireAction("milk-collection.collect", "create");
+  if ("error" in gate) return { error: gate.error };
   const supabase = createClient();
   const farmerId = String(formData.get("farmer_id") ?? "");
   const branchId = (formData.get("branch_id") as string) || null;
@@ -43,8 +47,11 @@ export async function createMilkEntry(_prev: ActionState, formData: FormData): P
 
   if (!farmerId) return { error: "Farmer is required." };
   if (!quantity || quantity <= 0) return { error: "Quantity must be greater than zero." };
-  if (!fat || fat <= 0) return { error: "Fat % zaroori hai." };
-  if (!lr || lr <= 0) return { error: "LR zaroori hai." };
+  const allowOverride = formData.get("quality_override") === "yes" && ["owner", "super_admin", "admin", "manager"].includes(gate.caller.role);
+  const fatError = fatRangeError(fat, allowOverride);
+  if (fatError) return { error: fatError };
+  const lrError = lrRangeError(lr, allowOverride);
+  if (lrError) return { error: lrError };
 
   const {
     data: { user },
@@ -61,10 +68,11 @@ export async function createMilkEntry(_prev: ActionState, formData: FormData): P
     mcaProfileId: user.id,
     branchId,
     notes,
+    qualityOverride: allowOverride,
   });
   if ("error" in saved) return { error: saved.error };
 
-  const priced = await applyFat(saved.id, fat, user.id);
+  const priced = await applyFat(saved.id, fat, user.id, { allowOverride });
   if ("error" in priced) return { error: priced.error };
 
   revalidatePath("/admin/milk-collection");
@@ -82,12 +90,23 @@ export async function recordMilkPayment(_prev: ActionState, formData: FormData):
   const notes = (formData.get("notes") as string) || null;
   if (!farmerId) return { error: "Farmer is required." };
   if (!amount || amount <= 0) return { error: "Amount must be greater than zero." };
+  const clientKey = String(formData.get("client_action_id") ?? "").trim();
+  if (!clientKey) return { error: "Adaigi ka nishan nahi. Safha dobara kholen." };
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const service = createServiceClient();
+  const balanceCall = await (service as unknown as {
+    rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+  }).rpc("fn_milk_payable_balance", { p_farmer: farmerId });
+  if (balanceCall.error) return { error: rpcError(balanceCall.error.message) };
+  const balance = Number(balanceCall.data ?? 0);
+  const over = payableCovers(balance, amount);
+  if (over) return { error: over };
 
   // 557: Qist Plan (doodh se) ki wajib qist pehle kategi; kami akhir wali jama qist mein.
-  // Rokne ke liye wajah lazmi.
+  // Rokne ke liye wajah lazmi. source id form ka nishan hai taake do dafa
+  // submit qist do dafa na kaate.
   const skipQist = formData.get("apply_qist") === "no";
   const skipReason = String(formData.get("qist_skip_reason") ?? "").trim();
   if (skipQist && skipReason.length < 3) return { error: "Qist is dafa na kaatne ki wajah likhein." };
@@ -95,62 +114,36 @@ export async function recordMilkPayment(_prev: ActionState, formData: FormData):
   if (!skipQist) {
     const q = await applyQistAtPayout({
       partyType: "farmer", partyId: farmerId, source: "milk", payout: amount,
-      sourceTable: "milk_payment_qist", sourceId: crypto.randomUUID(), createdBy: user?.id ?? null,
+      sourceTable: "milk_payment_qist", sourceId: clientKey, createdBy: user?.id ?? null,
     });
     if (q.error) return { error: q.error };
     qistCut = q.deducted;
   }
-  // Qist wala hissa bhi kisan ke doodh ke baqaya se katna chahiye (warna
-  // milk_farmer_balances sirf naqad hissa ghatata hai aur baqaya zyada dikhta hai).
-  // Yeh row sirf baqaya ke liye hai -- GL/journal qist settlement mein ho chuka.
-  if (qistCut > 0) {
-    const { error: qErr } = await supabase.from("milk_payments").insert({
-      farmer_id: farmerId,
-      amount: qistCut,
-      payment_method: "qist_adjustment",
-      notes: `Qist Plan kattauti (naqad nahi diya) Rs ${qistCut.toLocaleString("en-PK")}`,
-      created_by: user?.id ?? null,
-    });
-    if (qErr) return { error: qErr.message };
-  }
   const cashAmount = Math.round((amount - qistCut) * 100) / 100;
   const qistNote = qistCut > 0 ? ` | Qist kati Rs ${qistCut.toLocaleString("en-PK")}` : skipQist ? ` | Qist roki: ${skipReason}` : "";
-  if (cashAmount <= 0) {
-    revalidatePath("/admin/milk-collection");
-    revalidatePath("/admin/farmer-credit");
-    return { success: true };
+  const posted = await (service as unknown as {
+    rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: { already?: boolean } | null; error: { message: string } | null }>;
+  }).rpc("fn_record_milk_payment", {
+    p_farmer: farmerId,
+    p_cash: cashAmount,
+    p_qist: qistCut,
+    p_method: paymentMethod,
+    p_notes: `${notes ?? ""}${qistNote}`.trim() || null,
+    p_by: user?.id ?? null,
+    p_client: clientKey,
+  });
+  if (posted.error) {
+    if (qistCut > 0) {
+      await (supabase as unknown as {
+        rpc: (name: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+      }).rpc("fn_qist_reverse_source", {
+        p_source_table: "milk_payment_qist",
+        p_source_id: clientKey,
+        p_reason: `Doodh ki adaigi nakaam: ${posted.error.message}`,
+      });
+    }
+    return { error: rpcError(posted.error.message) };
   }
-  const { error } = await supabase.from("milk_payments").insert({
-    farmer_id: farmerId,
-    amount: cashAmount,
-    payment_method: paymentMethod,
-    notes: `${notes ?? ""}${qistNote}`.trim() || null,
-    created_by: user?.id ?? null,
-  });
-  if (error) return { error: error.message };
-
-  const label = `Cash payment (${paymentMethod ?? "cash"})${notes ? ` - ${notes}` : ""}`;
-
-  // Doodh ki adaigi kisan ka bojh BARHATI hai (debit) -- jo raqam us ka
-  // haq thi wo ab us ke haath mein hai.
-  await postFarmerLedger({
-    farmerId,
-    sourceType: "milk",
-    ledgerType: "debit",
-    amount: cashAmount,
-    notes: label,
-    createdBy: user?.id ?? null,
-  });
-
-  await postFarmerWallet({
-    farmerId,
-    type: "milk_payment",
-    direction: "debit",
-    amount: cashAmount,
-    notes: label,
-    referenceType: "milk_payment",
-    createdBy: user?.id ?? null,
-  });
 
   revalidatePath("/admin/milk-collection");
   revalidatePath("/admin/farmer-credit");
@@ -158,6 +151,8 @@ export async function recordMilkPayment(_prev: ActionState, formData: FormData):
 }
 
 export async function setMilkCollectionType(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireMoneyAdmin("Doodh ka rate tier badalna");
+  if (!gate.ok) return { error: gate.error };
   const supabase = createClient();
   const farmerId = String(formData.get("farmer_id") ?? "");
   const newType = String(formData.get("milk_collection_type") ?? "");
@@ -190,10 +185,16 @@ export async function saveMilkRateSettings(_prev: ActionState, formData: FormDat
   if (!gate.ok) return { error: gate.error };
   const supabase = createClient();
   const standardRate = Number(formData.get("standard_rate") ?? 0);
-  const incentive = Number(formData.get("self_dropoff_incentive") ?? 0);
-  const snfConstant = Number(formData.get("snf_constant") ?? 0.805);
-  const referenceTs = Number(formData.get("reference_ts") ?? 13);
+  const incentiveRaw = formData.get("self_dropoff_incentive");
+  const snfRaw = formData.get("snf_constant");
+  const tsRaw = formData.get("reference_ts");
+  const incentive = Number(incentiveRaw);
+  const snfConstant = Number(snfRaw);
+  const referenceTs = Number(tsRaw);
   if (!standardRate || standardRate <= 0) return { error: "Standard rate zaroori hai." };
+  if (incentiveRaw == null || String(incentiveRaw).trim() === "" || incentive < 0) return { error: "Incentive likhein (sifar ho sakta hai)." };
+  if (snfRaw == null || String(snfRaw).trim() === "" || !Number.isFinite(snfConstant)) return { error: "SNF constant likhein." };
+  if (!referenceTs || referenceTs <= 0) return { error: "Reference TS likhein." };
 
   const { data: existing } = await supabase.from("milk_rate_settings").select("id").limit(1).single();
   if (existing) {

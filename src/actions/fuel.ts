@@ -4,7 +4,9 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireAction } from "@/lib/access/guard";
+import { requireMoneyAdmin } from "@/lib/access/money-gate";
 import { COMMENT_MIN, COMMENT_MAX } from "@/lib/whatsapp-submissions";
+import { lockedFuelRate, openingReadingError, selfApprovalError } from "@/lib/dairy/rules";
 
 export interface ActionState {
   error?: string;
@@ -12,6 +14,8 @@ export interface ActionState {
 }
 
 export async function addVehicle(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireAction("milk-collection.fuel", "create");
+  if ("error" in gate) return { error: gate.error };
   const supabase = createClient();
   const vehicleName = String(formData.get("vehicle_name") ?? "").trim();
   const registrationNo = (formData.get("registration_no") as string) || null;
@@ -34,6 +38,8 @@ export async function addVehicle(_prev: ActionState, formData: FormData): Promis
 }
 
 export async function saveFuelRateSettings(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const money = await requireMoneyAdmin("Tel ka rate badalna");
+  if (!money.ok) return { error: money.error };
   const supabase = createClient();
   const petrolRate = Number(formData.get("petrol_rate") ?? 0);
   const dieselRate = Number(formData.get("diesel_rate") ?? 0);
@@ -70,6 +76,8 @@ export async function saveFuelRateSettings(_prev: ActionState, formData: FormDat
 }
 
 export async function logFuelEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireAction("milk-collection.fuel", "create");
+  if ("error" in gate) return { error: gate.error };
   const supabase = createClient();
   const serviceClient = createServiceClient();
   const vehicleId = String(formData.get("vehicle_id") ?? "");
@@ -83,14 +91,17 @@ export async function logFuelEntry(_prev: ActionState, formData: FormData): Prom
   const notes = (formData.get("notes") as string) || null;
 
   if (!vehicleId) return { error: "Vehicle select karein." };
-  if (!openingKm || openingKm < 0) return { error: "Opening KM zaroori hai." };
+  const openingError = openingReadingError(formData.get("opening_km"), "Opening KM");
+  if (openingError) return { error: openingError };
   if (!closingKm || closingKm <= openingKm) return { error: "Closing KM, Opening se zyada honi chahiye." };
 
   const { data: vehicle } = await supabase.from("vehicles").select("expected_km_per_liter").eq("id", vehicleId).single();
   const expectedKmPerLiter = Number(vehicle?.expected_km_per_liter ?? 45);
 
-  const { data: settings } = await supabase.from("fuel_rate_settings").select("petrol_rate, margin").limit(1).single();
-  const rate = submittedRate > 0 ? submittedRate : Number(settings?.petrol_rate ?? 280) + Number(settings?.margin ?? 5);
+  const { data: settings } = await supabase.from("fuel_rate_settings").select("petrol_rate, margin").limit(1).maybeSingle();
+  const locked = lockedFuelRate(settings?.petrol_rate, settings?.margin, submittedRate);
+  if ("error" in locked) return { error: locked.error };
+  const rate = locked.rate;
 
   const kmTravelled = closingKm - openingKm;
   const kmPerLiter = fuelLiters > 0 ? kmTravelled / fuelLiters : null;
@@ -107,7 +118,7 @@ export async function logFuelEntry(_prev: ActionState, formData: FormData): Prom
     const path = `fuel/${vehicleId}/${Date.now()}-${field}-${photo.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
     const { error: uploadError } = await serviceClient.storage.from("meter-readings").upload(path, photo);
     if (uploadError) return null;
-    return serviceClient.storage.from("meter-readings").getPublicUrl(path).data.publicUrl;
+    return path;
   }
   const openingMeterPhotoUrl = await uploadMeterPhoto("opening_meter_photo");
   const closingMeterPhotoUrl = await uploadMeterPhoto("closing_meter_photo");
@@ -145,18 +156,25 @@ export async function logFuelEntry(_prev: ActionState, formData: FormData): Prom
   return { success: true };
 }
 
-export async function approveFuelEntry(formData: FormData): Promise<void> {
+export async function approveFuelEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const logId = String(formData.get("log_id") ?? "");
   const comment = String(formData.get("approval_comment") ?? "").trim();
-  if (!logId || comment.length < COMMENT_MIN || comment.length > COMMENT_MAX) return;
+  if (!logId) return { error: "Entry nahi mili." };
+  if (comment.length < COMMENT_MIN || comment.length > COMMENT_MAX) return { error: `Comment ${COMMENT_MIN} se ${COMMENT_MAX} haroof ka ho.` };
   const gate = await requireAction("fuel", "approve");
-  if ("error" in gate) return;
+  if ("error" in gate) return { error: gate.error };
+  const { data: row } = await supabase.from("fuel_logs").select("created_by, approval_status").eq("id", logId).maybeSingle();
+  if (!row || row.approval_status !== "pending") return { error: "Ye entry manzoori ke liye nahi hai." };
+  const sod = selfApprovalError(gate.caller.userId, row.created_by);
+  if (sod) return { error: sod };
   const { error } = await supabase.from("fuel_logs").update({
     approval_status: "approved",
     approval_comment: comment,
     approved_by: gate.caller.userId,
     approved_at: new Date().toISOString(),
   }).eq("id", logId).eq("approval_status", "pending");
-  if (!error) revalidatePath("/admin/milk-collection/fuel");
+  if (error) return { error: error.message };
+  revalidatePath("/admin/milk-collection/fuel");
+  return { success: true };
 }
