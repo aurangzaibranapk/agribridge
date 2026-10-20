@@ -32,6 +32,8 @@ import {
   Lock,
 } from "lucide-react";
 import { ReceiptModal } from "@/components/pos/receipt-modal";
+import { ReceiptPrint } from "@/components/glass/receipt-print";
+import type { ReceiptData } from "@/lib/glass/glass";
 import { OfflineReceiptModal, type OfflineReceiptData } from "@/components/pos/offline-receipt-modal";
 import { BarcodeCameraModal } from "@/components/pos/barcode-camera-modal";
 import { PosReturn } from "@/components/pos/pos-return";
@@ -211,6 +213,7 @@ export function PosClient({
   const checkoutKey = useRef(createCheckoutKey(() => crypto.randomUUID())).current;
   const [overdueDialog, setOverdueDialog] = useState<{ info: CreditBlockInfo | null; text: string; resolve: (c: OverdueChoice) => void } | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [saleAnim, setSaleAnim] = useState<ReceiptData | null>(null);
   const [completedSaleId, setCompletedSaleId] = useState<string | null>(null);
   const [offlineReceipt, setOfflineReceipt] = useState<OfflineReceiptData | null>(null);
   const [barcodeError, setBarcodeError] = useState<string | null>(null);
@@ -692,6 +695,7 @@ export function PosClient({
           : item
       )
     );
+    setSaleAnim({ kind: "pos", no: String(data).slice(0, 8).toUpperCase(), date: new Date().toLocaleString("en-PK"), amount: Math.max(0, (Number(total) || 0) - (Number(discount) || 0)), lines: [["Items", String(cart.length)]] });
     setCompletedSaleId(data);
     resetSale();
     setSubmitting(false);
@@ -918,7 +922,8 @@ export function PosClient({
         {message && <div className={`rounded-lg px-3 py-2 text-sm ${message.type === "success" ? "bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-300" : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"}`}>{message.text}</div>}
         <div className="flex gap-2"><button type="button" onClick={resetSale} disabled={submitting || cart.length === 0} className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-500 hover:bg-surface-50 disabled:opacity-40 dark:border-surface-700 dark:text-surface-400 dark:hover:bg-surface-800">{t("pos_clear_cart", lang)}</button><Button data-guide="pos-checkout" className="flex-1 py-3 text-base" onClick={handleCheckout} disabled={submitting || cart.length === 0}>{submitting ? "Processing..." : "Checkout"}</Button></div>
       </Card>
-      {completedSaleId && <ReceiptModal saleId={completedSaleId} onClose={closeReceiptAndRefreshProducts} lang={lang} />}
+      {saleAnim && <ReceiptPrint receipt={saleAnim} autoCloseMs={2600} onClose={() => setSaleAnim(null)} />}
+      {completedSaleId && !saleAnim && <ReceiptModal saleId={completedSaleId} onClose={closeReceiptAndRefreshProducts} lang={lang} />}
       {offlineReceipt && <OfflineReceiptModal receipt={offlineReceipt} onClose={closeReceiptAndRefreshProducts} />}
       {showCameraModal && <BarcodeCameraModal onDetected={handleCameraDetected} onClose={() => setShowCameraModal(false)} lang={lang} />}
     </div>

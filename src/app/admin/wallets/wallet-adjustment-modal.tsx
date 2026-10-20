@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { ReceiptPrint } from "@/components/glass/receipt-print";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { manualWalletAdjustment, type ActionState } from "@/actions/wallet";
@@ -28,8 +29,14 @@ function AdjustModal({ walletId, ownerName, onClose }: { walletId: string; owner
   const lang = useLang();
   const [state, formAction] = useFormState(manualWalletAdjustment, initialState);
 
-  if (state.success) {
+  // Wallet jama (credit) kamyab ho to raseed animation; warna pehle jaisa band.
+  const sent = useRef<{ direction: string; amount: number; no: string } | null>(null);
+  const showReceipt = !!state.success && sent.current?.direction === "credit";
+  if (state.success && !showReceipt) {
     setTimeout(onClose, 800);
+  }
+  if (showReceipt) {
+    return <ReceiptPrint receipt={{ kind: "wallet", no: sent.current!.no, date: new Date().toLocaleString("en-PK"), from: "Al Rana Traders", to: ownerName, amount: sent.current!.amount }} onClose={onClose} />;
   }
 
   return (
@@ -44,7 +51,7 @@ function AdjustModal({ walletId, ownerName, onClose }: { walletId: string; owner
         <p className="mb-3 text-sm text-surface-500">{ownerName}</p>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">{state.error}</p>}
         {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("wl_adjusted", lang)}</p>}
-        <form action={formAction} className="space-y-3">
+        <form action={formAction} onSubmit={(e) => { const fd = new FormData(e.currentTarget); sent.current = { direction: String(fd.get("direction") ?? ""), amount: Number(fd.get("amount") ?? 0), no: `WL-${Date.now().toString(36).toUpperCase()}` }; }} className="space-y-3">
           <input type="hidden" name="wallet_id" value={walletId} />
           <div>
             <label className="text-xs font-medium text-surface-500">{t("wl_direction", lang)}</label>
