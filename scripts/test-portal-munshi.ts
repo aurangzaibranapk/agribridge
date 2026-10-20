@@ -196,7 +196,8 @@ test("every label used by the portal has Roman Urdu (no Urdu script in rm)", () 
   const root = path.resolve(__dirname, "..");
   const files = [
     ...walk(path.join(root, "src/app/portal")),
-    ...walk(path.join(root, "src/components/portal")),
+    // kisan-wallet apni typed dictionary (wt/gw) use karta hai, translations.ts nahi.
+    ...walk(path.join(root, "src/components/portal")).filter((f) => !f.includes(`${path.sep}kisan-wallet${path.sep}`)),
     ...walk(path.join(root, "src/components/dashboard")),
     path.join(root, "src/components/wallet/wallet-view.tsx"),
   ].filter((f) => /\.tsx?$/.test(f));
