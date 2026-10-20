@@ -47,6 +47,47 @@ assert.ok(g.heldPaymentPostPlan("approve", { ...liveHeld, finance_account_id: nu
 assert.ok(!/clientActionId:\s*`purchase-held-/.test(pur), "review must not send a non-uuid action id");
 assert.ok(/heldPaymentClientActionId|plan\.clientActionId/.test(pur));
 assert.ok(/Ruki hui adaigi post nahi hui/.test(pur), "post failure is an error, not a hidden warning");
+const doctorPurchase = "10205cdd-edc8-4c7c-becf-17d41bfbbdfb";
+const doctorKey = g.heldPaymentClientActionId(doctorPurchase);
+assert.notEqual(doctorKey, "4bad9c83-2c83-0601-a3d9-4f9861d26daf");
+const doctor = g.existingHeldPost({
+  purchaseId: doctorPurchase,
+  purchaseNumber: "PO-1792495620885",
+  heldAmount: 7500,
+  clientActionId: doctorKey,
+  payments: [{ id: "93d80980-fcb9-4e53-ba32-6966772d5a3d", purchaseId: doctorPurchase, amount: "7500.00" }],
+  journals: [{
+    id: "7d0685b9-4239-4f96-b596-86d94ffd454e",
+    clientActionId: "4bad9c83-2c83-0601-a3d9-4f9861d26daf",
+    sourceModule: "supplier_payment",
+    sourceId: "93d80980-fcb9-4e53-ba32-6966772d5a3d",
+    description: "Kharid PO-1792495620885 ke waqt (manzoori par post)",
+    isReversal: false,
+  }],
+});
+assert.equal(doctor.already, true);
+assert.equal(doctor.paymentId, "93d80980-fcb9-4e53-ba32-6966772d5a3d");
+assert.equal(doctor.journalId, "7d0685b9-4239-4f96-b596-86d94ffd454e");
+assert.equal(g.existingHeldPost({ purchaseId: doctorPurchase, purchaseNumber: "PO-1792495620885", heldAmount: 7500, clientActionId: doctorKey, payments: [], journals: [] }).already, false);
+assert.equal(g.existingHeldPost({
+  purchaseId: doctorPurchase,
+  purchaseNumber: "PO-1792495620885",
+  heldAmount: 7500,
+  clientActionId: doctorKey,
+  payments: [{ id: "other", purchaseId: "00000000-0000-4000-8000-000000000099", amount: 7500 }],
+  journals: [],
+}).already, false);
+assert.equal(g.existingHeldPost({
+  purchaseId: doctorPurchase,
+  purchaseNumber: "PO-1792495620885",
+  heldAmount: 7500,
+  clientActionId: doctorKey,
+  payments: [],
+  journals: [{ id: "rev", clientActionId: doctorKey, sourceModule: "supplier_payment", description: "Kharid PO-1792495620885", isReversal: true }],
+}).already, false);
+const postBlock = pur.slice(pur.indexOf("if (plan.post)"));
+assert.ok(postBlock.indexOf("existingHeldPost") < postBlock.indexOf("payAndPost"), "existing payment is checked before a new post");
+assert.ok(/prior\.already/.test(postBlock) && /dobara nahi kati/.test(postBlock));
 assert.ok(!/payAndPost\(/.test(bill.slice(bill.indexOf("export async function createPurchaseFromBill"), bill.indexOf("export async function deleteSupplierBill"))), "bill purchase must not post payment immediately");
 assert.ok(/held_payment:/.test(bill));
 assert.ok(/rvState\.error/.test(panel) && /rvState\.warning/.test(panel), "review UI shows payment errors");

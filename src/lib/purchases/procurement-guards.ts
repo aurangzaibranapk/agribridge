@@ -87,6 +87,58 @@ export function heldPaymentPostPlan(decision: string, held: HeldPayment | null |
   };
 }
 
+export type HeldPaymentRow = {
+  id: string;
+  purchaseId?: string | null;
+  amount?: number | string | null;
+};
+
+export type HeldJournalRow = {
+  id: string;
+  clientActionId?: string | null;
+  sourceModule?: string | null;
+  sourceId?: string | null;
+  description?: string | null;
+  isReversal?: boolean | null;
+};
+
+/**
+ * Held payment pehle se lagi ho (haath se, ya doosri key se) to dobara
+ * post nahi. Doctor Masala PO-1792495620885: supplier_payment 93d80980
+ * aur journal 7d0685b9, client_action_id hamari derived key nahi.
+ */
+export function existingHeldPost(args: {
+  purchaseId: string;
+  purchaseNumber: string;
+  heldAmount: number;
+  clientActionId: string;
+  payments: HeldPaymentRow[];
+  journals: HeldJournalRow[];
+}): { already: false } | { already: true; paymentId: string | null; journalId: string | null } {
+  const amount = Number(args.heldAmount);
+  const sameMoney = (value: number | string | null | undefined) => {
+    const n = Number(value);
+    return Number.isFinite(n) && Number.isFinite(amount) && Math.abs(n - amount) <= 0.05;
+  };
+  const matchedPayments = args.payments.filter((p) => p.purchaseId === args.purchaseId && sameMoney(p.amount));
+  const paymentIds = new Set(matchedPayments.map((p) => p.id));
+  const purchaseNumber = args.purchaseNumber.trim();
+  const journal = args.journals.find((j) => {
+    if (j.isReversal) return false;
+    if (j.clientActionId && j.clientActionId === args.clientActionId) return true;
+    if (j.sourceModule === "supplier_payment" && j.sourceId && paymentIds.has(j.sourceId)) return true;
+    return Boolean(
+      purchaseNumber &&
+        j.sourceModule === "supplier_payment" &&
+        j.description &&
+        j.description.includes(purchaseNumber)
+    );
+  });
+  const payment = matchedPayments[0] ?? null;
+  if (!payment && !journal) return { already: false };
+  return { already: true, paymentId: payment?.id ?? null, journalId: journal?.id ?? null };
+}
+
 function round2(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }

@@ -1,6 +1,6 @@
 "use server";
 import { purchaseApproveCheck, isSelfApproval, shouldPostHeldPayment } from "@/lib/approval/guards";
-import { heldPaymentPostPlan, purchaseBatchDedupeKey, purchaseHeaderMatchesLines, purchaseMovementDedupeKey, receiveLockOutcome } from "@/lib/purchases/procurement-guards";
+import { existingHeldPost, heldPaymentPostPlan, purchaseBatchDedupeKey, purchaseHeaderMatchesLines, purchaseMovementDedupeKey, receiveLockOutcome } from "@/lib/purchases/procurement-guards";
 import { billNoKey, duplicateBillError, duplicateBillSources, escapeLikePattern, isDuplicateBillNoError } from "@/lib/purchases/bill-no-unique";
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
@@ -765,7 +765,7 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
     .eq("id", purchaseId)
     .maybeSingle();
   if (!purchase) return { error: "Purchase not found." };
-  type Held = { amount: number; payment_date: string; payment_method: string | null; finance_account_id: string | null; posted?: boolean; client_action_id?: string | null };
+  type Held = { amount: number; payment_date: string; payment_method: string | null; finance_account_id: string | null; posted?: boolean; client_action_id?: string | null; supplier_payment_id?: string | null; journal_entry_id?: string | null };
   const held = (purchase.held_payment as unknown as Held | null) ?? null;
   // shouldPostHeldPayment sirf "approve + amount + abhi posted nahi".
   // heldPaymentPostPlan us par UUID key aur account ki kami rokta hai —
@@ -814,27 +814,78 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
   // Post PEHLE. Nakami par manzoori nahi badalti, aur error seedha UI ko
   // jata hai — success + chhupi warning nahi. Key UUID hai, is liye
   // dobara click wahi journal dubara nahi likhta.
+  // Pehle se supplier_payment ya journal ho (haath ki posting, doosri
+  // key) to payAndPost nahi — sirf posted nishan. PO-1792495620885.
   let heldMsg: string | undefined;
   let postedHeld: Held | null = null;
   if (plan.post) {
-    const paid = await payAndPost(supabase, {
-      supplierId: purchase.supplier_id,
+    const { data: payRows, error: payErr } = await supabase.from("supplier_payments").select("id, purchase_id, amount").eq("purchase_id", purchaseId);
+    if (payErr) return { error: `Ruki hui adaigi ki pehli payment nahi dekhi: ${payErr.message}` };
+    const payments = (payRows ?? []).map((row) => ({ id: row.id, purchaseId: row.purchase_id, amount: row.amount }));
+    const journalSelect = "id, client_action_id, source_module, source_id, description, is_reversal";
+    const { data: byKey, error: keyErr } = await supabase.from("journal_entries").select(journalSelect).eq("client_action_id", plan.clientActionId);
+    if (keyErr) return { error: `Ruki hui adaigi ka journal nahi dekha: ${keyErr.message}` };
+    const { data: byPo, error: poErr } = await supabase
+      .from("journal_entries")
+      .select(journalSelect)
+      .eq("source_module", "supplier_payment")
+      .ilike("description", `%${escapeLikePattern(purchase.purchase_number)}%`);
+    if (poErr) return { error: `Ruki hui adaigi ka journal nahi dekha: ${poErr.message}` };
+    const payIds = payments.map((row) => row.id);
+    const { data: byPay, error: byPayErr } = payIds.length
+      ? await supabase.from("journal_entries").select(journalSelect).eq("source_module", "supplier_payment").in("source_id", payIds)
+      : { data: [], error: null };
+    if (byPayErr) return { error: `Ruki hui adaigi ka journal nahi dekha: ${byPayErr.message}` };
+    const journalById = new Map<string, { id: string; client_action_id: string | null; source_module: string; source_id: string | null; description: string; is_reversal: boolean }>();
+    for (const row of [...(byKey ?? []), ...(byPo ?? []), ...(byPay ?? [])]) journalById.set(row.id, row);
+    const prior = existingHeldPost({
       purchaseId,
-      amount: plan.amount,
-      paymentDate: plan.paymentDate,
-      paymentMethod: plan.paymentMethod,
-      accountId: plan.accountId,
+      purchaseNumber: purchase.purchase_number,
+      heldAmount: plan.amount,
       clientActionId: plan.clientActionId,
-      notes: `Kharid ${purchase.purchase_number} ke waqt (manzoori par post)`,
-      branchId: purchase.branch_id ?? null,
-      createdBy: user.id,
-      backdateReason: plan.paymentDate < aajKaKhana() ? `Purchase ${purchase.purchase_number} ki apni tareekh (${plan.paymentDate}) — adaigi manzoori tak ruki rahi.` : null,
+      payments,
+      journals: [...journalById.values()].map((row) => ({
+        id: row.id,
+        clientActionId: row.client_action_id,
+        sourceModule: row.source_module,
+        sourceId: row.source_id,
+        description: row.description,
+        isReversal: row.is_reversal,
+      })),
     });
-    if ("error" in paid) {
-      return { error: `Ruki hui adaigi post nahi hui: ${paid.error}` };
+    if (prior.already) {
+      postedHeld = {
+        ...(held as Held),
+        posted: true,
+        client_action_id: plan.clientActionId,
+        supplier_payment_id: prior.paymentId,
+        journal_entry_id: prior.journalId,
+        payment_date: plan.paymentDate,
+        payment_method: plan.paymentMethod,
+        finance_account_id: plan.accountId,
+        amount: plan.amount,
+      };
+      heldMsg = `Ruki hui adaigi Rs ${plan.amount.toLocaleString()} pehle se lagi hui hai — dobara nahi kati.`;
+    } else {
+      const paid = await payAndPost(supabase, {
+        supplierId: purchase.supplier_id,
+        purchaseId,
+        amount: plan.amount,
+        paymentDate: plan.paymentDate,
+        paymentMethod: plan.paymentMethod,
+        accountId: plan.accountId,
+        clientActionId: plan.clientActionId,
+        notes: `Kharid ${purchase.purchase_number} ke waqt (manzoori par post)`,
+        branchId: purchase.branch_id ?? null,
+        createdBy: user.id,
+        backdateReason: plan.paymentDate < aajKaKhana() ? `Purchase ${purchase.purchase_number} ki apni tareekh (${plan.paymentDate}) — adaigi manzoori tak ruki rahi.` : null,
+      });
+      if ("error" in paid) {
+        return { error: `Ruki hui adaigi post nahi hui: ${paid.error}` };
+      }
+      postedHeld = { ...(held as Held), posted: true, client_action_id: plan.clientActionId, supplier_payment_id: paid.paymentId, payment_date: plan.paymentDate, payment_method: plan.paymentMethod, finance_account_id: plan.accountId, amount: plan.amount };
+      heldMsg = `Ruki hui adaigi Rs ${plan.amount.toLocaleString()} post ho gayi.`;
     }
-    postedHeld = { ...(held as Held), posted: true, client_action_id: plan.clientActionId, payment_date: plan.paymentDate, payment_method: plan.paymentMethod, finance_account_id: plan.accountId, amount: plan.amount };
-    heldMsg = `Ruki hui adaigi Rs ${plan.amount.toLocaleString()} post ho gayi.`;
   }
 
   const update: Record<string, unknown> = finishingHeld
