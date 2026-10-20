@@ -5,6 +5,27 @@
 alter table public.payroll_runs add column if not exists pay_lock uuid;
 alter table public.payroll_runs add column if not exists pay_lock_at timestamptz;
 
+-- Read-only. Index se PEHLE ye ginti. Koi update nahi. 0 hona chahiye.
+-- select pay_journal_id, count(*) as kitne
+--   from public.payroll_runs
+--  where pay_journal_id is not null
+--  group by pay_journal_id
+-- having count(*) > 1;
+do $$
+declare n int;
+begin
+  select count(*)::int into n from (
+    select pay_journal_id
+      from public.payroll_runs
+     where pay_journal_id is not null
+     group by pay_journal_id
+    having count(*) > 1
+  ) d;
+  if n > 0 then
+    raise exception 'pay_journal_id % dafa dohra hai. Index se pehle upar wali SELECT chalao. Koi raqam mat badlo.', n;
+  end if;
+end $$;
+
 create unique index if not exists uq_payroll_pay_journal
   on public.payroll_runs (pay_journal_id)
   where pay_journal_id is not null;

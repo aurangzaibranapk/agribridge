@@ -160,7 +160,7 @@ export async function payPayrollRun(_p: PayrollState, fd: FormData): Promise<Pay
   const { data: claim, error: claimError } = await sb.rpc("fn_payroll_claim_pay", { p_run: runId });
   if (claimError) return err(claimError);
   if (claim === "already_paid") return ok("Ye payroll pehle hi ada ho chuki hai. Dobara paisa nahi likha gaya.");
-  const { data: run } = await sb.from("payroll_runs").select("id, status, pay_year, pay_month, branch_id, created_by, approve_journal_id").eq("id", runId).single();
+  const { data: run } = await sb.from("payroll_runs").select("id, status, pay_year, pay_month, branch_id, created_by, submitted_by, approve_journal_id").eq("id", runId).single();
   if (!run || run.status !== "approved" || !run.approve_journal_id) {
     await sb.rpc("fn_payroll_release_pay_lock", { p_run: runId });
     return err("Pehle manzoori aur journal.");
@@ -169,7 +169,15 @@ export async function payPayrollRun(_p: PayrollState, fd: FormData): Promise<Pay
     await sb.rpc("fn_payroll_release_pay_lock", { p_run: runId });
     return err("Banane wala khud ada nahi kar sakta.");
   }
+  if (run.submitted_by === user?.id) {
+    await sb.rpc("fn_payroll_release_pay_lock", { p_run: runId });
+    return err("Bhejne wala khud ada nahi kar sakta.");
+  }
   const { data: lines } = await sb.from("payroll_lines").select("profile_id, net").eq("run_id", runId);
+  if ((lines ?? []).some((l: { profile_id: string }) => l.profile_id === user?.id)) {
+    await sb.rpc("fn_payroll_release_pay_lock", { p_run: runId });
+    return err("Is run mein aap ki apni tankhwah hai — koi aur ada kare.");
+  }
   const total = Math.round((lines ?? []).reduce((s: number, l: any) => s + Number(l.net), 0) * 100) / 100;
   const label = `Tankhwah ada ${MONTHS_RU[run.pay_month - 1]} ${run.pay_year}`;
   const { data: txn, error: tErr } = await sb.from("finance_transactions").insert({
