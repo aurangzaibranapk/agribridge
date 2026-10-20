@@ -88,8 +88,14 @@ function CustomerModal({ customer, onClose }: { customer?: ExistingCustomer; onC
             {isEditMode && <input type="hidden" name="id" value={customer.id} />}
             {state.error && (
               <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                {state.error}
+                {state.error.replace(/^DUPLICATE_PHONE:\s*/, "")}
               </p>
+            )}
+            {state.error?.startsWith("DUPLICATE_PHONE") && (
+              <label className="flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <input type="checkbox" name="confirm_duplicate" value="1" className="mt-0.5" />
+                Yeh number pehle se hai. Phir bhi save karein.
+              </label>
             )}
             {state.success && (
               <p className="rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("at_saved", lang)}</p>

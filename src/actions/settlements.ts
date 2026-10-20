@@ -3,8 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
-import { postJournal } from "@/lib/ledger/post";
-import { canApprove, linkedSettlementLimit, linkedSettlementLines } from "@/lib/party-links/core";
+import { canApprove, linkedSettlementLimit } from "@/lib/party-links/core";
 
 export interface ActionState {
   error?: string;
@@ -210,70 +209,21 @@ export async function settlementManzoor(_prev: ActionState, formData: FormData):
     data: any;
   };
   if (!s) return { error: "Ye adjustment nahi mila." };
-  if (s.status === "approved") return { error: "Ye pehle hi manzoor ho chuka hai." };
-  if (s.status === "rejected") return { error: "Ye radd ho chuka hai." };
-
-  const amount = Number(s.amount ?? 0);
-  if (s.party_link_id) return linkedManzoor(s, id, raye, who);
-  const [lena, dena] = await Promise.all([
-    khatePaBaqi(String(s.party_type), String(s.party_id), String(s.lena_khata)),
-    khatePaBaqi(String(s.party_type), String(s.party_id), String(s.dena_khata)),
-  ]);
-  const hadd = Math.min(lena, dena);
-  if (amount > hadd) {
-    return {
-      error: `Ab ye raqam adjust nahi ho sakti: is waqt lena Rs ${lena.toLocaleString()} aur dena Rs ${dena.toLocaleString()} hai, is liye hadd Rs ${hadd.toLocaleString()} hai. Beech mein koi aur qatar aa gayi hai — nayi darkhwast banayein.`,
-    };
+  if (s.status !== "pending") return { error: "Ye pehle hi faisla ho chuka hai." };
+  if (!canApprove(s.created_by, who.userId)) {
+    return { error: "Apni banayi hui darkhwast khud manzoor nahi kar sakte — doosra Finance/Admin kare." };
   }
 
-  const tafseel = `${s.settlement_number} — Khaton ka adjustment: ${s.wajah}`;
-
-  // Dena (liability) DEBIT, Lena (asset) CREDIT -- dono kam.
-  const posted = await postJournal({
-    description: tafseel,
-    sourceModule: "settlement",
-    sourceId: id,
-    branchId: s.branch_id ?? who.branchId,
-    createdBy: who.userId,
-    claims: [{ table: "party_settlements", rowId: id }],
-    lines: [
-      {
-        account: String(s.dena_khata),
-        debit: amount,
-        partyType: String(s.party_type),
-        partyId: String(s.party_id),
-        memo: `${tafseel} — dena kam`,
-      },
-      {
-        account: String(s.lena_khata),
-        credit: amount,
-        partyType: String(s.party_type),
-        partyId: String(s.party_id),
-        memo: `${tafseel} — lena kam`,
-      },
-    ],
+  // Claim, hadd, jurnal aur balance ek hi transaction (633). Service
+  // role se mat bulao: auth.uid() khali ho jata hai aur function rok deta hai.
+  const supabase = createClient();
+  const { data, error } = await (supabase as any).rpc("fn_approve_party_settlement", {
+    p_id: id,
+    p_note: raye,
   });
+  if (error) return { error: error.message };
 
-  if ("error" in posted) {
-    return { error: `Kitab mein qatar nahi bani, is liye manzoori bhi nahi di gayi: ${posted.error}` };
-  }
-
-  const { error: halatError } = await loose()
-    .from("party_settlements")
-    .update({
-      status: "approved",
-      approved_by: who.userId,
-      approved_at: new Date().toISOString(),
-      journal_entry_id: (posted as { id?: string }).id ?? null,
-    })
-    .eq("id", id);
-
-  if (halatError) {
-    return {
-      error: `Kitab mein qatar ban gayi magar halat "manzoor" nahi ho saki: ${halatError.message}. Kisi ko batayein — dobara manzoori se dohri qatar ban jayegi.`,
-    };
-  }
-
+  const amount = Number((data as { amount?: number } | null)?.amount ?? s.amount ?? 0);
   await logAudit({
     actionType: "approve",
     module: "settlements",
@@ -307,11 +257,15 @@ export async function settlementRadd(_prev: ActionState, formData: FormData): Pr
   if (!s) return { error: "Ye adjustment nahi mila." };
   if (s.status === "approved") return { error: "Ye manzoor ho kar kitab mein ja chuka hai — ulti qatar banayein." };
 
-  const { error } = await loose()
+  const { data: rejected, error } = await loose()
     .from("party_settlements")
     .update({ status: "rejected", rejection_reason: wajah })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
   if (error) return { error: error.message };
+  if (!rejected) return { error: "Ye pehle hi faisla ho chuka hai." };
 
   await logAudit({
     actionType: "reject",
@@ -375,58 +329,3 @@ export async function linkedSettlementMaangein(_prev: ActionState, formData: For
   return { success: true, message: `${number} darj — kisi DOOSRE Finance/Admin ki manzoori ka intezar.` };
 }
 
-async function linkedManzoor(s: any, id: string, raye: string, who: { userId: string; branchId: string | null }): Promise<ActionState> {
-  if (!canApprove(s.created_by, who.userId)) {
-    return { error: "Apni banayi hui darkhwast khud manzoor nahi kar sakte — doosra Finance/Admin kare." };
-  }
-  const amount = Number(s.amount ?? 0);
-  const [lena, dena] = await Promise.all([
-    khatePaBaqi("customer", String(s.party_id), "1100"),
-    khatePaBaqi("supplier", String(s.dena_party_id), "2000"),
-  ]);
-  const hadd = linkedSettlementLimit(lena, dena);
-  if (amount > hadd) {
-    return { error: `Ab ye raqam adjust nahi ho sakti: customer se lena Rs ${lena.toLocaleString()}, supplier ko dena Rs ${dena.toLocaleString()} (hadd Rs ${hadd.toLocaleString()}). Nayi darkhwast banayein.` };
-  }
-  const tafseel = `${s.settlement_number} — Linked party adjustment: ${s.wajah}`;
-  const posted = await postJournal({
-    description: tafseel, sourceModule: "settlement", sourceId: id,
-    branchId: s.branch_id ?? who.branchId, createdBy: who.userId,
-    claims: [{ table: "party_settlements", rowId: id }],
-    lines: linkedSettlementLines({ amount, customerId: String(s.party_id), supplierId: String(s.dena_party_id), memo: tafseel }),
-  });
-  if ("error" in posted) return { error: `Kitab mein qatar nahi bani, is liye manzoori bhi nahi di gayi: ${posted.error}` };
-
-  const { error: halatError } = await loose().from("party_settlements").update({
-    status: "approved", approved_by: who.userId, approved_at: new Date().toISOString(),
-    journal_entry_id: (posted as { id?: string }).id ?? null,
-  }).eq("id", id);
-  if (halatError) {
-    return { error: `Kitab mein qatar ban gayi magar halat "manzoor" nahi ho saki: ${halatError.message}. Kisi ko batayein — dobara manzoori se dohri qatar ban jayegi.` };
-  }
-  // Stored balances bhi foran theek (recovery function ka wohi tareeqa).
-  const db = createServiceClient() as any;
-  const [cust, supp] = await Promise.all([
-    khatePaBaqiSigned("customer", String(s.party_id), "1100"),
-    khatePaBaqiSigned("supplier", String(s.dena_party_id), "2000"),
-  ]);
-  await Promise.all([
-    db.from("customers").update({ current_balance: cust }).eq("id", s.party_id),
-    db.from("suppliers").update({ current_payable: supp }).eq("id", s.dena_party_id),
-  ]);
-
-  await logAudit({ actionType: "approve", module: "settlements", recordId: id, recordLabel: s.settlement_number,
-    description: `Linked manzoor: Rs ${amount.toLocaleString()} — Dr 2000 supplier / Cr 1100 customer. Raye: ${raye}` });
-  revalidatePath("/admin/settlements");
-  return { success: true, message: `Manzoor. Supplier ka dena aur customer ka lena dono Rs ${amount.toLocaleString()} kam.` };
-}
-
-async function khatePaBaqiSigned(partyType: string, partyId: string, khata: string): Promise<number> {
-  const { data: lines } = await createServiceClient().from("journal_lines").select("debit, credit")
-    .eq("party_type", partyType).eq("party_id", partyId).eq("account_code", khata);
-  let v = 0;
-  for (const l of (lines ?? []) as { debit: number | null; credit: number | null }[]) {
-    v += khata === "2000" ? Number(l.credit ?? 0) - Number(l.debit ?? 0) : Number(l.debit ?? 0) - Number(l.credit ?? 0);
-  }
-  return Math.round(v * 100) / 100;
-}

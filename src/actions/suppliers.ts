@@ -3,6 +3,23 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
+import { duplicatePhoneName, phoneDuplicateKey } from "@/lib/money/review-guards";
+
+async function duplicatePhoneWarning(
+  supabase: ReturnType<typeof createClient>,
+  phone: string,
+  exceptId: string | null,
+  confirmed: boolean,
+): Promise<string | null> {
+  if (confirmed) return null;
+  const key = phoneDuplicateKey(phone);
+  if (!key) return null;
+  const tail = key.slice(-10);
+  const { data } = await supabase.from("suppliers").select("id, name, phone_number").ilike("phone_number", `%${tail}%`).limit(30);
+  const name = duplicatePhoneName(data ?? [], phone, exceptId);
+  if (!name) return null;
+  return `DUPLICATE_PHONE: ${name} pehle se isi number par hai. Dobara save karne se pehle tasdeeq karein.`;
+}
 
 export interface ActionState {
   error?: string;
@@ -51,7 +68,10 @@ export async function saveSupplier(_prev: ActionState, formData: FormData): Prom
   if (!context.profile?.is_active) return { error: "Aap ka account active nahi hai." };
   if (!context.isUnrestricted) return { error: "Sirf Admin/Owner naya supplier bana sakta hai." };
   const name = String(formData.get("name") ?? "").trim();
+  const phoneNumber = String(formData.get("phone_number") ?? "").trim();
   if (!name) return { error: "Supplier name is required." };
+  const dup = await duplicatePhoneWarning(supabase, phoneNumber, null, formData.get("confirm_duplicate") === "1");
+  if (dup) return { error: dup };
 
   const cnicUpload = await uploadSupplierDocument(formData.get("cnic_document"), "cnic");
   if (cnicUpload.error) return { error: cnicUpload.error };
@@ -64,7 +84,7 @@ export async function saveSupplier(_prev: ActionState, formData: FormData): Prom
     name,
     company_name: (formData.get("company_name") as string) || null,
     contact_person: (formData.get("contact_person") as string) || null,
-    phone_number: (formData.get("phone_number") as string) || null,
+    phone_number: phoneNumber || null,
     email: (formData.get("email") as string) || null,
     address: (formData.get("address") as string) || null,
     credit_limit: formData.get("credit_limit") ? Number(formData.get("credit_limit")) : 0,
@@ -98,14 +118,17 @@ export async function updateSupplier(_prev: ActionState, formData: FormData): Pr
   if (!context.isUnrestricted) return { error: "Sirf Admin/Owner supplier update kar sakta hai." };
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
+  const phoneNumber = String(formData.get("phone_number") ?? "").trim();
   if (!id) return { error: "Missing supplier id." };
   if (!name) return { error: "Supplier name is required." };
+  const dup = await duplicatePhoneWarning(supabase, phoneNumber, id, formData.get("confirm_duplicate") === "1");
+  if (dup) return { error: dup };
 
   const updates: Record<string, unknown> = {
     name,
     company_name: (formData.get("company_name") as string) || null,
     contact_person: (formData.get("contact_person") as string) || null,
-    phone_number: (formData.get("phone_number") as string) || null,
+    phone_number: phoneNumber || null,
     email: (formData.get("email") as string) || null,
     address: (formData.get("address") as string) || null,
     credit_limit: formData.get("credit_limit") ? Number(formData.get("credit_limit")) : 0,

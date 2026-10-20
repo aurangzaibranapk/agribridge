@@ -31,7 +31,7 @@ export function fail(code: Exclude<DecideCode, "action">): DecideResult {
   return { ok: false, code, error: code };
 }
 
-export function actionFail(error: string): DecideResult {
+export function actionFail(error: string): Extract<DecideResult, { ok: false }> {
   const msg = error.replace(/\s+/g, " ").trim().slice(0, 300);
   return { ok: false, code: "action", error: msg || "error" };
 }

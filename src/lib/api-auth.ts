@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
  * liye jo bhi route paisa, email ya settings ko haath lagata hai usay
  * apni rok khud lagani parti hai.
  */
+// Call center agent jaan boojh kar is list mein nahi. Wo paisa / doodh /
+// rate ki API nahi chala sakta. /admin ka darwaza roles.ts se khulta hai.
 const STAFF_ROLES = [
   "owner", "super_admin", "admin", "admin_assistant", "manager",
   "sales_staff", "finance", "warehouse", "hr", "procurement", "milk_collection",

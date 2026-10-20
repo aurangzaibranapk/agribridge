@@ -132,7 +132,8 @@ await testAsync("success: POS approve calls the existing review and returns ok",
     reviewPosReturn: async (fd) => {
       decision = String(fd.get("decision"));
       returnId = String(fd.get("return_id"));
-      return { success: true, returnNumber: "RET-2026-00014" };
+      const reply: { error?: string; success: boolean; returnNumber: string } = { success: true, returnNumber: "RET-2026-00014" };
+      return reply;
     },
   }));
   assert.deepEqual(res, { ok: true, decision: "approve" });

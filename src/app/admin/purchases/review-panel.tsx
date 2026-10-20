@@ -67,6 +67,8 @@ export function ReviewPanel({
   canVerify = false,
   discountAmount,
   taxAmount,
+  heldOnly = false,
+  heldAmount = 0,
 }: {
   purchaseId: string;
   purchaseNumber: string;
@@ -78,13 +80,16 @@ export function ReviewPanel({
   canVerify?: boolean;
   discountAmount?: number | null;
   taxAmount?: number | null;
+  /** Manzoor ho chuki, magar held_payment abhi posted nahi. */
+  heldOnly?: boolean;
+  heldAmount?: number;
 }) {
   const lang = useLang();
   const [open, setOpen] = useState(false);
   const [rvState, rvAction] = useFormState(reviewPurchase, initialState);
   const [vrState, vrAction] = useFormState(verifyPurchase, initialState);
   const [cmState, cmAction] = useFormState(commentPurchase, initialState);
-  const done = rvState.success || vrState.success || cmState.success;
+  const done = (rvState.success || vrState.success || cmState.success) && !rvState.error && !rvState.warning && !vrState.error && !cmState.error;
   const showVerify = canVerify && !canApprove && reviewStatus === "submitted";
 
   useEffect(() => {
@@ -172,14 +177,22 @@ export function ReviewPanel({
               )}
             </div>
 
+            {rvState.error && <p className="mb-2 text-sm text-red-600 dark:text-red-400">{rvState.error}</p>}
+            {rvState.warning && <p className="mb-2 text-sm text-amber-700 dark:text-amber-300">{rvState.warning}</p>}
+            {!done && rvState.message && <p className="mb-2 text-sm text-brand-700 dark:text-brand-300">{rvState.message}</p>}
             {done ? (
-              <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{t("pu_rv_done", lang)}</p>
+              <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700 dark:bg-brand-900/30 dark:text-brand-300">{rvState.message || t("pu_rv_done", lang)}</p>
+            ) : heldOnly && canApprove ? (
+              <form action={rvAction} className="space-y-3">
+                <input type="hidden" name="purchase_id" value={purchaseId} />
+                <p className="text-xs text-amber-700 dark:text-amber-300">{t("pu_rv_held_hint", lang)}{heldAmount > 0 ? ` Rs ${heldAmount.toLocaleString()}.` : ""}</p>
+                <Decision value="approve" label={t("pu_rv_post_held", lang)} icon={<Check className="h-4 w-4" />} />
+              </form>
             ) : canApprove ? (
               <form action={rvAction} className="space-y-3">
                 <input type="hidden" name="purchase_id" value={purchaseId} />
                 <p className="text-xs text-surface-500">{t("pu_rv_hint", lang)}</p>
                 <Textarea name="comment" rows={3} placeholder={t("pu_rv_comment", lang)} />
-                {rvState.error && <p className="text-sm text-red-600 dark:text-red-400">{rvState.error}</p>}
                 <div className="flex flex-wrap gap-2">
                   <Decision value="approve" label={t("pu_rv_approve", lang)} icon={<Check className="h-4 w-4" />} />
                   <Decision value="send_back" label={t("pu_rv_send_back", lang)} icon={<Undo2 className="h-4 w-4" />} variant="secondary" />

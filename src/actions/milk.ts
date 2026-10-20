@@ -134,6 +134,8 @@ export async function recordMilkPayment(_prev: ActionState, formData: FormData):
   const skipReason = String(formData.get("qist_skip_reason") ?? "").trim();
   if (skipQist && skipReason.length < 3) return { error: "Qist is dafa na kaatne ki wajah likhein." };
   const qistNote = skipQist ? ` | Qist roki: ${skipReason}` : "";
+  // Khata, wallet, qist aur cash GL ek hi RPC mein. Nakaami par error
+  // wapas aata hai aur koi adhuri adaigi nahi rehti.
   const posted = await (service as unknown as {
     rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: { already?: boolean } | null; error: { message: string } | null }>;
   }).rpc("fn_record_milk_payment", {

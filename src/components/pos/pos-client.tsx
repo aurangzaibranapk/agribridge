@@ -2,6 +2,8 @@
 import { AnimatedSearch } from "@/components/ui/animated-search";
 import { animSearchEnabled } from "@/lib/ui/animated-search";
 import { ExpiryBadge } from "@/components/stock/expiry-badge";
+import { GodamHint, GodamStrip } from "@/components/pos/godam-strip";
+import { formatGodamQty, shopQtyToneClass, type GodamLine } from "@/lib/pos/godam-on-card";
 import { canAddToCart, isOutOfStock, sortInStockFirst, POS_DEMAND_HREF } from "@/lib/pos/stock-availability";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -52,6 +54,7 @@ interface PosProduct {
   category_name?: string | null;
   mrp_price?: number | null;
   purchase_price?: number | null;
+  min_stock_threshold?: number | null;
 }
 
 interface InventoryItem {
@@ -61,6 +64,7 @@ interface InventoryItem {
   selling_price: number;
   wholesale_price: number | null;
   warehouse_stock?: number | null;
+  warehouse_lines?: GodamLine[] | null;
   batch_number?: string | null;
   batch_count?: number;
   expiry_date?: string | null;
@@ -108,9 +112,7 @@ interface PaymentLine {
 }
 
 function stockTone(qty: number): string {
-  if (qty <= 5) return "bg-red-500";
-  if (qty <= 20) return "bg-amber-500";
-  return "bg-emerald-500";
+  return shopQtyToneClass(qty);
 }
 
 function shortDate(d: string | null | undefined): string | null {
@@ -340,6 +342,7 @@ export function PosClient({
 
   const [discount, setDiscount] = useState("");
   const [discountReason, setDiscountReason] = useState("");
+  const [managerCode, setManagerCode] = useState("");
   // Khata kis ka hai aur maal kaun le kar ja raha hai alag ho sakte hain
   // (malik, 15 September: "khata Aurangzaib ka hai, lay ke jaane wala
   // Mohsin hai") -- sirf record ke liye, `sales.notes` mein.
@@ -596,6 +599,7 @@ export function PosClient({
       paymentLines: paymentLines.filter((l) => (parseFloat(l.amount) || 0) > 0).map((l) => ({ method: l.method, amount: parseFloat(l.amount) || 0, reference: l.reference || "", receipt_url: l.receiptUrl || "" })),
       discount: chhoot,
       discountReason: discountReason.trim(),
+      managerCode: managerCode.trim() || null,
       counterId,
       receivedBy: receivedBy.trim(),
     };
@@ -769,11 +773,13 @@ export function PosClient({
               const oos = isOutOfStock(item);
               return (
                 <div key={item.id} className="relative">
-                <button onClick={() => addToCart(item)} aria-disabled={oos && !canAddToCart(item)} title={oos ? "Out of stock / Stock khatam" : undefined} className={`w-full ${oos ? "opacity-50 grayscale " : ""}overflow-hidden rounded-card border bg-white text-left shadow-card transition hover:shadow-md dark:bg-surface-900 ${inCart ? "border-brand-500 ring-1 ring-brand-200 dark:ring-brand-900/50" : "border-surface-200 hover:border-brand-400 dark:border-surface-800"}`}>
+                <button onClick={() => addToCart(item)} aria-disabled={oos && !canAddToCart(item)} title={oos ? "Out of stock / Stock khatam" : undefined} className={`w-full overflow-hidden rounded-card border bg-white text-left shadow-card transition hover:shadow-md dark:bg-surface-900 ${inCart ? "border-brand-500 ring-1 ring-brand-200 dark:ring-brand-900/50" : "border-surface-200 hover:border-brand-400 dark:border-surface-800"}`}>
                   <div className="relative aspect-square bg-surface-50 dark:bg-surface-800">
-                    {p?.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-2" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center text-surface-300 dark:text-surface-600"><Package className="h-8 w-8" strokeWidth={1.25} /></div>}
-                    <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-surface-700 shadow-sm dark:bg-surface-900/90 dark:text-surface-200"><span className={`h-1.5 w-1.5 rounded-full ${stockTone(item.stock_quantity)}`} />{item.stock_quantity}</span><ExpiryBadge date={item.expiry_date} className="absolute left-1.5 top-1.5 shadow-sm" />
-                    {oos && <span data-testid="pos-oos-badge" className="absolute bottom-1.5 left-1.5 rounded-md bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">Out of stock / Stock khatam</span>}
+                    <div className={oos ? "h-full opacity-60 grayscale" : "h-full"}>
+                      {p?.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-2" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center text-surface-300 dark:text-surface-600"><Package className="h-8 w-8" strokeWidth={1.25} /></div>}
+                    </div>
+                    <ExpiryBadge date={item.expiry_date} className="absolute left-1.5 top-1.5 shadow-sm" />
+                    {oos && <span data-testid="pos-oos-badge" className="absolute right-1.5 top-1.5 rounded-md bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">Out of stock / Stock khatam</span>}
                     {inCart && cartLine && (
                       <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-brand-600 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
                         {wholesaleOn && upc > 1
@@ -781,6 +787,7 @@ export function PosClient({
                           : `${cartLine.quantity} btl`}
                       </span>
                     )}
+                    <GodamStrip shopQty={item.stock_quantity} godamQty={item.warehouse_stock} lines={item.warehouse_lines} lang={lang} />
                   </div>
                   <div className="min-h-[3.25rem] border-t border-surface-100 px-2.5 py-2 dark:border-surface-800">
                     <p className="line-clamp-2 text-[13px] font-medium leading-tight text-surface-900 dark:text-surface-100">{p?.name ?? <span className="text-amber-700">{t("pos_no_name", lang)}</span>}{p?.pack_size ? <span className="text-surface-400"> {p.pack_size}</span> : null}</p>
@@ -795,6 +802,7 @@ export function PosClient({
                     ) : (
                       <p className="mt-0.5 flex items-baseline justify-between gap-2"><span className="font-display text-sm font-semibold text-brand-700 tabular-nums dark:text-brand-300">Rs {item.selling_price.toLocaleString()}</span>{p?.mrp_price != null && p.mrp_price > 0 && <span className="shrink-0 text-[11px] text-surface-400 tabular-nums">{t("pos_mrp", lang)} {Number(p.mrp_price).toLocaleString()}</span>}</p>
                     )}
+                    <GodamHint shopQty={item.stock_quantity} godamQty={item.warehouse_stock} minStock={p?.min_stock_threshold} lang={lang} className={oos ? "pr-16" : ""} />
                   </div>
                 </button>
                 {oos && <Link href={`${POS_DEMAND_HREF}?product=${item.product_id}`} className="absolute bottom-2 right-2 rounded-md border border-brand-500 bg-white px-2 py-0.5 text-[11px] font-semibold text-brand-700 shadow-sm hover:bg-brand-50 dark:bg-surface-900">Demand</Link>}
@@ -905,6 +913,7 @@ export function PosClient({
             <div className="rounded-lg bg-surface-50 p-2 dark:bg-surface-800/50">
               <div className="flex items-center justify-between gap-2"><label htmlFor="pos-discount" className="text-surface-500">Discount</label><input id="pos-discount" inputMode="decimal" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0" className="h-8 w-24 rounded-md border border-surface-200 bg-white px-2 text-right text-sm tabular-nums dark:border-surface-700 dark:bg-surface-900" /></div>
               {chhoot > 0 && <input value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} placeholder="Wajah — jaise: purana gahak" className="mt-1.5 h-8 w-full rounded-md border border-surface-200 bg-white px-2 text-xs dark:border-surface-700 dark:bg-surface-900" />}
+              {chhoot > 0 && <input value={managerCode} onChange={(e) => setManagerCode(e.target.value)} placeholder="Manager code — 5% ya Rs 500 se upar, ya bina ijazat" className="mt-1.5 h-8 w-full rounded-md border border-surface-200 bg-white px-2 text-xs dark:border-surface-700 dark:bg-surface-900" />}
               {chhoot > 0 && discountReason.trim().length < 3 && <p className="mt-1 text-[11px] text-amber-600">Wajah likhein — jo raqam bina wajah ke di jaye, us ka hisaab kabhi nahi milta.</p>}
             </div>
           )}
@@ -948,7 +957,7 @@ function ItemDetails({ line, item, lang, perms, onQty, onRate, onRemove, onClose
         {perms.canSeeCost && <Field label={t("pos_cost_rate", lang)} value={p?.purchase_price != null && p.purchase_price > 0 ? `Rs ${Number(p.purchase_price).toLocaleString()}` : nishaan} />}
         {perms.canSeeCost && <Field label={t("pos_wholesale_rate", lang)} value={item.wholesale_price != null ? `Rs ${item.wholesale_price.toLocaleString()}` : nishaan} />}
         <Field label={t("pos_shop_stock", lang)} value={<span className="inline-flex items-center gap-1.5"><span className={`h-1.5 w-1.5 rounded-full ${stockTone(item.stock_quantity)}`} />{item.stock_quantity}</span>} />
-        <Field label={t("pos_wh_stock", lang)} value={item.warehouse_stock == null ? nishaan : item.warehouse_stock} />
+        <Field label={t("pos_wh_stock", lang)} value={item.warehouse_stock == null ? nishaan : <span>{formatGodamQty(item.warehouse_stock)}{item.warehouse_lines && item.warehouse_lines.length > 0 ? <span className="mt-0.5 block text-[10px] font-normal leading-snug">{item.warehouse_lines.map((line) => `${line.name} ${formatGodamQty(line.qty)}`).join(" · ")}</span> : null}</span>} />
         <Field label={t("pos_barcode", lang)} value={barcode ? <span className="font-mono text-xs">{barcode}</span> : <span className="text-xs text-surface-400">{t("pos_no_barcode", lang)}</span>} />
         <Field label={t("pos_batch", lang)} value={item.batch_number ? item.batch_number : (item.batch_count ?? 0) > 1 ? t("pos_batch_many", lang).replace("{n}", String(item.batch_count)) : nishaan} />
         <Field label={t("pos_expiry", lang)} value={expiry ? <span className="inline-flex items-center gap-1.5">{expiry}<ExpiryBadge date={item.expiry_date} /></span> : nishaan} />
