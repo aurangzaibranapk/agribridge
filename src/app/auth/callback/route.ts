@@ -47,6 +47,17 @@ export async function GET(request: Request) {
         .eq("user_id", data.user.id)
         .maybeSingle();
 
+      // Login v5 (621): staff/owner/admin ka login kabhi member (farmer) nahi
+      // banta -- un ka apna portal. Database trigger bhi yahi rok lagata hai.
+      const { data: prof } = await serviceClient.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
+      const brandNew = Date.now() - new Date(data.user.created_at).getTime() < 10 * 60 * 1000;
+      const memberRole = ["farmer", "customer"].includes(String(prof?.role ?? ""));
+      // Naya OAuth login 'sales_staff' default se aata hai (neeche theek hota hai);
+      // purana staff login kabhi farmer mein nahi badalta.
+      if (prof?.role && !memberRole && !(brandNew && prof.role === "sales_staff")) {
+        return NextResponse.redirect(`${origin}/admin/portal`);
+      }
+
       if (!existingFarmer) {
         // The database trigger that creates the profiles row on signup
         // only assigns role='farmer' when raw_user_meta_data.role is set

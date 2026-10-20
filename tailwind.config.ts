@@ -72,6 +72,10 @@ const config: Config = {
         display: ["var(--font-display)"],
         sans: ["var(--font-sans)"],
         mono: ["var(--font-mono)"],
+        // Login v5 (sirf /login par load hoti hain)
+        v5: ["var(--font-v5)", "var(--font-sans)", "system-ui", "sans-serif"],
+        v5display: ["var(--font-v5display)", "var(--font-v5)", "system-ui", "sans-serif"],
+        urdu: ["var(--font-urdu)", "Noto Naskh Arabic", "serif"],
       },
       borderRadius: {
         card: "10px",
