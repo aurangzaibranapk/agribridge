@@ -67,6 +67,7 @@
     "test:auto-profile": "npx --yes tsx scripts/test-auto-profile.ts && node tests/auto-profile-sql.mjs",
     "test:login-crash": "npx --yes tsx scripts/test-login-crash.ts",
     "test:pos-card-cash": "npx --yes tsx scripts/test-pos-card-cash-dupes.ts",
+    "test:shop-categories": "npx --yes tsx tests/shop-allowed-categories-lib.ts && node tests/shop-allowed-categories-sql.mjs",
     "test:pos-godam": "npx --yes tsx --tsconfig scripts/tsconfig.inbox-test.json tests/pos-godam-on-card.tsx && node tests/shop-godam-link-sql.mjs",
     "test:portal-polish": "npx --yes tsx scripts/test-portal-polish.ts && node tests/portal-polish-sql.mjs",
     "test:portal-demand-categories": "npx --yes tsx scripts/test-portal-demand-categories.ts && node tests/portal-demand-categories-sql.mjs",
