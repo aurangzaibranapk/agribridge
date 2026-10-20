@@ -36,8 +36,8 @@ const act = readFileSync("src/actions/login-v5.ts", "utf8");
 assert.match(act, /sendFarmerOtp\("0" \+ key, channel, \{ digits: codeLengthFor\(channel\) as 4 \| 6, only: true \}\)/);
 const otp = readFileSync("src/lib/farmers/otp.ts", "utf8");
 assert.match(otp, /const order = opts\.only\s*\? \[prefer === "sms" \? trySms : tryWhatsapp\]/);
-const mig = readFileSync("supabase/migrations/686_login_v6_identity.sql", "utf8");
-assert.doesNotMatch(mig, /function public\.fn_phone_key/i, "686 must not redefine fn_phone_key");
+const mig = readFileSync("supabase/migrations/687_login_v6_identity.sql", "utf8");
+assert.doesNotMatch(mig, /function public\.fn_phone_key/i, "687 must not redefine fn_phone_key");
 // OAuth buttons wired to existing Supabase OAuth
 const ui = readFileSync("src/app/login/login-v6.tsx", "utf8");
 assert.match(ui, /signInWithOAuth\(\{ provider, options: \{ redirectTo: `\$\{window\.location\.origin\}\/auth\/callback` \} \}\)/);

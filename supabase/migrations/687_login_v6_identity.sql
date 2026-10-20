@@ -1,4 +1,4 @@
--- 686 Login v6 (design1, malik ki manzoori 20 Oct 2026)
+-- 687 Login v6 (design1, malik ki manzoori 20 Oct 2026)
 -- Additive only. Live par sirf malik ki ijazat aur backup ke baad.
 --
 -- 1. profiles.cnic     -- 13 hindse (normalized), unique (partial).
@@ -7,15 +7,15 @@
 --    DOBARA NAHI likha), farmers lower(email).
 --    Har index tabhi banta hai jab purana duplicate data na ho. Duplicate
 --    ho to migration FAIL NAHI hoti: NOTICE + login_identity_duplicates
---    report table mein qatar; malik data saaf kare, phir 686 dobara chalayein.
+--    report table mein qatar; malik data saaf kare, phir 687 dobara chalayein.
 -- 4. fn_login_resolve: 'cnic' kind + profiles.username (621 wala sab waise hi).
 -- 5. fn_login_identity_taken / fn_login_userid_available / fn_login_set_userid.
 
 -- ---------------------------------------------------------------- 1, 2
 alter table public.profiles add column if not exists cnic text;
 alter table public.profiles add column if not exists username text;
-comment on column public.profiles.cnic is 'CNIC, sirf 13 hindse (dash ke baghair). Login aur duplicate rok ke liye (686).';
-comment on column public.profiles.username is 'User ID -- ikhtiyari, poore nizam mein ek (686). farmers.username ke saath bhi takrao nahi.';
+comment on column public.profiles.cnic is 'CNIC, sirf 13 hindse (dash ke baghair). Login aur duplicate rok ke liye (687).';
+comment on column public.profiles.username is 'User ID -- ikhtiyari, poore nizam mein ek (687). farmers.username ke saath bhi takrao nahi.';
 
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'chk_profiles_cnic_13') then
@@ -70,7 +70,7 @@ begin
     execute format('insert into public.login_identity_duplicates (field, value_key, row_count) select %L, d.k, d.c from (%s) d', spec.field, spec.dup_sql);
     get diagnostics n = row_count;
     if n > 0 then
-      raise notice '686: % duplicate % groups -- index % NOT created (dekhein login_identity_duplicates)', n, spec.field, spec.idx;
+      raise notice '687: % duplicate % groups -- index % NOT created (dekhein login_identity_duplicates)', n, spec.field, spec.idx;
     else
       execute spec.make_sql;
     end if;

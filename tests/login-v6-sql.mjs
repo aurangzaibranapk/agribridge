@@ -1,10 +1,10 @@
-// Real SQL test: 621 + 686 (login v6) on PGlite (in-process Postgres) -- live DB nahi.
+// Real SQL test: 621 + 687 (login v6) on PGlite (in-process Postgres) -- live DB nahi.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 
-const mig = fs.readFileSync("supabase/migrations/686_login_v6_identity.sql", "utf8");
-const rb = fs.readFileSync("supabase/migrations/686_login_v6_identity.rollback.sql", "utf8");
+const mig = fs.readFileSync("supabase/migrations/687_login_v6_identity.sql", "utf8");
+const rb = fs.readFileSync("supabase/migrations/687_login_v6_identity.rollback.sql", "utf8");
 assert.doesNotMatch(mig, /\bdrop table\b|\btruncate\b|\bdrop column\b|\bdelete from\b/i, "additive only");
 assert.doesNotMatch(mig, /function public\.fn_phone_key/i, "fn_phone_key not redefined");
 

@@ -90,7 +90,7 @@ async function deps(): Promise<Deps> {
     async identityTaken(phoneKey, email, cnic) {
       try {
         return ((await rpc("fn_login_identity_taken", { p_phone_key: phoneKey ?? "", p_email: email ?? "", p_cnic: cnic ?? "" })) as any[]) ?? [];
-      } catch { return []; } // 686 abhi live nahi: baqi jaanch (resolve) phir bhi chalti hai
+      } catch { return []; } // 687 abhi live nahi: baqi jaanch (resolve) phir bhi chalti hai
     },
     async userIdAvailable(name) { return String(await rpc("fn_login_userid_available", { p_name: name })); },
     async saveUserId(user, name) { return String(await rpc("fn_login_set_userid", { p_user: user, p_name: name })); },
@@ -113,7 +113,7 @@ async function deps(): Promise<Deps> {
         return { ok: false, error: /staff_cannot_be_member|phone_key_uniq/.test(insErr.message) ? "e_phone_taken" : "e_try_again" };
       }
       await ensureProfileFor(service, made.user.id);
-      if (cnic) await service.from("profiles").update({ cnic }).eq("id", made.user.id); // 686 ke baad; pehle ho to chup
+      if (cnic) await service.from("profiles").update({ cnic }).eq("id", made.user.id); // 687 ke baad; pehle ho to chup
       return { ok: true, loginEmail };
     },
     async setPassword(user, password) {

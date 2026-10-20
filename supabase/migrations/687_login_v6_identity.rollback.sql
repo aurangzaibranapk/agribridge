@@ -1,4 +1,4 @@
--- Rollback for 686_login_v6_identity.sql. Owner approval + backup first.
+-- Rollback for 687_login_v6_identity.sql. Owner approval + backup first.
 drop function if exists public.fn_login_set_userid(uuid,text);
 drop function if exists public.fn_login_userid_available(text);
 drop function if exists public.fn_login_identity_taken(text,text,text);
