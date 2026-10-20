@@ -1,5 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
-import { sendWhatsAppMessage } from "@/lib/whatsapp-client";
+import { deliverFreeText } from "@/lib/sms/deliver";
 
 /**
  * Kisan ko payment ki yaad dahani.
@@ -55,26 +55,22 @@ export async function sendPaymentReminder(
   let ok = true;
   let error: string | null = null;
 
+  let channel: "sms" | "whatsapp" = "whatsapp";
   if (!target.phone) {
     ok = false;
     error = "Kisan ka phone number darj nahi hai.";
   } else {
-    // Malik (16 September): "jahan WhatsApp free hai wahan chalay" --
-    // ye free-form paighaam hai (template nahi), is liye kharcha nahi
-    // hota. Sirf paid template wale raaste (OTP, Khata Recovery) band
-    // hain.
-    try {
-      await sendWhatsAppMessage(target.phone, message);
-    } catch (e) {
-      ok = false;
-      error = e instanceof Error ? e.message : "Send failed";
-    }
+    // Veevo set ho to SMS. Warna purana free-form WhatsApp. Dono ek sath nahi.
+    const sent = await deliverFreeText({ phone: target.phone, message });
+    channel = sent.channel;
+    ok = sent.ok;
+    error = sent.error;
   }
 
   await service.from("machinery_payment_reminders").insert({
     booking_id: target.bookingId,
     farmer_id: target.farmerId,
-    channel: "whatsapp",
+    channel,
     phone: target.phone,
     amount: target.amount,
     promise_date: target.promiseDate,

@@ -6,7 +6,52 @@ Do not apply until Boss is on the system and a verified backup size is in chat. 
 
 Data repairs (open shift SHIFT-26-00020, Malik Traders / Zahid balances, duplicate customers, journals TXN-26-000008/9/21/25) are **not** in these migrations. Proposed SQL is in `docs/data-fixes/2026-10-20-needs-owner-approval/` and still needs owner approval. Do not run it with the migration.
 
-Open PRs #177 (624–628) and #180 (629–630) are unchanged. These new files start at 631. Deploy steps: `docs/DEPLOY-184.md` (backup of the 11-arg wrapper, then 631→632→633 with this app at low rush, then smoke, rollback 633→631).
+624–630 are already on main from the Call Center and procurement PRs. They are still not applied; their own notes are below. These money-guard files start at 631. Deploy steps: `docs/DEPLOY-184.md` (backup of the 11-arg wrapper, then 631→632→633 with this app at low rush, then smoke, rollback 633→631).
+
+## Pending — 20 October 2026: Call Center Agent (624 + 625 + 626 + 627 + 628)
+
+- Branch `cursor/call-center-agent-6663`. Migrations in order: `624_call_center_role.sql`, `625_call_center.sql`, `626_complaint_support_bridge.sql`, `627_complaint_stages_grants.sql`, `628_sms_retry.sql`.
+- **Not applied** to Live or Testing. Backup must be verified in chat before either database. Do not run these files from the agent environment.
+- 626 links CMP complaints into the Support Dashboard and lets staff file a complaint that lands unassigned for Admin. 627 adds the stage bar, private images, the Manager assign toggle (off until Owner/Admin grants it), and the AI webhook mark. 628 adds SMS retry columns (`attempts`, `next_attempt_at`) and `fn_cc_take_sms` for the Veevo drain. Web build comes after 628, otherwise the retry columns are missing and the drain falls back to a one-shot update.
+- Veevo env (no secrets in the repo): `SMS_PROVIDER=veevo`, `VEEVO_API_KEY`, optional `VEEVO_SENDER` (approved mask; empty uses the account default). Optional: `VEEVO_API_URL` (default `https://api.veevotech.com/v3/sendsms`), `VEEVO_HEADER` (only if Veevo assigned a shared-short-code header). The adapter POSTs JSON `apikey` and the same value as `hash`. Empty provider keeps `cc_sms_outbox` queued. Cron drain: `CRON_SECRET` on `GET /api/cron/sms-outbox`. Voice OTP (`sendernum` VT-vOTP) and `/v3/sendcall` are not wired.
+- Account side before the first real SMS: VT OneID (oneid.veevotech.com) API key, approved sender ID / mask in `VEEVO_SENDER`, wallet balance, and an IP allow-list if the Veevo account has one. Unverified accounts stay on testing limits.
+- Order when the owner is on the system: Testing first, smoke the four screens with a real caller, then Live only after a fresh backup size is confirmed. Web build comes after the migration, not before. `npm run test:call-center` is the local check (PGlite + rules); it does not talk to either Supabase project.
+- New role `call_center_agent` is view-only (khata, rates, milk, complaints create). SMS queue only. No WhatsApp. Maker cannot close their own complaint. Mukammal is Owner, super admin, or Admin only, and only from Check. The assignee does not close. The assign toggle is Manager-only. The AI button is Owner/Admin only.
+
+## Pending — 20 October 2026: procurement guards (NOT applied)
+
+Migrations `629_procurement_unique_guards.sql` and `630_procurement_atomic_rpc.sql` are written and tested on PGlite only. They are **not** applied to Testing or Live. PO-1792495620885 (Doctor Masala, Rs 7,500) was posted by hand: supplier_payment `93d80980-fcb9-4e53-ba32-6966772d5a3d`, journal `7d0685b9-4239-4f96-b596-86d94ffd454e` (TXN-26-001302), cash book `ef176676`. `held_payment.posted` was later set true on that row. The approve button looks for an existing supplier payment or journal for the purchase and only marks the flag — it does not post a second time. Numbered 629/630 because 624–628 belong to the SMS retry migration.
+
+Read-only — approved purchases whose held payment is still not marked posted (no writes):
+
+```sql
+select p.purchase_number,
+       p.status,
+       p.reviewed_at,
+       s.name as supplier,
+       (p.held_payment->>'amount')::numeric as held_amount,
+       p.held_payment->>'payment_date' as payment_date,
+       p.held_payment->>'payment_method' as payment_method,
+       sp.id as supplier_payment_id,
+       sp.amount as payment_amount,
+       je.id as journal_id,
+       je.entry_number
+from public.purchases p
+left join public.suppliers s on s.id = p.supplier_id
+left join public.supplier_payments sp on sp.purchase_id = p.id
+left join public.journal_entries je
+  on je.source_module = 'supplier_payment'
+ and je.source_id = sp.id
+ and je.is_reversal = false
+where p.review_status = 'approved'
+  and p.held_payment is not null
+  and coalesce(p.held_payment->>'posted', 'false') <> 'true'
+order by p.reviewed_at;
+```
+
+Before apply, run the read-only query at the top of 629 (`select * from public.fn_procurement_index_blockers();` or the raw SELECT in that file). On 20 Oct the Live read showed no `block:` groups. One shared bill (`jx0098807`, 2 purchases) and several old double stock movements are `info:` only — the new partial indexes do not use those rows as keys.
+
+Apply 629, let it commit, then 630. Then deploy the web build. Owner/Admin self-approve (13 Oct) is unchanged.
 
 ## 11 October 2026 — POS receipt print fix (web deployment pending)
 

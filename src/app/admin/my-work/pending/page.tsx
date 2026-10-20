@@ -1,27 +1,27 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Activity, AlertTriangle, CheckCircle2, UserRound } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { loadNav, routeAllowed } from "@/lib/access/nav";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
-import { cn } from "@/lib/utils/format";
 import {
-  ageDays,
   catLabelKey,
-  fmtRs,
   groupItems,
   groupLabelKey,
-  roleLabelKey,
   CODE_MAKER_COLS,
   markCodeOwn,
   adjustMineForCode,
   totals as calcTotals,
+  claimForHref,
+  inboxGroup,
+  parsePendingRoute,
   type PendingCount,
   type PendingItem,
 } from "@/lib/pending/categories";
-import { AgeChip, NayaPill, RedBadge } from "@/components/pending/pending-ui";
-import { DecideButtons } from "./decide-buttons";
+import { pendingKey } from "@/lib/pending/decide";
+import { LiveGroupMarks, PendingFilterPills, PendingGroupFrame, PendingKpis, PendingLive } from "./live-state";
+import { PendingCard, PendingTableRow } from "./pending-rows";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +33,7 @@ export const dynamic = "force-dynamic";
 type Rpc = (fn: string, a?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
 const ERR: Record<string, "apb_e_bad" | "apb_e_reason" | "apb_e_gone" | "apb_own_tip" | "apb_code_tip"> = { bad: "apb_e_bad", reason: "apb_e_reason", gone: "apb_e_gone", own: "apb_own_tip", code: "apb_code_tip" };
 
-export default async function PendingApprovalsPage({ searchParams }: { searchParams?: { f?: string; ok?: string; e?: string } }) {
+export default async function PendingApprovalsPage({ searchParams }: { searchParams?: { f?: string; ok?: string; e?: string; route?: string } }) {
   const sb = createClient();
   const {
     data: { user },
@@ -45,9 +45,18 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
   const allowed = nav.unrestricted ? null : nav.allowedRoutes;
   const can = (route: string) => allowed === null || routeAllowed(allowed, route.split(/[?#]/, 1)[0]);
   const rpc = sb.rpc.bind(sb) as unknown as Rpc;
+  const focus = parsePendingRoute(searchParams?.route);
+  const menus = nav.groups.map((g) => ({ key: g.key, hrefs: g.items.map((i) => i.href) }));
 
-  const [cRes, iRes] = await Promise.all([rpc("fn_admin_pending_counts"), rpc("fn_admin_pending_items", { p_limit: 25 })]);
-  const rawItems = ((iRes.data as PendingItem[] | null) ?? []).filter((i) => can(i.route));
+  const cRes = await rpc("fn_admin_pending_counts");
+  const rawCounts = ((cRes.data as PendingCount[] | null) ?? []).filter((c) => can(c.route));
+  const focusGroup = focus ? nav.groups.find((g) => g.items.some((i) => i.href.split(/[?#]/, 1)[0] === focus)) : undefined;
+  const focusSiblings = focus ? (focusGroup ? focusGroup.items.map((i) => i.href) : [focus]) : [];
+  const focusCats = focus ? claimForHref(rawCounts, focus, focusSiblings).map((c) => c.category) : [];
+  const itemParts = focus
+    ? await Promise.all(focusCats.map((cat) => rpc("fn_admin_pending_items", { p_limit: 200, p_category: cat })))
+    : [await rpc("fn_admin_pending_items", { p_limit: 25 })];
+  const rawItems = itemParts.flatMap((p) => (p.data as PendingItem[] | null) ?? []).filter((i) => can(i.route));
   // Manager code wala bhi maker hai (528) -- us par Approve band, "mujh par baqi" se bahar.
   const codeBy = new Map<string, string | null>();
   for (const [cat, src] of Object.entries(CODE_MAKER_COLS)) {
@@ -59,14 +68,17 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
     for (const r of rows ?? []) codeBy.set(String(r.id), r[src.col] ?? null);
   }
   const allItems = markCodeOwn(rawItems, codeBy, user.id);
-  const counts = adjustMineForCode(((cRes.data as PendingCount[] | null) ?? []).filter((c) => can(c.route)), allItems);
-  const tot = calcTotals(counts);
+  const counts = adjustMineForCode(rawCounts, allItems);
+  const scopeCounts = focus ? counts.filter((c) => focusCats.includes(c.category)) : counts;
+  const tot = calcTotals(scopeCounts);
   const filter = searchParams?.f === "mine" ? "mine" : searchParams?.f === "new" ? "new" : "all";
-  const items = allItems.filter((i) => (filter === "mine" ? !i.is_own && !i.code_own : filter === "new" ? i.is_new : true));
-  const byCat = new Map(counts.map((c) => [c.category, c]));
+  const inScope = focus ? allItems.filter((i) => focusCats.includes(i.category)) : allItems;
+  const items = inScope.filter((i) => (filter === "mine" ? !i.is_own && !i.code_own : filter === "new" ? i.is_new : true));
+  const byCat = new Map(scopeCounts.map((c) => [c.category, c]));
   const shownPerCat = new Map<string, number>();
-  for (const i of allItems) shownPerCat.set(i.category, (shownPerCat.get(i.category) ?? 0) + 1);
-  const groups = groupItems(items);
+  for (const i of inScope) shownPerCat.set(i.category, (shownPerCat.get(i.category) ?? 0) + 1);
+  const placed = items.map((i) => ({ ...i, group_key: inboxGroup(i.route, i.group_key, menus) }));
+  const groups = groupItems(placed);
   const info = counts.filter((c) => c.is_info && c.readable && Number(c.pending) > 0);
   const unreadable = tot.unreadable;
   const errKey = searchParams?.e ? ERR[searchParams.e] : undefined;
@@ -81,29 +93,22 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
   }
 
   return (
+    <PendingLive counts={counts}>
     <div data-pending-page className="mx-auto max-w-6xl space-y-5 pb-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-surface-900 dark:text-white">{t("apb_title", lang)}</h1>
           <p className="mt-1 max-w-2xl text-sm text-surface-500 dark:text-surface-400">{t("apb_sub", lang)}</p>
         </div>
-        <div className="flex gap-1.5" role="tablist">
-          {(["all", "mine", "new"] as const).map((k) => (
-            <Link
-              key={k}
-              href={k === "all" ? "?" : `?f=${k}`}
-              aria-selected={filter === k}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold",
-                filter === k ? "bg-gradient-to-r from-[#1e3a8a] to-[#2563eb] text-white" : "border border-surface-200 bg-white text-surface-600 dark:border-white/10 dark:bg-white/5 dark:text-surface-300"
-              )}
-            >
-              {t(k === "all" ? "apb_filter_all" : k === "mine" ? "apb_filter_mine" : "apb_filter_new", lang)}
-              <span className="opacity-80">· {k === "all" ? tot.pending : k === "mine" ? tot.mine : tot.naya}</span>
-            </Link>
-          ))}
-        </div>
+        <PendingFilterPills filter={filter} base={tot} route={focus} />
       </div>
+
+      {focus && (
+        <p data-pending-route={focus} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800">
+          <span>{t("apb_queue_for", lang)}</span>
+          <Link href="/admin/my-work/pending" className="font-semibold underline">{t("apb_queue_all", lang)}</Link>
+        </p>
+      )}
 
       {searchParams?.ok && (
         <p className="flex items-center gap-2 rounded-xl bg-emerald-500/10 px-4 py-2.5 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
@@ -117,13 +122,7 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
         </p>
       )}
 
-      <div data-pending-kpis className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        <Kpi label={t("apb_kul_baqi", lang)} value={String(tot.pending)} tone="red" />
-        <Kpi label={t("apb_kpi_new", lang)} value={String(tot.naya)} tone="green" />
-        <Kpi label={t("apb_kpi_old", lang)} value={String(tot.oldTypes)} tone="amber" />
-        <Kpi label={t("apb_kpi_mine", lang)} value={String(tot.mine)} tone="blue" />
-        <Kpi label={t("apb_kpi_amount", lang)} value={fmtRs(tot.amount)} tone="plain" />
-      </div>
+      <PendingKpis base={tot} />
 
       {unreadable.length > 0 && (
         <p data-pending-unreadable className="flex items-start gap-2 rounded-xl border border-amber-300/60 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-800 dark:border-amber-400/20 dark:text-amber-200">
@@ -139,18 +138,16 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
       )}
 
       {groups.map(({ group, items: list }) => {
-        const gCounts = counts.filter((c) => c.group_key === group && !c.is_info && c.readable);
+        const gCounts = scopeCounts.filter((c) => inboxGroup(c.route, c.group_key, menus) === group && !c.is_info && c.readable);
         const gPending = gCounts.reduce((s, c) => s + Number(c.pending ?? 0), 0);
         const gNew = gCounts.reduce((s, c) => s + Number(c.naya ?? 0), 0);
         const cats = [...new Set(list.map((i) => i.category))];
         return (
-          <section key={group} data-pending-group={group} className="overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#0f1b3d]">
+          <PendingGroupFrame key={group} group={group} pending={gPending} keys={list.map((i) => pendingKey(i.category, i.item_id))}>
+          <section data-pending-group={group} className="overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-sm dark:border-white/10 dark:bg-[#0f1b3d]">
             <header className="flex items-center justify-between gap-2 border-b border-surface-100 px-4 py-3 dark:border-white/5">
               <h2 className="text-[13px] font-extrabold uppercase tracking-wider text-surface-800 dark:text-surface-100">{t(groupLabelKey(group), lang)}</h2>
-              <span className="flex items-center gap-1.5">
-                <NayaPill n={gNew} lang={lang} />
-                <RedBadge n={gPending} />
-              </span>
+              <LiveGroupMarks group={group} pending={gPending} naya={gNew} />
             </header>
             {/* Desktop */}
             <table className="hidden w-full table-fixed text-left text-[12.5px] md:table">
@@ -167,49 +164,14 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
               </thead>
               <tbody className="divide-y divide-surface-100 dark:divide-white/5">
                 {list.map((i) => (
-                  <tr key={`${i.category}:${i.item_id}`} data-pending-row={i.is_new ? "new" : "pending"} className={cn(i.is_new ? "bg-emerald-500/[0.05]" : "bg-red-500/[0.03]")}>
-                    <td className="px-4 py-2.5 align-top">
-                      {i.is_new ? <NayaPill lang={lang} /> : <span className="text-[10.5px] font-extrabold tracking-wide text-red-600 dark:text-rose-400">● {t("apb_pending_short", lang)}</span>}
-                    </td>
-                    <td className="px-2 py-2.5 align-top">
-                      <p className="truncate font-bold text-surface-900 dark:text-white">
-                        {t(catLabelKey(i.category), lang)} {i.ref && <span className="font-mono text-[11px] text-surface-400">{i.ref}</span>}
-                      </p>
-                      {i.title && <p className="truncate text-[11.5px] text-surface-500 dark:text-surface-400">{i.title}</p>}
-                    </td>
-                    <td className="px-2 py-2.5 text-right align-top font-semibold tabular-nums text-surface-800 dark:text-surface-100">{i.amount != null ? fmtRs(i.amount) : "—"}</td>
-                    <td className="px-2 py-2.5 align-top"><AgeChip days={ageDays(i.created_at)} lang={lang} /></td>
-                    <td className="truncate px-2 py-2.5 align-top text-surface-700 dark:text-surface-200">{i.is_own ? <b className="text-amber-700 dark:text-amber-300">{t("apb_you", lang)}</b> : i.entered_by_name ?? t("apb_noname", lang)}</td>
-                    <td className="px-2 py-2.5 align-top">
-                      <span className="inline-flex max-w-full items-center gap-1 truncate rounded-lg bg-surface-100 px-2 py-0.5 text-[11.5px] font-semibold text-surface-700 dark:bg-white/5 dark:text-surface-200">
-                        <UserRound className="h-3 w-3 shrink-0" />
-                        <span className="truncate">{i.actor_name ?? t(roleLabelKey(i.pending_with), lang)}</span>
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 align-top"><DecideButtons category={i.category} id={i.item_id} isOwn={i.is_own} codeOwn={!!i.code_own} href={i.link || i.route} /></td>
-                  </tr>
+                  <PendingTableRow key={pendingKey(i.category, i.item_id)} item={i} />
                 ))}
               </tbody>
             </table>
             {/* Mobile */}
             <ul className="divide-y divide-surface-100 md:hidden dark:divide-white/5">
               {list.map((i) => (
-                <li key={`${i.category}:${i.item_id}`} data-pending-card className={cn("space-y-2 px-4 py-3", i.is_new ? "bg-emerald-500/[0.05]" : "bg-red-500/[0.03]")}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-[13px] font-bold text-surface-900 dark:text-white">{t(catLabelKey(i.category), lang)} {i.ref && <span className="font-mono text-[11px] text-surface-400">{i.ref}</span>}</p>
-                      {i.title && <p className="truncate text-[11.5px] text-surface-500 dark:text-surface-400">{i.title}</p>}
-                    </div>
-                    <span className="shrink-0 text-[13px] font-bold tabular-nums text-surface-900 dark:text-white">{i.amount != null ? fmtRs(i.amount) : ""}</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                    {i.is_new ? <NayaPill lang={lang} /> : <span className="font-extrabold text-red-600 dark:text-rose-400">● {t("apb_pending_short", lang)}</span>}
-                    <AgeChip days={ageDays(i.created_at)} lang={lang} />
-                    <span className="text-surface-500 dark:text-surface-400">{t("apb_entered", lang)}: {i.is_own ? t("apb_you", lang) : i.entered_by_name ?? t("apb_noname", lang)}</span>
-                    <span className="inline-flex items-center gap-1 font-semibold text-surface-700 dark:text-surface-200"><UserRound className="h-3 w-3" />{i.actor_name ?? t(roleLabelKey(i.pending_with), lang)}</span>
-                  </div>
-                  <DecideButtons category={i.category} id={i.item_id} isOwn={i.is_own} codeOwn={!!i.code_own} href={i.link || i.route} />
-                </li>
+                <PendingCard key={pendingKey(i.category, i.item_id)} item={i} />
               ))}
             </ul>
             {cats.map((c) => {
@@ -222,6 +184,7 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
               ) : null;
             })}
           </section>
+          </PendingGroupFrame>
         );
       })}
 
@@ -245,25 +208,6 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
         </section>
       )}
     </div>
-  );
-}
-
-function Kpi({ label, value, tone }: { label: string; value: string; tone: "red" | "green" | "amber" | "blue" | "plain" }) {
-  return (
-    <div className="rounded-2xl border border-surface-200 bg-white px-4 py-3 shadow-sm dark:border-white/10 dark:bg-[#0f1b3d]">
-      <p className="text-[10.5px] font-bold uppercase tracking-wider text-surface-400">{label}</p>
-      <p
-        className={cn(
-          "mt-1 font-display text-2xl font-extrabold tabular-nums",
-          tone === "red" && "text-red-600 dark:text-rose-400",
-          tone === "green" && "text-emerald-600 dark:text-emerald-400",
-          tone === "amber" && "text-amber-600 dark:text-amber-300",
-          tone === "blue" && "text-blue-700 dark:text-blue-300",
-          tone === "plain" && "text-surface-900 dark:text-white"
-        )}
-      >
-        {value}
-      </p>
-    </div>
+    </PendingLive>
   );
 }

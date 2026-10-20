@@ -1,5 +1,6 @@
 "use server";
 import { grnPayable } from "@/lib/inventory/grn-payable";
+import { grnBatchDedupeKey, grnMovementDedupeKey } from "@/lib/purchases/procurement-guards";
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
@@ -221,32 +222,6 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
     return { error: err instanceof Error ? err.message : "GRN number nahi ban saka." };
   }
 
-  const { data: grn, error } = await supabase
-    .from("agri_grns")
-    .insert({
-      grn_number: grnNumber,
-      order_id: orderId,
-      dispatch_id: dispatchId,
-      receiving_date: receivingDate,
-      ordered_value: orderedValue,
-      received_value: receivedValue,
-      shortage_amount: shortageAmount,
-      damage_amount: damageAmount,
-      discount_adjustment: discountAdjustment,
-      additional_charges: additionalCharges,
-      payable_amount: payableAmount,
-      notes,
-      discrepancy_status: hasDiscrepancy ? "pending_warehouse_review" : "none",
-      created_by: user?.id ?? null,
-    })
-    .select("id")
-    .single();
-  if (error) return { error: error.message };
-
-  const grnItemRows = itemRows.map((r) => ({ ...r, grn_id: grn.id }));
-  const { error: itemsError } = await supabase.from("agri_grn_items").insert(grnItemRows);
-  if (itemsError) return { error: itemsError.message };
-
   // Add received stock (skip Rejected items) into the receiving
   // branch's MAIN warehouse inventory - stock is added regardless of
   // discrepancy status, since goods physically arrived; only the
@@ -255,6 +230,7 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
   // order_to_warehouse_id: migration 442 — fetched separately until types regenerate.
   const { data: orderWh } = await (supabase as any).from("agri_orders").select("order_to_warehouse_id").eq("id", orderId).single() as { data: { order_to_warehouse_id: string | null } | null; error: unknown };
   const order = orderRaw ? { ...orderRaw, order_to_warehouse_id: orderWh?.order_to_warehouse_id ?? null } : null;
+  const stockRows: Record<string, unknown>[] = [];
   if (order?.order_to_branch_id) {
     // Destination warehouse: pehle order mein jo set ki gayi hai (seller
     // ki shop godam), phir branch ki MAIN warehouse.
@@ -274,71 +250,58 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
     }
 
     if (warehouse) {
-      for (const item of items) {
-        if (!item.product_id || item.quality_status === "Rejected" || item.received_qty <= 0) continue;
-
-        const { data: existingStock } = await supabase
-          .from("inventory")
-          .select("id")
-          .eq("warehouse_id", warehouse.id)
-          .eq("product_id", item.product_id)
-          .maybeSingle();
-
-        // Ye jagah baqi sab se alag tarah kharab thi: yahan ginti to
-        // badalti thi magar stock_movements mein KUCH LIKHA HI NAHI
-        // JATA tha. Yani maal godam mein aata tha aur us ka koi kaghaz
-        // nahi banta -- "ye sau bore kahan se aaye" ka jawab kahin nahi
-        // milta, aur GRN ka poora maqsad yehi sawal hai.
-        //
-        // Ab ginti khud nahi likhi jati (trigger karta hai, 129) aur
-        // harkat darj hoti hai.
-        const inventoryId =
-          existingStock?.id ??
-          (
-            await supabase
-              .from("inventory")
-              .insert({ warehouse_id: warehouse.id, product_id: item.product_id })
-              .select("id")
-              .single()
-          ).data?.id;
-
+      const warehouseId = warehouse.id;
+      items.forEach((item, index) => {
+        if (!item.product_id || item.quality_status === "Rejected" || item.received_qty <= 0) return;
+        const lineKey = item.order_item_id || `${item.product_id}:${index}`;
         const landed = item.unit_price + item.unit_price * chargeRatio;
-        if (inventoryId) {
-          const { data: alreadyMv } = await supabase
-            .from("stock_movements")
-            .select("id")
-            .eq("inventory_id", inventoryId)
-            .eq("reference_type", "agri_grn")
-            .eq("reference_id", orderId)
-            .limit(1);
-          if (!alreadyMv || alreadyMv.length === 0) {
-            await supabase.from("stock_movements").insert({
-              inventory_id: inventoryId,
-              movement_type: "purchase_in",
-              quantity: item.received_qty,
-              reference_type: "agri_grn",
-              reference_id: orderId,
-              created_by: user?.id ?? null,
-            });
-          }
-        }
-        const batchNo = item.batch_no || `GRN-${orderId.slice(0, 8)}-${item.product_id?.slice(0, 6) ?? "ITEM"}`;
-        const { data: newBatch } = await supabase.from("stock_batches").insert({
+        stockRows.push({
           product_id: item.product_id,
-          warehouse_id: warehouse.id,
-          batch_number: batchNo,
-          expiry_date: item.expiry_date,
-          manufacture_date: item.manufacturing_date,
-          initial_quantity: item.received_qty,
-          remaining_quantity: item.received_qty,
+          warehouse_id: warehouseId,
+          quantity: item.received_qty,
           unit_cost: landed,
-        }).select("id").single();
-        if (newBatch && inventoryId) {
-          await supabase.from("inventory").update({ batch_id: newBatch.id }).eq("id", inventoryId).is("batch_id", null);
-        }
-      }
+          batch_number: item.batch_no || `GRN-${orderId.slice(0, 8)}-${item.product_id.slice(0, 6)}`,
+          expiry_date: item.expiry_date,
+          manufacturing_date: item.manufacturing_date,
+          reference_id: orderId,
+          created_by: user?.id ?? null,
+          dedupe_key: grnMovementDedupeKey(orderId, lineKey),
+          batch_dedupe_key: grnBatchDedupeKey(orderId, lineKey),
+        });
+      });
     }
   }
+
+  // Header, items aur stock EK transaction. order_id ka unique index
+  // doosri GRN rokta hai; batch bhi usi transaction mein hai.
+  const { data: created, error } = await (supabase as any).rpc("fn_create_agri_grn_atomic", {
+    p_grn: {
+      grn_number: grnNumber,
+      order_id: orderId,
+      dispatch_id: dispatchId,
+      receiving_date: receivingDate,
+      ordered_value: orderedValue,
+      received_value: receivedValue,
+      shortage_amount: shortageAmount,
+      damage_amount: damageAmount,
+      discount_adjustment: discountAdjustment,
+      additional_charges: additionalCharges,
+      payable_amount: payableAmount,
+      notes,
+      discrepancy_status: hasDiscrepancy ? "pending_warehouse_review" : "none",
+      created_by: user?.id ?? null,
+    },
+    p_items: itemRows,
+    p_stock: stockRows,
+  });
+  if (error || !created?.ok) {
+    const message = String(error?.message ?? created?.error ?? "");
+    if (created?.code === "exists" || /ux_agri_grns_order_id|duplicate key/i.test(message)) {
+      return { error: "Is order ki GRN pehle se hai — dobara stock nahi barhega." };
+    }
+    return { error: message || "GRN save nahi hui." };
+  }
+  const grn = { id: created.id as string };
 
   if (hasDiscrepancy) {
     // Two-stage discrepancy workflow: Warehouse explains what happened
