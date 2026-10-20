@@ -378,6 +378,7 @@ export function BoardScreen({ data }: { data: BoardData }) {
         </table>
         <p className="m-4 rounded-2xl bg-[#f4f0ff] px-4 py-3 text-[13px] text-[#3d3a66]">
           Maker-checker: Agent apni complaint khud band nahi kar sakta — sirf department ka banda hal kar ke band karega. ایجنٹ اپنی شکایت خود بند نہیں کر سکتا۔
+          <span className="mt-1 block">Yeh CMP Support Dashboard ki admin queue mein bhi hai. Category sirf tajweez hai — assign Admin karta hai. Number sirf SMS.</span>
         </p>
       </section>
     </div>

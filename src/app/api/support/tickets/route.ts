@@ -5,6 +5,7 @@ import { configuredSupportAgents } from "@/lib/support/agent-dispatch";
 import { parseAssignChoice } from "@/lib/support/assign";
 import { notifyUser } from "@/lib/notifications";
 import { intakeDepartment } from "@/lib/support/departments";
+import { canAssignComplaints } from "@/lib/support/complaint-intake";
 
 export const dynamic = "force-dynamic";
 const MANAGER_ROLES = ["owner", "super_admin", "admin", "manager", "admin_assistant"];
@@ -19,14 +20,19 @@ async function context() {
   const { data: profile } = await service.from("profiles").select("id,full_name,role,organization_id,is_active").eq("id", user.id).maybeSingle();
   if (!profile?.is_active) return null;
   const supportDb = service as any;
-  return { user, profile, service, supportDb, canManage: MANAGERS.has(String(profile.role)) };
+  const role = String(profile.role);
+  return {
+    user, profile, service, supportDb,
+    canManage: MANAGERS.has(role),
+    canAssign: canAssignComplaints(role),
+  };
 }
 
 export async function GET() {
   const ctx = await context();
   if (!ctx) return NextResponse.json({ error: "Login zaroori hai." }, { status: 401 });
   let query = ctx.supportDb.from("support_tickets").select("*, reporter:profiles!support_tickets_reporter_id_fkey(full_name), assignee:profiles!support_tickets_assigned_to_fkey(full_name)").eq("organization_id", ctx.profile.organization_id).order("created_at", { ascending: false }).limit(100);
-  // Developer (insaan) ko apne assign kiye hue tickets bhi dikhen (539).
+  // Staff sirf apni shikayat aur jo unhein assign hui ho. Manager purani support list dekhta rehta hai.
   if (!ctx.canManage) query = query.or(`reporter_id.eq.${ctx.user.id},assigned_to.eq.${ctx.user.id}`);
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -60,12 +66,14 @@ export async function GET() {
     : { data: [] };
   return NextResponse.json({
     items,
-    departments: departments ?? [],
-    members: (members ?? []).map((m: any) => ({ ...m, full_name: m.person?.full_name ?? null })),
+    departments: ctx.canAssign ? (departments ?? []) : [],
+    members: ctx.canAssign ? (members ?? []).map((m: any) => ({ ...m, full_name: m.person?.full_name ?? null })) : [],
     canManage: ctx.canManage,
+    canAssign: ctx.canAssign,
+    viewerRole: String(ctx.profile.role),
     meId: ctx.user.id,
-    assignees: assignees ?? [],
-    agents: ctx.canManage ? configuredSupportAgents() : [],
+    assignees: ctx.canAssign ? (assignees ?? []) : [],
+    agents: ctx.canAssign ? configuredSupportAgents() : [],
   });
 }
 
@@ -78,7 +86,42 @@ export async function POST(req: NextRequest) {
   const priority = String(form.get("priority") ?? "normal");
   if (title.length < 3 || description.length < 3) return NextResponse.json({ error: "Title aur issue detail likhein." }, { status: 400 });
   if (!VALID_PRIORITY.has(priority)) return NextResponse.json({ error: "Priority theek nahi hai." }, { status: 400 });
-  // Khali = "Admin triage" (unassigned). Ghalat qeemat par bhi issue rukta nahi.
+  // Staff: form se department/assignee ignore. Seedha Admin ki khali queue.
+  if (!ctx.canAssign) {
+    const userDb = createClient() as any;
+    const filed = await userDb.rpc("fn_staff_file_complaint", {
+      p_title: title,
+      p_description: description,
+      p_priority: priority,
+      p_page_url: String(form.get("page_url") ?? "").slice(0, 1000) || null,
+    });
+    if (filed.error) {
+      const missing = /fn_staff_file_complaint|schema cache|does not exist|Could not find/i.test(filed.error.message);
+      return NextResponse.json({
+        error: missing
+          ? "Staff complaint queue abhi is database par nahi. Migration 626 backup ke baad chalti hai."
+          : filed.error.message,
+      }, { status: missing ? 503 : 400 });
+    }
+    const row = filed.data ?? {};
+    const screenshot = form.get("screenshot");
+    if (row.id && screenshot instanceof File && screenshot.size > 0) {
+      if (screenshot.size > 8 * 1024 * 1024 || !screenshot.type.startsWith("image/")) {
+        return NextResponse.json({ error: "Screenshot image 8MB se chhoti honi chahiye." }, { status: 400 });
+      }
+      const ext = screenshot.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "").toLowerCase() || "png";
+      const screenshotPath = `${ctx.profile.organization_id}/${ctx.user.id}/${crypto.randomUUID()}.${ext}`;
+      const uploaded = await ctx.service.storage.from("support-evidence").upload(screenshotPath, screenshot, { contentType: screenshot.type, upsert: false });
+      if (!uploaded.error) await ctx.supportDb.from("support_tickets").update({ screenshot_path: screenshotPath }).eq("id", row.id);
+    }
+    const { data: managers } = await ctx.service.from("profiles").select("id").eq("organization_id", ctx.profile.organization_id).eq("is_active", true).in("role", ["owner", "super_admin", "admin"]);
+    const reference = `ISS-${new Date(row.created_at ?? Date.now()).getFullYear()}-${String(row.ticket_no ?? 0).padStart(5, "0")}`;
+    await Promise.all((managers ?? []).map((manager: { id: string }) =>
+      notifyUser(manager.id, `${reference} · Staff complaint`, `${ctx.profile.full_name}: ${title}`, "/admin/my-work/support-dashboard")
+    ));
+    return NextResponse.json({ success: true, ticket: { id: row.id, ticket_no: row.ticket_no, created_at: row.created_at } });
+  }
+  // Admin apna support issue ab bhi triage kar sakta hai.
   const choice = parseAssignChoice(form.get("assign"));
   let assignee: { id: string; full_name: string } | null = null;
   if (choice.kind === "person") {

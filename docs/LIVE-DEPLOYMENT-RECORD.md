@@ -1,7 +1,8 @@
-## Pending — 20 October 2026: Call Center Agent (624 + 625)
+## Pending — 20 October 2026: Call Center Agent (624 + 625 + 626)
 
-- Branch `cursor/call-center-agent-6663`. Migrations `624_call_center_role.sql` then `625_call_center.sql`.
+- Branch `cursor/call-center-agent-6663`. Migrations in order: `624_call_center_role.sql`, `625_call_center.sql`, `626_complaint_support_bridge.sql`.
 - **Not applied** to Live or Testing. Backup must be verified in chat before either database. Do not run these files from the agent environment.
+- 626 links CMP complaints into the Support Dashboard and lets staff file a complaint that lands unassigned for Admin. Web build comes after 626, otherwise the queue columns are missing.
 - Order when the owner is on the system: Testing first, smoke the four screens with a real caller, then Live only after a fresh backup size is confirmed. Web build comes after the migration, not before. `npm run test:call-center` is the local check (PGlite + rules); it does not talk to either Supabase project.
 - New role `call_center_agent` is view-only (khata, rates, milk, complaints create). SMS queue only. No WhatsApp. Maker cannot close their own complaint.
 
