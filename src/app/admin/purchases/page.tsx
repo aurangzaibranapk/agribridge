@@ -55,7 +55,7 @@ export default async function AdminPurchasesPage() {
     supabase
       .from("purchases")
       .select(
-        "id, purchase_number, purchase_date, status, total_amount, invoice_total, discount_amount, tax_amount, tax_label, review_status, suppliers(name), branches(name), purchase_items(id, product_id, quantity, received_qty, unit_cost, products(name, pack_size, sale_rate_pending, units_per_pack)), purchase_comments(id, kind, body, created_at, profiles(full_name)), purchase_payment_slips(id, amount, paid_on, image_url)"
+        "id, purchase_number, purchase_date, status, total_amount, invoice_total, discount_amount, tax_amount, tax_label, review_status, held_payment, suppliers(name), branches(name), purchase_items(id, product_id, quantity, received_qty, unit_cost, products(name, pack_size, sale_rate_pending, units_per_pack)), purchase_comments(id, kind, body, created_at, profiles(full_name)), purchase_payment_slips(id, amount, paid_on, image_url)"
       )
       .order("created_at", { ascending: false })
       .limit(50),
@@ -107,6 +107,8 @@ export default async function AdminPurchasesPage() {
     tax_amount: p.tax_amount as number | null,
     tax_label: p.tax_label as string | null,
     review_status: (p.review_status as string) ?? "approved",
+    held_unposted: Boolean(p.held_payment && p.held_payment.posted !== true && Number(p.held_payment.amount) > 0),
+    held_amount: Number(p.held_payment?.amount ?? 0),
     // Product setup baqi = is purchase ki koi cheez bina sale rate ke.
     setupPending: ((p.purchase_items ?? []) as any[]).some((i) => {
       const rel = Array.isArray(i.products) ? i.products[0] : i.products;
@@ -311,7 +313,10 @@ export default async function AdminPurchasesPage() {
                               items={p.items.filter((item) => item.productId).map((item) => ({ productId: item.productId, name: item.name }))}
                             />
                           )}
-                          {p.status === "pending" && (
+                          {p.held_unposted && p.status !== "cancelled" && (
+                            <span className="text-[11px] font-medium text-amber-700 dark:text-amber-400">{t("pu_rv_held_open", lang)}</span>
+                          )}
+                          {(p.status === "pending" || p.held_unposted) && p.status !== "cancelled" && (
                             <ReviewPanel
                               purchaseId={p.id}
                               purchaseNumber={p.purchase_number}
@@ -322,6 +327,8 @@ export default async function AdminPurchasesPage() {
                               canVerify={canVerify}
                               discountAmount={p.discount_amount}
                               taxAmount={p.tax_amount}
+                              heldOnly={p.review_status === "approved" && p.held_unposted}
+                              heldAmount={p.held_amount}
                             />
                           )}
                         </div>

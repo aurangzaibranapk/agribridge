@@ -6,6 +6,10 @@ import { createServiceClient } from "@/lib/supabase/service";
 import type { Database } from "@/lib/types/database.types";
 import { postFarmerLedger } from "@/lib/farmer-ledger";
 import { postFarmerCreditGiven, postFarmerCreditRepaid, glForFinanceAccount, failed } from "@/lib/ledger/rules";
+import { farmerCreditNeedsOverride } from "@/lib/money/review-guards";
+import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
+
+const CREDIT_OVERRIDE_ROLES = ["owner", "super_admin", "admin", "manager"];
 
 export interface ActionState {
   error?: string;
@@ -33,22 +37,41 @@ export async function issueFarmerCredit(_prev: ActionState, formData: FormData):
   if (!sourceType) return { error: "Source type select karein." };
   if (!amount || amount <= 0) return { error: "Amount sahi likhein." };
 
+  const { data: farmer } = await supabase.from("farmers").select("credit_limit").eq("id", farmerId).maybeSingle();
+  const currentBalance = await getBalanceDue(supabase, farmerId);
+  const needsOverride = farmerCreditNeedsOverride(
+    farmer?.credit_limit == null ? null : Number(farmer.credit_limit),
+    currentBalance,
+    amount,
+  );
+  if (needsOverride && !overrideLimit) {
+    const hadd = Number(farmer?.credit_limit ?? 0);
+    return {
+      error: hadd > 0
+        ? `LIMIT_EXCEEDED:Is Farmer ki Credit Limit Rs ${hadd.toLocaleString()} hai. Naye balance ke sath Rs ${(currentBalance + amount).toLocaleString()} ho jayega.`
+        : "LIMIT_EXCEEDED:Is Farmer ki credit limit set nahi. Manager ya Admin override ke baghair udhaar nahi nikalta.",
+    };
+  }
+  if (needsOverride && overrideLimit) {
+    const {
+      data: { user: actor },
+    } = await supabase.auth.getUser();
+    const { data: me } = actor
+      ? await supabase.from("profiles").select("role, is_active").eq("id", actor.id).maybeSingle()
+      : { data: null };
+    if (!me?.is_active || !CREDIT_OVERRIDE_ROLES.includes(String(me.role))) {
+      return { error: "Credit limit override sirf Manager ya Admin de sakta hai." };
+    }
+  }
+
   if (clientActionId) {
     const { data, error } = await (supabase as any).rpc("fn_post_farmer_credit_atomic", {
       p_mode: "issue", p_farmer_id: farmerId, p_amount: amount, p_source_type: sourceType,
       p_notes: notes, p_collected_by: collectedBy, p_client_action_id: clientActionId,
+      p_override: needsOverride && overrideLimit,
     });
     if (error) return { error: error.message };
     if (data?.success) return { success: true };
-  }
-
-  const { data: farmer } = await supabase.from("farmers").select("credit_limit").eq("id", farmerId).maybeSingle();
-  if (farmer?.credit_limit) {
-    const currentBalance = await getBalanceDue(supabase, farmerId);
-    const newBalance = currentBalance + amount;
-    if (newBalance > Number(farmer.credit_limit) && !overrideLimit) {
-      return { error: `LIMIT_EXCEEDED:Is Farmer ki Credit Limit Rs ${Number(farmer.credit_limit).toLocaleString()} hai. Naye balance ke sath Rs ${newBalance.toLocaleString()} ho jayega.` };
-    }
   }
 
   const {
@@ -221,6 +244,14 @@ export async function migrateOpeningBalance(_prev: ActionState, formData: FormDa
 
 export async function setFarmerCreditLimit(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active || !UNRESTRICTED_ROLES.includes(String(me.role))) {
+    return { error: "Credit limit sirf Admin ya Owner badal sakta hai." };
+  }
   const farmerId = String(formData.get("farmer_id") ?? "");
   const limit = formData.get("credit_limit") ? Number(formData.get("credit_limit")) : null;
   if (!farmerId) return { error: "Farmer select karein." };

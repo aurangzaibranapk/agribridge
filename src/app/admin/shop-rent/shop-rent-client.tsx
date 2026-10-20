@@ -8,6 +8,7 @@ import {
   recordRentPayment,
   createShopBill,
   markBillPaid,
+  requestShopBill,
   uploadCompanyStamp,
   type ActionState,
 } from "@/actions/shop-rent";
@@ -179,16 +180,26 @@ function AgreementCard({ agreement, currentMonth, currentYear, bills, canManage 
 }
 
 function BillChip({ bill, canManage }: { bill: Bill; canManage: boolean }) {
-  const [, formAction] = useFormState(markBillPaid, initialState);
+  const [payState, payAction] = useFormState(markBillPaid, initialState);
+  const [askState, askAction] = useFormState(requestShopBill, initialState);
   const lang = useLang();
   return (
     <span className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs ${bill.status === "paid" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
       {bill.bill_type} ({MONTHS[bill.bill_month - 1]}) Rs {bill.amount.toLocaleString()}
       {bill.status !== "paid" && canManage && (
-        <form action={formAction}>
-          <input type="hidden" name="bill_id" value={bill.id} />
-          <button type="submit" title={t("sr_mark_paid", lang)}><CheckCircle2 className="h-3 w-3" /></button>
-        </form>
+        <>
+          <form action={askAction}>
+            <input type="hidden" name="bill_id" value={bill.id} />
+            <button type="submit" title="Finance se maango" className="underline">Maango</button>
+          </form>
+          <form action={payAction}>
+            <input type="hidden" name="bill_id" value={bill.id} />
+            <button type="submit" title={t("sr_mark_paid", lang)}><CheckCircle2 className="h-3 w-3" /></button>
+          </form>
+        </>
+      )}
+      {(payState.error || askState.error) && (
+        <span className="text-red-800">{payState.error || askState.error}</span>
       )}
     </span>
   );

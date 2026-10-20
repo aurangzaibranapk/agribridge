@@ -9,6 +9,7 @@ import { notifyRoles, notifyBranch } from "@/lib/notifications";
 import { mainWarehouseId, hqWarehouseId } from "@/lib/stock-movement";
 import { returnPriceCheck } from "@/lib/orders/return-math";
 import { requireAction } from "@/lib/access/guard";
+import { nextYearNumber } from "@/lib/counters";
 
 /**
  * Wapsi kaun manzoor karta hai.
@@ -39,19 +40,7 @@ export interface ReturnItemInput {
 }
 
 async function generateReturnNumber(): Promise<string> {
-  const serviceClient = createServiceClient();
-  const year = new Date().getFullYear() % 100;
-
-  const { data: existing } = await serviceClient.from("agri_return_counters").select("last_number").eq("year", year).maybeSingle();
-  const nextNumber = (existing?.last_number ?? 0) + 1;
-
-  if (existing) {
-    await serviceClient.from("agri_return_counters").update({ last_number: nextNumber }).eq("year", year);
-  } else {
-    await serviceClient.from("agri_return_counters").insert({ year, last_number: nextNumber });
-  }
-
-  return `RET-AGR-${year}-${String(nextNumber).padStart(5, "0")}`;
+  return nextYearNumber("agri_return_counters", "RET-AGR-");
 }
 
 /**

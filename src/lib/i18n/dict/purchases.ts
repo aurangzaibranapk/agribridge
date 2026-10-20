@@ -298,4 +298,11 @@ export const purchasesDict = {
     rm: "Tasdeeq shuda — Owner/Admin ke final manzoori ka intezar hai.",
     ur: "تصدیق شدہ — مالک/ایڈمن کی فائنل منظوری کا انتظار ہے۔",
   },
+  pu_rv_held_open: { en: "Payment not posted", rm: "Adaigi post nahi hui", ur: "ادائیگی پوسٹ نہیں ہوئی" },
+  pu_rv_held_hint: {
+    en: "This purchase is approved, but the payment recorded at entry was not posted. Post it once. A second click will not pay again.",
+    rm: "Purchase manzoor hai, magar entry wali adaigi post nahi hui. Ek dafa post karein. Dobara click doosri adaigi nahi karega.",
+    ur: "پرچیز منظور ہے، مگر اندراج والی ادائیگی پوسٹ نہیں ہوئی۔ ایک بار پوسٹ کریں۔ دوبارہ کلک دوسری ادائیگی نہیں کرے گا۔",
+  },
+  pu_rv_post_held: { en: "Post payment", rm: "Adaigi post karein", ur: "ادائیگی پوسٹ کریں" },
 } as const;

@@ -5,6 +5,9 @@ import { ArrowRight, BarChart3, CheckCircle2, LayoutGrid, Sparkles } from "lucid
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { iconByName } from "@/lib/access/icons";
 import { blueprintFor } from "@/lib/dashboard-blueprints";
+import { usePending } from "@/components/pending/pending-context";
+import { RedBadge } from "@/components/pending/pending-ui";
+import { badgeForHref, pendingQueueHref, type PendingCount } from "@/lib/pending/categories";
 
 type Item = { href: string; label: string; icon: string | null; description?: string | null; section?: string | null };
 type Tile = { label: string; value: string; hint?: string; href?: string; tone?: "normal" | "warn" | "alert" };
@@ -19,13 +22,21 @@ const ACCENTS = {
   rose: { icon: "bg-rose-50 text-rose-700", bar: "#d64545", wash: "from-rose-50/80" },
 };
 
-export function CanonicalDepartmentDashboard({ dashboardKey, label, description, icon, items, tiles }: { dashboardKey: string; label: string; description: string; icon: string | null; items: Item[]; tiles: Tile[] }) {
+export function CanonicalDepartmentDashboard({ dashboardKey, label, description, icon, items, tiles, counts }: { dashboardKey: string; label: string; description: string; icon: string | null; items: Item[]; tiles: Tile[]; counts?: PendingCount[] }) {
+  const pend = usePending();
+  const rows = counts ?? (pend.enabled ? pend.counts : []);
+  const hrefs = items.map((i) => i.href);
+  const badge = (href: string) => (rows.length ? badgeForHref(rows, href, Date.now(), hrefs) : null);
+  const dest = (href: string) => (badge(href) ? pendingQueueHref(href) : href);
   const Icon = iconByName(icon);
   const blueprint = blueprintFor(dashboardKey);
   const accent = ACCENTS[blueprint.accent];
   const sections = [...new Set(items.map((i) => i.section || "Operations"))].map((section) => ({ section, value: items.filter((i) => (i.section || "Operations") === section).length }));
   const reports = items.filter((i) => i.href.includes("report"));
-  const primary = items.filter((i) => !i.href.includes("report")).slice(0, 8);
+  const primaryBase = items.filter((i) => !i.href.includes("report")).slice(0, 8);
+  const quick = items.slice(8, 13);
+  const shown = new Set([...primaryBase.map((i) => i.href), ...quick.map((i) => i.href)]);
+  const primary = [...primaryBase, ...items.filter((i) => !shown.has(i.href) && badge(i.href))];
   const displayTiles = tiles.length ? tiles.slice(0, 4) : [
     { label: "Available Work", value: String(items.length), hint: "Permission-based features" },
     { label: "Operations", value: String(items.filter((i) => (i.section || "Operations") === "Operations").length), hint: "Daily work areas" },
@@ -53,7 +64,7 @@ export function CanonicalDepartmentDashboard({ dashboardKey, label, description,
       <div className="grid gap-3 xl:grid-cols-[1.45fr_.75fr]">
         <section className="rounded-xl border border-surface-200 bg-white p-3.5 shadow-card dark:border-surface-800 dark:bg-surface-900">
           <div className="mb-3 flex items-center justify-between"><div><h2 className="flex items-center gap-2 text-sm font-bold"><LayoutGrid className="h-4 w-4" style={{ color: accent.bar }} />{blueprint.operationsTitle}</h2><p className="text-[11px] text-surface-500">{blueprint.operationsHint}</p></div><span className="text-[10px] text-surface-400">{items.length} features</span></div>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{primary.map((item) => { const ItemIcon = iconByName(item.icon); return <Link key={item.href} href={item.href} className="group rounded-xl border border-surface-200 p-3 transition hover:border-brand-300 hover:bg-brand-25 dark:border-surface-800"><div className="flex items-center justify-between"><span className="rounded-lg bg-brand-50 p-2 text-brand-700 dark:bg-surface-800"><ItemIcon className="h-4 w-4" /></span><ArrowRight className="h-3.5 w-3.5 text-surface-300 group-hover:text-brand-600" /></div><p className="mt-2 text-xs font-bold text-surface-900 dark:text-white">{item.label}</p><p className="mt-0.5 line-clamp-2 text-[10px] text-surface-500">{item.description || item.section || "Department operation"}</p></Link>; })}</div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{primary.map((item) => { const ItemIcon = iconByName(item.icon); const b = badge(item.href); return <Link key={item.href} href={dest(item.href)} data-feature={item.href} data-pending-queue={b ? dest(item.href) : undefined} className="group rounded-xl border border-surface-200 p-3 transition hover:border-brand-300 hover:bg-brand-25 dark:border-surface-800"><div className="flex items-center justify-between"><span className="rounded-lg bg-brand-50 p-2 text-brand-700 dark:bg-surface-800"><ItemIcon className="h-4 w-4" /></span><span className="flex items-center gap-1">{b ? <RedBadge n={b.pending} /> : null}<ArrowRight className="h-3.5 w-3.5 text-surface-300 group-hover:text-brand-600" /></span></div><p className="mt-2 text-xs font-bold text-surface-900 dark:text-white">{item.label}</p><p className="mt-0.5 line-clamp-2 text-[10px] text-surface-500">{item.description || item.section || "Department operation"}</p></Link>; })}</div>
           {primary.length === 0 && <p className="py-12 text-center text-xs text-surface-400">Is department ke features abhi assign nahi hue.</p>}
         </section>
 
@@ -65,7 +76,7 @@ export function CanonicalDepartmentDashboard({ dashboardKey, label, description,
 
       <div className="grid gap-3 xl:grid-cols-[1.3fr_.7fr]">
         <section className="rounded-xl border border-surface-200 bg-white p-3.5 shadow-card dark:border-surface-800 dark:bg-surface-900"><h2 className="mb-2 text-sm font-bold">{blueprint.coverageTitle}</h2><div className="h-[150px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={sections} layout="vertical" margin={{ left: 10, right: 20 }}><CartesianGrid strokeDasharray="3 3" stroke="#e2e8e3" /><XAxis type="number" allowDecimals={false} tick={{ fontSize: 9 }} /><YAxis type="category" dataKey="section" width={90} tick={{ fontSize: 9 }} /><Tooltip /><Bar dataKey="value" name="Features" fill={accent.bar} radius={[0, 4, 4, 0]} /></BarChart></ResponsiveContainer></div></section>
-        <section className="rounded-xl border border-surface-200 bg-white p-3.5 shadow-card dark:border-surface-800 dark:bg-surface-900"><div className="mb-2 flex items-center justify-between"><h2 className="flex items-center gap-2 text-sm font-bold"><Sparkles className="h-4 w-4" style={{ color: accent.bar }} />{blueprint.quickTitle}</h2></div><div className="space-y-1.5">{items.slice(8, 13).map((item) => <Link key={item.href} href={item.href} className="flex items-center justify-between rounded-lg border border-surface-100 px-3 py-2 text-xs hover:bg-surface-50 dark:border-surface-800"><span>{item.label}</span><ArrowRight className="h-3.5 w-3.5 text-surface-300" /></Link>)}{items.length <= 8 && <p className="py-8 text-center text-xs text-surface-400">Primary operations upar available hain.</p>}</div></section>
+        <section className="rounded-xl border border-surface-200 bg-white p-3.5 shadow-card dark:border-surface-800 dark:bg-surface-900"><div className="mb-2 flex items-center justify-between"><h2 className="flex items-center gap-2 text-sm font-bold"><Sparkles className="h-4 w-4" style={{ color: accent.bar }} />{blueprint.quickTitle}</h2></div><div className="space-y-1.5">{quick.map((item) => { const b = badge(item.href); return <Link key={item.href} href={dest(item.href)} data-feature={item.href} data-pending-queue={b ? dest(item.href) : undefined} className="flex items-center justify-between rounded-lg border border-surface-100 px-3 py-2 text-xs hover:bg-surface-50 dark:border-surface-800"><span>{item.label}</span><span className="flex items-center gap-1">{b ? <RedBadge n={b.pending} /> : null}<ArrowRight className="h-3.5 w-3.5 text-surface-300" /></span></Link>; })}{items.length <= 8 && <p className="py-8 text-center text-xs text-surface-400">Primary operations upar available hain.</p>}</div></section>
       </div>
     </div>
   );
