@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { v5CompleteSignup, v5Login, v5Lookup, v5SendCode, v5SetPassword, v5VerifyCode } from "@/actions/login-v5";
+import { OtpGlassy } from "@/app/login/otp-glassy";
 import { goAfterLogin, routeAfterLogin } from "@/lib/navigation/after-login";
 import { tx, type V5Lang } from "@/app/login/v5-text";
+import { applyOtpBackspace, applyOtpInput, emptyOtpDigits, resendLeftSeconds } from "@/lib/auth/otp-ui";
 
 type Channel = "whatsapp" | "sms" | "email";
 type Purpose = "signup" | "first_time" | "reset";
@@ -19,39 +21,49 @@ const LINK = "font-semibold text-[#157a4b] hover:underline dark:text-[#3fc483]";
 const LABEL = "mb-2 block text-[13.5px] font-semibold text-[#0d1b2e] dark:text-[#eef3f8]";
 const MUTED = "text-[#5d6b7e] dark:text-[#93a3bd]";
 
-export function LoginV5({ initialLang }: { initialLang: V5Lang }) {
+const OTP_PREVIEWS = ["empty", "typing", "error", "verified"] as const;
+type OtpPreview = (typeof OTP_PREVIEWS)[number];
+
+export function LoginV5({ initialLang, preview = null }: { initialLang: V5Lang; preview?: string | null }) {
   const search = useSearchParams();
+  const otpPreview: OtpPreview | null = preview && (OTP_PREVIEWS as readonly string[]).includes(preview) ? preview as OtpPreview : null;
   const [lang, setLangState] = useState<V5Lang>(initialLang);
   const tr = (k: string, v?: Record<string, string | number>) => tx(lang, k, v);
   const rtl = lang === "ur";
-  const [step, setStep] = useState<Step>("id");
+  const [step, setStep] = useState<Step>(otpPreview ? "otp" : "id");
   const [purpose, setPurpose] = useState<Purpose>("signup");
   const [identifier, setIdentifier] = useState("");
   const [kind, setKind] = useState<"phone" | "email" | "username">("phone");
   const [masked, setMasked] = useState("");
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [channel, setChannel] = useState<Channel>("whatsapp");
+  const [channels, setChannels] = useState<Channel[]>(otpPreview ? ["whatsapp", "sms", "email"] : []);
+  const [channel, setChannel] = useState<Channel>(otpPreview ? "sms" : "whatsapp");
   const [email, setEmail] = useState("");
-  const [sentTo, setSentTo] = useState("");
+  const [sentTo, setSentTo] = useState(otpPreview ? "0322-*****76" : "");
   const [grant, setGrant] = useState("");
   const [verifiedPhone, setVerifiedPhone] = useState(false);
   const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [resendAt, setResendAt] = useState(0);
+  const [errorKey, setErrorKey] = useState<string | null>(otpPreview === "error" ? "e_code_wrong" : null);
+  const [otpFails, setOtpFails] = useState(otpPreview === "error" ? 1 : 0);
+  const [otpVerified, setOtpVerified] = useState(otpPreview === "verified");
+  const [resendAt, setResendAt] = useState(() => otpPreview ? Date.now() + (otpPreview === "error" ? 18_000 : 42_000) : 0);
 
   function setLang(l: V5Lang) {
     setLangState(l);
     document.cookie = `agribridge_lang=${l}; path=/; max-age=31536000; samesite=lax`;
   }
   function showError(r: Res) {
+    const key = r.error ?? "e_try_again";
     const secs = Number(r.retryAfterSeconds ?? 0);
-    setError(tr(r.error ?? "e_try_again", { m: Math.max(1, Math.ceil(secs / 60)), s: secs }));
+    setErrorKey(key);
+    setError(tr(key, { m: Math.max(1, Math.ceil(secs / 60)), s: secs }));
   }
+  function clearError() { setError(null); setErrorKey(null); }
   async function run(fn: () => Promise<Res>, onOk: (r: Res) => void) {
     if (typeof navigator !== "undefined" && !navigator.onLine) return setError(tr("e_offline"));
-    setBusy(true); setError(null);
+    setBusy(true); clearError();
     try {
       const r = await fn();
       if (r.ok) onOk(r); else {
@@ -70,22 +82,39 @@ export function LoginV5({ initialLang }: { initialLang: V5Lang }) {
     else { setPurpose(r.state === "new" ? "signup" : "first_time"); setStep("pick"); }
   });
   const onLogin = (pw: string) => run(() => v5Login(identifier, pw) as Promise<Res>, (r) => done(String(r.redirect)));
-  const onSend = () => run(() => v5SendCode(purpose, identifier, channel, email || undefined) as Promise<Res>, (r) => {
-    setSentTo(String(r.masked)); setResendAt(Date.now() + 60_000); setStep("otp");
-  });
-  const onVerify = (code: string) => run(() => v5VerifyCode(purpose, identifier, channel, code, email || undefined) as Promise<Res>, (r) => {
-    setGrant(String(r.grant)); setVerifiedPhone(Boolean(r.verifiedPhone)); setVerifiedEmail((r.verifiedEmail as string) ?? null);
-    setStep(purpose === "signup" ? "details" : "newpw");
-  });
-  const restart = () => { setStep("id"); setError(null); setPassword(""); setGrant(""); setEmail(""); };
+  const onSend = () => {
+    if (otpPreview) { setSentTo("0322-*****76"); setResendAt(Date.now() + 60_000); setOtpFails(0); setOtpVerified(false); clearError(); setStep("otp"); return; }
+    run(() => v5SendCode(purpose, identifier, channel, email || undefined) as Promise<Res>, (r) => {
+      setSentTo(String(r.masked)); setResendAt(Date.now() + 60_000); setOtpFails(0); setOtpVerified(false); setStep("otp");
+    });
+  };
+  const onVerify = (code: string) => {
+    if (otpPreview) {
+      clearError();
+      if (code === "000000" || code === "482915") { setOtpFails((n) => n + 1); setErrorKey("e_code_wrong"); setError(tr("otp_wrong")); setOtpVerified(false); }
+      else setOtpVerified(true);
+      return;
+    }
+    run(async () => {
+      const r = await v5VerifyCode(purpose, identifier, channel, code, email || undefined) as Res;
+      if (!r.ok && r.error === "e_code_wrong") setOtpFails((n) => n + 1);
+      if (!r.ok && r.error === "e_code_locked") setOtpFails(3);
+      return r;
+    }, (r) => {
+      setGrant(String(r.grant)); setVerifiedPhone(Boolean(r.verifiedPhone)); setVerifiedEmail((r.verifiedEmail as string) ?? null);
+      setOtpVerified(true);
+    });
+  };
+  function switchChannel() { clearError(); setOtpVerified(false); setStep("pick"); }
+  function afterOtp() { setOtpVerified(false); setStep(purpose === "signup" ? "details" : "newpw"); }
+  const restart = () => { setStep("id"); clearError(); setPassword(""); setGrant(""); setEmail(""); setOtpVerified(false); setOtpFails(0); };
 
   return (
     <div dir={rtl ? "rtl" : "ltr"} lang={lang === "ur" ? "ur" : "en"} className={rtl ? "font-urdu leading-[1.9]" : "font-v5"}>
-      <div className="rounded-[24px] border border-[#e3e8ee] bg-white px-6 py-7 shadow-[0_1px_2px_rgba(13,27,46,0.04),0_30px_60px_-30px_rgba(13,27,46,0.18)] dark:border-[#22324f] dark:bg-[#101c33] dark:shadow-[0_30px_60px_-30px_rgba(0,0,0,0.6)] sm:px-10 sm:py-9">
-        <div className="mb-6 flex justify-end">
-          <LangToggle lang={lang} onChange={setLang} />
-        </div>
-        {error && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13.5px] leading-5 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{error}</div>}
+      <div className={step === "otp" ? "rounded-[24px] border border-white/80 bg-white/55 px-5 py-6 shadow-[0_24px_60px_rgba(15,31,58,0.14),inset_0_1px_0_#fff] backdrop-blur-xl backdrop-saturate-150 dark:border-white/10 dark:bg-[#101c33]/75 dark:shadow-[0_24px_60px_rgba(0,0,0,0.45)] sm:px-8 sm:py-8" : "rounded-[24px] border border-[#e3e8ee] bg-white px-6 py-7 shadow-[0_1px_2px_rgba(13,27,46,0.04),0_30px_60px_-30px_rgba(13,27,46,0.18)] dark:border-[#22324f] dark:bg-[#101c33] dark:shadow-[0_30px_60px_-30px_rgba(0,0,0,0.6)] sm:px-10 sm:py-9"}>
+        {step !== "otp" && <div className="mb-6 flex justify-end"><LangToggle lang={lang} onChange={setLang} /></div>}
+        {error && step === "otp" && !["e_code_wrong", "e_code_locked", "e_code_expired"].includes(errorKey ?? "") ? <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13.5px] leading-5 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{error}</div> : null}
+        {error && step !== "otp" && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13.5px] leading-5 text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{error}</div>}
 
         {step === "id" && (
           <form onSubmit={(e) => { e.preventDefault(); onContinue(); }}>
@@ -125,8 +154,11 @@ export function LoginV5({ initialLang }: { initialLang: V5Lang }) {
         )}
 
         {step === "otp" && (
-          <OtpStep tr={tr} rtl={rtl} sentTo={sentTo} busy={busy} resendAt={resendAt}
-            onBack={() => { setError(null); setStep("pick"); }} onChangeNumber={restart} onVerify={onVerify} onResend={onSend} />
+          <OtpStep lang={lang} langToggle={<LangToggle lang={lang} onChange={setLang} />} sentTo={sentTo}
+            channel={channel} channels={channels.length ? channels : [channel]}
+            busy={busy} resendAt={resendAt} fails={otpFails} errorKey={otpVerified ? null : errorKey} verified={otpVerified}
+            preview={otpPreview} onBack={switchChannel} onSwitchChannel={switchChannel} onVerify={onVerify} onResend={onSend}
+            onContinue={afterOtp} onClearError={clearError} />
         )}
 
         {step === "details" && (
@@ -232,51 +264,38 @@ function ChannelPicker({ tr, value, allowed, onChange }: { tr: (k: string) => st
   );
 }
 
-function OtpStep({ tr, rtl, sentTo, busy, resendAt, onBack, onChangeNumber, onVerify, onResend }: {
-  tr: (k: string) => string; rtl: boolean; sentTo: string; busy: boolean; resendAt: number; onBack: () => void; onChangeNumber: () => void; onVerify: (c: string) => void; onResend: () => void;
+function seedDigits(preview: OtpPreview | null): string[] {
+  if (preview === "typing") return ["4", "8", "2", "", "", ""];
+  if (preview === "error") return ["4", "8", "2", "9", "1", "5"];
+  return emptyOtpDigits();
+}
+
+function OtpStep({ lang, langToggle, sentTo, channel, channels, busy, resendAt, fails, errorKey, verified, preview, onBack, onSwitchChannel, onVerify, onResend, onContinue, onClearError }: {
+  lang: V5Lang; langToggle: React.ReactNode; sentTo: string; channel: Channel; channels: Channel[]; busy: boolean; resendAt: number;
+  fails: number; errorKey: string | null; verified: boolean; preview: OtpPreview | null;
+  onBack: () => void; onSwitchChannel: () => void; onVerify: (c: string) => void; onResend: () => void; onContinue: () => void; onClearError: () => void;
 }) {
-  const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
+  const [digits, setDigits] = useState<string[]>(() => seedDigits(preview));
+  const [focus, setFocus] = useState(preview === "typing" ? 3 : preview === "error" ? 5 : 0);
+  const [shake, setShake] = useState(preview === "error" ? 1 : 0);
   const refs = useRef<(HTMLInputElement | null)[]>([]);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const i = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(i); }, []);
-  useEffect(() => { refs.current[0]?.focus(); }, []);
-  const left = Math.max(0, Math.ceil((resendAt - now) / 1000));
-  const code = digits.join("");
-  function put(i: number, raw: string) {
-    const v = raw.replace(/\D/g, "");
-    if (v.length > 1) { // paste
-      const next = v.slice(0, 6).split(""); while (next.length < 6) next.push("");
-      setDigits(next); refs.current[Math.min(5, v.length)]?.focus();
-      if (v.length >= 6) onVerify(v.slice(0, 6));
-      return;
-    }
-    const next = [...digits]; next[i] = v; setDigits(next);
-    if (v && i < 5) refs.current[i + 1]?.focus();
-    if (next.join("").length === 6) onVerify(next.join(""));
+  useEffect(() => { if (!verified) refs.current[focus]?.focus(); }, [focus, verified, shake]);
+  useEffect(() => { if (errorKey === "e_code_wrong") setShake((s) => s + 1); }, [fails, errorKey]);
+  function commit(next: ReturnType<typeof applyOtpInput>) {
+    const changed = next.digits.join("") !== digits.join("");
+    setDigits(next.digits); setFocus(next.focus);
+    if (changed && errorKey) onClearError();
+    if (next.submit && !busy) onVerify(next.submit);
   }
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onVerify(code); }}>
-      <div className="mb-4 flex items-center justify-between text-[14px]">
-        <button type="button" onClick={onBack} className={`inline-flex items-center gap-1.5 ${LINK}`}><Arrow rtl={!rtl} s={16} />{tr("other_way")}</button>
-        <button type="button" onClick={onChangeNumber} className={LINK}>{tr("change_number")}</button>
-      </div>
-      <H1>{tr("otp_title")}</H1>
-      <p className={`mb-6 mt-2 text-[15px] leading-6 ${MUTED}`}>{tr("otp_p")} <bdi dir="ltr" className="whitespace-nowrap font-v5 font-semibold text-[#0d1b2e] dark:text-[#eef3f8]">{sentTo}</bdi></p>
-      <div dir="ltr" className="flex gap-2 sm:gap-2.5">
-        {digits.map((d, i) => (
-          <input key={i} ref={(el) => { refs.current[i] = el; }} value={d} inputMode="numeric" autoComplete={i === 0 ? "one-time-code" : "off"} aria-label={`Digit ${i + 1}`} maxLength={i === 0 ? 6 : 1}
-            onChange={(e) => put(i, e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Backspace" && !digits[i] && i > 0) refs.current[i - 1]?.focus(); }}
-            className="h-[60px] w-full min-w-0 !outline-none rounded-[14px] border-[1.5px] border-[#e3e8ee] bg-[#fbfcfd] text-center font-v5 text-[26px] font-semibold text-[#0d1b2e] outline-none transition focus:border-[#157a4b] focus:shadow-[0_0_0_4px_rgba(21,122,75,0.12)] dark:border-[#22324f] dark:bg-[#0c1629] dark:text-white" />
-        ))}
-      </div>
-      <button type="submit" disabled={busy || code.length !== 6} className={CTA}>{busy ? tr("wait") : tr("verify")}</button>
-      <p className={`mt-4 flex items-center justify-center gap-2 text-[13.5px] ${MUTED}`}>
-        <Icon n="clock" s={14} />
-        {left > 0 ? <>{tr("resend_in")} <b dir="ltr" className="font-v5 text-[#0d1b2e] dark:text-white">0:{String(left).padStart(2, "0")}</b></>
-          : <button type="button" onClick={onResend} className={LINK}>{tr("resend")}</button>}
-      </p>
-    </form>
+    <OtpGlassy lang={lang} langToggle={langToggle} sentTo={sentTo} channel={channel} channels={channels} digits={digits} focus={focus}
+      busy={busy} resendLeft={resendLeftSeconds(resendAt, now)} fails={fails} errorKey={errorKey} verified={verified} shake={shake}
+      inputRef={(i, el) => { refs.current[i] = el; }}
+      onDigit={(i, raw) => commit(applyOtpInput(digits, i, raw))}
+      onBackspace={(i) => { const next = applyOtpBackspace(digits, i); setDigits(next.digits); setFocus(next.focus); if (errorKey) onClearError(); }}
+      onFocus={setFocus} onVerify={() => onVerify(digits.join(""))} onResend={onResend} onSwitchChannel={onSwitchChannel} onBack={onBack} onContinue={onContinue} />
   );
 }
 
