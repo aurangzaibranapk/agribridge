@@ -6,6 +6,7 @@ import { failed, postSalaryPaid } from "@/lib/ledger/rules";
 import { createClient } from "@/lib/supabase/server";
 import { postStaffLedger } from "@/lib/ledger/rules";
 import { createServiceClient } from "@/lib/supabase/service";
+import { reverseCashBookById } from "@/lib/finance/cash-book";
 import { notifyRoles, notifyUser } from "@/lib/notifications";
 import { TENANT_PLAN_LIMITS, tenantPlan } from "@/lib/tenant/plan-limits";
 import { DEPARTMENTS } from "@/lib/departments";
@@ -209,7 +210,7 @@ export async function markSalaryPaid(_prev: ActionState, formData: FormData): Pr
   // Kuch fail ho to claim wapas -- warna tankhwah "paid" dikhti jab ke
   // paisa nikla hi nahi. Cash book ki qatar pehle hatti hai, phir claim.
   const undo = async (txnId: string | null) => {
-    if (txnId) await supabase.from("finance_transactions").delete().eq("id", txnId);
+    if (txnId) await reverseCashBookById(txnId, "Tankhwah cash book ulti");
     await supabase.rpc("fn_salary_payment_unclaim", { p_payment: paymentId });
   };
 
@@ -538,6 +539,8 @@ export async function bulkDeactivateStaff(_prev: ActionState, formData: FormData
   const ids = idsRaw.split(",").filter(Boolean);
   if (ids.length === 0) return { error: "Koi Staff select nahi hui." };
   if (ids.includes(user.id)) return { error: "Apna account khud band nahi kiya ja sakta." };
+  const { data: owners } = await supabase.from("profiles").select("id").in("id", ids).eq("role", "owner");
+  if ((owners ?? []).length > 0) return { error: "Owner account band nahi ho sakta." };
 
   // Tasdeeq ke sath -- dekhein `lib/profile-write.ts`. Yahan ginti bhi
   // ahem hai: aadhe bande band ho jayen aur safha "ho gaya" kahe, to wo

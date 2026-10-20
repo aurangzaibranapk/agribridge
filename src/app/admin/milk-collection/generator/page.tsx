@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { GeneratorClient } from "./generator-client";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { signMeterPhoto } from "@/lib/dairy/meter-photo";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export default async function GeneratorTrackerPage() {
     .order("log_date", { ascending: false })
     .limit(500);
 
-  const logs = (rawLogs ?? []).map((l: any) => ({
+  const logs = await Promise.all((rawLogs ?? []).map(async (l: any) => ({
     id: l.id,
     log_date: l.log_date,
     hours_run: Number(l.hours_run),
@@ -30,11 +31,11 @@ export default async function GeneratorTrackerPage() {
     liters_per_hour: l.liters_per_hour ? Number(l.liters_per_hour) : null,
     electricity_units: l.electricity_units ? Number(l.electricity_units) : null,
     is_anomaly: l.is_anomaly,
-    meter_photo_url: l.meter_photo_url,
-    opening_meter_photo_url: l.opening_meter_photo_url,
-    closing_meter_photo_url: l.closing_meter_photo_url,
+    meter_photo_url: await signMeterPhoto(l.meter_photo_url),
+    opening_meter_photo_url: await signMeterPhoto(l.opening_meter_photo_url),
+    closing_meter_photo_url: await signMeterPhoto(l.closing_meter_photo_url),
     branch_name: Array.isArray(l.branches) ? l.branches[0]?.name : l.branches?.name,
-  }));
+  })));
 
   const start = (days: number) => new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   const today = new Date().toISOString().slice(0, 10);

@@ -8,6 +8,7 @@ import type { UserRole } from "@/lib/utils/roles";
 import { DEPARTMENTS } from "@/lib/departments";
 import { logAudit } from "@/lib/audit";
 import { profileGaps } from "@/lib/access/profile-gaps";
+import { ownerAccountChangeBlocked } from "@/lib/hr/owner-guard";
 
 const MASTER_ROLES = ["owner", "super_admin", "admin"];
 
@@ -23,6 +24,11 @@ async function requireMaster(targetId?: string) {
   }
   if (targetId && targetId === user.id) {
     return { error: "Apna account khud band, suspend ya delete nahi kiya ja sakta." };
+  }
+  if (targetId) {
+    const { data: target } = await supabase.from("profiles").select("role").eq("id", targetId).maybeSingle();
+    const blocked = ownerAccountChangeBlocked(target?.role);
+    if (blocked) return { error: blocked };
   }
   return { supabase, user, role: String(me.role) };
 }

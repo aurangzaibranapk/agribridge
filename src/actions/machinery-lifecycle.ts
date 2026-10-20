@@ -13,6 +13,7 @@ import { sendWhatsAppMessage } from "@/lib/whatsapp-client";
 import { pickDefaultRate } from "@/lib/machinery/rate-card";
 import { reverseJournal } from "@/lib/ledger/post";
 import { cashBookLikhein } from "@/lib/ledger/cash-book";
+import { reverseCashBookById } from "@/lib/finance/cash-book";
 import {
   postMachineryAdvance,
   postMachineryBill,
@@ -1450,7 +1451,7 @@ async function saveDieselExpense(args: {
     },
   });
   if (failed(posted)) {
-    await createServiceClient().from("finance_transactions").delete().eq("id", expense.id);
+    await reverseCashBookById(expense.id, "Diesel ledger nahi gaya");
     return `Ledger mein nahi gaya, is liye diesel darj nahi kiya: ${posted.error}`;
   }
 
@@ -4241,7 +4242,7 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
     },
   });
   if (failed(posted)) {
-    if (txn) await createServiceClient().from("finance_transactions").delete().eq("id", txn.id);
+    if (txn) await reverseCashBookById(txn.id, "Payout ledger nahi gaya");
     await bookingWapas();
     return { error: `Ledger mein nahi gaya, is liye payout darj nahi kiya: ${posted.error}` };
   }

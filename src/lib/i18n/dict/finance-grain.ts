@@ -169,7 +169,7 @@ export const grainDashDict = {
   gd_grain_type_req: { en: "Grain Type *", rm: "Anaj ki qism *", ur: "اناج کی قسم *" },
   gd_warehouse_req: { en: "Warehouse *", rm: "Godam *", ur: "گودام *" },
   gd_qty_kg_req: { en: "Quantity (kg) *", rm: "Tadaad (kg) *", ur: "تعداد (کلو) *" },
-  gd_rate_kg_req: { en: "Rate per kg (Rs.) *", rm: "Fi kg rate (Rs.) *", ur: "فی کلو ریٹ (روپے) *" },
+  gd_rate_kg_req: { en: "Rate per maund (Rs.) *", rm: "Rate fi mand (Rs.) *", ur: "ریٹ فی من (روپے) *" },
   gd_amount_req: { en: "Amount (Rs.) *", rm: "Raqam (Rs.) *", ur: "رقم (روپے) *" },
   gd_which_account_in: { en: "Which account did the money come into? *", rm: "Kaunse khate mein paisa aaya *", ur: "کون سے کھاتے میں پیسہ آیا *" },
   gd_which_account_out: { en: "Which account did this expense go from? *", rm: "Kaunse khate se ye kharcha gaya *", ur: "کون سے کھاتے سے یہ خرچہ گیا *" },

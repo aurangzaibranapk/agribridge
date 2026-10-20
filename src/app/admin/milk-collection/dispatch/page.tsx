@@ -21,15 +21,20 @@ export default async function MilkDispatchPage() {
   const supabase = createClient();
   const lang = getLanguageFromCookies("rm");
 
-  const [{ data: branches }, { data: rows }] = await Promise.all([
+  const [{ data: branches }, { data: rows }, { data: auth }] = await Promise.all([
     supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
     supabase
       .from("milk_dispatches")
-      .select("id, dispatch_date, shift, branch_id, vehicle_name, driver_name, dispatched_liters, received_liters, shortage_liters, shortage_percentage, notes, branches(name)")
+      .select("id, dispatch_date, shift, branch_id, vehicle_name, driver_name, dispatched_liters, received_liters, shortage_liters, shortage_percentage, notes, created_by, received_by, branches(name)")
       .order("dispatch_date", { ascending: false })
       .order("shift")
       .limit(60),
+    supabase.auth.getUser(),
   ]);
+  const { data: me } = auth.user
+    ? await supabase.from("profiles").select("role").eq("id", auth.user.id).maybeSingle()
+    : { data: null };
+  const canCorrect = me?.role === "owner" || me?.role === "super_admin";
 
   return (
     <div>
@@ -37,6 +42,8 @@ export default async function MilkDispatchPage() {
       <DispatchClient
         lang={lang}
         branches={(branches ?? []).map((b) => ({ id: b.id, name: b.name }))}
+        canCorrect={canCorrect}
+        userId={auth.user?.id ?? null}
         rows={((rows ?? []) as any[]).map((r) => ({
           id: r.id,
           date: r.dispatch_date,
@@ -48,6 +55,8 @@ export default async function MilkDispatchPage() {
           received: r.received_liters === null ? null : Number(r.received_liters),
           shortage: r.shortage_liters === null ? null : Number(r.shortage_liters),
           shortagePct: r.shortage_percentage === null ? null : Number(r.shortage_percentage),
+          createdBy: r.created_by ?? null,
+          receivedBy: r.received_by ?? null,
         }))}
       />
     </div>

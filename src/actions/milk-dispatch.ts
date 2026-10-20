@@ -2,7 +2,10 @@
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { requireAction } from "@/lib/access/guard";
+import { requireMoneyAdmin } from "@/lib/access/money-gate";
+import { rpcError } from "@/lib/dairy/rules";
 
 export interface DispatchState {
   error?: string;
@@ -115,4 +118,39 @@ export async function recordReceipt(_prev: DispatchState, formData: FormData): P
 
   revalidatePath("/admin/milk-collection/dispatch");
   return { success: true };
+}
+
+/**
+ * Ghalat raseed Owner theek kare — jis ne khud likhi, wo nahi.
+ * Database maker-checker rakhti hai; yahan role pehle roka jata hai.
+ */
+export async function correctMilkReceipt(_prev: DispatchState, formData: FormData): Promise<DispatchState> {
+  const gate = await requireMoneyAdmin("Company ki raseed theek karna");
+  if (!gate.ok) return { error: gate.error };
+  if (gate.role !== "owner" && gate.role !== "super_admin") {
+    return { error: "Raseed sirf Owner theek kar sakta hai." };
+  }
+
+  const id = String(formData.get("dispatch_id") ?? "");
+  const receivedRaw = formData.get("received_liters");
+  const received = Number(receivedRaw ?? 0);
+  const note = String(formData.get("note") ?? "").trim();
+  if (!id) return { error: "Kaun si rawangi, wo saaf nahi." };
+  if (receivedRaw === null || receivedRaw === "" || Number.isNaN(received) || received < 0) {
+    return { error: "Company ka adad sahi likhein." };
+  }
+  if (note.length < 5) return { error: "Raseed theek karne ki wajah kam az kam 5 haroof ki likhein." };
+
+  const posted = await (createServiceClient() as unknown as {
+    rpc: (name: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+  }).rpc("fn_correct_milk_receipt", {
+    p_dispatch: id,
+    p_received: received,
+    p_by: gate.userId,
+    p_note: note,
+  });
+  if (posted.error) return { error: rpcError(posted.error.message) };
+
+  revalidatePath("/admin/milk-collection/dispatch");
+  return { success: true, notice: "Raseed theek ho gayi." };
 }

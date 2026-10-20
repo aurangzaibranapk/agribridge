@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Mail, MapPin, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { SHOP_PHONE_E164, SHOP_PHONE_WHATSAPP, unwrapWebsiteSetting } from "@/lib/cms/website-setting";
 
 /**
  * Website ka footer -- malik ka final design (6 September).
@@ -50,8 +51,8 @@ const support: string[][] = [
 ];
 
 /** Design ke adad -- sirf tab jab CMS par kuch darj hi na ho. */
-const FALLBACK_PHONE = "+92 333 1116727";
-const FALLBACK_ADDRESS = "Al Rana Traders, Chak Mahabali, Pakistan";
+const FALLBACK_PHONE = SHOP_PHONE_E164;
+const FALLBACK_ADDRESS = "Pakistan";
 
 export async function PublicFooter() {
   // Wohi ehtiyaat jo layout mein: raabte ki tafseel na mile to footer
@@ -70,13 +71,13 @@ export async function PublicFooter() {
 
   const get = (key: string, fallback: string) => {
     const row = rows?.find((r) => r.key === key);
-    const raw = row?.value == null ? "" : String(row.value).replace(/^"|"$/g, "").trim();
+    const raw = unwrapWebsiteSetting(row?.value);
     return raw.length > 0 ? raw : fallback;
   };
 
   const phone = get("contact_phone", FALLBACK_PHONE);
   const address = get("contact_address", FALLBACK_ADDRESS);
-  const whatsapp = phone.replace(/\D/g, "") || "923331116727";
+  const whatsapp = phone.replace(/\D/g, "") || SHOP_PHONE_WHATSAPP;
 
   return (
     <footer className="bg-[#081f18] text-white">

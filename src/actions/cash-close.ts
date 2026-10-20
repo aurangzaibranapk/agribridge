@@ -4,7 +4,6 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
-import { ACC } from "@/lib/ledger/rules";
 import {
   DENOMINATIONS,
   REASON_MIN,
@@ -13,6 +12,7 @@ import {
   totalFromDenominations,
   type DenominationCount,
 } from "@/lib/ledger/cash-close";
+import { cashCloseApproveGate, cashCloseRecordGate, cashDifferenceLines } from "@/lib/finance/money-guards";
 
 export interface ActionState {
   error?: string;
@@ -30,14 +30,12 @@ export interface ActionState {
  *      jo us ne gina -- farq hamesha sifar aayega aur ginti ka koi
  *      matlab nahi rahega.
  *
- *   2. Farq nikalte hi wo 6100 "Cash ka farq" mein darj hota hai.
- *      Aam tor par log farq ko kisi kharche mein "adjust" kar dete
- *      hain -- us se hisaab mil jata hai aur masla nazar aana band ho
- *      jata hai. Yahan wo raasta hai hi nahi: farq ka apna khata hai,
- *      aur mahine ke aakhir mein us khate ka jama shuda adad khud ek
- *      sawal hai.
+ *   2. Farq yahin kitab mein nahi jata. Ginne wala sirf ginti likhta
+ *      hai. Doosra Owner / Super Admin / Admin baad mein farq ko
+ *      6100 "Cash ka farq" mein likhta hai. Sifar farq par koi
+ *      journal nahi.
  *
- *   3. Ginti pehle ledger mein jati hai, phir mahfooz hoti hai. Ulta
+ *   3. Ginti pehle mahfooz hoti hai. Ledger baad mein, doosre bande se. Ulta
  *      karein to aisi ginti bach sakti hai jis ka hisaab kahin nahi --
  *      yani wo farq jo darj to hua magar kisi khate mein gaya nahi.
  */
@@ -60,6 +58,10 @@ export async function recordCashClose(_prev: ActionState, formData: FormData): P
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Login karein." };
+  const { data: me } = await supabase.from("profiles").select("role, is_active, branch_id").eq("id", user.id).maybeSingle();
+  if (!me?.is_active) return { error: "Ye account fa'aal nahi hai." };
+  const recordGate = cashCloseRecordGate(String(me.role), me.branch_id, branchId);
+  if (!recordGate.ok) return { error: recordGate.error };
 
   // Note ki ginti. Har qism alag likhi jati hai taake dobara ginna aasan
   // ho -- kul adad mein farq nikle to poori ginti dobara karne ke bajaye
@@ -114,39 +116,11 @@ export async function recordCashClose(_prev: ActionState, formData: FormData): P
     };
   }
 
-  // Farq ledger mein. Sifar ho to koi entry nahi -- khali entry se koi
-  // maloomat nahi milti, sirf fehrist bhar jati hai.
-  let journalEntryId: string | null = null;
-  if (difference !== 0) {
-    const amount = Math.abs(difference);
-    const short = difference < 0;
+  // Farq abhi kitab mein NAHI jata. Doosra Owner/Admin manzoor kare
+  // (approveCashCloseDifference) tab GL entry banti hai.
+  const approvalStatus = difference === 0 ? "approved" : "recorded";
 
-    const posted = await postJournal({
-      description: `Cash ginti ${closeDate} — Rs ${amount.toLocaleString()} ${short ? "kam" : "zyada"} nikle`,
-      sourceModule: "cash_close",
-      branchId,
-      entryDate: closeDate,
-      createdBy: user.id,
-      backdateReason:
-        closeDate < today ? `Us raat ki ginti aaj darj hui — ${reason}` : null,
-      lines: short
-        ? // Cash kam nikla: golak ghata, farq kharche mein gaya.
-          [
-            { account: ACC.cashDifference, debit: amount, memo: reason },
-            { account: ACC.cash, credit: amount, memo: `Ginti ${closeDate}` },
-          ]
-        : // Cash zyada nikla: golak barha, farq wapas kharche se kata.
-          [
-            { account: ACC.cash, debit: amount, memo: `Ginti ${closeDate}` },
-            { account: ACC.cashDifference, credit: amount, memo: reason },
-          ],
-    });
-
-    if ("error" in posted) return { error: `Farq ledger mein darj nahi ho saka: ${posted.error}` };
-    journalEntryId = posted.id;
-  }
-
-  const { error } = await service.from("cash_closings").insert({
+  const { error } = await (service.from("cash_closings") as any).insert({
     branch_id: branchId,
     close_date: closeDate,
     expected_amount: expected,
@@ -156,7 +130,8 @@ export async function recordCashClose(_prev: ActionState, formData: FormData): P
     difference_reason: difference === 0 ? null : reason,
     notes,
     counted_by: user.id,
-    journal_entry_id: journalEntryId,
+    journal_entry_id: null,
+    approval_status: approvalStatus,
     corrects_id: original?.id ?? null,
     correction_reason: original ? correctionReason : null,
   });
@@ -174,6 +149,88 @@ export async function recordCashClose(_prev: ActionState, formData: FormData): P
         ? `${kind} — Rs ${counted.toLocaleString()}, farq koi nahi.`
         : `${kind} — Rs ${Math.abs(difference).toLocaleString()} ${
             difference < 0 ? "kam" : "zyada"
-          }. Farq "Cash ka farq" khate mein chala gaya.`,
+          }. Farq abhi kitab mein nahi — doosra Owner/Admin manzoor karega.`,
   };
+}
+
+/** Farq ki GL entry — ginne wale se alag banda. */
+export async function approveCashCloseDifference(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const service = createServiceClient();
+  const id = String(formData.get("id") ?? "").trim();
+  if (!id) return { error: "Ginti ki qatar nahi mili." };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login karein." };
+  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
+  if (!me?.is_active) return { error: "Ye account fa'aal nahi hai." };
+
+  const { data: row, error: readError } = await (service.from("cash_closings") as any)
+    .select("id, branch_id, close_date, difference, difference_reason, counted_by, approval_status, journal_entry_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (readError) return { error: readError.message };
+  if (!row) return { error: "Ginti nahi mili." };
+
+  const gate = cashCloseApproveGate(
+    {
+      counted_by: row.counted_by,
+      difference: Number(row.difference),
+      approval_status: row.approval_status,
+      journal_entry_id: row.journal_entry_id,
+    },
+    user.id,
+    String(me.role)
+  );
+  if (!gate.ok) return { error: gate.error };
+
+  const { data: claimed, error: claimError } = await (service.from("cash_closings") as any)
+    .update({ approval_status: "approving" })
+    .eq("id", id)
+    .eq("approval_status", "recorded")
+    .is("journal_entry_id", null)
+    .select("id")
+    .maybeSingle();
+  if (claimError) return { error: claimError.message };
+  if (!claimed) return { error: "Ye ginti pehle hi kisi ne le li hai." };
+
+  const difference = Number(row.difference);
+  const closeDate = String(row.close_date);
+  const reason = String(row.difference_reason ?? "");
+  const today = aajKaKhana();
+  const posted = await postJournal({
+    description: `Cash ginti ${closeDate} — Rs ${Math.abs(difference).toLocaleString()} ${difference < 0 ? "kam" : "zyada"} nikle`,
+    sourceModule: "cash_close",
+    sourceId: id,
+    branchId: row.branch_id,
+    entryDate: closeDate,
+    createdBy: user.id,
+    backdateReason: closeDate < today ? `Us raat ki ginti ki manzoori aaj — ${reason}` : null,
+    lines: cashDifferenceLines({ difference, closeDate, reason }),
+  });
+  if ("error" in posted) {
+    await (service.from("cash_closings") as any).update({ approval_status: "recorded" }).eq("id", id).eq("approval_status", "approving");
+    return { error: `Farq ledger mein darj nahi ho saka: ${posted.error}` };
+  }
+
+  const { data: saved, error: saveError } = await (service.from("cash_closings") as any)
+    .update({
+      approval_status: "approved",
+      approved_by: user.id,
+      approved_at: new Date().toISOString(),
+      journal_entry_id: posted.id,
+    })
+    .eq("id", id)
+    .eq("approval_status", "approving")
+    .select("id")
+    .maybeSingle();
+  if (saveError || !saved) {
+    return { error: `Kitab mein entry ban gayi magar ginti par nahi likhi ja saki: ${saveError?.message ?? "claim nahi mili"}.` };
+  }
+
+  revalidatePath("/admin/cash-close");
+  revalidatePath("/admin/money-trail");
+  return { success: true, message: `Farq kitab mein darj ho gaya (${posted.entryNumber}).` };
 }

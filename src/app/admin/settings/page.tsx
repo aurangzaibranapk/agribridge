@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/ui/layout-primitives";
 import { SettingRow } from "@/app/admin/settings/setting-row";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { addressNeedsOwner, unwrapWebsiteSetting } from "@/lib/cms/website-setting";
 
 export const dynamic = "force-dynamic";
 
@@ -34,9 +35,18 @@ export default async function AdminSettingsPage() {
         <Link href="/admin/receivable-reminders/overrides" className="rounded-lg border border-surface-200 px-3 py-2 text-sm">Udhaar Override Log</Link>
       </div>
       <div className="max-w-2xl space-y-3">
-        {(settings ?? []).map((s) => (
-          <SettingRow key={s.key} settingKey={s.key} label={LABELS[s.key] ?? s.key} value={typeof s.value === "string" ? s.value : JSON.stringify(s.value)} />
-        ))}
+        {(settings ?? []).map((s) => {
+          const shown = unwrapWebsiteSetting(s.value);
+          const addressFlag = s.key === "contact_address" && addressNeedsOwner(shown);
+          return (
+            <div key={s.key}>
+              <SettingRow settingKey={s.key} label={LABELS[s.key] ?? s.key} value={shown} />
+              {addressFlag && (
+                <p className="mt-1 text-xs font-medium text-amber-700">Pata abhi placeholder hai. Asal pata owner dega — yahan khud se nahi bhara gaya.</p>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

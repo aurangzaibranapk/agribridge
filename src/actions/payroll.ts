@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { aajKaKhana } from "@/lib/utils/format";
 import { failed, postPayrollApproved, postPayrollPaid, postStaffAdvance } from "@/lib/ledger/rules";
 import { reverseJournal } from "@/lib/ledger/post";
+import { reverseCashBookById } from "@/lib/finance/cash-book";
 import { payrollApprovalLines, MONTHS_RU } from "@/lib/payroll/compute";
 import { notifyUser } from "@/lib/notifications";
 
@@ -156,25 +157,39 @@ export async function payPayrollRun(_p: PayrollState, fd: FormData): Promise<Pay
   const runId = String(fd.get("run_id"));
   const accountId = String(fd.get("account_id") ?? "");
   if (!accountId) return err("Kis khate se ada ho rahi hai, wo chunein.");
+  const { data: claim, error: claimError } = await sb.rpc("fn_payroll_claim_pay", { p_run: runId });
+  if (claimError) return err(claimError);
+  if (claim === "already_paid") return ok("Ye payroll pehle hi ada ho chuki hai. Dobara paisa nahi likha gaya.");
   const { data: run } = await sb.from("payroll_runs").select("id, status, pay_year, pay_month, branch_id, created_by, approve_journal_id").eq("id", runId).single();
-  if (!run || run.status !== "approved" || !run.approve_journal_id) return err("Pehle manzoori aur journal.");
-  if (run.created_by === user?.id) return err("Banane wala khud ada nahi kar sakta.");
+  if (!run || run.status !== "approved" || !run.approve_journal_id) {
+    await sb.rpc("fn_payroll_release_pay_lock", { p_run: runId });
+    return err("Pehle manzoori aur journal.");
+  }
+  if (run.created_by === user?.id) {
+    await sb.rpc("fn_payroll_release_pay_lock", { p_run: runId });
+    return err("Banane wala khud ada nahi kar sakta.");
+  }
   const { data: lines } = await sb.from("payroll_lines").select("profile_id, net").eq("run_id", runId);
   const total = Math.round((lines ?? []).reduce((s: number, l: any) => s + Number(l.net), 0) * 100) / 100;
   const label = `Tankhwah ada ${MONTHS_RU[run.pay_month - 1]} ${run.pay_year}`;
   const { data: txn, error: tErr } = await sb.from("finance_transactions").insert({
     account_id: accountId, transaction_type: "expense", category: "Salary", amount: total, transaction_date: aajKaKhana(), notes: label, created_by: user?.id ?? null,
   }).select("id").single();
-  if (tErr) return err(`Cash book mein darj nahi hui: ${tErr.message}`);
+  if (tErr) {
+    await sb.rpc("fn_payroll_release_pay_lock", { p_run: runId });
+    return err(`Cash book mein darj nahi hui: ${tErr.message}`);
+  }
   const posted = await postPayrollPaid({ runId, label, amount: total, accountId, ctx: { createdBy: user?.id ?? null, branchId: run.branch_id, claims: [{ table: "finance_transactions", rowId: txn.id }] } });
   if (failed(posted)) {
-    await sb.from("finance_transactions").delete().eq("id", txn.id);
+    await reverseCashBookById(txn.id, "Payroll cash book ulti");
+    await sb.rpc("fn_payroll_release_pay_lock", { p_run: runId });
     return err(`Ledger mein nahi gayi: ${posted.error}`);
   }
   const { error } = await sb.rpc("fn_payroll_set_journal", { p_run: runId, p_kind: "pay", p_journal: posted.id, p_account: accountId, p_txn: txn.id });
   if (error) {
     await reverseJournal(posted.id, "Payroll adaigi ka nishan nahi laga", user?.id ?? null);
-    await sb.from("finance_transactions").delete().eq("id", txn.id);
+    await reverseCashBookById(txn.id, "Payroll cash book ulti");
+    await sb.rpc("fn_payroll_release_pay_lock", { p_run: runId });
     return err(error);
   }
   for (const l of lines ?? []) {
@@ -221,11 +236,11 @@ export async function payStaffAdvance(_p: PayrollState, fd: FormData): Promise<P
   }).select("id").single();
   if (tErr) return err(tErr);
   const posted = await postStaffAdvance({ profileId: a.profile_id, amount: Number(a.amount), accountId, description: "Staff advance (qiston mein)", ctx: { createdBy: user?.id ?? null, claims: [{ table: "finance_transactions", rowId: txn.id }] } });
-  if (failed(posted)) { await sb.from("finance_transactions").delete().eq("id", txn.id); return err(posted.error); }
+  if (failed(posted)) { await reverseCashBookById(txn.id, "Payroll cash book ulti"); return err(posted.error); }
   const { error } = await sb.rpc("fn_staff_advance_mark_paid", { p_id: id, p_account: accountId, p_txn: txn.id, p_journal: posted.id });
   if (error) {
     await reverseJournal(posted.id, "Advance ka nishan nahi laga", user?.id ?? null);
-    await sb.from("finance_transactions").delete().eq("id", txn.id);
+    await reverseCashBookById(txn.id, "Payroll cash book ulti");
     return err(error);
   }
   await sb.from("staff_credit_ledger").insert({ profile_id: a.profile_id, ledger_type: "debit", source_type: "advance", amount: a.amount, notes: "Staff advance -- qiston mein tankhwah se", created_by: user?.id ?? null });

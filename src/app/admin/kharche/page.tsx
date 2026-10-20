@@ -19,7 +19,7 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-const MANZOORI_WALE = ["admin_assistant", "finance"];
+const MANZOORI_WALE = ["owner", "super_admin", "admin"];
 
 /**
  * Kharche aur adaigi — din bhar ka har len-den ek jagah.
@@ -56,8 +56,7 @@ export default async function KharchePage({
 
   const role = String(me?.role ?? "");
   const sabKuchWala = UNRESTRICTED_ROLES.includes(role);
-  const manzoorKarSakta =
-    sabKuchWala || MANZOORI_WALE.includes(role) || (await canDo("kharche", "approve"));
+  const manzoorKarSakta = MANZOORI_WALE.includes(role);
   // Branch Manager: sirf apni branch ki tasdeeq (verify) -- final manzoori nahi.
   const taseeqKarSakta = !manzoorKarSakta && (await canDo("kharche", "verify"));
   const darjKarSakta = sabKuchWala || (await canDo("kharche", "create"));

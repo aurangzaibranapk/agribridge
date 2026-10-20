@@ -50,8 +50,10 @@ import { requireAction } from "@/lib/access/guard";
  *   1. **Ledger** -- 1100 par party ke sath qatar (statement yahin se
  *      banta hai)
  *   2. **Cash Book** -- jis khate se paisa gaya ya aaya
- *   3. **Customer ka balance** -- `customers.current_balance`, wohi adad
- *      jo POS par counter pe nazar aata hai aur credit limit rokti hai
+ *   3. **Customer ka balance** -- `customers.current_balance` sirf cache
+ *      hai: journal_lines 1100 par debit−credit ka sum. `customer_ledger`
+ *      khali/deprecated hai; us par bharosa nahi. POS credit limit yahi
+ *      cache dekhti hai, statement GL se banta hai.
  *
  * Teenon ek sath na hon to teen alag sach ban jate hain -- aur is
  * project mein wo pehle bhi ho chuka hai (127, 139).
