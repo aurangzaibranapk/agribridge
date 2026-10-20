@@ -172,7 +172,7 @@ async function infoBadges(lang: Lang): Promise<Map<string, CardBadge>> {
   const today = aajKaKhana();
   const [sales, products] = await Promise.all([
     count("pos_sales", (q) => q.gte("created_at", today)),
-    count("products", (q) => q.eq("status", "active")),
+    count("products", (q) => q.eq("is_deleted", false).eq("is_available", true)),
   ]);
 
   // Ye adad "kaam baqi hai" nahi kehte, sirf halat batate hain -- is liye
