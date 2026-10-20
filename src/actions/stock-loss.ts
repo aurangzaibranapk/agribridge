@@ -15,14 +15,9 @@ const HQ_ROLES = ["super_admin", "admin", "owner"];
 async function generateLossNumber(): Promise<string> {
   const serviceClient = createServiceClient();
   const year = new Date().getFullYear() % 100;
-  const { data: existing } = await serviceClient.from("stock_loss_counters").select("last_number").eq("year", year).single();
-  const nextNumber = (existing?.last_number ?? 0) + 1;
-  if (existing) {
-    await serviceClient.from("stock_loss_counters").update({ last_number: nextNumber }).eq("year", year);
-  } else {
-    await serviceClient.from("stock_loss_counters").insert({ year, last_number: nextNumber });
-  }
-  return `LOSS-${year}-${String(nextNumber).padStart(5, "0")}`;
+  const { data, error } = await (serviceClient as any).rpc("fn_next_year_counter", { p_kind: "stock_loss", p_year: year });
+  if (error || data == null) throw new Error(error?.message ?? "Loss number nahi bana.");
+  return `LOSS-${year}-${String(Number(data)).padStart(5, "0")}`;
 }
 
 export async function reportLoss(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -59,7 +54,12 @@ export async function reportLoss(_prev: ActionState, formData: FormData): Promis
     }
   }
 
-  const lossNumber = await generateLossNumber();
+  let lossNumber: string;
+  try {
+    lossNumber = await generateLossNumber();
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Loss number nahi bana." };
+  }
   const { error } = await supabase.from("stock_loss_records").insert({
     loss_number: lossNumber,
     warehouse_id: warehouseId,
@@ -119,60 +119,67 @@ export async function verifyLossRecord(_prev: ActionState, formData: FormData): 
   });
   if (decisionError) return { error: decisionError.message };
   if (decisionResult === "already") return { success: true };
+  const service = createServiceClient();
+  const releaseClaim = () => (service as any).rpc("fn_release_stock_loss_claim", { p_loss: lossId });
+
   if (decision === "reject") {
     revalidatePath("/admin/reports/audit");
     return { success: true };
   }
 
-  if (decision === "reject") {
-    if (!rejectionReason) return { error: "Reject karne ki wajah likhein." };
-    const { error } = await supabase
-      .from("stock_loss_records")
-      .update({ status: "rejected", rejection_reason: rejectionReason, approved_by: user.id, approved_at: new Date().toISOString() })
-      .eq("id", lossId);
-    if (error) return { error: error.message };
-  } else if (decision === "approve") {
+  if (decision === "approve") {
     const { data: inv } = await supabase
       .from("inventory")
       .select("id, quantity_on_hand")
       .eq("warehouse_id", loss.warehouse_id)
       .eq("product_id", loss.product_id)
       .maybeSingle();
-    if (inv) {
-      const { data: alreadyMoved } = await supabase
-        .from("stock_movements")
-        .select("id")
-        .eq("reference_type", "stock_loss")
-        .eq("reference_id", lossId)
-        .limit(1);
-      const deduct = Math.min(Number(loss.quantity), Number(inv.quantity_on_hand));
-      // Ginti yahan se NAHI badalti -- harkat par trigger karta hai (129).
-      // Pehle se harkat ho to dobara nahi — warna journal fail ke baad retry dugna kaat-ta.
-      if (!alreadyMoved?.length) await supabase.from("stock_movements").insert({
-        inventory_id: inv.id,
-        // Naam nuqsan ki apni qism se aata hai. Pehle yahan hamesha
-        // "loss_write_off" likha jata tha -- ek aisa lafz jo enum mein
-        // tha hi nahi, is liye ye qatar kabhi bani hi nahi aur nuqsan ka
-        // koi kaghaz nahi banta tha. Chori ko "damaged" keh dena bhi
-        // ghalat hota, is liye teesra lafz alag rakha gaya hai (129).
-        movement_type:
-          loss.loss_type === "damage" ? "damaged_out" : loss.loss_type === "expiry" ? "expired_out" : "loss_write_off",
-        quantity: deduct,
-        reference_type: "stock_loss",
-        reference_id: lossId,
-        created_by: user.id,
-      });
+    const onHand = Number(inv?.quantity_on_hand ?? 0);
+    const deduct = Math.min(Number(loss.quantity), onHand);
+    const movementType =
+      loss.loss_type === "damage" ? "damaged_out" : loss.loss_type === "expiry" ? "expired_out" : "loss_write_off";
+    const { data: alreadyMoved, error: movedError } = await supabase
+      .from("stock_movements")
+      .select("id")
+      .eq("reference_type", "stock_loss")
+      .eq("reference_id", lossId)
+      .limit(1);
+    if (movedError) {
+      await releaseClaim();
+      return { error: movedError.message };
     }
+    if (!alreadyMoved?.length && deduct > 0) {
+      if (!inv?.id) {
+        await releaseClaim();
+        return { error: "Stock record nahi mila." };
+      }
+      const { error: outError } = await (service as any).rpc("fn_record_stock_out", {
+        p_warehouse: loss.warehouse_id,
+        p_product: loss.product_id,
+        p_qty: deduct,
+        p_movement: movementType,
+        p_reference_type: "stock_loss",
+        p_reference_id: lossId,
+        p_actor: user.id,
+        p_allow_expired: movementType === "expired_out" || movementType === "damaged_out",
+      });
+      if (outError) {
+        await releaseClaim();
+        return { error: outError.message };
+      }
+    }
+    const lossValue = Math.round(deduct * Number(loss.unit_cost ?? 0) * 100) / 100;
     const { error } = await supabase
       .from("stock_loss_records")
-      .update({ status: "approved", approved_by: user.id, approved_at: new Date().toISOString() })
+      .update({ status: "approved", loss_value: lossValue, approved_by: user.id, approved_at: new Date().toISOString() })
       .eq("id", lossId);
-    if (error) return { error: error.message };
+    if (error) {
+      await (service as any).rpc("fn_undo_reference_stock", { p_reference_type: "stock_loss", p_reference_id: lossId });
+      await releaseClaim();
+      return { error: error.message };
+    }
 
-    // Nuqsan ka maal company se nikal gaya: Dr Stock Loss (6110), Cr Stock (1200).
-    const lossValue = Number(loss.loss_value ?? 0);
     if (lossValue > 0) {
-      // Pehle nateeja nazar-andaz hota tha: maal kam ho jata, ledger chup.
       const posted = await postJournal({
         description: `Stock loss ${loss.loss_number}: ${loss.loss_type} — ${loss.reason}`,
         sourceModule: "stock_loss",
@@ -185,14 +192,21 @@ export async function verifyLossRecord(_prev: ActionState, formData: FormData): 
         ],
       });
       if (failed(posted)) {
-        await (supabase as any).rpc("fn_release_stock_loss_claim", { p_loss: lossId });
+        await (service as any).rpc("fn_undo_reference_stock", { p_reference_type: "stock_loss", p_reference_id: lossId });
+        await releaseClaim();
         revalidatePath("/admin/inventory");
         return { error: `Nuqsan ledger mein nahi gaya, is liye faisla wapas pending hai: ${posted.error}` };
       }
     }
   } else {
-    if (!reducedRate || reducedRate < 0) return { error: "Kam rate sahi likhein." };
-    if (reducedRate >= Number(loss.unit_cost)) return { error: "Reduced rate original cost se kam honi chahiye." };
+    if (!reducedRate || reducedRate < 0) {
+      await releaseClaim();
+      return { error: "Kam rate sahi likhein." };
+    }
+    if (reducedRate >= Number(loss.unit_cost)) {
+      await releaseClaim();
+      return { error: "Reduced rate original cost se kam honi chahiye." };
+    }
     const markdownLoss = (Number(loss.unit_cost) - reducedRate) * Number(loss.quantity);
 
     const { data: batches } = await supabase
@@ -206,7 +220,11 @@ export async function verifyLossRecord(_prev: ActionState, formData: FormData): 
     for (const batch of batches ?? []) {
       if (remaining <= 0) break;
       const take = Math.min(remaining, Number(batch.remaining_quantity));
-      await supabase.from("stock_batches").update({ unit_cost: reducedRate }).eq("id", batch.id);
+      const { error: batchError } = await supabase.from("stock_batches").update({ unit_cost: reducedRate }).eq("id", batch.id);
+      if (batchError) {
+        await releaseClaim();
+        return { error: batchError.message };
+      }
       remaining -= take;
     }
 
@@ -220,7 +238,10 @@ export async function verifyLossRecord(_prev: ActionState, formData: FormData): 
         approved_at: new Date().toISOString(),
       })
       .eq("id", lossId);
-    if (error) return { error: error.message };
+    if (error) {
+      await releaseClaim();
+      return { error: error.message };
+    }
 
     // Kam rate par nikala: stock ki qeemat ghati -> Dr Stock Loss, Cr Stock.
     // Pehle ye ledger mein jata hi nahi tha (1200 asal maal se zyada rehta).
@@ -237,7 +258,7 @@ export async function verifyLossRecord(_prev: ActionState, formData: FormData): 
         ],
       });
       if (failed(posted)) {
-        await (supabase as any).rpc("fn_release_stock_loss_claim", { p_loss: lossId });
+        await (createServiceClient() as any).rpc("fn_release_stock_loss_claim", { p_loss: lossId });
         revalidatePath("/admin/inventory");
         return { error: `Kam rate ledger mein nahi gaya, is liye faisla wapas pending hai: ${posted.error}` };
       }

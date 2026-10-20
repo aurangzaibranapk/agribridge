@@ -165,7 +165,7 @@ await assert.rejects(() => run(`insert into grain_sales (grain_type, quantity_kg
 await run(`insert into grain_sales (grain_type, quantity_kg, rate_per_kg, total_amount) values ('wheat', 10, 4000, 1000)`);
 
 const oldUnit = await q(`select rate_unit from grain_sales where id = '00000000-0000-0000-0000-000000000211'`);
-assert.equal(oldUnit[0].rate_unit, "legacy_as_stored");
+assert.equal(oldUnit[0].rate_unit, "per_kg");
 const newUnit = await q(`select rate_unit from grain_sales where quantity_kg = 10`);
 assert.equal(newUnit[0].rate_unit, "per_maund");
 const oldTotal = await q(`select total_amount from grain_sales where id = '00000000-0000-0000-0000-000000000211'`);

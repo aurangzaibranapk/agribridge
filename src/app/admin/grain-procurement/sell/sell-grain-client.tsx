@@ -20,6 +20,7 @@ import {
 import { GrainBillSummary, GrainPaymentHistory, type GrainPaymentHistoryRow } from "@/components/grain/grain-payment-history";
 import { Fragment } from "react";
 import Link from "next/link";
+import { grainAmountFromRate, grainRatePresentation, normalizeGrainRateUnit } from "@/lib/grain/rate-unit";
 
 const initialState: ActionState = {};
 
@@ -35,6 +36,7 @@ interface Sale {
   grain_type: string;
   quantity_kg: number;
   rate_per_kg: number;
+  rate_unit?: string | null;
   total_amount: number;
   total_cogs: number;
   profit: number;
@@ -131,7 +133,7 @@ export function SellGrainClient({
                     {d.status === "rejected" && d.reject_reason && <p className="text-[11px] font-normal text-red-700">Wajah: {d.reject_reason}</p>}
                   </td>
                   <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{GRAIN_LABELS[d.grain_type]}</td>
-                  <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">{d.quantity_kg} kg</td>
+                  <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">{d.quantity_kg} kg<div className="text-[11px] text-surface-400">Rs {grainRatePresentation(d.rate_per_kg, "per_maund").perMaund.toLocaleString()} fi mand</div></td>
                   <td className="px-3 py-2 text-right font-medium text-surface-500">Rs {d.total_amount.toLocaleString()}</td>
                   <td className="px-3 py-2 text-right text-surface-400">—</td>
                   <td className="px-3 py-2 text-right text-surface-400">—</td>
@@ -154,7 +156,7 @@ export function SellGrainClient({
                     <td className="px-3 py-2 font-mono text-xs text-surface-500">{s.sale_number}</td>
                     <td className="px-3 py-2 font-medium text-surface-800 dark:text-surface-200">{s.buyer_name}{s.draft_id && <> <SaleDraftBadge status="approved" /></>}</td>
                     <td className="px-3 py-2 text-surface-600 dark:text-surface-400">{GRAIN_LABELS[s.grain_type]}</td>
-                    <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">{s.quantity_kg} kg</td>
+                    <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">{s.quantity_kg} kg<div className="text-[11px] text-surface-400">Rs {grainRatePresentation(s.rate_per_kg, normalizeGrainRateUnit(s.rate_unit)).perMaund.toLocaleString()} fi mand</div></td>
                     <td className="px-3 py-2 text-right font-medium text-surface-900 dark:text-white">Rs {s.total_amount.toLocaleString()}</td>
                     <td className="px-3 py-2 text-right font-semibold text-green-600">Rs {s.profit.toLocaleString()}</td>
                     <td className="px-3 py-2 text-right text-surface-600 dark:text-surface-400">Rs {s.amount_received.toLocaleString()}</td>
@@ -257,7 +259,7 @@ export function NewSaleForm({
   }, []);
 
   const availableStock = stockByWarehouseAndType[warehouseId]?.[grainType] ?? 0;
-  const total = (parseFloat(quantity) || 0) * (parseFloat(rate) || 0);
+  const total = grainAmountFromRate(parseFloat(quantity) || 0, parseFloat(rate) || 0, "per_maund");
   const combinedCost = (parseFloat(bardanaCost) || 0) + (parseFloat(mazdooriCost) || 0);
 
   if (state.success) setTimeout(() => window.location.reload(), 900);
@@ -336,7 +338,7 @@ export function NewSaleForm({
           </div>
           <div>
             <Label>{t("gd_rate_kg_req", lang)}</Label>
-            <Input type="number" step="0.01" name="rate_per_kg" value={rate} onChange={(e) => setRate(e.target.value)} required />
+            <Input type="number" step="0.01" name="rate_per_maund" value={rate} onChange={(e) => setRate(e.target.value)} required />
           </div>
         </div>
         <div className="rounded-lg border border-surface-200 p-3 dark:border-surface-700">

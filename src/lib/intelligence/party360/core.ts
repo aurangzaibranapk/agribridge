@@ -1,3 +1,5 @@
+import { grainRatePresentation, normalizeGrainRateUnit } from "@/lib/grain/rate-unit";
+
 /**
  * Party 360 (per type) -- pure hisaab. Sirf parhta hai; test: npm run test:party-360.
  */
@@ -98,10 +100,11 @@ export function shopKey(businessType: string | null | undefined, name?: string |
   return { key: `shop:${name ?? "other"}`, label: name ?? "Doosri dukan" };
 }
 
-/** Grain sale ka hisaab: mand = kg/40, rate/mand = rate_per_kg*40. */
-export function grainSaleRow(s: { quantity_kg: unknown; rate_per_kg: unknown; total_amount: unknown; amount_received: unknown }) {
+/** Grain sale: rate_unit se fi mand. Purani per_kg / legacy = rate * 40. Nayi per_maund = rate jyon ka tyon. */
+export function grainSaleRow(s: { quantity_kg: unknown; rate_per_kg: unknown; total_amount: unknown; amount_received: unknown; rate_unit?: unknown }) {
   const kg = num(s.quantity_kg), total = num(s.total_amount), rec = num(s.amount_received);
-  return { kg, mand: r2(kg / 40), ratePerMand: r2(num(s.rate_per_kg) * 40), total, received: rec, due: r2(Math.max(0, total - rec)) };
+  const view = grainRatePresentation(num(s.rate_per_kg), normalizeGrainRateUnit(s.rate_unit == null ? "legacy_as_stored" : String(s.rate_unit)));
+  return { kg, mand: r2(kg / 40), ratePerMand: view.perMaund, total, received: rec, due: r2(Math.max(0, total - rec)) };
 }
 
 /** Explicit links hi: customers.farmer_id = farmer.id, buyers.customer_id. Phone match sirf "mumkin" hint. */

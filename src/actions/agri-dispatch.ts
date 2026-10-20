@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getOrderPermissions } from "@/lib/order-permissions";
 import { getAdvancePaymentStatus } from "@/lib/order-payment-gate";
+import { reverseJournal } from "@/lib/ledger/post";
 import { moveStock, mainWarehouseId, hqWarehouseId } from "@/lib/stock-movement";
 
 export interface ActionState {
@@ -33,17 +34,26 @@ async function getOrderBranchIds(orderId: string): Promise<{ toBranchId: string 
 async function generateDispatchNumber(): Promise<string> {
   const serviceClient = createServiceClient();
   const year = new Date().getFullYear() % 100;
+  const { data, error } = await (serviceClient as any).rpc("fn_next_year_counter", { p_kind: "agri_dispatch", p_year: year });
+  if (error || data == null) throw new Error(error?.message ?? "Dispatch number nahi bana.");
+  return `DSP-AGR-${year}-${String(Number(data)).padStart(5, "0")}`;
+}
 
-  const { data: existing } = await serviceClient.from("agri_dispatch_counters").select("last_number").eq("year", year).single();
-  const nextNumber = (existing?.last_number ?? 0) + 1;
-
-  if (existing) {
-    await serviceClient.from("agri_dispatch_counters").update({ last_number: nextNumber }).eq("year", year);
-  } else {
-    await serviceClient.from("agri_dispatch_counters").insert({ year, last_number: nextNumber });
+async function rollbackFailedDispatch(dispatchId: string, userId: string | null) {
+  const service = createServiceClient();
+  const supabase = createClient();
+  const { data: entries } = await service
+    .from("journal_entries")
+    .select("id")
+    .eq("source_module", "agri_dispatch")
+    .eq("source_id", dispatchId)
+    .eq("is_reversal", false);
+  for (const entry of entries ?? []) {
+    await reverseJournal(entry.id, "Dispatch mukammal nahi hua, stock wapas", userId);
   }
-
-  return `DSP-AGR-${year}-${String(nextNumber).padStart(5, "0")}`;
+  await (service as any).rpc("fn_undo_reference_stock", { p_reference_type: "agri_dispatch", p_reference_id: dispatchId });
+  await supabase.from("agri_dispatch_items").delete().eq("dispatch_id", dispatchId);
+  await supabase.from("agri_dispatches").delete().eq("id", dispatchId);
 }
 
 interface DispatchItemInput {
@@ -106,7 +116,12 @@ export async function createDispatch(_prev: ActionState, formData: FormData): Pr
     data: { user },
   } = await supabase.auth.getUser();
 
-  const dispatchNumber = await generateDispatchNumber();
+  let dispatchNumber: string;
+  try {
+    dispatchNumber = await generateDispatchNumber();
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Dispatch number nahi bana." };
+  }
 
   const { data: dispatch, error } = await supabase
     .from("agri_dispatches")
@@ -124,7 +139,10 @@ export async function createDispatch(_prev: ActionState, formData: FormData): Pr
     })
     .select("id")
     .single();
-  if (error) return { error: error.message };
+  if (error) {
+    if (error.code === "23505") return { error: "Is order ka dispatch pehle hi ban chuka hai." };
+    return { error: error.message };
+  }
 
   const itemRows = items.map((i) => ({
     dispatch_id: dispatch.id,
@@ -138,7 +156,10 @@ export async function createDispatch(_prev: ActionState, formData: FormData): Pr
     damaged_qty: i.damaged_qty,
   }));
     const { error: itemsError } = await supabase.from("agri_dispatch_items").insert(itemRows);
-  if (itemsError) return { error: itemsError.message };
+  if (itemsError) {
+    await rollbackFailedDispatch(dispatch.id, user?.id ?? null);
+    return { error: itemsError.message };
+  }
 
   // Maal godown se nikal gaya, is liye bhejne wale ka stock ab kam hona
   // chahiye. Source wahi hai jahan se order maangaya gaya: branch-to-branch
@@ -174,7 +195,10 @@ export async function createDispatch(_prev: ActionState, formData: FormData): Pr
         journalDescription: `${dispatchNumber}: ${item.product_name}`,
         journalSourceModule: "agri_dispatch",
       });
-      if (moved.error) return { error: `${item.product_name}: ${moved.error}` };
+      if (moved.error) {
+        await rollbackFailedDispatch(dispatch.id, user?.id ?? null);
+        return { error: `${item.product_name}: ${moved.error}` };
+      }
     }
   }
 

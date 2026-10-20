@@ -3,8 +3,8 @@ import { unwrapWebsiteSetting, cmsWriteAllowed, addressNeedsOwner, SHOP_PHONE_E1
 import { ownerAccountChangeBlocked, makerCheckerBlock } from "../src/lib/hr/owner-guard";
 import { payrollPayDecision } from "../src/lib/payroll/pay-once";
 import { batchDeductPlan, batchIsSellable, canCancelTransfer, todayPkt } from "../src/lib/inventory/batch-guard";
-import { grainAmountFromRate, grainRatePresentation } from "../src/lib/grain/rate-unit";
-import { grainSaleWithinBought } from "../src/lib/grain/sold-vs-bought";
+import { grainAmountFromRate, grainMaundRateAllowed, grainRatePresentation } from "../src/lib/grain/rate-unit";
+import { grainSaleEditAllowed, grainSaleWithinOnHand } from "../src/lib/grain/sold-vs-bought";
 import { statementPartyVisible } from "../src/lib/statements/branch-scope";
 
 const triple = JSON.stringify(JSON.stringify(JSON.stringify("Al Rana Traders — AgriBridge")));
@@ -42,13 +42,20 @@ assert.match(todayPkt(new Date("2026-10-20T20:30:00Z")), /^2026-10-21$/);
 
 assert.equal(grainAmountFromRate(80, 4000, "per_maund"), 8000);
 assert.equal(grainAmountFromRate(80, 100, "per_kg"), 8000);
+assert.equal(grainAmountFromRate(80, 100, "legacy_as_stored"), 8000);
 assert.equal(grainRatePresentation(4000, "per_maund").perKg, 100);
 assert.equal(grainRatePresentation(4000, "legacy_as_stored").legacy, true);
+assert.equal(grainRatePresentation(100, "legacy_as_stored").perMaund, 4000);
 assert.equal(grainRatePresentation(100, "per_kg").perMaund, 4000);
+assert.equal(grainMaundRateAllowed(500), "Rate fi mand 1,000 se 20,000 ke darmiyan honi chahiye.");
+assert.equal(grainMaundRateAllowed(4000), null);
 
-assert.equal(grainSaleWithinBought(40530, 45905, 1).ok, false);
-assert.equal(grainSaleWithinBought(100, 40, 60).ok, true);
-assert.equal(grainSaleWithinBought(100, 40, 61).ok, false);
+assert.equal(grainSaleWithinOnHand(100, 60).ok, true);
+assert.equal(grainSaleWithinOnHand(100, 101).ok, false);
+assert.equal(grainSaleEditAllowed({ role: "owner", oldKg: 50, newKg: 40, onHandKg: 0 }).ok, true);
+assert.equal(grainSaleEditAllowed({ role: "admin", oldKg: 50, newKg: 50, onHandKg: 0 }).ok, true);
+assert.equal(grainSaleEditAllowed({ role: "sales_staff", oldKg: 50, newKg: 60, onHandKg: 5 }).ok, false);
+assert.equal(grainSaleEditAllowed({ role: "admin", oldKg: 50, newKg: 60, onHandKg: 20 }).ok, true);
 
 assert.equal(statementPartyVisible({ role: "sales_staff", callerBranchId: "b1", partyBranchId: "b2" }), false);
 assert.equal(statementPartyVisible({ role: "sales_staff", callerBranchId: "b1", partyBranchId: "b1" }), true);

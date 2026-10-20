@@ -1,7 +1,7 @@
 -- 665: rate_per_kg ka matlab, bina paisa badle.
 -- Khareed: column default per_maund (code pehle se kg/40 * rate karta hai).
--- Purani bikri: rate_unit legacy_as_stored (total_amount jyon ka tyon).
--- Nayi bikri jo column na bheje: default per_maund.
+-- Purani bikri (4 rows): rate column mein fi kg hai, is liye label per_kg.
+-- total_amount jyon ka tyon. Nayi bikri jo column na bheje: default per_maund.
 -- Paisa badalne wali SQL docs mein hai — needs owner approval. Yahan koi total update nahi.
 
 alter table public.grain_procurement_entries
@@ -14,7 +14,7 @@ alter table public.grain_procurement_entries
   check (rate_unit is null or rate_unit in ('per_maund', 'per_kg', 'legacy_as_stored'));
 
 alter table public.grain_sales
-  add column if not exists rate_unit text default 'legacy_as_stored';
+  add column if not exists rate_unit text default 'per_kg';
 
 alter table public.grain_sales
   alter column rate_unit set default 'per_maund';
