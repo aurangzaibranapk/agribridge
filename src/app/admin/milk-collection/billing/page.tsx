@@ -5,6 +5,7 @@ import { BillingClient } from "./billing-client";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { karachiParts, rpcError } from "@/lib/dairy/rules";
+import { requireMoneyAdmin } from "@/lib/access/money-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,15 @@ export default async function CompanyBillingPage({
   const year = params.year ? Number(params.year) : today.year;
   const branchFilter = params.branch_id ?? "";
   const lang = getLanguageFromCookies("rm");
+  const money = await requireMoneyAdmin("Doodh ka mahana bill aur tankhwah");
+  if (!money.ok) {
+    return (
+      <div>
+        <PageHeader title={t("mc_billing_title", lang)} description="Auto-generated monthly invoice and live profit/loss breakdown" />
+        <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{money.error}</p>
+      </div>
+    );
+  }
 
   const supabase = createClient();
   const service = createServiceClient();

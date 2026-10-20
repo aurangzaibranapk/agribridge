@@ -4,7 +4,7 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { Truck, PackageCheck } from "lucide-react";
-import { recordDispatch, recordReceipt, type DispatchState } from "@/actions/milk-dispatch";
+import { correctMilkReceipt, recordDispatch, recordReceipt, type DispatchState } from "@/actions/milk-dispatch";
 import { Card } from "@/components/ui/layout-primitives";
 import { Badge, Button, Input, Label, Select, Textarea } from "@/components/ui/form";
 import { t, type Lang } from "@/lib/i18n/translations";
@@ -22,19 +22,26 @@ interface Row {
   received: number | null;
   shortage: number | null;
   shortagePct: number | null;
+  createdBy: string | null;
+  receivedBy: string | null;
 }
 
 export function DispatchClient({
   lang,
   branches,
   rows,
+  canCorrect,
+  userId,
 }: {
   lang: Lang;
   branches: { id: string; name: string }[];
   rows: Row[];
+  canCorrect: boolean;
+  userId: string | null;
 }) {
   const [sendState, sendAction] = useFormState(recordDispatch, initial);
   const [recvState, recvAction] = useFormState(recordReceipt, initial);
+  const [correctState, correctAction] = useFormState(correctMilkReceipt, initial);
   const [open, setOpen] = useState(false);
 
   const waiting = rows.filter((r) => r.received === null);
@@ -158,6 +165,9 @@ export function DispatchClient({
           {t("md_history", lang)}
         </h2>
 
+        {correctState.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{correctState.error}</p>}
+        {correctState.notice && <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{correctState.notice}</p>}
+
         {rows.length === 0 ? (
           <p className="text-sm text-surface-500">{t("md_none", lang)}</p>
         ) : (
@@ -199,6 +209,14 @@ export function DispatchClient({
                         </span>
                       ) : (
                         <span className="text-green-600">0</span>
+                      )}
+                      {canCorrect && r.received !== null && r.createdBy !== userId && r.receivedBy !== userId && (
+                        <form action={correctAction} className="mt-2 flex flex-wrap items-end gap-2">
+                          <input type="hidden" name="dispatch_id" value={r.id} />
+                          <Input type="number" step="0.001" name="received_liters" defaultValue={String(r.received)} className="w-24" />
+                          <Input name="note" placeholder="Wajah" className="w-36" />
+                          <Button type="submit" size="sm" variant="secondary">Theek karein</Button>
+                        </form>
                       )}
                     </td>
                   </tr>

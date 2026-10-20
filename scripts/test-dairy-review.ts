@@ -1,6 +1,6 @@
 /**
  * Dairy review (20 October 2026) — hisaab aur wiring.
- * SQL: tests/dairy-review-sql.mjs (650-656, PGlite, koi remote DB nahi).
+ * SQL: tests/dairy-review-sql.mjs (650-659, PGlite, koi remote DB nahi).
  * Chalayein: npm run test:dairy-review
  */
 import assert from "node:assert/strict";
@@ -15,6 +15,7 @@ import {
   lrRangeError,
   meterObjectPath,
   milkInsertConflictMessage,
+  isUuid,
   openingReadingError,
   payableCovers,
   requireMilkSettings,
@@ -154,6 +155,8 @@ test("C2 invoice income is company-accepted litres times the service rate", () =
   assert.ok("income" in zero);
   if ("income" in zero) assert.equal(zero.income, 0);
   const billing = read("src/app/admin/milk-collection/billing/page.tsx");
+  assert.match(billing, /requireMoneyAdmin\("Doodh ka mahana bill aur tankhwah"\)/);
+  assert.ok(billing.indexOf("requireMoneyAdmin") < billing.indexOf("fn_dairy_month_pnl"));
   assert.match(billing, /fn_dairy_month_pnl/);
   assert.match(billing, /pnl\.error/);
   assert.match(read("src/app/admin/master-dashboard/page.tsx"), /fn_dairy_month_pnl/);
@@ -168,9 +171,18 @@ test("H2 payout cannot exceed the priced balance", () => {
   const pay = read("src/actions/milk.ts");
   assert.match(pay, /fn_milk_payable_balance/);
   assert.match(pay, /fn_record_milk_payment/);
-  assert.match(pay, /fn_qist_reverse_source/);
+  assert.match(pay, /p_amount: amount/);
+  assert.match(pay, /p_skip_qist: skipQist/);
+  assert.match(pay, /isUuid\(clientKey\)/);
+  assert.doesNotMatch(pay, /fn_qist_reverse_source/);
   assert.match(pay, /client_action_id/);
   assert.match(pay, /payableCovers/);
+  assert.equal(isUuid("00000000-0000-4000-8000-000000000001"), true);
+  assert.equal(isUuid("not-a-uuid"), false);
+  assert.equal(isUuid("00000000-0000-0000-0000-000000000000"), false);
+  assert.match(read("src/lib/qist/apply.ts"), /Wapsi bhi nahi hui/);
+  assert.match(read("src/actions/qist.ts"), /createServiceClient\(\)\.rpc\("fn_qist_reverse_source"/);
+  assert.match(read("supabase/migrations/658_dairy_payment_qist_gl_ledger_lock.sql"), /'1000'/);
 });
 
 test("H3 maker cannot approve their own entry", () => {
@@ -210,7 +222,29 @@ test("M6 meter photo path is stored and a public URL is reduced to that path", (
   assert.equal(meterObjectPath("  "), null);
   assert.match(read("src/lib/dairy/meter-photo.ts"), /createSignedUrl/);
   assert.match(read("src/app/admin/milk-collection/fuel/page.tsx"), /signMeterPhoto/);
+  assert.match(read("src/app/admin/milk-collection/generator/page.tsx"), /signMeterPhoto/);
+  assert.match(read("src/app/admin/milk-collection/fleet/page.tsx"), /signMeterPhoto/);
+  assert.match(read("src/app/admin/milk-collection/fleet/fleet-dashboard.tsx"), /opening_meter_photo_url/);
+  assert.match(read("src/app/admin/milk-collection/fleet/fleet-dashboard.tsx"), /fuel_receipt_url/);
+  assert.match(read("supabase/migrations/656_dairy_rate_privacy_meter_bucket.sql"), /public_read_milk_rates/);
+  assert.match(read("supabase/migrations/657_dairy_milk_rate_policy_name.sql"), /drop policy if exists public_read_milk_rates/);
   assert.doesNotMatch(read("supabase/migrations/656_dairy_rate_privacy_meter_bucket.sql").replace(/^\s*--.*$/gm, ""), /update\s+public\.fuel_logs/i);
+});
+
+test("N4 a refused FAT does not leave a second entry", () => {
+  const milk = read("src/actions/milk.ts");
+  assert.match(milk, /isUuid\(clientUuid\)/);
+  assert.match(milk, /eq\("status", "pending_fat"\)/);
+  assert.match(milk, /mahfooz/);
+  assert.match(read("src/app/admin/milk-collection/milk-client.tsx"), /name="client_uuid"/);
+});
+
+test("N5 only the owner corrects a company receipt", () => {
+  const action = read("src/actions/milk-dispatch.ts");
+  assert.match(action, /fn_correct_milk_receipt/);
+  assert.match(action, /gate\.role !== "owner" && gate\.role !== "super_admin"/);
+  assert.match(read("src/app/admin/milk-collection/dispatch/dispatch-client.tsx"), /correctMilkReceipt/);
+  assert.match(read("supabase/migrations/659_dairy_receipt_correction.sql"), /received_by = p_by/);
 });
 
 test("M2 SNF constant is unchanged until the owner confirms the contract", () => {

@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { aajKaKhana } from "@/lib/utils/format";
 import { failed, postQistSettlement, postQistWriteOff } from "@/lib/ledger/rules";
 import { postFarmerLedger } from "@/lib/farmer-ledger";
@@ -123,8 +124,11 @@ export async function receiveQistCash(_p: QistState, fd: FormData): Promise<Qist
     ctx: { createdBy: user?.id ?? null, branchId: plan.branch_id, claims: [{ table: "finance_transactions", rowId: txn.id }] },
   });
   if (failed(posted)) {
-    await sb.rpc("fn_qist_reverse_source", { p_source_table: "finance_transactions", p_source_id: txn.id, p_reason: posted.error });
+    const reversed = await createServiceClient().rpc("fn_qist_reverse_source", {
+      p_source_table: "finance_transactions", p_source_id: txn.id, p_reason: posted.error ?? "journal nakaam",
+    });
     await sb.from("finance_transactions").delete().eq("id", txn.id);
+    if (reversed.error) return err(`Journal nahi bana (${posted.error}). Wapsi bhi nahi hui: ${reversed.error.message}`);
     return err(posted.error);
   }
   await sb.rpc("fn_qist_set_deduction_journal", { p_source_table: "finance_transactions", p_source_id: txn.id, p_journal: posted.id });

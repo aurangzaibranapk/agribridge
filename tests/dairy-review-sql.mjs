@@ -1,4 +1,4 @@
-// Dairy review 650-656 on PGlite. Kisi remote database par nahi chalta.
+// Dairy review 650-659 on PGlite. Kisi remote database par nahi chalta.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
@@ -11,6 +11,9 @@ const FILES = [
   "654_dairy_rls_counters_dispatch",
   "655_dairy_month_pnl",
   "656_dairy_rate_privacy_meter_bucket",
+  "657_dairy_milk_rate_policy_name",
+  "658_dairy_payment_qist_gl_ledger_lock",
+  "659_dairy_receipt_correction",
 ];
 const M = FILES.map((f) => fs.readFileSync(`supabase/migrations/${f}.sql`, "utf8"));
 
@@ -36,6 +39,13 @@ assert.match(M[1], /Doodh pehle jama hua, FAT baad mein laga/);
 assert.match(M[2], /status in \('priced', 'verified'\)/);
 assert.match(M[6], /needs owner approval/);
 assert.match(M[6], /set public = false/);
+assert.match(M[6], /public_read_milk_rates/);
+assert.match(M[7], /public_read_milk_rates/);
+assert.match(M[8], /'1150'/);
+assert.match(M[8], /'1000'/);
+assert.match(M[8], /farmer-credit:/);
+assert.match(M[8], /fn_qist_reverse_source/);
+assert.match(M[9], /fn_correct_milk_receipt/);
 assert.doesNotMatch(stripComments(M[6]), /update\s+public\.fuel_logs/i);
 
 const db = new PGlite();
@@ -56,7 +66,7 @@ const pass = (n) => { ok++; console.log(`  ok  ${n}`); };
 
 await run(fs.readFileSync("tests/sql/dairy-review-stubs.sql", "utf8"));
 for (const m of M) { await run(m); await run(m); }
-pass("650-656 idempotent, additive, no remote project id");
+pass("650-659 idempotent, additive, no remote project id");
 
 const FA = "00000000-0000-0000-0000-0000000000a1";
 const FB = "00000000-0000-0000-0000-0000000000b1";
@@ -75,6 +85,9 @@ const BRANCH_C = "00000000-0000-0000-0000-00000000c333";
 const CLIENT = "00000000-0000-0000-0000-00000000c1a1";
 const CLIENT2 = "00000000-0000-0000-0000-00000000c1a2";
 const CLIENT3 = "00000000-0000-0000-0000-00000000c1a3";
+const CLIENT4 = "00000000-0000-0000-0000-00000000c1a4";
+const CLIENT5 = "00000000-0000-0000-0000-00000000c1a5";
+const CLIENT6 = "00000000-0000-0000-0000-00000000c1a6";
 
 await run(`
 insert into public.farmers (id, full_name, phone_number, milk_collection_type) values
@@ -199,57 +212,90 @@ await throws(`
   where id='${cId}'`, /chk_milk_no_self_verify|check/i, "H3 verify");
 pass("M1 FAT/LR bounds and H3 no self-verify");
 
-// H2 payments
+// H2 payments — qist RPC ke andar, cash GL 1150/1000
+const payCall = (farmer, amount, notes, client, skip = false) => `public.fn_record_milk_payment(
+    '${farmer}', ${amount}, 'cash', ${notes === null ? "null::text" : `'${notes}'`},
+    '${OTHER}', '${client}', ${skip}, null::uuid
+  )`;
 assert.equal(num(await one(`select public.fn_milk_payable_balance('${FF}')`)), 0);
-await throws(`
-  select public.fn_record_milk_payment('${FF}', 10, 0, 'cash', null, '${OTHER}', '${CLIENT}')
-`, /baqaya se zyada/, "H2 empty");
+await throws(`select ${payCall(FF, 10, null, CLIENT)}`, /baqaya se zyada/, "H2 empty");
 const pendingOnly = await entry(FF, { status: "pending_fat" });
 assert.ok(pendingOnly);
 assert.equal(num(await one(`select balance_due from public.milk_farmer_balances where farmer_id='${FF}'`)), 0);
 assert.equal(num(await one(`select public.fn_milk_payable_balance('${FA}')`)), 1406.5);
-await throws(`
-  select public.fn_record_milk_payment('${FA}', 2000, 0, 'cash', null, '${OTHER}', '${CLIENT}')
-`, /baqaya se zyada/, "H2 over");
-const pay = (await db.query(`
-  select public.fn_record_milk_payment('${FA}', 400, 0, 'cash', 'hissa', '${OTHER}', '${CLIENT}') as r
-`)).rows[0].r;
+await throws(`select ${payCall(FA, 2000, null, CLIENT)}`, /baqaya se zyada/, "H2 over");
+const journalsBeforePay = Number(await one(`select count(*) from public.test_journal_calls`));
+const pay = (await db.query(`select ${payCall(FA, 400, "hissa", CLIENT)} as r`)).rows[0].r;
 assert.equal(pay.already, false);
 assert.equal(num(pay.cash), 400);
-const again = (await db.query(`
-  select public.fn_record_milk_payment('${FA}', 400, 0, 'cash', 'hissa', '${OTHER}', '${CLIENT}') as r
-`)).rows[0].r;
+assert.equal(num(pay.qist), 0);
+const again = (await db.query(`select ${payCall(FA, 400, "x", CLIENT, true)} as r`)).rows[0].r;
 assert.equal(again.already, true);
 assert.equal(Number(await one(`select count(*) from public.milk_payments where client_action_id='${CLIENT}'`)), 1);
 assert.equal(Number(await one(`select count(*) from public.farmer_credit_ledger where farmer_id='${FA}' and ledger_type='debit'`)), 1);
 assert.equal(num(await one(`select balance from public.wallets where owner_id='${FA}'`)), 1006.5);
 const journalsAfterPay = Number(await one(`select count(*) from public.test_journal_calls`));
-await throws(`
-  select public.fn_record_milk_payment('${FA}', 1200, 0, 'cash', null, '${OTHER}', '${CLIENT2}')
-`, /baqaya se zyada/, "H2 remainder");
+assert.equal(journalsAfterPay, journalsBeforePay + 1);
+const cashGl = (await db.query(`select payload from public.test_journal_calls order by id desc limit 1`)).rows[0].payload;
+assert.equal(cashGl.sourceModule, "farmer_credit");
+assert.equal(Number(cashGl.lines.find((l) => l.account === "1150").debit), 400);
+assert.equal(Number(cashGl.lines.find((l) => l.account === "1000").credit), 400);
+await throws(`select ${payCall(FA, 1200, null, CLIENT2)}`, /baqaya se zyada/, "H2 remainder");
 assert.equal(Number(await one(`select count(*) from public.test_journal_calls`)), journalsAfterPay);
 assert.equal(num(await one(`select public.fn_milk_payable_balance('${FA}')`)), 1006.5);
 assert.equal(num(await one(`select balance_due from public.milk_farmer_balances where farmer_id='${FA}'`)), 1006.5);
-pass("H2 balance, idempotent cash payment, cash does not post GL");
+pass("H2 balance, idempotent cash payment, cash posts GL 1150/1000");
 
 const eId = await entry(FE);
 await run(`select public.fn_apply_milk_fat('${eId}', 4, '${OTHER}', false)`);
-await throws(`
-  select public.fn_record_milk_payment('${FE}', 1400, 20, 'cash', null, '${OTHER}', '${CLIENT2}')
-`, /baqaya se zyada/, "H2 qist plus cash over");
-const split = (await db.query(`
-  select public.fn_record_milk_payment('${FE}', 300, 100, 'cash', null, '${OTHER}', '${CLIENT3}') as r
-`)).rows[0].r;
+await run(`update public.test_qist_mode set deduct = 100, fail = false`);
+const cutsBeforeOver = Number(await one(`select count(*) from public.test_qist_cuts`));
+await throws(`select ${payCall(FE, 1500, null, CLIENT2)}`, /baqaya se zyada/, "H2 qist plus cash over");
+assert.equal(Number(await one(`select count(*) from public.test_qist_cuts`)), cutsBeforeOver);
+assert.equal(Number(await one(`select count(*) from public.milk_payments where farmer_id='${FE}'`)), 0);
+const split = (await db.query(`select ${payCall(FE, 400, null, CLIENT3)} as r`)).rows[0].r;
 assert.equal(split.already, false);
 assert.equal(num(split.cash), 300);
 assert.equal(num(split.qist), 100);
+const splitAgain = (await db.query(`select ${payCall(FE, 400, null, CLIENT3)} as r`)).rows[0].r;
+assert.equal(splitAgain.already, true);
+assert.equal(Number(await one(`select count(*) from public.test_qist_cuts where source_id='${CLIENT3}'`)), 1);
 assert.equal(Number(await one(`select count(*) from public.milk_payments where farmer_id='${FE}'`)), 2);
 assert.equal(Number(await one(`select count(*) from public.milk_payments where farmer_id='${FE}' and payment_method='qist_adjustment'`)), 1);
-assert.equal(Number(await one(`select count(*) from public.farmer_credit_ledger where farmer_id='${FE}' and ledger_type='debit'`)), 1);
-assert.equal(num(await one(`select amount from public.farmer_credit_ledger where farmer_id='${FE}' and ledger_type='debit'`)), 300);
+assert.equal(num(await one(`select amount from public.farmer_credit_ledger where farmer_id='${FE}' and ledger_type='debit' and amount=300`)), 300);
+assert.equal(num(await one(`select amount from public.farmer_credit_ledger where farmer_id='${FE}' and source_type='produce_repayment'`)), 100);
 assert.equal(num(await one(`select balance from public.wallets where owner_id='${FE}'`)), 1106.5);
 assert.equal(num(await one(`select public.fn_milk_payable_balance('${FE}')`)), 1006.5);
-pass("H2 qist row is not cash; wallet and khata move only for cash");
+const qistGl = (await db.query(`
+  select payload from public.test_journal_calls
+  where payload->>'sourceModule' = 'qist'
+  order by id desc limit 1
+`)).rows[0].payload;
+assert.equal(Number(qistGl.lines.find((l) => l.account === "2010").debit), 100);
+assert.equal(Number(qistGl.lines.find((l) => l.account === "1140").credit), 100);
+assert.match(String(qistGl.claims[0].table), /^milk_payment_qist:/);
+pass("H2 qist is inside the payment; wallet moves only for cash; over rolls qist back");
+
+const gId = await entry(FG);
+await run(`select public.fn_apply_milk_fat('${gId}', 4, '${OTHER}', false)`);
+const cutsBeforeFail = Number(await one(`select count(*) from public.test_qist_cuts`));
+const paysBeforeFail = Number(await one(`select count(*) from public.milk_payments where farmer_id='${FG}'`));
+await run(`update public.test_journal_mode set fail = true`);
+await throws(`select ${payCall(FG, 100, null, CLIENT4)}`, /journal down/, "H2 journal fail");
+await run(`update public.test_journal_mode set fail = false`);
+assert.equal(Number(await one(`select count(*) from public.test_qist_cuts`)), cutsBeforeFail);
+assert.equal(Number(await one(`select count(*) from public.milk_payments where farmer_id='${FG}'`)), paysBeforeFail);
+pass("H2 journal failure rolls payment and qist back");
+
+await throws(`select ${payCall(FH, 100, null, CLIENT5, true)}`, /wajah likhein/, "H2 skip short");
+const cutsBeforeSkip = Number(await one(`select count(*) from public.test_qist_cuts`));
+const skipped = (await db.query(`select ${payCall(FH, 100, "qist is dafa nahi", CLIENT6, true)} as r`)).rows[0].r;
+assert.equal(num(skipped.cash), 100);
+assert.equal(num(skipped.qist), 0);
+assert.equal(Number(await one(`select count(*) from public.test_qist_cuts`)), cutsBeforeSkip);
+assert.equal(Number(await one(`select count(*) from public.milk_payments where farmer_id='${FH}' and payment_method='qist_adjustment'`)), 0);
+await run(`update public.test_qist_mode set deduct = 0`);
+pass("H2 skip needs a reason and does not cut qist");
 
 // H3 maker-checker
 await throws(`
@@ -298,6 +344,58 @@ await run(`update public.milk_dispatches set notes = 'sirf note' where id='${dis
 assert.equal(await one(`select notes from public.milk_dispatches where id='${disp}'`), "sirf note");
 assert.equal(num(await one(`select received_liters from public.milk_dispatches where id='${disp}'`)), 90);
 pass("H7 received capped and write-once; notes can still change");
+
+await run(`
+  insert into public.profiles (id, role, is_active) values
+    ('${OTHER}', 'owner', true),
+    ('${MAKER}', 'owner', true),
+    ('${THIRD}', 'manager', true);
+  update public.milk_dispatches
+    set created_by = '${MAKER}', received_by = '${MAKER}'
+    where id = '${disp}';
+`);
+await throws(`select public.fn_correct_milk_receipt('${disp}', 80, '${MAKER}', 'ghalat adad tha')`, /khud theek/, "N5 own");
+await throws(`select public.fn_correct_milk_receipt('${disp}', 80, '${THIRD}', 'ghalat adad tha')`, /Owner/, "N5 manager");
+await throws(`select public.fn_correct_milk_receipt('${disp}', 80, '${OTHER}', 'ab')`, /5 haroof/, "N5 note");
+await throws(`select public.fn_correct_milk_receipt('${disp}', 200, '${OTHER}', 'zyada aa gaya')`, /zyada/, "N5 cap");
+await run(`select public.fn_correct_milk_receipt('${disp}', 80, '${OTHER}', 'company ne 80 mane')`);
+assert.equal(num(await one(`select received_liters from public.milk_dispatches where id='${disp}'`)), 80);
+assert.equal(Number(await one(`select count(*) from public.milk_dispatch_corrections where dispatch_id='${disp}'`)), 1);
+assert.equal(num(await one(`select old_received from public.milk_dispatch_corrections where dispatch_id='${disp}'`)), 90);
+assert.equal(num(await one(`select new_received from public.milk_dispatch_corrections where dispatch_id='${disp}'`)), 80);
+await throws(`update public.milk_dispatches set received_liters = 70 where id='${disp}'`, /Raseed pehle/, "N5 flag local");
+const ownDisp = await one(`
+  insert into public.milk_dispatches (dispatch_date, dispatched_liters, received_liters, created_by, received_by, notes)
+  values ('2026-09-16', 40, 40, '${OTHER}', '${THIRD}', 'owner ki rawangi') returning id
+`);
+await throws(`select public.fn_correct_milk_receipt('${ownDisp}', 30, '${OTHER}', 'apni rawangi')`, /Apni rawangi/, "N5 creator");
+pass("N5 owner corrects someone else's receipt; maker and manager cannot");
+
+assert.equal(await one(`select has_function_privilege('authenticated','public.fn_qist_reverse_source(text,uuid,text)','execute')`), false);
+assert.equal(await one(`select has_function_privilege('anon','public.fn_qist_reverse_source(text,uuid,text)','execute')`), false);
+pass("N7 authenticated cannot execute fn_qist_reverse_source");
+
+assert.match(String(await one(`select pg_get_functiondef('public.fn_apply_farmer_credit_entry()'::regprocedure)`)), /farmer-credit:/);
+const firstBal = num(await one(`
+  insert into public.farmer_credit_ledger (farmer_id, source_type, ledger_type, amount, balance_after)
+  values ('${FF}', 'milk', 'credit', 10, 0) returning balance_after
+`));
+const secondBal = num(await one(`
+  insert into public.farmer_credit_ledger (farmer_id, source_type, ledger_type, amount, balance_after)
+  values ('${FF}', 'milk', 'credit', 5, 0) returning balance_after
+`));
+assert.equal(firstBal, -10);
+assert.equal(secondBal, -15);
+pass("N8 farmer credit balance is locked and running");
+
+assert.equal(Number(await one(`select count(*) from pg_policies where policyname='public_read_milk_rates'`)), 0);
+await run(`create policy public_read_milk_rates on public.milk_rate_settings for select to anon using (true)`);
+assert.equal(Number(await one(`select count(*) from pg_policies where policyname='public_read_milk_rates'`)), 1);
+await run(fs.readFileSync("supabase/migrations/657_dairy_milk_rate_policy_name.sql", "utf8"));
+assert.equal(Number(await one(`select count(*) from pg_policies where policyname='public_read_milk_rates'`)), 0);
+assert.equal(Number(await one(`select count(*) from pg_policies where policyname='public_read_milk_rate_settings'`)), 0);
+assert.equal(Number(await one(`select count(*) from pg_policies where policyname='staff_read_milk_rate_settings'`)), 1);
+pass("N1 657 drops live policy public_read_milk_rates");
 
 const as = (role) => `set role authenticated; select set_config('test.staff_role','${role}', false);`;
 const reset = `reset role; select set_config('test.staff_role','', false);`;

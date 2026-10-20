@@ -7,8 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { recordCollection, applyFat } from "@/lib/milk-collection";
 import { previewQist } from "@/actions/qist";
-import { applyQistAtPayout } from "@/lib/qist/apply";
-import { fatRangeError, lrRangeError, payableCovers, rpcError } from "@/lib/dairy/rules";
+import { fatRangeError, isUuid, lrRangeError, payableCovers, rpcError } from "@/lib/dairy/rules";
 
 export interface ActionState {
   error?: string;
@@ -52,6 +51,8 @@ export async function createMilkEntry(_prev: ActionState, formData: FormData): P
   if (fatError) return { error: fatError };
   const lrError = lrRangeError(lr, allowOverride);
   if (lrError) return { error: lrError };
+  const clientUuid = String(formData.get("client_uuid") ?? "").trim();
+  if (!isUuid(clientUuid)) return { error: "Entry ka nishan sahi nahi. Safha dobara kholen." };
 
   const {
     data: { user },
@@ -69,11 +70,34 @@ export async function createMilkEntry(_prev: ActionState, formData: FormData): P
     branchId,
     notes,
     qualityOverride: allowOverride,
+    clientUuid,
   });
-  if ("error" in saved) return { error: saved.error };
+  let entryId: string | null = "error" in saved ? null : saved.id;
+  if ("error" in saved) {
+    if (!saved.error.includes("mahfooz")) return { error: saved.error };
+    const service = createServiceClient();
+    const { data: existing } = await service.from("milk_entries").select("id, status").eq("client_uuid", clientUuid).maybeSingle();
+    if (!existing) return { error: saved.error };
+    if (existing.status === "priced" || existing.status === "verified") {
+      revalidatePath("/admin/milk-collection");
+      return { success: true };
+    }
+    entryId = existing.id;
+  }
+  if (!entryId) return { error: "Entry nahi bani." };
 
-  const priced = await applyFat(saved.id, fat, user.id, { allowOverride });
-  if ("error" in priced) return { error: priced.error };
+  const priced = await applyFat(entryId, fat, user.id, { allowOverride });
+  if ("error" in priced) {
+    if (priced.error.includes("pehle hi lag")) {
+      revalidatePath("/admin/milk-collection");
+      return { success: true };
+    }
+    // FAT na lage to pending row mat chhodo — dobara submit doosri entry bana deti thi.
+    const service = createServiceClient();
+    const { error: gone } = await service.from("milk_entries").delete().eq("id", entryId).eq("status", "pending_fat");
+    if (gone) return { error: `${priced.error} — entry hatai nahi: ${rpcError(gone.message)}` };
+    return { error: priced.error };
+  }
 
   revalidatePath("/admin/milk-collection");
   revalidatePath("/admin/farmer-credit");
@@ -91,7 +115,7 @@ export async function recordMilkPayment(_prev: ActionState, formData: FormData):
   if (!farmerId) return { error: "Farmer is required." };
   if (!amount || amount <= 0) return { error: "Amount must be greater than zero." };
   const clientKey = String(formData.get("client_action_id") ?? "").trim();
-  if (!clientKey) return { error: "Adaigi ka nishan nahi. Safha dobara kholen." };
+  if (!isUuid(clientKey)) return { error: "Adaigi ka nishan sahi nahi. Safha dobara kholen." };
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -104,46 +128,25 @@ export async function recordMilkPayment(_prev: ActionState, formData: FormData):
   const over = payableCovers(balance, amount);
   if (over) return { error: over };
 
-  // 557: Qist Plan (doodh se) ki wajib qist pehle kategi; kami akhir wali jama qist mein.
-  // Rokne ke liye wajah lazmi. source id form ka nishan hai taake do dafa
-  // submit qist do dafa na kaate.
+  // Qist isi payment function ke andar kat-ti hai, taake adaigi tootay
+  // to qist bhi wapas ho. Rokne ki wajah yahin se jaati hai.
   const skipQist = formData.get("apply_qist") === "no";
   const skipReason = String(formData.get("qist_skip_reason") ?? "").trim();
   if (skipQist && skipReason.length < 3) return { error: "Qist is dafa na kaatne ki wajah likhein." };
-  let qistCut = 0;
-  if (!skipQist) {
-    const q = await applyQistAtPayout({
-      partyType: "farmer", partyId: farmerId, source: "milk", payout: amount,
-      sourceTable: "milk_payment_qist", sourceId: clientKey, createdBy: user?.id ?? null,
-    });
-    if (q.error) return { error: q.error };
-    qistCut = q.deducted;
-  }
-  const cashAmount = Math.round((amount - qistCut) * 100) / 100;
-  const qistNote = qistCut > 0 ? ` | Qist kati Rs ${qistCut.toLocaleString("en-PK")}` : skipQist ? ` | Qist roki: ${skipReason}` : "";
+  const qistNote = skipQist ? ` | Qist roki: ${skipReason}` : "";
   const posted = await (service as unknown as {
     rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: { already?: boolean } | null; error: { message: string } | null }>;
   }).rpc("fn_record_milk_payment", {
     p_farmer: farmerId,
-    p_cash: cashAmount,
-    p_qist: qistCut,
+    p_amount: amount,
     p_method: paymentMethod,
     p_notes: `${notes ?? ""}${qistNote}`.trim() || null,
     p_by: user?.id ?? null,
     p_client: clientKey,
+    p_skip_qist: skipQist,
+    p_branch: null,
   });
-  if (posted.error) {
-    if (qistCut > 0) {
-      await (supabase as unknown as {
-        rpc: (name: string, args: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
-      }).rpc("fn_qist_reverse_source", {
-        p_source_table: "milk_payment_qist",
-        p_source_id: clientKey,
-        p_reason: `Doodh ki adaigi nakaam: ${posted.error.message}`,
-      });
-    }
-    return { error: rpcError(posted.error.message) };
-  }
+  if (posted.error) return { error: rpcError(posted.error.message) };
 
   revalidatePath("/admin/milk-collection");
   revalidatePath("/admin/farmer-credit");

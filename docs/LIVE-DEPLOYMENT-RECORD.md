@@ -1,8 +1,8 @@
-## Pending — 20 October 2026: Dairy review migrations 650–656
+## Pending — 20 October 2026: Dairy review migrations 650–659
 
 Not applied. Files only, on branch `cursor/dairy-review-fixes-fa47`. Do not run them on testing or live until the owner says so, and do not run them on live until a fresh backup size is confirmed in chat.
 
-Order when the owner approves: testing first, counts checked, then live (backup already verified), then the web build. The milk, fuel, and billing screens call `fn_apply_milk_fat`, `fn_record_milk_payment`, `fn_next_milk_collection_number`, and `fn_dairy_month_pnl`. Deploying the build before the migrations will make those screens fail.
+Order when the owner approves: testing first, counts checked, then live (backup already verified), then the web build. The milk, fuel, billing, and receipt screens call `fn_apply_milk_fat`, `fn_record_milk_payment`, `fn_next_milk_collection_number`, `fn_dairy_month_pnl`, and `fn_correct_milk_receipt`. Deploying the build before the migrations will make those screens fail. 658 replaces the old payment function, so 652 and 658 must both be applied before the new payment screen is used.
 
 - 650 quality bounds, collection number, variance, indexes
 - 651 atomic FAT + khata + wallet + GL 5010/1150
@@ -10,7 +10,10 @@ Order when the owner approves: testing first, counts checked, then live (backup 
 - 653 maker-checker (nobody approves their own entry)
 - 654 counter and dispatch RLS
 - 655 monthly bill function
-- 656 private rates and private meter bucket
+- 656 private rates and private meter bucket (drops both public rate policy names)
+- 657 drops live policy `public_read_milk_rates` again
+- 658 payment, qist, khata, wallet, and cash GL 1150/1000 in one transaction; qist reverse is service-role only; farmer credit lock
+- 659 owner correction of someone else's company receipt
 
 No data cleanup was run. Rewriting old public meter URLs into paths is proposed SQL in `docs/DAIRY-REVIEW-FIXES-2026-10-20.md`, marked needs owner approval. SNF constant stays 0.805 until the owner confirms the Wasela contract.
 

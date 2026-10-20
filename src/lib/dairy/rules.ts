@@ -190,6 +190,11 @@ export function meterObjectPath(stored: string | null | undefined): string | nul
   return decodeURIComponent(trimmed.slice(at + marker.length).split("?")[0]);
 }
 
+/** Form ka client_action_id / client_uuid. Galat string RPC tak nahi jati. */
+export function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
+}
+
 export function rpcError(message: string): string {
   const line = message.split("\n")[0] ?? message;
   return line.replace(/^.*ERROR:\s*/i, "").replace(/^P0001:\s*/, "").trim();

@@ -219,6 +219,7 @@ function currentShift() {
 function NewEntryForm({ farmers, balances, branches, formula }: { farmers: Farmer[]; balances: Balance[]; branches: Branch[]; formula: { snfConstant: number; referenceTs: number } | null }) {
   const lang = useLang();
   const [state, formAction] = useFormState(createMilkEntry, initialState);
+  const [entryKey] = useState(() => crypto.randomUUID());
   const [quantity, setQuantity] = useState("");
   const [fat, setFat] = useState("");
   const [lr, setLr] = useState("");
@@ -257,6 +258,7 @@ function NewEntryForm({ farmers, balances, branches, formula }: { farmers: Farme
         </div>
       )}
       <form action={formAction} className="space-y-3">
+        <input type="hidden" name="client_uuid" value={entryKey} />
         {branches.length > 1 && (
           <div>
             <Label>{t("mk_chiller_branch_req", lang)}</Label>

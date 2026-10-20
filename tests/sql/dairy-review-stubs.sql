@@ -237,6 +237,12 @@ create table public.maintenance_logs (
   branch_id uuid
 );
 
+create table public.profiles (
+  id uuid primary key,
+  role text,
+  is_active boolean not null default true
+);
+
 create table public.milk_dispatches (
   id uuid primary key default gen_random_uuid(),
   dispatch_date date not null default current_date,
@@ -245,9 +251,80 @@ create table public.milk_dispatches (
   dispatched_liters numeric not null check (dispatched_liters > 0),
   received_liters numeric,
   received_at timestamptz,
+  received_by uuid,
   notes text,
   created_by uuid
 );
+
+create table public.qist_plans (
+  id uuid primary key,
+  origin text
+);
+insert into public.qist_plans (id, origin) values ('00000000-0000-0000-0000-00000000abcd', 'advance');
+
+create table public.test_qist_mode (
+  deduct numeric not null default 0,
+  fail boolean not null default false
+);
+insert into public.test_qist_mode (deduct, fail) values (0, false);
+create table public.test_qist_cuts (
+  source_id uuid primary key,
+  amount numeric not null
+);
+
+create or replace function public.fn_qist_apply(
+  p_party_type text, p_party_id uuid, p_source text, p_as_of date,
+  p_payout numeric, p_source_table text, p_source_id uuid
+) returns jsonb
+language plpgsql
+as $$
+declare
+  v numeric;
+begin
+  if coalesce((select fail from public.test_qist_mode limit 1), false) then
+    raise exception 'qist down';
+  end if;
+  if exists (select 1 from public.test_qist_cuts where source_id = p_source_id) then
+    select amount into v from public.test_qist_cuts where source_id = p_source_id;
+    return jsonb_build_object('deduct', v, 'items', '[]'::jsonb, 'already', true);
+  end if;
+  v := coalesce((select deduct from public.test_qist_mode limit 1), 0);
+  if v > p_payout then
+    v := p_payout;
+  end if;
+  if v > 0 then
+    insert into public.test_qist_cuts (source_id, amount) values (p_source_id, v);
+  end if;
+  return jsonb_build_object(
+    'deduct', v,
+    'already', false,
+    'items', case when v > 0 then jsonb_build_array(jsonb_build_object(
+      'plan_id', '00000000-0000-0000-0000-00000000abcd', 'code', 'QP-TEST', 'deduct', v
+    )) else '[]'::jsonb end
+  );
+end $$;
+
+create or replace function public.fn_qist_set_deduction_journal(p_source_table text, p_source_id uuid, p_journal uuid)
+returns void
+language plpgsql
+as $$
+begin
+  return;
+end $$;
+
+create or replace function public.fn_qist_reverse_source(p_source_table text, p_source_id uuid, p_reason text)
+returns numeric
+language plpgsql
+as $$
+begin
+  if coalesce(p_reason, '') = '' then
+    raise exception 'wajah likhein';
+  end if;
+  delete from public.test_qist_cuts where source_id = p_source_id;
+  return 0;
+end $$;
+
+grant execute on function public.fn_qist_reverse_source(text, uuid, text) to anon, authenticated;
 
 create table public.milk_route_collections (
   id uuid primary key default gen_random_uuid(),

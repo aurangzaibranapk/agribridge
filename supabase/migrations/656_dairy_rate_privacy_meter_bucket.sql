@@ -16,6 +16,8 @@ alter table public.milk_rate_settings enable row level security;
 
 drop policy if exists public_read_fuel_rate_settings on public.fuel_rate_settings;
 drop policy if exists public_read_milk_rate_settings on public.milk_rate_settings;
+-- Live par policy ka naam public_read_milk_rates hai. Dono naam hatao.
+drop policy if exists public_read_milk_rates on public.milk_rate_settings;
 
 revoke select on public.fuel_rate_settings from anon;
 revoke select on public.milk_rate_settings from anon;
