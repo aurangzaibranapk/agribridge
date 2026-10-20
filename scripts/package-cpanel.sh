@@ -20,6 +20,7 @@ node tests/hr-self-approval-guards.cjs
 node tests/inventory-guards-port.cjs
 node tests/pos-return-cash-match.cjs
 node tests/safe-form-state.cjs
+node tests/migration-631-phone-key.cjs
 node tests/maintenance-mode.cjs
 node tests/maintenance-copy-verify.cjs
 ./node_modules/.bin/tsc --noEmit --incremental

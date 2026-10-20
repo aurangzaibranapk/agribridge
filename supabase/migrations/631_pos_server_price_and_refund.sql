@@ -529,23 +529,8 @@ $$;
 revoke all on function public.fn_refresh_customer_balance(uuid) from public, anon;
 grant execute on function public.fn_refresh_customer_balance(uuid) to service_role;
 
-create or replace function public.fn_phone_key(p_raw text)
-returns text
-language plpgsql
-immutable
-as $$
-declare d text := regexp_replace(coalesce(p_raw, ''), '\D', '', 'g');
-begin
-  if d like '0092%' then d := substr(d, 3); end if;
-  if d like '0%' then d := '92' || substr(d, 2);
-  elsif d <> '' and d not like '92%' then d := '92' || d;
-  end if;
-  if length(d) < 12 then return null; end if;
-  return d;
-end;
-$$;
-revoke all on function public.fn_phone_key(text) from public, anon;
-grant execute on function public.fn_phone_key(text) to authenticated, service_role;
+-- fn_phone_key yahan dobara NAHI banti. Live wali (124, 10 hindse) farmers.phone_key
+-- generated column aur login v5 (621) chalati hai. Badalne se phone pehchan toot-ti.
 
 comment on table public.customer_ledger is
   '631: DEPRECATED. 0 rows. Customer balance ka asal hisaab journal_lines (party_type=customer, account 1100) hai. customers.current_balance us ka cache hai, is table ka nahi.';
