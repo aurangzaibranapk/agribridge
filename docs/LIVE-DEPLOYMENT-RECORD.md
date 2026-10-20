@@ -1,3 +1,38 @@
+## Pending — 20 October 2026: procurement guards (NOT applied)
+
+Migrations `629_procurement_unique_guards.sql` and `630_procurement_atomic_rpc.sql` are written and tested on PGlite only. They are **not** applied to Testing or Live. PO-1792495620885 (Doctor Masala, Rs 7,500) was posted by hand: supplier_payment `93d80980-fcb9-4e53-ba32-6966772d5a3d`, journal `7d0685b9-4239-4f96-b596-86d94ffd454e` (TXN-26-001302), cash book `ef176676`. `held_payment.posted` was later set true on that row. The approve button looks for an existing supplier payment or journal for the purchase and only marks the flag — it does not post a second time. Numbered 629/630 because 624–628 belong to the SMS retry migration.
+
+Read-only — approved purchases whose held payment is still not marked posted (no writes):
+
+```sql
+select p.purchase_number,
+       p.status,
+       p.reviewed_at,
+       s.name as supplier,
+       (p.held_payment->>'amount')::numeric as held_amount,
+       p.held_payment->>'payment_date' as payment_date,
+       p.held_payment->>'payment_method' as payment_method,
+       sp.id as supplier_payment_id,
+       sp.amount as payment_amount,
+       je.id as journal_id,
+       je.entry_number
+from public.purchases p
+left join public.suppliers s on s.id = p.supplier_id
+left join public.supplier_payments sp on sp.purchase_id = p.id
+left join public.journal_entries je
+  on je.source_module = 'supplier_payment'
+ and je.source_id = sp.id
+ and je.is_reversal = false
+where p.review_status = 'approved'
+  and p.held_payment is not null
+  and coalesce(p.held_payment->>'posted', 'false') <> 'true'
+order by p.reviewed_at;
+```
+
+Before apply, run the read-only query at the top of 629 (`select * from public.fn_procurement_index_blockers();` or the raw SELECT in that file). On 20 Oct the Live read showed no `block:` groups. One shared bill (`jx0098807`, 2 purchases) and several old double stock movements are `info:` only — the new partial indexes do not use those rows as keys.
+
+Apply 629, let it commit, then 630. Then deploy the web build. Owner/Admin self-approve (13 Oct) is unchanged.
+
 ## 11 October 2026 — POS receipt print fix (web deployment pending)
 
 Receipt modals now render through a body portal so dashboard scroll containers cannot clip long receipts or reserve blank space above them. Receipt print styles explicitly retain the last table column (line total), which generic report print CSS hides as an Actions column. Online and offline receipts share this isolation. Print page size follows the selected printer paper; use the 80 mm roll setting. No database migration. Physical printer validation remains required after deploying the new build.
