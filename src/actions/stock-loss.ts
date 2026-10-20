@@ -106,10 +106,23 @@ export async function verifyLossRecord(_prev: ActionState, formData: FormData): 
 
   const { data: loss } = await supabase.from("stock_loss_records").select("*").eq("id", lossId).single();
   if (!loss) return { error: "Loss record nahi mila." };
-  if (loss.status !== "pending") return { error: "Ye record pehle hi process ho chuka hai." };
+  if (loss.reported_by === user.id) return { error: "Jis ne nuqsan darj kiya wo khud manzoor nahi kar sakta." };
+  if (loss.status !== "pending") return { success: true };
 
   const authorized = await isAuthorizedVerifier(supabase, user.id, loss.warehouse_id);
   if (!authorized) return { error: "Aapko is Shop ke liye verify karne ki ijazat nahi hai." };
+
+  const { data: decisionResult, error: decisionError } = await (supabase as any).rpc("fn_decide_stock_loss", {
+    p_loss: lossId,
+    p_decision: decision,
+    p_reason: decision === "reject" ? rejectionReason : decision === "reduced_rate" ? `Kam rate pe nikala: Rs ${reducedRate}` : null,
+  });
+  if (decisionError) return { error: decisionError.message };
+  if (decisionResult === "already") return { success: true };
+  if (decision === "reject") {
+    revalidatePath("/admin/reports/audit");
+    return { success: true };
+  }
 
   if (decision === "reject") {
     if (!rejectionReason) return { error: "Reject karne ki wajah likhein." };
@@ -126,9 +139,16 @@ export async function verifyLossRecord(_prev: ActionState, formData: FormData): 
       .eq("product_id", loss.product_id)
       .maybeSingle();
     if (inv) {
+      const { data: alreadyMoved } = await supabase
+        .from("stock_movements")
+        .select("id")
+        .eq("reference_type", "stock_loss")
+        .eq("reference_id", lossId)
+        .limit(1);
       const deduct = Math.min(Number(loss.quantity), Number(inv.quantity_on_hand));
       // Ginti yahan se NAHI badalti -- harkat par trigger karta hai (129).
-      await supabase.from("stock_movements").insert({
+      // Pehle se harkat ho to dobara nahi — warna journal fail ke baad retry dugna kaat-ta.
+      if (!alreadyMoved?.length) await supabase.from("stock_movements").insert({
         inventory_id: inv.id,
         // Naam nuqsan ki apni qism se aata hai. Pehle yahan hamesha
         // "loss_write_off" likha jata tha -- ek aisa lafz jo enum mein
@@ -158,14 +178,16 @@ export async function verifyLossRecord(_prev: ActionState, formData: FormData): 
         sourceModule: "stock_loss",
         sourceId: lossId,
         createdBy: user.id,
+        claims: [{ table: "stock_loss_records", rowId: lossId }],
         lines: [
           { account: ACC.stockLoss, debit: lossValue },
           { account: ACC.stockGoods, credit: lossValue },
         ],
       });
       if (failed(posted)) {
+        await (supabase as any).rpc("fn_release_stock_loss_claim", { p_loss: lossId });
         revalidatePath("/admin/inventory");
-        return { error: `Nuqsan manzoor ho gaya magar ledger mein nahi gaya: ${posted.error}` };
+        return { error: `Nuqsan ledger mein nahi gaya, is liye faisla wapas pending hai: ${posted.error}` };
       }
     }
   } else {
@@ -208,14 +230,16 @@ export async function verifyLossRecord(_prev: ActionState, formData: FormData): 
         sourceModule: "stock_loss",
         sourceId: lossId,
         createdBy: user.id,
+        claims: [{ table: "stock_loss_records", rowId: lossId }],
         lines: [
           { account: ACC.stockLoss, debit: markdownLoss },
           { account: ACC.stockGoods, credit: markdownLoss },
         ],
       });
       if (failed(posted)) {
+        await (supabase as any).rpc("fn_release_stock_loss_claim", { p_loss: lossId });
         revalidatePath("/admin/inventory");
-        return { error: `Kam rate manzoor ho gaya magar ledger mein nahi gaya: ${posted.error}` };
+        return { error: `Kam rate ledger mein nahi gaya, is liye faisla wapas pending hai: ${posted.error}` };
       }
     }
   }

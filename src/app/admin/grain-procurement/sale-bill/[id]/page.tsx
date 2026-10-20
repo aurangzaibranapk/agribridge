@@ -58,6 +58,7 @@ export default async function GrainSaleBillPage({ params }: { params: Promise<{ 
     gross_weight_kg: s.gross_weight_kg != null ? Number(s.gross_weight_kg) : parsed.gross,
     cut_kg: s.cut_kg != null ? Number(s.cut_kg) : parsed.cut,
     rate_per_kg: Number(s.rate_per_kg),
+    rate_unit: s.rate_unit ?? "legacy_as_stored",
     total_amount: Number(s.total_amount),
     total_cogs: Number(s.total_cogs ?? 0),
     profit: Number(s.profit ?? 0),

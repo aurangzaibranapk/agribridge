@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { postJournal } from "@/lib/ledger/post";
 import { ACC } from "@/lib/ledger/rules";
 import { stockOutPlan } from "@/lib/inventory/stock-math";
+import { consumeSellableFifo } from "@/lib/inventory/atomic-batch";
 
 /**
  * Stock ki harkat ka ek hi markazi tareeqa — FEFO se batches nikalna
@@ -53,39 +54,22 @@ async function deductStock(
   movementType: MovementType,
   referenceType: string,
   referenceId: string,
-  userId: string | null
+  userId: string | null,
+  allowExpired = false
 ): Promise<{ cost: number; error: string | null }> {
   const supabase = createClient();
-  const { data: batches } = await supabase
-    .from("stock_batches")
-    .select("id, remaining_quantity, unit_cost")
-    .eq("warehouse_id", warehouseId)
-    .eq("product_id", productId)
-    .gt("remaining_quantity", 0)
-    .order("expiry_date", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: true });
   const { data: inv } = await supabase
     .from("inventory")
     .select("id, quantity_on_hand")
     .eq("warehouse_id", warehouseId)
     .eq("product_id", productId)
     .maybeSingle();
-  const plan = stockOutPlan(
-    qty,
-    Number(inv?.quantity_on_hand ?? 0),
-    (batches ?? []).map((batch) => ({ remaining: Number(batch.remaining_quantity), unitCost: Number(batch.unit_cost ?? 0) }))
-  );
-  if (!plan.ok) return { cost: 0, error: plan.error };
+  const plan = stockOutPlan(qty, Number(inv?.quantity_on_hand ?? 0), [{ remaining: Number(inv?.quantity_on_hand ?? 0), unitCost: 0 }]);
+  if (!plan.ok && Number(inv?.quantity_on_hand ?? 0) < qty) return { cost: 0, error: plan.error };
   if (!inv) return { cost: 0, error: "Stock record nahi mila." };
 
-  let remaining = qty;
-  for (const batch of batches ?? []) {
-    if (remaining <= 0) break;
-    const take = Math.min(remaining, Number(batch.remaining_quantity));
-    const { error: batchError } = await supabase.from("stock_batches").update({ remaining_quantity: Number(batch.remaining_quantity) - take }).eq("id", batch.id);
-    if (batchError) return { cost: 0, error: batchError.message };
-    remaining -= take;
-  }
+  const consumed = await consumeSellableFifo(supabase, { warehouseId, productId, qty, allowExpired });
+  if (consumed.error) return { cost: 0, error: consumed.error };
 
   const { error: movementError } = await supabase.from("stock_movements").insert({
     inventory_id: inv.id,
@@ -96,7 +80,7 @@ async function deductStock(
     created_by: userId,
   });
   if (movementError) return { cost: 0, error: movementError.message };
-  return { cost: plan.cost, error: null };
+  return { cost: consumed.cost, error: null };
 }
 
 async function addStock(
@@ -172,7 +156,16 @@ export async function moveStock(opts: StockMoveOptions): Promise<{ error: string
 
   let cost = 0;
   if (fromWarehouseId) {
-    const moved = await deductStock(fromWarehouseId, productId, qty, opts.outType ?? "transfer_out", referenceType, referenceId, userId);
+    const moved = await deductStock(
+      fromWarehouseId,
+      productId,
+      qty,
+      opts.outType ?? "transfer_out",
+      referenceType,
+      referenceId,
+      userId,
+      (opts.outType ?? "transfer_out") !== "sale_out"
+    );
     if (moved.error) return { error: moved.error, cost: 0 };
     cost = moved.cost;
     // Jab maal company se bahar jaye (jaise agri dispatch), tab ledger mein

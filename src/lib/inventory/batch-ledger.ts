@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { postJournal } from "@/lib/ledger/post";
 import { ACC } from "@/lib/ledger/rules";
+import { consumeSellableFifo } from "@/lib/inventory/atomic-batch";
 
 /**
  * Batch + ledger ko ek sath chalane wale chhote auzaar.
@@ -29,8 +30,8 @@ export async function stockAccountsFor(db: Db, productId: string) {
 }
 
 /**
- * FIFO se batches ghatao. Jitna batch mein nahi, us ki lagat product ki
- * purchase_price se lagti hai (stockHoldingValue wala usool).
+ * FIFO se batches ghatao. Adjustment expire batch chhoo sakta hai.
+ * Jitna sehat-mand batch cover na kare, utna error — bacha hua purchase_price se nahi bhara jata.
  */
 export async function consumeBatches(
   db: Db,
@@ -38,31 +39,9 @@ export async function consumeBatches(
   productId: string,
   qty: number
 ): Promise<{ cost: number; error: string | null }> {
-  const { data: batches, error } = await db
-    .from("stock_batches")
-    .select("id, remaining_quantity, unit_cost")
-    .eq("warehouse_id", warehouseId)
-    .eq("product_id", productId)
-    .gt("remaining_quantity", 0)
-    .order("created_at", { ascending: true });
-  if (error) return { cost: 0, error: error.message };
-
-  let remaining = qty;
-  let cost = 0;
-  for (const batch of batches ?? []) {
-    if (remaining <= 0) break;
-    const have = Number(batch.remaining_quantity);
-    const take = Math.min(remaining, have);
-    const { error: updErr } = await db.from("stock_batches").update({ remaining_quantity: have - take }).eq("id", batch.id);
-    if (updErr) return { cost, error: updErr.message };
-    cost += take * Number(batch.unit_cost ?? 0);
-    remaining -= take;
-  }
-  if (remaining > 0) {
-    const { data: p } = await db.from("products").select("purchase_price").eq("id", productId).maybeSingle();
-    cost += remaining * Number(p?.purchase_price ?? 0);
-  }
-  return { cost: Math.round(cost * 100) / 100, error: null };
+  const consumed = await consumeSellableFifo(db, { warehouseId, productId, qty, allowExpired: true });
+  if (consumed.error) return { cost: 0, error: consumed.error };
+  return { cost: consumed.cost, error: null };
 }
 
 /** Naya batch -- error chhupaya nahi jata. */

@@ -8,7 +8,7 @@
 export const GRAIN_SALE_DRAFT_EDITABLE: { key: string; label: string; type: "date" | "number" | "text" }[] = [
   { key: "sale_date", label: "Bikri ki tareekh (asal din)", type: "date" },
   { key: "quantity_kg", label: "Wazan (kg)", type: "number" },
-  { key: "rate_per_kg", label: "Rate (Rs fi kg)", type: "number" },
+  { key: "rate_per_kg", label: "Rate (Rs fi mand / 40 kg)", type: "number" },
   { key: "bardana_cost", label: "Bardana kharcha (Rs)", type: "number" },
   { key: "mazdoori_cost", label: "Mazdoori kharcha (Rs)", type: "number" },
   { key: "notes", label: "Notes", type: "text" },

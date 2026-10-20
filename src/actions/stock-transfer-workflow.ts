@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
+import { consumeSellableFifo } from "@/lib/inventory/atomic-batch";
 import { createServiceClient } from "@/lib/supabase/service";
 import { transferHasEnoughStock } from "@/lib/inventory/transfer-rules";
 
@@ -269,20 +270,13 @@ async function moveTransferBatches(
   qty: number,
   unitPrice: number
 ) {
-  let remaining = qty;
-  const { data: batches } = await supabase
-    .from("stock_batches")
-    .select("id, remaining_quantity")
-    .eq("warehouse_id", fromWarehouseId)
-    .eq("product_id", productId)
-    .gt("remaining_quantity", 0)
-    .order("created_at", { ascending: true });
-  for (const batch of batches ?? []) {
-    if (remaining <= 0) break;
-    const take = Math.min(remaining, Number(batch.remaining_quantity));
-    await supabase.from("stock_batches").update({ remaining_quantity: Number(batch.remaining_quantity) - take }).eq("id", batch.id);
-    remaining -= take;
-  }
+  const consumed = await consumeSellableFifo(supabase, {
+    warehouseId: fromWarehouseId,
+    productId,
+    qty,
+    allowExpired: true,
+  });
+  if (consumed.error) throw new Error(consumed.error);
 
   // Ginti (stock_movements) yahan se NAHI likhi jati. Ek hi malik hai:
   // fn_apply_stock_transfer trigger, jo status "completed" hote hi
@@ -436,9 +430,18 @@ export async function cancelInternalTransfer(_prev: ActionState, formData: FormD
   const transferId = String(formData.get("transfer_id") ?? "");
   const { data: transfer } = await supabase.from("stock_transfers").select("status").eq("id", transferId).single();
   if (!transfer) return { error: "Transfer not found." };
-  if (transfer.status === "completed") return { error: "Cannot cancel a completed transfer." };
-  const { error } = await supabase.from("stock_transfers").update({ status: "cancelled" }).eq("id", transferId);
+  if (transfer.status === "completed" || transfer.status === "cancelled") {
+    return { error: "Mukammal ya pehle se cancel transfer cancel nahi ho sakti." };
+  }
+  const { data: cancelled, error } = await supabase
+    .from("stock_transfers")
+    .update({ status: "cancelled" })
+    .eq("id", transferId)
+    .neq("status", "completed")
+    .neq("status", "cancelled")
+    .select("id");
   if (error) return { error: error.message };
+  if (!cancelled || cancelled.length === 0) return { error: "Mukammal transfer cancel nahi ho sakti." };
   revalidatePath("/admin/stock-transfers");
   return { success: true };
 }

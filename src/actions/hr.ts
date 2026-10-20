@@ -538,6 +538,8 @@ export async function bulkDeactivateStaff(_prev: ActionState, formData: FormData
   const ids = idsRaw.split(",").filter(Boolean);
   if (ids.length === 0) return { error: "Koi Staff select nahi hui." };
   if (ids.includes(user.id)) return { error: "Apna account khud band nahi kiya ja sakta." };
+  const { data: owners } = await supabase.from("profiles").select("id").in("id", ids).eq("role", "owner");
+  if ((owners ?? []).length > 0) return { error: "Owner account band nahi ho sakta." };
 
   // Tasdeeq ke sath -- dekhein `lib/profile-write.ts`. Yahan ginti bhi
   // ahem hai: aadhe bande band ho jayen aur safha "ho gaya" kahe, to wo

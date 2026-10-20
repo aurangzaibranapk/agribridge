@@ -1,3 +1,21 @@
+## Pending — 20 October 2026: department review fixes (660–670)
+
+Branch `cursor/dept-review-fixes-660-c70c`. Migrations **not applied** on Testing or Live. Do not run them until a fresh backup is confirmed in chat. Files only:
+
+- 660 CMS write = owner/super_admin/admin; shop phone `+923126513294`
+- 661 owner account cannot be suspended or deleted
+- 662 payroll pay claim (one payment)
+- 663 atomic batch deduct, row lock, check NOT VALID
+- 664 grain sale cannot exceed purchases
+- 665 grain rate unit label (no money change)
+- 666 completed transfer cannot be cancelled
+- 667 stock loss once + maker cannot approve own loss
+- 668 expired batch cannot be sold
+- 669 statement party must be in the caller's branch
+- 670 POS skips expired and over-initial batches
+
+Data fixes that change rows are only in `docs/NEEDS-OWNER-APPROVAL-660.md` and stay unrun. Address stays the placeholder.
+
 ## 11 October 2026 — POS receipt print fix (web deployment pending)
 
 Receipt modals now render through a body portal so dashboard scroll containers cannot clip long receipts or reserve blank space above them. Receipt print styles explicitly retain the last table column (line total), which generic report print CSS hides as an Actions column. Online and offline receipts share this isolation. Print page size follows the selected printer paper; use the 80 mm roll setting. No database migration. Physical printer validation remains required after deploying the new build.
