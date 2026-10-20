@@ -80,7 +80,8 @@
     "test:render-dashboard": "node tests/render-dashboard-parity.cjs && npx --yes tsx scripts/test-render-dashboard-look.ts",
     "test:whatsapp-parity": "npx tsx scripts/test-whatsapp-parity.ts && node tests/whatsapp-parity-sql.mjs",
     "test:animated-search": "npx tsx --tsconfig scripts/tsconfig.inbox-test.json scripts/test-animated-search.tsx",
-    "test:whatsapp-inbox": "npx tsx --tsconfig scripts/tsconfig.inbox-test.json scripts/test-whatsapp-inbox.tsx && node tests/whatsapp-inbox-sql.mjs && node tests/security-grants-619-sql.mjs"
+    "test:whatsapp-inbox": "npx tsx --tsconfig scripts/tsconfig.inbox-test.json scripts/test-whatsapp-inbox.tsx && node tests/whatsapp-inbox-sql.mjs && node tests/security-grants-619-sql.mjs",
+    "test:command-center-insights": "npx --yes tsx scripts/test-command-center-insights.ts && node tests/command-center-insights-wiring.cjs"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",
