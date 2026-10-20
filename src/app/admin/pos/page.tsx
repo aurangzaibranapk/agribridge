@@ -5,6 +5,7 @@ import { PosClient } from "@/components/pos/pos-client";
 import { CounterShiftPicker } from "@/components/pos/counter-shift-picker";
 import { ShiftBar } from "@/components/pos/shift-bar";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { aggregateGodamByProduct, centralGodams } from "@/lib/pos/godam-on-card";
 import { loadPosPermissions } from "@/lib/pos/permissions";
 import { t } from "@/lib/i18n/translations";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
@@ -288,7 +289,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     const [{ data: inv }, { data: cust }] = await Promise.all([
       supabase
         .from("dealer_inventory")
-        .select("id, product_id, stock_quantity, selling_price, products(name, pack_size, barcode, internal_barcode, image_url, unit_code, category_id, mrp_price, purchase_price, expiry_date)")
+        .select("id, product_id, stock_quantity, selling_price, products(name, pack_size, barcode, internal_barcode, image_url, unit_code, category_id, mrp_price, purchase_price, expiry_date, min_stock_threshold)")
         .eq("dealer_id", dealer.id)
         .gt("stock_quantity", 0),
       supabase
@@ -305,7 +306,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     const { data: invRows } = warehouseId
       ? await supabase
           .from("inventory")
-          .select("product_id, quantity_on_hand, batch_id, products(name, pack_size, units_per_pack, barcode, internal_barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending, mrp_price, purchase_price, expiry_date)")
+          .select("product_id, quantity_on_hand, batch_id, products(name, pack_size, units_per_pack, barcode, internal_barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending, mrp_price, purchase_price, expiry_date, min_stock_threshold)")
           .eq("warehouse_id", warehouseId)
           // Khatam (0) stock bhi laate hain taake counter par grey nazar aaye
           // aur staff demand bana sake (10 October). Cart mein jane se rok
@@ -531,37 +532,38 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
   }
 
   // ---- Godam mein aur kitna para hai ----
-  // Dukan par khatam ho raha ho to agla sawal yehi hota hai. Jawab na
-  // mil sake to NULL rehta hai aur safha "—" likhta hai -- sifar likh
-  // dena "godam khali hai" ka jhoot hai.
-  const godamStock = new Map<string, number>();
-  let godamMaloom = false;
+  // Sirf isi branch ke central godam (shop_id khali, quarantine nahi).
+  // Dukan ka apna warehouse is kul mein nahi. Doosri dukan ka shelf bhi
+  // nahi. Jawab na mil sake to NULL rehta hai aur card "—" likhta hai --
+  // sifar likh dena "godam khali hai" ka jhoot hai. Ek hi sawal, saare
+  // card. Har card ka alag sawal nahi.
+  let godamByProduct: ReturnType<typeof aggregateGodamByProduct> | null = null;
   if (!dealer && branch && inventory.length) {
-    const { data: otherWh, error: whErr } = await supabase
+    const { data: branchWh, error: whErr } = await supabase
       .from("warehouses")
-      .select("id")
+      .select("id, name, shop_id, is_quarantine")
       .eq("branch_id", branch.id);
-    const otherIds = (otherWh ?? []).map((w) => w.id).filter((id) => id !== warehouseId);
     if (!whErr) {
-      if (otherIds.length === 0) {
-        godamMaloom = true; // dekh liya: koi doosra godam hai hi nahi
+      const godams = centralGodams(branchWh ?? [], warehouseId);
+      const productIds = inventory.map((i: any) => i.product_id as string);
+      if (godams.length === 0) {
+        godamByProduct = aggregateGodamByProduct(productIds, [], [], true);
       } else {
         const { data: rows, error: invErr } = await supabase
           .from("inventory")
-          .select("product_id, quantity_on_hand")
-          .in("warehouse_id", otherIds)
-          .in("product_id", inventory.map((i: any) => i.product_id));
+          .select("product_id, warehouse_id, quantity_on_hand")
+          .in("warehouse_id", godams.map((w) => w.id))
+          .in("product_id", productIds);
         if (!invErr) {
-          godamMaloom = true;
-          for (const r of rows ?? []) {
-            godamStock.set(r.product_id, (godamStock.get(r.product_id) ?? 0) + Number(r.quantity_on_hand ?? 0));
-          }
+          godamByProduct = aggregateGodamByProduct(productIds, godams, rows ?? [], true);
         }
       }
     }
   }
   for (const it of inventory as any[]) {
-    it.warehouse_stock = godamMaloom ? godamStock.get(it.product_id) ?? 0 : null;
+    const g = godamByProduct?.get(it.product_id);
+    it.warehouse_stock = g ? g.total : null;
+    it.warehouse_lines = g ? g.lines : null;
   }
 
   // Lagat sirf us ke liye jise dekhne ki ijazat hai. Chhupana safhe par
