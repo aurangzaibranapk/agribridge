@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { storeComplaintImages } from "@/lib/support/store-attachments";
 
 export interface CcState {
   error?: string;
@@ -19,7 +20,7 @@ async function session() {
   if (!user) return { error: "Login zaroori hai." } as const;
   const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle();
   if (!me?.is_active) return { error: "Ye account fa'aal nahi hai." } as const;
-  return { supabase, role: String(me.role) };
+  return { supabase, role: String(me.role), userId: user.id };
 }
 
 /** Category form se. Channel hamesha SMS — client ki choice nahi. */
@@ -31,7 +32,7 @@ export async function createComplaint(_prev: CcState, formData: FormData): Promi
   const category = String(formData.get("category") ?? "");
   const description = String(formData.get("description") ?? "").trim();
   const { data, error } = await (who.supabase as unknown as {
-    rpc: (fn: string, args: Record<string, string>) => Promise<{ data: { number?: string; sms?: string } | null; error: { message: string } | null }>;
+    rpc: (fn: string, args: Record<string, string>) => Promise<{ data: { id?: string; number?: string; sms?: string } | null; error: { message: string } | null }>;
   }).rpc("fn_cc_create_complaint", {
     p_kind: kind,
     p_id: partyId,
@@ -40,6 +41,17 @@ export async function createComplaint(_prev: CcState, formData: FormData): Promi
     p_channel: "sms",
   });
   if (error) return { error: error.message };
+  const images = formData.getAll("images").filter((item): item is File => item instanceof File && item.size > 0);
+  if (data?.id && images.length > 0) {
+    const service = createServiceClient() as unknown as {
+      from: (table: string) => { select: (cols: string) => { eq: (col: string, value: string) => { maybeSingle: () => Promise<{ data: { support_ticket_id?: string; organization_id?: string; created_by?: string } | null }> } } };
+    };
+    const linked = await service.from("cc_complaints").select("support_ticket_id,organization_id,created_by").eq("id", data.id).maybeSingle();
+    const row = linked.data;
+    if (row?.support_ticket_id && row.organization_id && row.created_by === who.userId) {
+      await storeComplaintImages({ ticketId: row.support_ticket_id, organizationId: row.organization_id, userId: who.userId, files: images });
+    }
+  }
   revalidatePath("/admin/call-center");
   revalidatePath("/admin/call-center/complaints");
   const sms = data?.sms === "queued" ? "SMS queue mein hai." : "Mobile darj nahi — SMS nahi gayi.";

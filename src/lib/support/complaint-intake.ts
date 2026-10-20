@@ -1,6 +1,8 @@
 /**
  * Staff / call-center complaints jo Support Dashboard ki queue mein aati hain.
- * Staff khud department ya assignee nahi chunta. Assign sirf Admin.
+ * Staff khud department ya assignee nahi chunta.
+ * Assign: Owner, super admin, Admin hamesha. Manager sirf jab Owner/Admin
+ * us user ko ijazat de (default band).
  */
 
 export const COMPLAINT_ADMIN_ROLES = ["owner", "super_admin", "admin"] as const;
@@ -16,13 +18,20 @@ const DEPARTMENT_ROLES = [
   "agronomist",
 ] as const;
 
+/** Owner / super admin / Admin. Manager is list mein nahi — us ke liye grant alag hai. */
 export function canAssignComplaints(role: string): boolean {
   return (COMPLAINT_ADMIN_ROLES as readonly string[]).includes(role);
 }
 
-/** Staff form: department aur assignee ki list dikhti hi nahi. */
-export function complaintDeskAccess(role: string): { showDepartmentPicker: boolean; showAssigneePicker: boolean } {
-  const show = canAssignComplaints(role);
+/** Manager tab hi forward karta hai jab us ki apni ijazat on ho. */
+export function canForwardComplaint(input: { role: string; managerGrant?: boolean }): boolean {
+  if (canAssignComplaints(input.role)) return true;
+  return input.role === "manager" && input.managerGrant === true;
+}
+
+/** Grant na do to purana behaviour: Manager ko picker nahi dikhta. */
+export function complaintDeskAccess(role: string, managerGrant = false): { showDepartmentPicker: boolean; showAssigneePicker: boolean } {
+  const show = canForwardComplaint({ role, managerGrant });
   return { showDepartmentPicker: show, showAssigneePicker: show };
 }
 

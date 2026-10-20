@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, BarChart3, Camera, CheckCircle2, ClipboardPaste, ExternalLink, RefreshCw, Send, ShieldCheck, X } from "lucide-react";
 import { LightboxImage } from "@/components/ui/image-lightbox";
+import { ComplaintProgress } from "@/components/support/complaint-progress";
 
 type Person = { id: string; full_name: string; role: string };
 type Agent = { key: string; label: string };
@@ -17,6 +18,11 @@ type Ticket = {
   reporter?: { full_name?: string }; assignee?: { full_name?: string }; comments?: Comment[];
   department_id?: string | null; handback_department_id?: string | null; handback_note?: string | null; resolved_by_label?: string | null;   reporter_id?: string | null; assigned_to?: string | null;
   intake_source?: "staff" | "call_center" | "support" | null;
+  complaint_stage?: string | null;
+  stage_percent?: number | null;
+  manager_forward_label?: string | null;
+  images?: { id: string; url: string }[];
+  stageEvents?: { to_value?: string | null; note?: string | null; created_at: string; actor?: { full_name?: string } | null }[];
 };
 
 const statusLabel: Record<string, string> = { new: "Reported", assigned: "Assigned", investigating: "Analysis / Working", testing: "Testing", resolved_pending_verify: "Resolved — Admin verify", resolved: "Verified & Closed", reopened: "Reopened" };
@@ -60,7 +66,7 @@ export function SupportDesk({ pathname }: { pathname: string }) {
   const [error, setError] = useState(""), [sent, setSent] = useState(""), [file, setFile] = useState<File | null>(null), [preview, setPreview] = useState("");
   const [saving, setSaving] = useState(false), [busyId, setBusyId] = useState("");
   const [departments, setDepartments] = useState<Dept[]>([]), [members, setMembers] = useState<Member[]>([]), [meId, setMeId] = useState("");
-  const [canAssign, setCanAssign] = useState(false), [viewerRole, setViewerRole] = useState("");
+  const [canAssign, setCanAssign] = useState(false), [canCreateAssign, setCanCreateAssign] = useState(false), [viewerRole, setViewerRole] = useState("");
   const [deptChoice, setDeptChoice] = useState<Record<string, string>>({});
   const formRef = useRef<HTMLFormElement>(null), fileRef = useRef<HTMLInputElement>(null);
 
@@ -68,7 +74,7 @@ export function SupportDesk({ pathname }: { pathname: string }) {
     if (showSpinner) setLoading(true);
     const response = await fetch("/api/support/tickets", { cache: "no-store" });
     const data = await response.json();
-    if (response.ok) { setItems(data.items ?? []); setAssignees(data.assignees ?? []); setAgents(data.agents ?? []); setCanManage(Boolean(data.canManage)); setCanAssign(Boolean(data.canAssign)); setViewerRole(String(data.viewerRole ?? "")); setDepartments(data.departments ?? []); setMembers(data.members ?? []); setMeId(data.meId ?? ""); setError(""); }
+    if (response.ok) { setItems(data.items ?? []); setAssignees(data.assignees ?? []); setAgents(data.agents ?? []); setCanManage(Boolean(data.canManage)); setCanAssign(Boolean(data.canAssign)); setCanCreateAssign(Boolean(data.canCreateAssign)); setViewerRole(String(data.viewerRole ?? "")); setDepartments(data.departments ?? []); setMembers(data.members ?? []); setMeId(data.meId ?? ""); setError(""); }
     else setError(data.error ?? "Tickets load nahi huay.");
     if (showSpinner) setLoading(false);
   }
@@ -120,12 +126,12 @@ export function SupportDesk({ pathname }: { pathname: string }) {
       <div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-brand-700"/><p className="text-xs font-semibold text-surface-900 dark:text-white">Issue Report Karein</p></div>
       <input name="title" required minLength={3} maxLength={160} placeholder="Maslay ka chhota title" className="w-full rounded-lg border border-surface-200 px-2.5 py-2 text-xs dark:border-surface-700 dark:bg-surface-800"/>
       <textarea name="description" required minLength={3} maxLength={5000} rows={3} placeholder="Kya issue aa raha hai? Kya karte waqt aaya?" className="w-full resize-none rounded-lg border border-surface-200 px-2.5 py-2 text-xs dark:border-surface-700 dark:bg-surface-800"/>
-      {canAssign && <select name="assign" defaultValue="" className="w-full rounded-lg border border-surface-200 px-2.5 py-2 text-xs dark:border-surface-700 dark:bg-surface-800"><option value="">Admin triage karega (unassigned)</option><optgroup label="Call center agent">{assignees.filter((p) => p.role === "call_center_agent").map((person) => <option key={person.id} value={`person:${person.id}`}>{person.full_name}</option>)}</optgroup><optgroup label="Department user">{assignees.filter((p) => ["finance", "sales_staff", "warehouse", "milk_collection", "hr", "procurement", "machinery"].includes(p.role)).map((person) => <option key={person.id} value={`person:${person.id}`}>{person.full_name} · {person.role}</option>)}</optgroup><optgroup label="Developer">{assignees.filter((p) => ["owner", "super_admin", "admin", "admin_assistant", "manager"].includes(p.role)).map((person) => <option key={person.id} value={`person:${person.id}`}>{person.full_name} · {person.role}</option>)}</optgroup>{agents.length > 0 && <optgroup label="Developer (AI)">{agents.map((agent) => <option key={agent.key} value={`agent:${agent.key}`}>{agent.label}</option>)}</optgroup>}</select>}
-      {!canAssign && <p className="rounded-lg bg-white px-2.5 py-2 text-[11px] text-surface-600">Seedha Admin ke paas jayegi. Aap department ya assignee nahi chun sakte — sirf apni shikayat aur us ka status dikhega.</p>}
+      {canCreateAssign && <select name="assign" defaultValue="" className="w-full rounded-lg border border-surface-200 px-2.5 py-2 text-xs dark:border-surface-700 dark:bg-surface-800"><option value="">Admin triage karega (unassigned)</option><optgroup label="Call center agent">{assignees.filter((p) => p.role === "call_center_agent").map((person) => <option key={person.id} value={`person:${person.id}`}>{person.full_name}</option>)}</optgroup><optgroup label="Department user">{assignees.filter((p) => ["finance", "sales_staff", "warehouse", "milk_collection", "hr", "procurement", "machinery"].includes(p.role)).map((person) => <option key={person.id} value={`person:${person.id}`}>{person.full_name} · {person.role}</option>)}</optgroup><optgroup label="Developer">{assignees.filter((p) => ["owner", "super_admin", "admin", "admin_assistant", "manager"].includes(p.role)).map((person) => <option key={person.id} value={`person:${person.id}`}>{person.full_name} · {person.role}</option>)}</optgroup>{agents.length > 0 && <optgroup label="Developer (AI)">{agents.map((agent) => <option key={agent.key} value={`agent:${agent.key}`}>{agent.label}</option>)}</optgroup>}</select>}
+      {!canCreateAssign && <p className="rounded-lg bg-white px-2.5 py-2 text-[11px] text-surface-600">Seedha Admin ke paas jayegi. Aap department ya assignee nahi chun sakte — sirf apni shikayat aur us ka status dikhega.</p>}
       <select name="priority" className="w-full rounded-lg border border-surface-200 px-2.5 py-2 text-xs dark:border-surface-700 dark:bg-surface-800"><option value="normal">Normal</option><option value="urgent">Urgent</option><option value="work_stopped">Kaam ruk gaya</option></select>
       {preview && <div className="relative"><img src={preview} alt="Screenshot preview" className="max-h-36 w-full rounded-lg border object-contain"/><button type="button" onClick={() => { setFile(null); setPreview(""); }} className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white"><X className="h-3 w-3"/></button></div>}
       <div className="flex gap-2"><button type="button" onClick={() => fileRef.current?.click()} className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-surface-300 bg-white px-2 py-2 text-[11px] dark:bg-surface-800"><Camera className="h-3.5 w-3.5"/> Screenshot</button><span className="flex items-center gap-1 text-[10px] text-surface-500"><ClipboardPaste className="h-3.5 w-3.5"/> Ctrl+V bhi chalega</span></div>
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(event) => choose(event.target.files?.[0] ?? null)}/>
+      <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple className="hidden" onChange={(event) => choose(event.target.files?.[0] ?? null)}/>
       <button disabled={saving} className="flex w-full items-center justify-center gap-1 rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"><Send className="h-3.5 w-3.5"/>{saving ? "Report ho raha hai…" : "Admin/Developer ko bhejein"}</button>
     </form>
     {error && <p className="mt-2 rounded bg-red-50 p-2 text-[11px] text-red-700">{error}</p>}{sent && <p className="mt-2 rounded bg-green-50 p-2 text-[11px] text-green-700">{sent}</p>}
@@ -136,7 +142,7 @@ export function SupportDesk({ pathname }: { pathname: string }) {
       const canClose = ticket.assigned_kind !== "agent" || ["testing", "fixed", "completed"].includes(String(ticket.assignment_status));
       return <article key={ticket.id} className="rounded-lg border border-surface-200 p-2.5 dark:border-surface-700">
       <div className="flex items-start justify-between gap-2"><div><p className="text-xs font-semibold text-surface-900 dark:text-white">ISS-{new Date(ticket.created_at).getFullYear()}-{String(ticket.ticket_no).padStart(5, "0")} · {ticket.title}</p><p className="mt-0.5 text-[10px] text-surface-400">{ticket.reporter?.full_name ?? "Staff"} · {new Date(ticket.created_at).toLocaleString()}</p></div><span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-semibold ${statusTone[ticket.status] ?? "bg-surface-100"}`}>{statusLabel[ticket.status] ?? ticket.status}</span></div>
-      <p className="mt-2 whitespace-pre-wrap text-[11px] text-surface-600 dark:text-surface-300">{ticket.description}</p>{ticket.screenshotUrl && <LightboxImage src={ticket.screenshotUrl} alt="Issue screenshot" className="mt-2 max-h-28 w-full rounded border object-contain"/>}
+      <p className="mt-2 whitespace-pre-wrap text-[11px] text-surface-600 dark:text-surface-300">{ticket.description}</p>{ticket.manager_forward_label && <p className="mt-1 text-[10px] font-semibold text-brand-800">{ticket.manager_forward_label}</p>}{(ticket.intake_source === "staff" || ticket.intake_source === "call_center") && <ComplaintProgress stage={ticket.complaint_stage ?? "received"} percent={ticket.stage_percent ?? null} log={(ticket.stageEvents ?? []).filter((event) => event.to_value).map((event) => ({ stage: String(event.to_value), actor: event.actor?.full_name ?? "System", at: new Date(event.created_at).toLocaleString(), note: event.note ?? null }))} />}{ticket.screenshotUrl && <LightboxImage src={ticket.screenshotUrl} alt="Issue screenshot" className="mt-2 max-h-28 w-full rounded border object-contain"/>}{ticket.images?.map((image) => <LightboxImage key={image.id} src={image.url} alt="Complaint image" className="mt-2 h-16 w-16 rounded border object-cover" />)}
       {ticket.assigned_kind === "agent" && <div className="mt-2 rounded-lg border border-surface-200 bg-surface-50 p-2 dark:border-surface-700 dark:bg-surface-800">
         <div className="flex items-center justify-between gap-2"><p className="text-[10px] font-semibold">Professional Fix Workflow</p><span className="rounded-full bg-brand-100 px-2 py-0.5 text-[9px] font-semibold text-brand-800">{stageLabel[String(ticket.assignment_status)] ?? activeStage}</span></div>
         <div className="mt-2 grid grid-cols-4 gap-1">{stageOrder.map((stage, index) => <div key={stage} className="text-center"><div className={`mx-auto h-1.5 rounded-full ${index <= activeIndex ? "bg-brand-600" : "bg-surface-200 dark:bg-surface-700"}`}/><p className={`mt-1 text-[8px] ${index === activeIndex ? "font-semibold text-brand-700" : "text-surface-400"}`}>{stageLabel[stage]}</p></div>)}</div>

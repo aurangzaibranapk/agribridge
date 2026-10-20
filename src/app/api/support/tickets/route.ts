@@ -5,12 +5,41 @@ import { configuredSupportAgents } from "@/lib/support/agent-dispatch";
 import { parseAssignChoice } from "@/lib/support/assign";
 import { notifyUser } from "@/lib/notifications";
 import { intakeDepartment } from "@/lib/support/departments";
-import { canAssignComplaints } from "@/lib/support/complaint-intake";
+import { canSeeComplaintTicket, checkAttachment, normalizeImageMime } from "@/lib/support/attachments";
+import { canAssignComplaints, canForwardComplaint } from "@/lib/support/complaint-intake";
+import { storeComplaintImages } from "@/lib/support/store-attachments";
 
 export const dynamic = "force-dynamic";
 const MANAGER_ROLES = ["owner", "super_admin", "admin", "manager", "admin_assistant"];
 const MANAGERS = new Set(MANAGER_ROLES);
 const VALID_PRIORITY = new Set(["normal", "urgent", "work_stopped"]);
+
+async function managerGrant(service: any, userId: string, role: string) {
+  if (role !== "manager") return false;
+  const { data, error } = await service.from("cc_assign_grants").select("profile_id,active").eq("profile_id", userId).maybeSingle();
+  if (error || !data) return false;
+  return data.active !== false;
+}
+
+function collectImages(form: FormData): File[] {
+  const files: File[] = [];
+  const single = form.get("screenshot");
+  if (single instanceof File && single.size > 0) files.push(single);
+  for (const item of form.getAll("images")) {
+    if (item instanceof File && item.size > 0) files.push(item);
+  }
+  return files;
+}
+
+function rejectImages(files: File[]): string | null {
+  let count = 0;
+  for (const file of files) {
+    const problem = checkAttachment({ mime: normalizeImageMime(file.type, file.name), name: file.name, size: file.size, existingCount: count });
+    if (problem) return problem;
+    count += 1;
+  }
+  return null;
+}
 
 async function context() {
   const client = createClient();
@@ -21,10 +50,14 @@ async function context() {
   if (!profile?.is_active) return null;
   const supportDb = service as any;
   const role = String(profile.role);
+  const grant = await managerGrant(service, user.id, role);
+  const canForward = canForwardComplaint({ role, managerGrant: grant });
   return {
     user, profile, service, supportDb,
     canManage: MANAGERS.has(role),
-    canAssign: canAssignComplaints(role),
+    canAssign: canForward,
+    canCreateAssign: canAssignComplaints(role),
+    managerGrant: grant,
   };
 }
 
@@ -44,13 +77,38 @@ export async function GET() {
         .in("ticket_id", ticketIds)
         .order("created_at", { ascending: true })
     : { data: [] };
+  const attachmentQuery = ticketIds.length
+    ? await ctx.supportDb.from("support_ticket_attachments").select("id,ticket_id,storage_path").in("ticket_id", ticketIds)
+    : { data: [], error: null };
+  const attachmentRows = attachmentQuery.error ? [] : (attachmentQuery.data ?? []);
+  const eventQuery = ticketIds.length
+    ? await ctx.supportDb.from("support_ticket_events").select("ticket_id,event_type,to_value,note,created_at,actor:profiles(full_name)").in("ticket_id", ticketIds).order("created_at", { ascending: true }).limit(400)
+    : { data: [], error: null };
+  const eventRows = eventQuery.error ? [] : (eventQuery.data ?? []);
   const items = await Promise.all((data ?? []).map(async (row: any) => {
     let screenshotUrl: string | null = null;
     if (row.screenshot_path) {
       const signed = await ctx.service.storage.from("support-evidence").createSignedUrl(row.screenshot_path, 3600);
       screenshotUrl = signed.data?.signedUrl ?? null;
     }
-    return { ...row, screenshotUrl, comments: (comments ?? []).filter((c: any) => c.ticket_id === row.id) };
+    const mine = attachmentRows.filter((file: { ticket_id: string }) => file.ticket_id === row.id);
+    const visible = canSeeComplaintTicket({
+      actorId: ctx.user.id,
+      actorRole: String(ctx.profile.role),
+      reporterId: row.reporter_id,
+      assigneeId: row.assigned_to ?? null,
+    });
+    const images = visible ? (await Promise.all(mine.map(async (file: { id: string; storage_path: string }) => {
+      const signed = await ctx.service.storage.from("support-evidence").createSignedUrl(file.storage_path, 3600);
+      return signed.data?.signedUrl ? { id: file.id, url: signed.data.signedUrl } : null;
+    }))).filter(Boolean) : [];
+    return {
+      ...row,
+      screenshotUrl,
+      images,
+      stageEvents: eventRows.filter((event: { ticket_id: string }) => event.ticket_id === row.id),
+      comments: (comments ?? []).filter((c: any) => c.ticket_id === row.id),
+    };
   }));
   // Har staff issue bhejte waqt developer/staff chun sakta hai (sirf naam aur role).
   const { data: assignees } = await ctx.service
@@ -70,6 +128,7 @@ export async function GET() {
     members: ctx.canAssign ? (members ?? []).map((m: any) => ({ ...m, full_name: m.person?.full_name ?? null })) : [],
     canManage: ctx.canManage,
     canAssign: ctx.canAssign,
+    canCreateAssign: ctx.canCreateAssign,
     viewerRole: String(ctx.profile.role),
     meId: ctx.user.id,
     assignees: ctx.canAssign ? (assignees ?? []) : [],
@@ -86,8 +145,11 @@ export async function POST(req: NextRequest) {
   const priority = String(form.get("priority") ?? "normal");
   if (title.length < 3 || description.length < 3) return NextResponse.json({ error: "Title aur issue detail likhein." }, { status: 400 });
   if (!VALID_PRIORITY.has(priority)) return NextResponse.json({ error: "Priority theek nahi hai." }, { status: 400 });
-  // Staff: form se department/assignee ignore. Seedha Admin ki khali queue.
-  if (!ctx.canAssign) {
+  const images = collectImages(form);
+  const imageProblem = rejectImages(images);
+  if (imageProblem) return NextResponse.json({ error: imageProblem }, { status: 400 });
+  // Staff aur Manager (bina admin create ke): department/assignee ignore. Seedha Admin ki khali queue.
+  if (!ctx.canCreateAssign) {
     const userDb = createClient() as any;
     const filed = await userDb.rpc("fn_staff_file_complaint", {
       p_title: title,
@@ -104,15 +166,14 @@ export async function POST(req: NextRequest) {
       }, { status: missing ? 503 : 400 });
     }
     const row = filed.data ?? {};
-    const screenshot = form.get("screenshot");
-    if (row.id && screenshot instanceof File && screenshot.size > 0) {
-      if (screenshot.size > 8 * 1024 * 1024 || !screenshot.type.startsWith("image/")) {
-        return NextResponse.json({ error: "Screenshot image 8MB se chhoti honi chahiye." }, { status: 400 });
-      }
-      const ext = screenshot.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "").toLowerCase() || "png";
-      const screenshotPath = `${ctx.profile.organization_id}/${ctx.user.id}/${crypto.randomUUID()}.${ext}`;
-      const uploaded = await ctx.service.storage.from("support-evidence").upload(screenshotPath, screenshot, { contentType: screenshot.type, upsert: false });
-      if (!uploaded.error) await ctx.supportDb.from("support_tickets").update({ screenshot_path: screenshotPath }).eq("id", row.id);
+    if (row.id && images.length > 0) {
+      const stored = await storeComplaintImages({
+        ticketId: row.id,
+        organizationId: ctx.profile.organization_id,
+        userId: ctx.user.id,
+        files: images,
+      });
+      if (stored.paths[0]) await ctx.supportDb.from("support_tickets").update({ screenshot_path: stored.paths[0] }).eq("id", row.id);
     }
     const { data: managers } = await ctx.service.from("profiles").select("id").eq("organization_id", ctx.profile.organization_id).eq("is_active", true).in("role", ["owner", "super_admin", "admin"]);
     const reference = `ISS-${new Date(row.created_at ?? Date.now()).getFullYear()}-${String(row.ticket_no ?? 0).padStart(5, "0")}`;
@@ -129,16 +190,6 @@ export async function POST(req: NextRequest) {
     if (a?.is_active && a.organization_id === ctx.profile.organization_id) assignee = { id: a.id, full_name: a.full_name };
   }
 
-  let screenshotPath: string | null = null;
-  const screenshot = form.get("screenshot");
-  if (screenshot instanceof File && screenshot.size > 0) {
-    if (screenshot.size > 8 * 1024 * 1024 || !screenshot.type.startsWith("image/")) return NextResponse.json({ error: "Screenshot image 8MB se chhoti honi chahiye." }, { status: 400 });
-    const ext = screenshot.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "").toLowerCase() || "png";
-    screenshotPath = `${ctx.profile.organization_id}/${ctx.user.id}/${crypto.randomUUID()}.${ext}`;
-    const uploaded = await ctx.service.storage.from("support-evidence").upload(screenshotPath, screenshot, { contentType: screenshot.type, upsert: false });
-    if (uploaded.error) return NextResponse.json({ error: "Screenshot upload nahi hua: " + uploaded.error.message }, { status: 500 });
-  }
-
   let deviceInfo: Record<string, unknown> = {};
   try { deviceInfo = JSON.parse(String(form.get("device_info") ?? "{}")); } catch { /* invalid client metadata ignored */ }
   // 539: naya issue default intake department (Development Team) mein.
@@ -152,11 +203,21 @@ export async function POST(req: NextRequest) {
     description: description.slice(0, 5000),
     priority,
     page_url: String(form.get("page_url") ?? "").slice(0, 1000) || null,
-    screenshot_path: screenshotPath,
+    screenshot_path: null,
     device_info: deviceInfo,
     ...(assignee ? { assigned_to: assignee.id, assigned_kind: "person", assignment_status: "queued", assigned_at: new Date().toISOString(), status: "assigned" } : {}),
   } as any).select("id,ticket_no,created_at").single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (images.length > 0) {
+    const stored = await storeComplaintImages({
+      ticketId: data.id,
+      organizationId: ctx.profile.organization_id,
+      userId: ctx.user.id,
+      files: images,
+    });
+    if (stored.error && stored.saved === 0) return NextResponse.json({ error: "Screenshot upload nahi hua: " + stored.error }, { status: 500 });
+    if (stored.paths[0]) await ctx.supportDb.from("support_tickets").update({ screenshot_path: stored.paths[0] }).eq("id", data.id);
+  }
 
   const reference = `ISS-${new Date(data.created_at).getFullYear()}-${String(data.ticket_no).padStart(5, "0")}`;
   const { data: managers } = await ctx.service

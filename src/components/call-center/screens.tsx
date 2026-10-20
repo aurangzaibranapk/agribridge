@@ -289,6 +289,10 @@ function ComplaintModal({ data, variant, onClose, saved }: { data: PartyData; va
             <Tri a="Description" b="Tafseel" c="تفصیل" />
             <textarea name="description" required minLength={8} defaultValue={data.example ? "18 Oct ko DAP 1 bag likha gaya hai, caller kehta hai bag nahi liya. Check karein." : ""} className="mt-1 h-28 w-full rounded-2xl border border-[#e4eaf2] p-3 text-[14px] text-[#14233a] outline-none" />
           </label>
+          <label className="block text-[12px] text-[#607089]">
+            <Tri a="Images" b="Tasveer" c="تصویر" />
+            <input name="images" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple className="mt-1 block w-full text-[13px]" />
+          </label>
           <div className="flex items-center justify-between rounded-2xl bg-[#101a4a] px-4 py-3 text-white">
             <div>
               <div className="text-[11px] text-white/60">Complaint number</div>
