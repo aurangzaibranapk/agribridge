@@ -29,7 +29,7 @@ assert.match(read("src/actions/stock-count.ts"), /fn_claim_stock_count_post/);
 assert.match(read("src/actions/agri-dispatch.ts"), /fn_next_year_counter/);
 assert.match(read("src/actions/stock-transfer-workflow.ts"), /fn_complete_internal_transfer/);
 assert.match(read("src/actions/inventory.ts"), /fn_reject_stock_transfer/);
-assert.match(read("supabase/migrations/675_grain_sale_on_hand.sql"), /for update/);
+assert.match(read("supabase/migrations/677_grain_sale_on_hand.sql"), /for update/);
 assert.match(read("supabase/migrations/670_pos_skip_expired_batches.sql"), /pg_get_functiondef/);
 assert.match(read("docs/670-POS-FUNCTION-CHECK.md"), /pg_get_functiondef/);
 assert.match(read("src/app/admin/grain-procurement/sell/sell-grain-client.tsx"), /rate_per_maund/);

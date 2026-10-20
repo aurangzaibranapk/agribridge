@@ -1,12 +1,12 @@
-## Pending — 20 October 2026: department review fixes (660–675)
+## Pending — 20 October 2026: department review fixes (660–674, 677)
 
-Branch `cursor/dept-review-fixes-660-c70c`. Migrations **not applied** on Testing or Live. Do not run them until a fresh backup is confirmed in chat. Files only. Apply 660 through 675 together. 664's sold>bought guard is replaced by 675; do not leave 664 applied on its own.
+Branch `cursor/dept-review-fixes-660-c70c`. Migrations **not applied** on Testing or Live. Do not run them until a fresh backup is confirmed in chat. Files only. Apply 660 through 674 and 677 together. 675 and 676 belong to another PR (`675_shop_godams.sql`). 664 and 677 must apply together: 664's sold>bought guard is replaced by 677; do not leave 664 applied on its own.
 
 - 660 CMS write = owner/super_admin/admin; shop phone `+923126513294`
 - 661 owner account cannot be suspended or deleted
 - 662 payroll pay claim (one payment)
 - 663 atomic batch deduct, row lock, check NOT VALID
-- 664 grain sale file (function replaced by 675)
+- 664 grain sale file (function replaced by 677; apply with 677)
 - 665 grain rate unit: existing sales labeled `per_kg`, new default `per_maund` (no money change)
 - 666 completed transfer cannot be cancelled
 - 667 stock loss once + maker cannot approve own loss
@@ -17,7 +17,7 @@ Branch `cursor/dept-review-fixes-660-c70c`. Migrations **not applied** on Testin
 - 672 stock adjust / count lock / year counters
 - 673 transfer accept, reject, cancel in one function
 - 674 stock-loss shop scope; release and undo are service_role only
-- 675 grain sale on locked warehouse on-hand; `fn_post_grain_sale` one transaction
+- 677 grain sale on locked warehouse on-hand; `fn_post_grain_sale` one transaction. 664 and 677 must apply together.
 
 Data fixes that change rows are only in `docs/NEEDS-OWNER-APPROVAL-660.md` and stay unrun. Address stays the placeholder. **Before merge:** owner must approve the phantom wheat batch `OPENING-OWN-20261016` (24,500 kg) diagnostic and fix. This run did not execute it.
 

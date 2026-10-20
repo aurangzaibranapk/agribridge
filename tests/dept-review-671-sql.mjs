@@ -1,4 +1,4 @@
-// 671–675 ko PGlite par chalata hai. Live / testing database ko haath nahi lagata.
+// 671–674 aur 677 ko PGlite par chalata hai. Live / testing database ko haath nahi lagata.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
@@ -167,7 +167,7 @@ await run(read("supabase/migrations/671_fifo_shortfall_scope.sql"));
 await run(read("supabase/migrations/672_stock_locks_and_counters.sql"));
 await run(read("supabase/migrations/673_transfer_accept_atomic.sql"));
 await run(read("supabase/migrations/674_stock_loss_scope_and_undo.sql"));
-await run(read("supabase/migrations/675_grain_sale_on_hand.sql"));
+await run(read("supabase/migrations/677_grain_sale_on_hand.sql"));
 await run(`grant usage on schema public to authenticated, service_role; grant all on all tables in schema public to authenticated, service_role;`);
 
 async function asRole(role, uid, jwt, sql) {

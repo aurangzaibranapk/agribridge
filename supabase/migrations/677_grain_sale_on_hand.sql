@@ -1,7 +1,8 @@
--- 675: Anaj ki rok khareed-ka-jorh nahi. Godam ki locked ginti hai.
+-- 677: Anaj ki rok khareed-ka-jorh nahi. Godam ki locked ginti hai.
 -- Owner/Admin purani bikri ki miqdar kam kar sakein (correction).
 -- Nayi bikri: sale + batch + movement + cost/profit ek transaction.
 -- 664 wala sold>bought guard yahan replace ho jata hai.
+-- 664 aur 677 ek sath lagani hain. 664 akeli wheat/rice ki bikri rok degi.
 -- 24,500 kg phantom aur OPENING-OWN-20261016 is file mein NAHI chalte.
 -- Sirf label. total_amount nahi badalta. Purani file ne legacy_as_stored likha ho to per_kg.
 update public.grain_sales

@@ -59,7 +59,7 @@ Jab owner asal pata de (Chak Mahabali, Dakkhana Shah Nikdar, waghera), tab:
 ## 3. Grain rate — paisa mat badlo jab tak owner na kahe
 
 `rate_per_kg` nayi bikri par fi mand hai. Nayi bikri `kg / 40 * rate` se banegi.
-Purani 4 bikri ka `total_amount` **nahi badla**. Un ka label `per_kg` hai (665 / 675). Paisa jyon ka tyon.
+Purani 4 bikri ka `total_amount` **nahi badla**. Un ka label `per_kg` hai (665 / 677). Paisa jyon ka tyon.
 
 Agar owner kahe ke purani bikri ka total bhi fi mand hona chahiye (abhi total = kg * rate hai):
 
@@ -74,7 +74,7 @@ Agar owner kahe ke purani bikri ka total bhi fi mand hona chahiye (abhi total = 
 
 ## 4. Anaj zyada bika — sirf diagnostic
 
-Bikri 45,905 kg, khareed 40,530 kg. 664 ki sold>bought rok galat thi (adjustments, transfer, wapsi shamil nahi). 675 us ki jagah godam ki locked `quantity_on_hand` dekhti hai. Purana farq yahan se nahi mitaya. Phantom opening (neeche §10) merge se pehle owner ke baghair mat chhoro — warna nayi rok khayali stock par bikri khol degi.
+Bikri 45,905 kg, khareed 40,530 kg. 664 ki sold>bought rok galat thi (adjustments, transfer, wapsi shamil nahi). 677 us ki jagah godam ki locked `quantity_on_hand` dekhti hai. 664 aur 677 ek sath lagani hain — 664 akeli wheat aur rice ki bikri rok degi. Purana farq yahan se nahi mitaya. Phantom opening (neeche §10) merge se pehle owner ke baghair mat chhoro — warna nayi rok khayali stock par bikri khol degi.
 
 ```sql
 -- needs owner approval — sirf dekho, update mat karo
