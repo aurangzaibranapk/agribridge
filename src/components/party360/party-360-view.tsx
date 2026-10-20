@@ -8,6 +8,7 @@ import { CreditPositionStrip } from "@/components/recovery/credit-position-strip
 import { ACCENT, kpiIcon, short } from "./theme";
 import type { CreditReport } from "@/lib/recovery/credit-report-load";
 import { CreditReportCard } from "./credit-report-card";
+import { ST } from "@/lib/ui/statement-table";
 
 /* Theme A (light premium) + Theme B (soft dark pro) — Tailwind `dark` class se. */
 const PAGE = "bg-[#F6F7FB] text-slate-900 dark:bg-[#172033] dark:text-slate-100";
@@ -70,12 +71,17 @@ function SectionCard({ s }: { s: Section }) {
     <div className={`${CARD} p-6`}>
       <h3 className={TITLE}>{s.title}</h3>
       {s.note && <p className={`mt-0.5 text-[12px] ${MUTE}`}>{s.note}</p>}
-      {s.rows.length ? (
+      {s.rows.length ? (s.amountCols?.length ? (
+        <div className={`mt-3 ${ST.wrap}`}><table className={ST.table}>
+          <thead className={ST.thead}><tr>{s.columns.map((c, i) => <th key={i} className={s.amountCols!.includes(i) ? ST.thAmt : ST.th}>{c}</th>)}</tr></thead>
+          <tbody>{s.rows.map((r, i) => <tr key={i} className={ST.tr}>{r.map((c, j) => <td key={j} className={s.amountCols!.includes(j) ? (j === r.length - 1 ? ST.tdBal : ST.tdAmt) : ST.td}>{c ?? "—"}</td>)}</tr>)}</tbody>
+        </table></div>
+        ) : (
         <div className="mt-3 overflow-x-auto"><table className="w-full text-[13px]">
           {s.columns.some(Boolean) && <thead><tr>{s.columns.map((c, i) => <th key={i} className={`pb-2 pr-3 text-left text-[11px] font-medium uppercase tracking-wider ${MUTE}`}>{c}</th>)}</tr></thead>}
           <tbody>{s.rows.map((r, i) => <tr key={i} className={ROW}>{r.map((c, j) => <td key={j} className="py-2.5 pr-3 tabular-nums">{c ?? "—"}</td>)}</tr>)}</tbody>
         </table></div>
-      ) : <p className={`mt-3 text-[13px] ${MUTE}`}>{s.empty ?? "Kuch nahi."}</p>}
+      )) : <p className={`mt-3 text-[13px] ${MUTE}`}>{s.empty ?? "Kuch nahi."}</p>}
     </div>
   );
 }

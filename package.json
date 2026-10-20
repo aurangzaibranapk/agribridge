@@ -10,6 +10,7 @@
     "test:kisan-wallet-v2": "npx --yes tsx scripts/test-kisan-wallet-v2.ts",
     "test:hr-meetings": "npx --yes tsx tests/hr-meetings-lib.ts && node tests/hr-meetings-db.mjs",
     "test:admin-badges": "npx --yes tsx scripts/test-admin-badges.ts && node tests/admin-badges-sql.mjs",
+    "test:statement-table": "npx --yes tsx scripts/test-statement-table.ts",
     "test:party-links": "npx --yes tsx scripts/test-party-links.ts && node tests/party-links-sql.mjs",
     "test:finance": "npx --yes tsx scripts/test-finance.ts",
     "test:supplier-csv": "npx --yes tsx scripts/test-supplier-bill-csv.ts",

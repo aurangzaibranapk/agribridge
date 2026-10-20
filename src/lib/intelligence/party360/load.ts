@@ -5,7 +5,8 @@ import {
 } from "./core";
 import { loadActivity, resolveLinks, q as aq, type LinkIds } from "./activity";
 import { loadLinkedParties, supplierGlLines } from "@/lib/party-links/load";
-import { glToStatementRows, type GlLine } from "@/lib/party-links/core";
+import { glToStatementRows, type GlLine, type StatementRow } from "@/lib/party-links/core";
+import { fmtAmt, fmtBal } from "@/lib/ui/statement-table";
 
 /** Sirf PARHNA. Koi write nahi. Har query ki ghalti notes mein jaati hai, page nahi girta. */
 const LIMIT = 5000;
@@ -255,8 +256,9 @@ export async function loadSupplier360(id: string, now = new Date()): Promise<Par
     sections: [
       ...linkedSections(plinks, s.name ?? "—"),
       { title: "Ledger entries (2000/1120) — Recovery, Kharche bill, settlement", note: "Purchases aur supplier payments upar/neeche apni table se; yahan sirf baqi ledger qatarein.",
-        columns: ["Tareekh", "Tafseel", "Bill (dena barha)", "Payment (dena ghata)"],
-        rows: glRows.slice().reverse().slice(0, 30).map((r) => [pk(r.date), r.description, r.debit ? rs(r.debit) : "—", r.credit ? rs(r.credit) : "—"]), empty: "Koi ledger qatar nahi." },
+        columns: ["Tareekh", "Tafseel", "Debit (bill)", "Credit (payment)", "Balance"],
+        rows: glRunning(glRows).slice().reverse().slice(0, 30).map((r) => [pk(r.date), r.description, fmtAmt(r.debit), fmtAmt(r.credit), fmtBal(r.bal, "Cr")]),
+        amountCols: [2, 3, 4], empty: "Koi ledger qatar nahi." },
       { title: "Purchase bills / GRN", columns: ["Bill #", "Supplier bill", "Tareekh", "Due", "Raqam", "Paid (bill par)", "GRN"],
         rows: live.slice(0, 30).map((b: any) => [b.purchase_number, b.supplier_bill_no ?? "—", pk(b.purchase_date), pk(b.due_date), rs(num(b.total_amount)), rs(paidBy.get(b.id) ?? 0), b.received_at ? pk(b.received_at) : "baqi"]), empty: "Koi bill nahi." },
       { title: "Rate history", columns: ["Item", "Pichla", "Naya", "Farq", "Tareekh"], rows: rates, empty: "Items nahi mile." },
@@ -383,8 +385,15 @@ function linkedSections(plinks: Awaited<ReturnType<typeof loadLinkedParties>>, n
     title: `${name}: customer + supplier (net)`,
     note: "Party link (622). Kuch khud nahi katta — kaatna sirf Settlements ki manzoori se (Dr 2000 / Cr 1100).",
     columns: ["Customer", "Supplier", "Unhon ne dena (1100)", "Hum ne dena (2000)", "Net"],
-    rows: plinks.map((l) => [l.customerName, l.supplierName, rs(l.net.theyOwe), rs(l.net.weOwe),
-      `${rs(Math.abs(l.net.net))} ${l.net.net > 0 ? "party ne dena" : l.net.net < 0 ? "hum ne dena" : "barabar"}`]),
+    rows: plinks.map((l) => [l.customerName, l.supplierName, fmtAmt(l.net.theyOwe), fmtAmt(l.net.weOwe),
+      `${fmtBal(l.net.net, "Dr")} · ${l.net.net > 0 ? "party ne dena" : l.net.net < 0 ? "hum ne dena" : "barabar"}`]),
+    amountCols: [2, 3, 4],
     href: "/admin/party-links",
   }];
+}
+
+/** Running balance (supplier: musbat = hum ne dena = Cr). */
+function glRunning(rows: StatementRow[]) {
+  let b = 0;
+  return rows.map((r) => { b = Math.round((b + r.debit - r.credit) * 100) / 100; return { ...r, bal: b }; });
 }
