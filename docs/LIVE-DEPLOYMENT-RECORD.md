@@ -1,10 +1,10 @@
 ## Pending — 20 October 2026: procurement guards (NOT applied)
 
-Migrations `628_procurement_unique_guards.sql` and `629_procurement_atomic_rpc.sql` are written and tested on PGlite only. They are **not** applied to Testing or Live. No Live rows were updated (PO-1792495620885 still has `held_payment.posted = false`).
+Migrations `629_procurement_unique_guards.sql` and `630_procurement_atomic_rpc.sql` are written and tested on PGlite only. They are **not** applied to Testing or Live. No Live rows were updated (PO-1792495620885 still has `held_payment.posted = false`). Numbered 629/630 because 624–628 belong to the SMS retry migration.
 
-Before apply, run the read-only query at the top of 628 (`select * from public.fn_procurement_index_blockers();` or the raw SELECT in that file). On 20 Oct the Live read showed no `block:` groups. One shared bill (`jx0098807`, 2 purchases) and several old double stock movements are `info:` only — the new partial indexes do not use those rows as keys.
+Before apply, run the read-only query at the top of 629 (`select * from public.fn_procurement_index_blockers();` or the raw SELECT in that file). On 20 Oct the Live read showed no `block:` groups. One shared bill (`jx0098807`, 2 purchases) and several old double stock movements are `info:` only — the new partial indexes do not use those rows as keys.
 
-Apply 628, let it commit, then 629. Then deploy the web build. Owner/Admin self-approve (13 Oct) is unchanged.
+Apply 629, let it commit, then 630. Then deploy the web build. Owner/Admin self-approve (13 Oct) is unchanged.
 
 ## 11 October 2026 — POS receipt print fix (web deployment pending)
 

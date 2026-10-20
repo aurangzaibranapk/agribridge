@@ -153,7 +153,7 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
     return { error: "Supplier invoice ka bill number zaroor likhein taa-ke wohi bill dobara save na ho." };
   }
   // Dono tables: purchases aur supplier_bill_reads. ILIKE escape, aur
-  // race ka taala bill_no_key (628) hai — check-then-insert akela kaafi nahi.
+  // race ka taala bill_no_key (629) hai — check-then-insert akela kaafi nahi.
   if (supplierBillWorkspace && supplierBillNo) {
     const pattern = escapeLikePattern(supplierBillNo.trim());
     const [{ data: sameBill, error: sameBillError }, { data: sameRead, error: sameReadError }] = await Promise.all([
@@ -164,7 +164,7 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
     const hit = duplicateBillSources({ billNo: supplierBillNo, purchases: sameBill ?? [], billReads: sameRead ?? [] });
     if (hit) return { error: duplicateBillError(supplierBillNo, hit) };
   }
-  // Header + lines + held payment EK transaction (629). Koi line giri
+  // Header + lines + held payment EK transaction (630). Koi line giri
   // to purchase bhi nahi banti — total aur adaigi aadhi lines par nahi tikte.
   // paidNow yahin held rehta hai; post sirf reviewPurchase ki manzoori par.
   const headerTotal = supplierBillWorkspace ? invoiceTotal : totalAmount;
@@ -495,7 +495,7 @@ export async function receivePurchase(_prev: ActionState, formData: FormData): P
   const acceptedTax = purchase.tax_amount != null ? Number(purchase.tax_amount) * receivedRatio : 0;
   const acceptedPayable = Math.round((acceptedTotal - acceptedDiscount + acceptedTax) * 100) / 100;
   // Lock pehle (pending -> receiving). Doosri call ya to resume hai ya
-  // pehle hi received. Stock + status uske baad EK transaction (629).
+  // pehle hi received. Stock + status uske baad EK transaction (630).
   const gate = receiveLockOutcome(purchase.status, purchase.review_status);
   if (!gate.ok) return { error: gate.error };
   const { data: lockState, error: lockError } = await (supabase as any).rpc("fn_lock_purchase_receiving", { p_id: purchaseId });

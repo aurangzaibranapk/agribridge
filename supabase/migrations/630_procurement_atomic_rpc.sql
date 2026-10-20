@@ -1,7 +1,7 @@
 -- =====================================================================
--- AgriBridge — Migration 629: procurement atomic RPCs
+-- AgriBridge — Migration 630: procurement atomic RPCs
 -- =====================================================================
--- 628 COMMIT hone ke BAAD. Apply nahi kiya gaya.
+-- 629 COMMIT hone ke BAAD. Apply nahi kiya gaya.
 -- Receive ek transaction: status lock 'receiving', phir lines + stock
 -- + status received. Dedupe key doosri movement rok-ti hai.
 -- Purchase create ek transaction: header + har line, warna kuch nahi.

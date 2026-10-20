@@ -1,8 +1,8 @@
 -- =====================================================================
--- AgriBridge — Migration 628: procurement unique guards
+-- AgriBridge — Migration 629: procurement unique guards
 -- =====================================================================
 -- LIKHA HAI, APPLY NAHI KIYA. Pehle Testing, phir Live — aur Live se
--- pehle backup. 629 isi ke COMMIT ke baad chale (enum value usi
+-- pehle backup. 630 isi ke COMMIT ke baad chale (enum value usi
 -- transaction mein use nahi ho sakti).
 --
 -- Owner/Admin self-approve (13 Oct 2026) is migration mein NAHI badla.
@@ -83,7 +83,7 @@ declare n bigint;
 begin
   select count(*) into n from public.fn_procurement_index_blockers() where kind like 'block:%';
   if n > 0 then
-    raise exception '628: % duplicate group(s) block a unique index. Read-only: select * from public.fn_procurement_index_blockers();', n;
+    raise exception '629: % duplicate group(s) block a unique index. Read-only: select * from public.fn_procurement_index_blockers();', n;
   end if;
 end $$;
 
@@ -92,15 +92,15 @@ alter type public.purchase_status add value if not exists 'receiving';
 
 alter table public.purchases add column if not exists bill_no_key text;
 comment on column public.purchases.bill_no_key is
-  'Ek supplier + ek bill number ka unique slot (628). 388 ki agli purchase isi bill se isay null chhodti hai.';
+  'Ek supplier + ek bill number ka unique slot (629). 388 ki agli purchase isi bill se isay null chhodti hai.';
 
 alter table public.stock_movements add column if not exists dedupe_key text;
 comment on column public.stock_movements.dedupe_key is
-  'Receive/GRN ki ek line ek hi movement (628). Purani qatarein null rehti hain.';
+  'Receive/GRN ki ek line ek hi movement (629). Purani qatarein null rehti hain.';
 
 alter table public.stock_batches add column if not exists dedupe_key text;
 comment on column public.stock_batches.dedupe_key is
-  'GRN/receive ka batch dobara na bane (628).';
+  'GRN/receive ka batch dobara na bane (629).';
 
 -- Sab se purani non-cancelled purchase slot leti hai. Baqi (388 batches
 -- ya purane dohre) null rehti hain, is liye index un par nahi atkta.

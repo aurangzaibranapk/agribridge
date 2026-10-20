@@ -1,4 +1,4 @@
--- 628 rollback. Enum value 'receiving' Postgres se safe nahi hat-ti; wo rehti hai.
+-- 629 rollback. Enum value 'receiving' Postgres se safe nahi hat-ti; wo rehti hai.
 -- ux_bill_reads_supplier_bill_no_applied (388) yahan nahi girta.
 drop index if exists public.ux_agri_grns_order_id;
 drop index if exists public.ux_stock_batches_dedupe_key;

@@ -16,8 +16,8 @@ const pur = read("src/actions/purchases.ts");
 const bill = read("src/actions/supplier-bill-rates.ts");
 const grn = read("src/actions/agri-grn.ts");
 const panel = read("src/app/admin/purchases/review-panel.tsx");
-const mig628 = read("supabase/migrations/628_procurement_unique_guards.sql");
-const mig629 = read("supabase/migrations/629_procurement_atomic_rpc.sql");
+const mig629 = read("supabase/migrations/629_procurement_unique_guards.sql");
+const mig630 = read("supabase/migrations/630_procurement_atomic_rpc.sql");
 
 const purchaseId = "00000000-0000-4000-8000-000000000001";
 const accountId = "c4af3ece-0e8f-4c31-9bbb-0680111bc81a";
@@ -81,13 +81,13 @@ assert.ok(b.isDuplicateBillNoError({ code: "23505", message: "ux_purchases_bill_
 assert.equal(b.isDuplicateBillNoError({ code: "23505", message: "other" }), false);
 
 // migrations: read-only query first, not applied by this test to a live DB
-assert.ok(mig628.indexOf("select * from public.fn_procurement_index_blockers()") < mig628.indexOf("create unique index"));
-assert.ok(/block:agri_grn_order/.test(mig628));
-assert.ok(/info:historical_stock_double/.test(mig628));
-assert.ok(/fn_lock_purchase_receiving/.test(mig629));
-assert.ok(/fn_commit_purchase_receive/.test(mig629));
-assert.ok(/fn_create_purchase_atomic/.test(mig629));
-assert.ok(/fn_create_agri_grn_atomic/.test(mig629));
+assert.ok(mig629.indexOf("select * from public.fn_procurement_index_blockers()") < mig629.indexOf("create unique index"));
+assert.ok(/block:agri_grn_order/.test(mig629));
+assert.ok(/info:historical_stock_double/.test(mig629));
+assert.ok(/fn_lock_purchase_receiving/.test(mig630));
+assert.ok(/fn_commit_purchase_receive/.test(mig630));
+assert.ok(/fn_create_purchase_atomic/.test(mig630));
+assert.ok(/fn_create_agri_grn_atomic/.test(mig630));
 assert.ok(/fn_create_purchase_atomic/.test(pur) && /fn_lock_purchase_receiving/.test(pur) && /fn_commit_purchase_receive/.test(pur));
 assert.ok(/fn_create_agri_grn_atomic/.test(grn));
 assert.ok(/grnBatchDedupeKey/.test(grn), "batch insert is inside the deduped payload");

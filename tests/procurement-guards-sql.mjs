@@ -1,4 +1,4 @@
-// 628/629 on PGlite only. Live database is not touched.
+// 629/630 on PGlite only. Live database is not touched.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
@@ -16,11 +16,11 @@ const throws = async (s) => {
 let ok = 0;
 const pass = (n) => { ok++; console.log(`  ok  ${n}`); };
 
-const M628 = fs.readFileSync("supabase/migrations/628_procurement_unique_guards.sql", "utf8");
-const M629 = fs.readFileSync("supabase/migrations/629_procurement_atomic_rpc.sql", "utf8");
-const R629 = fs.readFileSync("supabase/migrations/629_procurement_atomic_rpc.rollback.sql", "utf8");
-assert.doesNotMatch(M628, /\bdelete\s+from\b|\btruncate\b/i);
+const M629 = fs.readFileSync("supabase/migrations/629_procurement_unique_guards.sql", "utf8");
+const M630 = fs.readFileSync("supabase/migrations/630_procurement_atomic_rpc.sql", "utf8");
+const R630 = fs.readFileSync("supabase/migrations/630_procurement_atomic_rpc.rollback.sql", "utf8");
 assert.doesNotMatch(M629, /\bdelete\s+from\b|\btruncate\b/i);
+assert.doesNotMatch(M630, /\bdelete\s+from\b|\btruncate\b/i);
 pass("migrations do not delete rows");
 
 await run(fs.readFileSync("tests/sql/procurement-guards-stubs.sql", "utf8"));
@@ -29,15 +29,15 @@ pass("old purchase-held key is not a uuid");
 await run(`select 'a5000000-0000-5000-8000-000000000001'::uuid`);
 pass("derived held-payment key is a uuid");
 
-await run(M628);
-await run(M628);
-pass("628 applies twice");
-assert.equal(await one(`select count(*) from fn_procurement_index_blockers() where kind like 'block:%'`), 0);
-pass("clean database has no index blockers");
-
 await run(M629);
 await run(M629);
 pass("629 applies twice");
+assert.equal(await one(`select count(*) from fn_procurement_index_blockers() where kind like 'block:%'`), 0);
+pass("clean database has no index blockers");
+
+await run(M630);
+await run(M630);
+pass("630 applies twice");
 
 const supplier = "11111111-1111-4111-8111-111111111111";
 const product = "22222222-2222-4222-8222-222222222222";
@@ -121,8 +121,8 @@ assert.equal(await one(`select count(*) from stock_movements where reference_typ
 assert.equal(await one(`select count(*) from stock_batches where dedupe_key = 'agri-grn-batch:${orderId}:1'`), 1);
 pass("second GRN does not insert another header, movement, or batch");
 
-await run(R629);
+await run(R630);
 await throws(`select fn_lock_purchase_receiving('${purchaseId}')`);
-pass("629 rollback drops the functions");
+pass("630 rollback drops the functions");
 
 console.log(`Procurement SQL tests passed (${ok}).`);

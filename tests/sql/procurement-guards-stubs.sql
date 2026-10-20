@@ -1,4 +1,4 @@
--- Minimal tables for 628/629. Not the live schema.
+-- Minimal tables for 629/630. Not the live schema.
 create role anon;
 create role authenticated;
 create role service_role;
