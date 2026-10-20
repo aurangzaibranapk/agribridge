@@ -231,7 +231,7 @@ as $$
   union all
   select 'uq_finance_opening_once', count(*)::bigint from (
     select 1 from public.finance_transactions
-    where category = 'Shuruati balance' and transaction_type::text = 'income'
+    where category = 'Shuruati balance' and transaction_type = 'income'::public.finance_transaction_type
     group by account_id
     having count(*) > 1
   ) d
@@ -277,7 +277,7 @@ begin
   if coalesce(n, 0) = 0 then
     create unique index if not exists uq_finance_opening_once
       on public.finance_transactions (account_id)
-      where category = 'Shuruati balance' and transaction_type::text = 'income';
+      where category = 'Shuruati balance' and transaction_type = 'income'::public.finance_transaction_type;
   else
     raise notice 'uq_finance_opening_once skipped (% duplicate groups). Delete mat karein.', n;
   end if;

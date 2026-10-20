@@ -13,3 +13,7 @@ for (const f of fs.readdirSync(dir)) {
 const m124 = fs.readFileSync(path.join(dir, "124_farmer_master.sql"), "utf8");
 assert.match(m124, /fn_phone_key\(p_phone text\)/, "124 asal fn_phone_key(p_phone)");
 console.log("migration 631 phone key: theek");
+// 641: index predicate mein enum::text (STABLE) mana hai — live par 42P17.
+const m641 = strip(fs.readFileSync(path.join(dir, "641_finance_maker_checker_and_indexes.sql"), "utf8"));
+assert.ok(!/transaction_type::text\s*=\s*'income'/.test(m641), "641 index predicate immutable ho");
+console.log("migration 641 predicate: theek");
