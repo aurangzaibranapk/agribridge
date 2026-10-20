@@ -14,6 +14,8 @@ import { NotificationBell } from "@/components/layout/notification-bell";
 import { HelpButton } from "@/components/help/help-button";
 import { UiModeToggle } from "@/components/guided/ui-mode-toggle";
 import { getUiMode } from "@/lib/access/ui-mode";
+import { TopbarAnimatedSearch } from "@/components/layout/topbar-search";
+import { animSearchEnabled } from "@/lib/ui/animated-search";
 
 export async function Topbar({
   subtitle, searchAction = "/admin/search", searchPlaceholder = "Search...", notificationsHref = "/admin/notifications", navGroups = [], lang = "rm",
@@ -45,6 +47,9 @@ export async function Topbar({
       <div className="flex flex-1 items-center gap-3">
         <MobileSidebar subtitle={subtitle} groups={navGroups} />
         <BusinessSelector current={businessContext} />
+        {animSearchEnabled() ? (
+          <TopbarAnimatedSearch action={searchAction} placeholder={searchPlaceholder} lang={lang} />
+        ) : (
         <form action={searchAction} className="hidden max-w-md flex-1 items-center gap-2 rounded-lg border border-surface-200 bg-surface-50 px-3 lg:flex dark:border-surface-700 dark:bg-surface-800">
           <Search className="h-4 w-4 text-surface-400" />
           <input
@@ -56,6 +61,7 @@ export async function Topbar({
             Apply
           </button>
         </form>
+        )}
       </div>
       <div className="flex items-center gap-1 sm:gap-3">
         {/* Simple / Advanced (E) aur "? Samjhein" (266). */}

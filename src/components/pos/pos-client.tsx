@@ -1,4 +1,6 @@
 "use client";
+import { AnimatedSearch } from "@/components/ui/animated-search";
+import { animSearchEnabled } from "@/lib/ui/animated-search";
 import { ExpiryBadge } from "@/components/stock/expiry-badge";
 import { canAddToCart, isOutOfStock, sortInStockFirst, POS_DEMAND_HREF } from "@/lib/pos/stock-availability";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -723,10 +725,14 @@ export function PosClient({
               Naam aur search box barabar jagah lete hain (malik: "half
               pay name half pay search bar"). */}
           <form onSubmit={handleSearchSubmit} className="flex min-w-0 flex-1 items-center gap-2">
+{animSearchEnabled() ? (
+            <AnimatedSearch ref={barcodeRef} defaultOpen value={search} onValueChange={setSearch} placeholder={t("pos_search_products", lang)} lang={lang} className="min-w-0 flex-1" />
+) : (
             <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
               <Input ref={barcodeRef} value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("pos_search_products", lang)} className="h-11 pl-9" />
             </div>
+)}
             <button type="button" onClick={() => setShowCameraModal(true)} aria-label="Camera" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"><Camera className="h-4 w-4" /></button>
           </form>
           {groups.length > 0 && (
