@@ -18,9 +18,14 @@ export function DecideButtons({
   item,
   href,
   run,
+  approveLabel,
+  hideOpen = false,
 }: {
   item: PendingItem;
   href: string;
+  /** Detail safhe par "Approve — naam badal do" jaisa label. */
+  approveLabel?: string;
+  hideOpen?: boolean;
   /** Preview / test. Asal safha is ko nahi bhejta -- decidePending chalti hai. */
   run?: (fd: FormData) => Promise<DecideResult | undefined>;
 }) {
@@ -93,13 +98,13 @@ export function DecideButtons({
           <>
             <button
               type="button"
-              data-approve="enabled"
-              disabled={busy}
+              data-approve={item.block_approve ? "blocked" : "enabled"}
+              disabled={busy || !!item.block_approve}
               onClick={() => open("approve")}
               className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-b from-emerald-500 to-emerald-600 px-2.5 py-1.5 text-[11.5px] font-bold text-white disabled:cursor-wait disabled:opacity-60"
             >
               {busy && ask === "approve" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-              {busy && ask === "approve" ? t("apb_saving", lang) : t("apb_approve", lang)}
+              {busy && ask === "approve" ? t("apb_saving", lang) : approveLabel ?? t("apb_approve", lang)}
             </button>
             {rule?.reject && (
               <button
@@ -126,10 +131,10 @@ export function DecideButtons({
             </button>
           </>
         )}
-        <Link href={href} className="inline-flex items-center gap-1 rounded-lg border border-surface-200 bg-white px-2.5 py-1.5 text-[11.5px] font-bold text-surface-800 dark:border-white/10 dark:bg-white/5 dark:text-surface-100">
+        {!hideOpen && <Link href={href} className="inline-flex items-center gap-1 rounded-lg border border-surface-200 bg-white px-2.5 py-1.5 text-[11.5px] font-bold text-surface-800 dark:border-white/10 dark:bg-white/5 dark:text-surface-100">
           {t("apb_open", lang)}
           <ArrowRight className="h-3 w-3" />
-        </Link>
+        </Link>}
       </div>
       {locked && <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300">{ownTip}</span>}
       {ask && state === "enabled" && (

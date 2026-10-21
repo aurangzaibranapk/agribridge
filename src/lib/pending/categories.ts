@@ -42,6 +42,10 @@ export interface PendingItem {
   code_own?: boolean;
   is_new: boolean;
   link: string | null;
+  /** 693: product tabdeeli/merge ka pehle-vs-baad (sirf product_edits / product_merge). */
+  product_extra?: import("./product-diff").ProductPendingExtra;
+  /** Approve band (masalan product ko khud mein merge). */
+  block_approve?: boolean;
 }
 
 /** 582 ki registry jaisi hi fehrist (test dono ko milata hai). */

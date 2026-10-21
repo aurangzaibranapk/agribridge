@@ -8,6 +8,7 @@ import { pendingKey, type DecideResult } from "@/lib/pending/decide";
 import { cn } from "@/lib/utils/format";
 import { DecideButtons } from "./decide-buttons";
 import { usePendingLive } from "./live-state";
+import { ProductPendingSummary } from "@/components/pending/product-diff-ui";
 
 type Run = (fd: FormData) => Promise<DecideResult | undefined>;
 
@@ -59,10 +60,12 @@ export function PendingTableRow({ item, run }: { item: PendingItem; run?: Run })
         <StateCell status={h?.status} isNew={item.is_new} />
       </td>
       <td className="px-2 py-2.5 align-top">
+        {item.product_extra ? <ProductPendingSummary extra={item.product_extra} lang={lang} /> : <>
         <p className="truncate font-bold text-surface-900 dark:text-white">
           {t(catLabelKey(item.category), lang)} {item.ref && <span className="font-mono text-[11px] text-surface-400">{item.ref}</span>}
         </p>
         {item.title && <p className="truncate text-[11.5px] text-surface-500 dark:text-surface-400">{item.title}</p>}
+        </>}
       </td>
       <td className="px-2 py-2.5 text-right align-top font-semibold tabular-nums text-surface-800 dark:text-surface-100">{item.amount != null ? fmtRs(item.amount) : "—"}</td>
       <td className="px-2 py-2.5 align-top"><AgeChip days={ageDays(item.created_at)} lang={lang} /></td>
@@ -89,10 +92,10 @@ export function PendingCard({ item, run }: { item: PendingItem; run?: Run }) {
   return (
     <li data-pending-card data-pending-decision={h?.status ?? "open"} className={cn("space-y-2 px-4 py-3", rowTone(h?.status, h?.phase === "fading", item.is_new))}>
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        {item.product_extra ? <ProductPendingSummary extra={item.product_extra} lang={lang} /> : <div className="min-w-0">
           <p className="truncate text-[13px] font-bold text-surface-900 dark:text-white">{t(catLabelKey(item.category), lang)} {item.ref && <span className="font-mono text-[11px] text-surface-400">{item.ref}</span>}</p>
           {item.title && <p className="truncate text-[11.5px] text-surface-500 dark:text-surface-400">{item.title}</p>}
-        </div>
+        </div>}
         <span className="shrink-0 text-[13px] font-bold tabular-nums text-surface-900 dark:text-white">{item.amount != null ? fmtRs(item.amount) : ""}</span>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-[11px]">
