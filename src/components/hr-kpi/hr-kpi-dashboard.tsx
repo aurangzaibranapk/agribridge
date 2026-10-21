@@ -7,8 +7,9 @@ import { type HrDashboard, type Kpi, KPI_FORMULAS, EMPLOYMENT_TYPES } from "@/li
  * Data na ho to saaf "—" / 0, koi farzi adad nahi.
  */
 
-const C = { blue: "#16a34a", teal: "#0d9488", amber: "#f59e0b", red: "#dc2626", purple: "#7c3aed", lime: "#65a30d", pink: "#db2777", sky: "#0284c7" };
-const PALETTE = [C.blue, C.teal, C.amber, C.purple, C.sky, C.pink, C.lime, C.red];
+// Reference tasveer ke rang (malik: "same to same" color grading).
+const C = { blue: "#1d6fd8", green: "#22a447", teal: "#14a3a3", amber: "#f5a524", orange: "#f97316", red: "#e5484d", purple: "#8b5cf6", lime: "#65a30d", pink: "#ec4899", sky: "#0ea5e9", navy: "#0b2545" };
+const PALETTE = [C.blue, C.green, C.amber, C.purple, C.teal, C.pink, C.orange, C.red];
 const card = "rounded-2xl border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900";
 const h2 = "mb-3 flex items-center gap-2 font-display text-sm font-semibold text-surface-900 dark:text-white";
 const rs = (v: number) => `Rs ${Math.round(v).toLocaleString("en-PK")}`;
@@ -16,12 +17,10 @@ const rs = (v: number) => `Rs ${Math.round(v).toLocaleString("en-PK")}`;
 function Panel({ title, children, className = "", right }: { title: string; children: ReactNode; className?: string; right?: ReactNode }) {
   return (
     <section className={`${card} ${className}`}>
-      <div className="flex items-start justify-between gap-2">
-        <h2 className={h2}>
-          <span className="inline-block h-4 w-1 rounded bg-brand-600" />
-          {title}
-        </h2>
-        {right}
+      {/* Reference jaisa: har panel ke upar navy patti */}
+      <div className="-mx-4 -mt-4 mb-3 flex items-center justify-between gap-2 rounded-t-2xl bg-gradient-to-r from-[#0b2545] to-[#123a6b] px-4 py-2 text-white">
+        <h2 className="flex items-center gap-2 font-display text-sm font-semibold">{title}</h2>
+        {right && <span className="text-white [&_*]:!text-white">{right}</span>}
       </div>
       {children}
     </section>
@@ -45,14 +44,15 @@ function Change({ k, goodWhenDown = false, suffix }: { k: Kpi; goodWhenDown?: bo
 }
 
 function KpiCard({ label, k, tone, icon, fmt, goodWhenDown, suffix = "" }: { label: string; k: Kpi; tone: string; icon: string; fmt: (v: number) => string; goodWhenDown?: boolean; suffix?: string }) {
+  // Reference jaisa: halka rangeen pas-manzar + rangeen kinara + rangeen icon.
   return (
-    <div className={`${card} flex items-center gap-3`} data-testid="hr-kpi">
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg text-white" style={{ background: tone }} aria-hidden>
+    <div className="flex items-center gap-3 rounded-2xl border-2 p-4 shadow-card dark:bg-surface-900" style={{ borderColor: `${tone}66`, background: `linear-gradient(135deg, ${tone}1f, ${tone}0a)` }} data-testid="hr-kpi">
+      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg text-white" style={{ background: tone }} aria-hidden>
         {icon}
       </span>
       <div className="min-w-0">
-        <p className="text-xs font-semibold text-surface-600 dark:text-surface-300">{label}</p>
-        <p className="text-2xl font-extrabold tabular-nums text-surface-900 dark:text-white">{k.value == null ? "—" : fmt(k.value)}</p>
+        <p className="text-xs font-bold" style={{ color: tone }}>{label}</p>
+        <p className="text-3xl font-extrabold tabular-nums text-[#0b2545] dark:text-white">{k.value == null ? "—" : fmt(k.value)}</p>
         <Change k={k} goodWhenDown={goodWhenDown} suffix={suffix} />
       </div>
     </div>
@@ -121,7 +121,7 @@ function Ring({ pct, label }: { pct: number | null; label: string }) {
   return (
     <svg viewBox="0 0 130 130" className="h-[130px] w-[130px]" role="img">
       <circle cx={65} cy={65} r={r} fill="none" strokeWidth={13} className="stroke-surface-100 dark:stroke-surface-800" />
-      {pct != null && <circle cx={65} cy={65} r={r} fill="none" stroke={C.blue} strokeWidth={13} strokeLinecap="round" strokeDasharray={`${(pct / 100) * c} ${c}`} transform="rotate(-90 65 65)" />}
+      {pct != null && <circle cx={65} cy={65} r={r} fill="none" stroke={C.green} strokeWidth={13} strokeLinecap="round" strokeDasharray={`${(pct / 100) * c} ${c}`} transform="rotate(-90 65 65)" />}
       <text x={65} y={66} textAnchor="middle" fontSize={22} fontWeight={800} className="fill-surface-900 dark:fill-white">{pct == null ? "—" : `${pct}%`}</text>
       <text x={65} y={84} textAnchor="middle" fontSize={10} className="fill-surface-500">{label}</text>
     </svg>
@@ -137,8 +137,8 @@ function Gauge({ pct }: { pct: number | null }) {
       {pct != null && <path d="M20 95 A70 70 0 0 1 160 95" fill="none" stroke="url(#hrGauge)" strokeWidth={16} strokeLinecap="round" strokeDasharray={`${(pct / 100) * half} ${half}`} />}
       <defs>
         <linearGradient id="hrGauge" x1="0" x2="1">
-          <stop offset="0" stopColor={C.sky} />
-          <stop offset="1" stopColor={C.blue} />
+          <stop offset="0" stopColor={C.blue} />
+          <stop offset="1" stopColor={C.green} />
         </linearGradient>
       </defs>
       <text x={90} y={82} textAnchor="middle" fontSize={26} fontWeight={800} className="fill-surface-900 dark:fill-white">{pct == null ? "—" : `${Math.round(pct)}%`}</text>
@@ -181,7 +181,7 @@ function HBar({ label, value, max, color, right }: { label: string; value: numbe
   );
 }
 
-const FUNNEL_COLORS = [C.sky, C.teal, C.amber, "#ea580c", C.purple];
+const FUNNEL_COLORS = [C.blue, C.green, "#eab308", C.orange, C.purple];
 
 export interface HrDashboardViewProps {
   d: HrDashboard;
@@ -212,30 +212,30 @@ export function HrKpiDashboardView({ d, departments, branches, demoLabel, basePa
   const salesMax = Math.max(...d.extras.staffSales.map((s) => s.amount), 1);
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] space-y-3 pb-6" data-testid="hr-kpi-dashboard">
+    <div className="mx-auto w-full max-w-[1600px] space-y-3 rounded-3xl bg-[#eef4fb] p-3 pb-6 dark:bg-[#071a33]" data-testid="hr-kpi-dashboard">
       {demoLabel && <div className="rounded-xl border-2 border-dashed border-amber-400 bg-amber-50 px-4 py-2 text-center text-sm font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-200">{demoLabel}</div>}
-      <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700 px-5 py-4 text-white shadow-card">
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-[#071a33] via-[#0b2545] to-[#123a6b] px-5 py-4 text-white shadow-card">
         <div>
-          <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">HR KPI <span className="text-emerald-300">DASHBOARD</span></h1>
-          <p className="text-sm text-emerald-100">People | Performance | Progress</p>
+          <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl">HR KPI <span className="text-[#4ade80]">DASHBOARD</span></h1>
+          <p className="text-sm text-slate-200">People &nbsp;|&nbsp; Performance &nbsp;|&nbsp; Progress</p>
         </div>
-        <p className="text-right font-display text-base italic text-emerald-100">Khush staff,<br />kamyab karobar</p>
+        <p className="text-right font-display text-base italic text-[#86efac]">Khush staff,<br />kamyab karobar</p>
       </header>
 
       <div className="grid gap-3 lg:grid-cols-[200px_minmax(0,1fr)]">
-        <nav className="hidden rounded-2xl bg-brand-900 p-3 text-sm text-emerald-50 lg:block" aria-label="HR">
+        <nav className="hidden rounded-2xl bg-[#0b2545] p-3 text-sm text-slate-100 lg:block" aria-label="HR">
           <ul className="space-y-1">
             {NAV.map((n) => (
               <li key={n.href}>
-                <a href={n.href} className={`flex items-center gap-2 rounded-lg px-2.5 py-2 hover:bg-brand-700 ${n.href === basePath ? "bg-brand-600 font-semibold" : ""}`}>
+                <a href={n.href} className={`flex items-center gap-2 rounded-lg px-2.5 py-2 hover:bg-[#123a6b] ${n.href === basePath ? "bg-[#22a447] font-semibold" : ""}`}>
                   <span aria-hidden>{n.icon}</span>
                   {n.label}
                 </a>
               </li>
             ))}
           </ul>
-          <p className="mt-6 px-2 font-display text-lg italic text-emerald-200">Achha HR, achhi team!</p>
-          <ul className="mt-3 space-y-1 px-2 text-xs text-emerald-200">
+          <p className="mt-6 px-2 font-display text-lg italic text-[#86efac]">Achha HR, achhi team!</p>
+          <ul className="mt-3 space-y-1 px-2 text-xs text-[#86efac]">
             {["Attract", "Develop", "Engage", "Retain"].map((x) => <li key={x}>✔ {x}</li>)}
           </ul>
         </nav>
@@ -278,19 +278,19 @@ export function HrKpiDashboardView({ d, departments, branches, demoLabel, basePa
               </select>
             </label>
             <div className="col-span-2 flex items-stretch gap-2 md:col-span-1">
-              <button type="submit" className="rounded-xl bg-brand-700 px-3 text-xs font-bold text-white hover:bg-brand-800">Lagao</button>
-              <div className="flex flex-1 items-center gap-2 rounded-2xl bg-brand-900 px-3 py-2 text-white">
+              <button type="submit" className="rounded-xl bg-[#1d6fd8] px-3 text-xs font-bold text-white hover:bg-[#1859b0]">Lagao</button>
+              <div className="flex flex-1 items-center gap-2 rounded-2xl bg-[#0b2545] px-3 py-2 text-white">
                 <span aria-hidden className="text-xl">👤</span>
-                <div><p className="text-[10px] text-emerald-200">Total Employees</p><p className="text-xl font-extrabold tabular-nums">{d.employeeCount}</p></div>
+                <div><p className="text-[10px] text-slate-300">Total Employees</p><p className="text-xl font-extrabold tabular-nums">{d.employeeCount}</p></div>
               </div>
             </div>
           </form>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <KpiCard label="Total Employees" k={k.total} tone={C.blue} icon="👥" fmt={(v) => String(v)} />
-            <KpiCard label="New Hires" k={k.newHires} tone={C.sky} icon="＋" fmt={(v) => String(v)} />
+            <KpiCard label="Total Employees" k={k.total} tone={C.green} icon="👥" fmt={(v) => String(v)} />
+            <KpiCard label="New Hires" k={k.newHires} tone={C.blue} icon="＋" fmt={(v) => String(v)} />
             <KpiCard label="Attrition Rate" k={k.attrition} tone={C.purple} icon="↪" fmt={(v) => `${v}%`} goodWhenDown suffix=" pts" />
-            <KpiCard label="Avg. Time to Hire" k={k.timeToHire} tone="#ea580c" icon="⏱" fmt={(v) => `${v} Days`} goodWhenDown suffix=" din" />
+            <KpiCard label="Avg. Time to Hire" k={k.timeToHire} tone={C.orange} icon="⏱" fmt={(v) => `${v} Days`} goodWhenDown suffix=" din" />
             <KpiCard label="Employee Engagement" k={k.engagement} tone={C.teal} icon="☺" fmt={(v) => `${v}%`} suffix=" pts" />
           </div>
 
@@ -324,7 +324,7 @@ export function HrKpiDashboardView({ d, departments, branches, demoLabel, basePa
             </Panel>
             <Panel title="Performance Rating">
               {d.ratings.some((r) => r.count) ? (
-                <Bars data={d.ratings.map((r, i) => ({ label: r.label, value: r.count, color: [C.blue, C.sky, C.amber, C.purple, C.red][i] }))} height={130} />
+                <Bars data={d.ratings.map((r, i) => ({ label: r.label, value: r.count, color: [C.green, C.blue, C.amber, C.purple, C.red][i] }))} height={130} />
               ) : (
                 <Empty text="Koi manzoor shuda review nahi -- HR → Performance se review darj karein." />
               )}
@@ -353,7 +353,7 @@ export function HrKpiDashboardView({ d, departments, branches, demoLabel, basePa
               )}
             </Panel>
             <Panel title="Training & Development" right={<span className="text-[10px] text-surface-400">ghante</span>}>
-              {d.training.some((t) => t.sessions) ? <Bars data={d.training.map((t, i) => ({ label: t.label, value: t.hours, color: [C.sky, C.blue, C.amber, C.purple][i] }))} height={130} /> : <Empty text="Koi training darj nahi -- HR → Training se darj karein." />}
+              {d.training.some((t) => t.sessions) ? <Bars data={d.training.map((t, i) => ({ label: t.label, value: t.hours, color: [C.blue, C.green, C.amber, C.purple][i] }))} height={130} /> : <Empty text="Koi training darj nahi -- HR → Training se darj karein." />}
             </Panel>
             <Panel title="Employee Satisfaction">
               <Gauge pct={d.satisfaction.pct} />
@@ -381,14 +381,14 @@ export function HrKpiDashboardView({ d, departments, branches, demoLabel, basePa
                 <Empty text="Is arse mein kisi ne nahi chhora." />
               )}
             </Panel>
-            <Panel title="Employee Performance vs. Target" right={<span className="flex gap-2 text-[10px]"><span className="text-emerald-600">■ Actual</span><span className="text-sky-600">■ Target</span></span>}>
+            <Panel title="Employee Performance vs. Target" right={<span className="flex gap-2 text-[10px]"><span style={{ color: C.green }}>■ Actual</span><span style={{ color: C.blue }}>■ Target</span></span>}>
               {d.perfVsTarget.length ? (
                 <div className="space-y-3">
                   {d.perfVsTarget.map((p) => (
                     <div key={p.key}>
                       <p className="mb-1 text-xs font-semibold">{p.label}</p>
-                      <HBar label="Actual" value={p.actual} max={Math.max(p.target, p.actual)} color={C.blue} right={`${p.pct}%`} />
-                      <div className="mt-1"><HBar label="Target" value={p.target} max={Math.max(p.target, p.actual)} color={C.sky} right={rs(p.target)} /></div>
+                      <HBar label="Actual" value={p.actual} max={Math.max(p.target, p.actual)} color={C.green} right={`${p.pct}%`} />
+                      <div className="mt-1"><HBar label="Target" value={p.target} max={Math.max(p.target, p.actual)} color={C.blue} right={rs(p.target)} /></div>
                     </div>
                   ))}
                 </div>
@@ -425,8 +425,8 @@ export function HrKpiDashboardView({ d, departments, branches, demoLabel, basePa
             <Panel title="Tankhwah: wajib vs diya">
               {d.extras.salary.runs ? (
                 <div className="space-y-2">
-                  <HBar label="Wajib (manzoor payroll)" value={d.extras.salary.due} max={d.extras.salary.due} color={C.sky} right={rs(d.extras.salary.due)} />
-                  <HBar label="Diya" value={d.extras.salary.paid} max={d.extras.salary.due} color={C.blue} right={rs(d.extras.salary.paid)} />
+                  <HBar label="Wajib (manzoor payroll)" value={d.extras.salary.due} max={d.extras.salary.due} color={C.blue} right={rs(d.extras.salary.due)} />
+                  <HBar label="Diya" value={d.extras.salary.paid} max={d.extras.salary.due} color={C.green} right={rs(d.extras.salary.paid)} />
                   <HBar label="Baqi" value={d.extras.salary.pending} max={d.extras.salary.due} color={C.red} right={rs(d.extras.salary.pending)} />
                 </div>
               ) : (
@@ -449,7 +449,7 @@ export function HrKpiDashboardView({ d, departments, branches, demoLabel, basePa
             <Panel title="Key HR KPI Formulas">
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
-                  <thead><tr className="bg-brand-900 text-left text-white"><th className="px-2 py-1.5">KPI</th><th className="px-2 py-1.5">Formula</th><th className="px-2 py-1.5">Tafseel</th></tr></thead>
+                  <thead><tr className="bg-[#0b2545] text-left text-white"><th className="px-2 py-1.5">KPI</th><th className="px-2 py-1.5">Formula</th><th className="px-2 py-1.5">Tafseel</th></tr></thead>
                   <tbody>
                     {KPI_FORMULAS.map((f) => (
                       <tr key={f.kpi} className="border-t border-surface-100 dark:border-surface-800"><td className="px-2 py-1.5 font-semibold">{f.kpi}</td><td className="px-2 py-1.5 font-mono text-[11px]">{f.formula}</td><td className="px-2 py-1.5 text-surface-500">{f.desc}</td></tr>
@@ -458,8 +458,8 @@ export function HrKpiDashboardView({ d, departments, branches, demoLabel, basePa
                 </table>
               </div>
             </Panel>
-            <section className={`${card} border-purple-200 bg-purple-50/60 dark:border-purple-900 dark:bg-purple-950/30`}>
-              <h2 className={h2}>💡 Insights & Next Steps</h2>
+            <section className={`${card} border-[#c4b5fd] bg-[#f3efff] dark:border-purple-900 dark:bg-purple-950/30`}>
+              <h2 className="mb-3 -mx-4 -mt-4 rounded-t-2xl bg-gradient-to-r from-[#6d28d9] to-[#8b5cf6] px-4 py-2 font-display text-sm font-semibold text-white">💡 Insights & Next Steps</h2>
               {d.insights.length ? (
                 <ul className="space-y-1.5 text-xs" data-testid="hr-insights">{d.insights.map((x) => <li key={x} className="flex gap-2"><span className="text-emerald-600">✔</span>{x}</li>)}</ul>
               ) : (

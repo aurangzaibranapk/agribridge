@@ -59,7 +59,7 @@ export default async function HrDashboardPage({ searchParams }: { searchParams?:
     const today = aajKaKhana();
     const filters = parseHrFilters(searchParams, today, depts.map((x) => x.key), branches.map((x) => x.id));
     const tab = (Array.isArray(searchParams?.tab) ? searchParams?.tab[0] : searchParams?.tab) === "tankhwah" ? "tankhwah" : "overview";
-    const tabCls = (on: boolean) => `rounded-lg px-4 py-2 text-sm font-semibold ${on ? "bg-brand-700 text-white" : "bg-surface-100 text-surface-700 dark:bg-surface-800 dark:text-surface-200"}`;
+    const tabCls = (on: boolean) => `rounded-lg px-4 py-2 text-sm font-semibold ${on ? "bg-[#0b2545] text-white" : "bg-surface-100 text-surface-700 dark:bg-surface-800 dark:text-surface-200"}`;
     const flash = typeof searchParams?.err === "string" ? searchParams.err : typeof searchParams?.ok === "string" ? searchParams.ok : null;
     try {
       let body: ReactNode;

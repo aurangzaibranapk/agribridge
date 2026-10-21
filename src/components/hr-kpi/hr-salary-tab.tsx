@@ -6,13 +6,14 @@ import { type SalaryDashboard, type SalFilters, SALARY_FORMULAS } from "@/lib/hr
 const card = "rounded-2xl border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900";
 const rs = (v: number) => `Rs ${Math.round(v).toLocaleString("en-PK")}`;
 const rsK = (v: number) => (v >= 100000 ? `${(v / 100000).toFixed(1)}L` : v >= 1000 ? `${Math.round(v / 1000)}K` : String(Math.round(v)));
-const PAL = ["#16a34a", "#0d9488", "#f59e0b", "#7c3aed", "#0284c7", "#db2777", "#65a30d"];
+// Reference ke rang: blue / green / orange / purple / teal.
+const PAL = ["#1d6fd8", "#22a447", "#f97316", "#8b5cf6", "#14a3a3", "#ec4899", "#f5a524"];
 const STATUS_LABEL = { active: "Active", on_leave: "On Leave", terminated: "Terminated" } as const;
 
-function Box({ title, children, className = "" }: { title: string; children: ReactNode; className?: string }) {
+function Box({ title, children, className = "", green }: { title: string; children: ReactNode; className?: string; green?: boolean }) {
   return (
     <section className={`${card} ${className}`}>
-      <h2 className="mb-3 rounded-lg bg-brand-800 px-3 py-1.5 font-display text-sm font-semibold text-white">{title}</h2>
+      <h2 className={`mb-3 -mx-4 -mt-4 rounded-t-2xl bg-gradient-to-r ${green ? "from-[#15803d] to-[#22a447]" : "from-[#0b3d91] to-[#1d6fd8]"} px-4 py-1.5 font-display text-sm font-semibold text-white`}>{title}</h2>
       {children}
     </section>
   );
@@ -24,10 +25,10 @@ function Card({ label, k, fmt, color, icon, goodDown }: { label: string; k: Kpi;
   const ch = k.change;
   const good = ch == null || ch === 0 ? true : goodDown ? ch < 0 : ch > 0;
   return (
-    <div className={`${card} text-center`} style={{ borderTop: `4px solid ${color}` }} data-testid="sal-kpi">
-      <div className="text-2xl" aria-hidden>{icon}</div>
-      <p className="text-xs font-bold text-surface-700 dark:text-surface-200">{label}</p>
-      <p className="my-1 text-2xl font-extrabold tabular-nums text-surface-900 dark:text-white">{k.value == null ? "—" : fmt(k.value)}</p>
+    <div className="rounded-2xl border-2 p-4 text-center shadow-card dark:bg-surface-900" style={{ borderColor: `${color}80`, background: `linear-gradient(180deg, ${color}24, ${color}08)` }} data-testid="sal-kpi">
+      <div className="mx-auto mb-1 flex h-10 w-10 items-center justify-center rounded-full text-xl" style={{ background: `${color}2e`, color }} aria-hidden>{icon}</div>
+      <p className="text-xs font-bold" style={{ color }}>{label}</p>
+      <p className="my-1 text-3xl font-extrabold tabular-nums text-[#0b2545] dark:text-white">{k.value == null ? "—" : fmt(k.value)}</p>
       <p className={`text-[11px] font-semibold ${ch == null ? "text-surface-400" : good ? "text-emerald-600" : "text-red-600"}`}>
         {ch == null ? "—" : `${ch > 0 ? "▲" : ch < 0 ? "▼" : "■"} ${Math.abs(ch).toFixed(1)}${k.unit === "count" ? "%" : " pts"}`}
         <span className="block font-normal text-surface-400">vs pichla mahina</span>
@@ -49,15 +50,15 @@ function TrendChart({ t }: { t: SalaryDashboard["trend"] }) {
         const cx = 30 + i * step + step / 2;
         return (
           <g key={x.month}>
-            <rect x={cx - step * 0.3} y={h - 10 - bh} width={step * 0.6} height={bh} rx={3} fill="#16a34a" />
+            <rect x={cx - step * 0.3} y={h - 10 - bh} width={step * 0.6} height={bh} rx={3} fill="#1d6fd8" />
             <text x={cx} y={h - 14 - bh} textAnchor="middle" fontSize={9.5} fontWeight={700} className="fill-surface-700 dark:fill-surface-200">{x.cost == null ? "—" : rsK(x.cost)}</text>
             <text x={cx} y={h + 6} textAnchor="middle" fontSize={10} className="fill-surface-500">{x.label}</text>
           </g>
         );
       })}
-      <polyline fill="none" stroke="#f59e0b" strokeWidth={2.5} points={pts} />
-      {t.map((x, i) => <circle key={x.month} cx={30 + i * step + step / 2} cy={h - 10 - (x.headcount / maxH) * (h - 40)} r={3.5} fill="#f59e0b" />)}
-      <g fontSize={10}><rect x={30} y={h + 14} width={10} height={8} fill="#16a34a" /><text x={44} y={h + 22} className="fill-surface-600 dark:fill-surface-300">Payroll Cost (Rs)</text><circle cx={160} cy={h + 18} r={4} fill="#f59e0b" /><text x={168} y={h + 22} className="fill-surface-600 dark:fill-surface-300">Headcount</text></g>
+      <polyline fill="none" stroke="#f97316" strokeWidth={2.5} points={pts} />
+      {t.map((x, i) => <circle key={x.month} cx={30 + i * step + step / 2} cy={h - 10 - (x.headcount / maxH) * (h - 40)} r={3.5} fill="#f97316" />)}
+      <g fontSize={10}><rect x={30} y={h + 14} width={10} height={8} fill="#1d6fd8" /><text x={44} y={h + 22} className="fill-surface-600 dark:fill-surface-300">Payroll Cost (Rs)</text><circle cx={160} cy={h + 18} r={4} fill="#f97316" /><text x={168} y={h + 22} className="fill-surface-600 dark:fill-surface-300">Headcount</text></g>
     </svg>
   );
 }
@@ -115,7 +116,7 @@ function Scatter({ pts, r2 }: { pts: SalaryDashboard["scatter"]; r2: number | nu
     <svg viewBox={`0 0 ${w} ${h + 26}`} className="max-h-[230px] w-full" role="img">
       <line x1={30} y1={h - 10} x2={w - 20} y2={h - 10} className="stroke-surface-300 dark:stroke-surface-600" />
       <line x1={30} y1={10} x2={30} y2={h - 10} className="stroke-surface-300 dark:stroke-surface-600" />
-      {pts.map((p, i) => <circle key={`${p.name}${i}`} cx={X(p.rating) + ((i % 5) - 2) * 3} cy={Y(p.salary)} r={4.5} fill="#0284c7" opacity={0.85}><title>{`${p.name}: ${p.rating} / ${rs(p.salary)}`}</title></circle>)}
+      {pts.map((p, i) => <circle key={`${p.name}${i}`} cx={X(p.rating) + ((i % 5) - 2) * 3} cy={Y(p.salary)} r={4.5} fill="#1d6fd8" opacity={0.85}><title>{`${p.name}: ${p.rating} / ${rs(p.salary)}`}</title></circle>)}
       {[1, 2, 3, 4, 5].map((r) => <text key={r} x={X(r)} y={h + 4} textAnchor="middle" fontSize={10} className="fill-surface-500">{r}</text>)}
       <text x={w / 2} y={h + 20} textAnchor="middle" fontSize={10} className="fill-surface-500">Performance Rating (1 Poor – 5 Excellent)</text>
       {r2 != null && <text x={w - 24} y={22} textAnchor="end" fontSize={11} fontWeight={700} className="fill-surface-700 dark:fill-surface-200">R² = {r2}</text>}
@@ -129,7 +130,7 @@ function Slicer({ title, name, options, current }: { title: string; name: string
       <legend className="px-1 text-xs font-bold text-surface-700 dark:text-surface-200">{title}</legend>
       <div className="flex max-h-40 flex-col gap-1 overflow-y-auto">
         {[{ v: "", l: "All" }, ...options].map((o) => (
-          <button key={o.v || "all"} name={name} value={o.v} className={`rounded-md px-2 py-1 text-left text-xs ${(current ?? "") === o.v ? "bg-brand-600 font-semibold text-white" : "bg-surface-50 text-surface-700 hover:bg-brand-50 dark:bg-surface-800 dark:text-surface-200"}`}>{o.l}</button>
+          <button key={o.v || "all"} name={name} value={o.v} className={`rounded-md px-2 py-1 text-left text-xs ${(current ?? "") === o.v ? "bg-[#1d6fd8] font-semibold text-white" : "bg-[#eef4ff] text-surface-700 hover:bg-[#dbeafe] dark:bg-surface-800 dark:text-surface-200"}`}>{o.l}</button>
         ))}
       </div>
     </fieldset>
@@ -141,21 +142,21 @@ export function HrSalaryTab({ s, f, basePath, keep }: { s: SalaryDashboard; f: S
   const totalHead = s.headDept.reduce((a, d) => a + d.count, 0);
   const hidden = (except: string) => Object.entries({ ...keep, s_dept: f.dept ?? "", s_status: f.status ?? "", s_desig: f.desig ?? "", s_year: f.year ?? "" }).filter(([n, v]) => n !== except && v).map(([n, v]) => <input key={n} type="hidden" name={n} value={v} />);
   return (
-    <div className="space-y-3" data-testid="hr-salary-tab">
-      <header className="rounded-2xl bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700 px-5 py-4 text-center text-white">
-        <h2 className="font-display text-2xl font-extrabold">Salary Smart Analysis</h2>
-        <p className="font-display text-lg font-bold text-amber-300">KPI Vision Dashboard</p>
-        <p className="text-sm text-emerald-100">Behtar tankhwah | Behtar log | Mazboot karobar</p>
+    <div className="space-y-3 rounded-3xl bg-[#eef4fb] p-3 dark:bg-[#071a33]" data-testid="hr-salary-tab">
+      <header className="rounded-2xl bg-gradient-to-r from-[#071a33] via-[#0b2545] to-[#123a6b] px-5 py-4 text-center text-white">
+        <h2 className="font-display text-3xl font-extrabold">Salary Smart Analysis</h2>
+        <p className="font-display text-2xl font-extrabold text-[#facc15]">KPI Vision Dashboard</p>
+        <p className="text-sm text-slate-200">Behtar tankhwah | Behtar log | Mazboot karobar</p>
       </header>
       <p className="text-xs text-surface-500">🔒 Tankhwah ka data sirf Owner / HR / Admin ko. Due date: har mahine ki tankhwah agle mahine ki {s.dueDay} tareekh tak.{s.missingSalary ? ` ${s.missingSalary} active staff ki tankhwah darj nahi.` : ""}</p>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <Card label="Total Employees" k={k.employees} fmt={(v) => String(v)} color="#0284c7" icon="👥" />
-        <Card label="Total Payroll Cost" k={k.payroll} fmt={rs} color="#16a34a" icon="💵" goodDown />
-        <Card label="Average Salary" k={k.avgSalary} fmt={rs} color="#7c3aed" icon="💰" />
-        <Card label="On-Time Payment %" k={k.onTime} fmt={(v) => `${v}%`} color="#f59e0b" icon="⏰" />
-        <Card label="New Hires" k={k.newHires} fmt={(v) => String(v)} color="#0d9488" icon="🧑‍💼" />
-        <Card label="Attrition Rate" k={k.attrition} fmt={(v) => `${v}%`} color="#dc2626" icon="📉" goodDown />
+        <Card label="Total Employees" k={k.employees} fmt={(v) => String(v)} color="#1d6fd8" icon="👥" />
+        <Card label="Total Payroll Cost" k={k.payroll} fmt={rs} color="#22a447" icon="💵" goodDown />
+        <Card label="Average Salary" k={k.avgSalary} fmt={rs} color="#8b5cf6" icon="💰" />
+        <Card label="On-Time Payment %" k={k.onTime} fmt={(v) => `${v}%`} color="#f97316" icon="⏰" />
+        <Card label="New Hires" k={k.newHires} fmt={(v) => String(v)} color="#14a3a3" icon="🧑‍💼" />
+        <Card label="Attrition Rate" k={k.attrition} fmt={(v) => `${v}%`} color="#e5484d" icon="📉" goodDown />
       </div>
 
       <div className="grid gap-3 lg:grid-cols-3">
@@ -169,7 +170,7 @@ export function HrSalaryTab({ s, f, basePath, keep }: { s: SalaryDashboard; f: S
           {s.table.length ? (
             <div className="max-h-[420px] overflow-auto">
               <table className="w-full text-xs" data-testid="sal-table">
-                <thead className="sticky top-0 bg-brand-50 text-left text-brand-900 dark:bg-surface-800 dark:text-brand-200"><tr><th className="p-1.5">Employee ID</th><th>Naam</th><th>Department</th><th>Designation</th><th className="text-right">Monthly Salary</th><th className="pl-2">Join Date</th><th>Status</th></tr></thead>
+                <thead className="sticky top-0 bg-[#dbeafe] text-left text-[#0b2545] dark:bg-[#0b2545] dark:text-slate-100"><tr><th className="p-1.5">Employee ID</th><th>Naam</th><th>Department</th><th>Designation</th><th className="text-right">Monthly Salary</th><th className="pl-2">Join Date</th><th>Status</th></tr></thead>
                 <tbody>
                   {s.table.map((r) => (
                     <tr key={r.id} className="border-t border-surface-100 dark:border-surface-800">
@@ -198,7 +199,7 @@ export function HrSalaryTab({ s, f, basePath, keep }: { s: SalaryDashboard; f: S
         <Box title="Performance Rating vs. Salary">{s.scatter.length ? <Scatter pts={s.scatter} r2={s.r2} /> : <Empty text="Manzoor shuda review aur tankhwah dono chahiye." />}</Box>
       </div>
 
-      <Box title="Key KPI Formulas">
+      <Box title="Key KPI Formulas" green>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead><tr className="text-left text-surface-500"><th className="p-1.5">KPI</th><th>Formula</th><th>Tafseel</th></tr></thead>
@@ -220,7 +221,7 @@ function VBarsCount({ data }: { data: { label: string; count: number }[] }) {
         const bh = (d.count / max) * (h - 24);
         return (
           <g key={d.label}>
-            <rect x={i * step + 6} y={h - bh} width={step - 12} height={bh} rx={2} fill="#16a34a" />
+            <rect x={i * step + 6} y={h - bh} width={step - 12} height={bh} rx={2} fill="#1d6fd8" />
             <text x={i * step + step / 2} y={h - bh - 4} textAnchor="middle" fontSize={11} fontWeight={700} className="fill-surface-800 dark:fill-surface-100">{d.count}</text>
             <text x={i * step + step / 2} y={h + 14} textAnchor="middle" fontSize={9.5} className="fill-surface-500">{d.label}</text>
           </g>
