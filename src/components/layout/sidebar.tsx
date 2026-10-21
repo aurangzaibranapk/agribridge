@@ -216,13 +216,6 @@ export function Sidebar({
           );
         })}
       </nav>
-      {pend.enabled && (
-        <div data-pending-legend className="mx-3 mb-3 flex flex-wrap gap-x-3 gap-y-1 rounded-xl bg-white/[0.06] px-3 py-2 text-[10.5px] text-[#d3deee]">
-          <span className="flex items-center gap-1"><NayaPill lang={lang} /> {t("apb_legend_new", lang)}</span>
-          <span className="flex items-center gap-1"><RedBadge n={5} /> {t("apb_legend_pending", lang)}</span>
-          <span className="flex items-center gap-1"><ZeroMark className="text-[#d3deee]" /> {t("apb_legend_zero", lang)}</span>
-        </div>
-      )}
     </aside>
   );
 }
