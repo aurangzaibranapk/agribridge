@@ -20,6 +20,8 @@ import {
   type PendingItem,
 } from "@/lib/pending/categories";
 import { pendingKey } from "@/lib/pending/decide";
+import { attachProductExtras } from "@/lib/pending/product-attach";
+import { loadProductPendingExtras } from "@/lib/pending/product-diff-load";
 import { LiveGroupMarks, PendingFilterPills, PendingGroupFrame, PendingKpis, PendingLive } from "./live-state";
 import { PendingCard, PendingTableRow } from "./pending-rows";
 
@@ -67,7 +69,10 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
     }).select(`id, ${src.col}`).in("id", ids);
     for (const r of rows ?? []) codeBy.set(String(r.id), r[src.col] ?? null);
   }
-  const allItems = markCodeOwn(rawItems, codeBy, user.id);
+  const editIds = rawItems.filter((i) => i.category === "product_edits").map((i) => i.item_id);
+  const mergeIds = rawItems.filter((i) => i.category === "product_merge").map((i) => i.item_id);
+  const extras = editIds.length || mergeIds.length ? await loadProductPendingExtras(sb as never, editIds, mergeIds).catch(() => new Map()) : new Map();
+  const allItems = attachProductExtras(markCodeOwn(rawItems, codeBy, user.id), extras);
   const counts = adjustMineForCode(rawCounts, allItems);
   const scopeCounts = focus ? counts.filter((c) => focusCats.includes(c.category)) : counts;
   const tot = calcTotals(scopeCounts);

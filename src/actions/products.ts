@@ -227,10 +227,12 @@ export async function updateProduct(_prev: FormState, formData: FormData): Promi
   };
 
   if (!skipApproval) {
+    const original = await snapshotOriginal(supabase, id, Object.keys(payload));
     const { error } = await supabase.from("product_edit_requests").insert({
       product_id: id,
       proposed_by: userId,
       changes: payload,
+      ...(original ? { original } : {}),
       status: "pending",
     });
     if (error) return { error: error.message };
@@ -299,10 +301,13 @@ export async function updateProductNamePackSize(
   }
 
   if (!isUnrestricted && permission?.edit_needs_approval) {
+    const changes = { name, pack_size: pack_size || null, ...extraFields };
+    const original = await snapshotOriginal(supabase, id, Object.keys(changes));
     const { error } = await supabase.from("product_edit_requests").insert({
       product_id: id,
       proposed_by: userId,
-      changes: { name, pack_size: pack_size || null, ...extraFields },
+      changes,
+      ...(original ? { original } : {}),
       status: "pending",
     });
     if (error) return { error: error.message };
@@ -405,4 +410,27 @@ async function unitFields(raw: string | null): Promise<{ unit: string | null; un
   const u = await resolveUnit(v);
   if (u) return { unit: u.label, unit_code: u.code };
   return { unit: v, unit_code: null };
+}
+
+/**
+ * 693: request bhejte waqt badalne wale fields ki purani qeemat. Agar
+ * column abhi live par nahi (693 nahi laga) to null -- insert purane
+ * tareeqe se hi hota hai.
+ */
+async function snapshotOriginal(supabase: ReturnType<typeof createClient>, id: string, keys: string[]): Promise<Record<string, unknown> | null> {
+  if (!(await hasOriginalColumn(supabase))) return null;
+  const { data } = await supabase.from("products").select("*").eq("id", id).maybeSingle();
+  if (!data) return null;
+  const row = data as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const k of keys) if (k in row) out[k] = row[k];
+  return out;
+}
+
+let originalColumnKnown: boolean | null = null;
+async function hasOriginalColumn(supabase: ReturnType<typeof createClient>): Promise<boolean> {
+  if (originalColumnKnown !== null) return originalColumnKnown;
+  const { error } = await (supabase.from("product_edit_requests") as unknown as { select: (c: string) => { limit: (n: number) => Promise<{ error: unknown }> } }).select("original").limit(1);
+  originalColumnKnown = !error;
+  return originalColumnKnown;
 }
