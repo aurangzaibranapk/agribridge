@@ -148,6 +148,7 @@ const CURATED_FEATURES: ErpFeature[] = [
   { section: "Reports", label: "Meri Dukan Report", href: "/admin/reports/sales/meri-dukan", description: "Sales staff ka apna safha — sirf apni dukan ki bikri, naqad, udhaar aur stock ki ginti (koi kharid qeemat nahi).", addedDate: "2026-10-17", who: "Sales staff / Shop incharge" },
   { section: "Reports", label: "Kharid Report", href: "/admin/reports/purchases", description: "Purchases ki report — supplier wise, product wise, month wise.", who: "Malik / Purchase Head" },
   { section: "Reports", label: "Stock Reports", href: "/admin/reports/inventory", description: "Current stock snapshot — har product kitna hai, kahan hai.", who: "Malik / Warehouse" },
+  { section: "Reports", label: "Supply Chain", href: "/admin/reports/supply-chain", description: "Khareed aur stock: supplier waqt par, lead time, gardish, stock khatam, PO/GRN.", who: "Malik / Procurement / Warehouse" },
   { section: "Reports", label: "Stock Value Report", href: "/admin/reports/stock-value", description: "Stock ki qeemat — har category (Wanda, Pesticide, Seed, Grocery) ki cost value aur sale value. Kab kitna aaya, kia value this, baqi kia hy.", who: "Malik / Finance", addedDate: "2026-09-25" },
   { section: "Reports", label: "Finance Report", href: "/admin/reports/finance", description: "Finance ka summary — income, expenses, bank balance.", who: "Malik / Finance" },
   { section: "Reports", label: "Udhaar Report", href: "/admin/reports/credit", description: "Tamam udhaar — kaun kaun kitna baqi hai.", who: "Malik / Finance" },
