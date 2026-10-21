@@ -18,11 +18,29 @@ export function ThemeToggle() {
     setIsDark(document.documentElement.classList.contains("dark"));
   }, []);
 
-  function toggle() {
-    const next = !document.documentElement.classList.contains("dark");
+  function apply(next: boolean) {
     document.documentElement.classList.toggle("dark", next);
     localStorage.setItem(STORAGE_KEY, next ? "dark" : "light");
     setIsDark(next);
+  }
+
+  // Gol daira (mockup manzoor, 21 Oct): click ki jagah se rang phailta
+  // hai. Jis browser mein View Transitions nahi, ya jis ne "kam harkat"
+  // chuna ho, wahan seedha badal jata hai.
+  function toggle(e: React.MouseEvent<HTMLButtonElement>) {
+    const next = !document.documentElement.classList.contains("dark");
+    const doc = document as Document & { startViewTransition?: (cb: () => void) => { ready: Promise<void> } };
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (!doc.startViewTransition || reduce) return apply(next);
+    const x = e.clientX || window.innerWidth / 2;
+    const y = e.clientY || 0;
+    const r = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+    doc.startViewTransition(() => apply(next)).ready.then(() => {
+      document.documentElement.animate(
+        { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
+        { duration: 550, easing: "ease-in-out", pseudoElement: "::view-transition-new(root)" },
+      );
+    }).catch(() => {});
   }
 
   return (
