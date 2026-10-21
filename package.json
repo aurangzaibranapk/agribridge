@@ -85,7 +85,8 @@
     "test:whatsapp-inbox": "npx tsx --tsconfig scripts/tsconfig.inbox-test.json scripts/test-whatsapp-inbox.tsx && node tests/whatsapp-inbox-sql.mjs && node tests/security-grants-619-sql.mjs",
     "test:command-center-insights": "npx --yes tsx scripts/test-command-center-insights.ts && node tests/command-center-insights-wiring.cjs",
     "test:supply-chain": "npx --yes tsx --tsconfig scripts/tsconfig.inbox-test.json scripts/test-supply-chain.ts && node tests/supply-chain-692-sql.mjs",
-    "test:hr-kpi": "npx --yes tsx scripts/test-hr-kpi.ts && node tests/hr-kpi-wiring.cjs && node tests/hr-kpi-688-db.mjs"
+    "test:hr-kpi": "npx --yes tsx scripts/test-hr-kpi.ts && node tests/hr-kpi-wiring.cjs && node tests/hr-kpi-688-db.mjs",
+    "test:data-health-assistant": "npx --yes tsx scripts/test-data-health-assistant.ts && node tests/data-health-assistant-694-sql.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",
