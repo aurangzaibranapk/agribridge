@@ -1,4 +1,5 @@
 "use client";
+import { StockBadge } from "@/components/ui/stock-badge";
 import { AnimatedSearch } from "@/components/ui/animated-search";
 import { animSearchEnabled } from "@/lib/ui/animated-search";
 import { ExpiryBadge } from "@/components/stock/expiry-badge";
@@ -779,7 +780,7 @@ export function PosClient({
                       {p?.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-2" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center text-surface-300 dark:text-surface-600"><Package className="h-8 w-8" strokeWidth={1.25} /></div>}
                     </div>
                     <ExpiryBadge date={item.expiry_date} className="absolute left-1.5 top-1.5 shadow-sm" />
-                    {oos && <span data-testid="pos-oos-badge" className="absolute right-1.5 top-1.5 rounded-md bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">Out of stock / Stock khatam</span>}
+                    <StockBadge floating qty={item.stock_quantity} min={p?.min_stock_threshold} testId={oos ? "pos-oos-badge" : "pos-stock-badge"} />
                     {inCart && cartLine && (
                       <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-brand-600 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
                         {wholesaleOn && upc > 1

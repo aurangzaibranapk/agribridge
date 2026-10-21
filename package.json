@@ -12,6 +12,7 @@
     "test:hr-meetings": "npx --yes tsx tests/hr-meetings-lib.ts && node tests/hr-meetings-db.mjs",
     "test:admin-badges": "npx --yes tsx scripts/test-admin-badges.ts && node tests/admin-badges-sql.mjs",
     "test:pending-decide": "npx --yes tsx scripts/test-pending-decide.ts",
+    "test:stock-badge": "npx --yes tsx scripts/test-stock-badge.ts",
     "test:product-edit-diff": "npx --yes tsx scripts/test-product-edit-diff.ts",
     "test:statement-table": "npx --yes tsx scripts/test-statement-table.ts",
     "test:party-links": "npx --yes tsx scripts/test-party-links.ts && node tests/party-links-sql.mjs",
@@ -89,7 +90,8 @@
     "test:hr-kpi": "npx --yes tsx scripts/test-hr-kpi.ts && node tests/hr-kpi-wiring.cjs && node tests/hr-kpi-688-db.mjs",
     "test:data-health-assistant": "npx --yes tsx scripts/test-data-health-assistant.ts && node tests/data-health-assistant-694-sql.mjs",
     "test:adjust-stock-695": "node tests/adjust-stock-695-sql.mjs",
-    "test:payroll-auto-draft": "npx --yes tsx scripts/test-payroll-auto-draft.ts && node tests/payroll-auto-draft-696-sql.mjs"
+    "test:payroll-auto-draft": "npx --yes tsx scripts/test-payroll-auto-draft.ts && node tests/payroll-auto-draft-696-sql.mjs",
+    "test:branch-exemption": "npx --yes tsx scripts/test-branch-exemption.ts && node tests/branch-exemption-697.cjs"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",
