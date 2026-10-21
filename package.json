@@ -15,6 +15,7 @@
     "test:statement-table": "npx --yes tsx scripts/test-statement-table.ts",
     "test:party-links": "npx --yes tsx scripts/test-party-links.ts && node tests/party-links-sql.mjs",
     "test:finance": "npx --yes tsx scripts/test-finance.ts",
+    "test:finance-dash": "npx --yes tsx scripts/test-finance-dash.ts",
     "test:supplier-csv": "npx --yes tsx scripts/test-supplier-bill-csv.ts",
     "test:recovery": "npx --yes tsx scripts/test-receivable-recovery.ts && npx --yes tsx scripts/test-branch-credit-recovery.ts",
     "check:i18n": "node scripts/check-i18n.mjs",

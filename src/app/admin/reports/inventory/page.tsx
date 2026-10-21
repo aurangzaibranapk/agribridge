@@ -4,6 +4,7 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { BranchFilter } from "@/components/dashboard/branch-filter";
 import { Package, PackageX, Boxes, AlertTriangle } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
+import { InventorySection } from "@/components/finance-dash/sections";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const dynamic = "force-dynamic";
@@ -73,6 +74,7 @@ export default async function InventoryReportPage({
   return (
     <div>
       <PageHeader title={t("ri_title", lang)} description="Stock levels and value across all branches" />
+      <InventorySection />
 
       <div className="mt-4">
         <BranchFilter branches={branches ?? []} current={branchId} />
