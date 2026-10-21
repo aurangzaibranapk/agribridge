@@ -51,7 +51,7 @@ export function AssistantSendPanel({ findingIds, title, onCancel }: { findingIds
   if (state.success) {
     return (
       <p data-testid="assistant-toast" className="mt-3 flex items-start gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800 dark:border-green-900 dark:bg-green-950/30 dark:text-green-400">
-        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />✓ {state.message}
+        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />{state.message}
       </p>
     );
   }
