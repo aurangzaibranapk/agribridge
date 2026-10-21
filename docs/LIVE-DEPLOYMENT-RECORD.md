@@ -4,7 +4,7 @@ Branch `cursor/mobile-phase1-4b80`. Migration **698 not applied** on Testing or 
 
 - staff_details.field_app_role: null, mca, ya mco
 - milk_rate_settings: fat/lr/snf alert columns, nullable, koi sample default nahi
-- attendance source check: `app` izafa (web, whatsapp, leave rehte hain)
+- attendance source check: live ki saat qismein rehti hain (web, pwa, whatsapp, biometric, correction, offline, leave) aur `app` izafa. Rollback wahi live array wapas rakhta hai.
 - support_tickets intake: `mobile_app`
 - support evidence mime: voice types
 - milk_route_collections.client_uuid

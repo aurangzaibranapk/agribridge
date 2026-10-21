@@ -18,16 +18,18 @@ alter table public.milk_rate_settings
   add column if not exists snf_alert_low numeric,
   add column if not exists snf_alert_high numeric;
 
--- App ki hazri alag source. Purane web/whatsapp/leave rehte hain.
+-- App ki hazri. Live pehle se web, pwa, whatsapp, biometric, correction,
+-- offline, leave rakhta hai (correction ki qatarein maujood hain). Sirf 'app' izafa.
 alter table public.attendance_records drop constraint if exists attendance_records_source_check;
 alter table public.attendance_records add constraint attendance_records_source_check
-  check (source is null or source in ('web', 'whatsapp', 'leave', 'app'));
+  check (source is null or source in ('web','pwa','whatsapp','biometric','correction','offline','leave','app'));
 
--- Tester ki report, complaint board par alag intake.
+-- Tester ki report. Live: null, support, staff, call_center. Sirf mobile_app izafa.
 alter table public.support_tickets drop constraint if exists support_tickets_intake_source_check;
 alter table public.support_tickets add constraint support_tickets_intake_source_check
   check (intake_source is null or intake_source in ('support', 'staff', 'call_center', 'mobile_app'));
 
+-- Live mime: image/png, jpeg, webp, gif. Awaz in ke sath judti hai, koi purani qism nahi hat-ti.
 alter table public.support_ticket_attachments drop constraint if exists support_ticket_attachments_mime_check;
 alter table public.support_ticket_attachments add constraint support_ticket_attachments_mime_check
   check (mime in (
@@ -36,10 +38,13 @@ alter table public.support_ticket_attachments add constraint support_ticket_atta
   ));
 
 update storage.buckets
-   set allowed_mime_types = array[
-     'image/png', 'image/jpeg', 'image/webp', 'image/gif',
-     'audio/mp4', 'audio/mpeg', 'audio/aac', 'audio/webm', 'audio/wav'
-   ]
+   set allowed_mime_types = (
+     select coalesce(array_agg(distinct mime), '{}')
+       from unnest(
+         coalesce(allowed_mime_types, '{}'::text[])
+         || array['audio/mp4','audio/mpeg','audio/aac','audio/webm','audio/wav']
+       ) as mime
+   )
  where id = 'support-evidence';
 
 -- Chiller drop ki dobara koshish.

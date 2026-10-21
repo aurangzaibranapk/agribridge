@@ -11,7 +11,11 @@ alter table public.support_ticket_attachments add constraint support_ticket_atta
   check (mime in ('image/png', 'image/jpeg', 'image/webp', 'image/gif'));
 
 update storage.buckets
-   set allowed_mime_types = array['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+   set allowed_mime_types = (
+     select coalesce(array_agg(mime order by mime), '{}')
+       from unnest(coalesce(allowed_mime_types, '{}'::text[])) as mime
+      where mime not in ('audio/mp4', 'audio/mpeg', 'audio/aac', 'audio/webm', 'audio/wav')
+   )
  where id = 'support-evidence';
 
 alter table public.support_tickets drop constraint if exists support_tickets_intake_source_check;
@@ -20,7 +24,7 @@ alter table public.support_tickets add constraint support_tickets_intake_source_
 
 alter table public.attendance_records drop constraint if exists attendance_records_source_check;
 alter table public.attendance_records add constraint attendance_records_source_check
-  check (source is null or source in ('web', 'whatsapp', 'leave'));
+  check (source = ANY (ARRAY['web','pwa','whatsapp','biometric','correction','offline','leave']));
 
 alter table public.milk_rate_settings
   drop column if exists fat_min,
