@@ -17,6 +17,12 @@ type DispatchSuccess = {
 };
 
 const CODEX_SUBSCRIPTION_KEY = "codex_subscription";
+
+/** Built-in agent: always listed, no env needed. Dispatch only records the
+ * assignment; an outside assistant polls support_tickets read-only. */
+export const BUILTIN_ASSISTANT_KEY = "agribridge_assistant";
+export const BUILTIN_ASSISTANT_LABEL = "AgriBridge Assistant";
+export const BUILTIN_ASSISTANT_MESSAGE = "AgriBridge Assistant ko bhej di gayi, jald jawab aayega.";
 const CODEX_SUBSCRIPTION_LABEL = "ChatGPT / Codex (Subscription)";
 
 function githubConfig(): { repository: string; token: string } | null {
@@ -63,8 +69,9 @@ function routes(): AgentRoute[] {
 }
 
 export function configuredSupportAgents(): SupportAgent[] {
-  const agents = routes().map(({ key, label }) => ({ key, label }));
+  const agents = routes().filter((r) => r.key !== BUILTIN_ASSISTANT_KEY).map(({ key, label }) => ({ key, label }));
   if (githubConfig()) agents.unshift({ key: CODEX_SUBSCRIPTION_KEY, label: CODEX_SUBSCRIPTION_LABEL });
+  agents.unshift({ key: BUILTIN_ASSISTANT_KEY, label: BUILTIN_ASSISTANT_LABEL });
   return agents;
 }
 
@@ -222,6 +229,9 @@ export async function dispatchSupportTicket(
   ticket: Record<string, unknown>,
   callbackUrl: string
 ): Promise<DispatchSuccess | { ok: false; error: string }> {
+  if (agentKey === BUILTIN_ASSISTANT_KEY) {
+    return { ok: true, assignmentStatus: "queued", ticketStatus: "assigned", message: BUILTIN_ASSISTANT_MESSAGE };
+  }
   if (agentKey === CODEX_SUBSCRIPTION_KEY) return createCodexSubscriptionIssue(ticket);
 
   const route = routes().find((item) => item.key === agentKey);

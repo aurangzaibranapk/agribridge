@@ -44,7 +44,7 @@
     "test:erp-directory": "npx --yes tsx scripts/test-erp-directory.ts",
     "test:sales-shop-filter": "npx --yes tsx scripts/test-sales-shop-filter.ts",
     "test:lightbox": "node tests/support-screenshot-lightbox.cjs",
-    "test:support-llm": "npx --yes tsx scripts/test-support-llm-agents.ts",
+    "test:support-llm": "npx --yes tsx scripts/test-support-llm-agents.ts && npx --yes tsx scripts/test-support-builtin-agent.ts",
     "test:txn-counter": "node tests/txn-counter-collision.cjs",
     "test:party-360": "npx --yes tsx scripts/test-party-360.ts",
     "test:promise-credit": "npx --yes tsx scripts/test-promise-credit.ts && node tests/promise-credit-migration.cjs",
