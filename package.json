@@ -14,6 +14,7 @@
     "test:pending-decide": "npx --yes tsx scripts/test-pending-decide.ts",
     "test:statement-table": "npx --yes tsx scripts/test-statement-table.ts",
     "test:party-links": "npx --yes tsx scripts/test-party-links.ts && node tests/party-links-sql.mjs",
+    "test:salary-offer": "npx --yes tsx scripts/test-salary-offer.ts && node tests/salary-offer-db.mjs",
     "test:finance": "npx --yes tsx scripts/test-finance.ts",
     "test:finance-dash": "npx --yes tsx scripts/test-finance-dash.ts",
     "test:supplier-csv": "npx --yes tsx scripts/test-supplier-bill-csv.ts",

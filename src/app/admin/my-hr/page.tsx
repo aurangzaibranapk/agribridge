@@ -11,6 +11,9 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { AttendanceCalendar } from "./attendance-calendar";
 import { PhotoClient } from "./photo-client";
+import { Chip, SO_BTN, SO_BTN2 } from "@/components/payroll/salary-ui";
+import { MONTHS_RU } from "@/lib/payroll/compute";
+import { pkr } from "@/lib/recovery/credit-report";
 import { CalendarDays, FileText, Wallet, Receipt, Users, ClipboardCheck, Network, Trophy } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -142,6 +145,21 @@ export default async function MyHrPage({ searchParams }: { searchParams?: Record
   const meriTasveer = (meraHr?.photo_url as string | null) ?? null;
   const joiningDate = (meraHr?.hire_date as string | null) ?? null;
 
+  // 691: payroll ki manzoor/ada shuda slips -- sirf apni (server par profile_id se filter).
+  const { data: mySlipLines } = await createServiceClient()
+    .from("payroll_lines")
+    .select("id, net, payroll_runs!inner(pay_year, pay_month, status)")
+    .eq("profile_id", user.id)
+    .in("payroll_runs.status", ["approved", "paid"]);
+  const mySlips = ((mySlipLines ?? []) as unknown as { id: string; net: number; payroll_runs: { pay_year: number; pay_month: number } }[])
+    .map((l) => ({ id: l.id, net: Number(l.net), y: l.payroll_runs.pay_year, m: l.payroll_runs.pay_month }))
+    .sort((a, b) => b.y * 100 + b.m - (a.y * 100 + a.m));
+  const oldest = mySlips[mySlips.length - 1];
+  const beforeJoining = oldest && joiningDate ? (() => {
+    const py = oldest.m === 1 ? oldest.y - 1 : oldest.y, pm = oldest.m === 1 ? 12 : oldest.m - 1;
+    return `${py}-${String(pm).padStart(2, "0")}` < joiningDate.slice(0, 7) ? { y: py, m: pm } : null;
+  })() : null;
+
   return (
     <div>
       <PageHeader
@@ -270,6 +288,35 @@ export default async function MyHrPage({ searchParams }: { searchParams?: Record
                   </tbody>
                 </table>
               </div>
+            )}
+          </Card>
+          <Card>
+            <p className="mb-3 text-[15px] font-bold text-surface-900 dark:text-white">Mera HR — Meri tankhwah parchiyan</p>
+            {mySlips.length === 0 ? (
+              <p className="text-sm text-surface-500">Abhi koi manzoor salary slip nahi.</p>
+            ) : (
+              <table className="w-full border-collapse text-[13px]">
+                <tbody>
+                  {mySlips.map((l) => (
+                    <tr key={l.id} className="border-b border-gray-100 dark:border-white/[0.06]">
+                      <td className="p-2">{MONTHS_RU[l.m - 1]} {l.y}</td>
+                      <td className="p-2 tabular-nums">Rs {pkr(l.net)}</td>
+                      <td className="p-2">
+                        <div className="flex gap-1.5">
+                          <Link href={`/admin/my-hr/payslip/${l.id}`} className={SO_BTN}>Dekhein</Link>
+                          <a href={`/api/hr/payslip/${l.id}/pdf`} className={SO_BTN2}>⬇ PDF</a>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {beforeJoining && (
+                    <tr className="border-b border-gray-100 dark:border-white/[0.06]">
+                      <td className="p-2">{MONTHS_RU[beforeJoining.m - 1]} {beforeJoining.y}</td><td className="p-2">—</td>
+                      <td className="p-2"><Chip tone="gy">Joining se pehle</Chip></td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             )}
           </Card>
         </div>

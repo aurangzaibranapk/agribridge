@@ -1,3 +1,15 @@
+## Pending — 21 October 2026: Bharti offer → structure → barhotri → salary slip (691)
+
+Branch `feat/salary-offer-slip`. Migration **691 not applied** on Testing or Live. Files only. 689 reserved, 690 left free. Backup pehle (lines file ke upar likhi hain), phir Testing, phir Live. App 691 ke baghair bhi chalta hai (purani payslip, purani offer), magar naye hissay 691 ke baad hi kaam karte hain.
+
+- job_offers: basic, house_rent, travel, mobile, bonus, incentive_pct/rule, probation_months, joining_date, accepted_total/at, superseded_by; status + countered, withdrawn.
+- job_offer_events (naya, sirf izafa) — mol-tol ki tareekh. HR/Admin/Owner hi dekhte.
+- staff_details: offer_id, application_id, father_name, bank_name, department, next_increment_due (apni khud nahi badalti).
+- staff_salary_structures: source_offer_id, change_reason, prev_structure_id, increment_amount/pct. fn_salary_structure_from_offer = sirf DRAFT; manzoori doosra admin.
+- v_upcoming_increments view; feature hr.increments (/admin/hr/increments).
+- payroll_lines: slip_no, verify_code (unique), paid_at, pay_method, pay_ref. fn_salary_slip (staff sirf apni, bank masked), fn_verify_salary_slip (anon, mehdood), fn_payroll_line_set_payment (Admin/Owner).
+- Rollback: `691_salary_offer_increments_slip.rollback.sql`.
+
 ## Pending — 20 October 2026: HR remaining guards (680–685)
 
 Branch `cursor/hr-remaining-fixes-7fa4` (PR #186). PR #182 is already on main. Migrations **680–685 not applied**. Files only. Backup ke baad pehle Testing, phir Live. 662 ke unique index se **pehle** ye read-only ginti (0 honi chahiye; koi update nahi):
