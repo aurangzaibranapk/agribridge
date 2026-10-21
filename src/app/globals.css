@@ -142,3 +142,7 @@ html.dark .pf-panel.pf-navy { --pf-bg: #101f42; }
 @media print {
   .pf-shell, .pf-col, .pf-main, .pf-fit, .pf-panel, .pf-body, .pf-scroll { height: auto !important; overflow: visible !important; display: block !important; }
 }
+
+/* Theme toggle ka gol daira (stock badges mockup ke saath manzoor). */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
