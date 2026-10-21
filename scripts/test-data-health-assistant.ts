@@ -40,3 +40,5 @@ t("migration 694 additive with rollback", () => {
   assert.ok(readFileSync("supabase/migrations/694_data_health_assistant.rollback.sql", "utf8").includes("drop column if exists support_ticket_id"));
 });
 console.log(`${n} passed`);
+// page falls back when 694 not yet applied
+{ const pg = readFileSync("src/app/admin/data-health/page.tsx", "utf8"); assert.ok(pg.includes("if (!openRows)")); console.log("ok page fallback without 694"); }

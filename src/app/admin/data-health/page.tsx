@@ -61,7 +61,18 @@ export default async function DataHealthPage() {
       .limit(20),
   ]);
 
-  const rows = (open ?? []) as any[];
+  // 694 live par na lagi ho to purani query -- safha na toote.
+  let openRows: any[] | null = open as any[] | null;
+  if (!openRows) {
+    const { data: legacy } = await service
+      .from("data_health_findings")
+      .select("id, finding_type, department, severity, title, description, related_label, amount, detected_at, status")
+      .eq("status", "open")
+      .order("detected_at", { ascending: false })
+      .limit(60);
+    openRows = legacy as any[] | null;
+  }
+  const rows = (openRows ?? []) as any[];
   const grouped = SEVERITY_ORDER.map((s) => ({
     severity: s,
     label: SEVERITY_LABEL[s],
