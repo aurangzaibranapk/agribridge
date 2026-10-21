@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { BranchCreditClient } from "./branch-credit-client";
@@ -47,6 +48,7 @@ export default async function BranchCreditPage() {
   return (
     <div>
       <PageHeader title={t("brc_title", lang)} description="Har shop ka credit limit set karein, advance payment record karein" />
+      <Link href="/admin/branch-credit/exemptions" className="mb-4 inline-block text-sm text-primary-600 underline">Udhaar rok se chhoot (30 din)</Link>
       <BranchCreditClient branches={branchesWithCredit} />
     </div>
   );
