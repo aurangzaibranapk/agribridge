@@ -6,6 +6,7 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { cashFlow, workingCapital, closingBalances, payReceiveSummary, partyBalances, branchPnl } from "@/lib/ledger/reports";
 import { ArrowLeft } from "lucide-react";
+import { CashFlowSection } from "@/components/finance-dash/sections";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ function money(n: number) {
 export default async function FinanceReportsPage({
   searchParams,
 }: {
-  searchParams: { view?: string; from?: string; to?: string };
+  searchParams: { view?: string; from?: string; to?: string; cf_by?: string };
 }) {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
@@ -128,6 +129,7 @@ export default async function FinanceReportsPage({
         </form>
       </Card>
 
+      {view === "cashflow" && <CashFlowSection from={searchParams.from} to={searchParams.to} by={searchParams.cf_by} />}
       {view === "cashflow" && <CashFlowView from={from} to={to} lang={lang} />}
       {view === "working" && <WorkingView asOf={to} lang={lang} />}
       {view === "closing" && <ClosingView from={from} to={to} lang={lang} />}
