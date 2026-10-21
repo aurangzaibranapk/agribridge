@@ -2,7 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Lock } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
+
+/**
+ * Wapas ERP (malik ki shikayat, 21 Oct): neeche wala chhota link click par
+ * "kuch nahi karta" tha. Shell `fixed inset-0 z-[200]` overlay hai jo admin
+ * layout ke upar baitha hai, is liye Next ka client navigation shuru to hota
+ * tha magar owner ka /admin/my-work (poora Command Center) server par der se
+ * banta hai aur progress bar (z-[60]) is overlay ke neeche chhup jata tha --
+ * safha jaisa ka taisa rehta. Ab yeh asal <a> hai (poora document load,
+ * browser ka loader nazar aata hai, koi client-router atkao nahi) aur
+ * sidebar ke upar saaf button hai.
+ */
+export const ERP_HOME = "/admin/my-work";
 
 const NAV = [
   { key: "console", live: "/admin/call-center", preview: "/call-center-preview/console", label: "Agent Console" },
@@ -31,6 +43,15 @@ export function Shell({
           <div className="font-display text-[22px] font-bold tracking-tight">AgriBridge</div>
           <div className="mt-0.5 text-[12px] text-white/60">Al Rana Traders · Call Center</div>
         </div>
+        <div className="px-3 pb-4">
+          <a
+            href={ERP_HOME}
+            data-testid="cc-back-erp"
+            className="relative z-10 flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2.5 text-[14px] font-semibold text-white hover:bg-white/20"
+          >
+            <ArrowLeft className="h-4 w-4" /> Wapas ERP
+          </a>
+        </div>
         <nav className="flex flex-col gap-1 px-3">
           {NAV.map((item) => {
             const href = variant === "preview" ? item.preview : item.live;
@@ -49,7 +70,7 @@ export function Shell({
           })}
         </nav>
         <div className="mt-auto px-5 py-4 text-[11px] text-white/40">
-          <Link href="/admin/my-work" className="hover:text-white/70">Wapas ERP</Link>
+          <a href={ERP_HOME} className="hover:text-white/70">Wapas ERP</a>
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
