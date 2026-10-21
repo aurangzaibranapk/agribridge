@@ -108,6 +108,7 @@ export const DEPARTMENTS: Department[] = [
       "/admin/brands",
       "/admin/companies",
       "/admin/reports/inventory",
+      "/admin/reports/supply-chain",
       ...REPORTS_BASIC,
     ],
   },
@@ -240,6 +241,7 @@ export const DEPARTMENTS: Department[] = [
       ...REPORTS_BASIC,
       "/admin/reports/sales",
       "/admin/reports/inventory",
+      "/admin/reports/supply-chain",
     ],
   },
   {

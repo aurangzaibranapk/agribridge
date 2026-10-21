@@ -1,0 +1,27 @@
+/* Supply Chain dashboard: finance-dash (.fdash) ki CSS par chand izafe. */
+.fdash .g6{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.fdash .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px}
+.fdash .kv.empty{font-size:15px;color:#94a3b8;font-weight:700;margin:10px 0 6px}
+.fdash .ks.bad{color:#dc2626}
+.fdash .ks.mutd{color:#6b7c70}
+.fdash .chip{display:inline-block;font-size:10px;padding:2px 8px;border-radius:9px;font-weight:700;white-space:nowrap}
+.fdash .chip.ok{background:#dcfce7;color:#166534}
+.fdash .chip.late{background:#fee2e2;color:#991b1b}
+.fdash .chip.wait{background:#fef3c7;color:#92400e}
+.fdash .chip.none{background:#e5e7eb;color:#4b5563}
+.dark .fdash .chip.ok{background:#14532d;color:#bbf7d0}
+.dark .fdash .chip.late{background:#450a0a;color:#fecaca}
+.dark .fdash .chip.wait{background:#3a2a06;color:#fde68a}
+.dark .fdash .chip.none{background:#273229;color:#9ca3af}
+.fdash .slicers{display:grid;grid-template-columns:repeat(4,1fr) auto;gap:8px;align-items:end}
+.fdash .slicers label{display:block;font-size:11px;color:#6b7c70;margin-bottom:3px;font-weight:600}
+.fdash .slicers select{width:100%;border:1px solid #bcd9c3;border-radius:9px;padding:6px 8px;font-size:12px;background:#fff;color:inherit}
+.dark .fdash .slicers select{background:#1b2a21;border-color:#2c4636}
+.fdash .slicers button{border:1px solid #15803d;background:#15803d;color:#fff;border-radius:9px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.fdash .emptybox{display:flex;align-items:center;justify-content:center;text-align:center;min-height:170px;color:#6b7c70;font-size:12px;padding:10px;border:1px dashed #cfe0d3;border-radius:10px}
+.dark .fdash .emptybox{border-color:#2c4636}
+.fdash .minrow input{width:80px;border:1px solid #bcd9c3;border-radius:7px;padding:3px 6px;font-size:12px;background:transparent;color:inherit}
+.fdash .minrow button{border:1px solid #bcd9c3;background:#fff;border-radius:7px;padding:3px 8px;font-size:11px;font-weight:700;color:#166534;cursor:pointer}
+.dark .fdash .minrow button{background:#1b2a21;border-color:#2c4636;color:#86efac}
+@media(max-width:1100px){.fdash .g6{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.fdash .g6{grid-template-columns:1fr 1fr}.fdash .g3{grid-template-columns:1fr}.fdash .slicers{grid-template-columns:1fr 1fr}}

@@ -221,6 +221,11 @@ export async function createPurchase(_prev: ActionState, formData: FormData): Pr
     return { error: purchaseError?.message ?? "Failed to create purchase." };
   }
   const purchase = { id: created.id as string };
+  // 692: "maal kab tak aayega". Column abhi Live par na ho to PO phir bhi ban jaye (khamoshi se chhor dein).
+  const expectedDate = String(formData.get("expected_date") ?? "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(expectedDate) && expectedDate >= purchaseDate) {
+    await (supabase as any).from("purchases").update({ expected_date: expectedDate }).eq("id", purchase.id);
+  }
   if (!approver && user) {
     await supabase.from("purchase_comments").insert({
       purchase_id: purchase.id,

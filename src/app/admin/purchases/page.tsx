@@ -7,6 +7,7 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { Badge } from "@/components/ui/form";
 import { PurchaseForm } from "@/app/admin/purchases/purchase-form";
+import { loadSupplierLeadDays, withLeadDays } from "@/lib/supply-chain/lead-days";
 import { ReceiveButton } from "@/app/admin/purchases/receive-button";
 import { PurchaseReturnForm } from "@/app/admin/purchases/purchase-return-form";
 import { DeletePurchaseButton } from "@/app/admin/purchases/delete-purchase-button";
@@ -200,7 +201,7 @@ export default async function AdminPurchasesPage() {
           list us ke neeche poori chauRai par. */}
       <div className="mx-auto mb-6 w-full max-w-2xl">
         <PurchaseForm
-          suppliers={suppliers ?? []}
+          suppliers={withLeadDays(suppliers ?? [], await loadSupplierLeadDays(supabase))}
           products={products ?? []}
           isAdminLevel={isAdminLevel}
           branches={branches ?? []}

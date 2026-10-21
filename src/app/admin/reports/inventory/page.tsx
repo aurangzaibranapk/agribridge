@@ -6,6 +6,7 @@ import { Package, PackageX, Boxes, AlertTriangle } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { InventorySection } from "@/components/finance-dash/sections";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +75,9 @@ export default async function InventoryReportPage({
   return (
     <div>
       <PageHeader title={t("ri_title", lang)} description="Stock levels and value across all branches" />
+      <div className="mb-3 flex justify-end">
+        <Link href="/admin/reports/supply-chain" className="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-white px-3 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-50 dark:border-surface-700 dark:bg-surface-900 dark:text-brand-300">Supply Chain dashboard →</Link>
+      </div>
       <InventorySection />
 
       <div className="mt-4">
