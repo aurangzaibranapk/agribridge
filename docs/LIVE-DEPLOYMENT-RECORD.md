@@ -1,3 +1,18 @@
+## Pending — 21 October 2026: Mobile phase 1 (698)
+
+Branch `cursor/mobile-phase1-4b80`. Migration **698 not applied** on Testing or Live. Files only. Backup pehle (size chat mein), phir Testing, phir Live, phir naya build. App 698 ke baghair bhi login aur zyada tar field kaam karta hai: attendance `source` pehle `app` try karti hai, constraint na ho to `web` likhti hai; ticket `intake_source` pehle `mobile_app`, warna `support`; `field_app_role` column na ho to designation se MCO/MCA. Jo 698 ke baghair nahi banta: `mobile_sync_inbox` (doosre phone par adhuri queue), voice mime (`audio/mp4` waghaira).
+
+- staff_details.field_app_role: null, mca, ya mco
+- milk_rate_settings: fat/lr/snf alert columns, nullable, koi sample default nahi
+- attendance source check: `app` izafa (web, whatsapp, leave rehte hain)
+- support_tickets intake: `mobile_app`
+- support evidence mime: voice types
+- milk_route_collections.client_uuid
+- mobile_sync_inbox (service role likhta hai; authenticated sirf apni row padhta hai)
+- Rollback: `698_mobile_phase1.rollback.sql` (nayi qadron wali rows hon to purana check wapas nahi lagega)
+
+WhatsApp number code mein nahi. Live par link tabhi dikhe jab `SUPPORT_WHATSAPP_E164` ya `website_settings.support_whatsapp` ya `contact_phone` set ho.
+
 ## Pending — 21 October 2026: Bharti offer → structure → barhotri → salary slip (691)
 
 Branch `feat/salary-offer-slip`. Migration **691 not applied** on Testing or Live. Files only. 689 reserved, 690 left free. Backup pehle (lines file ke upar likhi hain), phir Testing, phir Live. App 691 ke baghair bhi chalta hai (purani payslip, purani offer), magar naye hissay 691 ke baad hi kaam karte hain.

@@ -1,6 +1,6 @@
 # AgriBridge OS Versioning
 
-AgriBridge OS uses product releases independent of the npm package version.
+AgriBridge OS and the mobile app share one product version. The source is the repo `VERSION` file. The portal `package.json` version and `apps/mobile/package.json` version must match it. `scripts/check-shared-version.mjs` fails the build when they differ.
 
 ## Version format
 
@@ -23,3 +23,5 @@ Each approved release must record:
 ## Current baseline
 
 The current approved release is documented in `docs/releases/AgriBridge-OS-v0.3.0.md`.
+
+`v0.4.0` is proposed in `docs/releases/AgriBridge-OS-v0.4.0.md` (mobile phase 1). It is not approved until it is deployed. Plan enforcement, which this number used to mean, moves to a later version.

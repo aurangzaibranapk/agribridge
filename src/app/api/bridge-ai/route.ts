@@ -18,7 +18,7 @@ import { recordError } from "@/lib/errors/record";
 export async function POST(request: NextRequest) {
   // Bridge AI sirf admin panel se chalta hai. Middleware /api ko nahi bachata,
   // is liye rok yahan lagani parti hai.
-  const auth = await requireStaff();
+  const auth = await requireStaff(request);
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   const shuru = Date.now();

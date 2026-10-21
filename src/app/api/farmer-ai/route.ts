@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requestUser } from "@/lib/api-auth";
 import { processFarmerAiMessage } from "@/lib/farmer-ai-processor";
 import { aiKeyOrNull, AI_KEY_MISSING, aiErrorMessage } from "@/lib/ai/ai-failure";
 
@@ -15,13 +15,11 @@ export async function POST(request: NextRequest) {
     }
     if (!aiKeyOrNull()) return NextResponse.json({ error: AI_KEY_MISSING }, { status: 503 });
 
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Login zaroori hai" }, { status: 401 });
+    const auth = await requestUser(request);
+    if (!auth) return NextResponse.json({ error: "Login zaroori hai" }, { status: 401 });
+    const supabase = auth.supabase;
 
-    const { data: farmer } = await supabase.from("farmers").select("id").eq("user_id", user.id).single();
+    const { data: farmer } = await supabase.from("farmers").select("id").eq("user_id", auth.userId).single();
     if (!farmer) return NextResponse.json({ error: "Farmer profile nahi mila" }, { status: 404 });
 
     const result = await processFarmerAiMessage(supabase, farmer.id, { text: message, audioBase64, audioMimeType });
