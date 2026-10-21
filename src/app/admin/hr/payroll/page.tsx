@@ -21,6 +21,12 @@ export default async function PayrollPage({ searchParams }: { searchParams: { m?
   ]);
   const pm = new Map<string, any>((profs ?? []).map((p: any) => [p.id, p]));
   const { data: lines } = run ? await sb.from("payroll_lines").select("*").eq("run_id", run.id) : { data: [] };
+  const [{ data: warns }, { data: adjs }] = run
+    ? await Promise.all([
+        sb.from("payroll_run_warnings").select("id, profile_id, message").eq("run_id", run.id),
+        sb.from("payroll_line_adjustments").select("*").eq("run_id", run.id).order("adjusted_at"),
+      ])
+    : [{ data: [] }, { data: [] }];
   const { data: sd } = await sb.from("staff_details").select("profile_id, designation");
   const dm = new Map<string, string>((sd ?? []).map((s: any) => [s.profile_id, s.designation]));
   return (
@@ -29,6 +35,8 @@ export default async function PayrollPage({ searchParams }: { searchParams: { m?
       year={y} month={m} branch={branch}
       branches={branches ?? []} accounts={accounts ?? []}
       run={run ? { ...run, creator: pm.get(run.created_by)?.full_name, approverName: pm.get(run.approved_by)?.full_name, payer: pm.get(run.paid_by)?.full_name } : null}
+      warnings={(warns ?? []).filter((w: any) => !(lines ?? []).some((l: any) => l.profile_id === w.profile_id)).map((w: any) => ({ ...w, name: pm.get(w.profile_id)?.full_name ?? "Staff" }))}
+      adjustments={(adjs ?? []).map((a: any) => ({ ...a, staff: pm.get(a.profile_id)?.full_name ?? "—", by: pm.get(a.adjusted_by)?.full_name ?? "—" }))}
       lines={(lines ?? []).map((l: any) => ({ ...l, name: pm.get(l.profile_id)?.full_name ?? "—", designation: dm.get(l.profile_id) ?? pm.get(l.profile_id)?.role ?? "" })).sort((a: any, b: any) => a.name.localeCompare(b.name))}
     />
   );
