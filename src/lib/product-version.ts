@@ -1,8 +1,5 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 /**
- * Portal aur mobile app ka EK version. Source sirf repo ki VERSION file
- * hai. Dono release saath jaate hain — alag version nahi.
+ * Mobile aur portal API ka product version.
+ * Source sirf src/lib/app-version.ts ka AGRIBRIDGE_OS_VERSION hai.
  */
-export const PRODUCT_VERSION = readFileSync(join(process.cwd(), "VERSION"), "utf8").trim();
+export { AGRIBRIDGE_OS_VERSION as PRODUCT_VERSION } from "./app-version";

@@ -1,7 +1,8 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+const { loadPortalVersion } = require("./portal-version.cjs") as {
+  loadPortalVersion: () => { version: string; versionCode: number };
+};
 
-const version = readFileSync(join(__dirname, "../../VERSION"), "utf8").trim();
+const { version, versionCode } = loadPortalVersion();
 
 /** Same rule as src/lib/mobile/channel.ts. Expo config cannot import that .ts file. */
 function normalizeChannel(raw: unknown): "debug" | "internal" | "production" {
@@ -21,7 +22,7 @@ export function buildExpoConfig(env: NodeJS.ProcessEnv = process.env) {
       backgroundColor: "#F3F6F1",
       android: {
         package: "pk.alranatraders.agribridge",
-        versionCode: 2,
+        versionCode,
         backgroundColor: "#186838",
         permissions: [
           "ACCESS_COARSE_LOCATION",

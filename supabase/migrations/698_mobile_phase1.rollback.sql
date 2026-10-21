@@ -1,4 +1,6 @@
--- 698 rollback. App source wali hazri pehle hatani hogi warna constraint nahi baithega.
+-- 698 rollback.
+-- Pehle attendance_records se woh qatarein DELETE karein jin ka source = 'app' hai.
+-- Warna neeche wala check nahi baithta: 'app' live wali list mein nahi hai.
 
 drop policy if exists mobile_inbox_read_own on public.mobile_sync_inbox;
 drop table if exists public.mobile_sync_inbox;

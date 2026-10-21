@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { performance } from "node:perf_hooks";
 import { createHash } from "node:crypto";
+import { AGRIBRIDGE_OS_VERSION, versionCodeFor } from "../src/lib/app-version";
 import { PRODUCT_VERSION } from "../src/lib/product-version";
 import { buildExpoConfig } from "../apps/mobile/app.config";
 import { normalizeChannel, showProductionSupport, showTesterReport } from "../src/lib/mobile/channel";
@@ -19,17 +20,15 @@ import { elapsed, withinBudget, MOBILE_BUNDLE_BUDGET_BYTES } from "../src/lib/mo
 import { shiftTotals } from "../src/lib/mobile/shifts";
 import { calculateMilkValue } from "../src/lib/utils/milk-formula";
 
-const versionFile = readFileSync("VERSION", "utf8").trim();
-const pkg = JSON.parse(readFileSync("package.json", "utf8"));
-const mobilePkg = JSON.parse(readFileSync("apps/mobile/package.json", "utf8"));
-assert.equal(PRODUCT_VERSION, versionFile);
-assert.equal(pkg.version, versionFile);
-assert.equal(mobilePkg.version, versionFile);
-assert.equal(buildExpoConfig({ APP_CHANNEL: "debug" }).expo.version, versionFile);
+assert.equal(PRODUCT_VERSION, AGRIBRIDGE_OS_VERSION);
+assert.equal(buildExpoConfig({ APP_CHANNEL: "debug" }).expo.version, AGRIBRIDGE_OS_VERSION);
+assert.equal(buildExpoConfig({ APP_CHANNEL: "debug" }).expo.extra.productVersion, AGRIBRIDGE_OS_VERSION);
 assert.equal(buildExpoConfig({ APP_CHANNEL: "production" }).expo.extra.appChannel, "production");
 assert.equal(buildExpoConfig({}).expo.extra.appChannel, "production");
 assert.equal(buildExpoConfig({ APP_CHANNEL: "internal" }).expo.extra.appChannel, "internal");
-assert.equal(buildExpoConfig({ APP_CHANNEL: "debug" }).expo.android.versionCode, 2);
+assert.equal(versionCodeFor("v0.6.1 Beta"), 601);
+assert.equal(buildExpoConfig({ APP_CHANNEL: "debug" }).expo.android.versionCode, versionCodeFor(AGRIBRIDGE_OS_VERSION));
+assert.ok(versionCodeFor(AGRIBRIDGE_OS_VERSION) > 1);
 assert.equal(buildExpoConfig({}).expo.android.package, "pk.alranatraders.agribridge");
 
 assert.equal(showTesterReport("debug"), true);
@@ -128,11 +127,11 @@ const link = supportWhatsapp({ envNumber: "+923001112233" });
 assert.ok(link?.href.startsWith("https://wa.me/923001112233"));
 assert.equal(supportWhatsapp({ envNumber: "+923001112233", settingNumber: "03009998877" })?.e164, "923001112233");
 
-const ctx = reportContext({ screen: "MCA route", route: "/mca/route", userId: "u1", role: "milk_collection", appRole: "mca", deviceModel: "Pixel", os: "Android 14", appVersion: versionFile, network: "offline", channel: "debug" });
+const ctx = reportContext({ screen: "MCA route", route: "/mca/route", userId: "u1", role: "milk_collection", appRole: "mca", deviceModel: "Pixel", os: "Android 14", appVersion: AGRIBRIDGE_OS_VERSION, network: "offline", channel: "debug" });
 const description = reportDescription("Litre galat dikha", ctx);
 assert.match(description, /MCA route/);
 assert.match(description, /milk_collection/);
-assert.match(description, new RegExp(versionFile));
+assert.match(description, /v0\.6\.1 Beta/);
 assert.match(description, /offline/);
 
 const totals = shiftTotals([{ shift: "morning", liters: 10, amount: 100 }, { shift: "evening", liters: 4, amount: 40 }]);
@@ -167,7 +166,7 @@ void (async () => {
   await import("../src/lib/mobile/pricing");
   await import("../src/lib/mobile/sync");
   const importMs = Math.round(performance.now() - started);
-  console.log(`MOBILE_PERF ${JSON.stringify({ importMs, bundleBudgetBytes: MOBILE_BUNDLE_BUDGET_BYTES, version: versionFile })}`);
+  console.log(`MOBILE_PERF ${JSON.stringify({ importMs, bundleBudgetBytes: MOBILE_BUNDLE_BUDGET_BYTES, version: AGRIBRIDGE_OS_VERSION })}`);
   assert.ok(importMs < 2000, `domain import ${importMs}ms`);
   console.log("mobile phase 1 ok");
 })();

@@ -1,6 +1,10 @@
-## Pending — 21 October 2026: Mobile phase 1 (698)
+## Applied — 22 October 2026 ~00:10 PKT: Mobile phase 1 (698) on Live
 
-Branch `cursor/mobile-phase1-4b80`. Migration **698 not applied** on Testing or Live. Files only. Backup pehle (size chat mein), phir Testing, phir Live, phir naya build. App 698 ke baghair bhi login aur zyada tar field kaam karta hai: attendance `source` pehle `app` try karti hai, constraint na ho to `web` likhti hai; ticket `intake_source` pehle `mobile_app`, warna `support`; `field_app_role` column na ho to designation se MCO/MCA. Jo 698 ke baghair nahi banta: `mobile_sync_inbox` (doosre phone par adhuri queue), voice mime (`audio/mp4` waghaira).
+Branch `cursor/mobile-phase1-4b80`, commit `caa6b91d`. Migration **698 applied** on Live `ktskwawkslaznkjjacni` on 2026-10-22 at ~00:10 PKT. Testing par is dafe ka alag record nahi. Portal build abhi is PR ke sath deploy nahi hui.
+
+Backups `backups` schema mein hain, suffix `_20261022_mig698`: `staff_details`, `milk_rate_settings`, `attendance_records`, `support_tickets`, `support_ticket_attachments`, `milk_route_collections`, `storage_buckets`, aur constraints.
+
+Rollback: `698_mobile_phase1.rollback.sql`. Us se pehle `attendance_records` ki woh qatarein delete karni hain jin ka `source = 'app'` hai, warna purana check nahi baithta.
 
 - staff_details.field_app_role: null, mca, ya mco
 - milk_rate_settings: fat/lr/snf alert columns, nullable, koi sample default nahi

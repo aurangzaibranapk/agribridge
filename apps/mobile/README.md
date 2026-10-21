@@ -2,7 +2,7 @@
 
 Expo / React Native app in this same repo. It talks only to the portal API (`EXPO_PUBLIC_PORTAL_URL`). The anon key is not in the app.
 
-Shared product version is the repo `VERSION` file (`0.4.0`). Portal `package.json`, this `package.json`, and the Android `versionName` all read that file. Android `versionCode` is `2` (the old Play TWA was `1`). Package id: `pk.alranatraders.agribridge`.
+The app version is `AGRIBRIDGE_OS_VERSION` in `src/lib/app-version.ts` (currently `v0.6.1 Beta`). Expo reads that file at build time. Android `versionCode` is `major * 10000 + minor * 100 + patch` (601). The old Play TWA was versionCode 1. CI fails if the Expo version or versionCode disagree with the portal constant. Package id: `pk.alranatraders.agribridge`. The npm `package.json` version is not the product version.
 
 ## APP_CHANNEL — Masla batayein
 
