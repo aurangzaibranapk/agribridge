@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import { activeExemption, pkEndOfDayIso, validateGrant, type BranchExemption } from "../src/lib/recovery/exemption";
+const now = new Date("2026-10-21T15:00:00Z");
+const row = (o: Partial<BranchExemption>): BranchExemption => ({ id: "a", branch_id: "b", reason: "ok ok", valid_from: "2026-10-21T00:00:00Z", valid_until: "2026-11-20T18:59:59Z", approved_by: "u", revoked_at: null, ...o });
+assert.equal(activeExemption([row({})], now)?.id, "a");
+assert.equal(activeExemption([row({ revoked_at: "2026-10-21T10:00:00Z" })], now), null);
+assert.equal(activeExemption([row({ valid_until: "2026-10-21T14:59:59Z" })], now), null);
+assert.equal(activeExemption([row({ valid_from: "2026-10-22T00:00:00Z" })], now), null);
+assert.equal(activeExemption([row({ id: "x", valid_until: "2026-10-30T00:00:00Z" }), row({ id: "y" })], now)?.id, "y");
+assert.equal(pkEndOfDayIso("2026-11-20"), "2026-11-20T18:59:59.000Z");
+assert.equal(pkEndOfDayIso("20-11-2026"), null);
+assert.equal(validateGrant({ reason: "ok wajah", untilIso: pkEndOfDayIso("2026-11-20"), now }), null);
+assert.ok(validateGrant({ reason: "x", untilIso: pkEndOfDayIso("2026-11-20"), now }));
+assert.ok(validateGrant({ reason: "ok wajah", untilIso: pkEndOfDayIso("2026-10-20"), now }));
+assert.ok(validateGrant({ reason: "ok wajah", untilIso: pkEndOfDayIso("2027-03-01"), now }));
+console.log("branch-exemption lib OK");

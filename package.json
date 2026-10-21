@@ -89,7 +89,8 @@
     "test:supply-chain": "npx --yes tsx --tsconfig scripts/tsconfig.inbox-test.json scripts/test-supply-chain.ts && node tests/supply-chain-692-sql.mjs",
     "test:hr-kpi": "npx --yes tsx scripts/test-hr-kpi.ts && node tests/hr-kpi-wiring.cjs && node tests/hr-kpi-688-db.mjs",
     "test:data-health-assistant": "npx --yes tsx scripts/test-data-health-assistant.ts && node tests/data-health-assistant-694-sql.mjs",
-    "test:adjust-stock-695": "node tests/adjust-stock-695-sql.mjs"
+    "test:adjust-stock-695": "node tests/adjust-stock-695-sql.mjs",
+    "test:branch-exemption": "npx --yes tsx scripts/test-branch-exemption.ts && node tests/branch-exemption-697.cjs"
   },
   "dependencies": {
     "@google/genai": "^2.17.1",
