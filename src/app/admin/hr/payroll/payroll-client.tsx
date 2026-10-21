@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { SO_BTN, SO_BTN2 } from "@/components/payroll/salary-ui";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { createPayrollRun, payPayrollRun, payrollTransition, type PayrollState } from "@/actions/payroll";
 import { BTN, CARD, Header, INPUT, Kpi, Msg, PAGE, Pill, Submit, TD, TH, rs, pkr } from "@/components/payroll/ui";
@@ -67,7 +68,7 @@ export default function PayrollClient({ me, year, month, branch, branches, accou
       </div>
       <div className={`${CARD} overflow-auto`}>
         <h3 className="mb-2 font-semibold">Review</h3>
-        <table className="w-full min-w-[1120px] text-sm">
+        <table className="w-full min-w-[1280px] text-sm">
           <thead><tr>{["Staff", "Basic", "Hazir", "Absent", "Bina record (absent)", "Kul ghair-hazir", "Half day", "Chhutti (paid)", "Ghair-hazri kattauti", "Advance qist", "Net", ""].map((h, i) => <th key={h + i} className={`${TH} ${i > 0 && i < 11 ? "text-right" : ""}`}>{h}</th>)}</tr></thead>
           <tbody>
             {lines.map((l: any) => (
@@ -83,7 +84,11 @@ export default function PayrollClient({ me, year, month, branch, branches, accou
                 <td className={`${TD} text-right tabular-nums text-red-600 dark:text-red-400`}>{+l.absent_deduction ? `− ${pkr(l.absent_deduction)}` : "—"}</td>
                 <td className={`${TD} text-right tabular-nums text-red-600 dark:text-red-400`}>{+l.advance_deduction ? `− ${pkr(l.advance_deduction)}` : "—"}</td>
                 <td className={`${TD} text-right font-bold tabular-nums`}>{rs(l.net)}</td>
-                <td className={TD}>{(status === "approved" || status === "paid") && <Link className="text-xs font-semibold text-emerald-700 hover:underline dark:text-emerald-300" href={`/admin/hr/payslip/${l.id}`}>Payslip</Link>}</td>
+                <td className={`${TD} sticky right-0 bg-white dark:bg-[#111c33]`}>{(status === "approved" || status === "paid") && (
+                  <div className="flex gap-1.5 whitespace-nowrap">
+                    <Link className={SO_BTN} href={`/admin/hr/payslip/${l.id}`}>🧾 Salary Slip</Link>
+                    <a className={SO_BTN2} href={`/api/hr/payslip/${l.id}/pdf`}>⬇ PDF</a>
+                  </div>)}</td>
               </tr>))}
             {lines.length === 0 && <tr><td className={TD} colSpan={12}><span className="text-slate-500">Abhi hisaab nahi chala. Sirf manzoor shuda salary structure wale staff run mein aate hain.</span></td></tr>}
           </tbody>

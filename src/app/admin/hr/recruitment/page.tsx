@@ -44,11 +44,11 @@ export default async function RecruitmentPage({ searchParams }: { searchParams?:
       <div className={cardCls}>
         {rows.length ? (
           <table className="w-full text-sm">
-            <thead><tr className="text-left text-xs text-surface-500"><th>Tareekh</th><th>Naam</th><th>Vacancy</th><th>Marhala</th></tr></thead>
+            <thead><tr className="text-left text-xs text-surface-500"><th>Tareekh</th><th>Naam</th><th>Vacancy</th><th>Marhala</th><th></th></tr></thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id} className="border-t border-surface-100 dark:border-surface-800">
-                  <td className="py-1.5">{r.created_at.slice(0, 10)}</td><td>{r.full_name}</td><td>{vt.get(r.vacancy_id) ?? "—"}</td>
+                  <td className="py-1.5">{r.created_at.slice(0, 10)}</td><td><a className="font-medium text-brand-700 hover:underline dark:text-brand-300" href={`/admin/hr/recruitment/${r.id}`}>{r.full_name}</a></td><td>{vt.get(r.vacancy_id) ?? "—"}</td>
                   <td>
                     <form action={moveStage} className="flex gap-1">
                       <input type="hidden" name="id" value={r.id} />
@@ -58,6 +58,7 @@ export default async function RecruitmentPage({ searchParams }: { searchParams?:
                       <button className="rounded bg-surface-200 px-2 text-xs dark:bg-surface-700">Badlein</button>
                     </form>
                   </td>
+                  <td><a className="text-xs font-semibold text-green-700 hover:underline" href={`/admin/hr/recruitment/${r.id}`}>Tankhwah / Offer</a></td>
                 </tr>
               ))}
             </tbody>

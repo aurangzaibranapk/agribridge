@@ -223,6 +223,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/hr/attendance-log", label: "Hazri Record", icon: ClipboardCheck },
       { href: "/admin/hr/salary-structure", label: "Tankhwah ka Dhancha", icon: WalletCards },
       { href: "/admin/hr/payroll", label: "Payroll", icon: WalletCards },
+      { href: "/admin/hr/increments", label: "Aane wali barhotriyan", icon: WalletCards },
       { href: "/admin/hr/advances", label: "Staff Advance", icon: WalletCards },
       { href: "/admin/hr/attendance/board", label: "Hazri Board", icon: AlertTriangle },
       { href: "/admin/hr/meetings", label: "Meetings", icon: CalendarDays },

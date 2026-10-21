@@ -30,7 +30,12 @@ export async function saveSalaryStructure(_p: PayrollState, fd: FormData): Promi
   const effectiveFrom = String(fd.get("effective_from") ?? "");
   if (!profileId || !(basic > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom)) return err("Staff, basic (sifar se zyada) aur laagu tareekh zaroori hain.");
   const { data: s, error } = await sb.from("staff_salary_structures")
-    .insert({ profile_id: profileId, basic, effective_from: effectiveFrom, notes: (fd.get("notes") as string) || null, created_by: user.id })
+    .insert({
+      profile_id: profileId, basic, effective_from: effectiveFrom, notes: (fd.get("notes") as string) || null, created_by: user.id,
+      // 691: qubool offer se bana draft -- sirf tab bhejo jab form ne diya ho (purane database par bhi chale)
+      ...(fd.get("source_offer_id") ? { source_offer_id: String(fd.get("source_offer_id")) } : {}),
+      ...(fd.get("change_reason") ? { change_reason: String(fd.get("change_reason")) } : {}),
+    })
     .select("id").single();
   if (error) return err(error);
   const items: { structure_id: string; component_id: string; amount: number | null; pct: number | null }[] = [];
