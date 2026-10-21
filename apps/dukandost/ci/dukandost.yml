@@ -1,0 +1,44 @@
+name: DukanDost (Flutter)
+
+on:
+  push:
+    paths: ["apps/dukandost/**", ".github/workflows/dukandost.yml"]
+  pull_request:
+    paths: ["apps/dukandost/**", ".github/workflows/dukandost.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  flutter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: apps/dukandost
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  rls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: RLS tests (local Postgres only, no cloud project)
+        run: apps/dukandost/supabase/tests/run_rls_tests.sh
+        env:
+          PGURL: postgres://postgres:postgres@localhost:5432/postgres
