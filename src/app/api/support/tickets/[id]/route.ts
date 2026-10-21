@@ -116,7 +116,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         await supportDb.from("support_tickets").update({
           external_task_id: dispatched.externalTaskId ?? null,
           assignment_status: dispatched.assignmentStatus ?? "analysis_requested",
+          ...(dispatched.ticketStatus ? { status: dispatched.ticketStatus } : {}),
         }).eq("id", ticket.id);
+        if (dispatched.message) {
+          await supportDb.from("support_ticket_comments").insert({ ticket_id: ticket.id, author_id: user.id, body: dispatched.message.slice(0, 6000) });
+        }
+
       }
       if (ticket.reporter_id && ticket.reporter_id !== user.id) {
         const label = forwarded.data?.label ? String(forwarded.data.label) : "Complaint aage bhej di.";
