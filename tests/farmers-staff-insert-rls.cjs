@@ -14,4 +14,7 @@ const action = read("src/actions/admin-farmers.ts");
 const insert = action.slice(action.indexOf('.from("farmers")'), action.indexOf(".select(\"id\")"));
 assert.doesNotMatch(insert, /is_verified\s*:/);
 assert.match(insert, /registration_source:\s*"STAFF"/);
+// ticket #1: action must send the caller's own branch/org explicitly
+assert.match(insert, /\.\.\.callerScope/);
+assert.match(action, /from\("profiles"\)\s*\.select\("branch_id, organization_id"\)\s*\.eq\("id", user\.id\)/);
 console.log("farmers-staff-insert-rls: ok");
