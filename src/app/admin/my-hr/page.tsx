@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { PulseCard } from "@/components/hr-kpi/pulse-card";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { CheckinClient } from "@/app/admin/my-attendance/checkin-client";
@@ -40,7 +41,7 @@ export const dynamic = "force-dynamic";
  *
  * Is liye yahan sirf wo box hain jo waqai kaam karte hain.
  */
-export default async function MyHrPage() {
+export default async function MyHrPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
   const supabase = createClient();
   const lang = getLanguageFromCookies("rm");
 
@@ -147,6 +148,9 @@ export default async function MyHrPage() {
         title={`Assalam-o-Alaikum, ${naam}`}
         description="Aap ki apni hazri, chhutti, tankhwah aur baqi kaam — ek jagah"
       />
+
+      {/* NAYA (688): mahana gumnaam pulse -- HR dashboard ki engagement/satisfaction */}
+      <PulseCard userId={user.id} sp={searchParams} />
 
       {/* Apni tasveer. Ye yahan hai, Team ke safhe par nahi -- har banda
           apni tasveer khud lagata hai (334). */}

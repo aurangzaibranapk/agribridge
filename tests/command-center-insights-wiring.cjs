@@ -17,5 +17,5 @@ for (const tf of ["live", "aaj", "7d", "30d", "1y"]) assert.ok(client.includes(`
 const lib = fs.readFileSync("src/lib/command-center-insights.ts", "utf8");
 assert.ok(lib.includes("shop_allowed_categories"), "dukan ki category ijazat");
 assert.ok(!/\.(insert|update|delete|upsert)\(/.test(lib), "sirf parhna");
-assert.ok(!fs.readdirSync("supabase/migrations").some((f) => f.startsWith("688")), "koi migration nahi");
+assert.ok(!fs.readdirSync("supabase/migrations").some((f) => /^(6[89]\d|[7-9]\d\d)_.*command_center/i.test(f)), "command center ki koi migration nahi");
 console.log("command-center-insights-wiring: ok");
