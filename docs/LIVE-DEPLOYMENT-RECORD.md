@@ -1,3 +1,7 @@
+## Phone 605 — 22 October 2026 — NO MIGRATION
+
+App-only. Live aur Testing par koi SQL nahi. versionCode 605 session refresh aur admin `Role dekho` hai. 699 abhi bhi file only, neeche.
+
 ## Pending — 22 October 2026: App test account (699) — FILE ONLY
 
 Branch `cursor/mobile-phase1-4b80`. Migration **699 not applied**. Live aur Testing dono par nahi chali. Auth user bhi nahi bana. `hwaiuwxqldxsoukkfefn` ko haath nahi lagana.

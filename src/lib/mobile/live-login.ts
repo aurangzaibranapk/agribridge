@@ -22,7 +22,6 @@ export const LOGIN_TEXT: Record<string, string> = {
 };
 
 const PHONE_NEEDS_PORTAL = "Mobile ya CNIC se login tab chalega jab portal ka naya build live ho. Email se abhi login ho sakta hai.";
-const PRODUCTION_EMAIL_FAIL = "Login nahi hua. Thori der baad koshish karein.";
 
 export type MobileChannel = "debug" | "internal" | "production";
 
@@ -46,8 +45,9 @@ export type SignInResult =
 
 type Json = Record<string, unknown> | unknown[] | null;
 
+/** Raw HTTP/JSON sirf debug build par. Internal sideload par Urdu hi. */
 export function showsHttpDetail(channel: MobileChannel): boolean {
-  return channel === "debug" || channel === "internal";
+  return channel === "debug";
 }
 
 export function isEmailIdentifier(raw: string): boolean {
@@ -109,6 +109,13 @@ function asRecord(value: Json): Record<string, unknown> | null {
   return value;
 }
 
+function expiresAtFrom(json: Record<string, unknown> | null): number | null {
+  if (!json) return null;
+  if (typeof json.expires_at === "number") return json.expires_at;
+  if (typeof json.expires_in === "number") return Math.floor(Date.now() / 1000) + json.expires_in;
+  return null;
+}
+
 function sessionFromPortal(json: Record<string, unknown>): MobileSession {
   const role = String(json.role ?? "");
   const explicit = typeof json.appRole === "string" ? json.appRole : "";
@@ -118,7 +125,7 @@ function sessionFromPortal(json: Record<string, unknown>): MobileSession {
     user_id: String(json.user_id ?? ""),
     role,
     appRole: isAppRole(explicit) ? explicit : appRoleFor({ role }),
-    expires_at: typeof json.expires_at === "number" ? json.expires_at : null,
+      expires_at: expiresAtFrom(json),
   };
 }
 
@@ -283,7 +290,7 @@ async function supabaseEmailLogin(input: {
       user_id: userId,
       role: row.role,
       appRole: appRoleFor({ role: row.role, designation, fieldAppRole }),
-      expires_at: typeof authJson?.expires_at === "number" ? authJson.expires_at : null,
+      expires_at: expiresAtFrom(authJson),
     },
   };
 }
@@ -389,6 +396,6 @@ export async function signInMobile(input: {
   return {
     ok: false,
     offline: portalThrew,
-    message: showsHttpDetail(input.channel) ? why : PRODUCTION_EMAIL_FAIL,
+    message: why,
   };
 }

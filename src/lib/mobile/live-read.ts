@@ -4,6 +4,7 @@
  */
 
 import { acceptedSupabaseUrl, clipDetail, failureLine, type FetchLike, type MobileChannel } from "./live-login";
+import { jwtExpired, SESSION_EXPIRED, type RefreshFailure, type RefreshSuccess } from "./session-refresh";
 
 export type LiveAuth = {
   url: string;
@@ -12,6 +13,8 @@ export type LiveAuth = {
   channel: MobileChannel;
   /** Test account sirf is_test qatarein parhta hai. Asal admin inhen chhupata hai. */
   testAccount?: boolean;
+  /** 401 JWT expired par ek dafa. Naya token, ya dead/offline. */
+  refreshSession?: () => Promise<RefreshSuccess | RefreshFailure>;
 };
 
 export type ReadScope = "live" | "test";
@@ -68,9 +71,25 @@ function parseArray(text: string): unknown[] | null {
   }
 }
 
+async function refreshOnce(auth: LiveAuth): Promise<string | "dead" | "skip"> {
+  if (!auth.refreshSession) return "skip";
+  const outcome = await auth.refreshSession();
+  if (outcome.ok) return outcome.accessToken;
+  return outcome.dead ? "dead" : "skip";
+}
+
 export async function liveGet<T>(auth: LiveAuth, path: string, fetchImpl: FetchLike): Promise<ReadResult<T>> {
+  const first = await liveGetOnce<T>(auth, auth.token, path, fetchImpl);
+  if (first.ok || !jwtExpired(first.status, first.detail)) return first;
+  const next = await refreshOnce(auth);
+  if (next === "dead") return { ok: false, status: 401, message: SESSION_EXPIRED };
+  if (next === "skip") return first;
+  return liveGetOnce<T>(auth, next, path, fetchImpl);
+}
+
+async function liveGetOnce<T>(auth: LiveAuth, token: string, path: string, fetchImpl: FetchLike): Promise<ReadResult<T>> {
   const base = acceptedSupabaseUrl(auth.url);
-  if (!base || !auth.anonKey.trim() || !auth.token.trim()) {
+  if (!base || !auth.anonKey.trim() || !token.trim()) {
     return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Live read is build mein set nahi." }) };
   }
   try {
@@ -78,7 +97,7 @@ export async function liveGet<T>(auth: LiveAuth, path: string, fetchImpl: FetchL
       method: "GET",
       headers: {
         apikey: auth.anonKey,
-        authorization: `Bearer ${auth.token}`,
+        authorization: `Bearer ${token}`,
         accept: "application/json",
       },
     });
@@ -101,8 +120,17 @@ export async function liveGet<T>(auth: LiveAuth, path: string, fetchImpl: FetchL
 }
 
 export async function liveRpc<T>(auth: LiveAuth, name: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<{ ok: true; data: T } | { ok: false; status: number; message: string; detail?: string }> {
+  const first = await liveRpcOnce<T>(auth, auth.token, name, body, fetchImpl);
+  if (first.ok || !jwtExpired(first.status, first.detail)) return first;
+  const next = await refreshOnce(auth);
+  if (next === "dead") return { ok: false, status: 401, message: SESSION_EXPIRED };
+  if (next === "skip") return first;
+  return liveRpcOnce<T>(auth, next, name, body, fetchImpl);
+}
+
+async function liveRpcOnce<T>(auth: LiveAuth, token: string, name: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<{ ok: true; data: T } | { ok: false; status: number; message: string; detail?: string }> {
   const base = acceptedSupabaseUrl(auth.url);
-  if (!base || !auth.anonKey.trim() || !auth.token.trim()) {
+  if (!base || !auth.anonKey.trim() || !token.trim()) {
     return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Live read is build mein set nahi." }) };
   }
   try {
@@ -110,7 +138,7 @@ export async function liveRpc<T>(auth: LiveAuth, name: string, body: Record<stri
       method: "POST",
       headers: {
         apikey: auth.anonKey,
-        authorization: `Bearer ${auth.token}`,
+        authorization: `Bearer ${token}`,
         accept: "application/json",
         "content-type": "application/json",
       },

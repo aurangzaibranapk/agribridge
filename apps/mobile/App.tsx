@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Linking, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, AppState, Linking, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import Constants from "expo-constants";
 import * as Crypto from "expo-crypto";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -9,7 +9,8 @@ import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
 import { normalizeChannel, showTesterReport } from "../../src/lib/mobile/channel";
 import { failureLine, signInMobile } from "../../src/lib/mobile/live-login";
-import { readTestAccount, showRoleSwitch, SWITCH_ROLES, switchRoleLabel } from "../../src/lib/mobile/test-account";
+import { readTestAccount, showRolePreview, showRoleSwitch, SWITCH_ROLES, switchRoleLabel } from "../../src/lib/mobile/test-account";
+import { refreshSupabaseSession, SESSION_EXPIRED, singleFlight, type RefreshFailure, type RefreshSuccess } from "../../src/lib/mobile/session-refresh";
 import { ROLE_NAV } from "../../src/lib/mobile/nav";
 import type { AppRole } from "../../src/lib/mobile/roles";
 import { pinLock, pinProblem } from "../../src/lib/mobile/pin";
@@ -70,7 +71,68 @@ export default function App() {
   const [fails, setFails] = useState(0);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   const [isTest, setIsTest] = useState(false);
+  const [homeRole, setHomeRole] = useState<AppRole | null>(null);
   const [switchOpen, setSwitchOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const sessionRef = useRef<{ token: string; refresh: string; expiresAt: number | null } | null>(null);
+  const refreshFlight = useRef<(() => Promise<RefreshSuccess | RefreshFailure>) | null>(null);
+
+  function rememberSession(next: { token: string; refresh: string; expiresAt: number | null; role: string; appRole: AppRole; userId: string; isTest: boolean }) {
+    sessionRef.current = { token: next.token, refresh: next.refresh, expiresAt: next.expiresAt };
+    return SecureStore.setItemAsync("agribridge.session", JSON.stringify({
+      token: next.token,
+      refresh: next.refresh,
+      expiresAt: next.expiresAt,
+      role: next.role,
+      appRole: next.appRole,
+      userId: next.userId,
+      isTest: next.isTest,
+    }));
+  }
+
+  async function dropSession(message: string) {
+    sessionRef.current = null;
+    setToken(null);
+    setStage("login");
+    setRoute("/login");
+    setError(message);
+    await SecureStore.deleteItemAsync("agribridge.session");
+  }
+
+  async function runRefresh(): Promise<RefreshSuccess | RefreshFailure> {
+    const current = sessionRef.current;
+    if (!current?.refresh) return { ok: false, dead: true };
+    const outcome = await refreshSupabaseSession({
+      supabaseUrl: SUPABASE_URL,
+      anonKey: SUPABASE_ANON,
+      refreshToken: current.refresh,
+      fetchImpl: (url, init) => fetch(url, init),
+    });
+    if (!outcome.ok) {
+      if (outcome.dead) await dropSession(SESSION_EXPIRED);
+      return outcome;
+    }
+    sessionRef.current = { token: outcome.accessToken, refresh: outcome.refreshToken, expiresAt: outcome.expiresAt };
+    setToken(outcome.accessToken);
+    try {
+      const raw = await SecureStore.getItemAsync("agribridge.session");
+      if (raw) {
+        const saved = JSON.parse(raw) as Record<string, unknown>;
+        saved.token = outcome.accessToken;
+        saved.refresh = outcome.refreshToken;
+        saved.expiresAt = outcome.expiresAt;
+        await SecureStore.setItemAsync("agribridge.session", JSON.stringify(saved));
+      }
+    } catch {
+      // Naya token memory mein hai. Agli refresh dubara save karegi.
+    }
+    return outcome;
+  }
+
+  function refreshSession() {
+    if (!refreshFlight.current) refreshFlight.current = singleFlight(runRefresh);
+    return refreshFlight.current();
+  }
 
   useEffect(() => {
     bootMark("first-screen");
@@ -79,9 +141,15 @@ export default function App() {
       const pinHash = await SecureStore.getItemAsync("agribridge.pin");
       if (saved && pinHash) {
         const session = JSON.parse(saved);
+        sessionRef.current = {
+          token: String(session.token ?? ""),
+          refresh: String(session.refresh ?? ""),
+          expiresAt: typeof session.expiresAt === "number" ? session.expiresAt : null,
+        };
         setToken(session.token);
         setRole(session.role);
         setAppRole(session.appRole);
+        setHomeRole(session.appRole);
         setUserId(session.userId);
         setIsTest(session.isTest === true);
         setStage("unlock");
@@ -136,9 +204,18 @@ export default function App() {
     setToken(body.access_token);
     setRole(body.role);
     setAppRole(body.appRole);
+    setHomeRole(body.appRole);
     setUserId(body.user_id);
     setIsTest(test);
-    await SecureStore.setItemAsync("agribridge.session", JSON.stringify({ token: body.access_token, refresh: body.refresh_token, role: body.role, appRole: body.appRole, userId: body.user_id, isTest: test }));
+    await rememberSession({
+      token: body.access_token,
+      refresh: body.refresh_token,
+      expiresAt: body.expires_at,
+      role: body.role,
+      appRole: body.appRole,
+      userId: body.user_id,
+      isTest: test,
+    });
     setPassword("");
     setNet("online");
     setStage("pin");
@@ -152,9 +229,15 @@ export default function App() {
     const hash = await sha(`${salt}:${pin}`);
     await SecureStore.setItemAsync("agribridge.pin", JSON.stringify({ salt, hash }));
     setPin("");
+    await openApp();
+  }
+
+  async function openApp() {
+    const outcome = await refreshSession();
+    if (!outcome.ok && outcome.dead) return;
     setStage("app");
     setRoute(`/${appRole}/home`);
-    void sync(token);
+    void sync(sessionRef.current?.token ?? token);
   }
 
   async function unlock(method: "pin" | "biometric") {
@@ -162,7 +245,7 @@ export default function App() {
     if (lockedUntil && now < lockedUntil) { setError("PIN thori der band hai."); return; }
     if (method === "biometric") {
       const bio = await LocalAuthentication.authenticateAsync({ promptMessage: "AgriBridge kholen" });
-      if (bio.success) { setStage("app"); setRoute(`/${appRole}/home`); void sync(token); return; }
+      if (bio.success) { await openApp(); return; }
       setError("Fingerprint nahi hui.");
       return;
     }
@@ -179,10 +262,23 @@ export default function App() {
     }
     setFails(0);
     setPin("");
-    setStage("app");
-    setRoute(`/${appRole}/home`);
-    void sync(token);
+    await openApp();
   }
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active" && sessionRef.current?.refresh) void refreshSession();
+    });
+    return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
+    if (stage !== "app" || !sessionRef.current?.refresh) return;
+    const exp = sessionRef.current?.expiresAt;
+    const wait = exp ? Math.max(15_000, exp * 1000 - Date.now() - 60_000) : 15 * 60 * 1000;
+    const timer = setTimeout(() => { void refreshSession(); }, wait);
+    return () => clearTimeout(timer);
+  }, [stage, token]);
 
   async function sync(access = token) {
     if (!access || !PORTAL) return;
@@ -269,6 +365,13 @@ export default function App() {
 
   const Role = screen;
   const nav = appRole ? ROLE_NAV[appRole] : null;
+  const previewing = Boolean(homeRole && appRole && appRole !== homeRole && showRolePreview(CHANNEL, role, isTest));
+  function backToAdmin() {
+    if (!homeRole) return;
+    setAppRole(homeRole);
+    setTab("home");
+    setRoute(`/${homeRole}/home`);
+  }
   const startup = elapsed(marks, "js-start", "first-screen");
 
   if (!ready) return <ActivityIndicator style={{ marginTop: 80 }} color={colors.green} />;
@@ -323,7 +426,22 @@ export default function App() {
                 ) : null}
               </View>
             ) : null}
-            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} readOnly={isTest} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, testAccount: isTest }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
+            {previewing && appRole ? (
+              <View style={styles.previewBar}>
+                <Text style={styles.previewText}>Preview: {switchRoleLabel(appRole)}</Text>
+                <Pressable onPress={backToAdmin} style={styles.testBtn}>
+                  <Text style={styles.testBtnText}>Wapas Admin</Text>
+                </Pressable>
+              </View>
+            ) : showRolePreview(CHANNEL, role, isTest) && (tab === "home" || tab === "more") ? (
+              <View style={styles.previewBar}>
+                <Text style={styles.previewText}>Sirf dekhna</Text>
+                <Pressable onPress={() => setPreviewOpen(true)} style={styles.testBtn}>
+                  <Text style={styles.testBtnText}>Role dekho</Text>
+                </Pressable>
+              </View>
+            ) : null}
+            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} readOnly={isTest || previewing} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, testAccount: isTest, refreshSession }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
           </View>
           {nav ? <Tabs tabs={nav.tabs} current={tab} onChange={(key) => { setTab(key); setRoute(`/${appRole}/${key}`); }} /> : null}
           {tab === "more" ? (
@@ -348,6 +466,25 @@ export default function App() {
             })} />
             <Btn label={voice ? "Awaaz lagi" : "4 second awaaz"} kind="ghost" onPress={() => void recordVoice()} />
             <Btn label={net === "online" && token ? "Bhejein" : "Queue — baad mein"} onPress={() => void sendReport()} />
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal visible={previewOpen} animationType="slide" onRequestClose={() => setPreviewOpen(false)}>
+        <SafeAreaView style={styles.root}>
+          <Header title="Role dekho" action="Band" onAction={() => setPreviewOpen(false)} />
+          <ScrollView style={{ padding: 16 }}>
+            <Text style={styles.help}>Preview sirf dekhne ke liye hai. Likhai band hai. Jo aap ke admin login ko pehle se dikhta hai, wahi aayega. Baqi jagah khali.</Text>
+            {SWITCH_ROLES.map((next) => (
+              <Pressable key={next} style={styles.roleRow} onPress={() => {
+                setAppRole(next);
+                setTab("home");
+                setRoute(`/${next}/home`);
+                setPreviewOpen(false);
+              }}>
+                <Text style={{ fontWeight: "700", color: appRole === next ? colors.green : colors.text }}>{switchRoleLabel(next)}{appRole === next ? " · abhi" : ""}</Text>
+              </Pressable>
+            ))}
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -448,6 +585,8 @@ const styles = StyleSheet.create({
   fabText: { color: "#fff", fontWeight: "700" },
   perf: { textAlign: "center", color: colors.muted, fontSize: 11, paddingBottom: 4 },
   testBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#F4E4C4" },
+  previewBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#E7F2E4" },
+  previewText: { flex: 1, color: colors.greenDark, fontWeight: "800" },
   testBadge: { backgroundColor: "#7A4E00", color: "#fff", fontWeight: "800", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, overflow: "hidden" },
   testRole: { flex: 1, color: "#3d2e10", fontWeight: "700" },
   testBtn: { backgroundColor: colors.green, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },

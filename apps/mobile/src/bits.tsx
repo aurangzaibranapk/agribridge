@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
 import type { MobileChannel } from "../../../src/lib/mobile/live-login";
+import type { RefreshFailure, RefreshSuccess } from "../../../src/lib/mobile/session-refresh";
 import type { LiveAuth } from "../../../src/lib/mobile/live-read";
 import { colors } from "./kit";
 
@@ -11,11 +12,19 @@ export type LiveBag = {
   userId: string | null;
   channel: MobileChannel;
   testAccount?: boolean;
+  refreshSession?: () => Promise<RefreshSuccess | RefreshFailure>;
 };
 
 export function liveAuth(live: LiveBag | undefined): LiveAuth | null {
   if (!live?.token || !live.url || !live.anonKey) return null;
-  return { url: live.url, anonKey: live.anonKey, token: live.token, channel: live.channel, testAccount: live.testAccount === true };
+  return {
+    url: live.url,
+    anonKey: live.anonKey,
+    token: live.token,
+    channel: live.channel,
+    testAccount: live.testAccount === true,
+    refreshSession: live.refreshSession,
+  };
 }
 
 export function Empty({ title, body }: { title: string; body: string }) {

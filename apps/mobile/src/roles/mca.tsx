@@ -63,7 +63,7 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
         <Field label="Chiller" value={data?.chillerName || "—"} />
         <Field label="Offline queue" value={String(queueCount)} />
         <Text style={{ color: colors.muted }}>{note}</Text>
-        {readOnly ? <Text style={{ color: colors.muted, marginTop: 8 }}>TEST · GPS, meter, petrol, pickup aur drop band hain. Asal route par kuch nahi likhta.</Text> : <Btn label="Sync" kind="ghost" onPress={onSync} />}
+        {readOnly ? <Text style={{ color: colors.muted, marginTop: 8 }}>Sirf dekhna. GPS, meter, petrol, pickup aur drop band hain. Asal route par kuch nahi likhta.</Text> : <Btn label="Sync" kind="ghost" onPress={onSync} />}
       </Card>
       {!readOnly && (tab === "home" || tab === "fuel") ? (
         <Card>

@@ -23,7 +23,7 @@ jobs:
       EXPO_PUBLIC_PORTAL_URL: https://alranatraders.pk
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      AGRIBRIDGE_VERSION_CODE: "604"
+      AGRIBRIDGE_VERSION_CODE: "605"
       CI: "1"
     steps:
       - uses: actions/checkout@v4
@@ -115,8 +115,10 @@ jobs:
           tag=v0.6.1-beta-test1
           notes=$(cat <<'EOF'
           Sideload test builds for phones. Not a Play Store upload.
-          versionName v0.6.1 Beta, versionCode 604, APP_CHANNEL=internal.
-          Test account (profiles.is_test_account) can use Role badlo on this internal build.
+          versionName v0.6.1 Beta, versionCode 605, APP_CHANNEL=internal.
+          The saved Supabase session refreshes on foreground and once after JWT expired. A dead refresh returns to login in Urdu. Raw HTTP/JSON stays on debug builds only.
+          Admin and owner can use Role dekho on this internal build. Preview is read-only and keeps the admin JWT.
+          Test account (profiles.is_test_account) can still use Role badlo on this internal build.
           Admin, farmer, customer, and staff homes read the live Supabase project with the user JWT.
           Email login uses the live Supabase project when /api/mobile/v1/session is not on the portal yet.
           Mobile, CNIC, sync, milk, and feedback still need this PR's portal build on alranatraders.pk.

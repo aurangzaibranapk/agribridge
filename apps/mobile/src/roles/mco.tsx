@@ -14,8 +14,8 @@ export function RoleScreen({ tab, data, onEnqueue, readOnly = false }: { tab: st
     <ScrollView style={{ padding: 16 }}>
       {readOnly ? (
         <Card>
-          <Text style={{ fontWeight: "800", color: colors.text }}>TEST · MCO</Text>
-          <Text style={{ color: colors.muted, marginTop: 6 }}>Fat, LR aur invoice band hain. Asal chiller par kuch nahi likhta. TEST doodh kisan aur admin ghar par hai. Yahan Rs 0 is liye nahi ke hisaab sifar hai — sync ki totals is build mein nahi aati.</Text>
+          <Text style={{ fontWeight: "800", color: colors.text }}>Sirf dekhna · MCO</Text>
+          <Text style={{ color: colors.muted, marginTop: 6 }}>Fat, LR aur invoice band hain. Asal chiller par kuch nahi likhta. Yahan Rs 0 is liye nahi ke hisaab sifar hai — sync ki totals is build mein nahi aati.</Text>
         </Card>
       ) : (
         <>

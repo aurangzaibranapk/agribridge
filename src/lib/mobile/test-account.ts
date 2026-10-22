@@ -7,7 +7,7 @@
 import type { AppChannel } from "./channel";
 import type { FetchLike } from "./live-login";
 import { liveGet, type LiveAuth } from "./live-read";
-import type { AppRole } from "./roles";
+import { isPortalAdmin, type AppRole } from "./roles";
 
 export const TEST_LOGIN_EMAIL = "app-test@alranatraders.pk";
 
@@ -36,6 +36,11 @@ export function switchRoleLabel(role: AppRole): string {
 /** Production channel par flag ho to bhi button nahi. */
 export function showRoleSwitch(channel: AppChannel, isTestAccount: boolean): boolean {
   return isTestAccount === true && (channel === "debug" || channel === "internal");
+}
+
+/** Admin/owner ka Role dekho. Test account ka Role badlo alag rehta hai. */
+export function showRolePreview(channel: AppChannel, portalRole: string | null | undefined, isTestAccount: boolean): boolean {
+  return isTestAccount !== true && (channel === "debug" || channel === "internal") && isPortalAdmin(portalRole);
 }
 
 /** Column na ho to false. Asal admin ka ghar isi wajah se nahi tut-ta. */

@@ -16,9 +16,10 @@ import { fatActorError, validateOutbox } from "../src/lib/mobile/outbox";
 import { pinLock, pinProblem, verifyPin } from "../src/lib/mobile/pin";
 import { supportChatPath, supportWhatsapp } from "../src/lib/mobile/support";
 import { reportContext, reportDescription } from "../src/lib/mobile/report";
-import { acceptedSupabaseUrl, failureLine, LIVE_SUPABASE_URL, signInMobile, type FetchLike } from "../src/lib/mobile/live-login";
-import { cashPosition, columnMissing, karachiDaySeries, milkByShift, readError, salesByDay, salesOnDay, stockAlerts, withScope } from "../src/lib/mobile/live-read";
-import { showRoleSwitch, SWITCH_ROLES, TEST_LOGIN_EMAIL } from "../src/lib/mobile/test-account";
+import { acceptedSupabaseUrl, failureLine, LIVE_SUPABASE_URL, showsHttpDetail, signInMobile, type FetchLike } from "../src/lib/mobile/live-login";
+import { cashPosition, columnMissing, karachiDaySeries, liveGet, milkByShift, readError, salesByDay, salesOnDay, stockAlerts, withScope } from "../src/lib/mobile/live-read";
+import { jwtExpired, refreshDue, refreshSupabaseSession, SESSION_EXPIRED, singleFlight } from "../src/lib/mobile/session-refresh";
+import { showRolePreview, showRoleSwitch, SWITCH_ROLES, TEST_LOGIN_EMAIL } from "../src/lib/mobile/test-account";
 import { elapsed, withinBudget, MOBILE_BUNDLE_BUDGET_BYTES } from "../src/lib/mobile/perf";
 import { shiftTotals } from "../src/lib/mobile/shifts";
 import { calculateMilkValue } from "../src/lib/utils/milk-formula";
@@ -170,7 +171,7 @@ assert.match(sideload, /signingConfigs\.debug/);
 assert.match(sideloadWorkflow, /APP_CHANNEL: internal/);
 assert.match(sideloadWorkflow, /hermesEnabled=true/);
 assert.match(sideloadWorkflow, /v0\.6\.1-beta-test1/);
-assert.match(sideloadWorkflow, /AGRIBRIDGE_VERSION_CODE: "604"/);
+assert.match(sideloadWorkflow, /AGRIBRIDGE_VERSION_CODE: "605"/);
 assert.match(sideloadWorkflow, /EXPO_PUBLIC_SUPABASE_URL/);
 assert.match(sideloadWorkflow, /NEXT_PUBLIC_SUPABASE_ANON_KEY/);
 assert.match(sideloadWorkflow, /https:\/\/ktskwawkslaznkjjacni\.supabase\.co/);
@@ -181,11 +182,35 @@ assert.match(readFileSync("apps/mobile/scripts/verify-sideload-apk.sh", "utf8"),
 assert.match(readFileSync("apps/mobile/scripts/verify-sideload-apk.sh", "utf8"), /versionCode='\$\{code\}'/);
 assert.match(appSource, /showTesterReport\(CHANNEL\)/);
 assert.match(appSource, /Role badlo/);
+assert.match(appSource, /Role dekho/);
+assert.match(appSource, /Wapas Admin/);
+assert.match(appSource, /Preview: /);
+assert.match(appSource, /AppState.addEventListener/);
+assert.match(appSource, /SESSION_EXPIRED/);
+assert.match(appSource, /grant_type=refresh_token|refreshSupabaseSession/);
+assert.match(appSource, /readOnly=\{isTest \|\| previewing\}/);
+assert.match(readFileSync("src/lib/mobile/session-refresh.ts", "utf8"), /grant_type=refresh_token/);
+assert.doesNotMatch(appSource.slice(appSource.indexOf('title="Role dekho"'), appSource.indexOf('title="Role badlo"')), /setItemAsync/);
 assert.match(appSource, /showRoleSwitch\(CHANNEL, isTest\)/);
 assert.equal(showRoleSwitch("internal", true), true);
 assert.equal(showRoleSwitch("debug", true), true);
 assert.equal(showRoleSwitch("production", true), false);
 assert.equal(showRoleSwitch("internal", false), false);
+assert.equal(showRolePreview("internal", "super_admin", false), true);
+assert.equal(showRolePreview("internal", "owner", false), true);
+assert.equal(showRolePreview("debug", "admin_assistant", false), true);
+assert.equal(showRolePreview("production", "super_admin", false), false);
+assert.equal(showRolePreview("internal", "super_admin", true), false);
+assert.equal(showRolePreview("internal", "farmer", false), false);
+assert.equal(showsHttpDetail("debug"), true);
+assert.equal(showsHttpDetail("internal"), false);
+assert.equal(showsHttpDetail("production"), false);
+assert.equal(jwtExpired(401, '{"code":"PGRST303","message":"JWT expired"}'), true);
+assert.equal(jwtExpired(401, "permission denied"), false);
+assert.equal(jwtExpired(403, "JWT expired"), false);
+assert.equal(refreshDue(null, 1_000), true);
+assert.equal(refreshDue(100, 100 * 1000 - 30_000), true);
+assert.equal(refreshDue(1_000, 0), false);
 assert.deepEqual([...SWITCH_ROLES], ["admin", "farmer", "customer", "mca", "mco", "vet", "staff"]);
 assert.equal(withScope("milk_entries?select=id", "test"), "milk_entries?select=id&is_test=eq.true");
 assert.equal(withScope("farmers?select=id", "live"), "farmers?select=id&is_test=eq.false");
@@ -228,15 +253,19 @@ if (cash.state === "ok") assert.equal(cash.cash + cash.bank, 30);
 assert.equal(stockAlerts([{ id: "p", name: "Urea", min_stock_threshold: 5 }], [{ product_id: "p", quantity_on_hand: 1 }])[0].name, "Urea");
 assert.equal(stockAlerts([{ id: "p", name: "Urea", min_stock_threshold: null }], []).length, 0);
 assert.equal(karachiDaySeries(7, new Date("2026-10-22T08:00:00Z")).length, 7);
-assert.match(readError(403, "permission denied", "internal"), /HTTP 403/);
+assert.equal(readError(403, "permission denied", "internal"), "Is hisaab ki ijazat nahi.");
+assert.doesNotMatch(readError(401, '{"code":"PGRST303","message":"JWT expired"}', "internal"), /HTTP|PGRST|JWT|\{/);
+assert.match(readError(401, '{"code":"PGRST303","message":"JWT expired"}', "debug"), /HTTP 401/);
+assert.match(readError(401, '{"code":"PGRST303","message":"JWT expired"}', "debug"), /JWT expired/);
 assert.match(readError(403, "permission denied", "production"), /ijazat/);
 assert.doesNotMatch(readError(403, "permission denied", "production"), /HTTP/);
 assert.equal(acceptedSupabaseUrl(`${LIVE_SUPABASE_URL}/`), LIVE_SUPABASE_URL);
 assert.equal(acceptedSupabaseUrl("https://hwaiuwxqldxsoukkfefn.supabase.co"), null);
 assert.equal(failureLine({ channel: "production", fallback: "Network nahi mila.", status: 404, detail: "<html>404</html>" }), "Network nahi mila.");
-assert.match(failureLine({ channel: "internal", fallback: "Network nahi mila.", status: 404, detail: "<html>This page could not be found</html>" }), /HTTP 404/);
-assert.match(failureLine({ channel: "internal", fallback: "Network nahi mila.", status: 404, detail: "<html>This page could not be found</html>" }), /could not be found/);
-assert.doesNotMatch(failureLine({ channel: "internal", fallback: "Login nahi hua.", status: 404, detail: "secret-pass-99", secrets: ["secret-pass-99"] }), /secret-pass-99/);
+assert.equal(failureLine({ channel: "internal", fallback: "Network nahi mila.", status: 404, detail: "<html>This page could not be found</html>" }), "Network nahi mila.");
+assert.match(failureLine({ channel: "debug", fallback: "Network nahi mila.", status: 404, detail: "<html>This page could not be found</html>" }), /HTTP 404/);
+assert.match(failureLine({ channel: "debug", fallback: "Network nahi mila.", status: 404, detail: "<html>This page could not be found</html>" }), /could not be found/);
+assert.doesNotMatch(failureLine({ channel: "debug", fallback: "Login nahi hua.", status: 404, detail: "secret-pass-99", secrets: ["secret-pass-99"] }), /secret-pass-99/);
 
 const PORTAL = "https://alranatraders.pk";
 const ANON = "anon-key-value";
@@ -308,9 +337,23 @@ void (async () => {
   });
   assert.equal(phoneLogin.ok, false);
   if (!phoneLogin.ok) {
-    assert.match(phoneLogin.message, /HTTP 404/);
     assert.match(phoneLogin.message, /Mobile ya CNIC/);
-    assert.doesNotMatch(phoneLogin.message, /secret-pass-99/);
+    assert.doesNotMatch(phoneLogin.message, /HTTP|could not be found|secret-pass-99/);
+  }
+  const phoneDebug = scripted([() => ({ status: 404, body: html404 })]);
+  const phoneDebugLogin = await signInMobile({
+    identifier: "03001234567",
+    password: "secret-pass-99",
+    portalUrl: PORTAL,
+    supabaseUrl: LIVE_SUPABASE_URL,
+    supabaseAnonKey: ANON,
+    channel: "debug",
+    fetchImpl: phoneDebug.fetchImpl,
+  });
+  assert.equal(phoneDebugLogin.ok, false);
+  if (!phoneDebugLogin.ok) {
+    assert.match(phoneDebugLogin.message, /HTTP 404/);
+    assert.doesNotMatch(phoneDebugLogin.message, /secret-pass-99/);
   }
   assert.equal(phone.calls.length, 1);
 
@@ -327,7 +370,7 @@ void (async () => {
   assert.equal(noKey.ok, false);
   if (!noKey.ok) {
     assert.match(noKey.message, /anon key/);
-    assert.match(noKey.message, /HTTP 404/);
+    assert.doesNotMatch(noKey.message, /HTTP/);
   }
 
   const portalSession = scripted([
@@ -382,6 +425,89 @@ void (async () => {
   });
   assert.equal(deskLogin.ok, true);
   if (deskLogin.ok) assert.equal(deskLogin.session.appRole, "mco");
+
+  let flights = 0;
+  const once = singleFlight(async () => {
+    flights += 1;
+    return "same";
+  });
+  const [a, b] = await Promise.all([once(), once()]);
+  assert.equal(a, "same");
+  assert.equal(b, "same");
+  assert.equal(flights, 1);
+
+  const refreshed = await refreshSupabaseSession({
+    supabaseUrl: LIVE_SUPABASE_URL,
+    anonKey: ANON,
+    refreshToken: "old-refresh",
+    nowMs: 1_700_000_000_000,
+    fetchImpl: async (url, init) => {
+      assert.match(url, /\/auth\/v1\/token\?grant_type=refresh_token$/);
+      assert.match(init?.body ?? "", /old-refresh/);
+      assert.doesNotMatch(url, /hwaiuwxqldxsoukkfefn/);
+      return { status: 200, text: async () => JSON.stringify({ access_token: "new-access", refresh_token: "new-refresh", expires_in: 3600 }) };
+    },
+  });
+  assert.equal(refreshed.ok, true);
+  if (refreshed.ok) {
+    assert.equal(refreshed.accessToken, "new-access");
+    assert.equal(refreshed.refreshToken, "new-refresh");
+    assert.equal(refreshed.expiresAt, 1_700_000_000 + 3600);
+  }
+  const deadRefresh = await refreshSupabaseSession({
+    supabaseUrl: LIVE_SUPABASE_URL,
+    anonKey: ANON,
+    refreshToken: "dead-refresh",
+    fetchImpl: async () => ({ status: 401, text: async () => '{"error":"invalid_grant"}' }),
+  });
+  assert.deepEqual(deadRefresh, { ok: false, dead: true });
+  const offlineRefresh = await refreshSupabaseSession({
+    supabaseUrl: LIVE_SUPABASE_URL,
+    anonKey: ANON,
+    refreshToken: "live-refresh",
+    fetchImpl: async () => { throw new Error("network"); },
+  });
+  assert.deepEqual(offlineRefresh, { ok: false, dead: false });
+  const testingRefresh = await refreshSupabaseSession({
+    supabaseUrl: "https://hwaiuwxqldxsoukkfefn.supabase.co",
+    anonKey: ANON,
+    refreshToken: "live-refresh",
+    fetchImpl: async () => { throw new Error("must not call"); },
+  });
+  assert.deepEqual(testingRefresh, { ok: false, dead: true });
+
+  const expiredBody = '{"code":"PGRST303","message":"JWT expired"}';
+  let refreshCalls = 0;
+  const retried = await liveGet<{ id: string }>({
+    url: LIVE_SUPABASE_URL,
+    anonKey: ANON,
+    token: "old-access",
+    channel: "internal",
+    refreshSession: async () => {
+      refreshCalls += 1;
+      return { ok: true, accessToken: "new-access", refreshToken: "new-refresh", expiresAt: 9 };
+    },
+  }, "pos_sales?select=id", async (url, init) => {
+    const bearer = init?.headers?.authorization ?? "";
+    if (bearer.endsWith("old-access")) return { status: 401, text: async () => expiredBody };
+    assert.match(bearer, /new-access/);
+    assert.match(url, /\/rest\/v1\/pos_sales/);
+    return { status: 200, text: async () => "[]" };
+  });
+  assert.equal(retried.ok, true);
+  assert.equal(refreshCalls, 1);
+  const kicked = await liveGet({
+    url: LIVE_SUPABASE_URL,
+    anonKey: ANON,
+    token: "old-access",
+    channel: "internal",
+    refreshSession: async () => ({ ok: false, dead: true }),
+  }, "finance_accounts?select=id", async () => ({ status: 401, text: async () => expiredBody }));
+  assert.equal(kicked.ok, false);
+  if (!kicked.ok) {
+    assert.equal(kicked.message, SESSION_EXPIRED);
+    assert.doesNotMatch(kicked.message, /HTTP|PGRST|JWT|\{/);
+  }
 
   const started = performance.now();
   await import("../src/lib/mobile/nav");

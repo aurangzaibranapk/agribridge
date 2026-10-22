@@ -18,6 +18,10 @@ export type AppRole =
   | "vet";
 
 const ADMIN = new Set(["owner", "super_admin", "admin", "admin_assistant"]);
+
+export function isPortalAdmin(role: string | null | undefined): boolean {
+  return ADMIN.has(String(role ?? "").trim());
+}
 const STAFF = new Set([
   "manager",
   "sales_staff",
