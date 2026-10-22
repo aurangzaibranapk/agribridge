@@ -22,6 +22,9 @@ declare
   v_order uuid;
   v_day date;
   v_note text;
+  v_rate numeric;
+  v_snf_c numeric;
+  v_ref numeric;
 begin
   select u.id into v_uid
     from auth.users u
@@ -67,10 +70,10 @@ begin
     end if;
     insert into public.farmers (
       user_id, full_name, phone_number, email, district, farmer_code,
-      registration_source, is_test
+      registration_source, is_test, is_deleted
     ) values (
       v_uid, 'TEST Farmer', '03009990604', 'test-farmer@alranatraders.pk', 'TEST', 'TEST-FARMER',
-      'STAFF', true
+      'STAFF', true, false
     ) returning id into v_farmer;
   else
     update public.farmers
@@ -118,6 +121,72 @@ begin
     ('11111111-1111-4111-8111-000000000603', v_farmer, v_day - 1, 'morning', 11.0, 'TEST milk', v_uid, 'app', v_uid, 'TEST Route', 'TEST Chiller', 'pending_fat', 'mca_field', '11111111-1111-4111-8111-000000000603', true),
     ('11111111-1111-4111-8111-000000000604', v_farmer, v_day - 2, 'morning', 9.5, 'TEST milk', v_uid, 'app', v_uid, 'TEST Route', 'TEST Chiller', 'pending_fat', 'mca_field', '11111111-1111-4111-8111-000000000604', true)
   on conflict (id) do nothing;
+
+  -- Priced samples sirf tab jab milk_rate_settings ki asal qatar ho.
+  -- Rate, SNF constant aur reference TS usi qatar se. Andaza nahi.
+  select s.standard_rate, s.snf_constant, s.reference_ts
+    into v_rate, v_snf_c, v_ref
+    from public.milk_rate_settings s
+   limit 1;
+
+  if v_rate is not null and v_rate > 0 and v_snf_c is not null and v_ref is not null and v_ref > 0 then
+    insert into public.milk_entries (
+      id, farmer_id, entry_date, shift, quantity_liters,
+      fat_percentage, snf_percentage, lr, rate_per_liter, total_amount, ts_value,
+      notes, created_by, entry_channel, mca_profile_id, route_name, chiller_name,
+      status, collection_source, client_uuid, is_test
+    )
+    select
+      sample.id,
+      v_farmer,
+      v_day + sample.day_off,
+      sample.shift,
+      sample.litres,
+      sample.fat,
+      round((sample.lr / 4 + sample.fat * 0.2 + v_snf_c)::numeric, 2),
+      sample.lr,
+      v_rate,
+      round(
+        round((sample.litres * (
+          (sample.fat + round((sample.lr / 4 + sample.fat * 0.2 + v_snf_c)::numeric, 2)) / v_ref
+        ))::numeric, 2) * v_rate,
+        2
+      ),
+      round((sample.fat + round((sample.lr / 4 + sample.fat * 0.2 + v_snf_c)::numeric, 2))::numeric, 2),
+      'TEST milk priced',
+      v_uid,
+      'app',
+      v_uid,
+      'TEST Route',
+      'TEST Chiller',
+      'priced',
+      'mca_field',
+      sample.id,
+      true
+    from (
+      values
+        ('11111111-1111-4111-8111-000000000611'::uuid, -3, 'morning', 10.0::numeric, 4.0::numeric, 28.0::numeric),
+        ('11111111-1111-4111-8111-000000000612'::uuid, -1, 'evening', 7.5::numeric, 3.8::numeric, 27.0::numeric),
+        ('11111111-1111-4111-8111-000000000613'::uuid, -4, 'morning', 13.0::numeric, 4.5::numeric, 29.0::numeric)
+    ) as sample(id, day_off, shift, litres, fat, lr)
+    on conflict (id) do nothing;
+  end if;
+
+  begin
+    if to_regclass('public.dairy_health_events') is not null
+       and not exists (
+         select 1 from public.dairy_health_events h
+          where h.farmer_id = v_farmer and h.notes = 'TEST vet visit'
+       ) then
+      insert into public.dairy_health_events (
+        farmer_id, kind, diagnosis, vet_name, event_date, cost, payment, notes, created_by
+      ) values (
+        v_farmer, 'vet_visit', 'TEST checkup', 'TEST Vet', v_day - 3, null, 'cash', 'TEST vet visit', v_uid
+      );
+    end if;
+  exception when others then
+    null;
+  end;
 
   insert into public.attendance_records (
     profile_id, attendance_date, status, source, notes, is_test

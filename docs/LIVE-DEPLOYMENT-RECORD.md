@@ -1,3 +1,7 @@
+## Phone Phase A — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 607, tag `v0.6.1-beta-testdb`. Kisan screens (wallet, doodh, khata, vet, karyana) aur MCA pickup. Migration **700 not applied** by this agent. Owner testing par khud lagaye: `supabase/migrations/700_app_test_milk_write.sql`, phir `scripts/seed-app-test-account.sql` dobara. Live database par 700 nahi. Live APK tag `v0.6.1-beta-test1` replace nahi hoti.
+
 ## Phone TEST flavor — 22 October 2026 — NO SQL FROM THIS COMMIT
 
 Owner ka faisla: mobile testing testing project `hwaiuwxqldxsoukkfefn` par. Alag APK `AgriBridge TEST`, package `pk.alranatraders.agribridge.test`, tag `v0.6.1-beta-testdb`, versionCode 606. Live APK tag `v0.6.1-beta-test1` is commit se replace nahi hoti. Is commit ne testing ya live par koi SQL nahi chalayi. 699 aur seed owner testing par khud laga rahe hain. Live database par 699 tab tak nahi jab tak owner alag se na kahein.

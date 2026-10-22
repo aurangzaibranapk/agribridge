@@ -451,7 +451,7 @@ export default function App() {
                 </Pressable>
               </View>
             ) : null}
-            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} readOnly={isTest || previewing} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, flavor: FLAVOR, testAccount: isTest, refreshSession }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
+            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} onTab={(key: string) => { setTab(key); if (appRole) setRoute(`/${appRole}/${key}`); }} readOnly={previewing || (isTest && FLAVOR !== "test")} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, flavor: FLAVOR, testAccount: isTest, refreshSession }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
           </View>
           {nav ? <Tabs tabs={nav.tabs} current={tab} onChange={(key) => { setTab(key); setRoute(`/${appRole}/${key}`); }} /> : null}
           {tab === "more" ? (
@@ -503,7 +503,7 @@ export default function App() {
         <SafeAreaView style={styles.root}>
           <Header title="Role badlo" action="Band" onAction={() => setSwitchOpen(false)} />
           <ScrollView style={{ padding: 16 }}>
-            <Text style={styles.help}>TEST account. Har role sirf apni screens dikhata hai. Likhai band hai. Asal hisaab nahi khulta.</Text>
+            <Text style={styles.help}>{FLAVOR === "test" ? "TEST account. MCA ka doodh testing database par likhta hai aur Kisan ki list mein dikhta hai. Asal hisaab nahi khulta." : "TEST account. Har role sirf apni screens dikhata hai. Likhai band hai. Asal hisaab nahi khulta."}</Text>
             {SWITCH_ROLES.map((next) => (
               <Pressable key={next} style={styles.roleRow} onPress={() => {
                 setAppRole(next);

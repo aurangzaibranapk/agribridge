@@ -17,7 +17,7 @@ import { pinLock, pinProblem, verifyPin } from "../src/lib/mobile/pin";
 import { supportChatPath, supportWhatsapp } from "../src/lib/mobile/support";
 import { reportContext, reportDescription } from "../src/lib/mobile/report";
 import { acceptedSupabaseUrl, dataFlavor, failureLine, LIVE_SUPABASE_URL, showsHttpDetail, signInMobile, TEST_SUPABASE_URL, type FetchLike } from "../src/lib/mobile/live-login";
-import { cashPosition, columnMissing, karachiDaySeries, liveGet, milkByShift, readError, salesByDay, salesOnDay, stockAlerts, withScope } from "../src/lib/mobile/live-read";
+import { cashPosition, columnMissing, karachiDaySeries, liveGet, liveInsert, milkByShift, pricedMilkTotal, readError, salesByDay, salesOnDay, shiftLabel, stockAlerts, withScope } from "../src/lib/mobile/live-read";
 import { jwtExpired, refreshDue, refreshSupabaseSession, SESSION_EXPIRED, singleFlight } from "../src/lib/mobile/session-refresh";
 import { showRolePreview, showRoleSwitch, SWITCH_ROLES, TEST_LOGIN_EMAIL } from "../src/lib/mobile/test-account";
 import { elapsed, withinBudget, MOBILE_BUNDLE_BUDGET_BYTES } from "../src/lib/mobile/perf";
@@ -77,6 +77,7 @@ for (const role of ["farmer", "customer", "staff", "supplier", "dealer", "mca", 
   assert.ok(ROLE_NAV[role].tabs.length >= 3, role);
 }
 assert.equal(ROLE_NAV.farmer.phase1, true);
+assert.deepEqual(ROLE_NAV.farmer.tabs.map((tab) => tab.key), ["home", "doodh", "khata", "vet", "karyana"]);
 assert.equal(ROLE_NAV.mca.phase1, true);
 assert.equal(ROLE_NAV.mco.phase1, true);
 assert.equal(ROLE_NAV.customer.phase1, false);
@@ -192,7 +193,7 @@ const testSideload = readFileSync(".github/workflows/mobile-sideload-test.yml", 
 assert.match(testSideload, /EXPO_PUBLIC_APP_FLAVOR: test/);
 assert.match(testSideload, /APP_CHANNEL: internal/);
 assert.match(testSideload, /EXPO_PUBLIC_SUPABASE_URL: https:\/\/hwaiuwxqldxsoukkfefn\.supabase\.co/);
-assert.match(testSideload, /AGRIBRIDGE_VERSION_CODE: "606"/);
+assert.match(testSideload, /AGRIBRIDGE_VERSION_CODE: "607"/);
 assert.match(testSideload, /pk\.alranatraders\.agribridge\.test/);
 assert.match(testSideload, /v0\.6\.1-beta-testdb/);
 assert.match(testSideload, /ktskwawkslaznkjjacni/);
@@ -216,7 +217,7 @@ assert.match(appSource, /Preview: /);
 assert.match(appSource, /AppState.addEventListener/);
 assert.match(appSource, /SESSION_EXPIRED/);
 assert.match(appSource, /grant_type=refresh_token|refreshSupabaseSession/);
-assert.match(appSource, /readOnly=\{isTest \|\| previewing\}/);
+assert.match(appSource, /readOnly=\{previewing \|\| \(isTest && FLAVOR !== "test"\)\}/);
 assert.match(readFileSync("src/lib/mobile/session-refresh.ts", "utf8"), /grant_type=refresh_token/);
 assert.doesNotMatch(appSource.slice(appSource.indexOf('title="Role dekho"'), appSource.indexOf('title="Role badlo"')), /setItemAsync/);
 assert.match(appSource, /showRoleSwitch\(CHANNEL, isTest\)/);
@@ -259,7 +260,30 @@ assert.doesNotMatch(seed699, /kabhi nahi/);
 assert.doesNotMatch(seed699, /insert into auth\.users/i);
 assert.doesNotMatch(seed699, /encrypted_password|crypt\(/i);
 assert.match(readFileSync("supabase/migrations/699_app_test_account.rollback.sql", "utf8"), /drop column if exists is_test_account/);
-assert.match(readFileSync("apps/mobile/src/roles/mca.tsx", "utf8"), /readOnly/);
+const mig700 = readFileSync("supabase/migrations/700_app_test_milk_write.sql", "utf8");
+assert.match(mig700, /milk_entries_test_insert/);
+assert.match(mig700, /fn_is_app_test_account/);
+assert.match(mig700, /is_test = true/);
+assert.match(mig700, /milk_rate_settings_test_read/);
+assert.doesNotMatch(mig700, /auth\.users/);
+assert.doesNotMatch(mig700, /security definer/i);
+assert.match(readFileSync("supabase/migrations/700_app_test_milk_write.rollback.sql", "utf8"), /drop policy if exists milk_entries_test_insert/);
+assert.match(seed699, /milk_rate_settings/);
+assert.match(seed699, /priced/);
+assert.match(seed699, /TEST vet visit/);
+assert.doesNotMatch(seed699, /\b145\b/);
+assert.match(readFileSync("apps/mobile/src/roles/farmer.tsx", "utf8"), /Mera Wallet/);
+assert.match(readFileSync("apps/mobile/src/roles/farmer.tsx", "utf8"), /Rate abhi nahi/);
+assert.match(readFileSync("apps/mobile/src/roles/farmer.tsx", "utf8"), /Vet doctor/);
+assert.match(readFileSync("apps/mobile/src/roles/farmer.tsx", "utf8"), /Karyana/);
+assert.match(readFileSync("apps/mobile/src/roles/farmer.tsx", "utf8"), /Hafta milk statement/);
+const mcaSource = readFileSync("apps/mobile/src/roles/mca.tsx", "utf8");
+assert.match(mcaSource, /readOnly/);
+assert.match(mcaSource, /Subah/);
+assert.match(mcaSource, /Shaam/);
+assert.match(mcaSource, /liveInsert/);
+assert.match(mcaSource, /milk_entries/);
+assert.match(mcaSource, /Doodh save karein/);
 assert.match(readFileSync("apps/mobile/src/roles/mco.tsx", "utf8"), /readOnly/);
 assert.match(appSource, /signInMobile/);
 assert.match(appSource, /failureLine/);
@@ -595,6 +619,25 @@ void (async () => {
     channel: "internal",
   }, "profiles?select=id", async () => { throw new Error("must not call"); });
   assert.equal(liveReadRefusesTesting.ok, false);
+  const inserted = await liveInsert({
+    url: TEST_SUPABASE_URL,
+    anonKey: ANON,
+    token: "access",
+    channel: "internal",
+    flavor: "test",
+  }, "milk_entries", { is_test: true, quantity_liters: 1 }, async (url, init) => {
+    assert.match(url, /hwaiuwxqldxsoukkfefn\.supabase\.co\/rest\/v1\/milk_entries$/);
+    assert.equal(init?.method, "POST");
+    const headers = init?.headers as Record<string, string>;
+    assert.equal(headers.prefer, "return=representation");
+    assert.match(String(init?.body), /is_test/);
+    return { status: 201, text: async () => "[{\"id\":\"1\"}]" };
+  });
+  assert.equal(inserted.ok, true);
+  assert.equal(pricedMilkTotal([{ status: "pending_fat", total_amount: null }, { status: "priced", total_amount: 10 }]), 10);
+  assert.equal(pricedMilkTotal([{ status: "pending_fat", quantity_liters: 4 }]), null);
+  assert.equal(shiftLabel("evening"), "Shaam");
+  assert.equal(shiftLabel("morning"), "Subah");
 
   const started = performance.now();
   await import("../src/lib/mobile/nav");

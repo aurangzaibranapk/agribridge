@@ -27,7 +27,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: https://hwaiuwxqldxsoukkfefn.supabase.co
       # Public testing anon key.
       EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3YWl1d3hxbGR4c291a2tmZWZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MjU1NjMsImV4cCI6MjEwMzUwMTU2M30.UwchGHJHRCdKHwpJRr-fdNTreeVNLlfbpo7nBqQv9l4"
-      AGRIBRIDGE_VERSION_CODE: "606"
+      AGRIBRIDGE_VERSION_CODE: "607"
       CI: "1"
     steps:
       - uses: actions/checkout@v4
@@ -125,7 +125,9 @@ jobs:
           notes=$(cat <<'EOF'
           AgriBridge TEST sideload builds. Not the live app and not a Play Store upload.
           App name AgriBridge TEST. Package pk.alranatraders.agribridge.test.
-          versionName v0.6.1 Beta, versionCode 606, APP_CHANNEL=internal.
+          versionName v0.6.1 Beta, versionCode 607, APP_CHANNEL=internal.
+          Phase A: Kisan wallet, doodh, khata, vet, karyana, and MCA pickup save.
+          Owner applies 700_app_test_milk_write.sql on testing before pickup save.
           Supabase host is the testing project only. Portal /api/mobile/v1 is not called.
           Login: app-test@alranatraders.pk after the owner applies migration 699 and the seed on testing.
           arm64-v8a is the APK for almost every phone since 2019.

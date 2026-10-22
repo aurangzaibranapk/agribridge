@@ -22,10 +22,10 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     phase1: true,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "shop", label: "Shop" },
-      { key: "orders", label: "Orders" },
+      { key: "doodh", label: "Doodh" },
       { key: "khata", label: "Khata" },
-      { key: "more", label: "More" },
+      { key: "vet", label: "Vet" },
+      { key: "karyana", label: "Karyana" },
     ],
   },
   customer: {

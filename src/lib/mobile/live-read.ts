@@ -17,6 +17,7 @@ export type LiveAuth = {
   testAccount?: boolean;
   /** 401 JWT expired par ek dafa. Naya token, ya dead/offline. */
   refreshSession?: () => Promise<RefreshSuccess | RefreshFailure>;
+  userId?: string | null;
 };
 
 export type ReadScope = "live" | "test";
@@ -121,6 +122,53 @@ async function liveGetOnce<T>(auth: LiveAuth, token: string, path: string, fetch
   }
 }
 
+export async function liveInsert<T>(auth: LiveAuth, table: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<ReadResult<T>> {
+  const first = await liveInsertOnce<T>(auth, auth.token, table, body, fetchImpl);
+  if (first.ok || !jwtExpired(first.status, first.detail)) return first;
+  const next = await refreshOnce(auth);
+  if (next === "dead") return { ok: false, status: 401, message: SESSION_EXPIRED };
+  if (next === "skip") return first;
+  return liveInsertOnce<T>(auth, next, table, body, fetchImpl);
+}
+
+async function liveInsertOnce<T>(auth: LiveAuth, token: string, table: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<ReadResult<T>> {
+  const base = acceptedSupabaseUrl(auth.url, dataFlavor(auth.flavor));
+  if (!base || !auth.anonKey.trim() || !token.trim()) {
+    return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Live read is build mein set nahi." }) };
+  }
+  if (!/^[a-z_][a-z0-9_]*$/.test(table)) {
+    return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Ye fehrist nahi khuli." }) };
+  }
+  try {
+    const res = await fetchImpl(`${base}/rest/v1/${table}`, {
+      method: "POST",
+      headers: {
+        apikey: auth.anonKey,
+        authorization: `Bearer ${token}`,
+        accept: "application/json",
+        "content-type": "application/json",
+        prefer: "return=representation",
+      },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    if (res.status >= 400) return { ok: false, status: res.status, message: readError(res.status, text, auth.channel), detail: text };
+    const rows = parseArray(text);
+    if (!rows) return { ok: false, status: res.status, message: readError(res.status, text || "JSON nahi", auth.channel) };
+    return { ok: true, rows: rows as T[] };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      message: failureLine({
+        channel: auth.channel,
+        fallback: "Network nahi mila.",
+        detail: err instanceof Error ? err.message : "fetch failed",
+      }),
+    };
+  }
+}
+
 export async function liveRpc<T>(auth: LiveAuth, name: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<{ ok: true; data: T } | { ok: false; status: number; message: string; detail?: string }> {
   const first = await liveRpcOnce<T>(auth, auth.token, name, body, fetchImpl);
   if (first.ok || !jwtExpired(first.status, first.detail)) return first;
@@ -188,7 +236,42 @@ export async function liveGetScoped<T>(auth: LiveAuth, path: string, fetchImpl: 
 }
 
 export type SaleRow = { total_amount?: number | string | null; created_at?: string | null; status?: string | null; payment_mode?: string | null };
-export type MilkRow = { shift?: string | null; quantity_liters?: number | string | null; field_collected_volume?: number | string | null; entry_date?: string | null; collection_date?: string | null; fat_percentage?: number | string | null; total_amount?: number | string | null; route_name?: string | null; status?: string | null };
+export type MilkRow = {
+  id?: string;
+  shift?: string | null;
+  quantity_liters?: number | string | null;
+  field_collected_volume?: number | string | null;
+  entry_date?: string | null;
+  collection_date?: string | null;
+  fat_percentage?: number | string | null;
+  snf_percentage?: number | string | null;
+  lr?: number | string | null;
+  rate_per_liter?: number | string | null;
+  total_amount?: number | string | null;
+  route_name?: string | null;
+  chiller_name?: string | null;
+  status?: string | null;
+  mca_profile_id?: string | null;
+};
+export type MilkSettingsRow = {
+  standard_rate?: number | string | null;
+  self_dropoff_incentive?: number | string | null;
+  snf_constant?: number | string | null;
+  reference_ts?: number | string | null;
+};
+export type HealthRow = {
+  id?: string;
+  kind?: string | null;
+  diagnosis?: string | null;
+  medicine?: string | null;
+  event_date?: string | null;
+  vet_name?: string | null;
+  vaccine_code?: string | null;
+  next_due?: string | null;
+  notes?: string | null;
+  voided?: boolean | null;
+};
+export type VaccineRow = { code?: string | null; name_rm?: string | null };
 export type AccountRow = { account_type?: string | null; current_balance?: number | string | null; is_active?: boolean | null };
 export type ProductRow = { id?: string; name?: string | null; category_id?: string | null; min_stock_threshold?: number | string | null; selling_price?: number | string | null; unit?: string | null; is_available?: boolean | null };
 export type InventoryRow = { product_id?: string | null; quantity_on_hand?: number | string | null };
@@ -226,6 +309,26 @@ export function salesOnDay(rows: SaleRow[], day: string): { total: number; bills
 
 export function salesByDay(rows: SaleRow[], days: string[]): { day: string; amount: number }[] {
   return days.map((day) => ({ day, amount: salesOnDay(rows, day).total }));
+}
+
+export function shiftLabel(shift: string | null | undefined): string {
+  const value = String(shift ?? "").toLowerCase();
+  if (value === "evening" || value === "shaam") return "Shaam";
+  return "Subah";
+}
+
+/** Priced/verified rows ka jama. Koi priced raqam na ho to null — Rs 0 nahi. */
+export function pricedMilkTotal(rows: MilkRow[]): number | null {
+  let total = 0;
+  let priced = 0;
+  for (const row of rows) {
+    const status = String(row.status ?? "").toLowerCase();
+    if (status === "pending_fat" || status === "rejected") continue;
+    if (row.total_amount == null || row.total_amount === "") continue;
+    total += num(row.total_amount);
+    priced += 1;
+  }
+  return priced === 0 ? null : Math.round(total * 100) / 100;
 }
 
 export function milkByShift(rows: MilkRow[]): { subah: number; shaam: number } {
@@ -393,7 +496,7 @@ export async function loadAdminHome(auth: LiveAuth, fetchImpl: FetchLike, now = 
   };
 }
 
-export type PartyRow = { id?: string; full_name?: string | null; name?: string | null; current_balance?: number | string | null };
+export type PartyRow = { id?: string; full_name?: string | null; name?: string | null; farmer_code?: string | null; current_balance?: number | string | null };
 export type PurchaseRow = { purchase_number?: string | null; purchase_date?: string | null; total_amount?: number | string | null; status?: string | null; supplier_bill_no?: string | null };
 export type AttendanceRow = { attendance_date?: string | null; status?: string | null; check_in_at?: string | null; profile_id?: string | null };
 export type ProfileRow = { id?: string; full_name?: string | null };
@@ -417,8 +520,36 @@ export async function searchParties(auth: LiveAuth, query: string, fetchImpl: Fe
   return { farmers, customers };
 }
 
+const MILK_LIST_SELECT = "id,entry_date,shift,quantity_liters,fat_percentage,snf_percentage,lr,rate_per_liter,total_amount,route_name,chiller_name,status,mca_profile_id";
+
 export async function loadMilkList(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<MilkRow>> {
-  return liveGetScoped<MilkRow>(auth, "milk_entries?select=entry_date,shift,quantity_liters,fat_percentage,total_amount,route_name,status&order=entry_date.desc&limit=40", fetchImpl);
+  return liveGetScoped<MilkRow>(auth, `milk_entries?select=${MILK_LIST_SELECT}&order=entry_date.desc,created_at.desc&limit=40`, fetchImpl);
+}
+
+export async function loadMilkSettings(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<MilkSettingsRow>> {
+  return liveGet<MilkSettingsRow>(auth, "milk_rate_settings?select=standard_rate,self_dropoff_incentive,snf_constant,reference_ts&limit=1", fetchImpl);
+}
+
+export async function loadHealth(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<HealthRow>> {
+  return liveGet<HealthRow>(auth, "dairy_health_events?select=id,kind,diagnosis,medicine,event_date,vet_name,vaccine_code,next_due,notes,voided&voided=eq.false&order=event_date.desc&limit=20", fetchImpl);
+}
+
+export async function loadVaccines(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<VaccineRow>> {
+  return liveGet<VaccineRow>(auth, "dairy_vaccine_schedule?select=code,name_rm&order=code.asc&limit=20", fetchImpl);
+}
+
+export async function loadProfileNames(auth: LiveAuth, ids: string[], fetchImpl: FetchLike): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (!unique.length) return names;
+  const listed = unique.map((id) => encodeURIComponent(id)).join(",");
+  const profiles = await liveGet<ProfileRow>(auth, `profiles?select=id,full_name&id=in.(${listed})`, fetchImpl);
+  if (profiles.ok) {
+    for (const profile of profiles.rows) {
+      if (profile.id) names.set(profile.id, profile.full_name || "MCA");
+    }
+  }
+  return names;
 }
 
 export async function loadPurchases(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<PurchaseRow>> {

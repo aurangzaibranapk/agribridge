@@ -26,6 +26,7 @@ export function liveAuth(live: LiveBag | undefined): LiveAuth | null {
     flavor: live.flavor === "test" ? "test" : "live",
     testAccount: live.testAccount === true,
     refreshSession: live.refreshSession,
+    userId: live.userId,
   };
 }
 
