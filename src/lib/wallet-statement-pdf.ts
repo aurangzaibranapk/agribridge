@@ -36,8 +36,10 @@ export async function generateWalletStatementPdf(data: WalletStatementData): Pro
   let y = pageHeight - 50;
 
   function drawHeader() {
-    page.drawText(`${BRAND_NAME} — ${BRAND_TAGLINE.en}`, { x: marginX, y, size: 16, font: boldFont, color: navy });
-    y -= 18;
+    page.drawText(BRAND_NAME, { x: marginX, y, size: 16, font: boldFont, color: navy });
+    y -= 16;
+    page.drawText(BRAND_TAGLINE, { x: marginX, y, size: 9, font, color: gray });
+    y -= 14;
     page.drawText("Wallet Statement", { x: marginX, y, size: 10, font, color: gray });
     y -= 20;
     page.drawText(`${data.farmerName} (${data.farmerCode})${data.farmerPhone ? " - " + data.farmerPhone : ""}`, { x: marginX, y, size: 10, font, color: black });

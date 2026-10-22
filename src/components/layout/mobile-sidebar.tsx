@@ -13,6 +13,7 @@ import { usePending, PENDING_PAGE } from "@/components/pending/pending-context";
 import { RedBadge, NayaPill, PendingMeta, ZeroMark } from "@/components/pending/pending-ui";
 import { badgeForGroup, badgeForHref, pendingQueueHref } from "@/lib/pending/categories";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { brandName, brandTagline, isHiddenBrand } from "@/lib/brand";
 
 const M_ACTIVE = "bg-gradient-to-r from-[#1e3a8a] to-[#2563eb] text-white";
 const M_IDLE = "text-[#e7eef8] hover:bg-white/10 hover:text-white";
@@ -77,12 +78,15 @@ export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; gro
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
           <aside className="absolute inset-y-0 left-0 flex w-[19rem] max-w-[88vw] flex-col border-white/10 bg-[#10241c] shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] dark:bg-[#10241c]">
-            <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
+            <div className="flex min-h-16 items-center justify-between border-b border-white/10 px-5 py-2">
               <div className="flex items-center gap-2">
                 <BrandMark className="h-8 w-8 rounded-lg" />
                 <div>
-                  <p className="font-display text-sm font-bold leading-tight text-white">{t("au_company", lang)}</p>
-                  <p className="text-xs text-[#d3deee]">{subtitle}</p>
+                  <p className="font-display text-sm font-bold leading-tight text-white">{brandName(lang)}</p>
+                  <p className="truncate text-[11px] leading-tight text-emerald-100/80">{brandTagline(lang)}</p>
+                  {subtitle && !isHiddenBrand(subtitle) && subtitle !== brandName(lang) && (
+                    <p className="truncate text-[10px] text-[#d3deee]">{subtitle}</p>
+                  )}
                 </div>
               </div>
               <button onClick={() => setOpen(false)} aria-label={t("sh_close_menu", lang)} className="rounded-lg p-1.5 text-[#d3deee] hover:bg-white/10 hover:text-white">

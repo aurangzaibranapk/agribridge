@@ -139,13 +139,14 @@ for (const [key, value] of Object.entries(english)) assert.equal(t(key as "sp_ap
 
 assert.equal(t("sp_careers_title", "en"), "Careers at AgriBridge");
 assert.equal(t("sp_careers_title", "rm"), "AgriBridge mein naukri");
-assert.equal(t("sp_careers_title", "ur"), "AgriBridge میں نوکری");
+assert.equal(t("sp_careers_title", "ur"), "ایگری بریج میں نوکری");
 assert.equal(t("sp_careers_company", "en"), "AgriBridge");
 assert.equal(t("sp_careers_company", "rm"), "AgriBridge");
-assert.equal(t("sp_careers_company", "ur"), "AgriBridge");
-assert.equal(t("sp_careers_tagline", "en"), "The farmer's bridge");
+assert.equal(t("sp_careers_company", "ur"), "ایگری بریج");
+assert.equal(t("sp_careers_tagline", "en"), "Kisan ka Wasela");
 assert.equal(t("sp_careers_tagline", "rm"), "Kisan ka Wasela");
 assert.equal(t("sp_careers_tagline", "ur"), "کسان کا وسیلہ");
+assert.equal(t("sp_careers_tagline", "en").includes("farmer's bridge"), false);
 assert.equal(t("sp_careers_title", "en").startsWith("Careers at AgriBridge"), true);
 assert.equal(t("sp_careers_title", "en").includes("Al Rana"), false);
 

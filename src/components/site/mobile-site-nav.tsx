@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import localFont from "next/font/local";
 import { ChevronRight, Menu, X } from "lucide-react";
 import { BrandMark, BrandWord } from "@/components/brand/brand-mark";
+import { brandName } from "@/lib/brand";
 import type { Lang } from "@/lib/i18n/translations";
 
 const urdu = localFont({
@@ -75,9 +76,13 @@ export function MobileSiteNav({ lang, tagline }: { lang: Lang; tagline: string }
             <div className="flex items-center justify-between border-b border-surface-200 px-5 py-5 dark:border-surface-800">
               <Link href="/" onClick={() => setOpen(false)} className={`flex items-center gap-3 ${lang === "ur" ? urdu.variable : ""}`}>
                 <BrandMark className="h-12 w-12" />
-                <span className="min-w-0">
-                  <BrandWord className="block font-display text-2xl font-bold leading-tight text-surface-950 dark:text-white" />
-                  <span dir={lang === "ur" ? "rtl" : "ltr"} className={`block truncate text-xs text-surface-500 ${lang === "ur" ? "font-urdu" : ""}`}>{tagline}</span>
+                <span dir={lang === "ur" ? "rtl" : "ltr"} className={`min-w-0 ${lang === "ur" ? "font-urdu text-right" : "text-left"}`}>
+                  {lang === "ur" ? (
+                    <span className="block text-2xl font-bold leading-snug text-surface-950 dark:text-white">{brandName(lang)}</span>
+                  ) : (
+                    <BrandWord className="block font-display text-2xl font-bold leading-tight text-surface-950 dark:text-white" />
+                  )}
+                  <span className={`block truncate text-xs text-surface-500 ${lang === "ur" ? "leading-snug" : "leading-tight"}`}>{tagline}</span>
                 </span>
               </Link>
               <button

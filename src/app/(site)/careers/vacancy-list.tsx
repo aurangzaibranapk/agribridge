@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Banknote, Briefcase, MapPin, Users } from "lucide-react";
 import { ApplyForm } from "./apply-form";
 import type { CareerCard } from "@/lib/jobs/vacancy-i18n";
+import { isHiddenBrand } from "@/lib/brand";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -37,7 +38,7 @@ export function VacancyList({ vacancies }: { vacancies: CareerCard[] }) {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className={`font-display text-lg font-semibold text-surface-900 ${urdu ? "leading-snug" : "leading-tight"}`}>{vacancy.title}</h2>
-                  {vacancy.brand && <BrandTag urdu={urdu}>{vacancy.brand}</BrandTag>}
+                  {vacancy.brand && !isHiddenBrand(vacancy.brand) && <BrandTag urdu={urdu}>{vacancy.brand}</BrandTag>}
                 </div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-surface-600">
                   {vacancy.location && (

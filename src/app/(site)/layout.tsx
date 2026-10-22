@@ -10,10 +10,10 @@ const structuredData = {
       "@type": "Organization",
       "@id": "https://alranatraders.pk/#organization",
       name: BRAND_NAME,
-      alternateName: BRAND_TAGLINE.en,
+      alternateName: BRAND_TAGLINE,
       url: "https://alranatraders.pk",
       description:
-        `${BRAND_NAME} — ${BRAND_TAGLINE.en}. A digital agriculture platform connecting farmers with agriculture inputs, machinery, dairy, grain markets, farm products and digital guidance in Pakistan.`,
+        `${BRAND_NAME} — ${BRAND_TAGLINE}. A digital agriculture platform connecting farmers with agriculture inputs, machinery, dairy, grain markets, farm products and digital guidance in Pakistan.`,
       areaServed: {
         "@type": "Country",
         name: "Pakistan",
@@ -24,7 +24,7 @@ const structuredData = {
       "@id": "https://alranatraders.pk/#website",
       url: "https://alranatraders.pk",
       name: BRAND_NAME,
-      alternateName: BRAND_TAGLINE.en,
+      alternateName: BRAND_TAGLINE,
       publisher: {
         "@id": "https://alranatraders.pk/#organization",
       },

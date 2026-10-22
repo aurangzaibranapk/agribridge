@@ -68,7 +68,7 @@ export function PublicHeader() {
           <BrandMark className="h-12 w-12 lg:h-14 lg:w-14" />
           <div className="leading-tight">
             <BrandWord className="block text-xl font-black tracking-tight text-slate-950 lg:text-[26px]" />
-            <p className="text-[11px] text-slate-500 lg:text-xs">{BRAND_TAGLINE.en}</p>
+            <p className="text-[11px] text-slate-500 lg:text-xs">{BRAND_TAGLINE}</p>
           </div>
         </Link>
 

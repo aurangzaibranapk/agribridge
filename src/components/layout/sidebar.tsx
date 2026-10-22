@@ -12,6 +12,7 @@ import { usePending, PENDING_PAGE } from "@/components/pending/pending-context";
 import { RedBadge, NayaPill, PendingMeta, ZeroMark } from "@/components/pending/pending-ui";
 import { badgeForGroup, badgeForHref, pendingQueueHref } from "@/lib/pending/categories";
 import { BrandMark } from "@/components/brand/brand-mark";
+import { brandName, brandTagline, isHiddenBrand } from "@/lib/brand";
 export type { NavItem } from "@/components/layout/nav-items";
 
 /**
@@ -89,11 +90,14 @@ export function Sidebar({
   // Sidebar HAMESHA poori chaurai -- koi collapse / icon-only nahi (malik, 19 Oct).
   return (
     <aside data-sidebar="admin" className={cn("hidden h-screen min-h-0 w-72 shrink-0 overflow-hidden border-r backdrop-blur-xl lg:flex lg:flex-col", PINE)}>
-      <Link href={homeHref} className="flex h-16 items-center gap-2 border-b border-white/10 px-5">
+      <Link href={homeHref} className="flex min-h-16 items-center gap-2 border-b border-white/10 px-5 py-2">
         <BrandMark className="h-8 w-8 rounded-lg" />
         <div className="min-w-0 flex-1">
-          <p className="font-display text-sm font-bold leading-tight text-white">{t("au_company", lang)}</p>
-          <p className="truncate text-xs text-[#d3deee]">{subtitle}</p>
+          <p className="font-display text-sm font-bold leading-tight text-white">{brandName(lang)}</p>
+          <p className="truncate text-[11px] leading-tight text-emerald-100/80">{brandTagline(lang)}</p>
+          {subtitle && !isHiddenBrand(subtitle) && subtitle !== brandName(lang) && (
+            <p className="truncate text-[10px] text-[#d3deee]">{subtitle}</p>
+          )}
         </div>
         {pend.enabled && (
           <span className="flex items-center gap-1">

@@ -92,7 +92,7 @@ export async function PublicFooter() {
               <BrandMark className="h-11 w-11 rounded-xl" />
               <div>
                 <BrandWord className="block text-xl font-black text-white [&_span]:text-emerald-300" />
-                <p className="text-xs text-emerald-200">{BRAND_TAGLINE.en}</p>
+                <p className="text-xs text-emerald-200">{BRAND_TAGLINE}</p>
               </div>
             </Link>
 

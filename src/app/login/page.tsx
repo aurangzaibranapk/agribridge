@@ -6,7 +6,7 @@ import { LoginV6 } from "@/app/login/login-v6";
 import { LegacyLoginPage } from "@/app/login/legacy-page";
 import { tx, type V5Lang } from "@/app/login/v5-text";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
-import { BRAND_NAME, brandTagline } from "@/lib/brand";
+import { brandName, brandTagline } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "Login",
@@ -64,7 +64,7 @@ export default async function LoginPage({ searchParams }: { searchParams?: Recor
       <section className="relative flex min-h-screen flex-col items-center overflow-x-hidden bg-[#eef4f1] px-5 py-7 dark:bg-[#0a1324] lg:min-h-0 lg:justify-center lg:overflow-y-auto lg:py-10">
         <div aria-hidden="true" className="pointer-events-none absolute -left-16 -top-24 h-[380px] w-[380px] rounded-full bg-[#7fd6a6] opacity-55 blur-[80px] dark:opacity-20" />
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 -right-10 h-[340px] w-[340px] rounded-full bg-[#9db4e6] opacity-55 blur-[80px] dark:opacity-20" />
-        <div className="relative z-10 mb-6 flex w-full max-w-[440px] items-center gap-3 lg:hidden"><Logo id="ablg-m" /><div><p className="font-v5display text-[19px] font-semibold">{BRAND_NAME}</p><p className={`text-[12px] text-[#5d6b7e] dark:text-[#93a3bd] ${rtl ? "font-urdu" : ""}`}>{brandTagline(lang)}</p></div></div>
+        <div className="relative z-10 mb-6 flex w-full max-w-[440px] items-center gap-3 lg:hidden"><Logo id="ablg-m" /><div dir={rtl ? "rtl" : "ltr"}><p className={`text-[19px] font-semibold ${rtl ? "font-urdu" : "font-v5display"}`}>{brandName(lang)}</p><p className={`text-[12px] text-[#5d6b7e] dark:text-[#93a3bd] ${rtl ? "font-urdu" : ""}`}>{brandTagline(lang)}</p></div></div>
         <div className="relative z-10 w-full max-w-[440px]"><Suspense fallback={null}><LoginV5 initialLang={lang} preview={otpPreview} /></Suspense></div>
       </section>
     </main>
@@ -72,7 +72,7 @@ export default async function LoginPage({ searchParams }: { searchParams?: Recor
 }
 
 function Brand({ lang }: { lang: V5Lang }) {
-  return <div className="flex items-center gap-3.5"><Logo /><div><p className="font-v5display text-[22px] font-semibold tracking-[-0.01em]">{BRAND_NAME}</p><p className={`text-[12.5px] text-[#a9cdb9] ${lang === "ur" ? "font-urdu" : ""}`}>{brandTagline(lang)}</p></div></div>;
+  return <div className="flex items-center gap-3.5"><Logo /><div dir={lang === "ur" ? "rtl" : "ltr"}><p className={`text-[22px] font-semibold ${lang === "ur" ? "font-urdu" : "font-v5display tracking-[-0.01em]"}`}>{brandName(lang)}</p><p className={`text-[12.5px] text-[#a9cdb9] ${lang === "ur" ? "font-urdu" : ""}`}>{brandTagline(lang)}</p></div></div>;
 }
 function Logo({ id = "ablg" }: { id?: string }) {
   return (

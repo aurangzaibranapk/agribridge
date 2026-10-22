@@ -44,7 +44,7 @@ export function receiptText(r: ReceiptData): string {
   const head = r.kind === "pos" ? "POS Raseed" : r.kind === "wallet" ? "Wallet Jama Raseed" : "Payment Raseed";
   const flow = r.from || r.to ? `${r.from ?? "—"} se -> ${r.to ?? "—"}` : "";
   return [
-    BRAND_NAME, BRAND_TAGLINE.en, head, `Raseed #: ${r.no}`, `Tarikh: ${r.date}`, flow, `Raqam: ${rsFmt(r.amount)}`,
+    BRAND_NAME, BRAND_TAGLINE, head, `Raseed #: ${r.no}`, `Tarikh: ${r.date}`, flow, `Raqam: ${rsFmt(r.amount)}`,
     ...(r.lines ?? []).map(([a, b]) => `${a}: ${b}`),
   ].filter(Boolean).join("\n");
 }

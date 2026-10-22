@@ -83,8 +83,8 @@
  * ---------------------------------------------------------------------
  *  English                 Roman Urdu              اردو
  * ---------------------------------------------------------------------
- *  AgriBridge              AgriBridge              AgriBridge
- *  The farmer's bridge     Kisan ka Wasela         کسان کا وسیلہ
+ *  AgriBridge              AgriBridge              ایگری بریج
+ *  Kisan ka Wasela         Kisan ka Wasela         کسان کا وسیلہ
  * ---------------------------------------------------------------------
  *
  * Naam `src/lib/brand.ts` se aata hai (`{brand}` / `{tagline}`).

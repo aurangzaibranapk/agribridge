@@ -6,6 +6,7 @@ import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { applyToVacancy, type ActionState } from "@/actions/jobs";
 import { applyInputError, readApplyFields } from "@/lib/jobs/apply-input";
 import type { CareerCard } from "@/lib/jobs/vacancy-i18n";
+import { isHiddenBrand } from "@/lib/brand";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { CheckCircle2, Upload, X } from "lucide-react";
@@ -88,7 +89,7 @@ export function ApplyForm({ vacancy, onClose }: { vacancy: CareerCard; onClose: 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className={`text-[11px] font-semibold text-brand-700 ${urdu ? "leading-snug" : "uppercase tracking-wide"}`}>{t("sp_apply_for", lang)}</p>
-              {vacancy.brand && (
+              {vacancy.brand && !isHiddenBrand(vacancy.brand) && (
                 <span className={`inline-flex max-w-full truncate rounded-full border border-brand-200 bg-white px-2 py-0.5 text-[11px] font-medium text-brand-800 ${urdu ? "leading-snug" : ""}`}>{vacancy.brand}</span>
               )}
             </div>

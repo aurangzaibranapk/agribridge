@@ -39,9 +39,10 @@ export async function generateOfferLetterPDF(data: OfferLetterData): Promise<Buf
   let y = 780;
 
   // Header
-  page.drawRectangle({ x: 0, y: 800, width: 595, height: 42, color: navy });
-  page.drawText(`${BRAND_NAME} — ${BRAND_TAGLINE.en}`, { x: 40, y: 815, size: 18, font: boldFont, color: rgb(1, 1, 1) });
-  page.drawText("Employment Offer Letter", { x: 40, y: 803, size: 9, font, color: rgb(0.7, 0.73, 0.78) });
+  page.drawRectangle({ x: 0, y: 786, width: 595, height: 56, color: navy });
+  page.drawText(BRAND_NAME, { x: 40, y: 822, size: 16, font: boldFont, color: rgb(1, 1, 1) });
+  page.drawText(BRAND_TAGLINE, { x: 40, y: 808, size: 10, font, color: rgb(0.85, 0.9, 0.88) });
+  page.drawText("Employment Offer Letter", { x: 40, y: 794, size: 9, font, color: rgb(0.7, 0.73, 0.78) });
 
   y = 750;
   page.drawText(`Date: ${new Date().toLocaleDateString()}`, { x: 40, y, size: 10, font, color: gray });
@@ -103,7 +104,9 @@ export async function generateOfferLetterPDF(data: OfferLetterData): Promise<Buf
   y -= 16;
   page.drawText("Human Resources Department", { x: 40, y, size: 11, font: boldFont, color: navy });
   y -= 14;
-  page.drawText(`${BRAND_NAME} — ${BRAND_TAGLINE.en}`, { x: 40, y, size: 10, font, color: gray });
+  page.drawText(BRAND_NAME, { x: 40, y, size: 10, font, color: gray });
+  y -= 12;
+  page.drawText(BRAND_TAGLINE, { x: 40, y, size: 9, font, color: gray });
 
   // Footer
   page.drawText("alranatraders.pk | job@alranatraders.pk", { x: 40, y: 30, size: 8, font, color: gray });

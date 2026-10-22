@@ -7,24 +7,24 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: BRAND_TAGLINE.en,
+  title: BRAND_TAGLINE,
   description:
-    `${BRAND_NAME} — ${BRAND_TAGLINE.en}. Connects farmers with agriculture inputs, machinery booking, grain markets, dairy services, farm products and Kisan AI in Pakistan.`,
+    `${BRAND_NAME} — ${BRAND_TAGLINE}. Connects farmers with agriculture inputs, machinery booking, grain markets, dairy services, farm products and Kisan AI in Pakistan.`,
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: `${BRAND_NAME} | ${BRAND_TAGLINE.en}`,
+    title: `${BRAND_NAME} | ${BRAND_TAGLINE}`,
     description:
-      `${BRAND_NAME} — ${BRAND_TAGLINE.en}. A connected agriculture ecosystem for farmers, inputs, machinery, grain, dairy, farm products and digital guidance in Pakistan.`,
+      `${BRAND_NAME} — ${BRAND_TAGLINE}. A connected agriculture ecosystem for farmers, inputs, machinery, grain, dairy, farm products and digital guidance in Pakistan.`,
     url: "/",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: `${BRAND_NAME} | ${BRAND_TAGLINE.en}`,
+    title: `${BRAND_NAME} | ${BRAND_TAGLINE}`,
     description:
-      `${BRAND_NAME} — ${BRAND_TAGLINE.en}. Connecting farmers with agriculture services, markets, machinery and digital guidance in Pakistan.`,
+      `${BRAND_NAME} — ${BRAND_TAGLINE}. Connecting farmers with agriculture services, markets, machinery and digital guidance in Pakistan.`,
   },
 };
 

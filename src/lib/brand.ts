@@ -6,19 +6,37 @@
  * Domain alranatraders.pk, email pate, package id, database id
  * aur API URL yahan nahi — wo pata hain, naam nahi.
  */
+/** English aur Roman ka naam. Email, meta, PDF (bina zaban) yahi Latin lafz. */
 export const BRAND_NAME = "AgriBridge";
 
-export const BRAND_TAGLINE = {
-  en: "The farmer's bridge",
-  rm: "Kisan ka Wasela",
-  ur: "کسان کا وسیلہ",
+/**
+ * Naam aur tagline, zaban ke hisaab se.
+ * en/rm: AgriBridge / Kisan ka Wasela
+ * ur: ایگری بریج / کسان کا وسیلہ
+ * "The farmer's bridge" kahin nahi.
+ */
+export const BRAND_COPY = {
+  en: { name: "AgriBridge", tagline: "Kisan ka Wasela" },
+  rm: { name: "AgriBridge", tagline: "Kisan ka Wasela" },
+  ur: { name: "ایگری بریج", tagline: "کسان کا وسیلہ" },
 } as const;
 
-export type BrandLang = keyof typeof BRAND_TAGLINE;
+export type BrandLang = keyof typeof BRAND_COPY;
 
-export function brandTagline(lang: string): string {
-  if (lang === "en" || lang === "rm" || lang === "ur") return BRAND_TAGLINE[lang];
-  return BRAND_TAGLINE.en;
+/** Bina zaban wale meta, email, PDF — English/Roman tagline. */
+export const BRAND_TAGLINE = BRAND_COPY.en.tagline;
+
+export function asBrandLang(lang?: string): BrandLang {
+  if (lang === "en" || lang === "rm" || lang === "ur") return lang;
+  return "en";
+}
+
+export function brandName(lang?: string): string {
+  return BRAND_COPY[asBrandLang(lang)].name;
+}
+
+export function brandTagline(lang?: string): string {
+  return BRAND_COPY[asBrandLang(lang)].tagline;
 }
 
 /** Purane trading-naam jo site par kabhi na dikhein. */
@@ -43,12 +61,12 @@ function collapsePair(text: string, name: string): string {
 }
 
 /**
- * Tarjume aur templates. `{brand}` naam hai, `{tagline}` us zaban ki line.
+ * Tarjume aur templates. `{brand}` naam hai, `{tagline}` har zaban mein wahi line.
  * Purana trading-naam agar kisi jumle mein reh gaya ho to yahin naam ban jata hai.
  */
 export function applyBrand(text: string, lang: BrandLang = "en"): string {
-  const name = BRAND_NAME;
-  const tag = BRAND_TAGLINE[lang] ?? BRAND_TAGLINE.en;
+  const name = brandName(lang);
+  const tag = brandTagline(lang);
   const filled = text
     .replaceAll("{brand}", name)
     .replaceAll("{tagline}", tag)

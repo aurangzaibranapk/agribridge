@@ -2,7 +2,7 @@ import Link from "next/link";
 import localFont from "next/font/local";
 import { Leaf } from "lucide-react";
 import { BrandMark, BrandWord } from "@/components/brand/brand-mark";
-import { BRAND_NAME, brandTagline } from "@/lib/brand";
+import { brandName, brandTagline } from "@/lib/brand";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 const urdu = localFont({
@@ -35,6 +35,7 @@ const companyLinks = [
 
 export async function SiteFooter() {
   const lang = getLanguageFromCookies("en");
+  const name = brandName(lang);
   const tagline = brandTagline(lang);
   const rtl = lang === "ur";
   return (
@@ -44,9 +45,13 @@ export async function SiteFooter() {
           <div className="flex items-center justify-between gap-4 lg:block">
             <div className="flex min-w-0 items-center gap-3">
               <BrandMark className="h-12 w-12 sm:h-14 sm:w-14" />
-              <div className="min-w-0">
-                <BrandWord className="block font-display text-xl font-black sm:text-2xl" />
-                <p dir={rtl ? "rtl" : "ltr"} className={`truncate text-xs text-slate-500 sm:text-sm ${rtl ? "font-urdu leading-snug" : ""}`}>{tagline}</p>
+              <div dir={rtl ? "rtl" : "ltr"} className={`min-w-0 ${rtl ? "text-right" : "text-left"}`}>
+                {rtl ? (
+                  <p className="font-urdu text-xl font-black leading-snug sm:text-2xl">{name}</p>
+                ) : (
+                  <BrandWord className="block font-display text-xl font-black sm:text-2xl" />
+                )}
+                <p className={`truncate text-xs text-slate-500 sm:text-sm ${rtl ? "font-urdu leading-snug" : "leading-tight"}`}>{tagline}</p>
               </div>
             </div>
             <p className="hidden max-w-xs text-right text-xs leading-5 text-slate-600 sm:block lg:mt-4 lg:text-left lg:text-sm lg:leading-6">Digital Agriculture for a Better Tomorrow.</p>
@@ -86,8 +91,8 @@ export async function SiteFooter() {
         </div>
 
         <div className="mt-6 flex flex-col gap-2 border-t border-emerald-200 pt-4 text-center text-[10px] leading-5 text-slate-500 sm:mt-8 sm:flex-row sm:items-center sm:justify-between sm:pt-5 sm:text-left sm:text-xs">
-          <p>© {new Date().getFullYear()} {BRAND_NAME}. All rights reserved.</p>
-          <p>Zarurat se zindagi tak — AgriBridge ke saath.</p>
+          <p>© {new Date().getFullYear()} {name}. All rights reserved.</p>
+          <p>{rtl ? `${name} کے ساتھ` : `Zarurat se zindagi tak — ${name} ke saath.`}</p>
         </div>
       </div>
     </footer>
