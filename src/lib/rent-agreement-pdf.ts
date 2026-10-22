@@ -1,3 +1,4 @@
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 interface RentAgreementData {
@@ -22,16 +23,17 @@ export async function generateRentAgreementPDF(data: RentAgreementData): Promise
   const gray = rgb(0.35, 0.4, 0.45);
   const black = rgb(0.1, 0.1, 0.1);
 
-  page.drawRectangle({ x: 0, y: 800, width: 595, height: 42, color: navy });
-  page.drawText("Al Rana Traders", { x: 40, y: 815, size: 18, font: boldFont, color: rgb(1, 1, 1) });
-  page.drawText("Shop Rent Agreement", { x: 40, y: 803, size: 9, font, color: rgb(0.7, 0.73, 0.78) });
+  page.drawRectangle({ x: 0, y: 786, width: 595, height: 56, color: navy });
+  page.drawText(BRAND_NAME, { x: 40, y: 822, size: 16, font: boldFont, color: rgb(1, 1, 1) });
+  page.drawText(BRAND_TAGLINE, { x: 40, y: 808, size: 10, font, color: rgb(0.85, 0.9, 0.88) });
+  page.drawText("Shop Rent Agreement", { x: 40, y: 794, size: 9, font, color: rgb(0.7, 0.73, 0.78) });
 
   let y = 750;
   page.drawText(`Date: ${new Date().toLocaleDateString()}`, { x: 40, y, size: 10, font, color: gray });
   y -= 30;
 
   const introLines = [
-    "This Rent Agreement is made between the Landlord and Al Rana Traders",
+    "This Rent Agreement is made between the Landlord and AgriBridge",
     "(the Tenant), for the shop/branch premises detailed below, on the",
     "following terms and conditions:",
   ];
@@ -83,7 +85,7 @@ export async function generateRentAgreementPDF(data: RentAgreementData): Promise
   page.drawText("_____________________", { x: 320, y, size: 11, font, color: black });
   y -= 14;
   page.drawText("Landlord Signature", { x: 40, y, size: 9, font, color: gray });
-  page.drawText("Al Rana Traders (Tenant)", { x: 320, y, size: 9, font, color: gray });
+  page.drawText(`${BRAND_NAME} (Tenant)`, { x: 320, y, size: 9, font, color: gray });
 
   page.drawText("alranatraders.pk | job@alranatraders.pk", { x: 40, y: 30, size: 8, font, color: gray });
 

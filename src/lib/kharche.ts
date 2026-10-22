@@ -81,7 +81,7 @@ export const PAISA_KHAANE = [
   { value: "paisa_diya", label: "Paisa Diya", tafseel: "Kisi ko cash diya" },
   { value: "paisa_mila", label: "Paisa Mila", tafseel: "Kisi se payment mili" },
   { value: "udhaar", label: "Udhaar / Advance", tafseel: "Kisi ne aap se advance ya udhaar liya" },
-  { value: "mazdoori", label: "Mazdoori / Kaam", tafseel: "Kisi ne ART ke liye kaam kiya" },
+  { value: "mazdoori", label: "Mazdoori / Kaam", tafseel: "Kisi ne AgriBridge ke liye kaam kiya" },
   { value: "kharcha", label: "General Kharcha", tafseel: "Chai, loading, marammat, bijli, transport" },
 ] as const;
 

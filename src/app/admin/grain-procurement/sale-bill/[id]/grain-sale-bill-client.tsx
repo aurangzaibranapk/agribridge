@@ -139,7 +139,7 @@ export function GrainSaleBillClient({ bill, payments, isAdmin }: { bill: SaleBil
 
         <div className="mt-12 grid grid-cols-2 gap-10 text-center text-xs text-surface-500">
           <div className="border-t border-surface-300 pt-1">Dastakhat Khareedar</div>
-          <div className="border-t border-surface-300 pt-1">Dastakhat / Mohar Al Rana Traders</div>
+          <div className="border-t border-surface-300 pt-1">Dastakhat / Mohar AgriBridge</div>
         </div>
 
         <p className="mt-8 text-center text-[10px] text-surface-300">{t("gb_computer_bill", lang)}</p>

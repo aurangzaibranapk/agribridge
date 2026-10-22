@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Omit<ProductLayoutProps, "chi
   const brand = (product as any).brands?.name;
   const company = (product as any).companies?.name;
   const descriptor = [category, brand || company, product.pack_size].filter(Boolean).join(" • ");
-  const description = `${product.name}${descriptor ? ` — ${descriptor}` : ""}. View product details and availability on AgriBridge by Al Rana Traders.`;
+  const description = `${product.name}${descriptor ? ` — ${descriptor}` : ""}. View product details and availability on AgriBridge.`;
   const canonical = `/products/${product.id}`;
 
   return {

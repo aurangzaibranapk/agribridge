@@ -1,5 +1,16 @@
 import Link from "next/link";
+import localFont from "next/font/local";
 import { Leaf } from "lucide-react";
+import { BrandMark, BrandWord } from "@/components/brand/brand-mark";
+import { brandName, brandTagline } from "@/lib/brand";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+
+const urdu = localFont({
+  src: "../../app/login/fonts/noto-nastaliq-urdu.woff2",
+  variable: "--font-urdu",
+  display: "swap",
+  weight: "400 700",
+});
 
 const quickLinks = [
   ["Home", "/"],
@@ -23,16 +34,24 @@ const companyLinks = [
 ] as const;
 
 export async function SiteFooter() {
+  const lang = getLanguageFromCookies("en");
+  const name = brandName(lang);
+  const tagline = brandTagline(lang);
+  const rtl = lang === "ur";
   return (
-    <footer className="border-t border-emerald-100 bg-[#F3F7EE] text-[#123629]">
+    <footer className={`border-t border-emerald-100 bg-[#F3F7EE] text-[#123629] ${rtl ? urdu.variable : ""}`}>
       <div className="mx-auto max-w-[1500px] px-4 py-7 sm:px-5 sm:py-9 lg:px-8 lg:py-10">
         <div className="grid gap-6 sm:gap-7 lg:grid-cols-[1.1fr_1.35fr_.8fr_1fr] lg:gap-8">
           <div className="flex items-center justify-between gap-4 lg:block">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-xs font-black text-white shadow-sm sm:h-14 sm:w-14 sm:text-sm">ART</div>
-              <div className="min-w-0">
-                <p className="truncate text-[10px] font-extrabold uppercase tracking-[0.16em] text-slate-500 sm:text-xs sm:tracking-[0.2em]">Al Rana Traders</p>
-                <p className="font-display text-xl font-black sm:text-2xl">Agri<span className="text-emerald-700">Bridge</span></p>
+              <BrandMark className="h-12 w-12 sm:h-14 sm:w-14" />
+              <div dir={rtl ? "rtl" : "ltr"} className={`min-w-0 ${rtl ? "text-right" : "text-left"}`}>
+                {rtl ? (
+                  <p className="font-urdu text-xl font-black leading-snug sm:text-2xl">{name}</p>
+                ) : (
+                  <BrandWord className="block font-display text-xl font-black sm:text-2xl" />
+                )}
+                <p className={`truncate text-xs text-slate-500 sm:text-sm ${rtl ? "font-urdu leading-snug" : "leading-tight"}`}>{tagline}</p>
               </div>
             </div>
             <p className="hidden max-w-xs text-right text-xs leading-5 text-slate-600 sm:block lg:mt-4 lg:text-left lg:text-sm lg:leading-6">Digital Agriculture for a Better Tomorrow.</p>
@@ -72,8 +91,8 @@ export async function SiteFooter() {
         </div>
 
         <div className="mt-6 flex flex-col gap-2 border-t border-emerald-200 pt-4 text-center text-[10px] leading-5 text-slate-500 sm:mt-8 sm:flex-row sm:items-center sm:justify-between sm:pt-5 sm:text-left sm:text-xs">
-          <p>© {new Date().getFullYear()} Al Rana Traders (AgriBridge). All rights reserved.</p>
-          <p>Zarurat se zindagi tak — AgriBridge ke saath.</p>
+          <p>© {new Date().getFullYear()} {name}. All rights reserved.</p>
+          <p>{rtl ? `${name} کے ساتھ` : `Zarurat se zindagi tak — ${name} ke saath.`}</p>
         </div>
       </div>
     </footer>

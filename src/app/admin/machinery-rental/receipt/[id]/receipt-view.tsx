@@ -33,7 +33,7 @@ export function ReceiptView({ receipt, lang, title }: { receipt: Receipt; lang: 
   // hain, aur wo hamesha us kahani ko yaad rakhta hai jo us ke haq
   // mein ho.
   const message = [
-    `Al Rana Traders — AgriBridge`,
+    `AgriBridge`,
     `Raseed ${receipt.receiptNumber}`,
     ``,
     `${receipt.farmerName}${receipt.farmerCode ? ` (${receipt.farmerCode})` : ""}`,

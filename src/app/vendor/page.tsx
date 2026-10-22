@@ -174,11 +174,11 @@ export default async function VendorPortalPage() {
       rate: r.rate_amount === null ? null : Number(r.rate_amount),
       gross: r.gross_amount === null ? null : Number(r.gross_amount),
       // Commission ka FISAD yahan se aage nahi jata (malik ka faisla).
-      // Raqam upar "ART Commission" ke card mein alag dikhti hai; booking
+      // Raqam upar "AgriBridge Commission" ke card mein alag dikhti hai; booking
       // ke card par commission ki koi lakeer nahi.
       commission: r.commission_amount === null ? null : Number(r.commission_amount),
       payable: r.vendor_payable === null ? null : Number(r.vendor_payable),
-      // Kisan ka diesel pehle hi hisse se kat chuka hai; ART ka diesel
+      // Kisan ka diesel pehle hi hisse se kat chuka hai; AgriBridge ka diesel
       // adaigi ke waqt kat-ta hai. Dono alag alag dikhte hain (170).
       farmerDiesel: Number(r.kisan_ka_diesel ?? 0),
       artDiesel: Number(r.art_ka_diesel ?? 0),
@@ -230,7 +230,7 @@ export default async function VendorPortalPage() {
     // Vendor ka apna view (191). Pehle yahan v_machinery_machines tha,
     // magar us ka aakhri lafz `where fn_is_any_staff()` hai -- vendor ke
     // haath mein wo sifar qatarein laata tha aur safha us "kuch nahi
-    // mila" ko "koi machine nahi" samajh leta tha. Naye view mein ART ki
+    // mila" ko "koi machine nahi" samajh leta tha. Naye view mein AgriBridge ki
     // billing aur commission hai hi nahi.
     supabase.from("v_machinery_vendor_machines").select("*").eq("vendor_id", vendor.id).order("machine_code"),
     supabase.from("v_machinery_vendor_location").select("*").eq("vendor_id", vendor.id).order("pehli_tareekh", { nullsFirst: false }),

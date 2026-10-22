@@ -8,7 +8,7 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const metadata: Metadata = {
   title: "Agriculture Products",
-  description: "Browse agriculture products from AgriBridge including seeds, fertilizers and crop protection products available through Al Rana Traders.",
+  description: "Browse agriculture products from AgriBridge including seeds, fertilizers and crop protection products available through AgriBridge.",
   alternates: { canonical: "/products" },
 };
 

@@ -102,7 +102,7 @@ export default async function BranchTreePage() {
           </span>
           <div>
             <p className="font-display text-base font-semibold text-surface-900 dark:text-white">
-              Al Rana Traders
+              AgriBridge
             </p>
             <p className="text-xs text-surface-500">
               {(branches ?? []).length} shaakhein · {sabShops.length} dukanein

@@ -37,7 +37,7 @@ export function PaymentSlipClient({ slip, financeAccounts }: { slip: Slip; finan
   const [showEdit, setShowEdit] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const slipNumber = `SLIP-${slip.id.slice(0, 8).toUpperCase()}`;
-  const shareText = `Al Rana Traders - Payment Slip ${slipNumber}\n${slip.seller_name}\nAmount: Rs ${slip.amount.toLocaleString()}\nDate: ${new Date(slip.created_at).toLocaleDateString()}\n\nDekhein: ${typeof window !== "undefined" ? window.location.href : ""}`;
+  const shareText = `AgriBridge - Payment Slip ${slipNumber}\n${slip.seller_name}\nAmount: Rs ${slip.amount.toLocaleString()}\nDate: ${new Date(slip.created_at).toLocaleDateString()}\n\nDekhein: ${typeof window !== "undefined" ? window.location.href : ""}`;
 
   function handlePrint() {
     window.print();

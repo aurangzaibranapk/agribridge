@@ -152,7 +152,7 @@ export const portalDairyDict = {
   dy_err_litres: { en: "Litres must be between 0 and 60.", rm: "Litre 0 se 60 ke beech hon.", ur: "لیٹر ۰ سے ۶۰ کے درمیان۔" },
   dy_err_date: { en: "Date must be today or within the last 60 days.", rm: "Tareekh aaj ya pichhle 60 din ki ho.", ur: "تاریخ آج یا پچھلے ۶۰ دن کی ہو۔" },
   dy_err_generic: { en: "Could not save. Please try again.", rm: "Save nahi hua. Dobara koshish karein.", ur: "محفوظ نہیں ہوا۔" },
-  dy_footer: { en: "Your animals and milk are visible only to you (and Al Rana staff). ERP collection data is read-only.", rm: "Aap ke janwar aur doodh sirf aap (aur Al Rana staff) dekh sakte hain. ERP collection data sirf parhne ke liye hai.", ur: "آپ کے جانور اور دودھ صرف آپ دیکھ سکتے ہیں۔" },
+  dy_footer: { en: "Your animals and milk are visible only to you (and {brand} staff). ERP collection data is read-only.", rm: "Aap ke janwar aur doodh sirf aap (aur {brand} staff) dekh sakte hain. ERP collection data sirf parhne ke liye hai.", ur: "آپ کے جانور اور دودھ صرف آپ دیکھ سکتے ہیں۔" },
   // Livestock -> Dairy (19 Oct): purane Livestock safhe ke khane ab yahan.
   dy_ms_title: { en: "Milk sale", rm: "Doodh ki farokht", ur: "دودھ کی فروخت" },
   dy_ms_badge: { en: "Moved from Livestock", rm: "Livestock se yahan", ur: "لائیو اسٹاک سے یہاں" },

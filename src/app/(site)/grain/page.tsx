@@ -7,7 +7,7 @@ import { EcosystemFlow } from "@/components/site/ecosystem-flow";
 import { WebsiteCta } from "@/components/site/website-cta";
 
 export const metadata: Metadata = {
-  title: "Grain & Produce Procurement | ART AgriBridge",
+  title: "Grain & Produce Procurement | AgriBridge",
   description:
     "Gandum, chawal aur makai ki kharid — shaffaf wazan, shaffaf rate aur shaffaf adaigi. Kisan ki fasal ka poora record.",
 };

@@ -141,9 +141,9 @@ export const portalMoreDict = {
   pm_tehsil: { en: "Tehsil (optional)", rm: "Tehsil (marzi se)", ur: "تحصیل (مرضی سے)" },
   pm_order_placed: { en: "Order placed successfully!", rm: "Order lag gaya!", ur: "آرڈر لگ گیا!" },
   pm_order_routed: {
-    en: "Your order will be routed to a verified dealer in your area, delivered under Al Rana Traders.",
-    rm: "Aap ka order aap ke ilaqe ke tasdeeq shuda dealer ko jayega, aur Al Rana Traders ke taht pahunchega.",
-    ur: "آپ کا آرڈر آپ کے علاقے کے تصدیق شدہ ڈیلر کو جائے گا، اور الرانا ٹریڈرز کے تحت پہنچے گا۔",
+    en: "Your order will be routed to a verified dealer in your area, delivered under {brand}.",
+    rm: "Aap ka order aap ke ilaqe ke tasdeeq shuda dealer ko jayega, aur {brand} ke taht pahunchega.",
+    ur: "آپ کا آرڈر آپ کے علاقے کے تصدیق شدہ ڈیلر کو جائے گا، اور {brand} کے تحت پہنچے گا۔",
   },
   pm_dealer_notified: {
     en: "A verified dealer in your area has been notified. You'll be updated as your order progresses.",

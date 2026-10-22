@@ -22,7 +22,7 @@ export async function sendTestSms(_prev: SmsTestState, formData: FormData): Prom
   if (!me?.is_active || !ADMIN.has(String(me.role))) return { error: "Test SMS sirf Owner ya Admin bhejta hai." };
 
   const phone = String(formData.get("phone") ?? "").trim();
-  const text = String(formData.get("message") ?? "").trim().slice(0, 480) || "Al Rana Traders: yeh test SMS hai.";
+  const text = String(formData.get("message") ?? "").trim().slice(0, 480) || "AgriBridge: yeh test SMS hai.";
   if (!toVeevoReceiver(phone)) return { error: "Mobile 03xxxxxxxxx ki surat mein likhein." };
 
   const env = veevoEnv();

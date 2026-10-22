@@ -12,7 +12,7 @@ export async function getBusinessContext(): Promise<BusinessContext> {
 
 export const BUSINESS_LABELS: Record<BusinessContext, string> = {
   master: "Master View",
-  karyana: "Al Rana Traders (Karyana)",
+  karyana: "AgriBridge (Karyana)",
   agri_inputs: "Agri Inputs",
   grain_procurement: "Grain Procurement",
   dairy: "Dairy",

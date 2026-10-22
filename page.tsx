@@ -33,7 +33,7 @@ export default async function FarmerOrdersPage() {
       </Link>
       <h1 className="font-display text-2xl font-semibold text-surface-900">Place an Order</h1>
       <p className="mt-1 text-surface-500">
-        Your order will be routed to a verified dealer in your area, delivered under Al Rana Traders.
+        Your order will be routed to a verified dealer in your area, delivered under AgriBridge.
       </p>
 
       <div className="mt-6">

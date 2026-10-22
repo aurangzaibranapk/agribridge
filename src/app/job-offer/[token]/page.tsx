@@ -52,7 +52,7 @@ export default async function JobOfferPage({ params }: { params: { token: string
 
         <div className="border-t border-surface-100 bg-surface-50 px-6 py-4 text-center">
           <p className="text-xs text-surface-500">alranatraders.pk &nbsp;|&nbsp; info@alranatraders.pk</p>
-          <p className="mt-1 text-[11px] text-surface-400">© {new Date().getFullYear()} Al Rana Traders. All rights reserved.</p>
+          <p className="mt-1 text-[11px] text-surface-400">© {new Date().getFullYear()} AgriBridge. All rights reserved.</p>
         </div>
       </div>
     </div>

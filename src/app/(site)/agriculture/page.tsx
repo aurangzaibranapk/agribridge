@@ -8,7 +8,7 @@ import { ActionCard } from "@/components/site/action-card";
 import { WebsiteCta } from "@/components/site/website-cta";
 
 export const metadata: Metadata = {
-  title: "Agriculture & Farmer Services | ART AgriBridge",
+  title: "Agriculture & Farmer Services | AgriBridge",
   description:
     "Crop planning, seed, fertilizer, crop protection, machinery, farmer credit aur produce procurement — AgriBridge ka connected agriculture ecosystem.",
 };

@@ -1,3 +1,13 @@
+## Done on Live — 22 October 2026: Careers i18n columns (public apply modal)
+
+Branch `cursor/careers-apply-modal-i18n-552c` (PR #213). Live `ktskwawkslaznkjjacni` only. Testing was not touched.
+
+- Backup before the change: `backups.job_vacancies_20261022_brand` — 2 rows, 10 columns, same as `public.job_vacancies` at that moment. Schema `backups` is revoked from public, anon, and authenticated.
+- Migration `supabase/migrations/20261022082729_job_vacancy_public_i18n.sql` applied on Live. Nullable columns only. No other table.
+- Manual `supabase/manual/job_vacancy_i18n_live_rows.sql` then wrote the two MCO rows only. Base `title` / `description` unchanged. `brand`, `brand_en`, `brand_ur` are null.
+- Checked after write: Mahanbali and 157NB have English, Roman, and Urdu titles. Row count stayed 2.
+- Columns: `title_en`, `title_ur`, `title_roman`, `description_en`, `description_ur`, `description_roman`, plus optional `brand`, `brand_en`, `brand_ur`, `brand_roman`. Empty brand means no public tag. RLS unchanged.
+
 ## Pending — 21 October 2026: Bharti offer → structure → barhotri → salary slip (691)
 
 Branch `feat/salary-offer-slip`. Migration **691 not applied** on Testing or Live. Files only. 689 reserved, 690 left free. Backup pehle (lines file ke upar likhi hain), phir Testing, phir Live. App 691 ke baghair bhi chalta hai (purani payslip, purani offer), magar naye hissay 691 ke baad hi kaam karte hain.

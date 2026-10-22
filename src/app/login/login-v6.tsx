@@ -6,6 +6,7 @@ import { v5CompleteSignup, v5Login, v5SendCode, v5SetPassword, v5VerifyCode, v6C
 import { createClient } from "@/lib/supabase/client";
 import { goAfterLogin, routeAfterLogin } from "@/lib/navigation/after-login";
 import { t6, type V6Lang } from "@/app/login/v6-text";
+import { brandName, brandTagline } from "@/lib/brand";
 import { SlideCard } from "@/app/login/slide-card";
 import { codeLengthFor, OTP_MAX_TRIES, OTP_RESEND_SECONDS, OTP_VALID_MINUTES } from "@/lib/auth/login-v6-ui";
 
@@ -116,7 +117,7 @@ export function LoginV6({ initialLang }: { initialLang: V6Lang }) {
     <div lang={lang === "ur" ? "ur" : "en"} className={`mx-auto w-full max-w-[920px] ${dirCls}`}>
       <header dir={rtl ? "rtl" : "ltr"} className="mb-2 flex items-center gap-3">
         <Logo size={44} />
-        <div><p className="font-v5 text-[19px] font-bold">AgriBridge</p><p className={`text-[12px] ${MUTED}`}>{tr("tagline")}</p></div>
+        <div dir={rtl ? "rtl" : "ltr"} className={rtl ? "text-right leading-snug" : "text-left leading-tight"}><p className={`text-[19px] font-bold leading-tight ${rtl ? "" : "font-v5"}`}>{brandName(lang)}</p><p className={`text-[12px] leading-tight ${MUTED}`}>{brandTagline(lang)}</p></div>
         <div className="ms-auto"><LangToggle lang={lang} onChange={setLang} /></div>
       </header>
       {slide ? (
@@ -128,7 +129,7 @@ export function LoginV6({ initialLang }: { initialLang: V6Lang }) {
       ) : (
       <div dir={rtl ? "rtl" : "ltr"} className="mx-auto max-w-[440px] rounded-[24px] border border-[#e6efe9] bg-white px-6 py-7 shadow-[0_30px_70px_-30px_rgba(15,61,42,0.33)] dark:border-[#22324f] dark:bg-[#101c33] sm:px-[34px] sm:py-[34px]">
         {back && <div className="mb-1.5"><button type="button" onClick={back} className={`text-[14px] ${LINK}`}>{rtl ? "→" : "←"} {tr("back")}</button></div>}
-        <div className="mb-4 mt-1.5 flex flex-col items-center gap-2 text-center"><Logo size={52} /><div><p className="font-v5 text-[19px] font-bold">AgriBridge</p><p className={`text-[12px] ${MUTED}`}>{tr("brand_sub")}</p></div></div>
+        <div className="mb-4 mt-1.5 flex flex-col items-center gap-2 text-center"><Logo size={52} /><div dir={rtl ? "rtl" : "ltr"}><p className={`text-[19px] font-bold leading-tight ${rtl ? "" : "font-v5"}`}>{brandName(lang)}</p><p className={`text-[12px] leading-tight ${MUTED}`}>{brandTagline(lang)}</p></div></div>
         {error && <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13.5px] text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{error}</div>}
         {step === "forgot" && (
           <form onSubmit={(e) => { e.preventDefault(); sendCode(purpose, otpIdent, channel); }}>

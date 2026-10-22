@@ -30,9 +30,9 @@ export const outsideDict = {
   ou_tehsil: { en: "Tehsil", rm: "Tehsil", ur: "تحصیل" },
   ou_mobile: { en: "Mobile", rm: "Mobile", ur: "موبائل" },
   ou_mobile_note: {
-    en: "Your mobile is your identity. To change it, contact Al Rana Traders.",
-    rm: "Mobile aap ki pehchan hai. Badalwana ho to Al Rana Traders se raabta karein.",
-    ur: "موبائل آپ کی پہچان ہے۔ بدلوانا ہو تو الرانا ٹریڈرز سے رابطہ کریں۔",
+    en: "Your mobile is your identity. To change it, contact {brand}.",
+    rm: "Mobile aap ki pehchan hai. Badalwana ho to {brand} se raabta karein.",
+    ur: "موبائل آپ کی پہچان ہے۔ بدلوانا ہو تو {brand} سے رابطہ کریں۔",
   },
   ou_lang_q: { en: "Which language for messages?", rm: "Paighaam kis zaban mein?", ur: "پیغام کس زبان میں؟" },
   ou_english: { en: "English", rm: "English", ur: "انگریزی" },
@@ -57,9 +57,9 @@ export const outsideDict = {
   ou_profile_confirmed: { en: "Your profile is confirmed.", rm: "Profile confirm ho chuki hai.", ur: "پروفائل کنفرم ہو چکی ہے۔" },
   ou_profile_verified: { en: "Your profile is verified.", rm: "Profile tasdeeq shuda hai.", ur: "پروفائل تصدیق شدہ ہے۔" },
   ou_verified_note: {
-    en: "Al Rana Traders has checked your documents and verified them.",
-    rm: "Al Rana Traders ne aap ke kaghazat dekh kar tasdeeq kar di hai.",
-    ur: "الرانا ٹریڈرز نے آپ کے کاغذات دیکھ کر تصدیق کر دی ہے۔",
+    en: "{brand} has checked your documents and verified them.",
+    rm: "{brand} ne aap ke kaghazat dekh kar tasdeeq kar di hai.",
+    ur: "{brand} نے آپ کے کاغذات دیکھ کر تصدیق کر دی ہے۔",
   },
   ou_missing_parts: { en: "These parts are still left to confirm:", rm: "Confirm karne ke liye ye hissay baqi hain:", ur: "کنفرم کرنے کے لیے یہ حصے باقی ہیں:" },
 

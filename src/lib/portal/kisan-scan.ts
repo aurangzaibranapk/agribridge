@@ -8,7 +8,7 @@ export function kisanScanDecision(i: {
   token: string | null; secret: string | null;
   verify: (t: string, s: string) => KisanQrResult;
 }): ScanDecision {
-  if ("error" in i.auth) return i.auth.status === 401 ? { kind: "login" } : { kind: "error", message: "Sirf Al Rana staff ye card scan kar sakta hai." };
+  if ("error" in i.auth) return i.auth.status === 401 ? { kind: "login" } : { kind: "error", message: "Sirf AgriBridge staff ye card scan kar sakta hai." };
   if (!i.secret) return { kind: "error", message: "QR abhi set nahi (server par KISAN_QR_SECRET nahi)." };
   if (!i.token) return { kind: "error", message: "QR mein token nahi mila." };
   const r = i.verify(i.token, i.secret);

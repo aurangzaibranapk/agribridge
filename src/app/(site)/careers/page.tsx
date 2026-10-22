@@ -1,35 +1,51 @@
-import { createClient } from "@/lib/supabase/server";
-import { VacancyList } from "./vacancy-list";
-import { t } from "@/lib/i18n/translations";
+import localFont from "next/font/local";
+import { LanguageSwitch } from "@/components/ui/language-switch";
+import { LangProvider } from "@/lib/i18n/lang-context";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { t } from "@/lib/i18n/translations";
+import { loadOpenVacancies } from "@/lib/jobs/load-open-vacancies";
+import { LIVE_VACANCY_COPY } from "@/lib/jobs/vacancy-preview";
+import { presentVacancy } from "@/lib/jobs/vacancy-i18n";
+import { VacancyList } from "./vacancy-list";
 
 export const dynamic = "force-dynamic";
 
-export default async function CareersPage() {
-  const lang = getLanguageFromCookies("rm");
-  const supabase = createClient();
-  const { data: rawVacancies } = await supabase
-    .from("job_vacancies")
-    .select("id, title, designation, description, requirements, branches(name)")
-    .eq("is_open", true)
-    .order("created_at", { ascending: false });
+const urdu = localFont({
+  src: "../../login/fonts/noto-nastaliq-urdu.woff2",
+  variable: "--font-urdu",
+  display: "swap",
+  weight: "400 700",
+});
 
-  const vacancies = (rawVacancies ?? []).map((v: any) => ({
-    id: v.id,
-    title: v.title,
-    designation: v.designation,
-    description: v.description,
-    requirements: v.requirements,
-    branch_name: Array.isArray(v.branches) ? v.branches[0]?.name : v.branches?.name,
-  }));
+export default async function CareersPage() {
+  const lang = getLanguageFromCookies("en");
+  const preview = process.env.NODE_ENV !== "production" && process.env.CAREERS_PREVIEW === "1";
+  const sources = preview ? LIVE_VACANCY_COPY : await loadOpenVacancies().catch(() => []);
+  const vacancies = sources.map((row) => presentVacancy(row, lang));
+  const rtl = lang === "ur";
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-16">
-      <h1 className="font-display text-3xl font-semibold text-surface-900">{t("sp_careers_title", lang)}</h1>
-      <p className="mt-2 text-surface-500">{t("sp_careers_lead", lang)}</p>
-      <div className="mt-8">
-        <VacancyList vacancies={vacancies} />
+    <LangProvider lang={lang}>
+      <div
+        dir={rtl ? "rtl" : "ltr"}
+        lang={rtl ? "ur" : lang === "en" ? "en" : "ur-Latn"}
+        className={`bg-brand-25 ${rtl ? `${urdu.variable} font-urdu` : ""}`}
+      >
+        <div className="mx-auto max-w-3xl px-4 py-6 md:py-8">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className={`font-display text-2xl font-semibold text-surface-900 md:text-3xl ${rtl ? "leading-snug" : ""}`}>
+                {t("sp_careers_title", lang)}
+              </h1>
+              <p className={`mt-1 text-sm text-surface-500 md:text-base ${rtl ? "leading-relaxed" : ""}`}>{t("sp_careers_lead", lang)}</p>
+            </div>
+            <LanguageSwitch current={lang} />
+          </div>
+          <div className="mt-5">
+            <VacancyList vacancies={vacancies} />
+          </div>
+        </div>
       </div>
-    </div>
+    </LangProvider>
   );
 }

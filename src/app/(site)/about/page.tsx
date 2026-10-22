@@ -4,8 +4,8 @@ import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 export const metadata: Metadata = {
-  title: "About Al Rana Traders",
-  description: "Learn about Al Rana Traders and AgriBridge, a Pakistan agriculture platform focused on farmers, quality agriculture services, markets and digital agriculture.",
+  title: "About AgriBridge",
+  description: "Learn about AgriBridge and AgriBridge, a Pakistan agriculture platform focused on farmers, quality agriculture services, markets and digital agriculture.",
   alternates: { canonical: "/about" },
 };
 

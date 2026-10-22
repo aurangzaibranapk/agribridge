@@ -131,7 +131,7 @@ function BookingsList({
             {r.acres ? ` · ${r.acres} ایکڑ` : ""}
             {r.expectedDate ? ` · ${new Date(r.expectedDate).toLocaleDateString()}` : ""}
           </p>
-          <p className="mt-1 text-xs text-amber-600">الرانا ٹریڈرز جلد رابطہ کر کے ریٹ بتا دے گا۔</p>
+          <p className="mt-1 text-xs text-amber-600">AgriBridge جلد رابطہ کر کے ریٹ بتا دے گا۔</p>
         </div>
       ))}
 
@@ -532,7 +532,7 @@ function NewRequest({ token, farms, onNeedFarm }: { token: string; farms: Portal
       <div className="rounded-card border border-green-200 bg-white p-6 text-center shadow-card">
         <CheckCircle2 className="mx-auto h-10 w-10 text-green-600" />
         <p className="mt-3 font-display text-base font-semibold text-surface-900">{state.notice}</p>
-        <p className="mt-1 text-sm text-surface-500">الرانا ٹریڈرز جلد آپ سے رابطہ کرے گا اور ریٹ بتا دے گا۔</p>
+        <p className="mt-1 text-sm text-surface-500">AgriBridge جلد آپ سے رابطہ کرے گا اور ریٹ بتا دے گا۔</p>
         <button type="button" onClick={() => window.location.reload()} className="mt-3 text-xs font-medium text-brand-700 underline">
           صفحہ تازہ کریں
         </button>

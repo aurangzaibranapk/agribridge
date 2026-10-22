@@ -198,7 +198,7 @@ export default function MarketplacePage() {
       <section className="bg-white py-16 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="rounded-3xl bg-[#0c2d22] px-6 py-12 text-center text-white sm:px-10 lg:py-16">
-            <p className="font-bold text-emerald-300">ART AGRIBRIDGE MARKETPLACE</p>
+            <p className="font-bold text-emerald-300">AgriBridge MARKETPLACE</p>
 
             <h2 className="mx-auto mt-3 max-w-3xl text-3xl font-black sm:text-4xl">
               Agriculture products aur farmer services — one connected platform.

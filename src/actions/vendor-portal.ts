@@ -332,7 +332,7 @@ export async function submitVendorClosing(
 /**
  * Vendor ka diesel.
  *
- * Khata yahan NAHI poochha jata: vendor ko pata hi nahi hota ke ART ne
+ * Khata yahan NAHI poochha jata: vendor ko pata hi nahi hota ke AgriBridge ne
  * kis khate se paisa nikala. Wo sawal tasdeeq ke waqt ka hai. Yahan tak
  * ka indraj sirf ye kehta hai ke itna diesel dala aur kis ne dala.
  */
