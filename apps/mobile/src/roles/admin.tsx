@@ -5,11 +5,12 @@ import { liveGet } from "../../../../src/lib/mobile/live-read";
 import { fatActorError } from "../../../../src/lib/mobile/outbox";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { Empty, Kpi, SaleChart, Section, ShareBar, liveAuth, type LiveBag } from "../bits";
+import { AdminGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
 
 type Panel = "home" | "parties" | "stock" | "milk" | "purchases" | "attendance";
 
-export function RoleScreen({ tab, live, readOnly = false }: { tab: string; live?: LiveBag; readOnly?: boolean }) {
+export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { tab: string; live?: LiveBag; readOnly?: boolean; onProfile?: () => void; onTab?: (key: string) => void }) {
   const auth = liveAuth(live);
   const [home, setHome] = useState<AdminHome | null>(null);
   const [milk, setMilk] = useState<MilkRow[]>([]);
@@ -37,6 +38,9 @@ export function RoleScreen({ tab, live, readOnly = false }: { tab: string; live?
   useEffect(() => { if (tab === "approvals" || tab === "reports" || tab === "home") setPanel("home"); }, [tab]);
 
   if (!home && !error) return <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />;
+  if (tab === "home" && panel === "home") {
+    return <AdminGlass live={live} home={home} milk={milk} orders={orders} onProfile={onProfile} onTab={onTab} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />;
+  }
 
   return (
     <ScrollView

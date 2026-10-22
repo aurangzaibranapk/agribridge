@@ -6,7 +6,8 @@ import { fatRangeError, lrRangeError, type MilkSettings } from "../../../../src/
 import { settingsOrError, priceFromSettings } from "../../../../src/lib/mobile/pricing";
 import { karachiDate, liveGetScoped, liveInsert, loadMilkList, loadMilkSettings, rupees, shiftLabel, type MilkRow, type PartyRow } from "../../../../src/lib/mobile/live-read";
 import { liveAuth, type LiveBag } from "../bits";
-import { Btn, Card, Field, Later } from "../kit";
+import { McaGlass } from "./glass-homes";
+import { Btn, Card, Field } from "../kit";
 import { colors } from "../kit";
 
 async function photo() {
@@ -36,7 +37,7 @@ function parseNum(value: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly = false, live }: { tab: string; data: any; queueCount: number; onEnqueue: (item: any) => void; onSync: () => void; readOnly?: boolean; live?: LiveBag }) {
+export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly = false, live, onProfile }: { tab: string; data: any; queueCount: number; onEnqueue: (item: any) => void; onSync: () => void; readOnly?: boolean; live?: LiveBag; onProfile?: () => void }) {
   const auth = liveAuth(live);
   const [liters, setLiters] = useState("");
   const [fat, setFat] = useState("");
@@ -190,7 +191,8 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
   const preview = settings && previewLitres && previewFat != null && previewLr != null && !fatRangeError(previewFat, false) && !lrRangeError(previewLr, false)
     ? priceFromSettings(previewLitres, previewFat, previewLr, settings)
     : null;
-  const showPickup = tab === "home" || tab === "route";
+  const showPickup = tab === "route";
+  if (tab === "home") return <McaGlass live={live} farmers={farmers} onProfile={onProfile} />;
 
   return (
     <ScrollView style={{ padding: 16 }}>
@@ -234,7 +236,14 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
           ) : null}
         </Card>
       ) : null}
-      {!readOnly && (tab === "home" || tab === "fuel") ? (
+      {tab === "fuel" ? (
+        <Card>
+          <Text style={{ fontWeight: "800", color: colors.text }}>Kisan</Text>
+          {farmers.map((farmer) => <Text key={farmer.id} style={{ color: colors.text, marginTop: 8 }}>{farmer.full_name || "Kisan"}{farmer.farmer_code ? ` · ${farmer.farmer_code}` : ""}</Text>)}
+          {!farmers.length ? <Text style={{ color: colors.muted, marginTop: 8 }}>{farmerNote || "Koi kisan nahi."}</Text> : null}
+        </Card>
+      ) : null}
+      {!readOnly && tab === "more" ? (
         <Card>
           <Text style={{ fontWeight: "700", color: colors.text }}>Hazri, meter, petrol</Text>
           <Btn label="GPS hazri" onPress={() => void attendance()} />
@@ -250,7 +259,6 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
           <Btn label="Drop queue" onPress={drop} />
         </Card>
       ) : null}
-      {tab === "more" ? <Later title="MCA more" /> : null}
       <View style={{ height: 24 }} />
     </ScrollView>
   );

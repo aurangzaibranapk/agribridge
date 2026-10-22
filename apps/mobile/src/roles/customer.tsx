@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { karachiDate, liveGetScoped, liveInsert, loadCatalog, loadKhata, loadOrders, rupees, type CatalogRow, type KhataView, type OrderRow, type PartyRow, type ReadResult } from "../../../../src/lib/mobile/live-read";
 import { Empty, Section, liveAuth, type LiveBag } from "../bits";
+import { CustomerGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
 
 const STEPS = ["draft", "submitted", "approved", "delivered"];
 
-export function RoleScreen({ tab, live, readOnly = false }: { tab: string; live?: LiveBag; readOnly?: boolean }) {
+export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { tab: string; live?: LiveBag; readOnly?: boolean; onProfile?: () => void; onTab?: (key: string) => void }) {
   const auth = liveAuth(live);
   const [khata, setKhata] = useState<KhataView | null>(null);
   const [orders, setOrders] = useState<ReadResult<OrderRow> | null>(null);
@@ -61,15 +62,12 @@ export function RoleScreen({ tab, live, readOnly = false }: { tab: string; live?
     await load();
   }
 
+  if (tab === "home") {
+    return <CustomerGlass live={live} khata={khata} orders={orders} onProfile={onProfile} onTab={onTab} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />;
+  }
+
   return (
     <ScrollView style={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
-      {tab === "home" ? (
-        <View style={{ backgroundColor: "#0F4E28", borderRadius: 22, padding: 18, marginBottom: 12 }}>
-          <Text style={{ color: "#C8A058", fontWeight: "700" }}>Mera Wallet</Text>
-          <Text style={{ color: "#fff", fontSize: 28, fontWeight: "800", marginTop: 4 }}>{khata.note && khata.owed == null ? "—" : rupees(khata.owed)}</Text>
-          <Text style={{ color: "#D7E6D4", marginTop: 4 }}>{khata.note || "Khata baqaya"}</Text>
-        </View>
-      ) : null}
       {tab === "shop" ? (
         <View>
           <Shop result={shop} testAccount={live?.testAccount === true} />

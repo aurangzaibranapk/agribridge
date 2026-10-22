@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
 import { loadKhata, loadOrders, rupees, type KhataView, type OrderRow, type ReadResult } from "../../../../src/lib/mobile/live-read";
 import { Empty, Section, liveAuth, type LiveBag } from "../bits";
+import { DealerGlass } from "./glass-homes";
 import { colors } from "../kit";
 
-export function RoleScreen({ tab, live }: { tab: string; live?: LiveBag }) {
+export function RoleScreen({ tab, live, onProfile, onTab }: { tab: string; live?: LiveBag; onProfile?: () => void; onTab?: (key: string) => void }) {
   const auth = liveAuth(live);
   const [khata, setKhata] = useState<KhataView | null>(null);
   const [orders, setOrders] = useState<ReadResult<OrderRow> | null>(null);
@@ -20,16 +21,13 @@ export function RoleScreen({ tab, live }: { tab: string; live?: LiveBag }) {
   if (!khata || !orders) return <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />;
   const owed = khata.note && khata.owed == null ? "—" : rupees(khata.owed);
 
+  if (tab === "home") {
+    return <DealerGlass live={live} khata={khata} orders={orders} onProfile={onProfile} onTab={onTab} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />;
+  }
+
   return (
     <ScrollView style={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
-      {tab === "home" ? (
-        <View style={{ backgroundColor: "#0F4E28", borderRadius: 22, padding: 18, marginBottom: 12 }}>
-          <Text style={{ color: "#C8A058", fontWeight: "700" }}>Dealer / Outlet</Text>
-          <Text style={{ color: "#fff", fontSize: 28, fontWeight: "800", marginTop: 4 }}>{owed}</Text>
-          <Text style={{ color: "#D7E6D4", marginTop: 4 }}>{khata.note || "HQ khata"}</Text>
-        </View>
-      ) : null}
-      {tab === "home" || tab === "orders" ? (
+      {tab === "orders" ? (
         <Section title="Orders" sub="Status">
           {!orders.ok ? <Empty title="Orders nahi khule" body={orders.message} /> : null}
           {orders.ok && orders.rows.length === 0 ? <Empty title="Koi order nahi" body="HQ ka order jab hoga, number aur status yahan aayenge." /> : null}
@@ -43,7 +41,7 @@ export function RoleScreen({ tab, live }: { tab: string; live?: LiveBag }) {
           {khata.lines.map((line, index) => <Text key={`${line.entry_date}-${index}`} style={{ color: colors.text, marginBottom: 6 }}>{line.entry_date} · {line.tafseel || "Line"} · {line.baqaya ?? "—"}</Text>)}
         </Section>
       ) : null}
-      {tab === "more" ? <Section title="Aur"><Empty title="Profile upar hai" body="Orders aur HQ khata apne tabs par hain." /></Section> : null}
+      {tab === "more" ? <Section title="Dealer / Outlet"><Empty title="Profile upar hai" body={`Orders aur HQ khata apne tabs par hain. Baqaya ${owed}.`} /></Section> : null}
       <View style={{ height: 24 }} />
     </ScrollView>
   );

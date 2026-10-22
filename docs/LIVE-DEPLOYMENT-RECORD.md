@@ -1,3 +1,7 @@
+## Phone homes — 22 October 2026 — NO NEW SQL
+
+versionCode 610, tag `v0.6.1-beta-testdb`. Wasela Eco Mahabali dark glass homes for 8 roles. Numbers database se. Koi nayi migration nahi. Live APK nahi badli.
+
 ## Phone Phase C — 22 October 2026 — FILE ONLY, NOT APPLIED
 
 versionCode 609, tag `v0.6.1-beta-testdb`. Customer draft karyana, Staff check-in (`source = app`), Vet ilaj, Dealer orders/HQ khata, Profile (optional User ID, settings, PIN note, notifications). Migration **702 not applied** by this agent. Owner testing par: `supabase/migrations/702_app_test_phase_c.sql`. Live par 702 nahi. Live APK tag replace nahi hoti. Tankhwah aur advance jaan kar khali hain.

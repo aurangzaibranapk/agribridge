@@ -20,6 +20,7 @@ import { acceptedSupabaseUrl, dataFlavor, failureLine, LIVE_SUPABASE_URL, showsH
 import { cashPosition, columnMissing, karachiDaySeries, liveGet, liveInsert, livePatch, milkByShift, milkInRange, milkLitres, pricedMilkTotal, readError, salesByDay, salesOnDay, shiftLabel, stockAlerts, withScope } from "../src/lib/mobile/live-read";
 import { jwtExpired, refreshDue, refreshSupabaseSession, SESSION_EXPIRED, singleFlight } from "../src/lib/mobile/session-refresh";
 import { showRolePreview, showRoleSwitch, SWITCH_ROLES, TEST_LOGIN_EMAIL } from "../src/lib/mobile/test-account";
+import { approvalTimeline, milkTimeline, orderTimeline, pctChange, romanWeekday, timelineFinished } from "../src/lib/mobile/glass-metrics";
 import { elapsed, withinBudget, MOBILE_BUNDLE_BUDGET_BYTES } from "../src/lib/mobile/perf";
 import { shiftTotals } from "../src/lib/mobile/shifts";
 import { calculateMilkValue } from "../src/lib/utils/milk-formula";
@@ -77,7 +78,28 @@ for (const role of ["farmer", "customer", "staff", "supplier", "dealer", "mca", 
   assert.ok(ROLE_NAV[role].tabs.length >= 3, role);
 }
 assert.equal(ROLE_NAV.farmer.phase1, true);
-assert.deepEqual(ROLE_NAV.farmer.tabs.map((tab) => tab.key), ["home", "doodh", "khata", "vet", "karyana"]);
+assert.deepEqual(ROLE_NAV.farmer.tabs.map((tab) => tab.key), ["home", "doodh", "khata", "more"]);
+assert.equal(ROLE_NAV.farmer.tabs[2].label, "Wallet");
+assert.match(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /Wasela Eco Mahabali/i);
+assert.doesNotMatch(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /MISAAL/);
+const glassHomes = readFileSync("apps/mobile/src/roles/glass-homes.tsx", "utf8");
+assert.match(glassHomes, /orderTimeline/);
+assert.match(glassHomes, /milkTimeline/);
+assert.match(glassHomes, /approvalTimeline/);
+assert.match(glassHomes, /Tank ka level track nahi hota/);
+assert.match(glassHomes, /Maund stock track nahi hota/);
+assert.doesNotMatch(glassHomes, /MISAAL|18,?450|31°C|\b145\b/);
+assert.equal(pctChange(12, 10), 20);
+assert.equal(pctChange(5, 0), null);
+assert.equal(romanWeekday("2026-10-22"), "Jm");
+assert.equal(orderTimeline("in_transit")[3].state, "active");
+assert.equal(orderTimeline("delivered").every((step) => step.state === "done"), true);
+assert.equal(orderTimeline("cancelled")[0].state, "action");
+assert.equal(milkTimeline({ status: "pending_fat", entry_date: "2026-10-22" })[0].state, "done");
+assert.equal(milkTimeline({ status: "pending_fat", entry_date: "2026-10-22" })[1].state, "active");
+assert.equal(milkTimeline({ status: "verified", fat_percentage: 4, rate_per_liter: 10, total_amount: 100, entry_date: "2026-10-22" }).every((step) => step.state === "done"), true);
+assert.equal(timelineFinished(approvalTimeline([], true)), true);
+assert.equal(approvalTimeline([{ label: "Doodh", count: 2 }], true)[0].state, "action");
 assert.equal(ROLE_NAV.mca.phase1, true);
 assert.equal(ROLE_NAV.mco.phase1, true);
 assert.equal(ROLE_NAV.customer.phase1, false);
@@ -194,7 +216,7 @@ const testSideload = readFileSync(".github/workflows/mobile-sideload-test.yml", 
 assert.match(testSideload, /EXPO_PUBLIC_APP_FLAVOR: test/);
 assert.match(testSideload, /APP_CHANNEL: internal/);
 assert.match(testSideload, /EXPO_PUBLIC_SUPABASE_URL: https:\/\/hwaiuwxqldxsoukkfefn\.supabase\.co/);
-assert.match(testSideload, /AGRIBRIDGE_VERSION_CODE: "609"/);
+assert.match(testSideload, /AGRIBRIDGE_VERSION_CODE: "610"/);
 assert.match(testSideload, /pk\.alranatraders\.agribridge\.test/);
 assert.match(testSideload, /v0\.6\.1-beta-testdb/);
 assert.match(testSideload, /ktskwawkslaznkjjacni/);
@@ -322,7 +344,7 @@ assert.match(readFileSync("apps/mobile/src/roles/vet.tsx", "utf8"), /Ilaj save k
 assert.match(readFileSync("apps/mobile/src/roles/dealer.tsx", "utf8"), /HQ khata/);
 assert.match(readFileSync("apps/mobile/src/roles/dealer.tsx", "utf8"), /Dealer \/ Outlet/);
 assert.match(appSource, /User ID \(ikhtiyari\)/);
-assert.match(appSource, /action="Profile"/);
+assert.match(appSource, />Profile</);
 assert.match(appSource, /signInMobile/);
 assert.match(appSource, /failureLine/);
 assert.match(appSource, /Masla batayein/);

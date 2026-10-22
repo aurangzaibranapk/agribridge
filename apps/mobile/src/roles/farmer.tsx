@@ -1,19 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
 import { settingsOrError } from "../../../../src/lib/mobile/pricing";
 import { priceFromSettings } from "../../../../src/lib/mobile/pricing";
 import type { MilkSettings } from "../../../../src/lib/dairy/rules";
-import { karachiDate, karachiDaySeries, loadCatalog, loadHealth, loadKhata, loadMilkList, loadMilkSettings, loadOrders, loadProfileNames, loadVaccines, milkByShift, pricedMilkTotal, rupees, salesByDay, shiftLabel, type CatalogRow, type HealthRow, type KhataView, type MilkRow, type OrderRow, type ReadResult, type VaccineRow } from "../../../../src/lib/mobile/live-read";
+import { karachiDaySeries, loadCatalog, loadHealth, loadKhata, loadMilkList, loadMilkSettings, loadOrders, loadProfileNames, loadVaccines, pricedMilkTotal, rupees, salesByDay, shiftLabel, type CatalogRow, type HealthRow, type KhataView, type MilkRow, type OrderRow, type ReadResult, type VaccineRow } from "../../../../src/lib/mobile/live-read";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { Empty, SaleChart, Section, liveAuth, type LiveBag } from "../bits";
+import { FarmerGlass } from "./glass-homes";
 import { colors } from "../kit";
-
-const TILES = [
-  { key: "doodh", label: "Doodh" },
-  { key: "khata", label: "Khata" },
-  { key: "vet", label: "Vet" },
-  { key: "karyana", label: "Karyana" },
-];
 
 function num(value: number | string | null | undefined): number {
   const n = typeof value === "number" ? value : Number(value);
@@ -47,7 +41,7 @@ function kindLabel(kind: string | null | undefined, vaccine?: string | null): st
   return "Vet visit";
 }
 
-export function RoleScreen({ tab, live, onTab }: { tab: string; live?: LiveBag; onTab?: (key: string) => void }) {
+export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?: LiveBag; onTab?: (key: string) => void; onProfile?: () => void }) {
   const auth = liveAuth(live);
   const [khata, setKhata] = useState<KhataView | null>(null);
   const [milk, setMilk] = useState<ReadResult<MilkRow> | null>(null);
@@ -88,15 +82,9 @@ export function RoleScreen({ tab, live, onTab }: { tab: string; live?: LiveBag; 
   if (!khata || !milk || !orders || !shop || !health || !vaccines) return <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />;
 
   const milkRows = milk.ok ? milk.rows : [];
-  const today = karachiDate();
   const week = karachiWeek();
-  const todayRows = milkRows.filter((row) => row.entry_date === today);
   const weekRows = milkRows.filter((row) => inWeek(row.entry_date ?? null, week));
-  const todayLitres = Math.round(todayRows.reduce((sum, row) => sum + litresOf(row), 0) * 100) / 100;
   const weekLitres = Math.round(weekRows.reduce((sum, row) => sum + litresOf(row), 0) * 100) / 100;
-  const wallet = pricedMilkTotal(milkRows);
-  const walletText = wallet == null ? "—" : rupees(wallet);
-  const walletNote = wallet == null ? "Rate wali entry nahi. Rs 0 nahi likhte." : "Wallet baqaya · priced doodh";
   const khataText = khata.note && khata.owed == null ? "—" : rupees(khata.owed);
   const days = karachiDaySeries(7);
   const byDay = new Map<string, number>();
@@ -106,34 +94,13 @@ export function RoleScreen({ tab, live, onTab }: { tab: string; live?: LiveBag; 
     byDay.set(day, (byDay.get(day) ?? 0) + litresOf(row));
   }
   const chart = salesByDay(days.map((day) => ({ created_at: day, total_amount: byDay.get(day) ?? 0, status: "ok" })), days);
-  const shifts = milkByShift(todayRows);
+
+  if (tab === "home") {
+    return <FarmerGlass live={live} onTab={onTab} onProfile={onProfile} khata={khata} milk={milk} names={names} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />;
+  }
 
   return (
-    <ScrollView style={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
-      {tab === "home" ? (
-        <View>
-          <View style={{ backgroundColor: "#0F4E28", borderRadius: 22, padding: 18, marginBottom: 12 }}>
-            <Text style={{ color: "#C8A058", fontWeight: "700" }}>Mera Wallet</Text>
-            <Text style={{ color: "#F4F7F2", fontSize: 32, fontWeight: "800", marginTop: 4 }}>{walletText}</Text>
-            <Text style={{ color: "#D7E6D4", marginTop: 4 }}>{walletNote}</Text>
-            <View style={{ flexDirection: "row", marginTop: 14 }}>
-              <Stat label="Khata" value={khataText} />
-              <Stat label="Aaj" value={`${todayLitres} L`} />
-              <Stat label="Hafta" value={`${weekLitres} L`} />
-            </View>
-          </View>
-          <Text style={{ color: colors.muted, fontWeight: "700", marginBottom: 8 }}>Jaldi kaam</Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
-            {TILES.map((tile) => (
-              <Pressable key={tile.key} onPress={() => onTab?.(tile.key)} style={{ width: "48%", backgroundColor: "#fff", borderRadius: 16, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.line }}>
-                <Text style={{ color: colors.greenDark, fontWeight: "800", fontSize: 16 }}>{tile.label}</Text>
-                <Text style={{ color: colors.muted, marginTop: 4, fontSize: 12 }}>{tile.key === "doodh" ? "History aur chart" : tile.key === "khata" ? "Haal ka len-den" : tile.key === "vet" ? "Doctor ka record" : "Orders"}</Text>
-              </Pressable>
-            ))}
-          </View>
-          <MilkList title="Doodh ki ittila" sub={`Aaj subah ${Math.round(shifts.subah)} L · shaam ${Math.round(shifts.shaam)} L`} result={milk} rows={milkRows.slice(0, 4)} names={names} settings={settings} />
-        </View>
-      ) : null}
+    <ScrollView style={{ padding: 16, backgroundColor: "#07140F" }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
       {tab === "doodh" ? (
         <View>
           <MilkList title="Mera doodh" sub="Kis ne uthaya, litre, fat, SNF, LR, rate, raqam" result={milk} rows={milkRows} names={names} settings={settings} />
@@ -154,7 +121,7 @@ export function RoleScreen({ tab, live, onTab }: { tab: string; live?: LiveBag; 
       {tab === "khata" ? (
         <View>
           <View style={{ backgroundColor: colors.gold, borderRadius: 18, padding: 16, marginBottom: 12 }}>
-            <Text style={{ color: "#3d2e10", fontWeight: "700" }}>Mera khata</Text>
+            <Text style={{ color: "#3d2e10", fontWeight: "700" }}>Mera Wallet</Text>
             <Text style={{ color: "#1c1408", fontSize: 28, fontWeight: "800", marginTop: 4 }}>{khataText}</Text>
             <Text style={{ color: "#3d2e10", marginTop: 4 }}>{khata.note || "Baqaya, aap ki apni lines se"}</Text>
           </View>
@@ -191,6 +158,12 @@ export function RoleScreen({ tab, live, onTab }: { tab: string; live?: LiveBag; 
           </Section>
         </View>
       ) : null}
+      {tab === "more" ? (
+        <View>
+          <Text style={{ color: "#F4F7F4", fontWeight: "800", marginBottom: 8 }} onPress={() => onTab?.("vet")}>Vet doctor</Text>
+          <Text style={{ color: "#F4F7F4", fontWeight: "800" }} onPress={() => onTab?.("karyana")}>Karyana</Text>
+        </View>
+      ) : null}
       {tab === "karyana" ? (
         <View>
           <Orders result={orders} />
@@ -199,15 +172,6 @@ export function RoleScreen({ tab, live, onTab }: { tab: string; live?: LiveBag; 
       ) : null}
       <View style={{ height: 24 }} />
     </ScrollView>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={{ flex: 1, marginRight: 8 }}>
-      <Text style={{ color: "#C8D9C4", fontSize: 11 }}>{label}</Text>
-      <Text style={{ color: "#fff", fontWeight: "800", marginTop: 2 }}>{value}</Text>
-    </View>
   );
 }
 

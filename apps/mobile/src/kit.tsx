@@ -57,14 +57,39 @@ export function Btn({ label, onPress, kind = "green" }: { label: string; onPress
   );
 }
 
+const TAB_MARK: Record<string, string> = {
+  Home: "⌂",
+  Doodh: "🥛",
+  Wallet: "₨",
+  Profile: "◉",
+  Entry: "+",
+  Kisan: "☺",
+  Receive: "↓",
+  Tanks: "▭",
+  Reports: "▤",
+  Approve: "✓",
+  More: "••",
+  Order: "▣",
+  Orders: "☰",
+  Hazri: "⏱",
+  Tasks: "✓",
+  Visits: "✚",
+  Janwar: "◆",
+  Khata: "₨",
+};
+
 export function Tabs({ tabs, current, onChange }: { tabs: { key: string; label: string }[]; current: string; onChange: (key: string) => void }) {
   return (
     <View style={styles.tabs}>
-      {tabs.map((tab) => (
-        <Pressable key={tab.key} onPress={() => onChange(tab.key)} style={styles.tab}>
-          <Text style={[styles.tabText, current === tab.key ? styles.tabOn : null]}>{tab.label}</Text>
-        </Pressable>
-      ))}
+      {tabs.map((tab) => {
+        const on = current === tab.key;
+        return (
+          <Pressable key={tab.key} onPress={() => onChange(tab.key)} style={styles.tab}>
+            <Text style={[styles.tabMark, on ? styles.tabOn : null]}>{TAB_MARK[tab.label] || "•"}</Text>
+            <Text style={[styles.tabText, on ? styles.tabOn : null]}>{tab.label}</Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -97,10 +122,11 @@ const styles = StyleSheet.create({
   btnGhost: { backgroundColor: "#fff", borderWidth: 1, borderColor: colors.line },
   btnText: { color: "#fff", fontWeight: "700" },
   btnGhostText: { color: colors.green },
-  tabs: { flexDirection: "row", borderTopWidth: 1, borderTopColor: colors.line, backgroundColor: "#fff", paddingVertical: 8 },
+  tabs: { flexDirection: "row", marginHorizontal: 12, marginBottom: 10, backgroundColor: "rgba(16,32,28,0.94)", borderRadius: 24, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", paddingVertical: 8, elevation: 8 },
   tab: { flex: 1, alignItems: "center" },
-  tabText: { color: colors.muted, fontSize: 11, fontWeight: "600" },
-  tabOn: { color: colors.green },
+  tabMark: { color: "#8FA399", fontSize: 14, marginBottom: 2 },
+  tabText: { color: "#8FA399", fontSize: 11, fontWeight: "700" },
+  tabOn: { color: "#3DDC97" },
   laterTitle: { fontWeight: "700", color: colors.text, marginBottom: 6 },
   laterBody: { color: colors.muted, lineHeight: 20 },
 });

@@ -420,12 +420,11 @@ export default function App() {
           {whatsapp ? <Text style={styles.link} onPress={() => void Linking.openURL(whatsapp)}>WhatsApp support</Text> : null}
         </ScrollView>
       ) : (
-        <View style={{ flex: 1 }}>
-          <Header
-            title={nav?.title ?? "AgriBridge"}
-            action="Profile"
-            onAction={() => setProfileOpen(true)}
-          />
+        <View style={{ flex: 1, backgroundColor: "#07140F" }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 4 }}>
+            <Text style={{ color: "#8FA399", fontSize: 12 }}>AgriBridge · {VERSION || "v0.6.1 Beta"}{VERSION_CODE ? ` · ${VERSION_CODE}` : ""}</Text>
+            <Pressable onPress={() => setProfileOpen(true)}><Text style={{ color: "#3DDC97", fontWeight: "700" }}>Profile</Text></Pressable>
+          </View>
           <View style={{ flex: 1 }}>
             {isTest ? (
               <View style={styles.testBar}>
@@ -453,7 +452,7 @@ export default function App() {
                 </Pressable>
               </View>
             ) : null}
-            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} onTab={(key: string) => { setTab(key); if (appRole) setRoute(`/${appRole}/${key}`); }} readOnly={previewing || (isTest && FLAVOR !== "test")} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, flavor: FLAVOR, testAccount: isTest, refreshSession }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
+            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} onProfile={() => setProfileOpen(true)} onTab={(key: string) => { setTab(key); if (appRole) setRoute(`/${appRole}/${key}`); }} readOnly={previewing || (isTest && FLAVOR !== "test")} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, flavor: FLAVOR, testAccount: isTest, refreshSession }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
           </View>
           {nav ? <Tabs tabs={nav.tabs} current={tab} onChange={(key) => { setTab(key); setRoute(`/${appRole}/${key}`); }} /> : null}
           {tab === "more" ? (
@@ -638,7 +637,7 @@ function SupportSheet({ portal, token, chat, whatsapp, channel, flavor, onClose 
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.bg },
+  root: { flex: 1, backgroundColor: "#07140F" },
   brand: { fontSize: 32, fontWeight: "800", color: colors.green, marginTop: 24 },
   sub: { color: colors.muted, marginBottom: 16 },
   help: { color: colors.muted, marginBottom: 8 },

@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { karachiDate, liveGetScoped, liveInsert, loadHealth, type HealthRow, type PartyRow } from "../../../../src/lib/mobile/live-read";
 import { Empty, Section, liveAuth, type LiveBag } from "../bits";
+import { VetGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
 
-export function RoleScreen({ tab, live, readOnly = false }: { tab: string; live?: LiveBag; readOnly?: boolean }) {
+export function RoleScreen({ tab, live, readOnly = false, onProfile }: { tab: string; live?: LiveBag; readOnly?: boolean; onProfile?: () => void }) {
   const auth = liveAuth(live);
   const [health, setHealth] = useState<HealthRow[] | null>(null);
   const [error, setError] = useState("");
@@ -64,11 +65,15 @@ export function RoleScreen({ tab, live, readOnly = false }: { tab: string; live?
     await load();
   }
 
+  if (tab === "home") {
+    return <VetGlass live={live} health={health} error={error} onProfile={onProfile} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />;
+  }
+
   return (
     <ScrollView style={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
       {error ? <Section title="Vet"><Empty title="Record nahi khula" body={error} /></Section> : null}
       {note ? <Text style={{ color: colors.greenDark, marginBottom: 8 }}>{note}</Text> : null}
-      {tab === "home" || tab === "visits" ? (
+      {tab === "visits" ? (
         <Section title={tab === "visits" ? "Visits" : "Doctor Home"} sub={farmerName || "Kisan"}>
           {health.length === 0 ? <Empty title="Abhi koi visit nahi" body="Ilaj likhne par tareekh, naam aur diagnosis yahan aayenge." /> : null}
           {health.map((row, index) => (

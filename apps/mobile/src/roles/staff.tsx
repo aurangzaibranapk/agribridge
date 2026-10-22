@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, Text } from "react-native";
 import { karachiDate, liveInsert, loadStaffHome, rupees, type AdvanceRow, type AttendanceRow, type ReadResult, type SalaryRow } from "../../../../src/lib/mobile/live-read";
 import { Empty, Section, liveAuth, type LiveBag } from "../bits";
+import { StaffGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
 
-export function RoleScreen({ tab, live, readOnly = false }: { tab: string; live?: LiveBag; readOnly?: boolean }) {
+export function RoleScreen({ tab, live, readOnly = false, onProfile }: { tab: string; live?: LiveBag; readOnly?: boolean; onProfile?: () => void }) {
   const auth = liveAuth(live);
   const [attendance, setAttendance] = useState<ReadResult<AttendanceRow> | null>(null);
   const [salary, setSalary] = useState<ReadResult<SalaryRow> | null>(null);
@@ -54,10 +55,31 @@ export function RoleScreen({ tab, live, readOnly = false }: { tab: string; live?
     await load();
   }
 
+  const checkLabel = todayRow ? `Aaj · ${todayRow.status} · check-in ho chuka hai` : note || "Check-in · aaj";
+  if (tab === "home") {
+    return (
+      <StaffGlass
+        live={live}
+        onProfile={onProfile}
+        attendance={attendance}
+        salary={salary}
+        advances={advances}
+        tasks={tasks}
+        tasksNote={tasksNote}
+        checkLabel={checkLabel}
+        checkBusy={busy}
+        readOnly={readOnly}
+        onCheckIn={() => { void checkIn(); }}
+        refreshing={refreshing}
+        onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
+      />
+    );
+  }
+
   return (
     <ScrollView style={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
       {note ? <Text style={{ color: colors.greenDark, marginBottom: 8 }}>{note}</Text> : null}
-      {tab === "home" || tab === "visits" ? (
+      {tab === "visits" ? (
         <Section title="Meri hazri" sub="Aap ki apni qatarein">
           {todayRow ? <Text style={{ color: colors.text, fontWeight: "700", marginBottom: 6 }}>Aaj · {todayRow.status} · check-in ho chuka hai</Text> : readOnly ? <Text style={{ color: colors.muted }}>Sirf dekhna. Check-in band hai.</Text> : <Btn label={busy ? "Ho raha hai" : "Check-in"} onPress={() => { if (!busy) void checkIn(); }} />}
           {!attendance.ok ? <Empty title="Hazri nahi khuli" body={attendance.message} /> : null}

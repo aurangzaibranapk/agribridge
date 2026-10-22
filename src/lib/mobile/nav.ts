@@ -23,9 +23,8 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     tabs: [
       { key: "home", label: "Home" },
       { key: "doodh", label: "Doodh" },
-      { key: "khata", label: "Khata" },
-      { key: "vet", label: "Vet" },
-      { key: "karyana", label: "Karyana" },
+      { key: "khata", label: "Wallet" },
+      { key: "more", label: "Profile" },
     ],
   },
   customer: {
@@ -33,10 +32,9 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     phase1: false,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "shop", label: "Shop" },
+      { key: "shop", label: "Order" },
       { key: "orders", label: "Orders" },
-      { key: "khata", label: "Khata" },
-      { key: "more", label: "More" },
+      { key: "more", label: "Profile" },
     ],
   },
   staff: {
@@ -44,10 +42,9 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     phase1: false,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "visits", label: "Visits" },
-      { key: "orders", label: "Orders" },
-      { key: "khata", label: "Khata" },
-      { key: "more", label: "More" },
+      { key: "visits", label: "Hazri" },
+      { key: "orders", label: "Tasks" },
+      { key: "more", label: "Profile" },
     ],
   },
   supplier: {
@@ -65,9 +62,9 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     phase1: false,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "orders", label: "Orders" },
+      { key: "orders", label: "Order" },
       { key: "khata", label: "Khata" },
-      { key: "more", label: "More" },
+      { key: "more", label: "Profile" },
     ],
   },
   mca: {
@@ -75,10 +72,9 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     phase1: true,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "route", label: "Route" },
-      { key: "fuel", label: "Fuel" },
-      { key: "drop", label: "Drop" },
-      { key: "more", label: "More" },
+      { key: "route", label: "Entry" },
+      { key: "fuel", label: "Kisan" },
+      { key: "more", label: "Profile" },
     ],
   },
   mco: {
@@ -86,10 +82,9 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     phase1: true,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "fat", label: "Check" },
-      { key: "drop", label: "Shift" },
-      { key: "totals", label: "Reports" },
-      { key: "more", label: "Alerts" },
+      { key: "fat", label: "Receive" },
+      { key: "drop", label: "Tanks" },
+      { key: "more", label: "Profile" },
     ],
   },
   admin: {
@@ -97,8 +92,8 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     phase1: false,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "approvals", label: "Approvals" },
       { key: "reports", label: "Reports" },
+      { key: "approvals", label: "Approve" },
       { key: "more", label: "More" },
     ],
   },
@@ -108,8 +103,8 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     tabs: [
       { key: "home", label: "Home" },
       { key: "visits", label: "Visits" },
-      { key: "stock", label: "Stock" },
-      { key: "more", label: "More" },
+      { key: "stock", label: "Janwar" },
+      { key: "more", label: "Profile" },
     ],
   },
 };

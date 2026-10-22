@@ -7,6 +7,7 @@ import { karachiDate, karachiDaySeries, livePatch, loadMilkList, loadMilkSetting
 import { liveGetScoped } from "../../../../src/lib/mobile/live-read";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { Empty, SaleChart, Section, liveAuth, type LiveBag } from "../bits";
+import { McoGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
 
 function num(value: number | string | null | undefined): number {
@@ -19,7 +20,7 @@ function amountText(rows: MilkRow[]): string {
   return amount == null ? "raqam —" : rupees(amount);
 }
 
-export function RoleScreen({ tab, readOnly = false, live }: { tab: string; data?: unknown; onEnqueue?: (item: unknown) => void; readOnly?: boolean; live?: LiveBag }) {
+export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { tab: string; data?: unknown; onEnqueue?: (item: unknown) => void; readOnly?: boolean; live?: LiveBag; onProfile?: () => void; onTab?: (key: string) => void }) {
   const auth = liveAuth(live);
   const [rows, setRows] = useState<MilkRow[] | null>(null);
   const [error, setError] = useState("");
@@ -132,12 +133,16 @@ export function RoleScreen({ tab, readOnly = false, live }: { tab: string; data?
     await load();
   }
 
+  if (tab === "home") {
+    return <McoGlass live={live} rows={rows} error={error} names={names} onProfile={onProfile} onTab={onTab} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />;
+  }
+
   return (
     <ScrollView style={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
       {error ? <Section title="MCO"><Empty title="Entries nahi khulin" body={error} /></Section> : null}
       {note ? <Text style={{ color: colors.greenDark, marginBottom: 8 }}>{note}</Text> : null}
       {readOnly ? <Text style={{ color: colors.muted, marginBottom: 8 }}>Sirf dekhna · MCO. Fat aur tasdeeq band hain.</Text> : null}
-      {tab === "home" || tab === "drop" ? (
+      {tab === "drop" ? (
         <View>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <ShiftCard title="Subah" litres={Math.round(shifts.subah * 100) / 100} money={amountText(todayRows.filter((row) => shiftLabel(row.shift) === "Subah"))} />
