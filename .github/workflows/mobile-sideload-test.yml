@@ -27,7 +27,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: https://hwaiuwxqldxsoukkfefn.supabase.co
       # Public testing anon key.
       EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3YWl1d3hxbGR4c291a2tmZWZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MjU1NjMsImV4cCI6MjEwMzUwMTU2M30.UwchGHJHRCdKHwpJRr-fdNTreeVNLlfbpo7nBqQv9l4"
-      AGRIBRIDGE_VERSION_CODE: "621"
+      AGRIBRIDGE_VERSION_CODE: "622"
       CI: "1"
     steps:
       - uses: actions/checkout@v4
@@ -129,8 +129,9 @@ jobs:
           notes=$(cat <<'EOF'
           AgriBridge TEST sideload builds. Not the live app and not a Play Store upload.
           App name AgriBridge TEST. Package pk.alranatraders.agribridge.test.
-          versionName v0.6.1 Beta, versionCode 621, APP_CHANNEL=internal.
-          Starry glass, compact header, greeting from the profile name, weather place stays Chak 157 NB. KPI cards keep the 2x2 grid, an icon, a trend line, and a change badge.
+          versionName v0.6.1 Beta, versionCode 622, APP_CHANNEL=internal.
+          Compact header: small AgriBridge and Kisan ka Wasela, then one line with centre, role, Assalam o Alaikum, and the round photo. Weather card is short. A zero change or a missing previous value hides the badge. Huge changes cap at 300%+.
+          Role switch uses a demo name from phone notes (708, testing only). MCA fat and status mix, MCO pending near 6, centre names, vet visits, dealer product bars, admin monthly revenue and four categories. Not on live.
           Phone notes (707, testing only) fill tanks, grain maund, dealer stock, staff advance, and tasks. Goal numbers fill only where still null. Not on live.
           English and Roman: AgriBridge with Kisan ka Wasela directly under it. Urdu: the Urdu name with the Urdu tagline under it. The English gloss is not shown. Default is in the app. 706 can replace the two lines later. Not on live. Dark glass, TEST database numbers.
           Goal card: Kisan, MCA, MCO, Staff, Admin. Owner applies 704_app_goal_targets.sql on testing before targets show. Numbers stay empty until the owner sets them. Not on live.

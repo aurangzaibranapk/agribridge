@@ -1,3 +1,7 @@
+## Phone role home fix — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 622. Header ek compact line: centre aur role, Assalam o Alaikum, gol photo. AgriBridge aur Kisan ka Wasela chhote. Mausam card chhota. Sifar ya khali pichli value par badge nahi. 300% se aage 300%+. Staff ki doosri line alag row, kat-ti nahi. Admin revenue 6 mahine. Donut 4 qismen jab notes hon. Dealer bar par 1.6L / Rs, stock par product naam. Vet par visit ka naam aur 7 din ki line. `708_app_phone_role_fix.sql` testing par Boss chalayen: demo naam, MCA fat/status (6 pending rehti hain), centre, (TEST) hatao, aaj ke ilaj, bills 6 mahine. Live par mat chalana. Rollback file saath hai. 707 Boss testing par laga chuke hain.
+
 ## Phone glass home and TEST seed — 22 October 2026 — FILE ONLY, NOT APPLIED
 
 versionCode 621. Starry glass, compact header, greeting drops the word TEST, weather keeps the asked place (Chak 157 NB) plus a condition icon. Every number card has an icon, a line, and a change badge. Admin par chhoti TEST nishani aur "Is mahina munafa". Customer aur dealer charts 6 mahine. Khata ka minus Credit dikhta hai. `707_app_phone_home.sql` testing par: tanks, maund, dealer stock, staff advance/tasks, goal numbers sirf jahan null, centre names, vet next_due aaj, 8 janwar, orders 6 mahine. Live par mat chalana. Rollback file saath hai.

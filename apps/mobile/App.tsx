@@ -464,7 +464,7 @@ export default function App() {
             <Text style={{ color: "#8FA399", fontSize: 12 }}>{lock.title} · {VERSION || "v0.6.1 Beta"}{VERSION_CODE ? ` · ${VERSION_CODE}` : ""}</Text>
             <Pressable onPress={() => setProfileOpen(true)}><Text style={{ color: "#3DDC97", fontWeight: "700" }}>Profile</Text></Pressable>
           </View>
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, minHeight: 0 }}>
             {isTest ? (
               <View style={styles.testBar}>
                 <Text style={styles.testBadge}>TEST</Text>

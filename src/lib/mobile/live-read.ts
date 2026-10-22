@@ -3,6 +3,7 @@
  * Naya portal route zaroori nahi. Khali RLS jawab ko Rs 0 nahi likhte.
  */
 
+import { monthBuckets } from "./glass-metrics";
 import { acceptedSupabaseUrl, dataFlavor, clipDetail, failureLine, type DataFlavor, type FetchLike, type MobileChannel } from "./live-login";
 import { jwtExpired, SESSION_EXPIRED, type RefreshFailure, type RefreshSuccess } from "./session-refresh";
 
@@ -48,6 +49,15 @@ export function karachiDaySeries(days: number, now = new Date()): string[] {
 
 export function karachiStartIso(day: string): string {
   return `${day}T00:00:00+05:00`;
+}
+
+/** Bill ki mahine ki key, Karachi. UTC string seedha kaatne se mahina nahi badalta. */
+export function saleMonthKey(created: string | null | undefined): string {
+  const raw = String(created || "");
+  if (!raw) return "";
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw.slice(0, 7);
+  return karachiDate(date).slice(0, 7);
 }
 
 export function rupees(value: number | null | undefined): string {
@@ -616,11 +626,11 @@ export async function loadMilkList(auth: LiveAuth, fetchImpl: FetchLike, limit =
 }
 
 /** Haftay ka litre. Sirf tareekh aur litre, taake 7 din ki collection chart mein aaye. */
-export async function loadMilkWindow(auth: LiveAuth, start: string, end: string, fetchImpl: FetchLike): Promise<ReadResult<Pick<MilkRow, "entry_date" | "quantity_liters">>> {
+export async function loadMilkWindow(auth: LiveAuth, start: string, end: string, fetchImpl: FetchLike): Promise<ReadResult<Pick<MilkRow, "entry_date" | "shift" | "quantity_liters">>> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
     return { ok: false, status: 0, message: "Haftay ki tareekh theek nahi." };
   }
-  return liveGetScoped(auth, `milk_entries?select=entry_date,quantity_liters&entry_date=gte.${start}&entry_date=lte.${end}&order=entry_date.asc&limit=500`, fetchImpl);
+  return liveGetScoped(auth, `milk_entries?select=entry_date,shift,quantity_liters&entry_date=gte.${start}&entry_date=lte.${end}&order=entry_date.asc&limit=500`, fetchImpl);
 }
 
 const TEST_PENDING: { label: string; path: string; cap: number }[] = [
@@ -678,7 +688,33 @@ export type PhoneNote = { key?: string | null; value?: number | string | null; l
 
 /** 707 ki phone home rows. Table na ho to message, sifar nahi. */
 export async function loadPhoneNotes(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<PhoneNote>> {
-  return liveGet<PhoneNote>(auth, "app_phone_notes?select=key,value,label,detail&order=key.asc&limit=40", fetchImpl);
+  return liveGet<PhoneNote>(auth, "app_phone_notes?select=key,value,label,detail&order=key.asc&limit=80", fetchImpl);
+}
+
+export async function loadFarmerNames(auth: LiveAuth, ids: string[], fetchImpl: FetchLike): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (!unique.length) return names;
+  const listed = unique.map((id) => encodeURIComponent(id)).join(",");
+  const rows = await liveGetScoped<PartyRow>(auth, `farmers?select=id,full_name&id=in.(${listed})&limit=80`, fetchImpl);
+  if (rows.ok) {
+    for (const farmer of rows.rows) if (farmer.id) names.set(farmer.id, farmer.full_name || "");
+  }
+  return names;
+}
+
+/** Chhe mahine ki sale. Cap par rukay to cut. */
+export async function loadSalesMonths(auth: LiveAuth, today: string, fetchImpl: FetchLike): Promise<{ ok: true; values: number[]; labels: string[]; cut: boolean } | { ok: false; message: string }> {
+  const buckets = monthBuckets(today, 6);
+  if (!buckets.length) return { ok: false, message: "Mahine ki tareekh theek nahi." };
+  const start = `${buckets[0].key}-01`;
+  const path = `pos_sales?select=total_amount,created_at,status&created_at=gte.${encodeURIComponent(karachiStartIso(start))}&order=created_at.desc&limit=${MONTH_SALES_CAP}`;
+  const res = auth.testAccount ? await liveGetScoped<SaleRow>(auth, path, fetchImpl) : await liveGet<SaleRow>(auth, path, fetchImpl);
+  if (!res.ok) return { ok: false, message: res.message };
+  const values = buckets.map((bucket) => res.rows
+    .filter((row) => saleMonthKey(row.created_at) === bucket.key && !["void", "cancelled"].includes(String(row.status || "").toLowerCase()))
+    .reduce((sum, row) => sum + num(row.total_amount), 0));
+  return { ok: true, values, labels: buckets.map((bucket) => bucket.label), cut: res.rows.length >= MONTH_SALES_CAP };
 }
 
 export async function loadMonthPurchases(auth: LiveAuth, monthStart: string, fetchImpl: FetchLike): Promise<{ total: number | null; note: string | null }> {
@@ -713,7 +749,7 @@ export async function loadMilkSettings(auth: LiveAuth, fetchImpl: FetchLike): Pr
 }
 
 export async function loadHealth(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<HealthRow>> {
-  return liveGet<HealthRow>(auth, "dairy_health_events?select=id,kind,diagnosis,medicine,event_date,vet_name,vaccine_code,next_due,notes,voided&voided=eq.false&order=event_date.desc&limit=20", fetchImpl);
+  return liveGet<HealthRow>(auth, "dairy_health_events?select=id,kind,diagnosis,medicine,event_date,vet_name,vaccine_code,next_due,notes,voided&voided=eq.false&order=event_date.desc&limit=40", fetchImpl);
 }
 
 export async function loadVaccines(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<VaccineRow>> {

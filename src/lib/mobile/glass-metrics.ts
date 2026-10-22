@@ -23,10 +23,28 @@ export function romanWeekday(isoDate: string): string {
   return WEEKDAY[utc.getUTCDay()] ?? "";
 }
 
-/** Pichli value 0 ho to % nahi. Invented growth nahi. */
+/** Pichli value 0 ho, ya farq sifar ho, to badge nahi. 300 se aage cap. */
 export function pctChange(current: number | null, previous: number | null): number | null {
   if (current == null || previous == null || !(previous > 0) || !Number.isFinite(current)) return null;
-  return Math.round(((current - previous) / previous) * 1000) / 10;
+  const raw = Math.round(((current - previous) / previous) * 1000) / 10;
+  if (raw === 0) return null;
+  if (raw > 300) return 300;
+  if (raw < -300) return -300;
+  return raw;
+}
+
+/** Bar ke upar chhota label: 1.6L, warna Rs. */
+export function compactRupee(value: number): string {
+  if (!Number.isFinite(value)) return "";
+  const sign = value < 0 ? "-" : "";
+  const abs = Math.abs(value);
+  if (abs >= 100000) {
+    const lakh = abs / 100000;
+    const text = lakh >= 10 ? String(Math.round(lakh)) : lakh.toFixed(1).replace(/\.0$/, "");
+    return `${sign}${text}L`;
+  }
+  if (abs >= 1000) return `${sign}Rs ${Math.round(abs / 1000)}k`;
+  return `${sign}Rs ${Math.round(abs)}`;
 }
 
 /** Target na ho to null. Ring khali rehti hai, % nahi banate. */

@@ -1,12 +1,12 @@
-import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { Children, createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Animated, Pressable, RefreshControl, ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Path, Polyline, Rect, Stop } from "react-native-svg";
-import { greetingName } from "../../../src/lib/mobile/display-name";
+import { greetingName, roleNameKey } from "../../../src/lib/mobile/display-name";
 import type { TimelineStep } from "../../../src/lib/mobile/glass-metrics";
 import { pctChange, ringDashOffset, timelineFinished, timelinePercent } from "../../../src/lib/mobile/glass-metrics";
 import { brandLockup, loadAppMark, taglineWithDefault, type AppLang, type AppMark } from "../../../src/lib/mobile/sub-brand";
 import { liveAuth, type LiveBag } from "./bits";
-import { liveGet, liveGetScoped } from "../../../src/lib/mobile/live-read";
+import { liveGet, liveGetScoped, loadPhoneNotes } from "../../../src/lib/mobile/live-read";
 import { pickPakistan, preferVillage, shortPlace, usablePlace } from "../../../src/lib/mobile/weather-place";
 
 export const glass = {
@@ -55,11 +55,11 @@ export function StarField() {
 
 export function GlassScreen({ children, refreshing, onRefresh }: { children: ReactNode; refreshing?: boolean; onRefresh?: () => void }) {
   return (
-    <View style={{ flex: 1, backgroundColor: glass.bg }}>
+    <View style={{ flex: 1, minHeight: 0, backgroundColor: glass.bg }}>
       <StarField />
       <ScrollView
-        style={{ flex: 1, backgroundColor: "transparent" }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 28, width: "100%" }}
+        style={{ flex: 1, minHeight: 0, backgroundColor: "transparent" }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 120, width: "100%" }}
         refreshControl={onRefresh ? <RefreshControl refreshing={refreshing === true} onRefresh={onRefresh} tintColor={glass.up} /> : undefined}
       >
         {children}
@@ -80,9 +80,20 @@ export function Rise({ index, style, children }: { index: number; style?: StyleP
   return <Animated.View style={[{ opacity, transform: [{ translateY: shift }] }, style]}>{children}</Animated.View>;
 }
 
-/** Do cards ek line. Width flex item par hai, andar wale view par nahi. */
+/** Do cards ek line. Doosri line alag row hai, taake neeche wali card kat na jaye. */
 export function KpiGrid({ children }: { children: ReactNode }) {
-  return <View style={{ width: "100%", flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>{children}</View>;
+  const items = Children.toArray(children);
+  const rows: ReactNode[][] = [];
+  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
+  return (
+    <View style={{ width: "100%" }}>
+      {rows.map((row, index) => (
+        <View key={index} style={{ width: "100%", flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+          {row}
+        </View>
+      ))}
+    </View>
+  );
 }
 
 const LangContext = createContext<AppLang>("rm");
@@ -130,15 +141,17 @@ export function BrandHeader({ role, name, centre, onProfile, live }: { role: str
   const where = centre?.trim() ? `${role.toUpperCase()} · ${centre.trim()}` : role.toUpperCase();
   return (
     <Rise index={0}>
-      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-        <View style={{ flex: 1, paddingRight: 10 }}>
-          <Text style={{ color: glass.text, fontSize: 16, fontWeight: "800", textAlign: lock.rtl ? "right" : "left", writingDirection: lock.rtl ? "rtl" : "ltr" }}>{lock.title}</Text>
-          <Text style={{ color: glass.muted, fontSize: 11, marginTop: 1, textAlign: lock.rtl ? "right" : "left", writingDirection: lock.rtl ? "rtl" : "ltr" }}>{lock.line}</Text>
-          <Text style={{ color: glass.gold, fontSize: 11, fontWeight: "700", marginTop: 3 }}>{where}</Text>
-          <Text style={{ color: glass.text, fontSize: 18, fontWeight: "800", marginTop: 1 }}>Assalam o Alaikum, {name || "—"}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+        <View style={{ flex: 1, paddingRight: 8 }}>
+          <Text style={{ color: glass.text, fontSize: 12, lineHeight: 14, fontWeight: "800", textAlign: lock.rtl ? "right" : "left", writingDirection: lock.rtl ? "rtl" : "ltr" }}>{lock.title}</Text>
+          <Text style={{ color: glass.muted, fontSize: 10, lineHeight: 12, textAlign: lock.rtl ? "right" : "left", writingDirection: lock.rtl ? "rtl" : "ltr" }}>{lock.line}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
+            <Text style={{ color: glass.gold, fontSize: 11, fontWeight: "700", marginRight: 8, flexShrink: 1, maxWidth: "46%" }} numberOfLines={1}>{where}</Text>
+            <Text style={{ color: glass.text, fontSize: 15, lineHeight: 18, fontWeight: "800", flex: 1 }} numberOfLines={1}>Assalam o Alaikum, {name || "—"}</Text>
+          </View>
         </View>
-        <Pressable onPress={onProfile} style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: "#146B3A", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", shadowColor: "#3DDC97", shadowOpacity: 0.7, shadowRadius: 10 }}>
-          <Text style={{ color: "#fff", fontWeight: "800", fontSize: 18 }}>{initial}</Text>
+        <Pressable onPress={onProfile} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "#146B3A", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
+          <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>{initial}</Text>
         </Pressable>
       </View>
     </Rise>
@@ -174,17 +187,23 @@ const WMO: Record<number, string> = {
   95: "Toofan",
 };
 
-export function useFace(live?: LiveBag): { name: string; place: string } {
+export function useFace(live?: LiveBag, role?: string): { name: string; place: string } {
   const auth = liveAuth(live);
   const [name, setName] = useState("");
   const [place, setPlace] = useState("");
   useEffect(() => {
     if (!auth?.userId) return;
     const id = encodeURIComponent(auth.userId);
-    void liveGet<{ full_name?: string | null }>(auth, `profiles?select=full_name&id=eq.${id}&limit=1`, fetch).then((rows) => {
+    const key = roleNameKey(role);
+    void (async () => {
+      const [rows, notes] = await Promise.all([
+        liveGet<{ full_name?: string | null }>(auth, `profiles?select=full_name&id=eq.${id}&limit=1`, fetch),
+        live?.testAccount && key ? loadPhoneNotes(auth, fetch) : Promise.resolve(null),
+      ]);
+      const demo = notes?.ok ? notes.rows.find((row) => row.key === key)?.label : "";
       const full = rows.ok ? rows.rows[0]?.full_name || "" : "";
-      setName(greetingName(full));
-    });
+      setName(greetingName(demo || full));
+    })();
     void liveGetScoped<{ village?: string | null; tehsil?: string | null; district?: string | null }>(auth, `farmers?select=village,tehsil,district&user_id=eq.${id}&limit=1`, fetch).then(async (rows) => {
       const row = rows.ok ? rows.rows[0] : null;
       let place = usablePlace(row?.village) || usablePlace(row?.tehsil) || usablePlace(row?.district);
@@ -194,7 +213,7 @@ export function useFace(live?: LiveBag): { name: string; place: string } {
       }
       setPlace(place);
     });
-  }, [auth?.token, auth?.userId, auth?.url]);
+  }, [auth?.token, auth?.userId, auth?.url, auth?.testAccount, role]);
   return { name, place };
 }
 
@@ -260,25 +279,26 @@ function weatherGlyph(condition: string | undefined): string {
 export function WeatherCard({ weather, index = 1 }: { weather: WeatherView | null; index?: number }) {
   return (
     <Rise index={index}>
-      <View style={{ backgroundColor: "rgba(12, 48, 36, 0.72)", borderRadius: 22, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: "rgba(61,220,151,0.28)" }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <View style={{ flex: 1, paddingRight: 8 }}>
-            <Text style={{ color: glass.muted }}>{weather?.place || "—"}</Text>
-            <Text style={{ color: glass.text, fontSize: 34, fontWeight: "800" }}>{weather?.temp || "—"}</Text>
-            <Text style={{ color: glass.gold }}>{weather?.condition || "Mausam"}</Text>
+      <View style={{ backgroundColor: "rgba(12, 48, 36, 0.72)", borderRadius: 16, paddingVertical: 8, paddingHorizontal: 12, marginBottom: 8, borderWidth: 1, borderColor: "rgba(61,220,151,0.28)" }}>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center", marginRight: 8 }}>
+            <Svg width={16} height={16} viewBox="0 0 24 24">
+              <Path d={weatherGlyph(weather?.condition)} stroke="#F5B942" strokeWidth={1.7} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+            </Svg>
           </View>
-          <View style={{ alignItems: "flex-end" }}>
-            <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
-              <Svg width={26} height={26} viewBox="0 0 24 24">
-                <Path d={weatherGlyph(weather?.condition)} stroke="#F5B942" strokeWidth={1.7} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-              </Svg>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: glass.muted, fontSize: 11 }} numberOfLines={1}>{weather?.place || "—"}</Text>
+            <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+              <Text style={{ color: glass.text, fontSize: 20, lineHeight: 22, fontWeight: "800" }}>{weather?.temp || "—"}</Text>
+              <Text style={{ color: glass.gold, fontSize: 12, marginLeft: 6 }} numberOfLines={1}>{weather?.condition || "Mausam"}</Text>
             </View>
-            <Text style={{ color: glass.muted }}>{weather?.humidity || "—"}</Text>
-            <Text style={{ color: glass.muted, marginTop: 2 }}>{weather?.wind || "—"}</Text>
-            <Text style={{ color: glass.muted, marginTop: 2 }}>{weather?.when || ""}</Text>
+          </View>
+          <View style={{ alignItems: "flex-end", marginLeft: 8 }}>
+            <Text style={{ color: glass.muted, fontSize: 11 }}>{weather?.humidity || "—"} · {weather?.wind || "—"}</Text>
+            <Text style={{ color: glass.muted, fontSize: 11 }}>{weather?.when || ""}</Text>
           </View>
         </View>
-        {weather?.note ? <Text style={{ color: glass.muted, marginTop: 8 }}>{weather.note}</Text> : null}
+        {weather?.note ? <Text style={{ color: glass.muted, fontSize: 11, marginTop: 4 }}>{weather.note}</Text> : null}
       </View>
     </Rise>
   );
@@ -358,14 +378,14 @@ export function LineChart({ values, labels, color }: { values: number[]; labels:
   );
 }
 
-export function BarChart({ values, labels, color }: { values: number[]; labels: string[]; color: string }) {
+export function BarChart({ values, labels, color, format }: { values: number[]; labels: string[]; color: string; format?: (value: number) => string }) {
   const max = Math.max(...values, 0);
   if (!values.length) return <Text style={{ color: glass.muted }}>Chart ke liye qatarein nahi.</Text>;
   return (
     <View style={{ flexDirection: "row", alignItems: "flex-end", height: 132 }}>
       {values.map((value, index) => (
         <View key={`${labels[index]}-${index}`} style={{ flex: 1, alignItems: "center" }}>
-          <Text style={{ color: glass.muted, fontSize: 9, marginBottom: 4 }}>{value > 0 ? (Number.isInteger(value) ? String(value) : value.toFixed(1)) : ""}</Text>
+          <Text style={{ color: glass.muted, fontSize: 9, marginBottom: 4 }} numberOfLines={1}>{value > 0 ? (format ? format(value) : (Number.isInteger(value) ? String(value) : value.toFixed(1))) : ""}</Text>
           <View style={{ width: 16, height: max > 0 ? Math.max(6, (value / max) * 84) : 6, borderRadius: 8, backgroundColor: color, opacity: value > 0 ? 1 : 0.25 }} />
           <Text style={{ color: glass.muted, fontSize: 10, marginTop: 4 }}>{labels[index]}</Text>
         </View>
@@ -411,17 +431,12 @@ export function Donut({ parts, center }: { parts: { label: string; value: number
 }
 
 export function Pct({ value }: { value: number | null }) {
-  if (value == null) {
-    return (
-      <View style={{ backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
-        <Text style={{ color: glass.muted, fontSize: 11, fontWeight: "700" }}>—</Text>
-      </View>
-    );
-  }
-  const up = value >= 0;
+  if (value == null || value === 0) return null;
+  const up = value > 0;
+  const shown = Math.abs(value) >= 300 ? "300%+" : `${Math.abs(value)}%`;
   return (
     <View style={{ backgroundColor: up ? "rgba(61,220,151,0.15)" : "rgba(255,107,107,0.15)", borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
-      <Text style={{ color: up ? glass.up : glass.down, fontSize: 11, fontWeight: "700" }}>{up ? "▲" : "▼"} {Math.abs(value)}%</Text>
+      <Text style={{ color: up ? glass.up : glass.down, fontSize: 11, fontWeight: "700" }}>{up ? "▲" : "▼"} {shown}</Text>
     </View>
   );
 }
@@ -473,8 +488,8 @@ export function Kpi({ label, value, sub, color, series, pct, index }: { label: s
           </View>
           <Pct value={change} />
         </View>
-        <Text style={{ color: glass.muted, marginTop: 10, fontSize: 12, lineHeight: 16 }}>{label}</Text>
-        <Text style={{ color: glass.text, fontSize: 20, fontWeight: "800", marginTop: 2, lineHeight: 24 }}>{value}</Text>
+        <Text style={{ color: glass.muted, marginTop: 10, fontSize: 12, lineHeight: 16 }} numberOfLines={2}>{label}</Text>
+        <Text style={{ color: glass.text, fontSize: 20, fontWeight: "800", marginTop: 2, lineHeight: 24 }} numberOfLines={1}>{value}</Text>
         {sub ? <Text style={{ color: glass.muted, fontSize: 11, lineHeight: 14 }}>{sub}</Text> : null}
         <Spark values={line} color={color} />
       </View>
@@ -482,13 +497,14 @@ export function Kpi({ label, value, sub, color, series, pct, index }: { label: s
   );
 }
 
-export function GlassCard({ title, sub, children, index = 2 }: { title: string; sub?: string; children: ReactNode; index?: number }) {
+export function GlassCard({ title, sub, badge, children, index = 2 }: { title: string; sub?: string; badge?: string | null; children: ReactNode; index?: number }) {
   return (
     <Rise index={index}>
       <View style={{ backgroundColor: glass.card, borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: glass.line }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 8 }}>
-          <Text style={{ color: glass.text, fontWeight: "800" }}>{title}</Text>
-          {sub ? <Text style={{ color: glass.muted, fontSize: 12 }}>{sub}</Text> : null}
+          <Text style={{ color: glass.text, fontWeight: "800", flex: 1 }}>{title}</Text>
+          {badge ? <Pill label={badge} tone="blue" /> : null}
+          {sub ? <Text style={{ color: glass.muted, fontSize: 12, marginLeft: 8 }}>{sub}</Text> : null}
         </View>
         {children}
       </View>
