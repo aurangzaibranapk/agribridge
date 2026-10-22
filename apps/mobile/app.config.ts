@@ -1,8 +1,6 @@
 const { loadPortalVersion } = require("./portal-version.cjs") as {
-  loadPortalVersion: () => { version: string; versionCode: number };
+  loadPortalVersion: (env?: NodeJS.ProcessEnv) => { version: string; versionCode: number };
 };
-
-const { version, versionCode } = loadPortalVersion();
 
 /** Same rule as src/lib/mobile/channel.ts. Expo config cannot import that .ts file. */
 function normalizeChannel(raw: unknown): "debug" | "internal" | "production" {
@@ -11,6 +9,7 @@ function normalizeChannel(raw: unknown): "debug" | "internal" | "production" {
 }
 
 export function buildExpoConfig(env: NodeJS.ProcessEnv = process.env) {
+  const { version, versionCode } = loadPortalVersion(env);
   const appChannel = normalizeChannel(env.APP_CHANNEL);
   return {
     expo: {
@@ -35,8 +34,11 @@ export function buildExpoConfig(env: NodeJS.ProcessEnv = process.env) {
       },
       extra: {
         productVersion: version,
+        versionCode,
         appChannel,
         portalUrl: env.EXPO_PUBLIC_PORTAL_URL ?? "",
+        supabaseUrl: env.EXPO_PUBLIC_SUPABASE_URL ?? "",
+        supabaseAnonKey: env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "",
       },
       plugins: ["./plugins/withPlaySigning.js", "./plugins/withSideloadApk.js"],
     },

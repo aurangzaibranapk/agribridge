@@ -1,8 +1,8 @@
 # AgriBridge mobile (Phase 1)
 
-Expo / React Native app in this same repo. It talks only to the portal API (`EXPO_PUBLIC_PORTAL_URL`). The anon key is not in the app.
+Expo / React Native app in this same repo. Login prefers `POST /api/mobile/v1/session` on `EXPO_PUBLIC_PORTAL_URL`. When that route is not on the live site yet, an email address signs in directly against the live Supabase project (`https://ktskwawkslaznkjjacni.supabase.co`) with the public anon key. Phone, CNIC, and username still need the portal route, because `fn_login_resolve` is service-role only. The anon key is a CI secret (`NEXT_PUBLIC_SUPABASE_ANON_KEY`), not a committed value. Any other Supabase host is refused.
 
-The app version is `AGRIBRIDGE_OS_VERSION` in `src/lib/app-version.ts` (currently `v0.6.1 Beta`). Expo reads that file at build time. Android `versionCode` is `major * 10000 + minor * 100 + patch` (601). The old Play TWA was versionCode 1. CI fails if the Expo version or versionCode disagree with the portal constant. Package id: `pk.alranatraders.agribridge`. The npm `package.json` version is not the product version.
+The app version is `AGRIBRIDGE_OS_VERSION` in `src/lib/app-version.ts` (currently `v0.6.1 Beta`). Expo reads that file at build time. Android `versionCode` is `major * 10000 + minor * 100 + patch` (601). A sideload rebuild can set `AGRIBRIDGE_VERSION_CODE` only when that integer is higher (the phone build is 602) while versionName stays `v0.6.1 Beta`. The old Play TWA was versionCode 1. CI fails if the Expo version or the default versionCode disagree with the portal constant. Package id: `pk.alranatraders.agribridge`. The npm `package.json` version is not the product version.
 
 ## APP_CHANNEL — Masla batayein
 
@@ -50,8 +50,8 @@ Field writes sit in a local outbox and sync with `client_uuid`. The server accep
 
 ## Sideload test APKs
 
-Workflow **Mobile sideload APKs** builds two release APKs, not the fat debug APK. `APP_CHANNEL=internal`, versionName `v0.6.1 Beta`, versionCode 601. R8 minify and Hermes are on. Each APK is one ABI (`arm64-v8a` or `armeabi-v7a`) and is signed with the Android debug keystore. minSdk is 24, so Android 8 and newer can install. `android:testOnly` is rejected by `apps/mobile/scripts/verify-sideload-apk.sh`.
+Workflow **Mobile sideload APKs** builds two release APKs, not the fat debug APK. `APP_CHANNEL=internal`, versionName `v0.6.1 Beta`, versionCode 602 (`AGRIBRIDGE_VERSION_CODE`). R8 minify and Hermes are on. Each APK is one ABI (`arm64-v8a` or `armeabi-v7a`) and is signed with the Android debug keystore. minSdk is 24, so Android 8 and newer can install. `android:testOnly` is rejected by `apps/mobile/scripts/verify-sideload-apk.sh`. The job fails if the live Supabase URL or anon key secret is missing. Internal and debug builds append the HTTP status to login and support errors. Production builds keep the short Urdu line.
 
 ## CI artifact
 
-Workflow **Mobile debug APK** uploads `agribridge-mobile-debug-apk` (14 days). The APK is not in git. It calls portal routes from this release, so login against live works after this release is deployed with the portal.
+Workflow **Mobile debug APK** uploads `agribridge-mobile-debug-apk` (14 days). The APK is not in git. Email login can reach live Supabase before the portal build is uploaded. Sync, milk, attendance, feedback, support chat, and non-email login still need this PR's portal routes on alranatraders.pk.

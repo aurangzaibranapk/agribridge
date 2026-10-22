@@ -8,6 +8,7 @@ import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
 import { normalizeChannel, showTesterReport } from "../../src/lib/mobile/channel";
+import { failureLine, signInMobile } from "../../src/lib/mobile/live-login";
 import { ROLE_NAV } from "../../src/lib/mobile/nav";
 import type { AppRole } from "../../src/lib/mobile/roles";
 import { pinLock, pinProblem } from "../../src/lib/mobile/pin";
@@ -19,20 +20,20 @@ import { bootMark, marks } from "./src/boot";
 import { loadRoleModule } from "./src/roles/load";
 import { Btn, Header, Tabs, colors } from "./src/kit";
 
-const extra = (Constants.expoConfig?.extra ?? {}) as { productVersion?: string; appChannel?: string; portalUrl?: string };
+const extra = (Constants.expoConfig?.extra ?? {}) as {
+  productVersion?: string;
+  versionCode?: number;
+  appChannel?: string;
+  portalUrl?: string;
+  supabaseUrl?: string;
+  supabaseAnonKey?: string;
+};
 const VERSION = extra.productVersion || "";
+const VERSION_CODE = extra.versionCode || 0;
 const CHANNEL = normalizeChannel(extra.appChannel);
 const PORTAL = (extra.portalUrl || "").replace(/\/$/, "");
-
-const LOGIN_TEXT: Record<string, string> = {
-  e_bad: "ID ya password ghalat hai.",
-  e_rate: "Thori der baad koshish karein.",
-  e_locked: "Account kuch der ke liye band hai.",
-  e_first_time: "Pehle portal par password set karein.",
-  e_inactive: "Ye account band hai.",
-  e_identifier: "ID, mobile ya CNIC sahi likhein.",
-  e_try_again: "Dobara koshish karein.",
-};
+const SUPABASE_URL = extra.supabaseUrl || "";
+const SUPABASE_ANON = extra.supabaseAnonKey || "";
 
 async function sha(value: string) {
   return Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, value);
@@ -107,27 +108,30 @@ export default function App() {
 
   async function login() {
     setError("");
-    if (!PORTAL) { setError("Portal URL build mein set nahi."); return; }
-    try {
-      const res = await fetch(`${PORTAL}/api/mobile/v1/session`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ identifier, password }),
-      });
-      const body = await res.json();
-      if (!res.ok || !body.ok) { setError(LOGIN_TEXT[body.error] || "Login nahi hua."); return; }
-      setToken(body.access_token);
-      setRole(body.role);
-      setAppRole(body.appRole);
-      setUserId(body.user_id);
-      await SecureStore.setItemAsync("agribridge.session", JSON.stringify({ token: body.access_token, refresh: body.refresh_token, role: body.role, appRole: body.appRole, userId: body.user_id }));
-      setPassword("");
-      setStage("pin");
-      setRoute("/pin");
-    } catch {
-      setNet("offline");
-      setError("Network nahi mila.");
+    const result = await signInMobile({
+      identifier,
+      password,
+      portalUrl: PORTAL,
+      supabaseUrl: SUPABASE_URL,
+      supabaseAnonKey: SUPABASE_ANON,
+      channel: CHANNEL,
+      fetchImpl: (url, init) => fetch(url, init),
+    });
+    if (!result.ok) {
+      if (result.offline) setNet("offline");
+      setError(result.message);
+      return;
     }
+    const body = result.session;
+    setToken(body.access_token);
+    setRole(body.role);
+    setAppRole(body.appRole);
+    setUserId(body.user_id);
+    await SecureStore.setItemAsync("agribridge.session", JSON.stringify({ token: body.access_token, refresh: body.refresh_token, role: body.role, appRole: body.appRole, userId: body.user_id }));
+    setPassword("");
+    setNet("online");
+    setStage("pin");
+    setRoute("/pin");
   }
 
   async function savePin() {
@@ -264,7 +268,7 @@ export default function App() {
       {stage !== "app" ? (
         <ScrollView contentContainerStyle={{ padding: 20 }}>
           <Text style={styles.brand}>AgriBridge</Text>
-          <Text style={styles.sub}>Version {VERSION || "—"} · {CHANNEL}</Text>
+          <Text style={styles.sub}>Version {VERSION || "—"}{VERSION_CODE ? ` · ${VERSION_CODE}` : ""} · {CHANNEL}</Text>
           {stage === "login" ? (
             <View>
               <TextInput value={identifier} onChangeText={setIdentifier} placeholder="ID, mobile ya CNIC" autoCapitalize="none" style={styles.input} />
@@ -332,6 +336,7 @@ export default function App() {
           token={token}
           chat={data?.support?.chat ?? null}
           whatsapp={whatsapp}
+          channel={CHANNEL}
           onClose={() => setSupportOpen(false)}
         />
       </Modal>
@@ -339,7 +344,7 @@ export default function App() {
   );
 }
 
-function SupportSheet({ portal, token, chat, whatsapp, onClose }: { portal: string; token: string | null; chat: string | null; whatsapp: string | null; onClose: () => void }) {
+function SupportSheet({ portal, token, chat, whatsapp, channel, onClose }: { portal: string; token: string | null; chat: string | null; whatsapp: string | null; channel: ReturnType<typeof normalizeChannel>; onClose: () => void }) {
   const [text, setText] = useState("");
   const [log, setLog] = useState<string[]>([]);
   async function ask() {
@@ -353,10 +358,16 @@ function SupportSheet({ portal, token, chat, whatsapp, onClose }: { portal: stri
         headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
         body: JSON.stringify({ message }),
       });
-      const body = await res.json();
-      setLog((prev) => [...prev, body.answer || body.reply || body.error || "Jawab nahi aaya."]);
-    } catch {
-      setLog((prev) => [...prev, "Network nahi mila."]);
+      const raw = await res.text();
+      let body: { answer?: string; reply?: string; error?: string } = {};
+      try { body = JSON.parse(raw); } catch { body = {}; }
+      if (res.ok && (body.answer || body.reply)) {
+        setLog((prev) => [...prev, body.answer || body.reply || ""]);
+        return;
+      }
+      setLog((prev) => [...prev, failureLine({ channel, fallback: body.error || "Jawab nahi aaya.", status: res.status, detail: raw })]);
+    } catch (err) {
+      setLog((prev) => [...prev, failureLine({ channel, fallback: "Network nahi mila.", detail: err instanceof Error ? err.message : "fetch failed" })]);
     }
   }
   return (

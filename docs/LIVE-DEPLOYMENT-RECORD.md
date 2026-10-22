@@ -2,6 +2,8 @@
 
 Branch `cursor/mobile-phase1-4b80`, commit `caa6b91d`. Migration **698 applied** on Live `ktskwawkslaznkjjacni` on 2026-10-22 at ~00:10 PKT. Testing par is dafe ka alag record nahi. Portal build abhi is PR ke sath deploy nahi hui.
 
+Email login is APK se live Supabase password grant par chal sakta hai, portal route ke baghair. Mobile, CNIC, sync, feedback, milk, attendance, aur support chat ke liye is PR ka portal build chahiye: `POST /api/mobile/v1/session`, `POST /api/mobile/v1/sync`, `POST /api/mobile/v1/feedback`, `GET /api/mobile/v1/support`, aur bearer auth wale `/api/farmer-ai` aur `/api/bridge-ai`. Ye build abhi upload nahi hui. Command tab bhejni hai jab Boss system par hon.
+
 Backups `backups` schema mein hain, suffix `_20261022_mig698`: `staff_details`, `milk_rate_settings`, `attendance_records`, `support_tickets`, `support_ticket_attachments`, `milk_route_collections`, `storage_buckets`, aur constraints.
 
 Rollback: `698_mobile_phase1.rollback.sql`. Us se pehle `attendance_records` ki woh qatarein delete karni hain jin ka `source = 'app'` hai, warna purana check nahi baithta.

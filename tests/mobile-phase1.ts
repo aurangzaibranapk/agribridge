@@ -16,6 +16,7 @@ import { fatActorError, validateOutbox } from "../src/lib/mobile/outbox";
 import { pinLock, pinProblem, verifyPin } from "../src/lib/mobile/pin";
 import { supportChatPath, supportWhatsapp } from "../src/lib/mobile/support";
 import { reportContext, reportDescription } from "../src/lib/mobile/report";
+import { acceptedSupabaseUrl, failureLine, LIVE_SUPABASE_URL, signInMobile, type FetchLike } from "../src/lib/mobile/live-login";
 import { elapsed, withinBudget, MOBILE_BUNDLE_BUDGET_BYTES } from "../src/lib/mobile/perf";
 import { shiftTotals } from "../src/lib/mobile/shifts";
 import { calculateMilkValue } from "../src/lib/utils/milk-formula";
@@ -28,6 +29,11 @@ assert.equal(buildExpoConfig({}).expo.extra.appChannel, "production");
 assert.equal(buildExpoConfig({ APP_CHANNEL: "internal" }).expo.extra.appChannel, "internal");
 assert.equal(versionCodeFor("v0.6.1 Beta"), 601);
 assert.equal(buildExpoConfig({ APP_CHANNEL: "debug" }).expo.android.versionCode, versionCodeFor(AGRIBRIDGE_OS_VERSION));
+assert.equal(buildExpoConfig({ AGRIBRIDGE_VERSION_CODE: "602" }).expo.android.versionCode, 602);
+assert.equal(buildExpoConfig({ AGRIBRIDGE_VERSION_CODE: "602" }).expo.version, AGRIBRIDGE_OS_VERSION);
+assert.equal(buildExpoConfig({ AGRIBRIDGE_VERSION_CODE: "602" }).expo.extra.productVersion, "v0.6.1 Beta");
+assert.throws(() => buildExpoConfig({ AGRIBRIDGE_VERSION_CODE: "601" }));
+assert.equal(buildExpoConfig({ EXPO_PUBLIC_SUPABASE_URL: `${LIVE_SUPABASE_URL}/` }).expo.extra.supabaseUrl, `${LIVE_SUPABASE_URL}/`);
 assert.ok(versionCodeFor(AGRIBRIDGE_OS_VERSION) > 1);
 assert.equal(buildExpoConfig({}).expo.android.package, "pk.alranatraders.agribridge");
 
@@ -158,8 +164,18 @@ assert.match(sideload, /signingConfigs\.debug/);
 assert.match(sideloadWorkflow, /APP_CHANNEL: internal/);
 assert.match(sideloadWorkflow, /hermesEnabled=true/);
 assert.match(sideloadWorkflow, /v0\.6\.1-beta-test1/);
+assert.match(sideloadWorkflow, /AGRIBRIDGE_VERSION_CODE: "602"/);
+assert.match(sideloadWorkflow, /EXPO_PUBLIC_SUPABASE_URL/);
+assert.match(sideloadWorkflow, /NEXT_PUBLIC_SUPABASE_ANON_KEY/);
+assert.match(sideloadWorkflow, /https:\/\/ktskwawkslaznkjjacni\.supabase\.co/);
+assert.match(sideloadWorkflow, /--clobber/);
+assert.match(sideloadWorkflow, /hwaiuwxqldxsoukkfefn/);
+assert.doesNotMatch(sideloadWorkflow, /eyJ/);
 assert.match(readFileSync("apps/mobile/scripts/verify-sideload-apk.sh", "utf8"), /testOnly/);
+assert.match(readFileSync("apps/mobile/scripts/verify-sideload-apk.sh", "utf8"), /versionCode='\$\{code\}'/);
 assert.match(appSource, /showTesterReport\(CHANNEL\)/);
+assert.match(appSource, /signInMobile/);
+assert.match(appSource, /failureLine/);
 assert.match(appSource, /Masla batayein/);
 assert.match(appSource, /\/api\/mobile\/v1\/support/);
 const mobileTree = [
@@ -170,8 +186,158 @@ const mobileTree = [
   "src/lib/mobile/support.ts",
 ].map((path) => readFileSync(path, "utf8")).join("\n");
 assert.doesNotMatch(mobileTree, /923226275476|923126513294|wa\.me\/92/);
+assert.equal(acceptedSupabaseUrl(`${LIVE_SUPABASE_URL}/`), LIVE_SUPABASE_URL);
+assert.equal(acceptedSupabaseUrl("https://hwaiuwxqldxsoukkfefn.supabase.co"), null);
+assert.equal(failureLine({ channel: "production", fallback: "Network nahi mila.", status: 404, detail: "<html>404</html>" }), "Network nahi mila.");
+assert.match(failureLine({ channel: "internal", fallback: "Network nahi mila.", status: 404, detail: "<html>This page could not be found</html>" }), /HTTP 404/);
+assert.match(failureLine({ channel: "internal", fallback: "Network nahi mila.", status: 404, detail: "<html>This page could not be found</html>" }), /could not be found/);
+assert.doesNotMatch(failureLine({ channel: "internal", fallback: "Login nahi hua.", status: 404, detail: "secret-pass-99", secrets: ["secret-pass-99"] }), /secret-pass-99/);
+
+const PORTAL = "https://alranatraders.pk";
+const ANON = "anon-key-value";
+
+function scripted(handlers: Array<(url: string) => { status: number; body: string } | never>) {
+  const calls: string[] = [];
+  const fetchImpl: FetchLike = async (url) => {
+    calls.push(url);
+    const next = handlers.shift();
+    if (!next) throw new Error(`unexpected ${url}`);
+    const hit = next(url);
+    return { status: hit.status, text: async () => hit.body };
+  };
+  return { fetchImpl, calls };
+}
 
 void (async () => {
+  const html404 = "<!DOCTYPE html><html><body>This page could not be found secret-pass-99</body></html>";
+  const direct = scripted([
+    () => ({ status: 404, body: html404 }),
+    () => ({ status: 200, body: JSON.stringify({ access_token: "access-token-value", refresh_token: "refresh-token-value", expires_at: 1, user: { id: "user-1" } }) }),
+    () => ({ status: 200, body: JSON.stringify([{ role: "admin", is_active: true }]) }),
+    () => ({ status: 200, body: JSON.stringify([]) }),
+  ]);
+  const emailLogin = await signInMobile({
+    identifier: "admin@alranatraders.pk",
+    password: "secret-pass-99",
+    portalUrl: PORTAL,
+    supabaseUrl: LIVE_SUPABASE_URL,
+    supabaseAnonKey: ANON,
+    channel: "internal",
+    fetchImpl: direct.fetchImpl,
+  });
+  assert.equal(emailLogin.ok, true);
+  if (emailLogin.ok) {
+    assert.equal(emailLogin.session.appRole, "admin");
+    assert.equal(emailLogin.session.role, "admin");
+    assert.equal(emailLogin.session.user_id, "user-1");
+  }
+  assert.match(direct.calls[1] ?? "", /\/auth\/v1\/token\?grant_type=password$/);
+  assert.match(direct.calls[2] ?? "", /\/rest\/v1\/profiles\?/);
+  assert.doesNotMatch(direct.calls.join("\n"), /hwaiuwxqldxsoukkfefn/);
+
+  const wrongPassword = scripted([
+    () => ({ status: 401, body: JSON.stringify({ ok: false, error: "e_bad" }) }),
+  ]);
+  const rejected = await signInMobile({
+    identifier: "admin@alranatraders.pk",
+    password: "secret-pass-99",
+    portalUrl: PORTAL,
+    supabaseUrl: LIVE_SUPABASE_URL,
+    supabaseAnonKey: ANON,
+    channel: "production",
+    fetchImpl: wrongPassword.fetchImpl,
+  });
+  assert.equal(rejected.ok, false);
+  if (!rejected.ok) assert.equal(rejected.message, "ID ya password ghalat hai.");
+  assert.equal(wrongPassword.calls.length, 1);
+
+  const phone = scripted([() => ({ status: 404, body: html404 })]);
+  const phoneLogin = await signInMobile({
+    identifier: "03001234567",
+    password: "secret-pass-99",
+    portalUrl: PORTAL,
+    supabaseUrl: LIVE_SUPABASE_URL,
+    supabaseAnonKey: ANON,
+    channel: "internal",
+    fetchImpl: phone.fetchImpl,
+  });
+  assert.equal(phoneLogin.ok, false);
+  if (!phoneLogin.ok) {
+    assert.match(phoneLogin.message, /HTTP 404/);
+    assert.match(phoneLogin.message, /Mobile ya CNIC/);
+    assert.doesNotMatch(phoneLogin.message, /secret-pass-99/);
+  }
+  assert.equal(phone.calls.length, 1);
+
+  const missingKey = scripted([() => ({ status: 404, body: html404 })]);
+  const noKey = await signInMobile({
+    identifier: "admin@alranatraders.pk",
+    password: "secret-pass-99",
+    portalUrl: PORTAL,
+    supabaseUrl: LIVE_SUPABASE_URL,
+    supabaseAnonKey: "",
+    channel: "internal",
+    fetchImpl: missingKey.fetchImpl,
+  });
+  assert.equal(noKey.ok, false);
+  if (!noKey.ok) {
+    assert.match(noKey.message, /anon key/);
+    assert.match(noKey.message, /HTTP 404/);
+  }
+
+  const portalSession = scripted([
+    () => ({ status: 200, body: JSON.stringify({ ok: true, access_token: "t", refresh_token: "r", user_id: "u", role: "farmer", appRole: "farmer" }) }),
+  ]);
+  const fromPortal = await signInMobile({
+    identifier: "03001234567",
+    password: "secret-pass-99",
+    portalUrl: PORTAL,
+    supabaseUrl: LIVE_SUPABASE_URL,
+    supabaseAnonKey: ANON,
+    channel: "internal",
+    fetchImpl: portalSession.fetchImpl,
+  });
+  assert.equal(fromPortal.ok, true);
+  if (fromPortal.ok) assert.equal(fromPortal.session.appRole, "farmer");
+  assert.equal(portalSession.calls.length, 1);
+
+  const mco = scripted([
+    () => ({ status: 404, body: html404 }),
+    () => ({ status: 200, body: JSON.stringify({ access_token: "t", refresh_token: "r", user: { id: "mco-1" } }) }),
+    () => ({ status: 200, body: JSON.stringify([{ role: "milk_collection", is_active: true }]) }),
+    () => ({ status: 200, body: JSON.stringify([{ designation: "chiller", field_app_role: "mco" }]) }),
+  ]);
+  const mcoLogin = await signInMobile({
+    identifier: "mco@alranatraders.pk",
+    password: "secret-pass-99",
+    portalUrl: PORTAL,
+    supabaseUrl: "https://hwaiuwxqldxsoukkfefn.supabase.co",
+    supabaseAnonKey: ANON,
+    channel: "internal",
+    fetchImpl: mco.fetchImpl,
+  });
+  assert.equal(mcoLogin.ok, false);
+  if (!mcoLogin.ok) assert.match(mcoLogin.message, /live project nahi/);
+  assert.equal(mco.calls.length, 1);
+
+  const desk = scripted([
+    () => ({ status: 404, body: html404 }),
+    () => ({ status: 200, body: JSON.stringify({ access_token: "t", refresh_token: "r", user: { id: "mco-1" } }) }),
+    () => ({ status: 200, body: JSON.stringify([{ role: "milk_collection", is_active: true }]) }),
+    () => ({ status: 200, body: JSON.stringify([{ designation: "chiller", field_app_role: "mco" }]) }),
+  ]);
+  const deskLogin = await signInMobile({
+    identifier: "mco@alranatraders.pk",
+    password: "secret-pass-99",
+    portalUrl: PORTAL,
+    supabaseUrl: LIVE_SUPABASE_URL,
+    supabaseAnonKey: ANON,
+    channel: "internal",
+    fetchImpl: desk.fetchImpl,
+  });
+  assert.equal(deskLogin.ok, true);
+  if (deskLogin.ok) assert.equal(deskLogin.session.appRole, "mco");
+
   const started = performance.now();
   await import("../src/lib/mobile/nav");
   await import("../src/lib/mobile/pricing");

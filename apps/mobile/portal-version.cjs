@@ -19,10 +19,18 @@ function versionCodeFor(version) {
   return major * 10000 + minor * 100 + patch;
 }
 
-function loadPortalVersion() {
+function loadPortalVersion(env) {
   const source = readFileSync(join(__dirname, "../../src/lib/app-version.ts"), "utf8");
   const version = readPortalVersion(source);
-  return { version, versionCode: versionCodeFor(version) };
+  const base = versionCodeFor(version);
+  const bag = env || process.env;
+  const raw = bag.AGRIBRIDGE_VERSION_CODE;
+  if (raw == null || String(raw).trim() === "") return { version, versionCode: base };
+  const override = Number(String(raw).trim());
+  if (!Number.isInteger(override) || override <= base || override > 2100000000) {
+    throw new Error(`AGRIBRIDGE_VERSION_CODE ${raw} must be an integer above ${base}.`);
+  }
+  return { version, versionCode: override };
 }
 
 module.exports = { readPortalVersion, versionCodeFor, loadPortalVersion };

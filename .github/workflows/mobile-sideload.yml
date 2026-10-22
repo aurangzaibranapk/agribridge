@@ -21,6 +21,9 @@ jobs:
     env:
       APP_CHANNEL: internal
       EXPO_PUBLIC_PORTAL_URL: https://alranatraders.pk
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      AGRIBRIDGE_VERSION_CODE: "602"
       CI: "1"
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +37,18 @@ jobs:
       - uses: android-actions/setup-android@v4
         with:
           packages: platform-tools platforms;android-35 build-tools;35.0.0 ndk;26.1.10909125
+      - name: Require live Supabase public keys
+        run: |
+          test -n "$EXPO_PUBLIC_SUPABASE_URL" || { echo "::error::GitHub secret NEXT_PUBLIC_SUPABASE_URL is missing"; exit 1; }
+          test -n "$EXPO_PUBLIC_SUPABASE_ANON_KEY" || { echo "::error::GitHub secret NEXT_PUBLIC_SUPABASE_ANON_KEY is missing"; exit 1; }
+          case "$EXPO_PUBLIC_SUPABASE_URL" in
+            https://ktskwawkslaznkjjacni.supabase.co) ;;
+            *) echo "::error::EXPO_PUBLIC_SUPABASE_URL does not point to the live AgriBridge Supabase project"; exit 1 ;;
+          esac
+          case "$EXPO_PUBLIC_SUPABASE_URL" in
+            *hwaiuwxqldxsoukkfefn*) echo "::error::testing Supabase project is refused"; exit 1 ;;
+          esac
+          echo "Live Supabase public URL is set. Anon key length ${#EXPO_PUBLIC_SUPABASE_ANON_KEY}."
       - name: Install mobile dependencies
         working-directory: apps/mobile
         run: npm ci
@@ -69,7 +84,7 @@ jobs:
             fi
             local dest="sideload-out/agribridge-v0.6.1-beta-${abi}.apk"
             cp "$src" "$dest"
-            scripts/verify-sideload-apk.sh "$dest" "$abi" | tee "sideload-out/${abi}.verify.txt"
+            scripts/verify-sideload-apk.sh "$dest" "$abi" "$AGRIBRIDGE_VERSION_CODE" | tee "sideload-out/${abi}.verify.txt"
           }
           copy arm64-v8a
           copy armeabi-v7a
@@ -92,21 +107,29 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Publish prerelease v0.6.1-beta-test1
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v0.6.1-beta-test1
-          name: v0.6.1-beta-test1
-          prerelease: true
-          generate_release_notes: false
-          files: |
-            apps/mobile/sideload-out/agribridge-v0.6.1-beta-arm64-v8a.apk
-            apps/mobile/sideload-out/agribridge-v0.6.1-beta-armeabi-v7a.apk
-          body: |
-            Sideload test builds for phones. Not a Play Store upload.
-            versionName v0.6.1 Beta, versionCode 601, APP_CHANNEL=internal.
-            arm64-v8a is the APK for almost every phone since 2019.
-            armeabi-v7a is the separate APK for older 32-bit phones.
-            Signed with the Android debug keystore. R8 and Hermes are on.
-            minSdk 24 (Android 7), so Android 8 and newer can install.
+        working-directory: apps/mobile
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag=v0.6.1-beta-test1
+          notes=$(cat <<'EOF'
+          Sideload test builds for phones. Not a Play Store upload.
+          versionName v0.6.1 Beta, versionCode 602, APP_CHANNEL=internal.
+          Email login uses the live Supabase project when /api/mobile/v1/session is not on the portal yet.
+          Mobile, CNIC, sync, milk, and feedback still need this PR's portal build on alranatraders.pk.
+          arm64-v8a is the APK for almost every phone since 2019.
+          armeabi-v7a is the separate APK for older 32-bit phones.
+          Signed with the Android debug keystore. R8 and Hermes are on.
+          minSdk 24 (Android 7), so Android 8 and newer can install.
+          EOF
+          )
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --prerelease --title "$tag" --notes "$notes"
+          else
+            gh release create "$tag" --prerelease --title "$tag" --notes "$notes" --target "${{ github.sha }}"
+          fi
+          gh release upload "$tag" \
+            sideload-out/agribridge-v0.6.1-beta-arm64-v8a.apk \
+            sideload-out/agribridge-v0.6.1-beta-armeabi-v7a.apk \
+            --clobber

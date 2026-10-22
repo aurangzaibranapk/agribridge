@@ -4,6 +4,7 @@ set -euo pipefail
 
 apk="${1:?apk path}"
 abi="${2:?armeabi-v7a or arm64-v8a}"
+code="${3:?versionCode}"
 bt="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}/build-tools/35.0.0"
 
 if [[ ! -x "$bt/aapt" && -f "$bt/aapt" ]]; then
@@ -24,7 +25,7 @@ fi
 badging=$("$bt/aapt" dump badging "$apk")
 echo "$badging"
 echo "$badging" | grep -q "package: name='pk.alranatraders.agribridge'"
-echo "$badging" | grep -q "versionCode='601'"
+echo "$badging" | grep -q "versionCode='${code}'"
 echo "$badging" | grep -q "versionName='v0.6.1 Beta'"
 echo "$badging" | grep -q "native-code: '$abi'"
 sdk=$(echo "$badging" | sed -n "s/.*sdkVersion:'\\([0-9]*\\)'.*/\\1/p" | head -1)

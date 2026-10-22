@@ -18,8 +18,8 @@ if (!product.includes('AGRIBRIDGE_OS_VERSION as PRODUCT_VERSION')) {
   console.error("PRODUCT_VERSION must re-export AGRIBRIDGE_OS_VERSION.");
   process.exit(1);
 }
-if (!appConfig.includes("loadPortalVersion()") || appConfig.includes('join(__dirname, "../../VERSION")')) {
-  console.error("Expo config must read the portal version through loadPortalVersion().");
+if (!appConfig.includes("loadPortalVersion(env)") || appConfig.includes('join(__dirname, "../../VERSION")')) {
+  console.error("Expo config must read the portal version through loadPortalVersion(env).");
   process.exit(1);
 }
 if (!portalSource.includes("major * 10000 + minor * 100 + patch")) {
