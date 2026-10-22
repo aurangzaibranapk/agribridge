@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Animated, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
-import Svg, { Circle, Defs, LinearGradient, Path, Polyline, Stop } from "react-native-svg";
+import Svg, { Circle, Defs, LinearGradient, Path, Polyline, Rect, Stop } from "react-native-svg";
 import type { TimelineStep } from "../../../src/lib/mobile/glass-metrics";
 import { ringDashOffset, timelineFinished, timelinePercent } from "../../../src/lib/mobile/glass-metrics";
 import { liveAuth, type LiveBag } from "./bits";
@@ -519,28 +519,37 @@ function ChargeBit({ x, delay, color }: { x: number; delay: number; color: strin
   );
 }
 
-/** Glowing ring. pct null = beech mein dash, khali ring. Number sirf jab diya jaye. */
-export function RingMeter({ pct, label }: { pct: number | null; label: string }) {
+/** Glowing ring. pct null = beech mein dash. Number 0 se count hota hai. */
+export function RingMeter({ pct, label, size = 168 }: { pct: number | null; label: string; size?: number }) {
   const gid = `ring${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
-  const size = 168;
   const stroke = 12;
   const r = (size - stroke * 3) / 2;
   const c = 2 * Math.PI * r;
   const [offset, setOffset] = useState(c);
+  const [shown, setShown] = useState(pct == null ? "—" : "0%");
   const progress = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (pct == null || !Number.isFinite(pct)) {
+      setShown("—");
+      setOffset(c);
+      return;
+    }
+    setShown("0%");
     progress.setValue(0);
-    const to = pct == null || !Number.isFinite(pct) ? 0 : Math.max(0, Math.min(100, pct)) / 100;
+    const to = Math.max(0, Math.min(100, pct)) / 100;
     const anim = Animated.timing(progress, { toValue: to, duration: 1100, useNativeDriver: false });
-    const sub = progress.addListener(({ value }) => setOffset(ringDashOffset(c, value * 100)));
+    const sub = progress.addListener(({ value }) => {
+      const current = Math.round(value * 100);
+      setShown(`${current}%`);
+      setOffset(ringDashOffset(c, current));
+    });
     anim.start();
     return () => {
       anim.stop();
       progress.removeListener(sub);
     };
   }, [c, pct, progress]);
-  const shown = pct == null || !Number.isFinite(pct) ? "—" : `${Math.round(pct)}%`;
-  const bits = [22, 48, 78, 108, 138];
+  const bits = [0.18, 0.34, 0.5, 0.66, 0.82].map((part) => Math.round(part * (size - 20)));
   return (
     <View style={{ alignItems: "center", paddingVertical: 6 }}>
       <View style={{ width: size, height: size }}>
@@ -569,14 +578,116 @@ export function RingMeter({ pct, label }: { pct: number | null; label: string })
           />
         </Svg>
         <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ color: glass.text, fontSize: 40, fontWeight: "800" }}>{shown}</Text>
-          <Text style={{ color: glass.muted, fontSize: 12, marginTop: 2 }}>{label}</Text>
+          <Text style={{ color: glass.text, fontSize: size > 140 ? 40 : 28, fontWeight: "800" }}>{shown}</Text>
+          {label ? <Text style={{ color: glass.muted, fontSize: 12, marginTop: 2 }}>{label}</Text> : null}
         </View>
         {bits.map((x, index) => (
           <ChargeBit key={x} x={x} delay={index * 220} color={index % 2 === 0 ? "#F472B6" : "#3DDC97"} />
         ))}
       </View>
     </View>
+  );
+}
+
+function Chip({ label, value, mark }: { label: string; value: string; mark: string }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 14, padding: 10, marginBottom: 8 }}>
+      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "rgba(196,181,253,0.22)", alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ color: "#F4F7F4", fontWeight: "800" }}>{mark}</Text>
+      </View>
+      <View style={{ marginLeft: 8, flex: 1 }}>
+        <Text style={{ color: glass.muted, fontSize: 11 }}>{label}</Text>
+        <Text style={{ color: glass.text, fontWeight: "800" }}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
+/** Goal card. % aur Target/Baqi sirf jab number diye jayen. */
+export function GoalCard({ title, subtitle, tone = "purple", pct, targetText, remainingText, deadline, onPress }: {
+  title: string;
+  subtitle: string;
+  tone?: "purple" | "green";
+  pct: number | null;
+  targetText: string;
+  remainingText: string;
+  deadline: string;
+  onPress?: () => void;
+}) {
+  const gid = `goal${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
+  const bid = `goalBtn${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
+  const [width, setWidth] = useState(0);
+  const [pressed, setPressed] = useState(false);
+  const from = tone === "green" ? "#146B3A" : "#6D28D9";
+  const to = tone === "green" ? "#3DDC97" : "#5B8CFF";
+  return (
+    <Rise index={6}>
+      <View onLayout={(event) => setWidth(event.nativeEvent.layout.width)} style={{ borderRadius: 18, overflow: "hidden", backgroundColor: glass.card, borderWidth: 1, borderColor: glass.line, marginBottom: 12 }}>
+        <View style={{ height: 72 }}>
+          {width > 0 ? (
+            <Svg width={width} height={72}>
+              <Defs>
+                <LinearGradient id={gid} x1="0" y1="0" x2="1" y2="0">
+                  <Stop offset="0" stopColor={from} />
+                  <Stop offset="1" stopColor={to} />
+                </LinearGradient>
+              </Defs>
+              <Rect width={width} height={72} fill={`url(#${gid})`} />
+            </Svg>
+          ) : <View style={{ height: 72, backgroundColor: from }} />}
+          <View style={{ position: "absolute", left: 14, right: 14, top: 0, bottom: 0, flexDirection: "row", alignItems: "center" }}>
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center", marginRight: 10 }}>
+              <Text style={{ color: "#fff", fontWeight: "800" }}>◎</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>{title}</Text>
+              <Text style={{ color: "rgba(255,255,255,0.82)", fontSize: 12, marginTop: 2 }}>{subtitle}</Text>
+            </View>
+          </View>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 8, paddingTop: 8 }}>
+          <RingMeter pct={pct} label="" size={128} />
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <Chip label="Target" value={targetText} mark="T" />
+            <Chip label="Baqi" value={remainingText} mark="B" />
+          </View>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16 }}>
+          <Text style={{ color: glass.muted, marginRight: 6 }}>▦</Text>
+          <Text style={{ color: glass.muted }}>{deadline}</Text>
+        </View>
+        <Pressable
+          onPress={onPress}
+          onPressIn={() => setPressed(true)}
+          onPressOut={() => setPressed(false)}
+          style={{
+            margin: 14,
+            borderRadius: 14,
+            transform: [{ translateY: pressed ? -3 : 0 }],
+            shadowColor: from,
+            shadowOffset: { width: 0, height: pressed ? 10 : 2 },
+            shadowOpacity: pressed ? 0.55 : 0.22,
+            shadowRadius: pressed ? 14 : 4,
+            elevation: pressed ? 10 : 3,
+          }}
+        >
+          <View style={{ height: 44, borderRadius: 14, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
+            {width > 28 ? (
+              <Svg width={width - 28} height={44} style={{ position: "absolute", left: 0, top: 0 }}>
+                <Defs>
+                  <LinearGradient id={bid} x1="0" y1="0" x2="1" y2="0">
+                    <Stop offset="0" stopColor={from} />
+                    <Stop offset="1" stopColor={to} />
+                  </LinearGradient>
+                </Defs>
+                <Rect width={width - 28} height={44} rx={14} fill={`url(#${bid})`} />
+              </Svg>
+            ) : null}
+            <Text style={{ color: "#fff", fontWeight: "800" }}>Tafseel dekhein</Text>
+          </View>
+        </Pressable>
+      </View>
+    </Rise>
   );
 }
 

@@ -35,6 +35,25 @@ export function monthShare(litres: number | null, target: number | null): number
   return Math.round((litres / target) * 1000) / 10;
 }
 
+/** Target se baqi. Had se aage ho to 0. Target na ho to null. */
+export function goalRemaining(actual: number | null, target: number | null): number | null {
+  if (actual == null || target == null || !(target > 0) || !Number.isFinite(actual)) return null;
+  return Math.max(0, Math.round((target - actual) * 100) / 100);
+}
+
+/** Mahine ka aakhri din. Stored deadline na ho to yahi period end hai. */
+export function monthEnd(isoDate: string): string | null {
+  const [year, month] = isoDate.split("-").map(Number);
+  if (!year || !month) return null;
+  const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${year}-${String(month).padStart(2, "0")}-${String(last).padStart(2, "0")}`;
+}
+
+export function goalDeadline(stored: string | null | undefined, periodEnd: string | null): string {
+  if (stored && /^\d{4}-\d{2}-\d{2}$/.test(stored)) return stored;
+  return periodEnd && /^\d{4}-\d{2}-\d{2}$/.test(periodEnd) ? periodEnd : "—";
+}
+
 /** pct null = poora dash offset, yani ring khali. */
 export function ringDashOffset(circumference: number, pct: number | null): number {
   if (!(circumference > 0)) return 0;

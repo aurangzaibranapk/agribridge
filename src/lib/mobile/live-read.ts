@@ -350,6 +350,15 @@ function countedSale(row: SaleRow): boolean {
   return status !== "void" && status !== "cancelled";
 }
 
+export function salesTotal(rows: SaleRow[]): number {
+  let total = 0;
+  for (const row of rows) {
+    if (!countedSale(row)) continue;
+    total += num(row.total_amount);
+  }
+  return Math.round(total * 100) / 100;
+}
+
 export function salesOnDay(rows: SaleRow[], day: string): { total: number; bills: number } {
   let total = 0;
   let bills = 0;
@@ -635,6 +644,45 @@ export async function loadTestPending(auth: LiveAuth, fetchImpl: FetchLike): Pro
 export function testOrdersFor(rows: OrderRow[], role: "customer" | "dealer"): OrderRow[] {
   if (role === "customer") return rows.filter((row) => row.order_to_type === "Farmer");
   return rows.filter((row) => row.order_to_type === "Agri Dealer" || row.order_to_type === "Kisan Dukan");
+}
+
+export type GoalTargetRow = {
+  farmer_month_litres?: number | string | null;
+  collection_day_litres?: number | string | null;
+  staff_month_present?: number | string | null;
+  admin_month_sales?: number | string | null;
+  farmer_deadline?: string | null;
+  staff_deadline?: string | null;
+  admin_deadline?: string | null;
+};
+
+/** 704 ki ek settings row. is_test column nahi. Na ho to ijazat/missing message. */
+export async function loadGoalTargets(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<GoalTargetRow>> {
+  return liveGet<GoalTargetRow>(
+    auth,
+    "app_goal_targets?select=farmer_month_litres,collection_day_litres,staff_month_present,admin_month_sales,farmer_deadline,staff_deadline,admin_deadline&id=eq.1&limit=1",
+    fetchImpl,
+  );
+}
+
+const MONTH_SALES_CAP = 2000;
+
+/** Is mahine ki sale. Fehrist cap par ruk jaye to total null. */
+export async function loadMonthSales(auth: LiveAuth, monthStart: string, fetchImpl: FetchLike): Promise<{ total: number | null; note: string | null }> {
+  const path = `pos_sales?select=total_amount,created_at,status&created_at=gte.${encodeURIComponent(karachiStartIso(monthStart))}&order=created_at.desc&limit=${MONTH_SALES_CAP}`;
+  const res = auth.testAccount ? await liveGetScoped<SaleRow>(auth, path, fetchImpl) : await liveGet<SaleRow>(auth, path, fetchImpl);
+  if (!res.ok) return { total: null, note: res.message };
+  if (res.rows.length >= MONTH_SALES_CAP) return { total: null, note: "Sale ki fehrist adhoori hai." };
+  return { total: salesTotal(res.rows), note: null };
+}
+
+export async function loadOwnAttendance(auth: LiveAuth, userId: string, fromDay: string, fetchImpl: FetchLike): Promise<ReadResult<AttendanceRow>> {
+  const id = encodeURIComponent(userId);
+  return liveGetScoped<AttendanceRow>(
+    auth,
+    `attendance_records?select=attendance_date,status&profile_id=eq.${id}&attendance_date=gte.${encodeURIComponent(fromDay)}&limit=40`,
+    fetchImpl,
+  );
 }
 
 export async function loadMilkSettings(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<MilkSettingsRow>> {
