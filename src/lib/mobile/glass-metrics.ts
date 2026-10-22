@@ -29,6 +29,20 @@ export function pctChange(current: number | null, previous: number | null): numb
   return Math.round(((current - previous) / previous) * 1000) / 10;
 }
 
+/** Target na ho to null. Ring khali rehti hai, % nahi banate. */
+export function monthShare(litres: number | null, target: number | null): number | null {
+  if (litres == null || target == null || !(target > 0) || !Number.isFinite(litres)) return null;
+  return Math.round((litres / target) * 1000) / 10;
+}
+
+/** pct null = poora dash offset, yani ring khali. */
+export function ringDashOffset(circumference: number, pct: number | null): number {
+  if (!(circumference > 0)) return 0;
+  if (pct == null || !Number.isFinite(pct)) return circumference;
+  const clamped = Math.max(0, Math.min(100, pct));
+  return circumference * (1 - clamped / 100);
+}
+
 export function filled(value: unknown): boolean {
   return value != null && value !== "";
 }

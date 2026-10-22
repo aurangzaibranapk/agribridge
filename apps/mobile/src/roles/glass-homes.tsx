@@ -1,10 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { approvalJourney, approvalTimeline, karachiClock, milkTimeline, orderTimeline, pctChange, romanWeekday } from "../../../../src/lib/mobile/glass-metrics";
+import { approvalJourney, approvalTimeline, karachiClock, milkTimeline, monthShare, orderTimeline, pctChange, romanWeekday } from "../../../../src/lib/mobile/glass-metrics";
 import { karachiDate, karachiDaySeries, liveGetScoped, loadMilkList, loadProfileNames, milkLitres, pricedMilkTotal, rupees, shiftLabel, type AdminHome, type HealthRow, type KhataView, type MilkRow, type OrderRow, type ReadResult } from "../../../../src/lib/mobile/live-read";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { liveAuth, type LiveBag } from "../bits";
-import { BarChart, BarTrack, BrandHeader, Donut, GlassCard, GlassScreen, Kpi, LineChart, Pill, Rise, TankRow, Timeline, WeatherCard, glass, useFace, useWeather } from "../glass";
+import { BarChart, BarTrack, BrandHeader, Donut, GlassCard, GlassScreen, Kpi, LineChart, Pill, RingMeter, Rise, TankRow, Timeline, WeatherCard, glass, useFace, useWeather } from "../glass";
 
 type Refresh = { refreshing?: boolean; onRefresh?: () => void; onProfile?: () => void; onTab?: (key: string) => void };
 
@@ -97,6 +97,7 @@ export function FarmerGlass({ live, khata, milk, names, focus = "home", footer, 
   const milkTitle = latest ? `${latest.entry_date === today ? "Aaj ka doodh" : latest.entry_date || "Doodh"} · ${litres(latest)} L` : "Aaj ka doodh";
   const milkWho = latest ? [shiftLabel(latest.shift), latest.mca_profile_id ? names.get(latest.mca_profile_id) || "MCA" : null].filter(Boolean).join(" · ") : null;
   const yesterdayList = rows.filter((row) => row.entry_date === yesterday);
+  const monthLitres = milk.ok ? milkLitres(rows.filter((row) => String(row.entry_date || "").startsWith(today.slice(0, 7)))) : null;
   const track = (
     <>
       <Timeline title={milkTitle} detail={milkWho} steps={milkTimeline(latest)} onAction={() => bar.onTab?.("doodh")} index={focus === "track" ? 2 : 8} />
@@ -136,10 +137,14 @@ export function FarmerGlass({ live, khata, milk, names, focus = "home", footer, 
         <Kpi index={4} label="Fat / SNF avg" value={avg(fats) == null && avg(snfs) == null ? "—" : `${avg(fats) ?? "—"} / ${avg(snfs) ?? "—"}`} color="#C4B5FD" series={fats.length ? fats : []} pct={pctChange(avg(fats), avg(yFats))} />
         <Kpi index={5} label="Hafte ki kamai" value={money(weekPay, weekPay == null)} sub={`${week.start} se ${week.end}`} color="#F5B942" series={payLine} pct={pctChange(weekPay, prevPay)} />
       </View>
-      <GlassCard title="Pichlay 7 din ka doodh (L)" sub={series.some((value) => value > 0) ? `Avg ${(series.reduce((sum, value) => sum + value, 0) / series.length).toFixed(1)} L` : "Abhi litre nahi"} index={6}>
+      <GlassCard title="Mahine ka target" sub="Target record mein nahi" index={6}>
+        <RingMeter pct={monthShare(monthLitres, null)} label="Target" />
+        <Text style={{ color: glass.muted, textAlign: "center" }}>{milk.ok ? `Is mahine ${monthLitres ?? 0} L` : milk.message}</Text>
+      </GlassCard>
+      <GlassCard title="Pichlay 7 din ka doodh (L)" sub={series.some((value) => value > 0) ? `Avg ${(series.reduce((sum, value) => sum + value, 0) / series.length).toFixed(1)} L` : "Abhi litre nahi"} index={7}>
         {!milk.ok ? <Text style={{ color: glass.muted }}>{milk.message}</Text> : <LineChart values={series} labels={days.map(romanWeekday)} color="#3DDC97" />}
       </GlassCard>
-      <GlassCard title="Aakhri collections" index={7}>
+      <GlassCard title="Aakhri collections" index={8}>
         {!milk.ok ? <Text style={{ color: glass.muted }}>{milk.message}</Text> : null}
         {milk.ok && rows.length === 0 ? <Text style={{ color: glass.muted }}>Abhi koi collection nahi.</Text> : null}
         {rows.slice(0, 3).map((row, index) => {
@@ -249,6 +254,7 @@ export function McoGlass({ live, rows, error, names, ...bar }: Refresh & { live?
         <Kpi index={5} label="Pending checks" value={rows ? String(pending.length) : "—"} color="#F5B942" series={[]} pct={null} />
       </View>
       <GlassCard title="Tank fill level" sub="Tank ka level track nahi hota" index={6}>
+        <RingMeter pct={null} label="Chiller" />
         <TankRow levels={[{ name: "Tank 1", pct: null }, { name: "Tank 2", pct: null }, { name: "Tank 3", pct: null }, { name: "Bulk", pct: null }]} />
       </GlassCard>
       <GlassCard title="MCA receipts" index={7}>

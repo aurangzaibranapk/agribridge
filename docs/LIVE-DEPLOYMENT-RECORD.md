@@ -1,3 +1,7 @@
+## Phone ring meter — 22 October 2026 — NO NEW SQL
+
+versionCode 612. Kisan home: mahine ka target ring (target record nahi, beech mein dash, litres asal). MCO home: chiller ring (tank level track nahi, beech mein dash) aur purane tank bars. Koi nayi migration nahi. Live APK nahi badli.
+
 ## Phone homes read TEST data — 22 October 2026 — FILE ONLY, NOT APPLIED
 
 versionCode 611, tag `v0.6.1-beta-testdb`. Home cards TEST qatarein parhti hain: bills, stock, cash, tankhwah, activity, admin ki TEST manzooriyan. Kisan sirf apna doodh. Migration **703 not applied** by this agent. Owner testing par: `supabase/migrations/703_app_test_read_policies.sql`. Live par 703 nahi. Seed ka mass `is_test = true` is file mein nahi. Live APK nahi badli.

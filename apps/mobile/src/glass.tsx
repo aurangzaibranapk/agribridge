@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Animated, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Path, Polyline, Stop } from "react-native-svg";
 import type { TimelineStep } from "../../../src/lib/mobile/glass-metrics";
-import { timelineFinished, timelinePercent } from "../../../src/lib/mobile/glass-metrics";
+import { ringDashOffset, timelineFinished, timelinePercent } from "../../../src/lib/mobile/glass-metrics";
 import { liveAuth, type LiveBag } from "./bits";
 import { liveGet, liveGetScoped } from "../../../src/lib/mobile/live-read";
 
@@ -479,6 +479,104 @@ export function Timeline({ title, detail, steps, onAction, showProgress = false,
         ) : null}
       </View>
     </Rise>
+  );
+}
+
+function ChargeBit({ x, delay, color }: { x: number; delay: number; color: string }) {
+  const rise = useRef(new Animated.Value(0)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.parallel([
+          Animated.timing(rise, { toValue: -64, duration: 1500, useNativeDriver: true }),
+          Animated.sequence([
+            Animated.timing(opacity, { toValue: 0.75, duration: 280, useNativeDriver: true }),
+            Animated.timing(opacity, { toValue: 0, duration: 1220, useNativeDriver: true }),
+          ]),
+        ]),
+        Animated.timing(rise, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [delay, opacity, rise]);
+  return (
+    <Animated.View
+      style={{
+        position: "absolute",
+        left: x,
+        bottom: 28,
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: color,
+        opacity,
+        transform: [{ translateY: rise }],
+      }}
+    />
+  );
+}
+
+/** Glowing ring. pct null = beech mein dash, khali ring. Number sirf jab diya jaye. */
+export function RingMeter({ pct, label }: { pct: number | null; label: string }) {
+  const gid = `ring${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
+  const size = 168;
+  const stroke = 12;
+  const r = (size - stroke * 3) / 2;
+  const c = 2 * Math.PI * r;
+  const [offset, setOffset] = useState(c);
+  const progress = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    progress.setValue(0);
+    const to = pct == null || !Number.isFinite(pct) ? 0 : Math.max(0, Math.min(100, pct)) / 100;
+    const anim = Animated.timing(progress, { toValue: to, duration: 1100, useNativeDriver: false });
+    const sub = progress.addListener(({ value }) => setOffset(ringDashOffset(c, value * 100)));
+    anim.start();
+    return () => {
+      anim.stop();
+      progress.removeListener(sub);
+    };
+  }, [c, pct, progress]);
+  const shown = pct == null || !Number.isFinite(pct) ? "—" : `${Math.round(pct)}%`;
+  const bits = [22, 48, 78, 108, 138];
+  return (
+    <View style={{ alignItems: "center", paddingVertical: 6 }}>
+      <View style={{ width: size, height: size }}>
+        <Svg width={size} height={size}>
+          <Defs>
+            <LinearGradient id={gid} x1="0" y1="1" x2="1" y2="0">
+              <Stop offset="0" stopColor="#C4B5FD" />
+              <Stop offset="0.48" stopColor="#F472B6" />
+              <Stop offset="1" stopColor="#3DDC97" />
+            </LinearGradient>
+          </Defs>
+          <Circle cx={size / 2} cy={size / 2} r={r} stroke="#C4B5FD" strokeWidth={22} fill="none" opacity={0.16} />
+          <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} fill="none" />
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            stroke={`url(#${gid})`}
+            strokeWidth={stroke}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={`${c} ${c}`}
+            strokeDashoffset={offset}
+            rotation={-90}
+            origin={`${size / 2}, ${size / 2}`}
+          />
+        </Svg>
+        <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ color: glass.text, fontSize: 40, fontWeight: "800" }}>{shown}</Text>
+          <Text style={{ color: glass.muted, fontSize: 12, marginTop: 2 }}>{label}</Text>
+        </View>
+        {bits.map((x, index) => (
+          <ChargeBit key={x} x={x} delay={index * 220} color={index % 2 === 0 ? "#F472B6" : "#3DDC97"} />
+        ))}
+      </View>
+    </View>
   );
 }
 
