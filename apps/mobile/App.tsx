@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, Image, Linking, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, AppState, Linking, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import Constants from "expo-constants";
 import * as Crypto from "expo-crypto";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -100,8 +100,6 @@ export default function App() {
   const [switchOpen, setSwitchOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const loginMark = useLoginMark();
-  const loginBrand = loginMark.brand;
-  const [loginLogoOk, setLoginLogoOk] = useState(true);
   const sessionRef = useRef<{ token: string; refresh: string; expiresAt: number | null } | null>(null);
   const refreshFlight = useRef<(() => Promise<RefreshSuccess | RefreshFailure>) | null>(null);
 
@@ -419,14 +417,6 @@ export default function App() {
         <ScrollView contentContainerStyle={{ padding: 20 }}>
           <Text style={styles.brand}>{FLAVOR === "test" ? "AgriBridge TEST" : "AgriBridge"}</Text>
           <TaglineBlock tagline={loginMark.tagline} />
-          {loginBrand ? (
-            <View style={styles.bylineRow}>
-              {loginBrand.logoUrl && loginLogoOk ? (
-                <Image source={{ uri: loginBrand.logoUrl }} onError={() => setLoginLogoOk(false)} style={styles.bylineLogo} />
-              ) : null}
-              <Text style={styles.byline}>{loginBrand.name}</Text>
-            </View>
-          ) : null}
           <Text style={styles.sub}>Version {VERSION || "—"}{VERSION_CODE ? ` · ${VERSION_CODE}` : ""} · {CHANNEL}</Text>
           {stage === "login" ? (
             <View>
@@ -680,9 +670,6 @@ function SupportSheet({ portal, token, chat, whatsapp, channel, flavor, onClose 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#07140F" },
   brand: { fontSize: 32, fontWeight: "800", color: colors.green, marginTop: 24 },
-  bylineRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
-  bylineLogo: { width: 16, height: 16, borderRadius: 3, marginRight: 6 },
-  byline: { color: colors.muted, fontSize: 13 },
   sub: { color: colors.muted, marginBottom: 16 },
   help: { color: colors.muted, marginBottom: 8 },
   input: { backgroundColor: "#fff", borderRadius: 12, borderWidth: 1, borderColor: colors.line, padding: 12, marginTop: 8 },

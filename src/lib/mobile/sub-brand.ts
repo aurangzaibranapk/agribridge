@@ -1,4 +1,4 @@
-/** Phone ka chhota brand. AgriBridge code mein rehta hai. Naam aur logo website_settings se. */
+/** Phone par sirf AgriBridge aur tagline. Company naam screen par nahi, domain par rehta hai. */
 
 import type { FetchLike } from "./live-login";
 import { liveGet, type LiveAuth } from "./live-read";
@@ -50,12 +50,12 @@ function httpsLogo(value: unknown): string | null {
   return /^https:\/\//i.test(url) ? url : null;
 }
 
-/** Website ka naam phone par nahi. Doosri brand baad mein settings se aa sakti hai. */
+/** Website ka company naam. Phone is naam ko kabhi nahi dikhata. */
 export function blockedAppBrand(name: string): boolean {
   return /al\s*rana/i.test(name);
 }
 
-/** Sirf current: true wali pehli brand. Naam khali ho to null. Logo sirf https. */
+/** Settings array ka parser. Screen is naam ko nahi likhti. Website wala naam yahan bhi reject hota hai. */
 export function currentSubBrand(value: unknown): SubBrand | null {
   let parsed = value;
   if (typeof parsed === "string") {
@@ -77,16 +77,14 @@ export function currentSubBrand(value: unknown): SubBrand | null {
   return null;
 }
 
-/** Brand aur tagline ek saath. Key na ho ya read fail ho to khali. App khud naam nahi banati. */
+/** Tagline settings se. Brand hamesha null: koi company naam phone par nahi aata. */
 export async function loadAppMark(auth: LiveAuth, fetchImpl: FetchLike): Promise<AppMark> {
   const blank: AppMark = { brand: null, tagline: emptyTagline() };
   const res = await liveGet<{ key?: string; value?: unknown }>(auth, "website_settings?select=key,value&key=in.(app_brands,app_tagline)&limit=2", fetchImpl);
   if (!res.ok) return blank;
-  let brand: SubBrand | null = null;
   let tagline = emptyTagline();
   for (const row of res.rows) {
-    if (row.key === "app_brands") brand = currentSubBrand(row.value);
     if (row.key === "app_tagline") tagline = taglineFrom(row.value);
   }
-  return { brand, tagline };
+  return { brand: null, tagline };
 }

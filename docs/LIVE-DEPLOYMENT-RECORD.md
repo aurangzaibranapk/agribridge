@@ -1,3 +1,7 @@
+## Phone identity — 22 October 2026 — NO NEW SQL
+
+versionCode 618. Phone par sirf AgriBridge aur tagline. Login aur header koi company naam ya logo nahi likhte, chahe settings mein ho. Website wala naam sirf domain `alranatraders.pk` aur package id mein hai. 705 aur 706 ab bhi file only, live par nahi. Live APK nahi badli.
+
 ## Phone brand label — 22 October 2026 — FILE ONLY
 
 versionCode 617. Phone par sirf AgriBridge aur tagline. Website wala naam app ki seed aur screen par nahi. `app_brands` khali rehti hai jab tak koi doosri brand settings mein na ho. Package id aur domain nahi badle. 705 aur 706 ab bhi file only, live par nahi.
