@@ -347,6 +347,9 @@ export function HrKpiDashboardView({ d, departments, branches, demoLabel, basePa
                       <span className="text-xs font-bold tabular-nums">{s.count} <span className="font-normal text-surface-400">({s.pct}%)</span></span>
                     </div>
                   ))}
+                  <p data-testid="hr-applicant-gender" className="pt-1 text-[11px] text-surface-500">
+                    Applicants: {d.applicantGender.map((g) => `${g.label} ${g.count}`).join(" · ")}
+                  </p>
                 </div>
               ) : (
                 <Empty text="Is arse mein koi application nahi -- HR → Recruitment se candidate darj karein." />

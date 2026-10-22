@@ -1,3 +1,12 @@
+## Testing only — 22 October 2026: application gender + candidate message log
+
+Branch `cursor/careers-gender-messages-552c`. **Not applied on Live** (`ktskwawkslaznkjjacni`). Testing project `hwaiuwxqldxsoukkfefn` was not in this session's Supabase project list (permission denied on a direct lookup), so these two files are **unapplied everywhere**:
+
+- `supabase/migrations/20261022100000_job_application_gender.sql` — nullable `job_applications.gender`, check `male/female/other`. No backfill.
+- `supabase/migrations/20261022100100_job_application_messages.sql` — `job_application_messages` for email/SMS/WhatsApp. RLS: hr, admin, owner, super_admin, manager.
+
+Do not run them on Live until there is a verified backup and a separate approval. The duplicate Shortlist cleanup for M Usama Saleem is also **not run**. Read-only SQL and the separate DELETE are in `supabase/manual/job_application_shortlist_duplicate_20261022_read.sql` and `..._delete.sql`.
+
 ## Done on Live — 22 October 2026: Careers i18n columns (public apply modal)
 
 Branch `cursor/careers-apply-modal-i18n-552c` (PR #213). Live `ktskwawkslaznkjjacni` only. Testing was not touched.

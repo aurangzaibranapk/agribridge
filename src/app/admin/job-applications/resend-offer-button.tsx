@@ -3,6 +3,7 @@ import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { resendJobOfferEmail, type ActionState } from "@/actions/jobs";
 import { Send } from "lucide-react";
+import { ActionFeedback } from "./action-bits";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -18,7 +19,7 @@ export function ResendOfferButton({ applicationId }: { applicationId: string }) 
         <input type="hidden" name="application_id" value={applicationId} />
         <SubmitButton />
       </form>
-      {state.error && <p className="mt-1 text-xs text-red-600">{state.error}</p>}
+      <ActionFeedback success={state.success} error={state.error} notice={state.notice} />
       {state.success && <p className="mt-1 text-xs text-brand-700">{t("ja_offer_resent", lang)}</p>}
     </div>
   );

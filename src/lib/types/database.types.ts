@@ -19183,6 +19183,66 @@ export type Database = {
           },
         ]
       }
+      job_application_messages: {
+        Row: {
+          application_id: string
+          attachment_name: string | null
+          body: string | null
+          channel: string
+          created_at: string
+          error: string | null
+          id: string
+          link_url: string | null
+          status: string
+          subject: string | null
+          to_address: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          application_id: string
+          attachment_name?: string | null
+          body?: string | null
+          channel: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          link_url?: string | null
+          status: string
+          subject?: string | null
+          to_address?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          application_id?: string
+          attachment_name?: string | null
+          body?: string | null
+          channel?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          link_url?: string | null
+          status?: string
+          subject?: string | null
+          to_address?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_application_messages_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_application_messages_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_applications: {
         Row: {
           address: string | null
@@ -19198,6 +19258,7 @@ export type Database = {
           experience: string | null
           experience_certificate_url: string | null
           full_name: string
+          gender: string | null
           id: string
           interview_date: string | null
           interview_location: string | null
@@ -19223,6 +19284,7 @@ export type Database = {
           experience?: string | null
           experience_certificate_url?: string | null
           full_name: string
+          gender?: string | null
           id?: string
           interview_date?: string | null
           interview_location?: string | null
@@ -19248,6 +19310,7 @@ export type Database = {
           experience?: string | null
           experience_certificate_url?: string | null
           full_name?: string
+          gender?: string | null
           id?: string
           interview_date?: string | null
           interview_location?: string | null
@@ -34463,6 +34526,7 @@ export type Database = {
           employment_type: string
           exit_date: string | null
           exit_reason: string | null
+          gender: string | null
           hire_date: string | null
           id: string
           is_active: boolean
@@ -34497,6 +34561,7 @@ export type Database = {
           employment_type?: string
           exit_date?: string | null
           exit_reason?: string | null
+          gender?: string | null
           hire_date?: string | null
           id?: string
           is_active?: boolean
@@ -34531,6 +34596,7 @@ export type Database = {
           employment_type?: string
           exit_date?: string | null
           exit_reason?: string | null
+          gender?: string | null
           hire_date?: string | null
           id?: string
           is_active?: boolean
