@@ -38,7 +38,7 @@ export function IdCardClient(props: Props) {
 
   function cardText() {
     return [
-      "AL RANA TRADERS - Staff ID Card",
+      "AgriBridge - Staff ID Card",
       `Name: ${props.fullName}`,
       `Designation: ${props.designation}`,
       props.employeeCode ? `Employee Code: ${props.employeeCode}` : "",

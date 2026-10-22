@@ -12,6 +12,7 @@ import { useLang } from "@/lib/i18n/lang-context";
 import { usePending, PENDING_PAGE } from "@/components/pending/pending-context";
 import { RedBadge, NayaPill, PendingMeta, ZeroMark } from "@/components/pending/pending-ui";
 import { badgeForGroup, badgeForHref, pendingQueueHref } from "@/lib/pending/categories";
+import { BrandMark } from "@/components/brand/brand-mark";
 
 const M_ACTIVE = "bg-gradient-to-r from-[#1e3a8a] to-[#2563eb] text-white";
 const M_IDLE = "text-[#e7eef8] hover:bg-white/10 hover:text-white";
@@ -78,7 +79,7 @@ export function MobileSidebar({ subtitle, groups = [] }: { subtitle: string; gro
           <aside className="absolute inset-y-0 left-0 flex w-[19rem] max-w-[88vw] flex-col border-white/10 bg-[#10241c] shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] dark:bg-[#10241c]">
             <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">{t("au_ar", lang)}</div>
+                <BrandMark className="h-8 w-8 rounded-lg" />
                 <div>
                   <p className="font-display text-sm font-bold leading-tight text-white">{t("au_company", lang)}</p>
                   <p className="text-xs text-[#d3deee]">{subtitle}</p>

@@ -10,7 +10,7 @@
  */
 export const sitePagesDict = {
   // ---- Aam khane ----
-  sp_full_name: { en: "Full Name", rm: "Poora naam", ur: "پورا نام" },
+  sp_full_name: { en: "Full name", rm: "Poora naam", ur: "پورا نام" },
   sp_full_name_req: { en: "Full Name *", rm: "Poora naam *", ur: "پورا نام *" },
   sp_email: { en: "Email", rm: "Email", ur: "ای میل" },
   sp_phone: { en: "Phone", rm: "Phone", ur: "فون" },
@@ -24,31 +24,56 @@ export const sitePagesDict = {
   sp_eg_email: { en: "you@example.com", rm: "aap@misal.com", ur: "aap@misal.com" },
 
   // ---- Naukri ki darkhwast ----
-  sp_basic_info: { en: "Basic Information", rm: "Buniyadi maloomat", ur: "بنیادی معلومات" },
-  sp_exp_qual: { en: "Experience & Qualification", rm: "Tajurba aur taleem", ur: "تجربہ اور تعلیم" },
+  sp_basic_info: { en: "Basic information", rm: "Buniyadi maloomat", ur: "بنیادی معلومات" },
+  sp_exp_qual: { en: "Experience & education", rm: "Tajurba aur taleem", ur: "تجربہ اور تعلیم" },
   sp_documents: { en: "Documents", rm: "Kaghazat", ur: "کاغذات" },
-  sp_cnic_number: { en: "CNIC Number", rm: "Shanakhti card number", ur: "شناختی کارڈ نمبر" },
-  sp_cnic_front: { en: "CNIC Front", rm: "Shanakhti card — saamne", ur: "شناختی کارڈ — سامنے" },
-  sp_cnic_back: { en: "CNIC Back", rm: "Shanakhti card — peeche", ur: "شناختی کارڈ — پیچھے" },
-  sp_cv: { en: "CV / Resume (if any)", rm: "CV / Resume (agar ho)", ur: "سی وی / ریزیومے (اگر ہو)" },
-  sp_exp_cert: { en: "Experience Certificate (if any)", rm: "Tajurbe ka certificate (agar ho)", ur: "تجربے کا سرٹیفکیٹ (اگر ہو)" },
-  sp_qual_cert: { en: "Qualification Certificate", rm: "Taleem ka certificate", ur: "تعلیم کا سرٹیفکیٹ" },
+  sp_cnic_number: { en: "CNIC number", rm: "Shanakhti card number", ur: "شناختی کارڈ نمبر" },
+  sp_cnic_front: { en: "CNIC front", rm: "Shanakhti card — saamne", ur: "شناختی کارڈ — سامنے" },
+  sp_cnic_back: { en: "CNIC back", rm: "Shanakhti card — peeche", ur: "شناختی کارڈ — پیچھے" },
+  sp_cv: { en: "CV / resume", rm: "CV / Resume (agar ho)", ur: "سی وی / ریزیومے" },
+  sp_exp_cert: { en: "Experience certificate", rm: "Tajurbe ka certificate (agar ho)", ur: "تجربے کی سند" },
+  sp_qual_cert: { en: "Education certificate", rm: "Taleem ka certificate", ur: "تعلیمی سند" },
   sp_qualification: {
-    en: "Qualification (e.g. BSc Agriculture, 2022)",
+    en: "Education (e.g. BSc Agriculture, 2022)",
     rm: "Taleem (misal: BSc Agriculture, 2022)",
     ur: "تعلیم (مثال: بی ایس سی ایگریکلچر، 2022)",
   },
   sp_past_work: {
-    en: "Past work / experience (where you worked, for how long)",
+    en: "Previous work / experience (where and how long)",
     rm: "Pichla kaam / tajurba (kahan kaam kiya, kitna arsa)",
-    ur: "پچھلا کام / تجربہ (کہاں کام کیا، کتنا عرصہ)",
+    ur: "پچھلا کام / تجربہ (کہاں اور کتنا عرصہ)",
   },
-  sp_about_you: { en: "Tell us a little about yourself (optional)", rm: "Apne bare mein thora batayein (marzi se)", ur: "اپنے بارے میں تھوڑا بتائیں (مرضی سے)" },
-  sp_expected_salary: { en: "Expected Salary (Rs.)", rm: "Tawaqqo ki tankhwah (Rs.)", ur: "توقع کی تنخواہ (روپے)" },
+  sp_about_you: { en: "Tell us about yourself (optional)", rm: "Apne bare mein thora batayein (marzi se)", ur: "اپنے بارے میں بتائیں (اختیاری)" },
+  sp_expected_salary: { en: "Expected salary (Rs.)", rm: "Tawaqqo ki tankhwah (Rs.)", ur: "متوقع تنخواہ (روپے)" },
   sp_application_received: {
     en: "We have your application. We will contact you soon.",
     rm: "Aap ki darkhwast mil gayi hai. Hum jald aap se raabta karenge.",
     ur: "آپ کی درخواست مل گئی ہے۔ ہم جلد آپ سے رابطہ کریں گے۔",
+  },
+  sp_submit: { en: "Submit", rm: "Bhejein", ur: "جمع کرائیں" },
+  sp_submitting: { en: "Submitting...", rm: "Bhej rahe hain...", ur: "بھیجا جا رہا ہے..." },
+  sp_step_basic: { en: "Basic", rm: "Buniyadi", ur: "بنیادی" },
+  sp_step_experience: { en: "Experience", rm: "Tajurba", ur: "تجربہ" },
+  sp_step_documents: { en: "Documents", rm: "Kaghazat", ur: "کاغذات" },
+  sp_next: { en: "Next", rm: "Aage", ur: "آگے" },
+  sp_drop_or_browse: { en: "Drag a file here, or browse", rm: "File yahan chhor dein, ya chunein", ur: "فائل یہاں چھوڑیں، یا چنیں" },
+  sp_file_ready: { en: "File chosen", rm: "File chun li", ur: "فائل چن لی گئی" },
+  sp_clear_file: { en: "Remove file", rm: "File hata dein", ur: "فائل ہٹا دیں" },
+  sp_salary: { en: "Salary", rm: "Tankhwah", ur: "تنخواہ" },
+  sp_currency: { en: "Rs", rm: "Rs", ur: "روپے" },
+  sp_positions: { en: "Positions", rm: "Aasamiyan", ur: "آسامیاں" },
+  sp_per_month: { en: "per month", rm: "mahana", ur: "ماہانہ" },
+  sp_job_location: { en: "Location", rm: "Jagah", ur: "مقام" },
+  sp_apply_for: { en: "Apply for", rm: "Darkhwast", ur: "درخواست برائے" },
+  sp_apply_required: {
+    en: "Full name, email, and the job are required.",
+    rm: "Poora naam, email, aur jagah zaroori hain.",
+    ur: "پورا نام، ای میل، اور نوکری لازمی ہیں۔",
+  },
+  sp_apply_failed: {
+    en: "Could not submit the application. Please try again.",
+    rm: "Darkhwast nahi bhej saki. Dobara koshish karein.",
+    ur: "درخواست جمع نہیں ہو سکی۔ دوبارہ کوشش کریں۔",
   },
 
   // ---- Sarmayakari ka safha ----
@@ -103,7 +128,7 @@ export const sitePagesDict = {
   },
 
   // ---- Ta'aruf ----
-  sp_about_title: { en: "About Al Rana Traders", rm: "Al Rana Traders ke bare mein", ur: "الرانا ٹریڈرز کے بارے میں" },
+  sp_about_title: { en: "About {brand}", rm: "{brand} ke bare mein", ur: "{brand} کے بارے میں" },
   sp_about_lead: {
     en: "A Pakistan agriculture platform dedicated to quality products, expert guidance, and connecting every farmer, dealer, company, and investor on one transparent, reliable bridge.",
     rm: "Pakistan ka ek zarai platform — achhi cheezein, mahiron ki rehnumai, aur har kisan, dealer, company aur sarmayakar ko ek hi saaf aur bharose wale pul par jorna.",
@@ -152,9 +177,9 @@ export const sitePagesDict = {
   },
   sp_services: { en: "Services", rm: "Khidmaat", ur: "خدمات" },
   sp_services_lead: {
-    en: "What Al Rana Traders offers beyond the product catalog.",
-    rm: "Cheezon ki fehrist ke ilawa Al Rana Traders kya deta hai.",
-    ur: "چیزوں کی فہرست کے علاوہ الرانا ٹریڈرز کیا دیتا ہے۔",
+    en: "What {brand} offers beyond the product catalog.",
+    rm: "Cheezon ki fehrist ke ilawa {brand} kya deta hai.",
+    ur: "چیزوں کی فہرست کے علاوہ {brand} کیا دیتا ہے۔",
   },
   sp_inquire_service: { en: "Inquire About This Service", rm: "Is khidmat ke bare mein poochein", ur: "اِس خدمت کے بارے میں پوچھیں" },
 
@@ -170,14 +195,17 @@ export const sitePagesDict = {
   sp_search_articles: { en: "Search articles...", rm: "Mazameen dhoondein...", ur: "مضامین ڈھونڈیں..." },
 
   // ---- Naukri ----
-  sp_careers_title: { en: "Careers at Al Rana Traders", rm: "Al Rana Traders mein naukri", ur: "الرانا ٹریڈرز میں نوکری" },
+  // AgriBridge asal brand hai. {brand} us ke neeche aata hai.
+  sp_careers_title: { en: "Careers at {brand}", rm: "{brand} mein naukri", ur: "{brand} میں نوکری" },
+  sp_careers_tagline: { en: "{tagline}", rm: "{tagline}", ur: "{tagline}" },
+  sp_careers_company: { en: "{brand}", rm: "{brand}", ur: "{brand}" },
   sp_careers_lead: {
-    en: "Join our team — see the open positions below.",
-    rm: "Hamari team ka hissa banein — neeche khali jagahein dekhein.",
-    ur: "ہماری ٹیم کا حصہ بنیں — نیچے خالی جگہیں دیکھیں۔",
+    en: "Open roles with the brands under AgriBridge.",
+    rm: "AgriBridge ke brands par khali jagahein.",
+    ur: "ایگری بریج کے برانڈز پر خالی جگہیں۔",
   },
   sp_no_vacancy: { en: "No vacancy is open right now.", rm: "Abhi koi jagah khali nahi hai.", ur: "ابھی کوئی جگہ خالی نہیں ہے۔" },
-  sp_apply: { en: "Apply", rm: "Darkhwast dein", ur: "درخواست دیں" },
+  sp_apply: { en: "Apply Now", rm: "Darkhwast dein", ur: "اب درخواست دیں" },
 
   // ---- Gallery, FAQ, testimonials ----
   sp_gallery: { en: "Gallery", rm: "Gallery", ur: "گیلری" },

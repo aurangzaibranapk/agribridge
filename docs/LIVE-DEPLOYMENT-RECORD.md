@@ -1,3 +1,12 @@
+## Pending — 22 October 2026: Careers i18n columns (public apply modal)
+
+Branch `cursor/careers-apply-modal-i18n-552c`. Migration **not applied** on Testing or Live. Files only. Live par koi likhai is PR se nahi hui.
+
+- Migration: `supabase/migrations/20261022082729_job_vacancy_public_i18n.sql`
+- Nullable columns: `title_en`, `title_ur`, `title_roman`, `description_en`, `description_ur`, `description_roman`, aur optional brand tag `brand`, `brand_en`, `brand_ur`, `brand_roman`. Khali brand = card par koi tag nahi. Purana `title` / `description` fallback rehta hai. RLS nahi badli. AgriBridge platform hai; brand alag hai.
+- Manual data (auto-run nahi, migrations folder mein nahi): `supabase/manual/job_vacancy_i18n_live_rows.sql` — sirf do live rows (`4142631f-5e2c-4b77-99b7-07b0ea8d2613`, `bb95b584-c11b-4c31-a31e-75986f4fcdc4`). Backup ke baad, migration ke baad. Ids na milen to update nahi likhta. Brand khana khali rehta hai — site par trading-house ka naam nahi likhta.
+- Naya build in columns ke baghair bhi careers safha kholta hai (purana select). Tarjuma columns + manual SQL ke baad dikhta hai.
+
 ## Pending — 21 October 2026: Bharti offer → structure → barhotri → salary slip (691)
 
 Branch `feat/salary-offer-slip`. Migration **691 not applied** on Testing or Live. Files only. 689 reserved, 690 left free. Backup pehle (lines file ke upar likhi hain), phir Testing, phir Live. App 691 ke baghair bhi chalta hai (purani payslip, purani offer), magar naye hissay 691 ke baad hi kaam karte hain.

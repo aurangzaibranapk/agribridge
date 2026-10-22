@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Eye, EyeOff, RotateCw, BookOpen, Banknote, ShoppingCart } from "lucide-react";
 import { catIcon, HELPLINE, wt, type WalletV2Data, type WLang } from "@/lib/portal/kisan-wallet";
+import { BRAND_NAME, brandTagline } from "@/lib/brand";
 
 const rs = (v: number) => `Rs ${Math.round(Math.abs(v)).toLocaleString("en-PK")}`;
 const HID = "Rs ••••••";
@@ -54,8 +55,8 @@ export function KisanWalletV2({ data, lang, qr, links }: {
                 <div className="relative flex h-full flex-col justify-between p-[5.5%]">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-[clamp(11px,3.2vw,15px)] font-extrabold tracking-wide">AgriBridge</p>
-                      <p className="text-[clamp(8px,2vw,10px)] tracking-[.2em] opacity-80">AL RANA TRADERS</p>
+                      <p className="text-[clamp(11px,3.2vw,15px)] font-extrabold tracking-wide">{BRAND_NAME}</p>
+                      <p className="text-[clamp(8px,2vw,10px)] opacity-80">{brandTagline(lang)}</p>
                     </div>
                     <p className="kw2-gold text-[clamp(9px,2.4vw,12px)] font-bold tracking-[.25em]">KISAN CARD</p>
                   </div>

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import localFont from "next/font/local";
 import Script from "next/script";
 import "./globals.css";
@@ -63,12 +64,13 @@ const mono = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL("https://alranatraders.pk"),
   title: {
-    default: "AgriBridge | Pakistan's Digital Agriculture Platform",
-    template: "%s | AgriBridge",
+    default: `${BRAND_NAME} | ${BRAND_TAGLINE.en}`,
+    template: `%s | ${BRAND_NAME}`,
   },
-  description: "AgriBridge by Al Rana Traders connects farmers with agriculture inputs, machinery, dairy, grain markets, farm products, Kisan AI and digital agriculture services in Pakistan.",
+  description: `${BRAND_NAME} — ${BRAND_TAGLINE.en}. Connects farmers with agriculture inputs, machinery, dairy, grain markets, farm products, Kisan AI and digital agriculture services in Pakistan.`,
   keywords: [
-    "AgriBridge",
+    BRAND_NAME,
+    BRAND_TAGLINE.en,
     "digital agriculture Pakistan",
     "farmer services Pakistan",
     "agriculture inputs",
@@ -76,23 +78,22 @@ export const metadata: Metadata = {
     "grain marketplace",
     "dairy services",
     "Kisan AI",
-    "Al Rana Traders",
   ],
   openGraph: {
     type: "website",
     locale: "en_PK",
-    siteName: "AgriBridge",
-    title: "AgriBridge | Pakistan's Digital Agriculture Platform",
-    description: "Connecting farmers, agriculture inputs, machinery, dairy, grain, markets and digital agriculture services across Pakistan.",
+    siteName: BRAND_NAME,
+    title: `${BRAND_NAME} | ${BRAND_TAGLINE.en}`,
+    description: `${BRAND_NAME} — ${BRAND_TAGLINE.en}. Connecting farmers, agriculture inputs, machinery, dairy, grain, markets and digital agriculture services across Pakistan.`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "AgriBridge | Pakistan's Digital Agriculture Platform",
-    description: "Digital agriculture services connecting farmers, inputs, machinery, dairy, grain and markets in Pakistan.",
+    title: `${BRAND_NAME} | ${BRAND_TAGLINE.en}`,
+    description: `${BRAND_NAME} — ${BRAND_TAGLINE.en}. Digital agriculture services connecting farmers, inputs, machinery, dairy, grain and markets in Pakistan.`,
   },
   robots: { index: true, follow: true },
   manifest: "/manifest.json",
-  appleWebApp: { statusBarStyle: "default", title: "AgriBridge" },
+  appleWebApp: { statusBarStyle: "default", title: BRAND_NAME },
 };
 export const viewport: Viewport = {
   themeColor: "#3f7d43",

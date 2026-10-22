@@ -79,20 +79,19 @@
  * inhen "نقطہ فروخت" bana dena kisi ki madad nahi karta.
  *
  * ---------------------------------------------------------------------
- *  NAAM -- in ka tarjuma nahi hota, magar HIJJE tay hain
+ *  NAAM -- teenon zabanon mein yahi Latin lafz, tagline alag
  * ---------------------------------------------------------------------
- *  English            Roman Urdu        اردو
+ *  English                 Roman Urdu              اردو
  * ---------------------------------------------------------------------
- *  AgriBridge         AgriBridge        ایگری بریج
- *  Al Rana Traders    Al Rana Traders   الرانا ٹریڈرز
- *  ART                ART               اے آر ٹی
+ *  AgriBridge              AgriBridge              AgriBridge
+ *  The farmer's bridge     Kisan ka Wasela         کسان کا وسیلہ
  * ---------------------------------------------------------------------
  *
- * Ye teen yahan is liye likhe gaye hain ke inhen na likhne ka nuqsan
- * saamne aa chuka hai: nizam mein "الرعنا ٹریڈرز" aur "الرانا ٹریڈرز"
- * dono chal rahe the -- kisan wale booking safhe ek hijja likhte the aur
- * machinery ki parchi doosra. Isi tarah "ایگری برج" har jagah likha tha
- * jabke naam "ایگری بریج" hai.
+ * Naam `src/lib/brand.ts` se aata hai (`{brand}` / `{tagline}`).
+ * Site par sirf ye naam aur ye tagline dikhe. Domain alranatraders.pk
+ * pata hai, naam nahi — us purane trading-ghar ka naam na header mein,
+ * na footer, na unwan, na parchi, na email ke matn mein likhein.
+ * "ایگری برج" bhi mat likhein.
  *
  * Karobar ka naam koi aam lafz nahi ke har jagah apni marzi se likha
  * jaye. Jis kisan ko parchi par ek naam nazar aaye aur safhe par doosra,

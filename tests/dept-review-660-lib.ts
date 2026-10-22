@@ -7,8 +7,8 @@ import { grainAmountFromRate, grainMaundRateAllowed, grainRatePresentation } fro
 import { grainSaleEditAllowed, grainSaleWithinOnHand } from "../src/lib/grain/sold-vs-bought";
 import { statementPartyVisible } from "../src/lib/statements/branch-scope";
 
-const triple = JSON.stringify(JSON.stringify(JSON.stringify("Al Rana Traders — AgriBridge")));
-assert.equal(unwrapWebsiteSetting(triple), "Al Rana Traders — AgriBridge");
+const triple = JSON.stringify(JSON.stringify(JSON.stringify("AgriBridge")));
+assert.equal(unwrapWebsiteSetting(triple), "AgriBridge");
 assert.equal(unwrapWebsiteSetting('"Pakistan"'), "Pakistan");
 assert.equal(unwrapWebsiteSetting("0312-6513294"), "0312-6513294");
 assert.equal(SHOP_PHONE_E164, "+923126513294");

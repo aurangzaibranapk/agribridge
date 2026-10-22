@@ -8,7 +8,7 @@ import { SHOP_PHONE_E164, unwrapWebsiteSetting } from "@/lib/cms/website-setting
 
 export const metadata: Metadata = {
   title: "Contact & Partnership",
-  description: "Contact Al Rana Traders and AgriBridge for agriculture products, farmer services, machinery, dairy, grain, marketplace and partnership enquiries in Pakistan.",
+  description: "Contact AgriBridge and AgriBridge for agriculture products, farmer services, machinery, dairy, grain, marketplace and partnership enquiries in Pakistan.",
   alternates: { canonical: "/contact" },
 };
 

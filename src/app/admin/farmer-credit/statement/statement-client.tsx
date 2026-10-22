@@ -38,7 +38,7 @@ export function FarmerCreditStatementClient({
   balanceDue: number;
   bySource: SourceStat[];
 }) {
-  const shareText = `Al Rana Traders - Farmer Credit Statement\n${farmerName} (${farmerCode})\nTotal Issued: Rs ${totalDebit.toLocaleString()}\nTotal Paid: Rs ${totalCredit.toLocaleString()}\nBaaqi: Rs ${balanceDue.toLocaleString()}\n\nDekhein: ${typeof window !== "undefined" ? window.location.href : ""}`;
+  const shareText = `AgriBridge - Farmer Credit Statement\n${farmerName} (${farmerCode})\nTotal Issued: Rs ${totalDebit.toLocaleString()}\nTotal Paid: Rs ${totalCredit.toLocaleString()}\nBaaqi: Rs ${balanceDue.toLocaleString()}\n\nDekhein: ${typeof window !== "undefined" ? window.location.href : ""}`;
 
   const lang = useLang();
 

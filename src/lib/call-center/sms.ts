@@ -35,7 +35,7 @@ export interface SmsEnv extends VeevoEnv {
 
 export function buildComplaintSms(input: ComplaintSmsInput): SmsJob {
   const body =
-    `Al Rana Traders: Aap ki shikayat ${input.complaintNumber} darj ho gayi hai` +
+    `AgriBridge: Aap ki shikayat ${input.complaintNumber} darj ho gayi hai` +
     ` (${input.categoryLabel}). Department: ${input.departmentLabel}.` +
     ` Hum ${input.slaHours} ghante mein rabta karenge.`;
   return { to: input.toPhone, body, channel: "sms", complaintNumber: input.complaintNumber };

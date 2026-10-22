@@ -1,3 +1,4 @@
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 interface OfferLetterData {
@@ -39,7 +40,7 @@ export async function generateOfferLetterPDF(data: OfferLetterData): Promise<Buf
 
   // Header
   page.drawRectangle({ x: 0, y: 800, width: 595, height: 42, color: navy });
-  page.drawText("Al Rana Traders", { x: 40, y: 815, size: 18, font: boldFont, color: rgb(1, 1, 1) });
+  page.drawText(`${BRAND_NAME} — ${BRAND_TAGLINE.en}`, { x: 40, y: 815, size: 18, font: boldFont, color: rgb(1, 1, 1) });
   page.drawText("Employment Offer Letter", { x: 40, y: 803, size: 9, font, color: rgb(0.7, 0.73, 0.78) });
 
   y = 750;
@@ -50,7 +51,7 @@ export async function generateOfferLetterPDF(data: OfferLetterData): Promise<Buf
   y -= 25;
 
   const introLines = [
-    `We are pleased to offer you the position of ${designation} at Al Rana Traders.`,
+    `We are pleased to offer you the position of ${designation} at AgriBridge.`,
     `Following the successful completion of our recruitment process, we believe that your`,
     `skills and experience will be a valuable addition to our team.`,
   ];
@@ -90,7 +91,7 @@ export async function generateOfferLetterPDF(data: OfferLetterData): Promise<Buf
     "Kindly review the terms and conditions and confirm your acceptance via the link",
     "sent in your offer email.",
     "",
-    "We look forward to welcoming you to Al Rana Traders.",
+    "We look forward to welcoming you to AgriBridge.",
   ];
   for (const line of closingLines) {
     page.drawText(line, { x: 40, y, size: 11, font, color: black });
@@ -102,7 +103,7 @@ export async function generateOfferLetterPDF(data: OfferLetterData): Promise<Buf
   y -= 16;
   page.drawText("Human Resources Department", { x: 40, y, size: 11, font: boldFont, color: navy });
   y -= 14;
-  page.drawText("Al Rana Traders", { x: 40, y, size: 10, font, color: gray });
+  page.drawText(`${BRAND_NAME} — ${BRAND_TAGLINE.en}`, { x: 40, y, size: 10, font, color: gray });
 
   // Footer
   page.drawText("alranatraders.pk | job@alranatraders.pk", { x: 40, y: 30, size: 8, font, color: gray });

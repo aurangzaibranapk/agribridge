@@ -215,7 +215,7 @@ export default async function LoadBillPage({
     <DeskWorkspace className="desk-load">
       <PageHeader
         title="Staff Sales Desk"
-        description={`Al Rana Traders  |  ${branch?.name ?? "Branch not assigned"}  ·  Mobile Load · Bill Payment · Udhaar · Recovery · Bank Transfer`}
+        description={`AgriBridge  |  ${branch?.name ?? "Branch not assigned"}  ·  Mobile Load · Bill Payment · Udhaar · Recovery · Bank Transfer`}
         actions={
           <div className="flex flex-wrap gap-2">
             <Link

@@ -725,7 +725,7 @@ export function RecoveryClient({
             <div className="mb-3 flex items-center gap-2 border-b border-surface-200 pb-3 dark:border-surface-700">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">AR</span>
               <div>
-                <p className="text-sm font-semibold text-surface-900 dark:text-white">AL RANA TRADERS</p>
+                <p className="text-sm font-semibold text-surface-900 dark:text-white">AgriBridge</p>
                 <p className="text-[11px] text-surface-500">Quality Inputs | Stronger Yields</p>
               </div>
             </div>

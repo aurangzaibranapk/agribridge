@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, MessageCircle, Printer, Volume2, VolumeX, X } from "lucide-react";
 import { encodeQr, qrSvgPath } from "@/lib/qr/qr-encode";
+import { BRAND_NAME, brandTagline } from "@/lib/brand";
+import { useLang } from "@/lib/i18n/lang-context";
 import { printFrames, QUEUE_KEY, receiptText, receiptWhatsAppUrl, rsFmt, SOUND_KEY, soundOn, type ReceiptData } from "@/lib/glass/glass";
 
 /** Kamyab post ke baad raseed print animation. Awaaz default BAND. Kuch khud nahi bhejta. */
@@ -66,7 +68,8 @@ export function ReceiptPrint({ receipt: r, onClose, phone, autoCloseMs }: { rece
   const [pct, setPct] = useState(0);
   const [run, setRun] = useState(0);
   const timers = useRef<number[]>([]);
-  const qr = useMemo(() => qrSvgPath(encodeQr(`AL RANA ${r.no} ${rsFmt(r.amount)}`)), [r.no, r.amount]);
+  const lang = useLang();
+  const qr = useMemo(() => qrSvgPath(encodeQr(`${BRAND_NAME} ${r.no} ${rsFmt(r.amount)}`)), [r.no, r.amount]);
 
   useEffect(() => { try { setSound(soundOn(localStorage.getItem(SOUND_KEY))); } catch { /* */ } }, []);
   useEffect(() => {
@@ -97,8 +100,9 @@ export function ReceiptPrint({ receipt: r, onClose, phone, autoCloseMs }: { rece
         </div>
         <div className="rp-paper -mt-4 w-[260px] overflow-hidden" style={{ maxHeight: `${Math.max(6, pct) * 5.2}px` }}>
           <div className="rp-print bg-[#fffdf8] px-5 pb-3 pt-6 text-center text-[12px] text-[#0f1f3a] shadow-xl" data-testid="receipt-paper">
-            <p className="text-[15px] font-bold tracking-[.18em]">AL RANA TRADERS</p>
-            <p className="text-[10px] uppercase tracking-wide text-[#7a889c]">AgriBridge · {head}</p>
+            <p className="text-[15px] font-bold tracking-[.18em]">{BRAND_NAME}</p>
+            <p className={`text-[10px] text-[#7a889c] ${lang === "ur" ? "font-urdu" : "uppercase tracking-wide"}`}>{brandTagline(lang)}</p>
+            <p className="text-[10px] uppercase tracking-wide text-[#7a889c]">{head}</p>
             <p className="mt-2 font-semibold text-emerald-700">Kamyab · <span className="gl-ur" style={{ fontFamily: "'Noto Nastaliq Urdu',serif" }}>کامیاب</span></p>
             {(r.from || r.to) && <p className="mt-1 font-semibold">{r.from ?? "—"} se → {r.to ?? "—"}</p>}
             <p className="text-[26px] font-extrabold">{rsFmt(r.amount)}</p>
@@ -110,7 +114,7 @@ export function ReceiptPrint({ receipt: r, onClose, phone, autoCloseMs }: { rece
             </div>
             <div className="my-2 border-t border-dashed border-[#b8c0cc]" />
             <svg viewBox={`0 0 ${qr.view} ${qr.view}`} className="mx-auto h-24 w-24" shapeRendering="crispEdges" role="img" aria-label="QR"><path d={qr.path} fill="#0f1f3a" /></svg>
-            <p className="mt-1 text-[#5b6b82]">Shukriya · Al Rana Traders</p>
+            <p className="mt-1 text-[#5b6b82]">Shukriya · {BRAND_NAME}</p>
           </div>
           {done && <div className="rp-torn" />}
         </div>

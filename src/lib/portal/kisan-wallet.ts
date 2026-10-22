@@ -132,9 +132,9 @@ export const W_TXT = {
   mobile: { en: "Mobile", rm: "Mobile", ur: "موبائل" },
   helpline: { en: "Helpline", rm: "Helpline", ur: "ہیلپ لائن" },
   fine: {
-    en: "Scan only by logged-in Al Rana staff. QR has no balance. If found, please return to Al Rana Traders.",
-    rm: "Sirf login kiya hua Al Rana staff scan kar sakta hai. QR mein balance nahi. Mile to Al Rana Traders ko wapas karein.",
-    ur: "صرف لاگ اِن الرانا اسٹاف اسکین کر سکتا ہے۔ QR میں بیلنس نہیں۔ ملے تو الرانا ٹریڈرز کو واپس کریں۔",
+    en: "Scan only by logged-in AgriBridge staff. QR has no balance. If found, please return to AgriBridge.",
+    rm: "Sirf login kiya hua AgriBridge staff scan kar sakta hai. QR mein balance nahi. Mile to AgriBridge ko wapas karein.",
+    ur: "صرف لاگ اِن AgriBridge اسٹاف اسکین کر سکتا ہے۔ QR میں بیلنس نہیں۔ ملے تو AgriBridge کو واپس کریں۔",
   },
   noQr: { en: "QR not set up yet", rm: "QR abhi set nahi", ur: "QR ابھی سیٹ نہیں" },
   classic: { en: "Classic", rm: "Purana", ur: "پرانا" },

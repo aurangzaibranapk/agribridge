@@ -30,7 +30,7 @@ export function Wizard({ L, rtl, templates, campaigns, departments }: { L: Recor
   const [tplId, setTplId] = useState<string>(approved[0]?.id ?? "");
   const [tplVars, setTplVars] = useState<string[]>(["naam", "baqi_raqam", "", "", ""]);
   const [msgLang, setMsgLang] = useState<DraftInput["lang"]>("rm");
-  const [sms, setSms] = useState<{ en: string; rm: string; ur: string }>({ en: "", rm: "Assalam o alaikum {naam}, Al Rana Traders: ", ur: "" });
+  const [sms, setSms] = useState<{ en: string; rm: string; ur: string }>({ en: "", rm: "Assalam o alaikum {naam}, AgriBridge: ", ur: "" });
   const [smsTab, setSmsTab] = useState<"en" | "rm" | "ur">("rm");
   const [schedule, setSchedule] = useState("");
   const [preview, setPreview] = useState<Preview | null>(null);

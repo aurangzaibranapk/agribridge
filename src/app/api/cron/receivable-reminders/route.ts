@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
     const cust = custMap.get(r.customer_id);
     const phone = cust?.phone_number as string | null;
     const name = (cust?.business_name || cust?.name || "Gahak") as string;
-    const shopName = branchMap.get(r.last_branch_id) || "Al Rana Traders";
+    const shopName = branchMap.get(r.last_branch_id) || "AgriBridge";
     const dueDate = String(r.due_date);
     const amount = Number(r.balance);
     const message = buildReminderMessage({ stage, customerName: name, amount, dueDate, shopName });

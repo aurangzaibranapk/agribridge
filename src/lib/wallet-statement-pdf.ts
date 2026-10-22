@@ -1,3 +1,4 @@
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 export interface WalletStatementRow {
@@ -35,7 +36,7 @@ export async function generateWalletStatementPdf(data: WalletStatementData): Pro
   let y = pageHeight - 50;
 
   function drawHeader() {
-    page.drawText("Al Rana Traders - AgriBridge", { x: marginX, y, size: 16, font: boldFont, color: navy });
+    page.drawText(`${BRAND_NAME} — ${BRAND_TAGLINE.en}`, { x: marginX, y, size: 16, font: boldFont, color: navy });
     y -= 18;
     page.drawText("Wallet Statement", { x: marginX, y, size: 10, font, color: gray });
     y -= 20;

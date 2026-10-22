@@ -245,13 +245,13 @@ export function BookingDetail({
 
   // Diesel do hisson mein: hamara kharcha, aur wo jo kisan/vendor ne
   // dala. Dono ek adad mein jorh dena hamare munafe ko jhoota kar deta.
-  // ART ka diesel do qism ka hota hai, aur dono ka anjaam alag hai (170):
+  // AgriBridge ka diesel do qism ka hota hai, aur dono ka anjaam alag hai (170):
   //
   //   Vendor ki machine par diya hua diesel KHARCHA NAHI -- wo vendor ke
   //   hisse se wapas aata hai. Usay "kharcha" likhna machinery ka munafa
   //   jhooti tarah kam kar ke dikhata hai.
   //
-  //   ART ki apni machine par diya hua diesel waqai hamara kharcha hai.
+  //   AgriBridge ki apni machine par diya hua diesel waqai hamara kharcha hai.
   //
   // Screen par pehle dono ek hi lakeer mein "hamara diesel (kharcha)"
   // likhe jate the. Adad theek tha, lafz ghalat -- aur usi lafz par
@@ -287,7 +287,7 @@ export function BookingDetail({
   const workRemaining = Math.max(Math.round((booking.harvest_area - workDone) * 10000) / 10000, 0);
   const vendorRemaining = bill ? Math.round((bill.vendor_payable - paidToVendor) * 100) / 100 : 0;
 
-  // ART ne is booking par vendor ke liye jo diesel diya. Wo adaigi ke
+  // AgriBridge ne is booking par vendor ke liye jo diesel diya. Wo adaigi ke
   // waqt khud wapas kat jata hai (170) -- yahan sirf dikhaya jata hai,
   // taake adaigi se pehle dono taraf ko pata ho.
   const artDiesel = Math.max(
@@ -435,10 +435,10 @@ export function BookingDetail({
             tone={bill ? ((balance ?? 0) > 0 ? "red" : "green") : "gray"}
             hint={bill ? undefined : "bill ke baad"}
           />
-          {/* ART = Al Rana Traders. Bill bane baghair hamara hissa bana
+          {/* AgriBridge = AgriBridge. Bill bane baghair hamara hissa bana
               hi nahi -- wahan sifar likhna ghalat hoga. */}
           <Stat
-            label="ART Profit"
+            label="AgriBridge Profit"
             value={artProfit === null ? "—" : `Rs ${artProfit.toLocaleString()}`}
             tone={artProfit === null ? "gray" : "green"}
             hint={artProfit === null ? "bill ke baad" : `commission ${bill?.commission_percentage}%`}
@@ -876,7 +876,7 @@ export function BookingDetail({
                             {f.paid_by === "company"
                               ? f.vendor_recoverable
                                 ? "Vendor se wasooli"
-                                : "ART ka diesel kharcha"
+                                : "AgriBridge ka diesel kharcha"
                               : f.paid_by === "vendor"
                               ? "Vendor ka apna"
                               : "Farmer ka apna — bill se katega"}
@@ -1382,7 +1382,7 @@ function Modal({
  * Har raasta apne mojooda action par jata hai (B.1 ka naqsha):
  *   Farmer se advance        -> `recordAdvance`
  *   Farmer se bill ki adaigi -> `recordFinalPayment` (khud PaymentForm)
- *   ART se Vendor ko         -> `recordVendorPayout`
+ *   AgriBridge se Vendor ko         -> `recordVendorPayout`
  *
  * Jo raasta is waqt mumkin nahi wo fehrist mein aata hi nahi -- band
  * raasta dikha kar "kyun nahi" ka sawal khara karna staff ka waqt
@@ -1428,7 +1428,7 @@ function AddPayment({
   if (canVendor)
     options.push({
       key: "vendor",
-      label: `ART se ${vendorName ?? "Vendor"} ko`,
+      label: `AgriBridge se ${vendorName ?? "Vendor"} ko`,
       hint: `Dena Rs ${vendorRemaining.toLocaleString()}`,
     });
 
@@ -1599,7 +1599,7 @@ function SettlementRows({
           jorh kar "Diesel Cost" likh dena hamare munafe ko jhoota kar
           deta hai: vendor ki machine par diya hua diesel hamara kharcha
           hai hi nahi -- wo us ke hisse se wapas aata hai. */}
-      <Row label="Diesel — ART ka apna kharcha" value={ourFuelExpense} />
+      <Row label="Diesel — AgriBridge ka apna kharcha" value={ourFuelExpense} />
       <Row label="Diesel — vendor se wasool hona hai" value={ourFuelRecoverable} />
       <Row label="Diesel — farmer/vendor ka apna" value={othersFuel} />
 
@@ -1607,11 +1607,11 @@ function SettlementRows({
 
       {bill ? (
         <div className="flex justify-between py-0.5 font-display font-semibold">
-          <span>ART Commission ({bill.commission_percentage}%)</span>
+          <span>AgriBridge Commission ({bill.commission_percentage}%)</span>
           <span className="text-brand-700 dark:text-brand-300">Rs {bill.commission_amount.toLocaleString()}</span>
         </div>
       ) : (
-        <Missing label="ART Commission" note="bill ke baad" />
+        <Missing label="AgriBridge Commission" note="bill ke baad" />
       )}
     </div>
   );
@@ -2926,7 +2926,7 @@ function WorkForm({
                 <Label>{t("mc_diesel_rate", lang)}</Label>
                 <Input type="number" name="our_diesel_rate" step="0.01" />
               </div>
-              {/* Ye khana isi soorat mein aata hai. ART ka diesel hamare
+              {/* Ye khana isi soorat mein aata hai. AgriBridge ka diesel hamare
                   kisi khate se nikalta hai -- wo khata likhe baghair
                   raqam ledger mein ja hi nahi sakti. */}
               <div className="col-span-2">
@@ -3490,7 +3490,7 @@ function VendorPayoutForm({
   //
   // "Nahi" par kuch likha nahi jata, aur likhne ki zaroorat bhi
   // nahi: bill bante hi ye raqam vendor ke naam khari ho chuki hai
-  // (supplier payable), yani paisa ART ke paas jama hai. "Nahi"
+  // (supplier payable), yani paisa AgriBridge ke paas jama hai. "Nahi"
   // sirf us baat ko screen par kehta hai.
   if (answer !== "haan" && !state.success) {
     return (

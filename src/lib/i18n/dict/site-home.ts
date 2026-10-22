@@ -12,12 +12,12 @@
  *   Bande aur jagah ke naam (Aurangzaib Rana) -- naam tarjuma nahi hote.
  *   Email ka pata -- wo ek pata hai, jumla nahi.
  *   Karobar ke naam -- glossary.ts ke mutabiq: AgriBridge = ایگری بریج,
- *   Al Rana Traders = الرانا ٹریڈرز, ART = اے آر ٹی.
+ *   {brand} = {brand}, {brand} = {brand}.
  */
 export const siteHomeDict = {
   // ---- Header ----
-  sh_company: { en: "Al Rana Traders", rm: "Al Rana Traders", ur: "الرانا ٹریڈرز" },
-  sh_brand: { en: "ART AgriBridge", rm: "ART AgriBridge", ur: "اے آر ٹی ایگری بریج" },
+  sh_company: { en: "{brand}", rm: "{brand}", ur: "{brand}" },
+  sh_brand: { en: "{tagline}", rm: "{tagline}", ur: "{tagline}" },
   sh_sign_in: { en: "Sign In", rm: "Sign In", ur: "سائن اِن" },
   sh_register: { en: "Register", rm: "Register karein", ur: "رجسٹر کریں" },
 
@@ -38,9 +38,9 @@ export const siteHomeDict = {
     ur: "اور کسی کا حساب کسی سے نہیں الجھتا۔",
   },
   sh_hero_body: {
-    en: "Al Rana Traders supplies certified seed, fertilizer, and crop protection to farmers across Pakistan — every order routed, verified, and settled by AgriBridge, the same way a bank sits between two accounts.",
-    rm: "Al Rana Traders poore Pakistan ke kisanon ko tasdeeq shuda beej, khaad aur fasal ki hifazat ka saman pahunchata hai — har order AgriBridge se guzarta hai, tasdeeq hota hai aur wahin hisaab poora hota hai. Bilkul waise jaise bank do khaton ke beech khara hota hai.",
-    ur: "الرانا ٹریڈرز پورے پاکستان کے کسانوں کو تصدیق شدہ بیج، کھاد اور فصل کی حفاظت کا سامان پہنچاتا ہے — ہر آرڈر ایگری بریج سے گزرتا ہے، تصدیق ہوتا ہے اور وہیں حساب پورا ہوتا ہے۔ بالکل ویسے جیسے بینک دو کھاتوں کے بیچ کھڑا ہوتا ہے۔",
+    en: "{brand} supplies certified seed, fertilizer, and crop protection to farmers across Pakistan — every order routed, verified, and settled by AgriBridge, the same way a bank sits between two accounts.",
+    rm: "{brand} poore Pakistan ke kisanon ko tasdeeq shuda beej, khaad aur fasal ki hifazat ka saman pahunchata hai — har order AgriBridge se guzarta hai, tasdeeq hota hai aur wahin hisaab poora hota hai. Bilkul waise jaise bank do khaton ke beech khara hota hai.",
+    ur: "{brand} پورے پاکستان کے کسانوں کو تصدیق شدہ بیج، کھاد اور فصل کی حفاظت کا سامان پہنچاتا ہے — ہر آرڈر ایگری بریج سے گزرتا ہے، تصدیق ہوتا ہے اور وہیں حساب پورا ہوتا ہے۔ بالکل ویسے جیسے بینک دو کھاتوں کے بیچ کھڑا ہوتا ہے۔",
   },
   sh_explore_products: { en: "Explore Products", rm: "Cheezein dekhein", ur: "چیزیں دیکھیں" },
   sh_become_partner: { en: "Become a Partner", rm: "Sharik banein", ur: "شریک بنیں" },
@@ -113,9 +113,9 @@ export const siteHomeDict = {
   // banda jhijak kar parhta hai. Is liye Urdu seedhi aur sakht rakhi gayi.
   sh_fraud_label: { en: "Fraud alert:", rm: "Dhoke se bachein:", ur: "دھوکے سے بچیں:" },
   sh_fraud_body: {
-    en: "Al Rana Traders never accepts cash payment for a partnership or investment. Every deal happens through products or livestock, verified in writing. If anyone asks for cash in our name, report it to",
-    rm: "Al Rana Traders sharakat ya sarmayakari ke liye naqad paisa kabhi nahi leta. Har sauda cheezon ya maweshi ke zariye hota hai, aur likhit tasdeeq ke sath. Koi hamare naam par naqad maange to hamein batayein:",
-    ur: "الرانا ٹریڈرز شراکت یا سرمایہ کاری کے لیے نقد پیسہ کبھی نہیں لیتا۔ ہر سودا چیزوں یا مویشی کے ذریعے ہوتا ہے، اور تحریری تصدیق کے ساتھ۔ کوئی ہمارے نام پر نقد مانگے تو ہمیں بتائیں:",
+    en: "{brand} never accepts cash payment for a partnership or investment. Every deal happens through products or livestock, verified in writing. If anyone asks for cash in our name, report it to",
+    rm: "{brand} sharakat ya sarmayakari ke liye naqad paisa kabhi nahi leta. Har sauda cheezon ya maweshi ke zariye hota hai, aur likhit tasdeeq ke sath. Koi hamare naam par naqad maange to hamein batayein:",
+    ur: "{brand} شراکت یا سرمایہ کاری کے لیے نقد پیسہ کبھی نہیں لیتا۔ ہر سودا چیزوں یا مویشی کے ذریعے ہوتا ہے، اور تحریری تصدیق کے ساتھ۔ کوئی ہمارے نام پر نقد مانگے تو ہمیں بتائیں:",
   },
 
   // ---- Baqi ----
@@ -127,9 +127,9 @@ export const siteHomeDict = {
     ur: "ساتھ بڑھیں۔ ساتھ کمائیں۔ ساتھ بنائیں۔",
   },
   sh_cta_body: {
-    en: "Whether you're a farmer, a dealer, a company, or an investor — Al Rana Traders is your complete agriculture business platform.",
-    rm: "Aap kisan hon, dealer, company ya sarmayakar — Al Rana Traders aap ke poore zarai karobar ka platform hai.",
-    ur: "آپ کسان ہوں، ڈیلر، کمپنی یا سرمایہ کار — الرانا ٹریڈرز آپ کے پورے زرعی کاروبار کا پلیٹ فارم ہے۔",
+    en: "Whether you're a farmer, a dealer, a company, or an investor — {brand} is your complete agriculture business platform.",
+    rm: "Aap kisan hon, dealer, company ya sarmayakar — {brand} aap ke poore zarai karobar ka platform hai.",
+    ur: "آپ کسان ہوں، ڈیلر، کمپنی یا سرمایہ کار — {brand} آپ کے پورے زرعی کاروبار کا پلیٹ فارم ہے۔",
   },
   sh_get_started: { en: "Get Started Today", rm: "Aaj hi shuru karein", ur: "آج ہی شروع کریں" },
   sh_get_started_contact: { en: "Get Started — Contact Us", rm: "Shuru karein — hum se raabta", ur: "شروع کریں — ہم سے رابطہ" },
@@ -139,7 +139,7 @@ export const siteHomeDict = {
     rm: "Kheti ke mashware, nayi cheezein aur karobari khabrein apne email par lein.",
     ur: "کھیتی کے مشورے، نئی چیزیں اور کاروباری خبریں اپنے ای میل پر لیں۔",
   },
-  sh_founder: { en: "Founder & CEO, Al Rana Traders", rm: "Bani aur CEO, Al Rana Traders", ur: "بانی اور سی ای او، الرانا ٹریڈرز" },
+  sh_founder: { en: "Founder & CEO, {brand}", rm: "Bani aur CEO, {brand}", ur: "بانی اور سی ای او، {brand}" },
 
   // ---- Footer ----
   sf_tagline: {

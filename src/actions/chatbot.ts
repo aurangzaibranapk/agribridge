@@ -52,7 +52,7 @@ export async function askChatbot(question: string): Promise<ChatbotAnswer> {
   // 4. No local match - try Gemini for a general helpful answer, scoped
   // to agriculture so it stays on-topic and doesn't wander off into
   // unrelated territory.
-  const aiPrompt = `You are a helpful assistant for AgriBridge, an agriculture platform in Pakistan run by Al Rana Traders. A visitor asked: "${question}"
+  const aiPrompt = `You are a helpful assistant for AgriBridge, an agriculture platform in Pakistan for farmers. A visitor asked: "${question}"
 
 If this is a general agriculture question (crops, farming practices, pests, fertilizers, weather, livestock, etc.), answer it helpfully in 2-3 sentences in simple English.
 

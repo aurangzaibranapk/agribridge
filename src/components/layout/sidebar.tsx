@@ -11,6 +11,7 @@ import { useLang } from "@/lib/i18n/lang-context";
 import { usePending, PENDING_PAGE } from "@/components/pending/pending-context";
 import { RedBadge, NayaPill, PendingMeta, ZeroMark } from "@/components/pending/pending-ui";
 import { badgeForGroup, badgeForHref, pendingQueueHref } from "@/lib/pending/categories";
+import { BrandMark } from "@/components/brand/brand-mark";
 export type { NavItem } from "@/components/layout/nav-items";
 
 /**
@@ -89,7 +90,7 @@ export function Sidebar({
   return (
     <aside data-sidebar="admin" className={cn("hidden h-screen min-h-0 w-72 shrink-0 overflow-hidden border-r backdrop-blur-xl lg:flex lg:flex-col", PINE)}>
       <Link href={homeHref} className="flex h-16 items-center gap-2 border-b border-white/10 px-5">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-600 to-blue-600 text-sm font-bold text-white">{t("au_ar", lang)}</div>
+        <BrandMark className="h-8 w-8 rounded-lg" />
         <div className="min-w-0 flex-1">
           <p className="font-display text-sm font-bold leading-tight text-white">{t("au_company", lang)}</p>
           <p className="truncate text-xs text-[#d3deee]">{subtitle}</p>

@@ -34,7 +34,7 @@ export default async function CustomerStatementPrint({ searchParams }: { searchP
       </div>
       <div className="pf-panel pf-navy pf-grow rounded-2xl border border-surface-200 bg-white p-6 shadow-sm dark:border-[#1e3160] dark:bg-[#101f42] print:rounded-none print:border-0 print:shadow-none fit:p-4">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-surface-200 pb-4 dark:border-[#1e3160]">
-          <div><p className="text-lg font-bold text-surface-900 dark:text-white">Al Rana Traders · AgriBridge</p><p className="text-sm text-surface-500 dark:text-slate-400">{L("pc_khata_title")}</p></div>
+          <div><p className="text-lg font-bold text-surface-900 dark:text-white">AgriBridge</p><p className="text-sm text-surface-500 dark:text-slate-400">{L("pc_khata_title")}</p></div>
           <div className="text-end text-sm">
             <p className="font-semibold text-surface-900 dark:text-white">{c?.name ?? ""}</p>
             <p className="text-surface-500 dark:text-slate-400">{L("pc_f_code")}: {c?.code ?? "—"}</p>

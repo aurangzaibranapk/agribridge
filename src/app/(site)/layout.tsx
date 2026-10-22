@@ -1,6 +1,7 @@
 import { SiteHeader } from "@/components/site/header";
 import { SiteFooter } from "@/components/site/footer";
 import { ChatbotWidget } from "@/components/site/chatbot-widget";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -8,11 +9,11 @@ const structuredData = {
     {
       "@type": "Organization",
       "@id": "https://alranatraders.pk/#organization",
-      name: "Al Rana Traders",
-      alternateName: "AgriBridge",
+      name: BRAND_NAME,
+      alternateName: BRAND_TAGLINE.en,
       url: "https://alranatraders.pk",
       description:
-        "AgriBridge by Al Rana Traders is a digital agriculture platform connecting farmers with agriculture inputs, machinery, dairy, grain markets, farm products and digital guidance in Pakistan.",
+        `${BRAND_NAME} — ${BRAND_TAGLINE.en}. A digital agriculture platform connecting farmers with agriculture inputs, machinery, dairy, grain markets, farm products and digital guidance in Pakistan.`,
       areaServed: {
         "@type": "Country",
         name: "Pakistan",
@@ -22,8 +23,8 @@ const structuredData = {
       "@type": "WebSite",
       "@id": "https://alranatraders.pk/#website",
       url: "https://alranatraders.pk",
-      name: "AgriBridge",
-      alternateName: "Al Rana Traders AgriBridge",
+      name: BRAND_NAME,
+      alternateName: BRAND_TAGLINE.en,
       publisher: {
         "@id": "https://alranatraders.pk/#organization",
       },

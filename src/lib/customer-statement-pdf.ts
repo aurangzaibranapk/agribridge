@@ -1,3 +1,4 @@
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 type StatementRow = {
@@ -28,7 +29,7 @@ export async function generateCustomerStatementPdf(input: {
 
   function header() {
     page.drawRectangle({ x: 0, y: 766, width: 595.28, height: 76, color: rgb(0.04, 0.37, 0.22) });
-    page.drawText("AL RANA TRADERS", { x: 34, y: 806, size: 19, font: bold, color: rgb(1, 1, 1) });
+    page.drawText(`${BRAND_NAME} — ${BRAND_TAGLINE.en}`, { x: 34, y: 806, size: 19, font: bold, color: rgb(1, 1, 1) });
     page.drawText("Customer Khata Statement", { x: 34, y: 784, size: 11, font: regular, color: rgb(0.88, 1, 0.92) });
     page.drawText(input.customerName, { x: 34, y: 744, size: 15, font: bold, color: rgb(0.08, 0.12, 0.1) });
     page.drawText(`Statement period: ${period}`, { x: 34, y: 726, size: 9, font: regular, color: rgb(0.35, 0.38, 0.36) });
@@ -45,7 +46,7 @@ export async function generateCustomerStatementPdf(input: {
   function newPage() {
     page = pdf.addPage(pageSize);
     y = 800;
-    page.drawText(`Al Rana Traders - ${input.customerName}`, { x: 34, y: 810, size: 9, font: bold });
+    page.drawText(`${BRAND_NAME} - ${input.customerName}`, { x: 34, y: 810, size: 9, font: bold });
   }
 
   header();
@@ -70,7 +71,7 @@ export async function generateCustomerStatementPdf(input: {
     y -= 18;
   }
 
-  page.drawText("Al Rana Traders | Chak Mahabali | 0312-6513294 | alranatraders.pk", {
+  page.drawText(`${BRAND_NAME} | Chak Mahabali | 0312-6513294 | alranatraders.pk`, {
     x: 90,
     y: 24,
     size: 8,

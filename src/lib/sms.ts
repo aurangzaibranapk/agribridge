@@ -33,5 +33,5 @@ export async function sendMilkSms(
 }
 
 export function buildMilkReceiptMessage(farmerName: string, quantity: number, fat: number | null, rate: number, totalAmount: number): string {
-  return `Assalam-o-Alaikum ${farmerName}, aaj aap ka doodh: ${quantity}L${fat ? `, Fat: ${fat}%` : ""}, Rate: Rs${rate}/L, Total: Rs${totalAmount.toLocaleString()}. - Al Rana Traders`;
+  return `Assalam-o-Alaikum ${farmerName}, aaj aap ka doodh: ${quantity}L${fat ? `, Fat: ${fat}%` : ""}, Rate: Rs${rate}/L, Total: Rs${totalAmount.toLocaleString()}. - AgriBridge`;
 }

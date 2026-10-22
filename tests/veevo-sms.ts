@@ -38,7 +38,7 @@ ok("pakistan numbers become +92", () => {
 ok("empty provider does not fetch and does not log the OTP", async () => {
   logs.length = 0;
   let called = false;
-  const otp = "482913 — Al Rana Traders ke portal mein daakhil hone ka code.";
+  const otp = "482913 — AgriBridge ke portal mein daakhil hone ka code.";
   const result = await sendMilkSms("03001234567", otp, {
     env: {},
     fetchImpl: async () => { called = true; return json({}); },

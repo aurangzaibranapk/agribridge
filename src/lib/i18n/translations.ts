@@ -68,6 +68,7 @@ import { salesPeriodDict } from "./dict/sales-period";
 import { staffPerformanceDict } from "./dict/staff-performance";
 import { intelligenceDict } from "./dict/intelligence";
 import { business360OwnerDict } from "./dict/business-360-owner";
+import { applyBrand, type BrandLang } from "@/lib/brand";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -194,8 +195,8 @@ export type TranslationKey = keyof typeof dict;
 export function t(key: TranslationKey, lang: Lang): string {
   const entry = dict[key] as { en: string; rm?: string; ur: string } | undefined;
   if (!entry) return String(key);
-  if (lang === "rm") return entry.rm ?? entry.ur;
-  return entry[lang] ?? entry.en;
+  const raw = lang === "rm" ? (entry.rm ?? entry.ur) : (entry[lang] ?? entry.en);
+  return applyBrand(raw, lang as BrandLang);
 }
 
 /** Har zaban ka apna naam -- apni hi zaban mein. */

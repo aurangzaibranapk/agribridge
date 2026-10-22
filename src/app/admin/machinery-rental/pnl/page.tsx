@@ -13,15 +13,15 @@ export const dynamic = "force-dynamic";
  * Do jaal is safhe par hain, aur dono ne kabhi na kabhi ghalat jawab
  * diya hai:
  *
- *   1. ART ka diya hua diesel jo VENDOR se wapas aata hai, wo kharcha
+ *   1. AgriBridge ka diya hua diesel jo VENDOR se wapas aata hai, wo kharcha
  *      NAHI hai. Usay kharche mein ginna munafa jhooti tarah kam kar
  *      ke dikhata hai -- aur usi adad par machine rakhne ya na rakhne
  *      ka faisla hota hai.
  *
- *   2. "gross billing - vendor payable" ko ART ka margin samajhna.
+ *   2. "gross billing - vendor payable" ko AgriBridge ka margin samajhna.
  *      Vendor ke hisse mein se KISAN ka diesel pehle hi kat chuka hota
- *      hai, is liye wo formula kisan ke diesel ko ART ki aamdani bana
- *      deta hai -- wo paisa jo ART ke paas kabhi aaya hi nahi. Sahi
+ *      hai, is liye wo formula kisan ke diesel ko AgriBridge ki aamdani bana
+ *      deta hai -- wo paisa jo AgriBridge ke paas kabhi aaya hi nahi. Sahi
  *      adad bill ka apna commission_amount hai, jo ledger ke 4030
  *      Machinery Income se lafz-ba-lafz milta hai.
  *

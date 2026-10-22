@@ -84,7 +84,7 @@ export function GeneralBookingForm() {
       <div dir="rtl" className="rounded-card border border-green-200 bg-white p-6 text-center shadow-card">
         <CheckCircle2 className="mx-auto h-10 w-10 text-green-600" />
         <p className="mt-3 font-display text-base font-semibold text-surface-900">بکنگ کی درخواست بھیج دی گئی</p>
-        <p className="mt-1 text-sm text-surface-500">الرانا ٹریڈرز جلد آپ سے رابطہ کرے گا اور ریٹ بتا دے گا۔</p>
+        <p className="mt-1 text-sm text-surface-500">AgriBridge جلد آپ سے رابطہ کرے گا اور ریٹ بتا دے گا۔</p>
       </div>
     );
   }

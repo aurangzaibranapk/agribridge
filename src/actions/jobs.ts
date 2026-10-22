@@ -3,6 +3,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
+import { applyInputError, readApplyFields } from "@/lib/jobs/apply-input";
+import { t } from "@/lib/i18n/translations";
 import {
   sendApplicationReceivedEmail,
   sendEligibilityEmail,
@@ -98,11 +100,10 @@ async function uploadJobDoc(serviceClient: ReturnType<typeof createServiceClient
 
 export async function applyToVacancy(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const serviceClient = createServiceClient();
-  const vacancyId = String(formData.get("vacancy_id") ?? "");
-  const fullName = String(formData.get("full_name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
-
-  if (!vacancyId || !fullName || !email) return { error: "Naam, email, aur vacancy zaroori hain." };
+  const fields = readApplyFields(formData);
+  const invalid = applyInputError(fields);
+  if (invalid) return { error: invalid };
+  const { vacancyId, fullName, email, lang } = fields;
 
   const { data: vacancy } = await serviceClient.from("job_vacancies").select("title").eq("id", vacancyId).single();
 
@@ -136,7 +137,7 @@ export async function applyToVacancy(_prev: ActionState, formData: FormData): Pr
   }
 
   const { data: application, error } = await (serviceClient as any).from("job_applications").insert(payload).select("id").single();
-  if (error) return { error: error.message };
+  if (error) return { error: t("sp_apply_failed", lang) };
 
   if (application) {
     await sendApplicationReceivedEmail(email, fullName, vacancy?.title ?? "Position", application.id);

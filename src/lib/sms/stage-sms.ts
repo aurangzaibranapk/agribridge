@@ -8,7 +8,7 @@ import { drainSmsOutbox } from "@/lib/sms/outbox";
 
 export function stageSmsBody(complaintNumber: string, stage: ComplaintStage): string {
   const meta = COMPLAINT_STAGE_META[stage];
-  return `Al Rana Traders: Shikayat ${complaintNumber} ab ${meta.rm} / ${meta.en} (${meta.percent}%).`;
+  return `AgriBridge: Shikayat ${complaintNumber} ab ${meta.rm} / ${meta.en} (${meta.percent}%).`;
 }
 
 export async function enqueueCallerStageSms(

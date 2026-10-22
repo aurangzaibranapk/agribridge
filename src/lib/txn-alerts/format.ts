@@ -3,7 +3,7 @@
  *
  * Template ka matn (Meta mein manzoor shuda, Utility, English):
  *
- *   AgriBridge Alert - Al Rana Traders
+ *   AgriBridge Alert - AgriBridge
  *   {{1}}: Rs {{2}}
  *   Party: {{3}}
  *   Account: {{4}}

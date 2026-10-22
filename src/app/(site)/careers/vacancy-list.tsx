@@ -1,56 +1,81 @@
 "use client";
+
 import { useState } from "react";
-import { Briefcase, MapPin } from "lucide-react";
+import { Banknote, Briefcase, MapPin, Users } from "lucide-react";
 import { ApplyForm } from "./apply-form";
+import type { CareerCard } from "@/lib/jobs/vacancy-i18n";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
-interface Vacancy {
-  id: string;
-  title: string;
-  designation: string | null;
-  description: string | null;
-  requirements: string | null;
-  branch_name: string | null;
+function BrandTag({ urdu, children }: { urdu: boolean; children: string }) {
+  return (
+    <span className={`inline-flex max-w-full truncate rounded-full border border-brand-200 bg-brand-25 px-2 py-0.5 text-[11px] font-medium text-brand-800 ${urdu ? "leading-snug" : ""}`}>
+      {children}
+    </span>
+  );
 }
 
-export function VacancyList({ vacancies }: { vacancies: Vacancy[] }) {
+export function VacancyList({ vacancies }: { vacancies: CareerCard[] }) {
   const lang = useLang();
-  const [openId, setOpenId] = useState<string | null>(null);
+  const urdu = lang === "ur";
   const [applyId, setApplyId] = useState<string | null>(null);
+  const open = vacancies.find((vacancy) => vacancy.id === applyId) ?? null;
 
   if (vacancies.length === 0) {
-    return <p className="rounded-card border border-dashed border-surface-200 bg-white p-8 text-center text-surface-400">{t("sp_no_vacancy", lang)}</p>;
+    return <p className="rounded-2xl border border-dashed border-brand-200 bg-white p-8 text-center text-surface-500">{t("sp_no_vacancy", lang)}</p>;
   }
 
   return (
-    <div className="space-y-3">
-      {vacancies.map((v) => (
-        <div key={v.id} className="rounded-card border border-surface-200 bg-white p-4 shadow-card">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Briefcase className="h-4 w-4 text-brand-600" />
-              <p className="font-medium text-surface-900">{v.title}</p>
+    <>
+      <div className="grid gap-3">
+        {vacancies.map((vacancy) => (
+          <article key={vacancy.id} className="rounded-2xl border border-brand-100 bg-white p-4 shadow-card">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                <Briefcase className="h-5 w-5" aria-hidden />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className={`font-display text-lg font-semibold text-surface-900 ${urdu ? "leading-snug" : "leading-tight"}`}>{vacancy.title}</h2>
+                  {vacancy.brand && <BrandTag urdu={urdu}>{vacancy.brand}</BrandTag>}
+                </div>
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-surface-600">
+                  {vacancy.location && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-surface-100 px-2 py-0.5">
+                      <MapPin className="h-3 w-3 text-brand-700" aria-hidden />
+                      <span className="sr-only">{t("sp_job_location", lang)}: </span>
+                      {vacancy.location}
+                    </span>
+                  )}
+                  {vacancy.salary && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 font-medium text-brand-800">
+                      <Banknote className="h-3 w-3" aria-hidden />
+                      {t("sp_salary", lang)}{" "}
+                      <bdi className="tabular-nums ltr-iso">{lang === "ur" ? `${vacancy.salary} ${t("sp_currency", lang)}` : `${t("sp_currency", lang)} ${vacancy.salary}`}</bdi>
+                      <span className="font-normal text-brand-700">· {t("sp_per_month", lang)}</span>
+                    </span>
+                  )}
+                  {vacancy.positions != null && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-surface-100 px-2 py-0.5">
+                      <Users className="h-3 w-3 text-brand-700" aria-hidden />
+                      <bdi className="tabular-nums">{vacancy.positions}</bdi> {t("sp_positions", lang)}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-            {v.branch_name && (
-              <span className="flex items-center gap-1 text-xs text-surface-500">
-                <MapPin className="h-3 w-3" /> {v.branch_name}
-              </span>
-            )}
-          </div>
-          {v.description && <p className="mt-2 text-sm text-surface-600">{v.description}</p>}
-          {v.requirements && <p className="mt-1 text-xs text-surface-400">Requirements: {v.requirements}</p>}
-
-          {applyId === v.id ? (
-            <ApplyForm vacancyId={v.id} onClose={() => setApplyId(null)} />
-          ) : (
+            {vacancy.blurb && <p className={`mt-3 line-clamp-2 text-sm text-surface-600 ${urdu ? "leading-relaxed" : "leading-6"}`}>{vacancy.blurb}</p>}
             <button
-              onClick={() => setApplyId(v.id)}
-              className="mt-3 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
-            >{t("sp_apply", lang)}</button>
-          )}
-        </div>
-      ))}
-    </div>
+              type="button"
+              onClick={() => setApplyId(vacancy.id)}
+              className="mt-3 rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
+            >
+              {t("sp_apply", lang)}
+            </button>
+          </article>
+        ))}
+      </div>
+      {open && <ApplyForm key={open.id} vacancy={open} onClose={() => setApplyId(null)} />}
+    </>
   );
 }

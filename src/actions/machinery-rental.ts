@@ -145,7 +145,7 @@ export async function createVendorMachine(_prev: ActionState, formData: FormData
   const rateAmount = Number(formData.get("rate_amount") ?? 0);
   const notes = (formData.get("notes") as string) || null;
 
-  // Machine kis ki hai. ART ki apni ho to vendor hota hi nahi -- aur
+  // Machine kis ki hai. AgriBridge ki apni ho to vendor hota hi nahi -- aur
   // wo shart DB par bhi lagi hui hai (173), taake "commission kis ko
   // jaye" wala sawal kabhi khula na rahe.
   const owner = String(formData.get("owner") ?? "vendor") === "art" ? "art" : "vendor";

@@ -19350,8 +19350,15 @@ export type Database = {
       job_vacancies: {
         Row: {
           branch_id: string | null
+          brand: string | null
+          brand_en: string | null
+          brand_roman: string | null
+          brand_ur: string | null
           created_at: string
           description: string | null
+          description_en: string | null
+          description_roman: string | null
+          description_ur: string | null
           designation: string | null
           id: string
           is_open: boolean
@@ -19359,11 +19366,21 @@ export type Database = {
           seats_filled: number | null
           seats_total: number | null
           title: string
+          title_en: string | null
+          title_roman: string | null
+          title_ur: string | null
         }
         Insert: {
           branch_id?: string | null
+          brand?: string | null
+          brand_en?: string | null
+          brand_roman?: string | null
+          brand_ur?: string | null
           created_at?: string
           description?: string | null
+          description_en?: string | null
+          description_roman?: string | null
+          description_ur?: string | null
           designation?: string | null
           id?: string
           is_open?: boolean
@@ -19371,11 +19388,21 @@ export type Database = {
           seats_filled?: number | null
           seats_total?: number | null
           title: string
+          title_en?: string | null
+          title_roman?: string | null
+          title_ur?: string | null
         }
         Update: {
           branch_id?: string | null
+          brand?: string | null
+          brand_en?: string | null
+          brand_roman?: string | null
+          brand_ur?: string | null
           created_at?: string
           description?: string | null
+          description_en?: string | null
+          description_roman?: string | null
+          description_ur?: string | null
           designation?: string | null
           id?: string
           is_open?: boolean
@@ -19383,6 +19410,9 @@ export type Database = {
           seats_filled?: number | null
           seats_total?: number | null
           title?: string
+          title_en?: string | null
+          title_roman?: string | null
+          title_ur?: string | null
         }
         Relationships: [
           {

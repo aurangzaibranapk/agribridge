@@ -44,7 +44,7 @@ export const DELETION_COPY: Record<DeletionLang, DeletionCopy> = {
     label: "English",
     title: "Delete your AgriBridge account",
     intro:
-      "This page explains how to delete your AgriBridge (Al Rana Traders) account, used on alranatraders.pk and in the AgriBridge Android app. It applies to farmers, customers, dealers and staff logins.",
+      "This page explains how to delete your AgriBridge account, used on alranatraders.pk and in the AgriBridge Android app. It applies to farmers, customers, dealers and staff logins.",
     howTitle: "How to request deletion",
     steps: [
       "Send us a message on WhatsApp or email from the phone number / email linked to your account.",
@@ -75,7 +75,7 @@ export const DELETION_COPY: Record<DeletionLang, DeletionCopy> = {
     label: "Roman Urdu",
     title: "Apna AgriBridge account mitwayein",
     intro:
-      "Is safhe par bataya gaya hai ke AgriBridge (Al Rana Traders) ka account — jo alranatraders.pk aur AgriBridge Android app par chalta hai — kaise mitwaya jata hai. Ye kisan, gahak, dealer aur staff sab ke login par lagu hai.",
+      "Is safhe par bataya gaya hai ke AgriBridge ka account — jo alranatraders.pk aur AgriBridge Android app par chalta hai — kaise mitwaya jata hai. Ye kisan, gahak, dealer aur staff sab ke login par lagu hai.",
     howTitle: "Darkhwast kaise dein",
     steps: [
       "Jo phone number / email aap ke account se juda hai, us se hamein WhatsApp ya email karein.",
@@ -106,7 +106,7 @@ export const DELETION_COPY: Record<DeletionLang, DeletionCopy> = {
     label: "اردو",
     title: "اپنا AgriBridge اکاؤنٹ ختم کروائیں",
     intro:
-      "اس صفحے پر بتایا گیا ہے کہ AgriBridge (الرانا ٹریڈرز) کا اکاؤنٹ، جو alranatraders.pk اور AgriBridge اینڈرائیڈ ایپ پر چلتا ہے، کیسے ختم کروایا جاتا ہے۔ یہ کسان، گاہک، ڈیلر اور اسٹاف سب کے لاگ اِن پر لاگو ہے۔",
+      "اس صفحے پر بتایا گیا ہے کہ AgriBridge کا اکاؤنٹ، جو alranatraders.pk اور AgriBridge اینڈرائیڈ ایپ پر چلتا ہے، کیسے ختم کروایا جاتا ہے۔ یہ کسان، گاہک، ڈیلر اور اسٹاف سب کے لاگ اِن پر لاگو ہے۔",
     howTitle: "درخواست کیسے دیں",
     steps: [
       "جو فون نمبر یا ای میل آپ کے اکاؤنٹ سے جڑا ہے، اسی سے ہمیں واٹس ایپ یا ای میل کریں۔",

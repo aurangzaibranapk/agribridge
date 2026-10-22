@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { EcosystemHome } from "@/components/site/ecosystem-home";
 import { HeroSlider } from "@/components/site/hero-slider";
 import { createClient } from "@/lib/supabase/server";
@@ -6,35 +7,29 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Pakistan's Digital Agriculture Platform",
+  title: BRAND_TAGLINE.en,
   description:
-    "AgriBridge by Al Rana Traders connects farmers with agriculture inputs, machinery booking, grain markets, dairy services, farm products and Kisan AI in Pakistan.",
+    `${BRAND_NAME} — ${BRAND_TAGLINE.en}. Connects farmers with agriculture inputs, machinery booking, grain markets, dairy services, farm products and Kisan AI in Pakistan.`,
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "AgriBridge | Pakistan's Digital Agriculture Platform",
+    title: `${BRAND_NAME} | ${BRAND_TAGLINE.en}`,
     description:
-      "A connected agriculture ecosystem for farmers, inputs, machinery, grain, dairy, farm products and digital guidance in Pakistan.",
+      `${BRAND_NAME} — ${BRAND_TAGLINE.en}. A connected agriculture ecosystem for farmers, inputs, machinery, grain, dairy, farm products and digital guidance in Pakistan.`,
     url: "/",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "AgriBridge | Pakistan's Digital Agriculture Platform",
+    title: `${BRAND_NAME} | ${BRAND_TAGLINE.en}`,
     description:
-      "Connecting farmers with agriculture services, markets, machinery and digital guidance in Pakistan.",
+      `${BRAND_NAME} — ${BRAND_TAGLINE.en}. Connecting farmers with agriculture services, markets, machinery and digital guidance in Pakistan.`,
   },
 };
 
 export default async function HomePage() {
-  const supabase = createClient();
-
-  const { data: heroSlides } = await supabase
-    .from("hero_slides")
-    .select("*")
-    .eq("is_active", true)
-    .order("display_order");
+  const heroSlides = await loadHeroSlides().catch(() => null);
 
   return (
     <>
@@ -47,4 +42,14 @@ export default async function HomePage() {
       </div>
     </>
   );
+}
+
+async function loadHeroSlides() {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("hero_slides")
+    .select("*")
+    .eq("is_active", true)
+    .order("display_order");
+  return data;
 }

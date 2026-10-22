@@ -336,7 +336,7 @@ export function ConfirmProfileCard({
       {state.notice && <p className="mb-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">{state.notice}</p>}
       <p className="text-sm font-medium text-surface-900 dark:text-surface-100">{t("ou_profile_complete", lang)}</p>
       <p className="mt-1 text-sm text-surface-600 dark:text-surface-300">
-        Confirm karne ke baad Al Rana Traders ki har service — machinery, doodh, anaj, marketplace, bataway — yahi
+        Confirm karne ke baad AgriBridge ki har service — machinery, doodh, anaj, marketplace, bataway — yahi
         tafseel istemal karegi. Aap se ye sab dobara nahi poocha jayega.
       </p>
       <ConfirmButton />

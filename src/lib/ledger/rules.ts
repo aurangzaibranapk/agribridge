@@ -1130,7 +1130,7 @@ export async function postMachineryBill(args: {
    * entry post hi nahi hoti, is liye bill banta hi nahi tha -- aur
    * safha "Ledger mein nahi gaya" keh kar chup ho jata.
    *
-   * Diesel kisan ne apne haath se vendor ko diya tha. Wo paisa ART se
+   * Diesel kisan ne apne haath se vendor ko diya tha. Wo paisa AgriBridge se
    * hokar guzra hi nahi, is liye us ka koi khana nahi banta -- bas
    * kisan ka qarza utna kam hota hai.
    */
@@ -1521,7 +1521,7 @@ export async function postMachineryPayment(args: {
 /**
  * Vendor ko us ka hissa dena.
  *
- * Do lakeeron ka kaam tha, ab teen ho sakti hain: agar ART ne us ke
+ * Do lakeeron ka kaam tha, ab teen ho sakti hain: agar AgriBridge ne us ke
  * liye diesel diya tha, to wo raqam isi waqt wapas aati hai.
  *
  * `amount` wo POORI raqam hai jo us ke naam par khari thi. Us mein se
@@ -1548,7 +1548,7 @@ export async function postMachineryVendorPayout(args: {
    * kabhi wapas na maanga jata.
    */
   advance?: number;
-  /** ART ka diya hua diesel jo isi adaigi mein wapas aa raha hai. */
+  /** AgriBridge ka diya hua diesel jo isi adaigi mein wapas aa raha hai. */
   dieselRecovered?: number;
   accountId?: string | null;
   description: string;
@@ -1588,7 +1588,7 @@ export async function postMachineryVendorPayout(args: {
       credit: diesel,
       partyType: "machinery_vendor",
       partyId: args.vendorId ?? null,
-      memo: `${args.description} — ART ka diesel wapas`,
+      memo: `${args.description} — AgriBridge ka diesel wapas`,
     });
   }
 

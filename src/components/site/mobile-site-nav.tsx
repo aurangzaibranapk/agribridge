@@ -3,7 +3,17 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
+import localFont from "next/font/local";
 import { ChevronRight, Menu, X } from "lucide-react";
+import { BrandMark, BrandWord } from "@/components/brand/brand-mark";
+import type { Lang } from "@/lib/i18n/translations";
+
+const urdu = localFont({
+  src: "../../app/login/fonts/noto-nastaliq-urdu.woff2",
+  variable: "--font-urdu",
+  display: "swap",
+  weight: "400 700",
+});
 
 const NAV = [
   { href: "/", label: "Home" },
@@ -18,7 +28,7 @@ const NAV = [
   { href: "/contact", label: "Partner" },
 ] as const;
 
-export function MobileSiteNav() {
+export function MobileSiteNav({ lang, tagline }: { lang: Lang; tagline: string }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -63,12 +73,12 @@ export function MobileSiteNav() {
             className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col overflow-y-auto bg-white shadow-2xl dark:bg-surface-950"
           >
             <div className="flex items-center justify-between border-b border-surface-200 px-5 py-5 dark:border-surface-800">
-              <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-500 text-xl font-black text-white shadow-sm">ART</div>
-                <div>
-                  <span className="block text-[10px] font-semibold uppercase tracking-[0.28em] text-surface-500">Al Rana Traders</span>
-                  <span className="block font-display text-2xl font-bold leading-tight text-surface-950 dark:text-white">Agri<span className="text-emerald-700">Bridge</span></span>
-                </div>
+              <Link href="/" onClick={() => setOpen(false)} className={`flex items-center gap-3 ${lang === "ur" ? urdu.variable : ""}`}>
+                <BrandMark className="h-12 w-12" />
+                <span className="min-w-0">
+                  <BrandWord className="block font-display text-2xl font-bold leading-tight text-surface-950 dark:text-white" />
+                  <span dir={lang === "ur" ? "rtl" : "ltr"} className={`block truncate text-xs text-surface-500 ${lang === "ur" ? "font-urdu" : ""}`}>{tagline}</span>
+                </span>
               </Link>
               <button
                 type="button"

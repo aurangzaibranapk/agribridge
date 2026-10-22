@@ -13,13 +13,13 @@
  *    ghalat hoga: English mode mein aadha angrezi muahida banta, jo
  *    qanooni tor par bekar hai. Muahida ek hi zaban mein rehta hai.
  *
- * 2. art-logo.tsx -- wahan "Al Rana Traders" logo ka aria-label hai,
+ * 2. art-logo.tsx -- wahan "{brand}" logo ka aria-label hai,
  *    nazar aane wala matn nahi. Logo ka wordmark hota hai; usay har
  *    zaban mein badal dena nishan ko hi badal dena hai.
  *
  * Jo lafz commonDict mein pehle se the (Raqam, Baqi, Tareekh, Phone,
  * Qism, Tafseel) aur jo doosri fehriston mein (Customer, Loading...,
- * All Branches, AR, Al Rana Traders) un ke liye naya key nahi banaya.
+ * All Branches, AR, {brand}) un ke liye naya key nahi banaya.
  */
 export const sharedDict = {
   // ---- Tasveer aur file ----

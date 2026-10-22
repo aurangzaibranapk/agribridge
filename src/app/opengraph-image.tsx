@@ -1,7 +1,8 @@
 import { ImageResponse } from "next/og";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 
 export const runtime = "edge";
-export const alt = "AgriBridge - Pakistan's Digital Agriculture Platform";
+export const alt = `${BRAND_NAME} — ${BRAND_TAGLINE.en}`;
 export const size = {
   width: 1200,
   height: 630,
@@ -46,14 +47,9 @@ export default function OpenGraphImage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 90,
-            fontWeight: 900,
-            letterSpacing: -5,
             background: "rgba(255,255,255,0.08)",
           }}
-        >
-          ART
-        </div>
+        />
 
         <div
           style={{
@@ -85,12 +81,10 @@ export default function OpenGraphImage() {
                 fontSize: 28,
                 fontWeight: 900,
               }}
-            >
-              ART
-            </div>
+            />
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <div style={{ fontSize: 26, fontWeight: 800 }}>Al Rana Traders</div>
-              <div style={{ fontSize: 21, opacity: 0.9, fontWeight: 700 }}>AgriBridge</div>
+              <div style={{ fontSize: 42, fontWeight: 800 }}>{BRAND_NAME}</div>
+              <div style={{ fontSize: 24, opacity: 0.9, fontWeight: 700 }}>{BRAND_TAGLINE.en}</div>
             </div>
           </div>
 
