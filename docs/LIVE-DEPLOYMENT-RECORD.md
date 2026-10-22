@@ -1,3 +1,7 @@
+## Phone sub-brand — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 615. AgriBridge umbrella code mein hai. Chhota brand naam aur logo `website_settings` key `app_brands` se. Migration **705 not applied** by this agent. Owner testing par: `supabase/migrations/705_app_sub_brand.sql`. Live par 705 nahi. Key na ho to sirf AgriBridge, koi banaya hua naam nahi. Logo tab jab https URL ho.
+
 ## Phone brand — 22 October 2026 — NO NEW SQL
 
 versionCode 614. Home brand AgriBridge hai. Neeche chhota `by Al Rana Traders`. Wasela Eco Mahabali home brand nahi. Baqi approved cards waise hi. Live APK nahi badli. 704 ab bhi file only.

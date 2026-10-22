@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Animated, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Animated, Image, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Path, Polyline, Rect, Stop } from "react-native-svg";
 import type { TimelineStep } from "../../../src/lib/mobile/glass-metrics";
 import { ringDashOffset, timelineFinished, timelinePercent } from "../../../src/lib/mobile/glass-metrics";
+import { loadCurrentSubBrand, type SubBrand } from "../../../src/lib/mobile/sub-brand";
 import { liveAuth, type LiveBag } from "./bits";
 import { liveGet, liveGetScoped } from "../../../src/lib/mobile/live-read";
 
@@ -44,12 +45,38 @@ export function Rise({ index, children }: { index: number; children: ReactNode }
   return <Animated.View style={{ opacity, transform: [{ translateY: shift }] }}>{children}</Animated.View>;
 }
 
-export function BrandHeader({ role, name, onProfile }: { role: string; name: string; onProfile?: () => void }) {
+function useSubBrand(live?: LiveBag): SubBrand | null {
+  const auth = liveAuth(live);
+  const [brand, setBrand] = useState<SubBrand | null>(null);
+  useEffect(() => {
+    if (!auth) {
+      setBrand(null);
+      return;
+    }
+    let gone = false;
+    void loadCurrentSubBrand(auth, fetch).then((row) => {
+      if (!gone) setBrand(row);
+    });
+    return () => { gone = true; };
+  }, [auth?.token, auth?.url, auth?.anonKey]);
+  return brand;
+}
+
+export function BrandHeader({ role, name, onProfile, live }: { role: string; name: string; onProfile?: () => void; live?: LiveBag }) {
   const initial = (name.trim().charAt(0) || role.charAt(0) || "A").toUpperCase();
+  const brand = useSubBrand(live);
+  const [logoOk, setLogoOk] = useState(true);
+  useEffect(() => { setLogoOk(true); }, [brand?.logoUrl]);
+  const label = brand ? `${brand.name} · ${role.toUpperCase()}` : role.toUpperCase();
   return (
     <Rise index={0}>
       <Text style={{ color: glass.text, fontSize: 22, fontWeight: "800" }}>AgriBridge</Text>
-      <Text style={{ color: glass.gold, fontSize: 11, letterSpacing: 0.4, fontWeight: "700", marginTop: 2 }}>by Al Rana Traders · {role.toUpperCase()}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
+        {brand?.logoUrl && logoOk ? (
+          <Image source={{ uri: brand.logoUrl }} onError={() => setLogoOk(false)} style={{ width: 16, height: 16, borderRadius: 3, marginRight: 6 }} />
+        ) : null}
+        <Text style={{ color: glass.gold, fontSize: 11, letterSpacing: 0.4, fontWeight: "700" }}>{label}</Text>
+      </View>
       <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6, marginBottom: 12 }}>
         <Text style={{ color: glass.text, fontSize: 26, fontWeight: "800", flex: 1, paddingRight: 8 }}>Assalam o Alaikum, {name || "—"}</Text>
         <Pressable onPress={onProfile} style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: "#146B3A", alignItems: "center", justifyContent: "center", shadowColor: "#3DDC97", shadowOpacity: 0.7, shadowRadius: 10 }}>

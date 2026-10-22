@@ -200,14 +200,14 @@ export function FarmerGlass({ live, khata, milk, names, focus = "home", footer, 
   if (focus === "track") {
     return (
       <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-        <BrandHeader role="Kisan" name={face.name} onProfile={bar.onProfile} />
+        <BrandHeader role="Kisan" name={face.name} onProfile={bar.onProfile} live={live} />
         {track}
       </GlassScreen>
     );
   }
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-      <BrandHeader role="Kisan" name={face.name} onProfile={bar.onProfile} />
+      <BrandHeader role="Kisan" name={face.name} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
         <Kpi index={2} label="Wallet balance" value={money(khata.owed, Boolean(khata.note && khata.owed == null))} sub={khata.note || "Khata baqaya"} color="#C8A058" series={payLine} pct={pctChange(weekPay, prevPay)} />
@@ -298,7 +298,7 @@ export function McaGlass({ live, farmers, ...bar }: Refresh & { live?: LiveBag; 
   const dayGoal = goalView(todayActual, dayTarget, "L");
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-      <BrandHeader role="MCA" name={face.name} onProfile={bar.onProfile} />
+      <BrandHeader role="MCA" name={face.name} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
         <Kpi index={2} label="Aaj ki collection" value={milk?.ok ? `${milkLitres(todayRows)} L` : "—"} color="#3DDC97" series={series} pct={pctChange(milkLitres(todayRows), milkLitres(rows.filter((row) => row.entry_date === yesterday)))} />
@@ -367,7 +367,7 @@ export function McoGlass({ live, rows, error, names, ...bar }: Refresh & { live?
   const dayGoal = goalView(todayActual, dayTarget, "L");
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-      <BrandHeader role="MCO / Chiller" name={face.name} onProfile={bar.onProfile} />
+      <BrandHeader role="MCO / Chiller" name={face.name} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
         <Kpi index={2} label="Subah ka doodh" value={rows ? `${milkLitres(subah)} L` : "—"} color="#5B8CFF" series={subahSeries} pct={pctChange(subahSeries[subahSeries.length - 1] ?? null, subahSeries[subahSeries.length - 2] ?? null)} />
@@ -498,7 +498,7 @@ export function AdminGlass({ live, home, milk, orders, focus = "home", footer, o
   if (focus === "track") {
     return (
       <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-        <BrandHeader role="Admin" name={face.name} onProfile={bar.onProfile} />
+        <BrandHeader role="Admin" name={face.name} onProfile={bar.onProfile} live={live} />
         <Timeline title={approvalTitle} detail={approvalDetail} steps={approvalSteps} onAction={() => { if (hero && hero.status === "priced" && onVerify) onVerify(hero); else bar.onTab?.("approvals"); }} index={2} />
         {baqi}
         {footer}
@@ -507,7 +507,7 @@ export function AdminGlass({ live, home, milk, orders, focus = "home", footer, o
   }
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-      <BrandHeader role="Admin" name={face.name} onProfile={bar.onProfile} />
+      <BrandHeader role="Admin" name={face.name} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
       {home.banner ? <Text style={{ color: glass.gold, marginBottom: 8 }}>{home.banner}</Text> : null}
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
@@ -589,7 +589,7 @@ export function CustomerGlass({ live, khata, orders, focus = "home", ...bar }: R
   if (focus === "track") {
     return (
       <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-        <BrandHeader role="Customer" name={face.name} onProfile={bar.onProfile} />
+        <BrandHeader role="Customer" name={face.name} onProfile={bar.onProfile} live={live} />
         <Timeline title={card.title} detail={card.detail} steps={card.steps} showProgress progressNote={card.progressNote} onAction={() => bar.onTab?.("orders")} index={2} />
         {others}
       </GlassScreen>
@@ -597,7 +597,7 @@ export function CustomerGlass({ live, khata, orders, focus = "home", ...bar }: R
   }
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-      <BrandHeader role="Customer" name={face.name} onProfile={bar.onProfile} />
+      <BrandHeader role="Customer" name={face.name} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
         <Kpi index={2} label="Mere orders" value={orders.ok ? String(list.length) : "—"} color="#5B8CFF" series={[]} pct={null} />
@@ -627,7 +627,7 @@ export function DealerGlass({ live, khata, orders, ...bar }: Refresh & { live?: 
   const deal = orderCard(featuredOrder(list), extra);
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-      <BrandHeader role="Dealer" name={face.name} onProfile={bar.onProfile} />
+      <BrandHeader role="Dealer" name={face.name} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
         <Kpi index={2} label="Is mahine orders" value={orders.ok ? (dated.length ? String(monthCount) : String(list.length)) : "—"} sub={dated.length ? "Is mahine" : "Aakhri fehrist"} color="#3DDC97" series={byDay} pct={null} />
@@ -703,7 +703,7 @@ export function StaffGlass({ live, attendance, salary, advances, tasks, tasksNot
   const hazriGoal = goalView(hazriActual, hazriTarget, "din");
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-      <BrandHeader role="Staff" name={face.name} onProfile={bar.onProfile} />
+      <BrandHeader role="Staff" name={face.name} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
       <Rise index={2}>
         <View style={{ backgroundColor: "#146B3A", borderRadius: 18, padding: 14, marginBottom: 12, flexDirection: "row", alignItems: "center" }}>
@@ -783,7 +783,7 @@ export function VetGlass({ live, health, ...bar }: Refresh & { live?: LiveBag; h
   const pending = visits.filter((row) => row.next_due && String(row.next_due) >= today);
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-      <BrandHeader role="Vet" name={face.name} onProfile={bar.onProfile} />
+      <BrandHeader role="Vet" name={face.name} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
         <Kpi index={2} label="Aaj ke visits" value={health ? String(todayVisits.length) : "—"} color="#5B8CFF" series={[]} pct={null} />
