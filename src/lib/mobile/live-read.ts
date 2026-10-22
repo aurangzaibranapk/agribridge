@@ -169,6 +169,55 @@ async function liveInsertOnce<T>(auth: LiveAuth, token: string, table: string, b
   }
 }
 
+const ROW_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function livePatch<T>(auth: LiveAuth, table: string, id: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<ReadResult<T>> {
+  const first = await livePatchOnce<T>(auth, auth.token, table, id, body, fetchImpl);
+  if (first.ok || !jwtExpired(first.status, first.detail)) return first;
+  const next = await refreshOnce(auth);
+  if (next === "dead") return { ok: false, status: 401, message: SESSION_EXPIRED };
+  if (next === "skip") return first;
+  return livePatchOnce<T>(auth, next, table, id, body, fetchImpl);
+}
+
+async function livePatchOnce<T>(auth: LiveAuth, token: string, table: string, id: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<ReadResult<T>> {
+  const base = acceptedSupabaseUrl(auth.url, dataFlavor(auth.flavor));
+  if (!base || !auth.anonKey.trim() || !token.trim()) {
+    return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Live read is build mein set nahi." }) };
+  }
+  if (!/^[a-z_][a-z0-9_]*$/.test(table) || !ROW_ID.test(id)) {
+    return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Ye fehrist nahi khuli." }) };
+  }
+  try {
+    const res = await fetchImpl(`${base}/rest/v1/${table}?id=eq.${id}`, {
+      method: "PATCH",
+      headers: {
+        apikey: auth.anonKey,
+        authorization: `Bearer ${token}`,
+        accept: "application/json",
+        "content-type": "application/json",
+        prefer: "return=representation",
+      },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    if (res.status >= 400) return { ok: false, status: res.status, message: readError(res.status, text, auth.channel), detail: text };
+    const rows = parseArray(text);
+    if (!rows) return { ok: false, status: res.status, message: readError(res.status, text || "JSON nahi", auth.channel) };
+    return { ok: true, rows: rows as T[] };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      message: failureLine({
+        channel: auth.channel,
+        fallback: "Network nahi mila.",
+        detail: err instanceof Error ? err.message : "fetch failed",
+      }),
+    };
+  }
+}
+
 export async function liveRpc<T>(auth: LiveAuth, name: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<{ ok: true; data: T } | { ok: false; status: number; message: string; detail?: string }> {
   const first = await liveRpcOnce<T>(auth, auth.token, name, body, fetchImpl);
   if (first.ok || !jwtExpired(first.status, first.detail)) return first;
@@ -252,6 +301,8 @@ export type MilkRow = {
   chiller_name?: string | null;
   status?: string | null;
   mca_profile_id?: string | null;
+  farmer_id?: string | null;
+  created_by?: string | null;
 };
 export type MilkSettingsRow = {
   standard_rate?: number | string | null;
@@ -329,6 +380,22 @@ export function pricedMilkTotal(rows: MilkRow[]): number | null {
     priced += 1;
   }
   return priced === 0 ? null : Math.round(total * 100) / 100;
+}
+
+export function milkInRange(rows: MilkRow[], from: string, to: string): MilkRow[] {
+  return rows.filter((row) => {
+    const day = String(row.entry_date || "");
+    return day >= from && day <= to;
+  });
+}
+
+export function milkLitres(rows: MilkRow[]): number {
+  let total = 0;
+  for (const row of rows) {
+    const litres = row.quantity_liters != null ? num(row.quantity_liters) : num(row.field_collected_volume);
+    total += litres;
+  }
+  return Math.round(total * 100) / 100;
 }
 
 export function milkByShift(rows: MilkRow[]): { subah: number; shaam: number } {
@@ -427,7 +494,7 @@ export async function loadAdminHome(auth: LiveAuth, fetchImpl: FetchLike, now = 
   const since = encodeURIComponent(karachiStartIso(days[0]));
   const test = auth.testAccount === true;
   const banner = test
-    ? "TEST account. Sirf TEST naam ki qatarein. Asal cash, bank, bills, stock aur manzooriyan nahi dikhti. Likhai band hai."
+    ? "TEST account. Sirf TEST qatarein. Asal cash, bank aur bills nahi. Doodh ki tasdeeq TEST rows par hai."
     : null;
   const [sales, accounts, milk, route, products, inventory, categories, items, pending, activity] = await Promise.all([
     test
@@ -500,7 +567,7 @@ export type PartyRow = { id?: string; full_name?: string | null; name?: string |
 export type PurchaseRow = { purchase_number?: string | null; purchase_date?: string | null; total_amount?: number | string | null; status?: string | null; supplier_bill_no?: string | null };
 export type AttendanceRow = { attendance_date?: string | null; status?: string | null; check_in_at?: string | null; profile_id?: string | null };
 export type ProfileRow = { id?: string; full_name?: string | null };
-export type OrderRow = { order_number?: string | null; status?: string | null; grand_total?: number | string | null; created_at?: string | null };
+export type OrderRow = { id?: string; order_number?: string | null; status?: string | null; grand_total?: number | string | null; created_at?: string | null; requested_by?: string | null };
 export type KhataLine = { entry_date?: string | null; tafseel?: string | null; udhaar?: number | string | null; adaigi?: number | string | null; baqaya?: number | string | null; is_opening?: boolean | null; category?: string | null };
 export type SalaryRow = { net_salary?: number | string | null; status?: string | null; pay_month?: number | null; pay_year?: number | null };
 export type AdvanceRow = { amount?: number | string | null; status?: string | null; created_at?: string | null };
@@ -520,10 +587,11 @@ export async function searchParties(auth: LiveAuth, query: string, fetchImpl: Fe
   return { farmers, customers };
 }
 
-const MILK_LIST_SELECT = "id,entry_date,shift,quantity_liters,fat_percentage,snf_percentage,lr,rate_per_liter,total_amount,route_name,chiller_name,status,mca_profile_id";
+const MILK_LIST_SELECT = "id,entry_date,shift,quantity_liters,fat_percentage,snf_percentage,lr,rate_per_liter,total_amount,route_name,chiller_name,status,mca_profile_id,farmer_id,created_by";
 
-export async function loadMilkList(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<MilkRow>> {
-  return liveGetScoped<MilkRow>(auth, `milk_entries?select=${MILK_LIST_SELECT}&order=entry_date.desc,created_at.desc&limit=40`, fetchImpl);
+export async function loadMilkList(auth: LiveAuth, fetchImpl: FetchLike, limit = 40): Promise<ReadResult<MilkRow>> {
+  const cap = Math.max(1, Math.min(200, Math.floor(limit)));
+  return liveGetScoped<MilkRow>(auth, `milk_entries?select=${MILK_LIST_SELECT}&order=entry_date.desc,created_at.desc&limit=${cap}`, fetchImpl);
 }
 
 export async function loadMilkSettings(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<MilkSettingsRow>> {
@@ -579,7 +647,7 @@ export async function loadCatalog(auth: LiveAuth, fetchImpl: FetchLike): Promise
 }
 
 export async function loadOrders(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<OrderRow>> {
-  return liveGetScoped<OrderRow>(auth, "agri_orders?select=order_number,status,grand_total,created_at&order=created_at.desc&limit=20", fetchImpl);
+  return liveGetScoped<OrderRow>(auth, "agri_orders?select=id,order_number,status,grand_total,created_at,requested_by&order=created_at.desc&limit=20", fetchImpl);
 }
 
 export type KhataView = {

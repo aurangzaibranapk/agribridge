@@ -17,7 +17,7 @@ import { pinLock, pinProblem, verifyPin } from "../src/lib/mobile/pin";
 import { supportChatPath, supportWhatsapp } from "../src/lib/mobile/support";
 import { reportContext, reportDescription } from "../src/lib/mobile/report";
 import { acceptedSupabaseUrl, dataFlavor, failureLine, LIVE_SUPABASE_URL, showsHttpDetail, signInMobile, TEST_SUPABASE_URL, type FetchLike } from "../src/lib/mobile/live-login";
-import { cashPosition, columnMissing, karachiDaySeries, liveGet, liveInsert, milkByShift, pricedMilkTotal, readError, salesByDay, salesOnDay, shiftLabel, stockAlerts, withScope } from "../src/lib/mobile/live-read";
+import { cashPosition, columnMissing, karachiDaySeries, liveGet, liveInsert, livePatch, milkByShift, milkInRange, milkLitres, pricedMilkTotal, readError, salesByDay, salesOnDay, shiftLabel, stockAlerts, withScope } from "../src/lib/mobile/live-read";
 import { jwtExpired, refreshDue, refreshSupabaseSession, SESSION_EXPIRED, singleFlight } from "../src/lib/mobile/session-refresh";
 import { showRolePreview, showRoleSwitch, SWITCH_ROLES, TEST_LOGIN_EMAIL } from "../src/lib/mobile/test-account";
 import { elapsed, withinBudget, MOBILE_BUNDLE_BUDGET_BYTES } from "../src/lib/mobile/perf";
@@ -193,7 +193,7 @@ const testSideload = readFileSync(".github/workflows/mobile-sideload-test.yml", 
 assert.match(testSideload, /EXPO_PUBLIC_APP_FLAVOR: test/);
 assert.match(testSideload, /APP_CHANNEL: internal/);
 assert.match(testSideload, /EXPO_PUBLIC_SUPABASE_URL: https:\/\/hwaiuwxqldxsoukkfefn\.supabase\.co/);
-assert.match(testSideload, /AGRIBRIDGE_VERSION_CODE: "607"/);
+assert.match(testSideload, /AGRIBRIDGE_VERSION_CODE: "608"/);
 assert.match(testSideload, /pk\.alranatraders\.agribridge\.test/);
 assert.match(testSideload, /v0\.6\.1-beta-testdb/);
 assert.match(testSideload, /ktskwawkslaznkjjacni/);
@@ -284,7 +284,23 @@ assert.match(mcaSource, /Shaam/);
 assert.match(mcaSource, /liveInsert/);
 assert.match(mcaSource, /milk_entries/);
 assert.match(mcaSource, /Doodh save karein/);
-assert.match(readFileSync("apps/mobile/src/roles/mco.tsx", "utf8"), /readOnly/);
+const mcoSource = readFileSync("apps/mobile/src/roles/mco.tsx", "utf8");
+assert.match(mcoSource, /readOnly/);
+assert.match(mcoSource, /Subah/);
+assert.match(mcoSource, /Shaam/);
+assert.match(mcoSource, /Fat lagayein/);
+assert.match(mcoSource, /livePatch/);
+assert.match(mcoSource, /Kisan alerts/);
+assert.match(mcoSource, /Kisan trend/);
+assert.match(readFileSync("apps/mobile/src/roles/admin.tsx", "utf8"), /Manzoor/);
+assert.match(readFileSync("apps/mobile/src/roles/admin.tsx", "utf8"), /Mahina/);
+const mig701 = readFileSync("supabase/migrations/701_app_test_mco_admin.sql", "utf8");
+assert.match(mig701, /milk_entries_test_update/);
+assert.match(mig701, /fn_is_app_test_account/);
+assert.match(mig701, /status = 'verified'/);
+assert.doesNotMatch(mig701, /security definer/i);
+assert.doesNotMatch(mig701, /auth\.users/);
+assert.match(readFileSync("supabase/migrations/701_app_test_mco_admin.rollback.sql", "utf8"), /drop policy if exists milk_entries_test_update/);
 assert.match(appSource, /signInMobile/);
 assert.match(appSource, /failureLine/);
 assert.match(appSource, /Masla batayein/);
@@ -638,6 +654,22 @@ void (async () => {
   assert.equal(pricedMilkTotal([{ status: "pending_fat", quantity_liters: 4 }]), null);
   assert.equal(shiftLabel("evening"), "Shaam");
   assert.equal(shiftLabel("morning"), "Subah");
+  assert.equal(milkLitres([{ quantity_liters: 1.5 }, { quantity_liters: 2 }]), 3.5);
+  assert.equal(milkInRange([{ entry_date: "2026-10-01" }, { entry_date: "2026-10-22" }], "2026-10-20", "2026-10-22").length, 1);
+  const patched = await livePatch({
+    url: TEST_SUPABASE_URL,
+    anonKey: ANON,
+    token: "access",
+    channel: "internal",
+    flavor: "test",
+  }, "milk_entries", "11111111-1111-4111-8111-000000000601", { status: "priced" }, async (url, init) => {
+    assert.match(url, /hwaiuwxqldxsoukkfefn\.supabase\.co\/rest\/v1\/milk_entries\?id=eq\.11111111-1111-4111-8111-000000000601$/);
+    assert.equal(init?.method, "PATCH");
+    const headers = init?.headers as Record<string, string>;
+    assert.equal(headers.prefer, "return=representation");
+    return { status: 200, text: async () => "[{\"id\":\"11111111-1111-4111-8111-000000000601\"}]" };
+  });
+  assert.equal(patched.ok, true);
 
   const started = performance.now();
   await import("../src/lib/mobile/nav");
