@@ -1029,7 +1029,7 @@ export async function approveGrainPendingEntry(_prev: ActionState, formData: For
     .select("id, payload, receipt_photo_url, created_by")
     .maybeSingle();
   if (claimError) return { error: claimError.message };
-  if (claimed && makerCheckerBlock(guard.userId, claimed.created_by)) {
+  if (claimed && makerCheckerBlock(guard.userId, claimed.created_by, guard.role)) {
     await service.from("grain_pending_entries").update({ status: "pending", approval_claimed_at: null, approval_claimed_by: null }).eq("id", pendingId);
     return { error: "Apni entry khud manzoor nahi kar sakte." };
   }
@@ -1093,7 +1093,7 @@ export async function rejectGrainPendingEntry(_prev: ActionState, formData: Form
   if (reason.length < 3) return { error: "Reject ki wajah likhein." };
   const service = createServiceClient() as any;
   const { data: pendingRow } = await service.from("grain_pending_entries").select("created_by").eq("id", pendingId).maybeSingle();
-  if (makerCheckerBlock(guard.userId, pendingRow?.created_by)) return { error: "Apni entry khud manzoor nahi kar sakte." };
+  if (makerCheckerBlock(guard.userId, pendingRow?.created_by, guard.role)) return { error: "Apni entry khud manzoor nahi kar sakte." };
   const { data, error } = await service
     .from("grain_pending_entries")
     .update({ status: "rejected", reject_reason: reason, reviewed_by: guard.userId, reviewed_at: new Date().toISOString() })

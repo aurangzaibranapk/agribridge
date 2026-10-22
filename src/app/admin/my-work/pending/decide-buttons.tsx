@@ -32,7 +32,7 @@ export function DecideButtons({
   const lang = useLang();
   const live = usePendingLive();
   const { category, item_id: id, is_own: isOwn, code_own: codeOwn = false } = item;
-  const state = approveState({ category, is_own: isOwn, code_own: codeOwn });
+  const state = approveState({ category, is_own: isOwn, code_own: codeOwn }, live.viewerRole);
   const rule = INLINE_DECISIONS[category];
   const ownTip = t(state === "code" ? "apb_code_tip" : "apb_own_tip", lang);
   const locked = state === "own" || state === "code";

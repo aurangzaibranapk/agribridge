@@ -1,3 +1,13 @@
+## Pending — 22 October 2026: Pending approval escalation (698)
+
+Branch `cursor/pending-approval-escalation-e154`. Migration **698 not applied** on Testing or Live. Files only. Backup pehle, phir Testing (`hwaiuwxqldxsoukkfefn`), phir Live. Live par tab tak nahi jab tak backup ka size chat mein na aa jaye.
+
+- `pending_escalation_settings` / `_state` / `_events`. `fn_pending_escalate` har 15 minute (pg_cron, warna `/api/cron/pending-escalation`). Sirf in-app notification. SMS/WhatsApp nahi.
+- Manager SLA (default 24h, category settings) ke baad item **Admin aur Owner dono** ke paas. Koi bhi ek faisla kar sakta hai.
+- `fn_may_decide_entry` / `fn_actor_may_decide`: Admin, Owner, Super Admin apni entry bhi. Manager aur baqi staff apni entry nahi. Fuel, generator, maintenance checks aur POS review isi guard par.
+- Timeline: `Khud approve (Admin)` / `Khud approve (Owner)`. Season import SELECT staff policy (pending warning).
+- Rollback: `supabase/migrations/698_pending_escalation.rollback.sql`.
+
 ## Done on Live — 22 October 2026: Careers i18n columns (public apply modal)
 
 Branch `cursor/careers-apply-modal-i18n-552c` (PR #213). Live `ktskwawkslaznkjjacni` only. Testing was not touched.

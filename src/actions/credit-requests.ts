@@ -96,7 +96,7 @@ export async function adminApproveCreditRequest(_prev: ActionState, formData: Fo
     .single();
   if (!request) return { error: "Request not found." };
   if (request.status !== "pending") return { error: "Sirf pending request approve hoti hai." };
-  if (!makerIsNotChecker(request.created_by, who.caller.userId)) {
+  if (!makerIsNotChecker(request.created_by, who.caller.userId, who.caller.role)) {
     return { error: "Apni credit request khud approve nahi kar sakte." };
   }
 
@@ -134,7 +134,7 @@ export async function adminRejectCreditRequest(_prev: ActionState, formData: For
   const { data: request } = await supabase.from("credit_requests").select("status, created_by").eq("id", requestId).maybeSingle();
   if (!request) return { error: "Request not found." };
   if (request.status !== "pending") return { error: "Sirf pending request radd hoti hai." };
-  if (!makerIsNotChecker(request.created_by, who.caller.userId)) {
+  if (!makerIsNotChecker(request.created_by, who.caller.userId, who.caller.role)) {
     return { error: "Apni credit request khud radd nahi kar sakte." };
   }
 

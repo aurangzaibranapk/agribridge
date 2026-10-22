@@ -24,6 +24,9 @@ assert.equal(ownerAccountChangeBlocked("owner"), "Owner account suspend, band ya
 assert.equal(ownerAccountChangeBlocked("admin"), null);
 assert.ok(makerCheckerBlock("a", "a"));
 assert.equal(makerCheckerBlock("a", "b"), null);
+assert.equal(makerCheckerBlock("a", "a", "manager"), "Apni entry khud manzoor nahi kar sakte.");
+assert.equal(makerCheckerBlock("a", "a", "admin"), null);
+assert.equal(makerCheckerBlock("a", "a", "owner"), null);
 
 assert.equal(payrollPayDecision({ status: "paid", createdBy: "m", actorId: "a", payJournalId: "j", payLock: null, payLockAt: null }), "already_paid");
 assert.equal(payrollPayDecision({ status: "approved", createdBy: "a", actorId: "a", payJournalId: null, payLock: null, payLockAt: null }), "maker");
