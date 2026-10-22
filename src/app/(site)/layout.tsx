@@ -2,6 +2,7 @@ import { SiteHeader } from "@/components/site/header";
 import { SiteFooter } from "@/components/site/footer";
 import { ChatbotWidget } from "@/components/site/chatbot-widget";
 import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -42,6 +43,7 @@ const structuredData = {
 };
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
+  const lang = getLanguageFromCookies("en");
   return (
     <div className="flex min-h-screen flex-col">
       <script
@@ -51,7 +53,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       <SiteHeader />
       <main className="flex-1">{children}</main>
       <SiteFooter />
-      <ChatbotWidget />
+      <ChatbotWidget lang={lang} />
     </div>
   );
 }
