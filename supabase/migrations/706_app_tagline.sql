@@ -10,3 +10,10 @@ values (
   '{"roman":"Wasela Kisan Ka","urdu":"وسیلہ کسان کا","english":"The farmer''s bridge"}'::jsonb
 )
 on conflict (key) do nothing;
+
+-- Purani seed 'Kisan ki Seerhi' ho to sirf wahi badlo. Baad ki owner edit nahi chhedte.
+update public.website_settings
+set value = '{"roman":"Wasela Kisan Ka","urdu":"وسیلہ کسان کا","english":"The farmer''s bridge"}'::jsonb,
+    updated_at = now()
+where key = 'app_tagline'
+  and value->>'roman' = 'Kisan ki Seerhi';
