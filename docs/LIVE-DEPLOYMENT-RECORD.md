@@ -7,6 +7,8 @@ Branch `cursor/careers-apply-modal-i18n-552c` (PR #213). Live `ktskwawkslaznkjja
 - Manual `supabase/manual/job_vacancy_i18n_live_rows.sql` then wrote the two MCO rows only. Base `title` / `description` unchanged. `brand`, `brand_en`, `brand_ur` are null.
 - Checked after write: Mahanbali and 157NB have English, Roman, and Urdu titles. Row count stayed 2.
 - Columns: `title_en`, `title_ur`, `title_roman`, `description_en`, `description_ur`, `description_roman`, plus optional `brand`, `brand_en`, `brand_ur`, `brand_roman`. Empty brand means no public tag. RLS unchanged.
+- Merged to `main` as `f22757b12a9ca6a88d20ae08fbad2428a8dc8237` (PR #213, normal merge). CI on that commit: AgriBridge Build Check and Build AgriBridge cPanel Package both succeeded.
+- cPanel package from that commit: `agribridge-cpanel-release.tar.gz` (191,787,268 bytes). SHA256 `f3761bfb8d9f12a614dc313cf1f50d8e6e92721d19608e951abf5611006d3326`. `.next` BUILD_ID `Jqfn_IvJI8XREv-mwPfs5`. Actions run 39755713629. The archive includes `.next`, `public`, `package.json`, `package-lock.json`, `next.config.js`, `server.js`, and `node_modules`.
 
 ## Pending — 21 October 2026: Bharti offer → structure → barhotri → salary slip (691)
 
