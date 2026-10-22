@@ -53,7 +53,7 @@ export default async function FarmerProfilePage() {
           <p className="text-xs text-surface-400">
             Darja: {PROFILE_STATUS_LABEL[(farmer as any).profile_status] ?? (farmer as any).profile_status}
           </p>
-          <UsernameCard current={(farmer as any).username ?? null} />
+          <UsernameCard />
           <ConfirmProfileCard
             completion={completion}
             confirmedAt={(farmer as any).profile_confirmed_at ?? null}

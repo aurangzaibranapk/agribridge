@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { LogoutButton } from "@/components/layout/logout-button";
 import { t } from "@/lib/i18n/translations";
@@ -180,6 +180,7 @@ export interface AlertRow {
 }
 
 export function VendorDashboardClient({
+  account,
   alerts,
   vendorName,
   awaitingCheck,
@@ -193,6 +194,7 @@ export function VendorDashboardClient({
   payments,
   commissionRows,
 }: {
+  account?: ReactNode;
   alerts: AlertRow[];
   vendorName: string;
   awaitingCheck: number;
@@ -292,6 +294,7 @@ export function VendorDashboardClient({
             </div>
           </div>
         </header>
+        {account}
 
         {/* Nayi khabrein -- sab se upar, hero se bhi pehle.
             Machine rawana hoti hai to khabar yahin milti hai. Pehle wo

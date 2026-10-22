@@ -34,7 +34,7 @@ export default async function LoginPage({ searchParams }: { searchParams?: Recor
   if (process.env.LOGIN_UI !== "v5" && !otpPreview) {
     // Login v6: sliding card (hara panel) ne baayan info panel ki jagah le li.
     return (
-      <main className={`${v5.variable} ${v5display.variable} ${urdu.variable} flex min-h-screen flex-col items-center justify-start bg-[radial-gradient(circle_at_20%_10%,#c8ecd6,transparent_45%),radial-gradient(circle_at_90%_95%,#cfdcf3,transparent_40%),linear-gradient(135deg,#eef7f1,#e2f2e8)] px-3.5 py-5 font-v5 text-[#0d1b2e] antialiased dark:bg-[#0a1324] dark:text-[#eef3f8] md:justify-center md:px-6 md:py-6`}>
+      <main className={`${v5.variable} ${v5display.variable} ${urdu.variable} flex min-h-screen flex-col items-center justify-start bg-[radial-gradient(circle_at_20%_10%,#c8ecd6,transparent_45%),radial-gradient(circle_at_90%_95%,#cfdcf3,transparent_40%),linear-gradient(135deg,#eef7f1,#e2f2e8)] px-3.5 py-5 font-v5 text-[#0d1b2e] antialiased dark:bg-[#0a1324] dark:text-[#eef3f8] md:justify-center md:px-6 md:py-3`}>
         <Suspense fallback={null}><LoginV6 initialLang={lang} /></Suspense>
       </main>
     );
