@@ -4,7 +4,7 @@ import { approvalJourney, approvalTimeline, goalDeadline, goalRemaining, karachi
 import { karachiDate, karachiDaySeries, liveGetScoped, loadGoalTargets, loadMilkList, loadMonthSales, loadOwnAttendance, loadProfileNames, milkLitres, pricedMilkTotal, rupees, shiftLabel, type AdminHome, type GoalTargetRow, type HealthRow, type KhataView, type MilkRow, type OrderRow, type ReadResult } from "../../../../src/lib/mobile/live-read";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { liveAuth, type LiveBag } from "../bits";
-import { BarChart, BarTrack, BrandHeader, Donut, GlassCard, GlassScreen, GoalCard, Kpi, LineChart, Pill, RingMeter, Rise, TankRow, Timeline, WeatherCard, glass, useFace, useWeather } from "../glass";
+import { BarChart, BarTrack, BrandHeader, Donut, GlassCard, GlassScreen, GoalCard, Kpi, KpiGrid, LineChart, Pill, RingMeter, Rise, TankRow, Timeline, WeatherCard, glass, useFace, useWeather } from "../glass";
 
 type Refresh = { refreshing?: boolean; onRefresh?: () => void; onProfile?: () => void; onTab?: (key: string) => void };
 
@@ -209,12 +209,12 @@ export function FarmerGlass({ live, khata, milk, names, focus = "home", footer, 
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Kisan" name={face.name} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+      <KpiGrid>
         <Kpi index={2} label="Wallet balance" value={money(khata.owed, Boolean(khata.note && khata.owed == null))} sub={khata.note || "Khata baqaya"} color="#C8A058" series={payLine} pct={pctChange(weekPay, prevPay)} />
         <Kpi index={3} label="Aaj ka doodh" value={milk.ok ? `${milkLitres(todayRows)} L` : "—"} sub={milk.ok ? "" : milk.message} color="#5B8CFF" series={series} pct={pctChange(milkLitres(todayRows), yesterday ? milkLitres(yesterdayRows) : null)} />
         <Kpi index={4} label="Fat / SNF avg" value={avg(fats) == null && avg(snfs) == null ? "—" : `${avg(fats) ?? "—"} / ${avg(snfs) ?? "—"}`} color="#C4B5FD" series={fats.length ? fats : []} pct={pctChange(avg(fats), avg(yFats))} />
         <Kpi index={5} label="Hafte ki kamai" value={money(weekPay, weekPay == null)} sub={`${week.start} se ${week.end}`} color="#F5B942" series={payLine} pct={pctChange(weekPay, prevPay)} />
-      </View>
+      </KpiGrid>
       <GoalCard
         title="Mahine ka target"
         subtitle={goalSubtitle({
@@ -300,12 +300,12 @@ export function McaGlass({ live, farmers, ...bar }: Refresh & { live?: LiveBag; 
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="MCA" name={face.name} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+      <KpiGrid>
         <Kpi index={2} label="Aaj ki collection" value={milk?.ok ? `${milkLitres(todayRows)} L` : "—"} color="#3DDC97" series={series} pct={pctChange(milkLitres(todayRows), milkLitres(rows.filter((row) => row.entry_date === yesterday)))} />
         <Kpi index={3} label="Kisan count" value={String(farmers.length)} color="#F5B942" series={[]} pct={null} />
         <Kpi index={4} label="Pending entries" value={milk?.ok ? String(pending) : "—"} color="#F5B942" series={[]} pct={null} />
         <Kpi index={5} label="Avg fat" value={avg(fats) == null ? "—" : `${avg(fats)}%`} color="#C4B5FD" series={fats} pct={null} />
-      </View>
+      </KpiGrid>
       <GoalCard
         title="Aaj ka target"
         subtitle={goalSubtitle({
@@ -369,12 +369,12 @@ export function McoGlass({ live, rows, error, names, ...bar }: Refresh & { live?
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="MCO / Chiller" name={face.name} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+      <KpiGrid>
         <Kpi index={2} label="Subah ka doodh" value={rows ? `${milkLitres(subah)} L` : "—"} color="#5B8CFF" series={subahSeries} pct={pctChange(subahSeries[subahSeries.length - 1] ?? null, subahSeries[subahSeries.length - 2] ?? null)} />
         <Kpi index={3} label="Shaam ka doodh" value={rows ? `${milkLitres(shaam)} L` : "—"} color="#C4B5FD" series={shaamSeries} pct={pctChange(shaamSeries[shaamSeries.length - 1] ?? null, shaamSeries[shaamSeries.length - 2] ?? null)} />
         <Kpi index={4} label="Avg fat" value={avg(fats) == null ? "—" : `${avg(fats)}%`} color="#3DDC97" series={fats} pct={null} />
         <Kpi index={5} label="Pending checks" value={rows ? String(pending.length) : "—"} color="#F5B942" series={[]} pct={null} />
-      </View>
+      </KpiGrid>
       <GoalCard
         title="Aaj ka target"
         subtitle={goalSubtitle({
@@ -510,12 +510,12 @@ export function AdminGlass({ live, home, milk, orders, focus = "home", footer, o
       <BrandHeader role="Admin" name={face.name} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
       {home.banner ? <Text style={{ color: glass.gold, marginBottom: 8 }}>{home.banner}</Text> : null}
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+      <KpiGrid>
         <Kpi index={2} label="Total sales" value={home.sales.state === "ok" ? rupees(home.sales.total) : "—"} sub={home.sales.state === "error" ? "Asal bills nahi" : `${home.sales.bills} bill`} color="#C4B5FD" series={days} pct={pctChange(days[days.length - 1] ?? null, days[days.length - 2] ?? null)} />
         <Kpi index={3} label="Milk collection" value={milkToday == null ? "—" : `${Math.round(milkToday)} L`} color="#3DDC97" series={[]} pct={null} />
         <Kpi index={4} label="Grain stock" value="—" sub="Maund stock track nahi hota" color="#F5B942" series={[]} pct={null} />
         <Kpi index={5} label="Active farmers" value={farmers == null ? "—" : farmers >= 200 ? "200+" : String(farmers)} color="#5B8CFF" series={[]} pct={null} />
-      </View>
+      </KpiGrid>
       {salesCard}
       <GlassCard title="Revenue" sub={home.days.length ? "7 din" : "Sale nahi khuli"} index={6}>
         {days.length ? <LineChart values={days} labels={labels} color="#C4B5FD" /> : <Text style={{ color: glass.muted }}>{home.sales.state === "error" ? home.sales.message : "Chart nahi bana."}</Text>}
@@ -599,10 +599,10 @@ export function CustomerGlass({ live, khata, orders, focus = "home", ...bar }: R
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Customer" name={face.name} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+      <KpiGrid>
         <Kpi index={2} label="Mere orders" value={orders.ok ? String(list.length) : "—"} color="#5B8CFF" series={[]} pct={null} />
         <Kpi index={3} label="Baqi balance" value={money(khata.owed, Boolean(khata.note && khata.owed == null))} sub={khata.note || "Khata"} color="#F5B942" series={[]} pct={null} />
-      </View>
+      </KpiGrid>
       <GlassCard title="Mahana kharch" sub="Aakhri orders" index={4}>
         {orders.ok && totals.length ? <LineChart values={totals.slice().reverse()} labels={list.slice().reverse().map((row) => (row.created_at || "").slice(5, 10) || "—")} color="#F5B942" /> : <Text style={{ color: glass.muted }}>{orders.ok ? "Chart ke liye qatarein nahi." : orders.message}</Text>}
       </GlassCard>
@@ -629,12 +629,12 @@ export function DealerGlass({ live, khata, orders, ...bar }: Refresh & { live?: 
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Dealer" name={face.name} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+      <KpiGrid>
         <Kpi index={2} label="Is mahine orders" value={orders.ok ? (dated.length ? String(monthCount) : String(list.length)) : "—"} sub={dated.length ? "Is mahine" : "Aakhri fehrist"} color="#3DDC97" series={byDay} pct={null} />
         <Kpi index={3} label="HQ khata balance" value={money(khata.owed, Boolean(khata.note && khata.owed == null))} sub={khata.note || "HQ khata"} color="#FF6B6B" series={[]} pct={null} />
         <Kpi index={4} label="Stock items" value="—" sub="Stock is login ko alag track nahi" color="#3DDC97" series={[]} pct={null} />
         <Kpi index={5} label="Kam stock" value="—" sub="Hadd se kam maal yahan nahi" color="#F5B942" series={[]} pct={null} />
-      </View>
+      </KpiGrid>
       <GlassCard title="Mahana orders" sub="Aakhri 7 din" index={6}>
         <BarChart values={byDay} labels={days.map(romanWeekday)} color="#5B8CFF" />
       </GlassCard>
@@ -721,12 +721,12 @@ export function StaffGlass({ live, attendance, salary, advances, tasks, tasksNot
       <GlassCard title="Aaj ki duty" index={3}>
         <Text style={{ color: glass.text }}>{attendance.ok ? (monthRows.find((row) => row.attendance_date === today) ? `Check-in ${String(monthRows.find((row) => row.attendance_date === today)?.check_in_at || "").slice(11, 16) || "ho chuka"}` : "Aaj ki hazri abhi nahi") : attendance.message}</Text>
       </GlassCard>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+      <KpiGrid>
         <Kpi index={4} label="Is mahine tankhwah" value={pay == null ? "—" : rupees(pay)} sub={!salary.ok ? salary.message : salary.rows.length === 0 ? "Koi tankhwah line nahi" : ""} color="#5B8CFF" series={[]} pct={null} />
         <Kpi index={5} label="Advance baqi" value={advance == null ? "—" : rupees(advance)} sub={!advances.ok ? advances.message : advances.rows.length === 0 ? "Koi advance nahi" : ""} color="#F5B942" series={[]} pct={null} />
         <Kpi index={6} label="Hazri" value={attendance.ok ? `${present}/${dayNum || "—"}` : "—"} color="#3DDC97" series={[]} pct={null} />
         <Kpi index={7} label="Tasks" value={tasksNote ? "—" : String(taskDone)} sub={tasksNote || "Ginati"} color="#C4B5FD" series={[]} pct={null} />
-      </View>
+      </KpiGrid>
       <GoalCard
         title="Mahine ka target"
         subtitle={goalSubtitle({
@@ -785,12 +785,12 @@ export function VetGlass({ live, health, ...bar }: Refresh & { live?: LiveBag; h
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Vet" name={face.name} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+      <KpiGrid>
         <Kpi index={2} label="Aaj ke visits" value={health ? String(todayVisits.length) : "—"} color="#5B8CFF" series={[]} pct={null} />
         <Kpi index={3} label="Pending cases" value={health ? String(pending.length) : "—"} color="#F5B942" series={[]} pct={null} />
         <Kpi index={4} label="Ilaj mukammal" value={health ? String(visits.filter((row) => !row.next_due).length) : "—"} color="#3DDC97" series={[]} pct={null} />
         <Kpi index={5} label="Kisan ke janwar" value={animals == null ? "—" : String(animals)} sub={animalNote || ""} color="#C4B5FD" series={[]} pct={null} />
-      </View>
+      </KpiGrid>
       <GlassCard title="Aaj ke visits" index={6}>
         {bar.error ? <Text style={{ color: glass.muted }}>{bar.error}</Text> : null}
         {todayVisits.length === 0 ? <Text style={{ color: glass.muted }}>Aaj koi visit nahi.</Text> : null}

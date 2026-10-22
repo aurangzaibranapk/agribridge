@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Animated, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Animated, Pressable, RefreshControl, ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Path, Polyline, Rect, Stop } from "react-native-svg";
 import type { TimelineStep } from "../../../src/lib/mobile/glass-metrics";
 import { ringDashOffset, timelineFinished, timelinePercent } from "../../../src/lib/mobile/glass-metrics";
 import { brandLockup, loadAppMark, taglineWithDefault, type AppLang, type AppMark } from "../../../src/lib/mobile/sub-brand";
 import { liveAuth, type LiveBag } from "./bits";
 import { liveGet, liveGetScoped } from "../../../src/lib/mobile/live-read";
+import { pickPakistan, preferVillage, usablePlace } from "../../../src/lib/mobile/weather-place";
 
 export const glass = {
   bg: "#07140F",
@@ -25,7 +26,7 @@ export function GlassScreen({ children, refreshing, onRefresh }: { children: Rea
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: glass.bg }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 28 }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 28, width: "100%" }}
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing === true} onRefresh={onRefresh} tintColor={glass.up} /> : undefined}
     >
       {children}
@@ -33,7 +34,7 @@ export function GlassScreen({ children, refreshing, onRefresh }: { children: Rea
   );
 }
 
-export function Rise({ index, children }: { index: number; children: ReactNode }) {
+export function Rise({ index, style, children }: { index: number; style?: StyleProp<ViewStyle>; children: ReactNode }) {
   const opacity = useRef(new Animated.Value(0)).current;
   const shift = useRef(new Animated.Value(16)).current;
   useEffect(() => {
@@ -42,7 +43,12 @@ export function Rise({ index, children }: { index: number; children: ReactNode }
       Animated.timing(shift, { toValue: 0, duration: 420, delay: index * 70, useNativeDriver: true }),
     ]).start();
   }, [index, opacity, shift]);
-  return <Animated.View style={{ opacity, transform: [{ translateY: shift }] }}>{children}</Animated.View>;
+  return <Animated.View style={[{ opacity, transform: [{ translateY: shift }] }, style]}>{children}</Animated.View>;
+}
+
+/** Do cards ek line. Width flex item par hai, andar wale view par nahi. */
+export function KpiGrid({ children }: { children: ReactNode }) {
+  return <View style={{ width: "100%", flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>{children}</View>;
 }
 
 const LangContext = createContext<AppLang>("rm");
@@ -141,50 +147,64 @@ export function useFace(live?: LiveBag): { name: string; place: string } {
       const full = rows.ok ? rows.rows[0]?.full_name || "" : "";
       setName(full.trim().split(/\s+/)[0] || "");
     });
-    void liveGetScoped<{ village?: string | null; tehsil?: string | null; district?: string | null }>(auth, `farmers?select=village,tehsil,district&user_id=eq.${id}&limit=1`, fetch).then((rows) => {
+    void liveGetScoped<{ village?: string | null; tehsil?: string | null; district?: string | null }>(auth, `farmers?select=village,tehsil,district&user_id=eq.${id}&limit=1`, fetch).then(async (rows) => {
       const row = rows.ok ? rows.rows[0] : null;
-      setPlace(row?.village || row?.tehsil || row?.district || "");
+      let place = usablePlace(row?.village) || usablePlace(row?.tehsil) || usablePlace(row?.district);
+      if (!place) {
+        const list = await liveGetScoped<{ village?: string | null; tehsil?: string | null; district?: string | null }>(auth, "farmers?select=village,tehsil,district&limit=40", fetch);
+        place = list.ok ? preferVillage(list.rows) : "";
+      }
+      setPlace(place);
     });
   }, [auth?.token, auth?.userId, auth?.url]);
   return { name, place };
 }
 
+let cachedWeather: WeatherView | null = null;
+
+const NO_PLACE: WeatherView = { place: "—", temp: "—", condition: "Mausam", humidity: "—", wind: "—", when: "", note: "Shehar record mein nahi. Mausam nahi dikhaya." };
+
+async function fetchWeather(place: string): Promise<WeatherView | null> {
+  const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(place)}&count=5&language=en&format=json`);
+  const geo = await geoRes.json() as { results?: { latitude: number; longitude: number; name: string; country_code?: string; country?: string }[] };
+  const hit = pickPakistan(geo.results);
+  if (!hit) return null;
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${hit.latitude}&longitude=${hit.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&wind_speed_unit=kmh&timezone=Asia%2FKarachi`);
+  const data = await res.json() as { current?: { temperature_2m?: number; relative_humidity_2m?: number; wind_speed_10m?: number; weather_code?: number } };
+  const current = data.current;
+  if (!current || current.temperature_2m == null) return null;
+  const when = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", weekday: "short", day: "numeric", month: "short" }).format(new Date());
+  return {
+    place: hit.name,
+    temp: `${Math.round(current.temperature_2m)}°C`,
+    condition: WMO[current.weather_code ?? -1] || "Mausam",
+    humidity: current.relative_humidity_2m == null ? "—" : `${Math.round(current.relative_humidity_2m)}%`,
+    wind: current.wind_speed_10m == null ? "—" : `${Math.round(current.wind_speed_10m)} km/h`,
+    when,
+    note: null,
+  };
+}
+
 export function useWeather(place: string): WeatherView | null {
-  const [view, setView] = useState<WeatherView | null>(null);
+  const [view, setView] = useState<WeatherView | null>(cachedWeather);
   useEffect(() => {
     let stop = false;
     void (async () => {
       if (!place.trim()) {
-        if (!stop) setView({ place: "—", temp: "—", condition: "Mausam", humidity: "—", wind: "—", when: "", note: "Shehar record mein nahi. Mausam nahi dikhaya." });
+        if (!stop) setView(cachedWeather ?? NO_PLACE);
         return;
       }
       try {
-        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(place)}&count=1&language=en&format=json`);
-        const geo = await geoRes.json() as { results?: { latitude: number; longitude: number; name: string }[] };
-        const hit = geo.results?.[0];
-        if (!hit) {
-          if (!stop) setView({ place, temp: "—", condition: "Mausam", humidity: "—", wind: "—", when: "", note: "Is shehar ka mausam nahi mila." });
+        const next = await fetchWeather(place);
+        if (stop) return;
+        if (next) {
+          cachedWeather = next;
+          setView(next);
           return;
         }
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${hit.latitude}&longitude=${hit.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&wind_speed_unit=kmh&timezone=Asia%2FKarachi`);
-        const data = await res.json() as { current?: { temperature_2m?: number; relative_humidity_2m?: number; wind_speed_10m?: number; weather_code?: number; time?: string } };
-        const current = data.current;
-        if (!current || current.temperature_2m == null) {
-          if (!stop) setView({ place: hit.name, temp: "—", condition: "Mausam", humidity: "—", wind: "—", when: "", note: "Mausam ka jawab adhoora hai." });
-          return;
-        }
-        const when = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", weekday: "short", day: "numeric", month: "short" }).format(new Date());
-        if (!stop) setView({
-          place: hit.name,
-          temp: `${Math.round(current.temperature_2m)}°C`,
-          condition: WMO[current.weather_code ?? -1] || "Mausam",
-          humidity: current.relative_humidity_2m == null ? "—" : `${Math.round(current.relative_humidity_2m)}%`,
-          wind: current.wind_speed_10m == null ? "—" : `${Math.round(current.wind_speed_10m)} km/h`,
-          when,
-          note: null,
-        });
+        setView(cachedWeather ?? { place, temp: "—", condition: "Mausam", humidity: "—", wind: "—", when: "", note: "Is shehar ka mausam nahi mila." });
       } catch {
-        if (!stop) setView({ place, temp: "—", condition: "Mausam", humidity: "—", wind: "—", when: "", note: "Mausam network par nahi aaya." });
+        if (!stop) setView(cachedWeather ?? { place, temp: "—", condition: "Mausam", humidity: "—", wind: "—", when: "", note: "Mausam network par nahi aaya." });
       }
     })();
     return () => { stop = true; };
@@ -384,8 +404,8 @@ const GLYPH: Record<string, string> = {
 
 export function Kpi({ label, value, sub, color, series, pct, index }: { label: string; value: string; sub?: string; color: string; series: number[]; pct: number | null; index: number }) {
   return (
-    <Rise index={index}>
-      <View style={{ width: "48%", backgroundColor: glass.card, borderRadius: 18, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: glass.line }}>
+    <Rise index={index} style={{ width: "48%", maxWidth: "48%", flexBasis: "48%", flexGrow: 0, flexShrink: 0 }}>
+      <View style={{ width: "100%", backgroundColor: glass.card, borderRadius: 18, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: glass.line }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: color, opacity: 0.95, alignItems: "center", justifyContent: "center", shadowColor: color, shadowOpacity: 0.9, shadowRadius: 10, elevation: 6 }}>
             <Svg width={16} height={16} viewBox="0 0 24 24">
@@ -394,9 +414,9 @@ export function Kpi({ label, value, sub, color, series, pct, index }: { label: s
           </View>
           <Pct value={pct} />
         </View>
-        <Text style={{ color: glass.muted, marginTop: 10, fontSize: 12 }}>{label}</Text>
-        <Text style={{ color: glass.text, fontSize: 22, fontWeight: "800", marginTop: 2 }}>{value}</Text>
-        {sub ? <Text style={{ color: glass.muted, fontSize: 11 }}>{sub}</Text> : null}
+        <Text style={{ color: glass.muted, marginTop: 10, fontSize: 12, lineHeight: 16 }}>{label}</Text>
+        <Text style={{ color: glass.text, fontSize: 20, fontWeight: "800", marginTop: 2, lineHeight: 24 }}>{value}</Text>
+        {sub ? <Text style={{ color: glass.muted, fontSize: 11, lineHeight: 14 }}>{sub}</Text> : null}
         <Spark values={series} color={color} />
       </View>
     </Rise>

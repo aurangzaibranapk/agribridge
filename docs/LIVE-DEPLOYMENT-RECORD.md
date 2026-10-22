@@ -1,3 +1,7 @@
+## Phone KPI grid and weather — 22 October 2026
+
+versionCode 620. KPI card ki chaudai flex item par 48% hai, is liye 2x2 grid rehti hai. Mausam Open-Meteo se: apna gaon, warna TEST kisan ka asal gaon (district "TEST" shehar nahi). Pakistan wali geocode. Aakhri kamiyab reading cache. Live APK nahi badli. 705 aur 706 file only.
+
 ## Phone tagline lockup — 22 October 2026
 
 versionCode 619. English aur Roman: AgriBridge, seedha neeche Kisan ka Wasela. Urdu: ایگری بریج, seedha neeche کسان کا وسیلہ. English gloss nahi. Default app mein hai, 706 baad mein roman/urdu badal sakti hai. Live par 706 nahi. Live APK nahi badli.
