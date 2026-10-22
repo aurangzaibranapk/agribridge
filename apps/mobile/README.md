@@ -48,6 +48,10 @@ Field writes sit in a local outbox and sync with `client_uuid`. The server accep
 
 `signing/keystore.properties.example` has empty passwords. Copy it to `signing/keystore.properties` only on the machine that signs a Play build. Do not commit the keystore. Debug APK uses the debug keystore.
 
+## AgriBridge TEST
+
+`EXPO_PUBLIC_APP_FLAVOR=test` builds a second app, `AgriBridge TEST`, package `pk.alranatraders.agribridge.test`, so it installs beside the live app. An orange bar says `TEST · testing database`. That flavor talks only to `https://hwaiuwxqldxsoukkfefn.supabase.co` and does not call `/api/mobile/v1/*`. The live flavor still refuses the testing host. Workflow **Mobile TEST database APKs** publishes arm64 and armeabi-v7a to prerelease `v0.6.1-beta-testdb` at versionCode 606. It does not replace `v0.6.1-beta-test1`.
+
 ## Sideload test APKs
 
 Phase 2 homes (admin, farmer, customer, staff) read the live project with the signed-in user JWT and existing RLS. They do not wait for `/api/mobile/v1/*`. A denied query stays a message, and an empty finance list is not shown as Rs 0.

@@ -3,7 +3,7 @@
  * Naya portal route zaroori nahi. Khali RLS jawab ko Rs 0 nahi likhte.
  */
 
-import { acceptedSupabaseUrl, clipDetail, failureLine, type FetchLike, type MobileChannel } from "./live-login";
+import { acceptedSupabaseUrl, dataFlavor, clipDetail, failureLine, type DataFlavor, type FetchLike, type MobileChannel } from "./live-login";
 import { jwtExpired, SESSION_EXPIRED, type RefreshFailure, type RefreshSuccess } from "./session-refresh";
 
 export type LiveAuth = {
@@ -11,6 +11,8 @@ export type LiveAuth = {
   anonKey: string;
   token: string;
   channel: MobileChannel;
+  /** Test flavor sirf testing host. Khali ya live flavor sirf live host. */
+  flavor?: DataFlavor;
   /** Test account sirf is_test qatarein parhta hai. Asal admin inhen chhupata hai. */
   testAccount?: boolean;
   /** 401 JWT expired par ek dafa. Naya token, ya dead/offline. */
@@ -88,7 +90,7 @@ export async function liveGet<T>(auth: LiveAuth, path: string, fetchImpl: FetchL
 }
 
 async function liveGetOnce<T>(auth: LiveAuth, token: string, path: string, fetchImpl: FetchLike): Promise<ReadResult<T>> {
-  const base = acceptedSupabaseUrl(auth.url);
+  const base = acceptedSupabaseUrl(auth.url, dataFlavor(auth.flavor));
   if (!base || !auth.anonKey.trim() || !token.trim()) {
     return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Live read is build mein set nahi." }) };
   }
@@ -129,7 +131,7 @@ export async function liveRpc<T>(auth: LiveAuth, name: string, body: Record<stri
 }
 
 async function liveRpcOnce<T>(auth: LiveAuth, token: string, name: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<{ ok: true; data: T } | { ok: false; status: number; message: string; detail?: string }> {
-  const base = acceptedSupabaseUrl(auth.url);
+  const base = acceptedSupabaseUrl(auth.url, dataFlavor(auth.flavor));
   if (!base || !auth.anonKey.trim() || !token.trim()) {
     return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Live read is build mein set nahi." }) };
   }

@@ -4,7 +4,7 @@
  * aur 401 JWT expired par ek dafa refresh phir wahi request.
  */
 
-import { acceptedSupabaseUrl, type FetchLike } from "./live-login";
+import { acceptedSupabaseUrl, dataFlavor, type DataFlavor, type FetchLike } from "./live-login";
 
 export const SESSION_EXPIRED = "Session khatam ho gayi. Dobara login karein.";
 
@@ -44,10 +44,11 @@ export async function refreshSupabaseSession(input: {
   supabaseUrl: string;
   anonKey: string;
   refreshToken: string;
+  flavor?: DataFlavor;
   fetchImpl: FetchLike;
   nowMs?: number;
 }): Promise<RefreshSuccess | RefreshFailure> {
-  const base = acceptedSupabaseUrl(input.supabaseUrl);
+  const base = acceptedSupabaseUrl(input.supabaseUrl, dataFlavor(input.flavor));
   if (!base || !input.anonKey.trim() || !input.refreshToken.trim()) return { ok: false, dead: true };
   let res: { status: number; text: () => Promise<string> };
   try {

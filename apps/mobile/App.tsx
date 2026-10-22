@@ -8,7 +8,7 @@ import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
 import { normalizeChannel, showTesterReport } from "../../src/lib/mobile/channel";
-import { failureLine, signInMobile } from "../../src/lib/mobile/live-login";
+import { dataFlavor, failureLine, signInMobile } from "../../src/lib/mobile/live-login";
 import { readTestAccount, showRolePreview, showRoleSwitch, SWITCH_ROLES, switchRoleLabel } from "../../src/lib/mobile/test-account";
 import { refreshSupabaseSession, SESSION_EXPIRED, singleFlight, type RefreshFailure, type RefreshSuccess } from "../../src/lib/mobile/session-refresh";
 import { ROLE_NAV } from "../../src/lib/mobile/nav";
@@ -26,6 +26,7 @@ const extra = (Constants.expoConfig?.extra ?? {}) as {
   productVersion?: string;
   versionCode?: number;
   appChannel?: string;
+  appFlavor?: string;
   portalUrl?: string;
   supabaseUrl?: string;
   supabaseAnonKey?: string;
@@ -33,6 +34,7 @@ const extra = (Constants.expoConfig?.extra ?? {}) as {
 const VERSION = extra.productVersion || "";
 const VERSION_CODE = extra.versionCode || 0;
 const CHANNEL = normalizeChannel(extra.appChannel);
+const FLAVOR = dataFlavor(extra.appFlavor);
 const PORTAL = (extra.portalUrl || "").replace(/\/$/, "");
 const SUPABASE_URL = extra.supabaseUrl || "";
 const SUPABASE_ANON = extra.supabaseAnonKey || "";
@@ -106,6 +108,7 @@ export default function App() {
       supabaseUrl: SUPABASE_URL,
       anonKey: SUPABASE_ANON,
       refreshToken: current.refresh,
+      flavor: FLAVOR,
       fetchImpl: (url, init) => fetch(url, init),
     });
     if (!outcome.ok) {
@@ -156,7 +159,7 @@ export default function App() {
         setRoute("/unlock");
       }
       setReady(true);
-      if (!PORTAL) return;
+      if (FLAVOR === "test" || !PORTAL) return;
       try {
         const res = await fetch(`${PORTAL}/api/mobile/v1/support`);
         const body = await res.json();
@@ -187,6 +190,7 @@ export default function App() {
       supabaseUrl: SUPABASE_URL,
       supabaseAnonKey: SUPABASE_ANON,
       channel: CHANNEL,
+      flavor: FLAVOR,
       fetchImpl: (url, init) => fetch(url, init),
     });
     if (!result.ok) {
@@ -200,6 +204,7 @@ export default function App() {
       anonKey: SUPABASE_ANON,
       token: body.access_token,
       channel: CHANNEL,
+      flavor: FLAVOR,
     }, body.user_id, (url, init) => fetch(url, init));
     setToken(body.access_token);
     setRole(body.role);
@@ -281,7 +286,7 @@ export default function App() {
   }, [stage, token]);
 
   async function sync(access = token) {
-    if (!access || !PORTAL) return;
+    if (!access || FLAVOR === "test" || !PORTAL) return;
     const plan = flushPlan(queue, net === "offline" ? "offline" : "online");
     try {
       const res = await fetch(`${PORTAL}/api/mobile/v1/sync`, {
@@ -323,7 +328,7 @@ export default function App() {
       channel: CHANNEL,
     });
     const payload = { text: reportText, context: ctx, photo_base64: shot, voice_base64: voice };
-    if (!token || net !== "online") {
+    if (!token || net !== "online" || FLAVOR === "test") {
       onEnqueue({ kind: "feedback", payload });
       setReportOpen(false);
       setReportText("");
@@ -379,9 +384,14 @@ export default function App() {
   return (
     <SafeAreaView style={styles.root}>
       <StatusBar style="light" />
+      {FLAVOR === "test" ? (
+        <View style={styles.flavorBar}>
+          <Text style={styles.flavorText}>TEST · testing database</Text>
+        </View>
+      ) : null}
       {stage !== "app" ? (
         <ScrollView contentContainerStyle={{ padding: 20 }}>
-          <Text style={styles.brand}>AgriBridge</Text>
+          <Text style={styles.brand}>{FLAVOR === "test" ? "AgriBridge TEST" : "AgriBridge"}</Text>
           <Text style={styles.sub}>Version {VERSION || "—"}{VERSION_CODE ? ` · ${VERSION_CODE}` : ""} · {CHANNEL}</Text>
           {stage === "login" ? (
             <View>
@@ -441,7 +451,7 @@ export default function App() {
                 </Pressable>
               </View>
             ) : null}
-            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} readOnly={isTest || previewing} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, testAccount: isTest, refreshSession }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
+            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} readOnly={isTest || previewing} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, flavor: FLAVOR, testAccount: isTest, refreshSession }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
           </View>
           {nav ? <Tabs tabs={nav.tabs} current={tab} onChange={(key) => { setTab(key); setRoute(`/${appRole}/${key}`); }} /> : null}
           {tab === "more" ? (
@@ -522,6 +532,7 @@ export default function App() {
           chat={data?.support?.chat ?? null}
           whatsapp={whatsapp}
           channel={CHANNEL}
+          flavor={FLAVOR}
           onClose={() => setSupportOpen(false)}
         />
       </Modal>
@@ -529,11 +540,11 @@ export default function App() {
   );
 }
 
-function SupportSheet({ portal, token, chat, whatsapp, channel, onClose }: { portal: string; token: string | null; chat: string | null; whatsapp: string | null; channel: ReturnType<typeof normalizeChannel>; onClose: () => void }) {
+function SupportSheet({ portal, token, chat, whatsapp, channel, flavor, onClose }: { portal: string; token: string | null; chat: string | null; whatsapp: string | null; channel: ReturnType<typeof normalizeChannel>; flavor: ReturnType<typeof dataFlavor>; onClose: () => void }) {
   const [text, setText] = useState("");
   const [log, setLog] = useState<string[]>([]);
   async function ask() {
-    if (!token || !chat || !portal) return;
+    if (flavor === "test" || !token || !chat || !portal) return;
     setLog((prev) => [...prev, `Aap: ${text}`]);
     const message = text;
     setText("");
@@ -566,7 +577,7 @@ function SupportSheet({ portal, token, chat, whatsapp, channel, onClose }: { por
             <TextInput value={text} onChangeText={setText} placeholder="Sawal" style={styles.input} />
             <Btn label="Bhejein" onPress={() => void ask()} />
           </View>
-        ) : <Text style={styles.help}>Is account par chat login ke baad khulta hai.</Text>}
+        ) : <Text style={styles.help}>{flavor === "test" ? "TEST build portal chat nahi kholta. Login seedha testing database par hai." : "Is account par chat login ke baad khulta hai."}</Text>}
         {whatsapp ? <Text style={styles.link} onPress={() => void Linking.openURL(whatsapp)}>WhatsApp kholen</Text> : <Text style={styles.help}>WhatsApp number settings mein nahi.</Text>}
       </ScrollView>
     </SafeAreaView>
@@ -584,6 +595,8 @@ const styles = StyleSheet.create({
   fab: { position: "absolute", right: 16, bottom: 72, backgroundColor: colors.greenDark, borderRadius: 22, paddingHorizontal: 14, paddingVertical: 10 },
   fabText: { color: "#fff", fontWeight: "700" },
   perf: { textAlign: "center", color: colors.muted, fontSize: 11, paddingBottom: 4 },
+  flavorBar: { backgroundColor: "#C2410C", paddingVertical: 8, paddingHorizontal: 16 },
+  flavorText: { color: "#fff", fontWeight: "800", textAlign: "center" },
   testBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#F4E4C4" },
   previewBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#E7F2E4" },
   previewText: { flex: 1, color: colors.greenDark, fontWeight: "800" },

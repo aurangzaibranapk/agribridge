@@ -10,6 +10,14 @@
 import { appRoleFor, type AppRole } from "./roles";
 
 export const LIVE_SUPABASE_URL = "https://ktskwawkslaznkjjacni.supabase.co";
+export const TEST_SUPABASE_URL = "https://hwaiuwxqldxsoukkfefn.supabase.co";
+
+export type DataFlavor = "live" | "test";
+
+/** Sirf exact "test". Baqi sab live, taake ghalat env live ko testing na bana de. */
+export function dataFlavor(raw: string | null | undefined): DataFlavor {
+  return raw === "test" ? "test" : "live";
+}
 
 export const LOGIN_TEXT: Record<string, string> = {
   e_bad: "ID ya password ghalat hai.",
@@ -54,10 +62,11 @@ export function isEmailIdentifier(raw: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw.trim());
 }
 
-/** Sirf live project. Testing ya koi aur host app se call nahi hota. */
-export function acceptedSupabaseUrl(raw: string | null | undefined): string | null {
+/** Live flavor sirf live host. Test flavor sirf testing host. Doosra host null. */
+export function acceptedSupabaseUrl(raw: string | null | undefined, flavor: DataFlavor = "live"): string | null {
   const url = String(raw ?? "").trim().replace(/\/$/, "");
-  return url === LIVE_SUPABASE_URL ? url : null;
+  const allowed = flavor === "test" ? TEST_SUPABASE_URL : LIVE_SUPABASE_URL;
+  return url === allowed ? url : null;
 }
 
 export function clipDetail(raw: string, secrets: string[] = []): string {
@@ -302,6 +311,7 @@ export async function signInMobile(input: {
   supabaseUrl: string;
   supabaseAnonKey: string;
   channel: MobileChannel;
+  flavor?: DataFlavor;
   fetchImpl: FetchLike;
 }): Promise<SignInResult> {
   const identifier = input.identifier.trim();
@@ -309,7 +319,8 @@ export async function signInMobile(input: {
   const secrets = [password, input.supabaseAnonKey].filter((item) => item.length >= 4);
   const portal = input.portalUrl.replace(/\/$/, "");
   const email = isEmailIdentifier(identifier);
-  const supabase = acceptedSupabaseUrl(input.supabaseUrl);
+  const flavor = dataFlavor(input.flavor);
+  const supabase = acceptedSupabaseUrl(input.supabaseUrl, flavor);
   const anon = input.supabaseAnonKey.trim();
 
   if (!identifier || !password) {
@@ -319,7 +330,9 @@ export async function signInMobile(input: {
   let portalNote = "";
   let portalThrew = false;
 
-  if (portal) {
+  if (flavor === "test") {
+    portalNote = failureLine({ channel: input.channel, fallback: "TEST build portal ko nahi poochti.", secrets });
+  } else if (portal) {
     try {
       const res = await input.fetchImpl(`${portal}/api/mobile/v1/session`, {
         method: "POST",
@@ -379,9 +392,10 @@ export async function signInMobile(input: {
 
   let why = portalNote;
   if (!supabase) {
+    const wrongHost = flavor === "test" ? "Supabase URL testing project nahi hai." : "Supabase URL live project nahi hai.";
     why = failureLine({
       channel: input.channel,
-      fallback: input.supabaseUrl.trim() ? "Supabase URL live project nahi hai." : "Supabase URL build mein nahi.",
+      fallback: input.supabaseUrl.trim() ? wrongHost : "Supabase URL build mein nahi.",
       detail: portalNote,
       secrets,
     });

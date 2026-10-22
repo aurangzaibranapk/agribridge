@@ -16,7 +16,7 @@ import { fatActorError, validateOutbox } from "../src/lib/mobile/outbox";
 import { pinLock, pinProblem, verifyPin } from "../src/lib/mobile/pin";
 import { supportChatPath, supportWhatsapp } from "../src/lib/mobile/support";
 import { reportContext, reportDescription } from "../src/lib/mobile/report";
-import { acceptedSupabaseUrl, failureLine, LIVE_SUPABASE_URL, showsHttpDetail, signInMobile, type FetchLike } from "../src/lib/mobile/live-login";
+import { acceptedSupabaseUrl, dataFlavor, failureLine, LIVE_SUPABASE_URL, showsHttpDetail, signInMobile, TEST_SUPABASE_URL, type FetchLike } from "../src/lib/mobile/live-login";
 import { cashPosition, columnMissing, karachiDaySeries, liveGet, milkByShift, readError, salesByDay, salesOnDay, stockAlerts, withScope } from "../src/lib/mobile/live-read";
 import { jwtExpired, refreshDue, refreshSupabaseSession, SESSION_EXPIRED, singleFlight } from "../src/lib/mobile/session-refresh";
 import { showRolePreview, showRoleSwitch, SWITCH_ROLES, TEST_LOGIN_EMAIL } from "../src/lib/mobile/test-account";
@@ -39,6 +39,15 @@ assert.throws(() => buildExpoConfig({ AGRIBRIDGE_VERSION_CODE: "601" }));
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_SUPABASE_URL: `${LIVE_SUPABASE_URL}/` }).expo.extra.supabaseUrl, `${LIVE_SUPABASE_URL}/`);
 assert.ok(versionCodeFor(AGRIBRIDGE_OS_VERSION) > 1);
 assert.equal(buildExpoConfig({}).expo.android.package, "pk.alranatraders.agribridge");
+assert.equal(buildExpoConfig({}).expo.name, "AgriBridge");
+assert.equal(buildExpoConfig({}).expo.extra.appFlavor, "live");
+assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "testing" }).expo.extra.appFlavor, "live");
+assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.name, "AgriBridge TEST");
+assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.slug, "agribridge-test");
+assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.package, "pk.alranatraders.agribridge.test");
+assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.appFlavor, "test");
+assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.android.versionCode, 606);
+assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.version, AGRIBRIDGE_OS_VERSION);
 
 assert.equal(showTesterReport("debug"), true);
 assert.equal(showTesterReport("internal"), true);
@@ -178,6 +187,25 @@ assert.match(sideloadWorkflow, /https:\/\/ktskwawkslaznkjjacni\.supabase\.co/);
 assert.match(sideloadWorkflow, /--clobber/);
 assert.match(sideloadWorkflow, /hwaiuwxqldxsoukkfefn/);
 assert.doesNotMatch(sideloadWorkflow, /eyJ/);
+assert.match(sideloadWorkflow, /github.event_name == 'workflow_dispatch'/);
+const testSideload = readFileSync(".github/workflows/mobile-sideload-test.yml", "utf8");
+assert.match(testSideload, /EXPO_PUBLIC_APP_FLAVOR: test/);
+assert.match(testSideload, /APP_CHANNEL: internal/);
+assert.match(testSideload, /EXPO_PUBLIC_SUPABASE_URL: https:\/\/hwaiuwxqldxsoukkfefn\.supabase\.co/);
+assert.match(testSideload, /AGRIBRIDGE_VERSION_CODE: "606"/);
+assert.match(testSideload, /pk\.alranatraders\.agribridge\.test/);
+assert.match(testSideload, /v0\.6\.1-beta-testdb/);
+assert.match(testSideload, /ktskwawkslaznkjjacni/);
+assert.match(testSideload, /--clobber/);
+assert.doesNotMatch(testSideload, /release upload "\$tag"[\s\S]*v0\.6\.1-beta-test1/);
+assert.match(appSource, /TEST · testing database/);
+assert.match(appSource, /flavor: FLAVOR/);
+const anonJwt = testSideload.match(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/);
+assert.ok(anonJwt);
+const anonPayload = JSON.parse(Buffer.from(anonJwt[0].split(".")[1], "base64url").toString()) as { ref?: string; role?: string };
+assert.equal(anonPayload.ref, "hwaiuwxqldxsoukkfefn");
+assert.equal(anonPayload.role, "anon");
+assert.doesNotMatch(testSideload, /service_role/);
 assert.match(readFileSync("apps/mobile/scripts/verify-sideload-apk.sh", "utf8"), /testOnly/);
 assert.match(readFileSync("apps/mobile/scripts/verify-sideload-apk.sh", "utf8"), /versionCode='\$\{code\}'/);
 assert.match(appSource, /showTesterReport\(CHANNEL\)/);
@@ -226,6 +254,8 @@ assert.match(seed699, /Password SQL se mat likho/);
 assert.match(seed699, /TEST Farmer/);
 assert.match(seed699, /TEST Customer/);
 assert.match(seed699, /TEST Staff/);
+assert.match(seed699, /Target: testing project hwaiuwxqldxsoukkfefn/);
+assert.doesNotMatch(seed699, /kabhi nahi/);
 assert.doesNotMatch(seed699, /insert into auth\.users/i);
 assert.doesNotMatch(seed699, /encrypted_password|crypt\(/i);
 assert.match(readFileSync("supabase/migrations/699_app_test_account.rollback.sql", "utf8"), /drop column if exists is_test_account/);
@@ -260,7 +290,13 @@ assert.match(readError(401, '{"code":"PGRST303","message":"JWT expired"}', "debu
 assert.match(readError(403, "permission denied", "production"), /ijazat/);
 assert.doesNotMatch(readError(403, "permission denied", "production"), /HTTP/);
 assert.equal(acceptedSupabaseUrl(`${LIVE_SUPABASE_URL}/`), LIVE_SUPABASE_URL);
-assert.equal(acceptedSupabaseUrl("https://hwaiuwxqldxsoukkfefn.supabase.co"), null);
+assert.equal(acceptedSupabaseUrl(TEST_SUPABASE_URL), null);
+assert.equal(acceptedSupabaseUrl(TEST_SUPABASE_URL, "test"), TEST_SUPABASE_URL);
+assert.equal(acceptedSupabaseUrl(`${TEST_SUPABASE_URL}/`, "test"), TEST_SUPABASE_URL);
+assert.equal(acceptedSupabaseUrl(LIVE_SUPABASE_URL, "test"), null);
+assert.equal(dataFlavor("test"), "test");
+assert.equal(dataFlavor("live"), "live");
+assert.equal(dataFlavor(undefined), "live");
 assert.equal(failureLine({ channel: "production", fallback: "Network nahi mila.", status: 404, detail: "<html>404</html>" }), "Network nahi mila.");
 assert.equal(failureLine({ channel: "internal", fallback: "Network nahi mila.", status: 404, detail: "<html>This page could not be found</html>" }), "Network nahi mila.");
 assert.match(failureLine({ channel: "debug", fallback: "Network nahi mila.", status: 404, detail: "<html>This page could not be found</html>" }), /HTTP 404/);
@@ -508,6 +544,57 @@ void (async () => {
     assert.equal(kicked.message, SESSION_EXPIRED);
     assert.doesNotMatch(kicked.message, /HTTP|PGRST|JWT|\{/);
   }
+
+  const testFlavorLogin = scripted([
+    () => ({ status: 200, body: JSON.stringify({ access_token: "t", refresh_token: "r", expires_in: 3600, user: { id: "test-user" } }) }),
+    () => ({ status: 200, body: JSON.stringify([{ role: "admin", is_active: true }]) }),
+    () => ({ status: 200, body: JSON.stringify([]) }),
+  ]);
+  const testFlavor = await signInMobile({
+    identifier: "app-test@alranatraders.pk",
+    password: "secret-pass-99",
+    portalUrl: PORTAL,
+    supabaseUrl: TEST_SUPABASE_URL,
+    supabaseAnonKey: ANON,
+    channel: "internal",
+    flavor: "test",
+    fetchImpl: testFlavorLogin.fetchImpl,
+  });
+  assert.equal(testFlavor.ok, true);
+  assert.equal(testFlavorLogin.calls.length, 3);
+  assert.doesNotMatch(testFlavorLogin.calls.join("\n"), /\/api\/mobile|ktskwawkslaznkjjacni/);
+  assert.match(testFlavorLogin.calls[0] ?? "", /hwaiuwxqldxsoukkfefn\.supabase\.co\/auth\/v1\/token\?grant_type=password$/);
+  const testFlavorWrongHost = await signInMobile({
+    identifier: "app-test@alranatraders.pk",
+    password: "secret-pass-99",
+    portalUrl: PORTAL,
+    supabaseUrl: LIVE_SUPABASE_URL,
+    supabaseAnonKey: ANON,
+    channel: "internal",
+    flavor: "test",
+    fetchImpl: async () => { throw new Error("must not call"); },
+  });
+  assert.equal(testFlavorWrongHost.ok, false);
+  if (!testFlavorWrongHost.ok) assert.match(testFlavorWrongHost.message, /testing project nahi/);
+  const testRead = await liveGet({
+    url: TEST_SUPABASE_URL,
+    anonKey: ANON,
+    token: "access",
+    channel: "internal",
+    flavor: "test",
+  }, "profiles?select=id", async (url) => {
+    assert.match(url, /hwaiuwxqldxsoukkfefn\.supabase\.co\/rest\/v1\/profiles/);
+    assert.doesNotMatch(url, /ktskwawkslaznkjjacni/);
+    return { status: 200, text: async () => "[]" };
+  });
+  assert.equal(testRead.ok, true);
+  const liveReadRefusesTesting = await liveGet({
+    url: TEST_SUPABASE_URL,
+    anonKey: ANON,
+    token: "access",
+    channel: "internal",
+  }, "profiles?select=id", async () => { throw new Error("must not call"); });
+  assert.equal(liveReadRefusesTesting.ok, false);
 
   const started = performance.now();
   await import("../src/lib/mobile/nav");

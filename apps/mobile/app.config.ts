@@ -11,18 +11,19 @@ function normalizeChannel(raw: unknown): "debug" | "internal" | "production" {
 export function buildExpoConfig(env: NodeJS.ProcessEnv = process.env) {
   const { version, versionCode } = loadPortalVersion(env);
   const appChannel = normalizeChannel(env.APP_CHANNEL);
+  const testFlavor = env.EXPO_PUBLIC_APP_FLAVOR === "test";
   return {
     expo: {
-      name: "AgriBridge",
-      slug: "agribridge",
+      name: testFlavor ? "AgriBridge TEST" : "AgriBridge",
+      slug: testFlavor ? "agribridge-test" : "agribridge",
       version,
       orientation: "portrait",
       userInterfaceStyle: "light",
-      backgroundColor: "#F3F6F1",
+      backgroundColor: testFlavor ? "#FFF7ED" : "#F3F6F1",
       android: {
-        package: "pk.alranatraders.agribridge",
+        package: testFlavor ? "pk.alranatraders.agribridge.test" : "pk.alranatraders.agribridge",
         versionCode,
-        backgroundColor: "#186838",
+        backgroundColor: testFlavor ? "#C2410C" : "#186838",
         permissions: [
           "ACCESS_COARSE_LOCATION",
           "ACCESS_FINE_LOCATION",
@@ -36,6 +37,7 @@ export function buildExpoConfig(env: NodeJS.ProcessEnv = process.env) {
         productVersion: version,
         versionCode,
         appChannel,
+        appFlavor: testFlavor ? "test" : "live",
         portalUrl: env.EXPO_PUBLIC_PORTAL_URL ?? "",
         supabaseUrl: env.EXPO_PUBLIC_SUPABASE_URL ?? "",
         supabaseAnonKey: env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "",

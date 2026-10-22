@@ -1,8 +1,8 @@
 -- TEST app account ke records. Migration 699 ke BAAD chalao.
 -- Auth user ye script NAHI banati aur password NAHI likhti.
 -- Dobara chalana safe hai: wahi TEST email / TEST farmer dobara nahi banta.
--- Live par tab, jab backup ho aur owner manzoor kare.
--- Testing project hwaiuwxqldxsoukkfefn par kabhi nahi.
+-- Target: testing project hwaiuwxqldxsoukkfefn.
+-- Live par mat chalao jab tak owner alag se na kahe.
 
 -- 1) Dashboard → Authentication → Add user
 --    Email: app-test@alranatraders.pk

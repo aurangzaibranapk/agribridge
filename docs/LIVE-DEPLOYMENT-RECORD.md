@@ -1,10 +1,10 @@
-## Phone 605 — 22 October 2026 — NO MIGRATION
+## Phone TEST flavor — 22 October 2026 — NO SQL FROM THIS COMMIT
 
-App-only. Live aur Testing par koi SQL nahi. versionCode 605 session refresh aur admin `Role dekho` hai. 699 abhi bhi file only, neeche.
+Owner ka faisla: mobile testing testing project `hwaiuwxqldxsoukkfefn` par. Alag APK `AgriBridge TEST`, package `pk.alranatraders.agribridge.test`, tag `v0.6.1-beta-testdb`, versionCode 606. Live APK tag `v0.6.1-beta-test1` is commit se replace nahi hoti. Is commit ne testing ya live par koi SQL nahi chalayi. 699 aur seed owner testing par khud laga rahe hain. Live database par 699 tab tak nahi jab tak owner alag se na kahein.
 
-## Pending — 22 October 2026: App test account (699) — FILE ONLY
+## Pending — 22 October 2026: App test account (699)
 
-Branch `cursor/mobile-phase1-4b80`. Migration **699 not applied**. Live aur Testing dono par nahi chali. Auth user bhi nahi bana. `hwaiuwxqldxsoukkfefn` ko haath nahi lagana.
+Branch `cursor/mobile-phase1-4b80`. Is agent ne migration apply nahi ki. Auth user `app-test@alranatraders.pk` owner ne testing par bana liya hai. 699 aur seed owner testing par alag se laga rahe hain. Live par 699 nahi.
 
 - `supabase/migrations/699_app_test_account.sql` — `profiles.is_test_account`, `is_test` columns, `app_test_accounts` / `app_test_links`, sirf SELECT policies. Koi likhai policy nahi.
 - `scripts/seed-app-test-account.sql` — tab chale jab Auth mein `app-test@alranatraders.pk` ban chuka ho. Password SQL mein nahi.
