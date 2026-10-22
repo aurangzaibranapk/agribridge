@@ -3,7 +3,7 @@ import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react
 import { settingsOrError } from "../../../../src/lib/mobile/pricing";
 import { priceFromSettings } from "../../../../src/lib/mobile/pricing";
 import type { MilkSettings } from "../../../../src/lib/dairy/rules";
-import { karachiDaySeries, loadCatalog, loadHealth, loadKhata, loadMilkList, loadMilkSettings, loadOrders, loadProfileNames, loadVaccines, pricedMilkTotal, rupees, salesByDay, shiftLabel, type CatalogRow, type HealthRow, type KhataView, type MilkRow, type OrderRow, type ReadResult, type VaccineRow } from "../../../../src/lib/mobile/live-read";
+import { karachiDaySeries, loadCatalog, loadHealth, loadKhata, loadMilkList, loadMilkSettings, loadMyFarmerId, loadOrders, loadProfileNames, loadVaccines, pricedMilkTotal, rupees, salesByDay, shiftLabel, type CatalogRow, type HealthRow, type KhataView, type MilkRow, type OrderRow, type ReadResult, type VaccineRow } from "../../../../src/lib/mobile/live-read";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { Empty, SaleChart, Section, liveAuth, type LiveBag } from "../bits";
 import { FarmerGlass } from "./glass-homes";
@@ -55,9 +55,10 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
 
   const load = useCallback(async () => {
     if (!auth) return;
+    const farmerId = auth.testAccount ? await loadMyFarmerId(auth, fetch) : undefined;
     const [nextKhata, nextMilk, nextOrders, nextShop, nextHealth, nextVaccines, nextSettings] = await Promise.all([
       loadKhata(auth, fetch),
-      loadMilkList(auth, fetch),
+      loadMilkList(auth, fetch, 80, auth.testAccount ? farmerId ?? null : undefined),
       loadOrders(auth, fetch),
       loadCatalog(auth, fetch),
       loadHealth(auth, fetch),
@@ -75,7 +76,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
     if (nextMilk.ok) {
       setNames(await loadProfileNames(auth, nextMilk.rows.map((row) => row.mca_profile_id || ""), fetch));
     }
-  }, [auth?.token, auth?.url, auth?.testAccount, auth?.flavor]);
+  }, [auth?.token, auth?.url, auth?.userId, auth?.testAccount, auth?.flavor]);
 
   useEffect(() => { void load(); }, [load]);
   if (!auth) return <ScrollView style={{ padding: 16 }}><Section title="Kisan"><Empty title="Login chahiye" body="Wallet aur doodh testing account se aate hain. Is build mein Supabase key set nahi." /></Section></ScrollView>;

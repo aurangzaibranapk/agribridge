@@ -1,3 +1,7 @@
+## Phone homes read TEST data — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 611, tag `v0.6.1-beta-testdb`. Home cards TEST qatarein parhti hain: bills, stock, cash, tankhwah, activity, admin ki TEST manzooriyan. Kisan sirf apna doodh. Migration **703 not applied** by this agent. Owner testing par: `supabase/migrations/703_app_test_read_policies.sql`. Live par 703 nahi. Seed ka mass `is_test = true` is file mein nahi. Live APK nahi badli.
+
 ## Phone homes — 22 October 2026 — NO NEW SQL
 
 versionCode 610, tag `v0.6.1-beta-testdb`. Wasela Eco Mahabali dark glass homes for 8 roles. Live tracking card: Customer order (Orders tab), Kisan doodh (Wallet tab), Admin manzoori (Approve tab). Numbers database se. Koi nayi migration nahi. Live APK nahi badli.

@@ -497,35 +497,25 @@ export async function loadAdminHome(auth: LiveAuth, fetchImpl: FetchLike, now = 
   const since = encodeURIComponent(karachiStartIso(days[0]));
   const test = auth.testAccount === true;
   const banner = test
-    ? "TEST account. Sirf TEST qatarein. Asal cash, bank aur bills nahi. Doodh ki tasdeeq TEST rows par hai."
+    ? "TEST account. Sirf is_test qatarein. Asal (is_test false) bills, cash aur manzooriyan nahi."
     : null;
+  const salesPath = `pos_sales?select=total_amount,created_at,status,payment_mode&created_at=gte.${since}&order=created_at.desc&limit=${SALES_LIMIT}`;
+  const accountPath = "finance_accounts?select=account_type,current_balance,is_active&is_active=eq.true&limit=100";
+  const inventoryPath = `inventory?select=product_id,quantity_on_hand&limit=${STOCK_LIMIT}`;
+  const itemPath = `pos_sale_items?select=subtotal,product_id,created_at&created_at=gte.${since}&limit=${ITEM_LIMIT}`;
+  const activityPath = "activity_logs?select=action,created_at&order=created_at.desc&limit=8";
   const [sales, accounts, milk, route, products, inventory, categories, items, pending, activity] = await Promise.all([
-    test
-      ? Promise.resolve({ ok: false as const, status: 0, message: "TEST account ko asal bills nahi dikhaye jaate." })
-      : liveGet<SaleRow>(auth, `pos_sales?select=total_amount,created_at,status,payment_mode&created_at=gte.${since}&order=created_at.desc&limit=${SALES_LIMIT}`, fetchImpl),
-    test
-      ? Promise.resolve({ ok: true as const, rows: [] as AccountRow[] })
-      : liveGet<AccountRow>(auth, "finance_accounts?select=account_type,current_balance,is_active&is_active=eq.true&limit=100", fetchImpl),
+    test ? liveGetScoped<SaleRow>(auth, salesPath, fetchImpl) : liveGet<SaleRow>(auth, salesPath, fetchImpl),
+    test ? liveGetScoped<AccountRow>(auth, accountPath, fetchImpl) : liveGet<AccountRow>(auth, accountPath, fetchImpl),
     liveGetScoped<MilkRow>(auth, `milk_entries?select=shift,quantity_liters&entry_date=eq.${today}&limit=500`, fetchImpl),
     liveGetScoped<MilkRow>(auth, `milk_route_collections?select=shift,field_collected_volume&collection_date=eq.${today}&limit=200`, fetchImpl),
-    test
-      ? Promise.resolve({ ok: false as const, status: 0, message: "TEST stock alag nahi banaya, taake dukan ki fehrist na badle." })
-      : liveGet<ProductRow>(auth, "products?select=id,name,category_id,min_stock_threshold,selling_price,unit,is_available&is_deleted=eq.false&limit=400", fetchImpl),
-    test
-      ? Promise.resolve({ ok: false as const, status: 0, message: "TEST stock alag nahi banaya, taake dukan ki fehrist na badle." })
-      : liveGet<InventoryRow>(auth, `inventory?select=product_id,quantity_on_hand&limit=${STOCK_LIMIT}`, fetchImpl),
-    test
-      ? Promise.resolve({ ok: true as const, rows: [] as CategoryRow[] })
-      : liveGet<CategoryRow>(auth, "categories?select=id,name&limit=200", fetchImpl),
-    test
-      ? Promise.resolve({ ok: true as const, rows: [] as ItemRow[] })
-      : liveGet<ItemRow>(auth, `pos_sale_items?select=subtotal,product_id,created_at&created_at=gte.${since}&limit=${ITEM_LIMIT}`, fetchImpl),
-    test
-      ? Promise.resolve({ ok: false as const, status: 0, message: "TEST account ko asal manzooriyan nahi dikhti." })
-      : liveRpc<PendingRow[] | null>(auth, "fn_admin_pending_counts", {}, fetchImpl),
-    test
-      ? Promise.resolve({ ok: false as const, status: 0, message: "TEST account ko asal activity nahi dikhti." })
-      : liveGet<ActivityRow>(auth, "activity_logs?select=action,created_at&order=created_at.desc&limit=8", fetchImpl),
+    liveGet<ProductRow>(auth, "products?select=id,name,category_id,min_stock_threshold,selling_price,unit,is_available&is_deleted=eq.false&limit=400", fetchImpl),
+    test ? liveGetScoped<InventoryRow>(auth, inventoryPath, fetchImpl) : liveGet<InventoryRow>(auth, inventoryPath, fetchImpl),
+    liveGet<CategoryRow>(auth, "categories?select=id,name&limit=200", fetchImpl),
+    // Items have no is_test column. Test policy is the parent sale. Do not add is_test=eq.
+    liveGet<ItemRow>(auth, itemPath, fetchImpl),
+    test ? loadTestPending(auth, fetchImpl) : liveRpc<PendingRow[] | null>(auth, "fn_admin_pending_counts", {}, fetchImpl),
+    test ? liveGetScoped<ActivityRow>(auth, activityPath, fetchImpl) : liveGet<ActivityRow>(auth, activityPath, fetchImpl),
   ]);
 
   const todaySales = sales.ok ? salesOnDay(sales.rows, today) : null;
@@ -570,7 +560,7 @@ export type PartyRow = { id?: string; full_name?: string | null; name?: string |
 export type PurchaseRow = { purchase_number?: string | null; purchase_date?: string | null; total_amount?: number | string | null; status?: string | null; supplier_bill_no?: string | null };
 export type AttendanceRow = { attendance_date?: string | null; status?: string | null; check_in_at?: string | null; profile_id?: string | null };
 export type ProfileRow = { id?: string; full_name?: string | null };
-export type OrderRow = { id?: string; order_number?: string | null; status?: string | null; grand_total?: number | string | null; created_at?: string | null; requested_by?: string | null };
+export type OrderRow = { id?: string; order_number?: string | null; status?: string | null; grand_total?: number | string | null; created_at?: string | null; requested_by?: string | null; order_to_type?: string | null };
 export type KhataLine = { entry_date?: string | null; tafseel?: string | null; udhaar?: number | string | null; adaigi?: number | string | null; baqaya?: number | string | null; is_opening?: boolean | null; category?: string | null };
 export type SalaryRow = { net_salary?: number | string | null; status?: string | null; pay_month?: number | null; pay_year?: number | null };
 export type AdvanceRow = { amount?: number | string | null; status?: string | null; created_at?: string | null };
@@ -592,9 +582,59 @@ export async function searchParties(auth: LiveAuth, query: string, fetchImpl: Fe
 
 const MILK_LIST_SELECT = "id,entry_date,shift,quantity_liters,fat_percentage,snf_percentage,lr,rate_per_liter,total_amount,route_name,chiller_name,status,mca_profile_id,farmer_id,created_by,collected_at,fat_at,verified_at";
 
-export async function loadMilkList(auth: LiveAuth, fetchImpl: FetchLike, limit = 40): Promise<ReadResult<MilkRow>> {
+/** Logged-in kisan. Pehle farmers.user_id, phir app_test_links role=farmer. Id hardcode nahi. */
+export async function loadMyFarmerId(auth: LiveAuth, fetchImpl: FetchLike): Promise<string | null> {
+  const uid = auth.userId?.trim();
+  if (!uid) return null;
+  const id = encodeURIComponent(uid);
+  const own = await liveGetScoped<{ id?: string }>(auth, `farmers?select=id&user_id=eq.${id}&limit=1`, fetchImpl);
+  if (own.ok && own.rows[0]?.id) return own.rows[0].id;
+  if (auth.testAccount !== true) return null;
+  const link = await liveGet<{ record_id?: string | null }>(auth, `app_test_links?select=record_id&account_id=eq.${id}&role=eq.farmer&limit=1`, fetchImpl);
+  return link.ok && link.rows[0]?.record_id ? link.rows[0].record_id : null;
+}
+
+/**
+ * Milk list. farmerId string = sirf woh kisan.
+ * Test kisan par null = doosre is_test kisan nahi dikhate.
+ * MCA/MCO/Admin farmerId na bhejein — unki fehrist saari scoped rows hai.
+ */
+export async function loadMilkList(auth: LiveAuth, fetchImpl: FetchLike, limit = 40, farmerId?: string | null): Promise<ReadResult<MilkRow>> {
   const cap = Math.max(1, Math.min(200, Math.floor(limit)));
-  return liveGetScoped<MilkRow>(auth, `milk_entries?select=${MILK_LIST_SELECT}&order=entry_date.desc,created_at.desc&limit=${cap}`, fetchImpl);
+  if (auth.testAccount === true && farmerId === null) {
+    return { ok: false, status: 0, message: "Is login ka kisan record nahi mila. Doosre kisanon ka doodh nahi dikhaya." };
+  }
+  const farmer = farmerId ? `&farmer_id=eq.${encodeURIComponent(farmerId)}` : "";
+  return liveGetScoped<MilkRow>(auth, `milk_entries?select=${MILK_LIST_SELECT}${farmer}&order=entry_date.desc,created_at.desc&limit=${cap}`, fetchImpl);
+}
+
+const TEST_PENDING: { label: string; path: string; cap: number }[] = [
+  { label: "Doodh ki tasdeeq", path: "milk_entries?select=id&status=in.(pending_fat,priced)&limit=500", cap: 500 },
+  { label: "Khareed", path: "purchases?select=id&review_status=in.(submitted,verified)&limit=200", cap: 200 },
+  { label: "Orders", path: "agri_orders?select=id&status=in.(submitted,sales_verified,finance_verified)&limit=200", cap: 200 },
+];
+
+/** Admin role (test login ya Role dekho nahi — test account) ki TEST manzooriyan. Live RPC asal rows gin sakta hai, is liye yahan scoped count. */
+export async function loadTestPending(auth: LiveAuth, fetchImpl: FetchLike): Promise<{ ok: true; data: PendingRow[] } | { ok: false; status: number; message: string; detail?: string }> {
+  const data: PendingRow[] = [];
+  const errors: string[] = [];
+  for (const spec of TEST_PENDING) {
+    const res = await liveGetScoped<{ id?: string }>(auth, spec.path, fetchImpl);
+    if (!res.ok) {
+      errors.push(res.message);
+      continue;
+    }
+    const count = res.rows.length;
+    if (count > 0) data.push({ category: count >= spec.cap ? `${spec.label} ${spec.cap}+` : spec.label, pending: count, readable: true });
+  }
+  if (!data.length && errors.length) return { ok: false, status: 0, message: errors[0] };
+  return { ok: true, data };
+}
+
+/** Test login par customer sirf Farmer orders, dealer sirf dealer/dukaan. Live fehrist nahi chhanti. */
+export function testOrdersFor(rows: OrderRow[], role: "customer" | "dealer"): OrderRow[] {
+  if (role === "customer") return rows.filter((row) => row.order_to_type === "Farmer");
+  return rows.filter((row) => row.order_to_type === "Agri Dealer" || row.order_to_type === "Kisan Dukan");
 }
 
 export async function loadMilkSettings(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<MilkSettingsRow>> {
@@ -624,7 +664,7 @@ export async function loadProfileNames(auth: LiveAuth, ids: string[], fetchImpl:
 }
 
 export async function loadPurchases(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<PurchaseRow>> {
-  return liveGet<PurchaseRow>(auth, "purchases?select=purchase_number,purchase_date,total_amount,status,supplier_bill_no&order=purchase_date.desc&limit=30", fetchImpl);
+  return liveGetScoped<PurchaseRow>(auth, "purchases?select=purchase_number,purchase_date,total_amount,status,supplier_bill_no&order=purchase_date.desc&limit=30", fetchImpl);
 }
 
 export async function loadAttendance(auth: LiveAuth, day: string, fetchImpl: FetchLike): Promise<{ rows: ReadResult<AttendanceRow>; names: Map<string, string> }> {
@@ -650,7 +690,7 @@ export async function loadCatalog(auth: LiveAuth, fetchImpl: FetchLike): Promise
 }
 
 export async function loadOrders(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<OrderRow>> {
-  return liveGetScoped<OrderRow>(auth, "agri_orders?select=id,order_number,status,grand_total,created_at,requested_by&order=created_at.desc&limit=20", fetchImpl);
+  return liveGetScoped<OrderRow>(auth, "agri_orders?select=id,order_number,status,grand_total,created_at,requested_by,order_to_type&order=created_at.desc&limit=40", fetchImpl);
 }
 
 export type KhataView = {
@@ -690,14 +730,10 @@ export async function loadStaffHome(auth: LiveAuth, userId: string, fetchImpl: F
   const test = auth.testAccount === true;
   const [attendance, salary, advances, pending] = await Promise.all([
     liveGetScoped<AttendanceRow>(auth, `attendance_records?select=attendance_date,status,check_in_at&profile_id=eq.${id}&order=attendance_date.desc&limit=14`, fetchImpl),
+    liveGetScoped<SalaryRow>(auth, `salary_payments?select=net_salary,status,pay_month,pay_year&profile_id=eq.${id}&order=pay_year.desc,pay_month.desc&limit=6`, fetchImpl),
+    liveGet<AdvanceRow>(auth, `staff_advances?select=amount,status,created_at&profile_id=eq.${id}&order=created_at.desc&limit=6`, fetchImpl),
     test
-      ? Promise.resolve({ ok: true as const, rows: [] as SalaryRow[] })
-      : liveGet<SalaryRow>(auth, `salary_payments?select=net_salary,status,pay_month,pay_year&profile_id=eq.${id}&order=pay_year.desc&limit=6`, fetchImpl),
-    test
-      ? Promise.resolve({ ok: true as const, rows: [] as AdvanceRow[] })
-      : liveGet<AdvanceRow>(auth, `staff_advances?select=amount,status,created_at&profile_id=eq.${id}&order=created_at.desc&limit=6`, fetchImpl),
-    test
-      ? Promise.resolve({ ok: false as const, status: 0, message: "TEST account ko asal tasks nahi dikhte." })
+      ? Promise.resolve({ ok: false as const, status: 0, message: "TEST tasks asal RPC se nahi. Admin home par TEST manzooriyan hain." })
       : liveRpc<PendingRow[] | null>(auth, "fn_admin_pending_counts", {}, fetchImpl),
   ]);
   const tasks = pending.ok && Array.isArray(pending.data)

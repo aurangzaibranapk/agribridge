@@ -526,8 +526,8 @@ export function StaffGlass({ live, attendance, salary, advances, tasks, tasksNot
         <Text style={{ color: glass.text }}>{attendance.ok ? (monthRows.find((row) => row.attendance_date === today) ? `Check-in ${String(monthRows.find((row) => row.attendance_date === today)?.check_in_at || "").slice(11, 16) || "ho chuka"}` : "Aaj ki hazri abhi nahi") : attendance.message}</Text>
       </GlassCard>
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
-        <Kpi index={4} label="Is mahine tankhwah" value={pay == null ? "—" : rupees(pay)} sub={salary.ok && salary.rows.length === 0 ? "Tankhwah track nahi, qist nahi" : ""} color="#5B8CFF" series={[]} pct={null} />
-        <Kpi index={5} label="Advance baqi" value={advance == null ? "—" : rupees(advance)} sub={advances.ok && advances.rows.length === 0 ? "Advance track nahi" : ""} color="#F5B942" series={[]} pct={null} />
+        <Kpi index={4} label="Is mahine tankhwah" value={pay == null ? "—" : rupees(pay)} sub={!salary.ok ? salary.message : salary.rows.length === 0 ? "Koi tankhwah line nahi" : ""} color="#5B8CFF" series={[]} pct={null} />
+        <Kpi index={5} label="Advance baqi" value={advance == null ? "—" : rupees(advance)} sub={!advances.ok ? advances.message : advances.rows.length === 0 ? "Koi advance nahi" : ""} color="#F5B942" series={[]} pct={null} />
         <Kpi index={6} label="Hazri" value={attendance.ok ? `${present}/${dayNum || "—"}` : "—"} color="#3DDC97" series={[]} pct={null} />
         <Kpi index={7} label="Tasks" value={tasksNote ? "—" : String(taskDone)} sub={tasksNote || "Ginati"} color="#C4B5FD" series={[]} pct={null} />
       </View>

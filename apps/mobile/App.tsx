@@ -9,7 +9,7 @@ import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
 import { normalizeChannel, showTesterReport } from "../../src/lib/mobile/channel";
 import { dataFlavor, failureLine, signInMobile } from "../../src/lib/mobile/live-login";
-import { liveGetScoped, type MilkRow } from "../../src/lib/mobile/live-read";
+import { liveGetScoped, loadMyFarmerId, type MilkRow } from "../../src/lib/mobile/live-read";
 import { readTestAccount, showRolePreview, showRoleSwitch, SWITCH_ROLES, switchRoleLabel } from "../../src/lib/mobile/test-account";
 import { refreshSupabaseSession, SESSION_EXPIRED, singleFlight, type RefreshFailure, type RefreshSuccess } from "../../src/lib/mobile/session-refresh";
 import { ROLE_NAV } from "../../src/lib/mobile/nav";
@@ -563,11 +563,19 @@ function ProfileSheet({ url, anonKey, token, userId, channel, flavor, testAccoun
   useEffect(() => {
     void SecureStore.getItemAsync("agribridge.displayId").then((value) => { if (value) setDisplayId(value); });
     if (!token) return;
-    void liveGetScoped<MilkRow>({ url, anonKey, token, channel, flavor, testAccount }, "milk_entries?select=entry_date,shift,quantity_liters,status&order=entry_date.desc&limit=5", fetch).then((rows) => {
+    const auth = { url, anonKey, token, channel, flavor, testAccount, userId };
+    void (async () => {
+      let path = "milk_entries?select=entry_date,shift,quantity_liters,status&order=entry_date.desc&limit=5";
+      if (testAccount) {
+        const farmerId = await loadMyFarmerId(auth, fetch);
+        if (!farmerId) { setNotes(["Is login ka kisan record nahi mila."]); return; }
+        path += `&farmer_id=eq.${encodeURIComponent(farmerId)}`;
+      }
+      const rows = await liveGetScoped<MilkRow>(auth, path, fetch);
       if (!rows.ok) { setNotes([rows.message]); return; }
       setNotes(rows.rows.length ? rows.rows.map((row) => `Doodh · ${row.entry_date} · ${row.shift === "evening" ? "Shaam" : "Subah"} · ${row.quantity_liters ?? "—"} L`) : ["Koi notification nahi"]);
-    });
-  }, [url, anonKey, token, channel, flavor, testAccount]);
+    })();
+  }, [url, anonKey, token, userId, channel, flavor, testAccount]);
   return (
     <SafeAreaView style={styles.root}>
       <Header title="Profile" action="Band" onAction={onClose} />

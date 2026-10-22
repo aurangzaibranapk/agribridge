@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
-import { loadKhata, loadOrders, rupees, type KhataView, type OrderRow, type ReadResult } from "../../../../src/lib/mobile/live-read";
+import { loadKhata, loadOrders, testOrdersFor, rupees, type KhataView, type OrderRow, type ReadResult } from "../../../../src/lib/mobile/live-read";
 import { Empty, Section, liveAuth, type LiveBag } from "../bits";
 import { DealerGlass } from "./glass-homes";
 import { colors } from "../kit";
@@ -14,7 +14,7 @@ export function RoleScreen({ tab, live, onProfile, onTab }: { tab: string; live?
     if (!auth) return;
     const [nextKhata, nextOrders] = await Promise.all([loadKhata(auth, fetch), loadOrders(auth, fetch)]);
     setKhata(nextKhata);
-    setOrders(nextOrders);
+    setOrders(nextOrders.ok && auth.testAccount ? { ok: true, rows: testOrdersFor(nextOrders.rows, "dealer") } : nextOrders);
   }, [auth?.token, auth?.url, auth?.testAccount, auth?.flavor]);
   useEffect(() => { void load(); }, [load]);
   if (!auth) return <ScrollView style={{ padding: 16 }}><Section title="Dealer"><Empty title="Login chahiye" body="Outlet ka khata login ke baad khulta hai." /></Section></ScrollView>;
