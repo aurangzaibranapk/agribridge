@@ -15,7 +15,7 @@ async function photo() {
   }
 }
 
-export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync }: { tab: string; data: any; queueCount: number; onEnqueue: (item: any) => void; onSync: () => void }) {
+export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly = false }: { tab: string; data: any; queueCount: number; onEnqueue: (item: any) => void; onSync: () => void; readOnly?: boolean }) {
   const [code, setCode] = useState("");
   const [liters, setLiters] = useState("");
   const [lr, setLr] = useState("");
@@ -63,9 +63,9 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync }: { tab: 
         <Field label="Chiller" value={data?.chillerName || "—"} />
         <Field label="Offline queue" value={String(queueCount)} />
         <Text style={{ color: colors.muted }}>{note}</Text>
-        <Btn label="Sync" kind="ghost" onPress={onSync} />
+        {readOnly ? <Text style={{ color: colors.muted, marginTop: 8 }}>TEST · GPS, meter, petrol, pickup aur drop band hain. Asal route par kuch nahi likhta.</Text> : <Btn label="Sync" kind="ghost" onPress={onSync} />}
       </Card>
-      {tab === "home" || tab === "fuel" ? (
+      {!readOnly && (tab === "home" || tab === "fuel") ? (
         <Card>
           <Text style={{ fontWeight: "700", color: colors.text }}>Hazri, meter, petrol</Text>
           <Btn label="GPS hazri" onPress={() => void attendance()} />
@@ -75,7 +75,7 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync }: { tab: 
           <Btn label="Petrol bill" kind="gold" onPress={() => void petrol()} />
         </Card>
       ) : null}
-      {tab === "route" ? (
+      {!readOnly && tab === "route" ? (
         <Card>
           <TextInput value={code} onChangeText={setCode} placeholder="Kisan ka code" style={box} />
           <TextInput value={liters} onChangeText={setLiters} placeholder="Litre" keyboardType="decimal-pad" style={box} />
@@ -83,7 +83,7 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync }: { tab: 
           <Btn label="Pickup queue" onPress={() => void pickup()} />
         </Card>
       ) : null}
-      {tab === "drop" ? (
+      {!readOnly && tab === "drop" ? (
         <Card>
           <TextInput value={liters} onChangeText={setLiters} placeholder="Chiller par litre" keyboardType="decimal-pad" style={box} />
           <Btn label="Drop queue" onPress={drop} />

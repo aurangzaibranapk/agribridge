@@ -10,11 +10,12 @@ export type LiveBag = {
   token: string | null;
   userId: string | null;
   channel: MobileChannel;
+  testAccount?: boolean;
 };
 
 export function liveAuth(live: LiveBag | undefined): LiveAuth | null {
   if (!live?.token || !live.url || !live.anonKey) return null;
-  return { url: live.url, anonKey: live.anonKey, token: live.token, channel: live.channel };
+  return { url: live.url, anonKey: live.anonKey, token: live.token, channel: live.channel, testAccount: live.testAccount === true };
 }
 
 export function Empty({ title, body }: { title: string; body: string }) {

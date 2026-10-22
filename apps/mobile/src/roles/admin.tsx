@@ -18,7 +18,7 @@ export function RoleScreen({ tab, live }: { tab: string; live?: LiveBag }) {
     if (!auth) { setError("Live Supabase is build mein set nahi. Login ke baad hisaab yahin aata hai."); return; }
     setError("");
     setHome(await loadAdminHome(auth, fetch));
-  }, [auth?.token, auth?.url]);
+  }, [auth?.token, auth?.url, auth?.testAccount]);
 
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { if (tab === "approvals" || tab === "reports" || tab === "home") setPanel("home"); }, [tab]);
@@ -51,7 +51,13 @@ function Dashboard({ tab, home, error, onOpen }: { tab: string; home: AdminHome 
   }
   return (
     <View>
-      <Text style={{ color: colors.muted, marginBottom: 8 }}>Aaj · {home.today} · live hisaab</Text>
+      {home.banner ? (
+        <View style={{ backgroundColor: "#F4E4C4", borderRadius: 12, padding: 10, marginBottom: 8 }}>
+          <Text style={{ fontWeight: "800", color: "#7A4E00" }}>TEST</Text>
+          <Text style={{ color: "#3d2e10", marginTop: 4 }}>{home.banner}</Text>
+        </View>
+      ) : null}
+      <Text style={{ color: colors.muted, marginBottom: 8 }}>Aaj · {home.today} · {home.banner ? "TEST hisaab" : "live hisaab"}</Text>
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
         <Kpi label="Aaj ki sale" value={home.sales.state === "ok" ? rupees(home.sales.total) : "—"} sub={home.sales.state === "ok" ? `${home.sales.bills} bill${home.sales.partial ? " · adhoori" : ""}` : "nahi khuli"} />
         <Kpi label="Cash" value={home.cash.state === "ok" ? rupees(home.cash.cash) : "—"} sub={home.cash.state === "ok" ? `${home.cash.accounts} accounts` : home.cash.state === "empty" ? "koi account nahi" : "ijazat"} />
@@ -61,7 +67,7 @@ function Dashboard({ tab, home, error, onOpen }: { tab: string; home: AdminHome 
       {home.sales.state === "error" ? <Section title="Sale"><Empty title="Aaj ki sale nahi dikhi" body={home.sales.message} /></Section> : null}
       {home.sales.state === "ok" && home.sales.bills === 0 ? <Section title="Aaj ki sale"><Empty title="Aaj abhi koi bill nahi" body="Jab dukan par bill katega, raqam aur 7 din ka chart yahin barh jayega. Rs 0 is liye hai ke bills parh liye gaye aur koi nahi mila." /></Section> : null}
       {home.cash.state === "error" ? <Section title="Cash / Bank"><Empty title="Balance nahi dikha" body={home.cash.message} /></Section> : null}
-      {home.cash.state === "empty" ? <Section title="Cash / Bank"><Empty title="Koi account nazar nahi aaya" body="Cash ya bank ka balance tab dikhega jab finance accounts is login ko nazar aayen. Khali fehrist ko Rs 0 nahi likha." /></Section> : null}
+      {home.cash.state === "empty" ? <Section title="Cash / Bank"><Empty title={home.banner ? "Asal cash nahi" : "Koi account nazar nahi aaya"} body={home.banner ? "TEST account ko asal cash aur bank nahi dikhaya jata. Khali ko Rs 0 nahi likha." : "Cash ya bank ka balance tab dikhega jab finance accounts is login ko nazar aayen. Khali fehrist ko Rs 0 nahi likha."} /></Section> : null}
       {home.milk.state === "error" ? <Section title="Doodh"><Empty title="Aaj ka doodh nahi dikha" body={home.milk.message} /></Section> : null}
       {home.milk.state === "ok" && home.milk.subah === 0 && home.milk.shaam === 0 ? <Section title="Doodh"><Empty title="Aaj koi litre darj nahi" body="Entries parh li gayin. Subah ya shaam ka litre jab darj hoga, yahan aayega." /></Section> : null}
       {tab !== "reports" ? null : <Text style={{ color: colors.muted, marginBottom: 8 }}>Reports · charts neeche bhi hain</Text>}
@@ -133,6 +139,10 @@ function ListPanel({ panel, auth, day, onBack }: { panel: Panel; auth: LiveAuth;
       return;
     }
     if (panel === "stock") {
+      if (auth.testAccount) {
+        setBody(<Empty title="TEST stock nahi" body="Asal products aur quantity yahan nahi aate, taake dukan ki fehrist na badle." />);
+        return;
+      }
       const [products, inventory] = await Promise.all([
         liveGet<ProductRow>(auth, "products?select=id,name,min_stock_threshold,unit&is_deleted=eq.false&order=name.asc&limit=40", fetch),
         liveGet<InventoryRow>(auth, "inventory?select=product_id,quantity_on_hand&limit=2000", fetch),
@@ -157,6 +167,10 @@ function ListPanel({ panel, auth, day, onBack }: { panel: Panel; auth: LiveAuth;
       return;
     }
     if (panel === "purchases") {
+      if (auth.testAccount) {
+        setBody(<Empty title="TEST khareed nahi" body="Asal supplier bills is account ko nahi dikhti. Koi nayi khareed nahi banti." />);
+        return;
+      }
       const rows = await loadPurchases(auth, fetch);
       setBody(!rows.ok ? <Empty title="Purchases nahi khulin" body={rows.message} /> : rows.rows.length === 0 ? <Empty title="Koi khareed nahi" body="Supplier ki bill jab darj hogi, number, tareekh aur raqam yahan aayenge." /> : (
         <View>{rows.rows.map((row, index) => <Row key={`${row.purchase_number}-${index}`} title={`${row.purchase_number || row.supplier_bill_no || "Bill"} · ${row.purchase_date || ""}`} value={row.total_amount == null ? "—" : rupees(Number(row.total_amount))} />)}</View>

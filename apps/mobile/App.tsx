@@ -9,6 +9,7 @@ import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
 import { normalizeChannel, showTesterReport } from "../../src/lib/mobile/channel";
 import { failureLine, signInMobile } from "../../src/lib/mobile/live-login";
+import { readTestAccount, showRoleSwitch, SWITCH_ROLES, switchRoleLabel } from "../../src/lib/mobile/test-account";
 import { ROLE_NAV } from "../../src/lib/mobile/nav";
 import type { AppRole } from "../../src/lib/mobile/roles";
 import { pinLock, pinProblem } from "../../src/lib/mobile/pin";
@@ -68,6 +69,8 @@ export default function App() {
   const [whatsapp, setWhatsapp] = useState<string | null>(null);
   const [fails, setFails] = useState(0);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [isTest, setIsTest] = useState(false);
+  const [switchOpen, setSwitchOpen] = useState(false);
 
   useEffect(() => {
     bootMark("first-screen");
@@ -80,6 +83,7 @@ export default function App() {
         setRole(session.role);
         setAppRole(session.appRole);
         setUserId(session.userId);
+        setIsTest(session.isTest === true);
         setStage("unlock");
         setRoute("/unlock");
       }
@@ -123,11 +127,18 @@ export default function App() {
       return;
     }
     const body = result.session;
+    const test = await readTestAccount({
+      url: SUPABASE_URL,
+      anonKey: SUPABASE_ANON,
+      token: body.access_token,
+      channel: CHANNEL,
+    }, body.user_id, (url, init) => fetch(url, init));
     setToken(body.access_token);
     setRole(body.role);
     setAppRole(body.appRole);
     setUserId(body.user_id);
-    await SecureStore.setItemAsync("agribridge.session", JSON.stringify({ token: body.access_token, refresh: body.refresh_token, role: body.role, appRole: body.appRole, userId: body.user_id }));
+    setIsTest(test);
+    await SecureStore.setItemAsync("agribridge.session", JSON.stringify({ token: body.access_token, refresh: body.refresh_token, role: body.role, appRole: body.appRole, userId: body.user_id, isTest: test }));
     setPassword("");
     setNet("online");
     setStage("pin");
@@ -301,7 +312,18 @@ export default function App() {
             onAction={() => setSupportOpen(true)}
           />
           <View style={{ flex: 1 }}>
-            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
+            {isTest ? (
+              <View style={styles.testBar}>
+                <Text style={styles.testBadge}>TEST</Text>
+                <Text style={styles.testRole}>{appRole ? switchRoleLabel(appRole) : ""}</Text>
+                {showRoleSwitch(CHANNEL, isTest) && (tab === "home" || tab === "more") ? (
+                  <Pressable onPress={() => setSwitchOpen(true)} style={styles.testBtn}>
+                    <Text style={styles.testBtnText}>Role badlo</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} readOnly={isTest} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, testAccount: isTest }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
           </View>
           {nav ? <Tabs tabs={nav.tabs} current={tab} onChange={(key) => { setTab(key); setRoute(`/${appRole}/${key}`); }} /> : null}
           {tab === "more" ? (
@@ -326,6 +348,32 @@ export default function App() {
             })} />
             <Btn label={voice ? "Awaaz lagi" : "4 second awaaz"} kind="ghost" onPress={() => void recordVoice()} />
             <Btn label={net === "online" && token ? "Bhejein" : "Queue — baad mein"} onPress={() => void sendReport()} />
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal visible={switchOpen} animationType="slide" onRequestClose={() => setSwitchOpen(false)}>
+        <SafeAreaView style={styles.root}>
+          <Header title="Role badlo" action="Band" onAction={() => setSwitchOpen(false)} />
+          <ScrollView style={{ padding: 16 }}>
+            <Text style={styles.help}>TEST account. Har role sirf apni screens dikhata hai. Likhai band hai. Asal hisaab nahi khulta.</Text>
+            {SWITCH_ROLES.map((next) => (
+              <Pressable key={next} style={styles.roleRow} onPress={() => {
+                setAppRole(next);
+                setTab("home");
+                setRoute(`/${next}/home`);
+                setSwitchOpen(false);
+                void SecureStore.getItemAsync("agribridge.session").then((raw) => {
+                  if (!raw) return;
+                  const saved = JSON.parse(raw) as Record<string, unknown>;
+                  saved.appRole = next;
+                  saved.isTest = true;
+                  return SecureStore.setItemAsync("agribridge.session", JSON.stringify(saved));
+                });
+              }}>
+                <Text style={{ fontWeight: "700", color: appRole === next ? colors.green : colors.text }}>{switchRoleLabel(next)}{appRole === next ? " · abhi" : ""}</Text>
+              </Pressable>
+            ))}
           </ScrollView>
         </SafeAreaView>
       </Modal>
@@ -399,4 +447,10 @@ const styles = StyleSheet.create({
   fab: { position: "absolute", right: 16, bottom: 72, backgroundColor: colors.greenDark, borderRadius: 22, paddingHorizontal: 14, paddingVertical: 10 },
   fabText: { color: "#fff", fontWeight: "700" },
   perf: { textAlign: "center", color: colors.muted, fontSize: 11, paddingBottom: 4 },
+  testBar: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#F4E4C4" },
+  testBadge: { backgroundColor: "#7A4E00", color: "#fff", fontWeight: "800", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, overflow: "hidden" },
+  testRole: { flex: 1, color: "#3d2e10", fontWeight: "700" },
+  testBtn: { backgroundColor: colors.green, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
+  testBtnText: { color: "#fff", fontWeight: "700" },
+  roleRow: { backgroundColor: "#fff", borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: colors.line },
 });

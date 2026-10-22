@@ -24,7 +24,7 @@ export function RoleScreen({ tab, live }: { tab: string; live?: LiveBag }) {
     setMilk(nextMilk);
     setOrders(nextOrders);
     setShop(nextShop);
-  }, [auth?.token, auth?.url]);
+  }, [auth?.token, auth?.url, auth?.testAccount]);
 
   useEffect(() => { void load(); }, [load]);
   if (!auth) return <ScrollView style={{ padding: 16 }}><Section title="Kisan"><Empty title="Login chahiye" body="Wallet aur doodh live account se aate hain. Is build mein Supabase key set nahi." /></Section></ScrollView>;

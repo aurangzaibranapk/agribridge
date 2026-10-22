@@ -1,3 +1,12 @@
+## Pending — 22 October 2026: App test account (699) — FILE ONLY
+
+Branch `cursor/mobile-phase1-4b80`. Migration **699 not applied**. Live aur Testing dono par nahi chali. Auth user bhi nahi bana. `hwaiuwxqldxsoukkfefn` ko haath nahi lagana.
+
+- `supabase/migrations/699_app_test_account.sql` — `profiles.is_test_account`, `is_test` columns, `app_test_accounts` / `app_test_links`, sirf SELECT policies. Koi likhai policy nahi.
+- `scripts/seed-app-test-account.sql` — tab chale jab Auth mein `app-test@alranatraders.pk` ban chuka ho. Password SQL mein nahi.
+- Seed aaj ka TEST doodh daalti hai (subah 12.5 L, shaam 8 L, `pending_fat`, notes `TEST milk`). Mobile admin `is_test = false` se chhupata hai. Portal ka doodh total in litres ko tab tak jod sakta hai jab tak report `is_test = false` na lagaye. Tankhwah aur advance jaan kar nahi daale, taake qist na bane. `pos_sales` aur cash/bank ko test account nahi parhta.
+- Rollback: `699_app_test_account.rollback.sql` (TEST rows pehle delete).
+
 ## Applied — 22 October 2026 ~00:10 PKT: Mobile phase 1 (698) on Live
 
 Branch `cursor/mobile-phase1-4b80`, commit `caa6b91d`. Migration **698 applied** on Live `ktskwawkslaznkjjacni` on 2026-10-22 at ~00:10 PKT. Testing par is dafe ka alag record nahi. Portal build abhi is PR ke sath deploy nahi hui.

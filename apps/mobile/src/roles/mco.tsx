@@ -4,7 +4,7 @@ import { paginate } from "../../../../src/lib/mobile/sync";
 import { Btn, Card, Field, GoldCard } from "../kit";
 import { colors } from "../kit";
 
-export function RoleScreen({ tab, data, onEnqueue }: { tab: string; data: any; onEnqueue: (item: any) => void }) {
+export function RoleScreen({ tab, data, onEnqueue, readOnly = false }: { tab: string; data: any; onEnqueue: (item: any) => void; readOnly?: boolean }) {
   const [fat, setFat] = useState("");
   const [lr, setLr] = useState("");
   const [entry, setEntry] = useState("");
@@ -12,9 +12,18 @@ export function RoleScreen({ tab, data, onEnqueue }: { tab: string; data: any; o
   const totals = data?.totals;
   return (
     <ScrollView style={{ padding: 16 }}>
-      <GoldCard title="Subah" value={`${totals?.morningLiters ?? 0} L`} sub={`Rs ${totals?.morningAmount ?? 0}`} />
-      <GoldCard title="Shaam" value={`${totals?.eveningLiters ?? 0} L`} sub={`Rs ${totals?.eveningAmount ?? 0}`} />
-      {tab === "fat" || tab === "home" ? (
+      {readOnly ? (
+        <Card>
+          <Text style={{ fontWeight: "800", color: colors.text }}>TEST · MCO</Text>
+          <Text style={{ color: colors.muted, marginTop: 6 }}>Fat, LR aur invoice band hain. Asal chiller par kuch nahi likhta. TEST doodh kisan aur admin ghar par hai. Yahan Rs 0 is liye nahi ke hisaab sifar hai — sync ki totals is build mein nahi aati.</Text>
+        </Card>
+      ) : (
+        <>
+          <GoldCard title="Subah" value={`${totals?.morningLiters ?? 0} L`} sub={`Rs ${totals?.morningAmount ?? 0}`} />
+          <GoldCard title="Shaam" value={`${totals?.eveningLiters ?? 0} L`} sub={`Rs ${totals?.eveningAmount ?? 0}`} />
+        </>
+      )}
+      {!readOnly && (tab === "fat" || tab === "home") ? (
         <Card>
           <Text style={{ fontWeight: "700", color: colors.text, marginBottom: 8 }}>FAT / LR — apni entry nahi</Text>
           {rows.map((row: any) => (

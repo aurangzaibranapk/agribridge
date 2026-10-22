@@ -10,11 +10,15 @@ export type LiveAuth = {
   anonKey: string;
   token: string;
   channel: MobileChannel;
+  /** Test account sirf is_test qatarein parhta hai. Asal admin inhen chhupata hai. */
+  testAccount?: boolean;
 };
+
+export type ReadScope = "live" | "test";
 
 export type ReadResult<T> =
   | { ok: true; rows: T[] }
-  | { ok: false; status: number; message: string };
+  | { ok: false; status: number; message: string; detail?: string };
 
 const SALES_LIMIT = 2000;
 const ITEM_LIMIT = 800;
@@ -79,7 +83,7 @@ export async function liveGet<T>(auth: LiveAuth, path: string, fetchImpl: FetchL
       },
     });
     const text = await res.text();
-    if (res.status >= 400) return { ok: false, status: res.status, message: readError(res.status, text, auth.channel) };
+    if (res.status >= 400) return { ok: false, status: res.status, message: readError(res.status, text, auth.channel), detail: text };
     const rows = parseArray(text);
     if (!rows) return { ok: false, status: res.status, message: readError(res.status, text || "JSON nahi", auth.channel) };
     return { ok: true, rows: rows as T[] };
@@ -96,7 +100,7 @@ export async function liveGet<T>(auth: LiveAuth, path: string, fetchImpl: FetchL
   }
 }
 
-export async function liveRpc<T>(auth: LiveAuth, name: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<{ ok: true; data: T } | { ok: false; status: number; message: string }> {
+export async function liveRpc<T>(auth: LiveAuth, name: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<{ ok: true; data: T } | { ok: false; status: number; message: string; detail?: string }> {
   const base = acceptedSupabaseUrl(auth.url);
   if (!base || !auth.anonKey.trim() || !auth.token.trim()) {
     return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Live read is build mein set nahi." }) };
@@ -113,7 +117,7 @@ export async function liveRpc<T>(auth: LiveAuth, name: string, body: Record<stri
       body: JSON.stringify(body),
     });
     const text = await res.text();
-    if (res.status >= 400) return { ok: false, status: res.status, message: readError(res.status, text, auth.channel) };
+    if (res.status >= 400) return { ok: false, status: res.status, message: readError(res.status, text, auth.channel), detail: text };
     try {
       return { ok: true, data: JSON.parse(text) as T };
     } catch {
@@ -130,6 +134,27 @@ export async function liveRpc<T>(auth: LiveAuth, name: string, body: Record<stri
       }),
     };
   }
+}
+
+export function scopeFor(auth: LiveAuth): ReadScope {
+  return auth.testAccount ? "test" : "live";
+}
+
+export function withScope(path: string, scope: ReadScope): string {
+  const filter = scope === "test" ? "is_test=eq.true" : "is_test=eq.false";
+  return path.includes("?") ? `${path}&${filter}` : `${path}?${filter}`;
+}
+
+/** PostgREST tab ye kehta hai jab migration 699 abhi lagi nahi. */
+export function columnMissing(detail: string | undefined, column: string): boolean {
+  const body = detail ?? "";
+  return body.includes(column) && /does not exist|schema cache|42703|PGRST204/i.test(body);
+}
+
+export async function liveGetScoped<T>(auth: LiveAuth, path: string, fetchImpl: FetchLike, scope = scopeFor(auth)): Promise<ReadResult<T>> {
+  const filtered = await liveGet<T>(auth, withScope(path, scope), fetchImpl);
+  if (filtered.ok || scope === "test" || !columnMissing(filtered.detail, "is_test")) return filtered;
+  return liveGet<T>(auth, path, fetchImpl);
 }
 
 export type SaleRow = { total_amount?: number | string | null; created_at?: string | null; status?: string | null; payment_mode?: string | null };
@@ -260,23 +285,44 @@ export type AdminHome = {
   pendingNote: string | null;
   activity: { action: string; at: string }[];
   activityNote: string | null;
+  banner: string | null;
 };
 
 export async function loadAdminHome(auth: LiveAuth, fetchImpl: FetchLike, now = new Date()): Promise<AdminHome> {
   const days = karachiDaySeries(7, now);
   const today = days[days.length - 1];
   const since = encodeURIComponent(karachiStartIso(days[0]));
+  const test = auth.testAccount === true;
+  const banner = test
+    ? "TEST account. Sirf TEST naam ki qatarein. Asal cash, bank, bills, stock aur manzooriyan nahi dikhti. Likhai band hai."
+    : null;
   const [sales, accounts, milk, route, products, inventory, categories, items, pending, activity] = await Promise.all([
-    liveGet<SaleRow>(auth, `pos_sales?select=total_amount,created_at,status,payment_mode&created_at=gte.${since}&order=created_at.desc&limit=${SALES_LIMIT}`, fetchImpl),
-    liveGet<AccountRow>(auth, "finance_accounts?select=account_type,current_balance,is_active&is_active=eq.true&limit=100", fetchImpl),
-    liveGet<MilkRow>(auth, `milk_entries?select=shift,quantity_liters&entry_date=eq.${today}&limit=500`, fetchImpl),
-    liveGet<MilkRow>(auth, `milk_route_collections?select=shift,field_collected_volume&collection_date=eq.${today}&limit=200`, fetchImpl),
-    liveGet<ProductRow>(auth, "products?select=id,name,category_id,min_stock_threshold,selling_price,unit,is_available&is_deleted=eq.false&limit=400", fetchImpl),
-    liveGet<InventoryRow>(auth, `inventory?select=product_id,quantity_on_hand&limit=${STOCK_LIMIT}`, fetchImpl),
-    liveGet<CategoryRow>(auth, "categories?select=id,name&limit=200", fetchImpl),
-    liveGet<ItemRow>(auth, `pos_sale_items?select=subtotal,product_id,created_at&created_at=gte.${since}&limit=${ITEM_LIMIT}`, fetchImpl),
-    liveRpc<PendingRow[] | null>(auth, "fn_admin_pending_counts", {}, fetchImpl),
-    liveGet<ActivityRow>(auth, "activity_logs?select=action,created_at&order=created_at.desc&limit=8", fetchImpl),
+    test
+      ? Promise.resolve({ ok: false as const, status: 0, message: "TEST account ko asal bills nahi dikhaye jaate." })
+      : liveGet<SaleRow>(auth, `pos_sales?select=total_amount,created_at,status,payment_mode&created_at=gte.${since}&order=created_at.desc&limit=${SALES_LIMIT}`, fetchImpl),
+    test
+      ? Promise.resolve({ ok: true as const, rows: [] as AccountRow[] })
+      : liveGet<AccountRow>(auth, "finance_accounts?select=account_type,current_balance,is_active&is_active=eq.true&limit=100", fetchImpl),
+    liveGetScoped<MilkRow>(auth, `milk_entries?select=shift,quantity_liters&entry_date=eq.${today}&limit=500`, fetchImpl),
+    liveGetScoped<MilkRow>(auth, `milk_route_collections?select=shift,field_collected_volume&collection_date=eq.${today}&limit=200`, fetchImpl),
+    test
+      ? Promise.resolve({ ok: false as const, status: 0, message: "TEST stock alag nahi banaya, taake dukan ki fehrist na badle." })
+      : liveGet<ProductRow>(auth, "products?select=id,name,category_id,min_stock_threshold,selling_price,unit,is_available&is_deleted=eq.false&limit=400", fetchImpl),
+    test
+      ? Promise.resolve({ ok: false as const, status: 0, message: "TEST stock alag nahi banaya, taake dukan ki fehrist na badle." })
+      : liveGet<InventoryRow>(auth, `inventory?select=product_id,quantity_on_hand&limit=${STOCK_LIMIT}`, fetchImpl),
+    test
+      ? Promise.resolve({ ok: true as const, rows: [] as CategoryRow[] })
+      : liveGet<CategoryRow>(auth, "categories?select=id,name&limit=200", fetchImpl),
+    test
+      ? Promise.resolve({ ok: true as const, rows: [] as ItemRow[] })
+      : liveGet<ItemRow>(auth, `pos_sale_items?select=subtotal,product_id,created_at&created_at=gte.${since}&limit=${ITEM_LIMIT}`, fetchImpl),
+    test
+      ? Promise.resolve({ ok: false as const, status: 0, message: "TEST account ko asal manzooriyan nahi dikhti." })
+      : liveRpc<PendingRow[] | null>(auth, "fn_admin_pending_counts", {}, fetchImpl),
+    test
+      ? Promise.resolve({ ok: false as const, status: 0, message: "TEST account ko asal activity nahi dikhti." })
+      : liveGet<ActivityRow>(auth, "activity_logs?select=action,created_at&order=created_at.desc&limit=8", fetchImpl),
   ]);
 
   const todaySales = sales.ok ? salesOnDay(sales.rows, today) : null;
@@ -313,6 +359,7 @@ export async function loadAdminHome(auth: LiveAuth, fetchImpl: FetchLike, now = 
       ? activity.rows.map((row) => ({ action: String(row.action || "Kaam"), at: String(row.created_at || "") }))
       : [],
     activityNote: activity.ok ? null : activity.message,
+    banner,
   };
 }
 
@@ -334,14 +381,14 @@ export async function searchParties(auth: LiveAuth, query: string, fetchImpl: Fe
     ? `customers?select=id,name,current_balance&name=ilike.${q}&order=name.asc&limit=30`
     : "customers?select=id,name,current_balance&order=name.asc&limit=30";
   const [farmers, customers] = await Promise.all([
-    liveGet<PartyRow>(auth, farmerPath, fetchImpl),
-    liveGet<PartyRow>(auth, customerPath, fetchImpl),
+    liveGetScoped<PartyRow>(auth, farmerPath, fetchImpl),
+    liveGetScoped<PartyRow>(auth, customerPath, fetchImpl),
   ]);
   return { farmers, customers };
 }
 
 export async function loadMilkList(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<MilkRow>> {
-  return liveGet<MilkRow>(auth, "milk_entries?select=entry_date,shift,quantity_liters,fat_percentage,total_amount,route_name,status&order=entry_date.desc&limit=40", fetchImpl);
+  return liveGetScoped<MilkRow>(auth, "milk_entries?select=entry_date,shift,quantity_liters,fat_percentage,total_amount,route_name,status&order=entry_date.desc&limit=40", fetchImpl);
 }
 
 export async function loadPurchases(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<PurchaseRow>> {
@@ -349,7 +396,7 @@ export async function loadPurchases(auth: LiveAuth, fetchImpl: FetchLike): Promi
 }
 
 export async function loadAttendance(auth: LiveAuth, day: string, fetchImpl: FetchLike): Promise<{ rows: ReadResult<AttendanceRow>; names: Map<string, string> }> {
-  const rows = await liveGet<AttendanceRow>(auth, `attendance_records?select=attendance_date,status,check_in_at,profile_id&attendance_date=eq.${day}&order=check_in_at.desc&limit=40`, fetchImpl);
+  const rows = await liveGetScoped<AttendanceRow>(auth, `attendance_records?select=attendance_date,status,check_in_at,profile_id&attendance_date=eq.${day}&order=check_in_at.desc&limit=40`, fetchImpl);
   const names = new Map<string, string>();
   if (!rows.ok) return { rows, names };
   const ids = [...new Set(rows.rows.map((row) => row.profile_id).filter((id): id is string => Boolean(id)))];
@@ -371,7 +418,7 @@ export async function loadCatalog(auth: LiveAuth, fetchImpl: FetchLike): Promise
 }
 
 export async function loadOrders(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<OrderRow>> {
-  return liveGet<OrderRow>(auth, "agri_orders?select=order_number,status,grand_total,created_at&order=created_at.desc&limit=20", fetchImpl);
+  return liveGetScoped<OrderRow>(auth, "agri_orders?select=order_number,status,grand_total,created_at&order=created_at.desc&limit=20", fetchImpl);
 }
 
 export type KhataView = {
@@ -408,11 +455,18 @@ export async function loadStaffHome(auth: LiveAuth, userId: string, fetchImpl: F
   tasksNote: string | null;
 }> {
   const id = encodeURIComponent(userId);
+  const test = auth.testAccount === true;
   const [attendance, salary, advances, pending] = await Promise.all([
-    liveGet<AttendanceRow>(auth, `attendance_records?select=attendance_date,status,check_in_at&profile_id=eq.${id}&order=attendance_date.desc&limit=14`, fetchImpl),
-    liveGet<SalaryRow>(auth, `salary_payments?select=net_salary,status,pay_month,pay_year&profile_id=eq.${id}&order=pay_year.desc&limit=6`, fetchImpl),
-    liveGet<AdvanceRow>(auth, `staff_advances?select=amount,status,created_at&profile_id=eq.${id}&order=created_at.desc&limit=6`, fetchImpl),
-    liveRpc<PendingRow[] | null>(auth, "fn_admin_pending_counts", {}, fetchImpl),
+    liveGetScoped<AttendanceRow>(auth, `attendance_records?select=attendance_date,status,check_in_at&profile_id=eq.${id}&order=attendance_date.desc&limit=14`, fetchImpl),
+    test
+      ? Promise.resolve({ ok: true as const, rows: [] as SalaryRow[] })
+      : liveGet<SalaryRow>(auth, `salary_payments?select=net_salary,status,pay_month,pay_year&profile_id=eq.${id}&order=pay_year.desc&limit=6`, fetchImpl),
+    test
+      ? Promise.resolve({ ok: true as const, rows: [] as AdvanceRow[] })
+      : liveGet<AdvanceRow>(auth, `staff_advances?select=amount,status,created_at&profile_id=eq.${id}&order=created_at.desc&limit=6`, fetchImpl),
+    test
+      ? Promise.resolve({ ok: false as const, status: 0, message: "TEST account ko asal tasks nahi dikhte." })
+      : liveRpc<PendingRow[] | null>(auth, "fn_admin_pending_counts", {}, fetchImpl),
   ]);
   const tasks = pending.ok && Array.isArray(pending.data)
     ? pending.data.filter((row) => num(row.mine_to_act) > 0).slice(0, 8).map((row) => ({ label: String(row.category || "Kaam"), count: num(row.mine_to_act) }))

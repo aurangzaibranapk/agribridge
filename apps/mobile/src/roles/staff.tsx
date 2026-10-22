@@ -21,7 +21,7 @@ export function RoleScreen({ tab, live }: { tab: string; live?: LiveBag }) {
     setAdvances(home.advances);
     setTasks(home.tasks);
     setTasksNote(home.tasksNote);
-  }, [auth?.token, live?.userId]);
+  }, [auth?.token, auth?.testAccount, live?.userId]);
 
   useEffect(() => { void load(); }, [load]);
   if (!auth || !live?.userId) return <ScrollView style={{ padding: 16 }}><Section title="Staff"><Empty title="Login chahiye" body="Hazri, tankhwah aur tasks aap ke account se aate hain." /></Section></ScrollView>;
@@ -39,10 +39,10 @@ export function RoleScreen({ tab, live }: { tab: string; live?: LiveBag }) {
       {tab === "home" || tab === "khata" ? (
         <Section title="Tankhwah aur advance">
           {!salary.ok ? <Empty title="Tankhwah nahi khuli" body={salary.message} /> : null}
-          {salary.ok && salary.rows.length === 0 ? <Empty title="Koi tankhwah nahi" body="Jab aap ki salary line bane gi, mahina aur raqam yahan aayenge." /> : null}
+          {salary.ok && salary.rows.length === 0 ? <Empty title="Koi tankhwah nahi" body={live?.testAccount ? "TEST account ki tankhwah asal payroll mein nahi daali, taake qist na ban jaye. Upar hazri ki TEST line hai." : "Jab aap ki salary line bane gi, mahina aur raqam yahan aayenge."} /> : null}
           {salary.ok ? salary.rows.map((row, index) => <Text key={`${row.pay_year}-${row.pay_month}-${index}`} style={{ color: colors.text, marginBottom: 6 }}>{row.pay_year}-{row.pay_month} · {row.status} · {row.net_salary == null ? "—" : rupees(Number(row.net_salary))}</Text>) : null}
           {!advances.ok ? <Empty title="Advance nahi khula" body={advances.message} /> : null}
-          {advances.ok && advances.rows.length === 0 ? <Empty title="Koi advance nahi" body="Agar aap ne advance liya hai aur wo aap ko nazar aata hai, wo yahan aayega." /> : null}
+          {advances.ok && advances.rows.length === 0 ? <Empty title="Koi advance nahi" body={live?.testAccount ? "TEST advance asal staff_advances mein nahi, kyunke wahan qist khud ban jati hai." : "Agar aap ne advance liya hai aur wo aap ko nazar aata hai, wo yahan aayega."} /> : null}
           {advances.ok ? advances.rows.map((row, index) => <Text key={`${row.created_at}-${index}`} style={{ color: colors.text, marginBottom: 6 }}>Advance · {row.status} · {row.amount == null ? "—" : rupees(Number(row.amount))}</Text>) : null}
         </Section>
       ) : null}

@@ -12,25 +12,29 @@ export function RoleScreen({ tab, live }: { tab: string; live?: LiveBag }) {
   const [refreshing, setRefreshing] = useState(false);
   const load = useCallback(async () => {
     if (!auth) return;
-    const [nextKhata, nextOrders, nextShop] = await Promise.all([loadKhata(auth, fetch), loadOrders(auth, fetch), loadCatalog(auth, fetch)]);
+    const [nextKhata, nextOrders, nextShop] = await Promise.all([
+      loadKhata(auth, fetch),
+      loadOrders(auth, fetch),
+      auth.testAccount ? Promise.resolve({ ok: true as const, rows: [] as CatalogRow[] }) : loadCatalog(auth, fetch),
+    ]);
     setKhata(nextKhata);
     setOrders(nextOrders);
     setShop(nextShop);
-  }, [auth?.token, auth?.url]);
+  }, [auth?.token, auth?.url, auth?.testAccount]);
   useEffect(() => { void load(); }, [load]);
   if (!auth) return <ScrollView style={{ padding: 16 }}><Section title="Customer"><Empty title="Login chahiye" body="Khata aur dukaan live account se aate hain." /></Section></ScrollView>;
   if (!khata || !orders || !shop) return <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />;
 
   return (
     <ScrollView style={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
-      {tab === "shop" ? <Shop result={shop} /> : null}
+      {tab === "shop" ? <Shop result={shop} testAccount={live?.testAccount === true} /> : null}
       {tab === "orders" ? <Orders result={orders} /> : null}
       {tab === "home" || tab === "khata" ? (
         <View>
           <View style={{ backgroundColor: colors.green, borderRadius: 18, padding: 16, marginBottom: 12 }}>
             <Text style={{ color: "#E7F2E4", fontWeight: "700" }}>Khata</Text>
             <Text style={{ color: "#fff", fontSize: 28, fontWeight: "800", marginTop: 4 }}>{khata.note && khata.owed == null ? "—" : rupees(khata.owed)}</Text>
-            <Text style={{ color: "#E7F2E4", marginTop: 4 }}>{khata.note || "Aapka baqaya"}</Text>
+            <Text style={{ color: "#E7F2E4", marginTop: 4 }}>{khata.note || (live?.testAccount ? "TEST customer. Khata mili aur abhi koi line nahi." : "Aapka baqaya")}</Text>
           </View>
           <Section title="Lines">
             {khata.linesNote ? <Empty title="Lines nahi khulin" body={khata.linesNote} /> : null}
@@ -56,7 +60,14 @@ function Orders({ result }: { result: ReadResult<OrderRow> }) {
   );
 }
 
-function Shop({ result }: { result: ReadResult<CatalogRow> }) {
+function Shop({ result, testAccount = false }: { result: ReadResult<CatalogRow>; testAccount?: boolean }) {
+  if (testAccount) {
+    return (
+      <Section title="Dukaan" sub="Browse only">
+        <Empty title="TEST dukaan" body="Asal catalog is account ko nahi dikhaya. TEST order Orders par hai. Is screen se khareed nahi hoti." />
+      </Section>
+    );
+  }
   return (
     <Section title="Dukaan" sub="Browse only">
       {!result.ok ? <Empty title="Catalog nahi khula" body={result.message} /> : null}

@@ -2,7 +2,7 @@
 
 Expo / React Native app in this same repo. Login prefers `POST /api/mobile/v1/session` on `EXPO_PUBLIC_PORTAL_URL`. When that route is not on the live site yet, an email address signs in directly against the live Supabase project (`https://ktskwawkslaznkjjacni.supabase.co`) with the public anon key. Phone, CNIC, and username still need the portal route, because `fn_login_resolve` is service-role only. The anon key is a CI secret (`NEXT_PUBLIC_SUPABASE_ANON_KEY`), not a committed value. Any other Supabase host is refused.
 
-The app version is `AGRIBRIDGE_OS_VERSION` in `src/lib/app-version.ts` (currently `v0.6.1 Beta`). Expo reads that file at build time. Android `versionCode` is `major * 10000 + minor * 100 + patch` (601). A sideload rebuild can set `AGRIBRIDGE_VERSION_CODE` only when that integer is higher (the phone build is 602) while versionName stays `v0.6.1 Beta`. The old Play TWA was versionCode 1. CI fails if the Expo version or the default versionCode disagree with the portal constant. Package id: `pk.alranatraders.agribridge`. The npm `package.json` version is not the product version.
+The app version is `AGRIBRIDGE_OS_VERSION` in `src/lib/app-version.ts` (currently `v0.6.1 Beta`). Expo reads that file at build time. Android `versionCode` is `major * 10000 + minor * 100 + patch` (601). A sideload rebuild can set `AGRIBRIDGE_VERSION_CODE` only when that integer is higher (the phone build is 604) while versionName stays `v0.6.1 Beta`. The old Play TWA was versionCode 1. CI fails if the Expo version or the default versionCode disagree with the portal constant. Package id: `pk.alranatraders.agribridge`. The npm `package.json` version is not the product version.
 
 ## APP_CHANNEL — Masla batayein
 
@@ -52,7 +52,7 @@ Field writes sit in a local outbox and sync with `client_uuid`. The server accep
 
 Phase 2 homes (admin, farmer, customer, staff) read the live project with the signed-in user JWT and existing RLS. They do not wait for `/api/mobile/v1/*`. A denied query stays a message, and an empty finance list is not shown as Rs 0.
 
-Workflow **Mobile sideload APKs** builds two release APKs, not the fat debug APK. `APP_CHANNEL=internal`, versionName `v0.6.1 Beta`, versionCode 603 (`AGRIBRIDGE_VERSION_CODE`). R8 minify and Hermes are on. Each APK is one ABI (`arm64-v8a` or `armeabi-v7a`) and is signed with the Android debug keystore. minSdk is 24, so Android 8 and newer can install. `android:testOnly` is rejected by `apps/mobile/scripts/verify-sideload-apk.sh`. The job fails if the live Supabase URL or anon key secret is missing. Internal and debug builds append the HTTP status to login and support errors. Production builds keep the short Urdu line.
+Workflow **Mobile sideload APKs** builds two release APKs, not the fat debug APK. `APP_CHANNEL=internal`, versionName `v0.6.1 Beta`, versionCode 604 (`AGRIBRIDGE_VERSION_CODE`). R8 minify and Hermes are on. Each APK is one ABI (`arm64-v8a` or `armeabi-v7a`) and is signed with the Android debug keystore. minSdk is 24, so Android 8 and newer can install. `android:testOnly` is rejected by `apps/mobile/scripts/verify-sideload-apk.sh`. The job fails if the live Supabase URL or anon key secret is missing. Internal and debug builds append the HTTP status to login and support errors. Production builds keep the short Urdu line.
 
 ## CI artifact
 
