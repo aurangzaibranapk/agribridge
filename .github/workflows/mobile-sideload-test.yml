@@ -87,7 +87,11 @@ jobs:
               find android/app/build/outputs/apk -type f
               exit 1
             fi
-            local dest="sideload-out/agribridge-test-v0.6.1-beta-${abi}.apk"
+            local suffix=""
+            if [[ "$abi" == "armeabi-v7a" ]]; then
+              suffix="-v7a"
+            fi
+            local dest="sideload-out/AgriBridge-TEST-${AGRIBRIDGE_VERSION_CODE}${suffix}.apk"
             cp "$src" "$dest"
             scripts/verify-sideload-apk.sh "$dest" "$abi" "$AGRIBRIDGE_VERSION_CODE" "pk.alranatraders.agribridge.test" | tee "sideload-out/${abi}.verify.txt"
           }
@@ -95,14 +99,14 @@ jobs:
           copy armeabi-v7a
       - uses: actions/upload-artifact@v4
         with:
-          name: agribridge-test-sideload-arm64-v8a
-          path: apps/mobile/sideload-out/agribridge-test-v0.6.1-beta-arm64-v8a.apk
+          name: AgriBridge-TEST-${{ env.AGRIBRIDGE_VERSION_CODE }}.apk
+          path: apps/mobile/sideload-out/AgriBridge-TEST-${{ env.AGRIBRIDGE_VERSION_CODE }}.apk
           if-no-files-found: error
           retention-days: 14
       - uses: actions/upload-artifact@v4
         with:
-          name: agribridge-test-sideload-armeabi-v7a
-          path: apps/mobile/sideload-out/agribridge-test-v0.6.1-beta-armeabi-v7a.apk
+          name: AgriBridge-TEST-${{ env.AGRIBRIDGE_VERSION_CODE }}-v7a.apk
+          path: apps/mobile/sideload-out/AgriBridge-TEST-${{ env.AGRIBRIDGE_VERSION_CODE }}-v7a.apk
           if-no-files-found: error
           retention-days: 14
       - uses: actions/upload-artifact@v4
@@ -145,6 +149,6 @@ jobs:
             gh release create "$tag" --prerelease --title "$tag" --notes "$notes" --target "${{ github.sha }}"
           fi
           gh release upload "$tag" \
-            sideload-out/agribridge-test-v0.6.1-beta-arm64-v8a.apk \
-            sideload-out/agribridge-test-v0.6.1-beta-armeabi-v7a.apk \
+            "sideload-out/AgriBridge-TEST-${AGRIBRIDGE_VERSION_CODE}.apk" \
+            "sideload-out/AgriBridge-TEST-${AGRIBRIDGE_VERSION_CODE}-v7a.apk" \
             --clobber
