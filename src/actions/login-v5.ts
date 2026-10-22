@@ -94,6 +94,25 @@ async function deps(): Promise<Deps> {
     },
     async userIdAvailable(name) { return String(await rpc("fn_login_userid_available", { p_name: name })); },
     async saveUserId(user, name) { return String(await rpc("fn_login_set_userid", { p_user: user, p_name: name })); },
+    async replaceUserId(user, name) {
+      const { data: farmers, error: readErr } = await service.from("farmers").select("id, username").eq("user_id", user).eq("is_deleted", false);
+      if (readErr) return "no_profile";
+      const list = (farmers ?? []) as { id: string; username: string | null }[];
+      const target = list.find((f) => f.username) ?? list[0] ?? null;
+      const prev = target?.username ?? null;
+      if (target) {
+        const { error } = await service.from("farmers").update({ username: name }).eq("id", target.id);
+        if (error) return /unique|duplicate|23505/i.test(error.message) ? "taken" : /check|23514/i.test(error.message) ? "shape" : "no_profile";
+      }
+      const { data: updated, error: pErr } = await service.from("profiles").update({ username: name }).eq("id", user).select("id");
+      if (pErr || !updated?.length) {
+        if (target) await service.from("farmers").update({ username: prev }).eq("id", target.id);
+        if (pErr && /unique|duplicate|23505/i.test(pErr.message)) return "taken";
+        if (pErr && /check|23514/i.test(pErr.message)) return "shape";
+        return "no_profile";
+      }
+      return "ok";
+    },
     async createMember({ fullName, phoneKey, email, password, cnic }) {
       const organizationId = await resolveRequestOrganizationId();
       if (!organizationId) return { ok: false, error: "e_try_again" };
@@ -160,7 +179,39 @@ async function sessionUserId(): Promise<string | null> {
 }
 export async function v6UserIdCheck(name: string) { return safe(async () => Flow.checkUserId(await deps(), name)); }
 export async function v6SaveUserId(name: string) { return safe(async () => Flow.saveUserId(await deps(), await sessionUserId(), name)); }
-/** Login ke baad: kya "Apni User ID banayein" dikhana hai? (sirf jab abhi User ID na ho) */
+
+/** Login pehle farmers.username dekhta hai, phir profiles.username. Dono yahan saath aate hain. */
+async function ownUserIdentity(uid: string): Promise<{ name: string | null; names: string[] }> {
+  const service = createServiceClient() as any;
+  const [{ data: profile }, { data: farmers }] = await Promise.all([
+    service.from("profiles").select("username").eq("id", uid).maybeSingle(),
+    service.from("farmers").select("username").eq("user_id", uid).eq("is_deleted", false),
+  ]);
+  const farmerName = ((farmers ?? []) as { username: string | null }[]).map((f) => f.username).find(Boolean) ?? null;
+  const profileName = (profile?.username as string | null) ?? null;
+  const names = [farmerName, profileName].filter((n): n is string => Boolean(n));
+  return { name: farmerName || profileName, names };
+}
+
+/** Profile card: abhi kaun si User ID login par chalegi. */
+export async function v6LoadOwnUserId() {
+  return safe(async () => {
+    const uid = await sessionUserId();
+    if (!uid) return { ok: false as const, error: "e_grant" };
+    return { ok: true as const, name: (await ownUserIdentity(uid)).name };
+  });
+}
+
+/** Profile card: User ID lagayein ya badlein. Khali naam purani ID nahi mitata. */
+export async function v6ChangeUserId(name: string) {
+  return safe(async () => {
+    const uid = await sessionUserId();
+    const names = uid ? (await ownUserIdentity(uid)).names : [];
+    return Flow.changeUserId(await deps(), uid, name, names);
+  });
+}
+
+/** Login screen ab is ko nahi bulati. Purani ID wale seedha dashboard jate hain. */
 export async function v6NeedsUserId(): Promise<boolean> {
   try {
     const uid = await sessionUserId();

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { VendorDashboardClient } from "./vendor-dashboard-client";
+import { UserIdAccountSection } from "@/components/account/user-id-section";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
@@ -252,6 +253,7 @@ export default async function VendorPortalPage() {
 
   return (
     <VendorDashboardClient
+      account={<div className="mb-4 max-w-xl"><UserIdAccountSection /></div>}
       alerts={(alerts ?? []).map((a) => ({
         id: a.id as string,
         title: (a.title as string) ?? "",

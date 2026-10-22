@@ -11,6 +11,7 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { AttendanceCalendar } from "./attendance-calendar";
 import { PhotoClient } from "./photo-client";
+import { UserIdAccountSection } from "@/components/account/user-id-section";
 import { Chip, SO_BTN, SO_BTN2 } from "@/components/payroll/salary-ui";
 import { MONTHS_RU } from "@/lib/payroll/compute";
 import { pkr } from "@/lib/recovery/credit-report";
@@ -166,6 +167,8 @@ export default async function MyHrPage({ searchParams }: { searchParams?: Record
         title={`Assalam-o-Alaikum, ${naam}`}
         description="Aap ki apni hazri, chhutti, tankhwah aur baqi kaam — ek jagah"
       />
+
+      <div className="mb-4 max-w-xl"><UserIdAccountSection /></div>
 
       {/* NAYA (688): mahana gumnaam pulse -- HR dashboard ki engagement/satisfaction */}
       <PulseCard userId={user.id} sp={searchParams} />

@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SlideCard, SLIDE_CSS, slideBoxClass, toggleMode } from "../src/app/login/slide-card";
+import { SignupForm, type SignupValues } from "../src/app/login/login-v6";
+import { UserIdAccountCard } from "../src/components/account/user-id-card";
 import { t6 } from "../src/app/login/v6-text";
 import { readFileSync } from "node:fs";
 
@@ -32,6 +34,34 @@ assert.match(SLIDE_CSS, /\.ab-ovw\{[^}]*transition:transform \.7s ease-in-out,bo
 assert.match(SLIDE_CSS, /\.ab-slide\.up \.ab-ovw\{transform:translateX\(-100%\);border-radius:0 150px 110px 0\}/);
 assert.match(SLIDE_CSS, /@keyframes ab-sl\{from\{opacity:0;transform:translateY\(40px\)\}/);
 assert.match(SLIDE_CSS, /@media \(prefers-reduced-motion:reduce\)\{[^}]*transition:none!important;animation:none!important/);
+// Desktop: dono panel ek hi card height, andar scroll nahi. Mobile: safha scroll, nested scroll nahi.
+assert.match(SLIDE_CSS, /height:min\(640px,calc\(100dvh - 128px\)\)/);
+assert.match(SLIDE_CSS, /\.ab-form\{[^}]*height:100%[^}]*overflow:hidden/);
+assert.match(SLIDE_CSS, /\.ab-pn\{[^}]*height:100%/);
+assert.doesNotMatch(SLIDE_CSS, /overflow-y:\s*auto/);
+assert.match(SLIDE_CSS, /@media \(max-width:767px\)\{[\s\S]*\.ab-slide\{[^}]*height:auto[^}]*overflow:visible/);
+assert.match(SLIDE_CSS, /@media \(max-width:767px\)\{[\s\S]*\.ab-form\{[^}]*height:auto;overflow:visible/);
+const emptySu: SignupValues = { name: "", email: "", phone: "", cnic: "", password: "" };
+const signupHtml = renderToStaticMarkup(
+  <SignupForm tr={(k) => t6("en", k)} busy={false} su={emptySu} setSu={() => {}} fieldErr={{}} channel="sms" setChannel={() => {}} onSubmit={() => {}} onReset={() => {}} onLogin={() => {}} onOAuth={() => {}} />);
+assert.match(signupHtml, /data-layout="compact"/);
+assert.match(signupHtml, /md:grid-cols-2/);
+assert.match(signupHtml, /data-compact="1"/);
+assert.match(signupHtml, /id="su-cnic-hint" class="sr-only"/);
+assert.match(signupHtml, /title="13 digits, format 12345-1234567-1"/);
+assert.match(signupHtml, /One account per email, mobile, CNIC and User ID/);
+assert.match(signupHtml, /class="[^"]*ab-box/);
+const uidSet = renderToStaticMarkup(<UserIdAccountCard lang="en" current={null} />);
+const uidHave = renderToStaticMarkup(<UserIdAccountCard lang="en" current="aslam.farms" />);
+assert.match(uidSet, /data-testid="user-id-account"/);
+assert.match(uidSet, /Set your User ID/);
+assert.match(uidSet, /Optional\. Sign in with this/);
+assert.match(uidHave, /value="aslam.farms"/);
+assert.match(uidHave, /Your User ID/);
+assert.match(uidHave, /You can change it here any time/);
+const uidSrc = readFileSync("src/components/account/user-id-card.tsx", "utf8");
+assert.match(uidSrc, /from "@\/lib\/auth\/login-v6-ui"/);
+assert.doesNotMatch(uidSrc, /from "@\/lib\/auth\/login-v5"/, "client card node:crypto wali file import na kare");
 // Urdu fully Urdu on the green panel
 for (const k of ["slide_hi_title", "slide_hi_p", "slide_back_title", "slide_back_p", "pill_login", "pill_signup", "m_new", "m_have"]) assert.ok(!/[A-Za-z]{3,}/.test(t6("ur", k).replace("AgriBridge", "")), k);
 // page wiring: v6 uses the slide card, footer kept, social icons + duplicate reset link kept
@@ -39,5 +69,11 @@ const ui = readFileSync("src/app/login/login-v6.tsx", "utf8");
 assert.match(ui, /<SlideCard mode=\{step === "signup" \? "signup" : "login"\} onMode=\{\(m\) => go\(m\)\}/);
 assert.match(ui, /<Footer tr=\{tr\} \/>/);
 assert.match(ui, /fieldErr\.phone === "e_phone_taken" \? <ResetLink/);
-assert.equal((ui.match(/<Social tr=\{tr\} onOAuth=\{onOAuth\} \/>/g) ?? []).length, 2, "icons on login and signup");
+assert.equal((ui.match(/<Social tr=\{tr\} onOAuth=\{onOAuth\}/g) ?? []).length, 2, "icons on login and signup");
+assert.doesNotMatch(ui, /v6NeedsUserId/, "login ke baad User ID ka screen nahi");
+assert.doesNotMatch(ui, /step === "userid"/);
+assert.match(ui, /function afterSignedIn\(to: string\) \{\s*finish\(to\);\s*\}/);
+for (const f of ["src/app/portal/profile/page.tsx", "src/app/admin/my-hr/page.tsx", "src/app/portal/c/profile/page.tsx", "src/app/vendor/page.tsx"]) {
+  assert.match(readFileSync(f, "utf8"), /UserIdAccountSection|UsernameCard/, f);
+}
 console.log("login-v6-slide: all assertions passed");

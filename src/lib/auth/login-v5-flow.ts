@@ -38,6 +38,8 @@ export interface Deps {
   identityTaken?(phoneKey: string | null, email: string | null, cnic: string | null): Promise<("phone" | "email" | "cnic")[]>;
   userIdAvailable?(name: string): Promise<string>;
   saveUserId?(userId: string, name: string): Promise<string>;
+  /** Profile settings: User ID pehli dafa ya badal kar. "ok" | "taken" | "shape" | "no_profile". */
+  replaceUserId?(userId: string, name: string): Promise<string>;
   createMember(input: { fullName: string; phoneKey: string; email: string | null; password: string; cnic?: string | null }): Promise<{ ok: true; loginEmail: string } | { ok: false; error: string }>;
   setPassword(userId: string, password: string): Promise<boolean>;
 }
@@ -284,4 +286,22 @@ export async function saveUserId(d: Deps, userId: string | null, raw: unknown): 
   if (!c.ok) return c;
   const r = d.saveUserId ? await d.saveUserId(userId, c.name) : "no_profile";
   return r === "ok" ? { ok: true, name: c.name } : { ok: false, error: UID_ERR[r] ?? "e_try_again" };
+}
+
+/**
+ * Profile / account settings par User ID.
+ * Pehli dafa lagti hai, aur baad mein badal bhi sakti hai (Facebook username jaisa).
+ * Jo naam pehle se isi bande ka hai, us par "taken" nahi aata -- purani ID login par chalti rehti hai.
+ */
+export async function changeUserId(d: Deps, userId: string | null, raw: unknown, currentNames: readonly string[] = []): Promise<{ ok: true; name: string } | Fail> {
+  if (!userId) return { ok: false, error: "e_grant" };
+  const name = String(raw ?? "").trim().toLowerCase();
+  const owned = currentNames.map((s) => String(s).trim().toLowerCase()).filter(Boolean);
+  if (owned.includes(name)) return { ok: true, name };
+  const shape = userIdProblem(name);
+  if (shape) return { ok: false, error: shape };
+  const avail = d.userIdAvailable ? await d.userIdAvailable(name) : "ok";
+  if (avail !== "ok") return { ok: false, error: UID_ERR[avail] ?? "e_try_again" };
+  const saved = d.replaceUserId ? await d.replaceUserId(userId, name) : "no_profile";
+  return saved === "ok" ? { ok: true, name } : { ok: false, error: UID_ERR[saved] ?? "e_try_again" };
 }
