@@ -13,6 +13,10 @@ export const sitePagesDict = {
   sp_full_name: { en: "Full name", rm: "Poora naam", ur: "پورا نام" },
   sp_full_name_req: { en: "Full Name *", rm: "Poora naam *", ur: "پورا نام *" },
   sp_email: { en: "Email", rm: "Email", ur: "ای میل" },
+  sp_gender: { en: "Gender", rm: "Jins", ur: "جنس" },
+  sp_gender_male: { en: "Male", rm: "Mard", ur: "مرد" },
+  sp_gender_female: { en: "Female", rm: "Aurat", ur: "عورت" },
+  sp_gender_other: { en: "Other", rm: "Dusra", ur: "دیگر" },
   sp_phone: { en: "Phone", rm: "Phone", ur: "فون" },
   sp_phone_wa: { en: "Phone / WhatsApp", rm: "Phone / WhatsApp", ur: "فون / واٹس ایپ" },
   sp_address: { en: "Address", rm: "Pata", ur: "پتہ" },
@@ -66,9 +70,9 @@ export const sitePagesDict = {
   sp_job_location: { en: "Location", rm: "Jagah", ur: "مقام" },
   sp_apply_for: { en: "Apply for", rm: "Darkhwast", ur: "درخواست برائے" },
   sp_apply_required: {
-    en: "Full name, email, and the job are required.",
-    rm: "Poora naam, email, aur jagah zaroori hain.",
-    ur: "پورا نام، ای میل، اور نوکری لازمی ہیں۔",
+    en: "Full name, email, gender, and the job are required.",
+    rm: "Poora naam, email, jins, aur jagah zaroori hain.",
+    ur: "پورا نام، ای میل، جنس، اور نوکری لازمی ہیں۔",
   },
   sp_apply_failed: {
     en: "Could not submit the application. Please try again.",
