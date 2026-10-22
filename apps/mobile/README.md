@@ -48,6 +48,10 @@ Field writes sit in a local outbox and sync with `client_uuid`. The server accep
 
 `signing/keystore.properties.example` has empty passwords. Copy it to `signing/keystore.properties` only on the machine that signs a Play build. Do not commit the keystore. Debug APK uses the debug keystore.
 
+## Sideload test APKs
+
+Workflow **Mobile sideload APKs** builds two release APKs, not the fat debug APK. `APP_CHANNEL=internal`, versionName `v0.6.1 Beta`, versionCode 601. R8 minify and Hermes are on. Each APK is one ABI (`arm64-v8a` or `armeabi-v7a`) and is signed with the Android debug keystore. minSdk is 24, so Android 8 and newer can install. `android:testOnly` is rejected by `apps/mobile/scripts/verify-sideload-apk.sh`.
+
 ## CI artifact
 
 Workflow **Mobile debug APK** uploads `agribridge-mobile-debug-apk` (14 days). The APK is not in git. It calls portal routes from this release, so login against live works after this release is deployed with the portal.

@@ -38,7 +38,7 @@ export function buildExpoConfig(env: NodeJS.ProcessEnv = process.env) {
         appChannel,
         portalUrl: env.EXPO_PUBLIC_PORTAL_URL ?? "",
       },
-      plugins: ["./plugins/withPlaySigning.js"],
+      plugins: ["./plugins/withPlaySigning.js", "./plugins/withSideloadApk.js"],
     },
   };
 }
