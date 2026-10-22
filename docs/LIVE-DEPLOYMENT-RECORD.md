@@ -1,3 +1,7 @@
+## Phone glass home and TEST seed — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 621. Starry glass, compact header, greeting drops the word TEST, weather keeps the asked place (Chak 157 NB) plus a condition icon. Every number card has an icon, a line, and a change badge. Admin par chhoti TEST nishani aur "Is mahina munafa". Customer aur dealer charts 6 mahine. Khata ka minus Credit dikhta hai. `707_app_phone_home.sql` testing par: tanks, maund, dealer stock, staff advance/tasks, goal numbers sirf jahan null, centre names, vet next_due aaj, 8 janwar, orders 6 mahine. Live par mat chalana. Rollback file saath hai.
+
 ## Phone KPI grid and weather — 22 October 2026
 
 versionCode 620. KPI card ki chaudai flex item par 48% hai, is liye 2x2 grid rehti hai. Mausam Open-Meteo se: apna gaon, warna TEST kisan ka asal gaon (district "TEST" shehar nahi). Pakistan wali geocode. Aakhri kamiyab reading cache. Live APK nahi badli. 705 aur 706 file only.

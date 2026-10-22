@@ -505,9 +505,7 @@ export async function loadAdminHome(auth: LiveAuth, fetchImpl: FetchLike, now = 
   const today = days[days.length - 1];
   const since = encodeURIComponent(karachiStartIso(days[0]));
   const test = auth.testAccount === true;
-  const banner = test
-    ? "TEST account. Sirf is_test qatarein. Asal (is_test false) bills, cash aur manzooriyan nahi."
-    : null;
+  const banner = null;
   const salesPath = `pos_sales?select=total_amount,created_at,status,payment_mode&created_at=gte.${since}&order=created_at.desc&limit=${SALES_LIMIT}`;
   const accountPath = "finance_accounts?select=account_type,current_balance,is_active&is_active=eq.true&limit=100";
   const inventoryPath = `inventory?select=product_id,quantity_on_hand&limit=${STOCK_LIMIT}`;
@@ -617,6 +615,14 @@ export async function loadMilkList(auth: LiveAuth, fetchImpl: FetchLike, limit =
   return liveGetScoped<MilkRow>(auth, `milk_entries?select=${MILK_LIST_SELECT}${farmer}&order=entry_date.desc,created_at.desc&limit=${cap}`, fetchImpl);
 }
 
+/** Haftay ka litre. Sirf tareekh aur litre, taake 7 din ki collection chart mein aaye. */
+export async function loadMilkWindow(auth: LiveAuth, start: string, end: string, fetchImpl: FetchLike): Promise<ReadResult<Pick<MilkRow, "entry_date" | "quantity_liters">>> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+    return { ok: false, status: 0, message: "Haftay ki tareekh theek nahi." };
+  }
+  return liveGetScoped(auth, `milk_entries?select=entry_date,quantity_liters&entry_date=gte.${start}&entry_date=lte.${end}&order=entry_date.asc&limit=500`, fetchImpl);
+}
+
 const TEST_PENDING: { label: string; path: string; cap: number }[] = [
   { label: "Doodh ki tasdeeq", path: "milk_entries?select=id&status=in.(pending_fat,priced)&limit=500", cap: 500 },
   { label: "Khareed", path: "purchases?select=id&review_status=in.(submitted,verified)&limit=200", cap: 200 },
@@ -668,6 +674,23 @@ export async function loadGoalTargets(auth: LiveAuth, fetchImpl: FetchLike): Pro
 const MONTH_SALES_CAP = 2000;
 
 /** Is mahine ki sale. Fehrist cap par ruk jaye to total null. */
+export type PhoneNote = { key?: string | null; value?: number | string | null; label?: string | null; detail?: string | null };
+
+/** 707 ki phone home rows. Table na ho to message, sifar nahi. */
+export async function loadPhoneNotes(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<PhoneNote>> {
+  return liveGet<PhoneNote>(auth, "app_phone_notes?select=key,value,label,detail&order=key.asc&limit=40", fetchImpl);
+}
+
+export async function loadMonthPurchases(auth: LiveAuth, monthStart: string, fetchImpl: FetchLike): Promise<{ total: number | null; note: string | null }> {
+  const path = `purchases?select=total_amount,purchase_date,status&purchase_date=gte.${encodeURIComponent(monthStart)}&limit=500`;
+  const res = auth.testAccount ? await liveGetScoped<PurchaseRow>(auth, path, fetchImpl) : await liveGet<PurchaseRow>(auth, path, fetchImpl);
+  if (!res.ok) return { total: null, note: res.message };
+  const total = res.rows
+    .filter((row) => !["void", "cancelled"].includes(String(row.status || "").toLowerCase()))
+    .reduce((sum, row) => sum + num(row.total_amount), 0);
+  return { total, note: null };
+}
+
 export async function loadMonthSales(auth: LiveAuth, monthStart: string, fetchImpl: FetchLike): Promise<{ total: number | null; note: string | null }> {
   const path = `pos_sales?select=total_amount,created_at,status&created_at=gte.${encodeURIComponent(karachiStartIso(monthStart))}&order=created_at.desc&limit=${MONTH_SALES_CAP}`;
   const res = auth.testAccount ? await liveGetScoped<SaleRow>(auth, path, fetchImpl) : await liveGet<SaleRow>(auth, path, fetchImpl);

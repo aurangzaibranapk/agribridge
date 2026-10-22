@@ -54,6 +54,20 @@ export function goalDeadline(stored: string | null | undefined, periodEnd: strin
   return periodEnd && /^\d{4}-\d{2}-\d{2}$/.test(periodEnd) ? periodEnd : "—";
 }
 
+/** Aakhri mahine, purana se naya. Label Angrezi chhota mahina. */
+export function monthBuckets(today: string, count = 6): { key: string; label: string }[] {
+  const [year, month] = today.split("-").map(Number);
+  if (!year || !month) return [];
+  const labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const out: { key: string; label: string }[] = [];
+  for (let i = count - 1; i >= 0; i -= 1) {
+    const date = new Date(Date.UTC(year, month - 1 - i, 1));
+    const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+    out.push({ key, label: labels[date.getUTCMonth()] });
+  }
+  return out;
+}
+
 /** pct null = poora dash offset, yani ring khali. */
 export function ringDashOffset(circumference: number, pct: number | null): number {
   if (!(circumference > 0)) return 0;

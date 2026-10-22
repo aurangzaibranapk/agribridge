@@ -104,7 +104,7 @@ function Dashboard({ tab, home, error, onOpen, milk, orders, auth, readOnly, not
           <Text style={{ color: "#3d2e10", marginTop: 4 }}>{home.banner}</Text>
         </View>
       ) : null}
-      <Text style={{ color: colors.muted, marginBottom: 8 }}>Aaj · {home.today} · {home.banner ? "TEST hisaab" : "live hisaab"}</Text>
+      <Text style={{ color: colors.muted, marginBottom: 8 }}>Aaj · {home.today} · {auth?.testAccount ? "TEST" : "live hisaab"}</Text>
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
         <Kpi label="Aaj ki sale" value={home.sales.state === "ok" ? rupees(home.sales.total) : "—"} sub={home.sales.state === "ok" ? `${home.sales.bills} bill${home.sales.partial ? " · adhoori" : ""}` : "nahi khuli"} />
         <Kpi label="Cash" value={home.cash.state === "ok" ? rupees(home.cash.cash) : "—"} sub={home.cash.state === "ok" ? `${home.cash.accounts} accounts` : home.cash.state === "empty" ? "koi account nahi" : "ijazat"} />

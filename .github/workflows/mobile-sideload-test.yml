@@ -27,7 +27,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: https://hwaiuwxqldxsoukkfefn.supabase.co
       # Public testing anon key.
       EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3YWl1d3hxbGR4c291a2tmZWZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MjU1NjMsImV4cCI6MjEwMzUwMTU2M30.UwchGHJHRCdKHwpJRr-fdNTreeVNLlfbpo7nBqQv9l4"
-      AGRIBRIDGE_VERSION_CODE: "620"
+      AGRIBRIDGE_VERSION_CODE: "621"
       CI: "1"
     steps:
       - uses: actions/checkout@v4
@@ -129,8 +129,9 @@ jobs:
           notes=$(cat <<'EOF'
           AgriBridge TEST sideload builds. Not the live app and not a Play Store upload.
           App name AgriBridge TEST. Package pk.alranatraders.agribridge.test.
-          versionName v0.6.1 Beta, versionCode 620, APP_CHANNEL=internal.
-          KPI cards are a 2x2 grid (48% on the flex item). Weather uses a real Pakistan village when the farmer district is TEST, and keeps the last Open-Meteo reading.
+          versionName v0.6.1 Beta, versionCode 621, APP_CHANNEL=internal.
+          Starry glass, compact header, greeting from the profile name, weather place stays Chak 157 NB. KPI cards keep the 2x2 grid, an icon, a trend line, and a change badge.
+          Phone notes (707, testing only) fill tanks, grain maund, dealer stock, staff advance, and tasks. Goal numbers fill only where still null. Not on live.
           English and Roman: AgriBridge with Kisan ka Wasela directly under it. Urdu: the Urdu name with the Urdu tagline under it. The English gloss is not shown. Default is in the app. 706 can replace the two lines later. Not on live. Dark glass, TEST database numbers.
           Goal card: Kisan, MCA, MCO, Staff, Admin. Owner applies 704_app_goal_targets.sql on testing before targets show. Numbers stay empty until the owner sets them. Not on live.
           Owner applies 703_app_test_read_policies.sql on testing before home cards (bills, stock, cash, salary, activity). Not on live.

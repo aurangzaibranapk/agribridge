@@ -33,3 +33,14 @@ export function pickPakistan<T extends GeoHit>(results: T[] | null | undefined):
   if (!results?.length) return null;
   return results.find((row) => row.country_code === "PK" || /pakistan/i.test(row.country || "")) ?? null;
 }
+
+/** Geocoder "Chak One Hundred Fifty-Seven NB" likhta hai. Gaon ka chhota naam rakho, NB laga do. */
+export function shortPlace(query: string, official: string): string {
+  const asked = query.trim();
+  const named = official.trim();
+  const suffix = named.match(/\b(NB|SB|EB|WB)\b/i)?.[1]?.toUpperCase() || "";
+  const base = asked || named;
+  if (!base) return "";
+  if (suffix && !new RegExp(`\\b${suffix}\\b`, "i").test(base)) return `${base} ${suffix}`;
+  return base;
+}

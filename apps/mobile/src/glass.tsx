@@ -1,17 +1,18 @@
 import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Animated, Pressable, RefreshControl, ScrollView, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Path, Polyline, Rect, Stop } from "react-native-svg";
+import { greetingName } from "../../../src/lib/mobile/display-name";
 import type { TimelineStep } from "../../../src/lib/mobile/glass-metrics";
-import { ringDashOffset, timelineFinished, timelinePercent } from "../../../src/lib/mobile/glass-metrics";
+import { pctChange, ringDashOffset, timelineFinished, timelinePercent } from "../../../src/lib/mobile/glass-metrics";
 import { brandLockup, loadAppMark, taglineWithDefault, type AppLang, type AppMark } from "../../../src/lib/mobile/sub-brand";
 import { liveAuth, type LiveBag } from "./bits";
 import { liveGet, liveGetScoped } from "../../../src/lib/mobile/live-read";
-import { pickPakistan, preferVillage, usablePlace } from "../../../src/lib/mobile/weather-place";
+import { pickPakistan, preferVillage, shortPlace, usablePlace } from "../../../src/lib/mobile/weather-place";
 
 export const glass = {
-  bg: "#07140F",
-  card: "rgba(14, 32, 28, 0.92)",
-  line: "rgba(255,255,255,0.08)",
+  bg: "#071018",
+  card: "rgba(16, 36, 32, 0.55)",
+  line: "rgba(255,255,255,0.16)",
   text: "#F4F7F4",
   muted: "#8FA399",
   gold: "#C8A058",
@@ -22,15 +23,48 @@ export const glass = {
   orange: "#F5B942",
 };
 
+function starDots(): { x: number; y: number; r: number; o: number }[] {
+  const dots: { x: number; y: number; r: number; o: number }[] = [];
+  let n = 42;
+  for (let i = 0; i < 56; i += 1) {
+    n = (n * 1103515245 + 12345) % 2147483647;
+    dots.push({ x: (n % 1000) / 10, y: ((Math.floor(n / 9) % 1000) / 10), r: (n % 3) * 0.4 + 0.5, o: 0.28 + (n % 5) * 0.1 });
+  }
+  return dots;
+}
+
+const STARS = starDots();
+
+export function StarField() {
+  return (
+    <Svg style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} width="100%" height="100%" pointerEvents="none">
+      <Defs>
+        <LinearGradient id="agriSky" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor="#07111A" />
+          <Stop offset="0.45" stopColor="#0A1C16" />
+          <Stop offset="1" stopColor="#10261C" />
+        </LinearGradient>
+      </Defs>
+      <Rect width="100%" height="100%" fill="url(#agriSky)" />
+      {STARS.map((star, index) => (
+        <Circle key={index} cx={`${star.x}%`} cy={`${star.y}%`} r={star.r} fill={index % 7 === 0 ? "#C8A058" : "#F4F7F4"} opacity={star.o} />
+      ))}
+    </Svg>
+  );
+}
+
 export function GlassScreen({ children, refreshing, onRefresh }: { children: ReactNode; refreshing?: boolean; onRefresh?: () => void }) {
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: glass.bg }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 28, width: "100%" }}
-      refreshControl={onRefresh ? <RefreshControl refreshing={refreshing === true} onRefresh={onRefresh} tintColor={glass.up} /> : undefined}
-    >
-      {children}
-    </ScrollView>
+    <View style={{ flex: 1, backgroundColor: glass.bg }}>
+      <StarField />
+      <ScrollView
+        style={{ flex: 1, backgroundColor: "transparent" }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 28, width: "100%" }}
+        refreshControl={onRefresh ? <RefreshControl refreshing={refreshing === true} onRefresh={onRefresh} tintColor={glass.up} /> : undefined}
+      >
+        {children}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -89,17 +123,21 @@ export function BrandStack({ title, line, rtl, titleSize, lineSize }: { title: s
   );
 }
 
-export function BrandHeader({ role, name, onProfile, live }: { role: string; name: string; onProfile?: () => void; live?: LiveBag }) {
+export function BrandHeader({ role, name, centre, onProfile, live }: { role: string; name: string; centre?: string; onProfile?: () => void; live?: LiveBag }) {
   const initial = (name.trim().charAt(0) || role.charAt(0) || "A").toUpperCase();
   const mark = useAppMark(live);
   const lock = brandLockup(useAppLang(), mark.tagline);
+  const where = centre?.trim() ? `${role.toUpperCase()} · ${centre.trim()}` : role.toUpperCase();
   return (
     <Rise index={0}>
-      <BrandStack title={lock.title} line={lock.line} rtl={lock.rtl} titleSize={22} lineSize={13} />
-      <Text style={{ color: glass.gold, fontSize: 11, letterSpacing: 0.4, fontWeight: "700", marginTop: 2 }}>{role.toUpperCase()}</Text>
-      <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6, marginBottom: 12 }}>
-        <Text style={{ color: glass.text, fontSize: 26, fontWeight: "800", flex: 1, paddingRight: 8 }}>Assalam o Alaikum, {name || "—"}</Text>
-        <Pressable onPress={onProfile} style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: "#146B3A", alignItems: "center", justifyContent: "center", shadowColor: "#3DDC97", shadowOpacity: 0.7, shadowRadius: 10 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+        <View style={{ flex: 1, paddingRight: 10 }}>
+          <Text style={{ color: glass.text, fontSize: 16, fontWeight: "800", textAlign: lock.rtl ? "right" : "left", writingDirection: lock.rtl ? "rtl" : "ltr" }}>{lock.title}</Text>
+          <Text style={{ color: glass.muted, fontSize: 11, marginTop: 1, textAlign: lock.rtl ? "right" : "left", writingDirection: lock.rtl ? "rtl" : "ltr" }}>{lock.line}</Text>
+          <Text style={{ color: glass.gold, fontSize: 11, fontWeight: "700", marginTop: 3 }}>{where}</Text>
+          <Text style={{ color: glass.text, fontSize: 18, fontWeight: "800", marginTop: 1 }}>Assalam o Alaikum, {name || "—"}</Text>
+        </View>
+        <Pressable onPress={onProfile} style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: "#146B3A", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", shadowColor: "#3DDC97", shadowOpacity: 0.7, shadowRadius: 10 }}>
           <Text style={{ color: "#fff", fontWeight: "800", fontSize: 18 }}>{initial}</Text>
         </Pressable>
       </View>
@@ -145,7 +183,7 @@ export function useFace(live?: LiveBag): { name: string; place: string } {
     const id = encodeURIComponent(auth.userId);
     void liveGet<{ full_name?: string | null }>(auth, `profiles?select=full_name&id=eq.${id}&limit=1`, fetch).then((rows) => {
       const full = rows.ok ? rows.rows[0]?.full_name || "" : "";
-      setName(full.trim().split(/\s+/)[0] || "");
+      setName(greetingName(full));
     });
     void liveGetScoped<{ village?: string | null; tehsil?: string | null; district?: string | null }>(auth, `farmers?select=village,tehsil,district&user_id=eq.${id}&limit=1`, fetch).then(async (rows) => {
       const row = rows.ok ? rows.rows[0] : null;
@@ -175,7 +213,7 @@ async function fetchWeather(place: string): Promise<WeatherView | null> {
   if (!current || current.temperature_2m == null) return null;
   const when = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", weekday: "short", day: "numeric", month: "short" }).format(new Date());
   return {
-    place: hit.name,
+    place: shortPlace(place, hit.name),
     temp: `${Math.round(current.temperature_2m)}°C`,
     condition: WMO[current.weather_code ?? -1] || "Mausam",
     humidity: current.relative_humidity_2m == null ? "—" : `${Math.round(current.relative_humidity_2m)}%`,
@@ -212,20 +250,32 @@ export function useWeather(place: string): WeatherView | null {
   return view;
 }
 
+function weatherGlyph(condition: string | undefined): string {
+  const name = condition || "";
+  if (/barish|toofan/i.test(name)) return "M6 14a6 6 0 0 1 12 0 M8 18v2 M12 18v3 M16 18v2";
+  if (/badal|dhund/i.test(name)) return "M7 16a4 4 0 0 1 1-8 5 5 0 0 1 9 1 3 3 0 0 1 1 7z";
+  return "M12 7a5 5 0 1 0 .1 0 M12 2v2 M12 20v2 M4 12H6 M18 12h2 M6 6l1.5 1.5 M16.5 16.5L18 18 M18 6l-1.5 1.5 M7.5 16.5L6 18";
+}
+
 export function WeatherCard({ weather, index = 1 }: { weather: WeatherView | null; index?: number }) {
   return (
     <Rise index={index}>
-      <View style={{ backgroundColor: "#0C3B2C", borderRadius: 22, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: "rgba(61,220,151,0.28)" }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <View>
+      <View style={{ backgroundColor: "rgba(12, 48, 36, 0.72)", borderRadius: 22, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: "rgba(61,220,151,0.28)" }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <View style={{ flex: 1, paddingRight: 8 }}>
             <Text style={{ color: glass.muted }}>{weather?.place || "—"}</Text>
             <Text style={{ color: glass.text, fontSize: 34, fontWeight: "800" }}>{weather?.temp || "—"}</Text>
             <Text style={{ color: glass.gold }}>{weather?.condition || "Mausam"}</Text>
           </View>
           <View style={{ alignItems: "flex-end" }}>
+            <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
+              <Svg width={26} height={26} viewBox="0 0 24 24">
+                <Path d={weatherGlyph(weather?.condition)} stroke="#F5B942" strokeWidth={1.7} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+            </View>
             <Text style={{ color: glass.muted }}>{weather?.humidity || "—"}</Text>
-            <Text style={{ color: glass.muted, marginTop: 4 }}>{weather?.wind || "—"}</Text>
-            <Text style={{ color: glass.muted, marginTop: 8 }}>{weather?.when || ""}</Text>
+            <Text style={{ color: glass.muted, marginTop: 2 }}>{weather?.wind || "—"}</Text>
+            <Text style={{ color: glass.muted, marginTop: 2 }}>{weather?.when || ""}</Text>
           </View>
         </View>
         {weather?.note ? <Text style={{ color: glass.muted, marginTop: 8 }}>{weather.note}</Text> : null}
@@ -361,7 +411,13 @@ export function Donut({ parts, center }: { parts: { label: string; value: number
 }
 
 export function Pct({ value }: { value: number | null }) {
-  if (value == null) return null;
+  if (value == null) {
+    return (
+      <View style={{ backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
+        <Text style={{ color: glass.muted, fontSize: 11, fontWeight: "700" }}>—</Text>
+      </View>
+    );
+  }
   const up = value >= 0;
   return (
     <View style={{ backgroundColor: up ? "rgba(61,220,151,0.15)" : "rgba(255,107,107,0.15)", borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
@@ -403,6 +459,9 @@ const GLYPH: Record<string, string> = {
 };
 
 export function Kpi({ label, value, sub, color, series, pct, index }: { label: string; value: string; sub?: string; color: string; series: number[]; pct: number | null; index: number }) {
+  const clean = series.filter((point) => Number.isFinite(point));
+  const line = clean.length >= 2 ? clean : clean.length === 1 ? [clean[0], clean[0]] : [];
+  const change = pct != null ? pct : line.length >= 2 ? pctChange(line[line.length - 1], line[line.length - 2]) : null;
   return (
     <Rise index={index} style={{ width: "48%", maxWidth: "48%", flexBasis: "48%", flexGrow: 0, flexShrink: 0 }}>
       <View style={{ width: "100%", backgroundColor: glass.card, borderRadius: 18, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: glass.line }}>
@@ -412,12 +471,12 @@ export function Kpi({ label, value, sub, color, series, pct, index }: { label: s
               <Path d={GLYPH[label] || "M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0"} stroke="#07140F" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
           </View>
-          <Pct value={pct} />
+          <Pct value={change} />
         </View>
         <Text style={{ color: glass.muted, marginTop: 10, fontSize: 12, lineHeight: 16 }}>{label}</Text>
         <Text style={{ color: glass.text, fontSize: 20, fontWeight: "800", marginTop: 2, lineHeight: 24 }}>{value}</Text>
         {sub ? <Text style={{ color: glass.muted, fontSize: 11, lineHeight: 14 }}>{sub}</Text> : null}
-        <Spark values={series} color={color} />
+        <Spark values={line} color={color} />
       </View>
     </Rise>
   );
