@@ -48,7 +48,8 @@ export function BrandHeader({ role, name, onProfile }: { role: string; name: str
   const initial = (name.trim().charAt(0) || role.charAt(0) || "A").toUpperCase();
   return (
     <Rise index={0}>
-      <Text style={{ color: glass.gold, fontSize: 11, letterSpacing: 1.1, fontWeight: "700" }}>WASELA ECO MAHABALI · {role.toUpperCase()}</Text>
+      <Text style={{ color: glass.text, fontSize: 22, fontWeight: "800" }}>AgriBridge</Text>
+      <Text style={{ color: glass.gold, fontSize: 11, letterSpacing: 0.4, fontWeight: "700", marginTop: 2 }}>by Al Rana Traders · {role.toUpperCase()}</Text>
       <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6, marginBottom: 12 }}>
         <Text style={{ color: glass.text, fontSize: 26, fontWeight: "800", flex: 1, paddingRight: 8 }}>Assalam o Alaikum, {name || "—"}</Text>
         <Pressable onPress={onProfile} style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: "#146B3A", alignItems: "center", justifyContent: "center", shadowColor: "#3DDC97", shadowOpacity: 0.7, shadowRadius: 10 }}>

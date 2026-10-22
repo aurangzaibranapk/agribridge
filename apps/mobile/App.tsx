@@ -394,6 +394,7 @@ export default function App() {
       {stage !== "app" ? (
         <ScrollView contentContainerStyle={{ padding: 20 }}>
           <Text style={styles.brand}>{FLAVOR === "test" ? "AgriBridge TEST" : "AgriBridge"}</Text>
+          <Text style={styles.byline}>by Al Rana Traders</Text>
           <Text style={styles.sub}>Version {VERSION || "—"}{VERSION_CODE ? ` · ${VERSION_CODE}` : ""} · {CHANNEL}</Text>
           {stage === "login" ? (
             <View>
@@ -647,6 +648,7 @@ function SupportSheet({ portal, token, chat, whatsapp, channel, flavor, onClose 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#07140F" },
   brand: { fontSize: 32, fontWeight: "800", color: colors.green, marginTop: 24 },
+  byline: { color: colors.muted, fontSize: 13, marginTop: 2 },
   sub: { color: colors.muted, marginBottom: 16 },
   help: { color: colors.muted, marginBottom: 8 },
   input: { backgroundColor: "#fff", borderRadius: 12, borderWidth: 1, borderColor: colors.line, padding: 12, marginTop: 8 },

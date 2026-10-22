@@ -80,7 +80,10 @@ for (const role of ["farmer", "customer", "staff", "supplier", "dealer", "mca", 
 assert.equal(ROLE_NAV.farmer.phase1, true);
 assert.deepEqual(ROLE_NAV.farmer.tabs.map((tab) => tab.key), ["home", "doodh", "khata", "more"]);
 assert.equal(ROLE_NAV.farmer.tabs[2].label, "Wallet");
-assert.match(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /Wasela Eco Mahabali/i);
+assert.match(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /AgriBridge/);
+assert.match(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /by Al Rana Traders/);
+assert.doesNotMatch(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /Wasela Eco Mahabali/i);
+assert.match(readFileSync("apps/mobile/App.tsx", "utf8"), /by Al Rana Traders/);
 assert.doesNotMatch(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /MISAAL/);
 const glassHomes = readFileSync("apps/mobile/src/roles/glass-homes.tsx", "utf8");
 assert.match(glassHomes, /orderTimeline/);
@@ -253,7 +256,7 @@ const testSideload = readFileSync(".github/workflows/mobile-sideload-test.yml", 
 assert.match(testSideload, /EXPO_PUBLIC_APP_FLAVOR: test/);
 assert.match(testSideload, /APP_CHANNEL: internal/);
 assert.match(testSideload, /EXPO_PUBLIC_SUPABASE_URL: https:\/\/hwaiuwxqldxsoukkfefn\.supabase\.co/);
-assert.match(testSideload, /AGRIBRIDGE_VERSION_CODE: "613"/);
+assert.match(testSideload, /AGRIBRIDGE_VERSION_CODE: "614"/);
 assert.match(testSideload, /pk\.alranatraders\.agribridge\.test/);
 assert.match(testSideload, /v0\.6\.1-beta-testdb/);
 assert.match(testSideload, /ktskwawkslaznkjjacni/);

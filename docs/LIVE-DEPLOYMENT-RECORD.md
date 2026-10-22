@@ -1,3 +1,7 @@
+## Phone brand — 22 October 2026 — NO NEW SQL
+
+versionCode 614. Home brand AgriBridge hai. Neeche chhota `by Al Rana Traders`. Wasela Eco Mahabali home brand nahi. Baqi approved cards waise hi. Live APK nahi badli. 704 ab bhi file only.
+
 ## Phone goal card — 22 October 2026 — FILE ONLY, NOT APPLIED
 
 versionCode 613. Goal card on Kisan (mahine ke litre), MCA aur MCO (aaj ki collection), Staff (mahine ki hazri), Admin home (mahine ki sale). Ring 0 se count karti hai jab target number ho. Target na ho to dash, sifar nahi. Migration **704 not applied** by this agent. Owner testing par: `supabase/migrations/704_app_goal_targets.sql`. Live par 704 nahi. Row insert hoti hai, chaaron numbers NULL rehte hain jab tak owner khud set na kare. Koi sample target nahi. Live APK nahi badli.
