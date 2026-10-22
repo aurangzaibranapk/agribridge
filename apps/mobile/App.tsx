@@ -9,6 +9,7 @@ import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
 import { normalizeChannel, showTesterReport } from "../../src/lib/mobile/channel";
 import { dataFlavor, failureLine, signInMobile } from "../../src/lib/mobile/live-login";
+import { liveGetScoped, type MilkRow } from "../../src/lib/mobile/live-read";
 import { readTestAccount, showRolePreview, showRoleSwitch, SWITCH_ROLES, switchRoleLabel } from "../../src/lib/mobile/test-account";
 import { refreshSupabaseSession, SESSION_EXPIRED, singleFlight, type RefreshFailure, type RefreshSuccess } from "../../src/lib/mobile/session-refresh";
 import { ROLE_NAV } from "../../src/lib/mobile/nav";
@@ -66,6 +67,7 @@ export default function App() {
   const [route, setRoute] = useState("/login");
   const [reportOpen, setReportOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [reportText, setReportText] = useState("");
   const [shot, setShot] = useState<string | null>(null);
   const [voice, setVoice] = useState<string | null>(null);
@@ -421,8 +423,8 @@ export default function App() {
         <View style={{ flex: 1 }}>
           <Header
             title={nav?.title ?? "AgriBridge"}
-            action="Support"
-            onAction={() => setSupportOpen(true)}
+            action="Profile"
+            onAction={() => setProfileOpen(true)}
           />
           <View style={{ flex: 1 }}>
             {isTest ? (
@@ -525,6 +527,22 @@ export default function App() {
         </SafeAreaView>
       </Modal>
 
+      <Modal visible={profileOpen} animationType="slide" onRequestClose={() => setProfileOpen(false)}>
+        <ProfileSheet
+          url={SUPABASE_URL}
+          anonKey={SUPABASE_ANON}
+          token={token}
+          userId={userId}
+          channel={CHANNEL}
+          flavor={FLAVOR}
+          testAccount={isTest}
+          version={VERSION}
+          versionCode={VERSION_CODE}
+          onSupport={() => { setProfileOpen(false); setSupportOpen(true); }}
+          onClose={() => setProfileOpen(false)}
+        />
+      </Modal>
+
       <Modal visible={supportOpen} animationType="slide" onRequestClose={() => setSupportOpen(false)}>
         <SupportSheet
           portal={PORTAL}
@@ -536,6 +554,41 @@ export default function App() {
           onClose={() => setSupportOpen(false)}
         />
       </Modal>
+    </SafeAreaView>
+  );
+}
+
+function ProfileSheet({ url, anonKey, token, userId, channel, flavor, testAccount, version, versionCode, onSupport, onClose }: { url: string; anonKey: string; token: string | null; userId: string | null; channel: ReturnType<typeof normalizeChannel>; flavor: ReturnType<typeof dataFlavor>; testAccount: boolean; version: string; versionCode: number; onSupport: () => void; onClose: () => void }) {
+  const [displayId, setDisplayId] = useState("");
+  const [notes, setNotes] = useState<string[]>([]);
+  useEffect(() => {
+    void SecureStore.getItemAsync("agribridge.displayId").then((value) => { if (value) setDisplayId(value); });
+    if (!token) return;
+    void liveGetScoped<MilkRow>({ url, anonKey, token, channel, flavor, testAccount }, "milk_entries?select=entry_date,shift,quantity_liters,status&order=entry_date.desc&limit=5", fetch).then((rows) => {
+      if (!rows.ok) { setNotes([rows.message]); return; }
+      setNotes(rows.rows.length ? rows.rows.map((row) => `Doodh · ${row.entry_date} · ${row.shift === "evening" ? "Shaam" : "Subah"} · ${row.quantity_liters ?? "—"} L`) : ["Koi notification nahi"]);
+    });
+  }, [url, anonKey, token, channel, flavor, testAccount]);
+  return (
+    <SafeAreaView style={styles.root}>
+      <Header title="Profile" action="Band" onAction={onClose} />
+      <ScrollView style={{ padding: 16 }}>
+        <Text style={styles.help}>User ID (ikhtiyari). Login ka password nahi. Sirf is phone par naam.</Text>
+        <TextInput
+          value={displayId}
+          onChangeText={setDisplayId}
+          onEndEditing={() => { void SecureStore.setItemAsync("agribridge.displayId", displayId.trim()); }}
+          placeholder="User ID"
+          autoCapitalize="none"
+          style={styles.input}
+        />
+        <Text style={styles.help}>Account · {userId || "—"}</Text>
+        <Text style={styles.help}>Settings · Version {version || "—"} · {versionCode || "—"} · {channel} · {flavor === "test" ? "TEST database" : "live database"}</Text>
+        <Text style={styles.help}>PIN aur fingerprint login ke unlock par hain. Yahan se band nahi hote.</Text>
+        <Text style={{ fontWeight: "800", color: colors.text, marginTop: 12 }}>Notifications</Text>
+        {notes.map((line, index) => <Text key={`${index}-${line}`} style={{ color: colors.text, marginTop: 6 }}>{line}</Text>)}
+        <Btn label="Support" kind="ghost" onPress={onSupport} />
+      </ScrollView>
     </SafeAreaView>
   );
 }

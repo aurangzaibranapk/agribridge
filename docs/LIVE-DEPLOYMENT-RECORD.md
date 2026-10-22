@@ -1,3 +1,7 @@
+## Phone Phase C — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 609, tag `v0.6.1-beta-testdb`. Customer draft karyana, Staff check-in (`source = app`), Vet ilaj, Dealer orders/HQ khata, Profile (optional User ID, settings, PIN note, notifications). Migration **702 not applied** by this agent. Owner testing par: `supabase/migrations/702_app_test_phase_c.sql`. Live par 702 nahi. Live APK tag replace nahi hoti. Tankhwah aur advance jaan kar khali hain.
+
 ## Phone Phase B — 22 October 2026 — FILE ONLY, NOT APPLIED
 
 versionCode 608, tag `v0.6.1-beta-testdb`. MCO check (fat/LR, rate settings se), subah/shaam, din/hafta/mahina, kisan alerts aur trend. Admin Manzoor priced TEST doodh par. Migration **701 not applied** by this agent. Owner testing par: `supabase/migrations/701_app_test_mco_admin.sql`. Live par 701 nahi. Live APK tag replace nahi hoti.

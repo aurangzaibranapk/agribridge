@@ -21,6 +21,8 @@ export function loadRoleModule(role: string): Promise<RoleModule> {
       return import("./mco");
     case "vet":
       return import("./vet");
+    case "dealer":
+      return import("./dealer");
     default:
       return import("./later");
   }
