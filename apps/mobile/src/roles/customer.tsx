@@ -62,8 +62,8 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
     await load();
   }
 
-  if (tab === "home") {
-    return <CustomerGlass live={live} khata={khata} orders={orders} onProfile={onProfile} onTab={onTab} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />;
+  if (tab === "home" || tab === "orders") {
+    return <CustomerGlass focus={tab === "orders" ? "track" : "home"} live={live} khata={khata} orders={orders} onProfile={onProfile} onTab={onTab} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />;
   }
 
   return (
@@ -84,7 +84,7 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
           ) : null}
         </View>
       ) : null}
-      {tab === "orders" || tab === "home" ? <Orders result={orders} /> : null}
+      {tab === "orders" ? <Orders result={orders} /> : null}
       {tab === "khata" || tab === "home" ? (
         <Section title="Haal ka len-den" sub="Khata">
           {khata.linesNote ? <Empty title="Lines nahi khulin" body={khata.linesNote} /> : null}

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { approvalTimeline, milkTimeline, orderTimeline, pctChange, romanWeekday } from "../../../../src/lib/mobile/glass-metrics";
+import { approvalJourney, approvalTimeline, karachiClock, milkTimeline, orderTimeline, pctChange, romanWeekday } from "../../../../src/lib/mobile/glass-metrics";
 import { karachiDate, karachiDaySeries, liveGetScoped, loadMilkList, loadProfileNames, milkLitres, pricedMilkTotal, rupees, shiftLabel, type AdminHome, type HealthRow, type KhataView, type MilkRow, type OrderRow, type ReadResult } from "../../../../src/lib/mobile/live-read";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { liveAuth, type LiveBag } from "../bits";
@@ -40,7 +40,39 @@ function money(value: number | null | undefined, missing: boolean): string {
   return rupees(value);
 }
 
-export function FarmerGlass({ live, khata, milk, names, ...bar }: Refresh & { live?: LiveBag; khata: KhataView | null; milk: ReadResult<MilkRow> | null; names: Map<string, string> }) {
+function useOrderExtra(live: LiveBag | undefined, orderId: string | null) {
+  const auth = liveAuth(live);
+  const [extra, setExtra] = useState<{ detail: string | null; details: (string | null)[]; times: (string | null)[]; place: string | null } | null>(null);
+  useEffect(() => {
+    if (!auth || !orderId) { setExtra(null); return; }
+    const id = encodeURIComponent(orderId);
+    void (async () => {
+      const [items, dispatch, marks] = await Promise.all([
+        liveGetScoped<{ product_name?: string | null; order_qty?: number | string | null }>(auth, `agri_order_items?select=product_name,order_qty&order_id=eq.${id}&limit=6`, fetch),
+        liveGetScoped<{ driver_name?: string | null; vehicle_no?: string | null; delivery_location?: string | null }>(auth, `agri_dispatches?select=driver_name,vehicle_no,delivery_location&order_id=eq.${id}&order=created_at.desc&limit=1`, fetch),
+        liveGetScoped<{ status?: string | null; created_at?: string | null }>(auth, `agri_order_timeline?select=status,created_at&order_id=eq.${id}&order=created_at.asc&limit=20`, fetch),
+      ]);
+      const item = items.ok ? items.rows[0] : null;
+      const run = dispatch.ok ? dispatch.rows[0] : null;
+      const detail = item?.product_name ? `${item.product_name}${item.order_qty != null && item.order_qty !== "" ? ` ${item.order_qty}` : ""}` : null;
+      const rider = run && (run.driver_name || run.vehicle_no) ? `Rider: ${[run.driver_name, run.vehicle_no].filter(Boolean).join(" · ")}` : null;
+      const times: (string | null)[] = [null, null, null, null, null];
+      if (marks.ok) {
+        for (const mark of marks.rows) {
+          const steps = orderTimeline(mark.status);
+          const index = steps.findIndex((step) => step.state === "active" || step.state === "action");
+          const at = steps.every((step) => step.state === "done") ? 4 : index;
+          const clock = karachiClock(mark.created_at);
+          if (at >= 0 && at < 5 && clock && !times[at]) times[at] = clock;
+        }
+      }
+      setExtra({ detail, details: [null, null, rider, run?.delivery_location || null, null], times, place: run?.delivery_location || null });
+    })();
+  }, [auth?.token, auth?.url, orderId]);
+  return extra;
+}
+
+export function FarmerGlass({ live, khata, milk, names, focus = "home", footer, ...bar }: Refresh & { live?: LiveBag; khata: KhataView | null; milk: ReadResult<MilkRow> | null; names: Map<string, string>; focus?: "home" | "track"; footer?: ReactNode }) {
   const face = useFace(live);
   const weather = useWeather(face.place);
   if (!khata || !milk) return <ActivityIndicator color={glass.up} style={{ marginTop: 24 }} />;
@@ -61,7 +93,39 @@ export function FarmerGlass({ live, khata, milk, names, ...bar }: Refresh & { li
   const fats = todayRows.map((row) => num(row.fat_percentage)).filter((value, index) => rowHas(todayRows[index], "fat_percentage") && value > 0);
   const snfs = todayRows.map((row) => num(row.snf_percentage)).filter((value, index) => rowHas(todayRows[index], "snf_percentage") && value > 0);
   const yFats = yesterdayRows.map((row) => num(row.fat_percentage)).filter((value, index) => rowHas(yesterdayRows[index], "fat_percentage") && value > 0);
-  const latest = rows[0] ?? null;
+  const latest = todayRows[0] ?? rows[0] ?? null;
+  const milkTitle = latest ? `${latest.entry_date === today ? "Aaj ka doodh" : latest.entry_date || "Doodh"} · ${litres(latest)} L` : "Aaj ka doodh";
+  const milkWho = latest ? [shiftLabel(latest.shift), latest.mca_profile_id ? names.get(latest.mca_profile_id) || "MCA" : null].filter(Boolean).join(" · ") : null;
+  const yesterdayList = rows.filter((row) => row.entry_date === yesterday);
+  const track = (
+    <>
+      <Timeline title={milkTitle} detail={milkWho} steps={milkTimeline(latest)} onAction={() => bar.onTab?.("doodh")} index={focus === "track" ? 2 : 8} />
+      <GlassCard title="Kal ka doodh" index={focus === "track" ? 3 : 9}>
+        {yesterdayList.length === 0 ? <Text style={{ color: glass.muted }}>Kal ki collection nahi.</Text> : null}
+        {yesterdayList.slice(0, 3).map((row, index) => {
+          const verified = row.status === "verified";
+          return (
+            <View key={row.id ?? String(index)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: glass.text, fontWeight: "700" }}>{shiftLabel(row.shift)} · {litres(row)} L</Text>
+                <Text style={{ color: glass.muted }}>Fat {row.fat_percentage ?? "—"}{filledAmount(row) ? ` · ${rupees(num(row.total_amount))}` : ""}</Text>
+              </View>
+              <Pill label={verified ? "Wallet credit" : row.status === "pending_fat" ? "Pending" : row.status === "priced" ? "Rate laga" : "Saved"} tone={verified ? "green" : "orange"} mark={verified ? "check" : undefined} />
+            </View>
+          );
+        })}
+      </GlassCard>
+      {footer}
+    </>
+  );
+  if (focus === "track") {
+    return (
+      <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
+        <BrandHeader role="Kisan" name={face.name} onProfile={bar.onProfile} />
+        {track}
+      </GlassScreen>
+    );
+  }
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Kisan" name={face.name} onProfile={bar.onProfile} />
@@ -92,11 +156,15 @@ export function FarmerGlass({ live, khata, milk, names, ...bar }: Refresh & { li
           );
         })}
       </GlassCard>
-      <Timeline title="Doodh ka safar" steps={milkTimeline(latest)} onAction={() => bar.onTab?.("doodh")} index={8} />
+      {track}
       <Text style={{ color: glass.muted, marginTop: 4 }} onPress={() => bar.onTab?.("vet")}>Vet doctor</Text>
       <Text style={{ color: glass.muted, marginTop: 6 }} onPress={() => bar.onTab?.("karyana")}>Karyana</Text>
     </GlassScreen>
   );
+}
+
+function filledAmount(row: MilkRow): boolean {
+  return row.total_amount != null && row.total_amount !== "";
 }
 
 function rowHas(row: MilkRow | undefined, key: "fat_percentage" | "snf_percentage"): boolean {
@@ -198,14 +266,14 @@ export function McoGlass({ live, rows, error, names, ...bar }: Refresh & { live?
           </View>
         ))}
       </GlassCard>
-      <Timeline title="Doodh ka safar" steps={milkTimeline(pending[0] ?? list[0] ?? null)} onAction={() => bar.onTab?.("fat")} />
+      <Timeline title="Doodh ka safar" detail={null} steps={milkTimeline(pending[0] ?? list[0] ?? null, "Fat lagayein")} onAction={() => bar.onTab?.("fat")} />
     </GlassScreen>
   );
 }
 
 const DONUT_COLORS = ["#3DDC97", "#C4B5FD", "#F5B942", "#5B8CFF", "#FF6B6B"];
 
-export function AdminGlass({ live, home, milk, orders, ...bar }: Refresh & { live?: LiveBag; home: AdminHome | null; milk: MilkRow[]; orders: OrderRow[] }) {
+export function AdminGlass({ live, home, milk, orders, focus = "home", footer, onVerify, ...bar }: Refresh & { live?: LiveBag; home: AdminHome | null; milk: MilkRow[]; orders: OrderRow[]; focus?: "home" | "track"; footer?: ReactNode; onVerify?: (row: MilkRow) => void }) {
   const face = useFace(live);
   const weather = useWeather(face.place);
   const [farmers, setFarmers] = useState<number | null>(null);
@@ -222,6 +290,46 @@ export function AdminGlass({ live, home, milk, orders, ...bar }: Refresh & { liv
   const milkToday = home.milk.state === "ok" ? home.milk.subah + home.milk.shaam : null;
   const approvals = approvalTimeline(home.pending, !home.pendingNote);
   const priced = milk.filter((row) => row.status === "priced");
+  const hero = milk.find((row) => row.status === "verified") ?? priced[0] ?? milk.find((row) => row.status === "pending_fat") ?? null;
+  const approvalSteps = hero ? approvalJourney(hero) : home.pending.length ? approvals : home.pendingNote ? approvalTimeline([], false) : approvalJourney(null);
+  const approvalTitle = hero ? `Doodh · ${hero.entry_date || "—"}` : home.pending[0] ? `${home.pending[0].label} · ${home.pending[0].count}` : "Koi manzoori baqi nahi";
+  const approvalDetail = hero
+    ? [hero.quantity_liters != null ? `${hero.quantity_liters} L` : null, hero.total_amount != null && hero.total_amount !== "" ? rupees(num(hero.total_amount)) : null].filter(Boolean).join(" · ") || null
+    : home.pendingNote;
+  const baqi = (
+    <GlassCard title="Baqi approvals" index={5}>
+      {priced.filter((row) => row !== hero).map((row, index) => (
+        <View key={row.id ?? String(index)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+          <Text style={{ color: glass.text, flex: 1 }}>Doodh {row.entry_date || "—"} · {row.total_amount == null || row.total_amount === "" ? "—" : rupees(num(row.total_amount))}</Text>
+          <Pill label="Check baqi" tone="orange" />
+        </View>
+      ))}
+      {milk.filter((row) => row.status === "pending_fat" && row !== hero).slice(0, 4).map((row, index) => (
+        <View key={row.id ?? `fat-${index}`} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+          <Text style={{ color: glass.text, flex: 1 }}>Doodh {row.entry_date || "—"} · fat baqi</Text>
+          <Pill label="Pending" tone="orange" />
+        </View>
+      ))}
+      {home.pending.map((row) => (
+        <View key={row.label} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+          <Text style={{ color: glass.text, flex: 1 }}>{row.label} · {row.count}</Text>
+          <Pill label="Pending" tone="orange" />
+        </View>
+      ))}
+      {!priced.length && !home.pending.length && !milk.some((row) => row.status === "pending_fat") ? <Text style={{ color: glass.muted }}>Koi baqi manzoori nahi.</Text> : null}
+      {home.pendingNote ? <Text style={{ color: glass.muted }}>{home.pendingNote}</Text> : null}
+    </GlassCard>
+  );
+  if (focus === "track") {
+    return (
+      <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
+        <BrandHeader role="Admin" name={face.name} onProfile={bar.onProfile} />
+        <Timeline title={approvalTitle} detail={approvalDetail} steps={approvalSteps} onAction={() => { if (hero && hero.status === "priced" && onVerify) onVerify(hero); else bar.onTab?.("approvals"); }} index={2} />
+        {baqi}
+        {footer}
+      </GlassScreen>
+    );
+  }
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Admin" name={face.name} onProfile={bar.onProfile} />
@@ -249,19 +357,68 @@ export function AdminGlass({ live, home, milk, orders, ...bar }: Refresh & { liv
         {home.pending.map((row) => <Text key={row.label} style={{ color: glass.muted, marginBottom: 4 }}>{row.label} · {row.count}</Text>)}
         {home.pendingNote ? <Text style={{ color: glass.muted }}>{home.pendingNote}</Text> : null}
       </GlassCard>
-      <Timeline title="Manzoori" steps={approvals} onAction={() => bar.onTab?.("approvals")} />
+      <Timeline title={approvalTitle} detail={approvalDetail} steps={approvalSteps} onAction={() => bar.onTab?.("approvals")} />
       {orders.length ? <Text style={{ color: glass.muted }}>Orders {orders.length}</Text> : null}
     </GlassScreen>
   );
 }
 
-export function CustomerGlass({ live, khata, orders, ...bar }: Refresh & { live?: LiveBag; khata: KhataView | null; orders: ReadResult<OrderRow> | null }) {
+function featuredOrder(rows: OrderRow[]): OrderRow | null {
+  const open = rows.find((row) => !["delivered", "completed", "grn_submitted", "cancelled", "rejected"].includes(String(row.status || "").toLowerCase()));
+  return open ?? rows[0] ?? null;
+}
+
+function orderCard(row: OrderRow | null, extra: ReturnType<typeof useOrderExtra>) {
+  const total = row?.grand_total == null || row.grand_total === "" ? null : rupees(num(row.grand_total));
+  const detail = [extra?.detail, total].filter(Boolean).join(" · ") || null;
+  const times = extra?.times ? [...extra.times] : undefined;
+  if (times && row?.created_at) times[0] = times[0] || karachiClock(row.created_at);
+  return {
+    title: row?.order_number ? `Order #${row.order_number}` : "Order",
+    detail,
+    steps: orderTimeline(row?.status, row?.created_at, { details: extra?.details, times }),
+    progressNote: extra?.place || null,
+  };
+}
+
+export function CustomerGlass({ live, khata, orders, focus = "home", ...bar }: Refresh & { live?: LiveBag; khata: KhataView | null; orders: ReadResult<OrderRow> | null; focus?: "home" | "track" }) {
   const face = useFace(live);
   const weather = useWeather(face.place);
+  const preview = orders?.ok ? featuredOrder(orders.rows) : null;
+  const extra = useOrderExtra(live, preview?.id ?? null);
   if (!khata || !orders) return <ActivityIndicator color={glass.up} style={{ marginTop: 24 }} />;
   const list = orders.ok ? orders.rows : [];
-  const latest = list[0] ?? null;
+  const latest = featuredOrder(list);
+  const rest = list.filter((row) => row !== latest);
+  const card = orderCard(latest, extra);
   const totals = list.map((row) => num(row.grand_total));
+  const others = (
+    <GlassCard title="Doosre orders" index={6}>
+      {!orders.ok ? <Text style={{ color: glass.muted }}>{orders.message}</Text> : null}
+      {orders.ok && rest.length === 0 ? <Text style={{ color: glass.muted }}>Koi doosra order nahi.</Text> : null}
+      {rest.slice(0, 6).map((row, index) => {
+        const tone = orderTone(row.status);
+        return (
+          <View key={row.id ?? String(index)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: glass.text, fontWeight: "700" }}>{row.order_number || "Order"}</Text>
+              <Text style={{ color: glass.muted }}>{row.grand_total == null ? "—" : rupees(num(row.grand_total))}</Text>
+            </View>
+            <Pill label={tone.label} tone={tone.tone} mark={tone.tone === "green" ? "check" : undefined} />
+          </View>
+        );
+      })}
+    </GlassCard>
+  );
+  if (focus === "track") {
+    return (
+      <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
+        <BrandHeader role="Customer" name={face.name} onProfile={bar.onProfile} />
+        <Timeline title={card.title} detail={card.detail} steps={card.steps} showProgress progressNote={card.progressNote} onAction={() => bar.onTab?.("orders")} index={2} />
+        {others}
+      </GlassScreen>
+    );
+  }
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Customer" name={face.name} onProfile={bar.onProfile} />
@@ -273,22 +430,8 @@ export function CustomerGlass({ live, khata, orders, ...bar }: Refresh & { live?
       <GlassCard title="Mahana kharch" sub="Aakhri orders" index={4}>
         {orders.ok && totals.length ? <LineChart values={totals.slice().reverse()} labels={list.slice().reverse().map((row) => (row.created_at || "").slice(5, 10) || "—")} color="#F5B942" /> : <Text style={{ color: glass.muted }}>{orders.ok ? "Chart ke liye qatarein nahi." : orders.message}</Text>}
       </GlassCard>
-      <GlassCard title="Order status" index={5}>
-        {list.length === 0 ? <Text style={{ color: glass.muted }}>Koi order nahi.</Text> : null}
-        {list.slice(0, 6).map((row, index) => {
-          const tone = orderTone(row.status);
-          return (
-            <View key={row.id ?? String(index)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: glass.text, fontWeight: "700" }}>{row.order_number || "Order"}</Text>
-                <Text style={{ color: glass.muted }}>{row.grand_total == null ? "—" : rupees(num(row.grand_total))}</Text>
-              </View>
-              <Pill label={tone.label} tone={tone.tone} />
-            </View>
-          );
-        })}
-      </GlassCard>
-      <Timeline title="Order ka safar" steps={orderTimeline(latest?.status, latest?.created_at?.slice(0, 10))} onAction={() => bar.onTab?.("orders")} />
+      {others}
+      <Timeline title={card.title} detail={card.detail} steps={card.steps} showProgress progressNote={card.progressNote} onAction={() => bar.onTab?.("orders")} />
     </GlassScreen>
   );
 }
@@ -296,6 +439,8 @@ export function CustomerGlass({ live, khata, orders, ...bar }: Refresh & { live?
 export function DealerGlass({ live, khata, orders, ...bar }: Refresh & { live?: LiveBag; khata: KhataView | null; orders: ReadResult<OrderRow> | null }) {
   const face = useFace(live);
   const weather = useWeather(face.place);
+  const preview = orders?.ok ? featuredOrder(orders.rows) : null;
+  const extra = useOrderExtra(live, preview?.id ?? null);
   if (!khata || !orders) return <ActivityIndicator color={glass.up} style={{ marginTop: 24 }} />;
   const list = orders.ok ? orders.rows : [];
   const monthKey = karachiDate().slice(0, 7);
@@ -303,6 +448,7 @@ export function DealerGlass({ live, khata, orders, ...bar }: Refresh & { live?: 
   const monthCount = dated.filter((row) => String(row.created_at).startsWith(monthKey)).length;
   const days = karachiDaySeries(7);
   const byDay = days.map((day) => list.filter((row) => String(row.created_at || "").slice(0, 10) === day).reduce((sum, row) => sum + num(row.grand_total), 0));
+  const deal = orderCard(featuredOrder(list), extra);
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Dealer" name={face.name} onProfile={bar.onProfile} />
@@ -331,7 +477,7 @@ export function DealerGlass({ live, khata, orders, ...bar }: Refresh & { live?: 
           );
         })}
       </GlassCard>
-      <Timeline title="Order ka safar" steps={orderTimeline(list[0]?.status, list[0]?.created_at?.slice(0, 10))} onAction={() => bar.onTab?.("orders")} />
+      <Timeline title={deal.title} detail={deal.detail} steps={deal.steps} showProgress progressNote={deal.progressNote} onAction={() => bar.onTab?.("orders")} />
     </GlassScreen>
   );
 }

@@ -5,12 +5,14 @@ export type StepState = "pending" | "active" | "done" | "action";
 export type TimelineStep = {
   label: string;
   state: StepState;
+  detail?: string | null;
   time?: string | null;
   actionLabel?: string | null;
 };
 
-const ORDER_STEPS = ["Order mila", "Pack", "Rawana", "Raste mein", "Pohanch gaya"] as const;
-const MILK_STEPS = ["MCA ne uthaya", "Chiller check", "Rate laga", "Wallet mein credit"] as const;
+const ORDER_STEPS = ["Order mila", "Pack hua", "Rawana hua", "Raste mein", "Pohanch gaya"] as const;
+const MILK_STEPS = ["MCA ne uthaya", "Chiller par check", "Rate laga", "Wallet mein credit"] as const;
+const APPROVAL_STEPS = ["Entry hui", "Check hui", "Manzoor hui", "Khata mein post"] as const;
 
 const WEEKDAY = ["It", "Pi", "Mn", "Bd", "Jm", "Ju", "Ha"];
 
@@ -31,15 +33,15 @@ export function filled(value: unknown): boolean {
   return value != null && value !== "";
 }
 
-export function orderTimeline(status: string | null | undefined, at?: string | null): TimelineStep[] {
-  const key = String(status ?? "").toLowerCase();
-  if (key === "cancelled" || key === "rejected") {
-    return ORDER_STEPS.map((label, index) => ({
-      label,
-      state: index === 0 ? "action" : "pending",
-      actionLabel: index === 0 ? "Action chahiye" : null,
-    }));
-  }
+/** Sirf asal timestamp. Tareekh-only ko ghante ka waqt nahi banaya. */
+export function karachiClock(iso: string | null | undefined): string | null {
+  if (!iso || /^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Karachi", hour: "numeric", minute: "2-digit" }).format(date);
+}
+
+function orderRank(status: string): number {
   const rank: Record<string, number> = {
     draft: 0,
     submitted: 0,
@@ -53,13 +55,32 @@ export function orderTimeline(status: string | null | undefined, at?: string | n
     grn_submitted: 4,
     completed: 4,
   };
-  const atRank = rank[key] ?? -1;
+  return rank[status] ?? -1;
+}
+
+export function orderTimeline(
+  status: string | null | undefined,
+  at?: string | null,
+  extra?: { details?: (string | null)[]; times?: (string | null)[] },
+): TimelineStep[] {
+  const key = String(status ?? "").toLowerCase();
+  if (key === "cancelled" || key === "rejected") {
+    return ORDER_STEPS.map((label, index) => ({
+      label,
+      detail: extra?.details?.[index] ?? null,
+      state: index === 0 ? "action" : "pending",
+      actionLabel: index === 0 ? "Action chahiye" : null,
+      time: extra?.times?.[index] ?? (index === 0 ? karachiClock(at) : null),
+    }));
+  }
+  const atRank = orderRank(key);
   return ORDER_STEPS.map((label, index) => {
-    if (atRank < 0) return { label, state: index === 0 ? "active" : "pending" };
-    if (atRank === 4) return { label, state: "done", time: at ?? null };
-    if (index < atRank) return { label, state: "done", time: at ?? null };
-    if (index === atRank) return { label, state: "active" };
-    return { label, state: "pending" };
+    const time = extra?.times?.[index] ?? (index === 0 ? karachiClock(at) : null);
+    const detail = extra?.details?.[index] ?? null;
+    if (atRank < 0) return { label, detail, time: index === 0 ? time : null, state: index === 0 ? "active" : "pending" };
+    if (atRank === 4 || index < atRank) return { label, detail, state: "done", time };
+    if (index === atRank) return { label, detail, state: "active", time };
+    return { label, detail, state: "pending" };
   });
 }
 
@@ -68,30 +89,72 @@ export function milkTimeline(row: {
   fat_percentage?: unknown;
   rate_per_liter?: unknown;
   total_amount?: unknown;
-  entry_date?: string | null;
-} | null): TimelineStep[] {
+  quantity_liters?: unknown;
+  route_name?: string | null;
+  chiller_name?: string | null;
+  collected_at?: string | null;
+  fat_at?: string | null;
+  verified_at?: string | null;
+} | null, actionLabel = "Fat check karwayein"): TimelineStep[] {
   if (!row) {
     return MILK_STEPS.map((label, index) => ({ label, state: index === 0 ? "active" : "pending" }));
   }
-  if (String(row.status ?? "") === "rejected") {
-    return MILK_STEPS.map((label, index) => ({
-      label,
-      state: index === 0 ? "done" : index === 1 ? "action" : "pending",
-      time: index === 0 ? row.entry_date ?? null : null,
-      actionLabel: index === 1 ? "Action chahiye" : null,
-    }));
-  }
-  const flags = [
-    true,
-    filled(row.fat_percentage),
-    filled(row.rate_per_liter) && filled(row.total_amount),
-    String(row.status ?? "") === "verified",
+  const litres = filled(row.quantity_liters) ? `${row.quantity_liters} L` : null;
+  const place = [row.chiller_name || row.route_name, litres].filter(Boolean).join(" · ") || null;
+  const fatOk = filled(row.fat_percentage);
+  const rateOk = filled(row.rate_per_liter) && filled(row.total_amount);
+  const paid = String(row.status ?? "") === "verified";
+  const rejected = String(row.status ?? "") === "rejected";
+  const needsFat = rejected || !fatOk;
+  const states: StepState[] = needsFat
+    ? ["done", "action", "pending", "pending"]
+    : !rateOk
+      ? ["done", "done", "active", "pending"]
+      : !paid
+        ? ["done", "done", "done", "active"]
+        : ["done", "done", "done", "done"];
+  const details = [
+    place,
+    needsFat ? "Fat check baqi hai" : fatOk ? `Fat ${row.fat_percentage}` : null,
+    rateOk ? `Rs ${row.rate_per_liter}/L` : null,
+    filled(row.total_amount) ? `Rs ${row.total_amount}` : null,
   ];
-  const active = flags.findIndex((ok) => !ok);
+  const times = [karachiClock(row.collected_at), karachiClock(row.fat_at), null, karachiClock(row.verified_at)];
   return MILK_STEPS.map((label, index) => ({
     label,
-    state: active < 0 || index < active ? "done" : index === active ? "active" : "pending",
-    time: active < 0 || index < active ? row.entry_date ?? null : null,
+    detail: details[index],
+    state: states[index],
+    time: states[index] === "done" || states[index] === "action" ? times[index] : null,
+    actionLabel: states[index] === "action" ? actionLabel : null,
+  }));
+}
+
+export function approvalJourney(row: {
+  status?: string | null;
+  fat_percentage?: unknown;
+  collected_at?: string | null;
+  fat_at?: string | null;
+  verified_at?: string | null;
+} | null, actionLabel = "Manzoor karein"): TimelineStep[] {
+  if (!row) {
+    return APPROVAL_STEPS.map((label) => ({ label, state: "done" }));
+  }
+  const checked = filled(row.fat_percentage);
+  const verified = String(row.status ?? "") === "verified";
+  const priced = String(row.status ?? "") === "priced";
+  const states: StepState[] = verified
+    ? ["done", "done", "done", "done"]
+    : priced
+      ? ["done", "done", "action", "pending"]
+      : checked
+        ? ["done", "done", "active", "pending"]
+        : ["done", "active", "pending", "pending"];
+  const times = [karachiClock(row.collected_at), karachiClock(row.fat_at), karachiClock(row.verified_at), karachiClock(row.verified_at)];
+  return APPROVAL_STEPS.map((label, index) => ({
+    label,
+    state: states[index],
+    time: states[index] === "done" ? times[index] : null,
+    actionLabel: states[index] === "action" ? actionLabel : null,
   }));
 }
 
@@ -117,6 +180,14 @@ export function timelineProgress(steps: TimelineStep[]): number {
   if (!steps.length) return 0;
   const done = steps.filter((step) => step.state === "done").length;
   return done / steps.length;
+}
+
+/** Active step ko aadha count. Mockup ki bar yahi andaaza hai, koi naya stop nahi. */
+export function timelinePercent(steps: TimelineStep[]): number {
+  if (!steps.length) return 0;
+  const done = steps.filter((step) => step.state === "done").length;
+  const moving = steps.some((step) => step.state === "active" || step.state === "action") ? 0.5 : 0;
+  return Math.round(((done + moving) / steps.length) * 100);
 }
 
 export function timelineFinished(steps: TimelineStep[]): boolean {

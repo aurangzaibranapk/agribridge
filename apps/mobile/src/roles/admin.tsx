@@ -19,6 +19,7 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
   const [refreshing, setRefreshing] = useState(false);
   const [panel, setPanel] = useState<Panel>("home");
   const [note, setNote] = useState("");
+  const [verifyBusy, setVerifyBusy] = useState("");
 
   const load = useCallback(async () => {
     if (!auth) { setError("Live Supabase is build mein set nahi. Login ke baad hisaab yahin aata hai."); return; }
@@ -35,11 +36,46 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
   }, [auth?.token, auth?.url, auth?.testAccount, auth?.flavor]);
 
   useEffect(() => { void load(); }, [load]);
+
+  async function verifyHero(row: MilkRow) {
+    if (!auth || !row.id || readOnly) return;
+    const self = !auth.testAccount ? fatActorError(auth.userId || "", row) : null;
+    if (self) { setNote(self); return; }
+    setVerifyBusy(row.id);
+    const saved = await livePatch<MilkRow>(auth, "milk_entries", row.id, {
+      status: "verified",
+      verified_by_profile_id: auth.userId,
+      verified_comment: "TEST tasdeeq",
+      verified_at: new Date().toISOString(),
+    }, fetch);
+    setVerifyBusy("");
+    if (!saved.ok) {
+      const denied = saved.status === 401 || saved.status === 403 || /42501|row-level security/i.test(saved.detail || "");
+      setNote(denied ? "Tasdeeq nahi hui. Testing par 701_app_test_mco_admin.sql lagani hai." : saved.message);
+      return;
+    }
+    setNote("Tasdeeq ho gayi. Entry verified hai.");
+    await load();
+  }
   useEffect(() => { if (tab === "approvals" || tab === "reports" || tab === "home") setPanel("home"); }, [tab]);
 
   if (!home && !error) return <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />;
-  if (tab === "home" && panel === "home") {
-    return <AdminGlass live={live} home={home} milk={milk} orders={orders} onProfile={onProfile} onTab={onTab} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />;
+  if ((tab === "home" || tab === "approvals") && panel === "home") {
+    return (
+      <AdminGlass
+        focus={tab === "approvals" ? "track" : "home"}
+        live={live}
+        home={home}
+        milk={milk}
+        orders={orders}
+        onProfile={onProfile}
+        onTab={onTab}
+        refreshing={refreshing}
+        onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
+        onVerify={hero => { if (!verifyBusy) void verifyHero(hero); }}
+        footer={tab === "approvals" && home ? <Approvals home={home} milk={milk} orders={orders} auth={auth} readOnly={readOnly} note={note} onReload={load} /> : null}
+      />
+    );
   }
 
   return (

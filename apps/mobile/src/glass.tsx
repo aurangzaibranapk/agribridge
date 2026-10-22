@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Animated, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Path, Polyline, Stop } from "react-native-svg";
 import type { TimelineStep } from "../../../src/lib/mobile/glass-metrics";
-import { timelineFinished, timelineProgress } from "../../../src/lib/mobile/glass-metrics";
+import { timelineFinished, timelinePercent } from "../../../src/lib/mobile/glass-metrics";
 import { liveAuth, type LiveBag } from "./bits";
 import { liveGet, liveGetScoped } from "../../../src/lib/mobile/live-read";
 
@@ -375,52 +375,110 @@ export function GlassCard({ title, sub, children, index = 2 }: { title: string; 
   );
 }
 
-export function Pill({ label, tone }: { label: string; tone: "green" | "orange" | "red" | "blue" }) {
+export function Pill({ label, tone, mark }: { label: string; tone: "green" | "orange" | "red" | "blue"; mark?: "dot" | "check" | "bang" }) {
   const color = tone === "green" ? glass.up : tone === "orange" ? glass.orange : tone === "red" ? glass.down : glass.blue;
+  const glyph = mark === "check" ? "✓ " : mark === "bang" ? "! " : mark === "dot" ? "● " : "";
   return (
-    <View style={{ borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: color }}>
-      <Text style={{ color, fontWeight: "700", fontSize: 12 }}>{label}</Text>
+    <View style={{ borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: color }}>
+      <Text style={{ color, fontWeight: "700", fontSize: 12 }}>{glyph}{label}</Text>
     </View>
   );
 }
 
-export function Timeline({ title, steps, onAction, index = 4 }: { title: string; steps: TimelineStep[]; onAction?: () => void; index?: number }) {
-  const progress = timelineProgress(steps);
-  const done = timelineFinished(steps);
-  return (
-    <GlassCard title={title} sub="Live step" index={index}>
-      <View style={{ height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.08)", marginBottom: 10 }}>
-        <View style={{ width: `${Math.round(progress * 100)}%`, height: 4, borderRadius: 2, backgroundColor: glass.up }} />
+function StepMark({ state }: { state: TimelineStep["state"] }) {
+  if (state === "done") {
+    return <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: glass.up, alignItems: "center", justifyContent: "center" }}><Text style={{ color: "#07140F", fontSize: 12, fontWeight: "800" }}>✓</Text></View>;
+  }
+  if (state === "active") {
+    return (
+      <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: glass.blue, alignItems: "center", justifyContent: "center" }}>
+        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: glass.blue }} />
       </View>
-      {steps.map((step, stepIndex) => (
-        <View key={`${step.label}-${stepIndex}`} style={{ flexDirection: "row", marginBottom: 10 }}>
-          <View style={{ width: 22, alignItems: "center" }}>
-            <View style={{
-              width: 16,
-              height: 16,
-              borderRadius: 8,
-              backgroundColor: step.state === "done" ? glass.up : step.state === "active" ? glass.blue : step.state === "action" ? glass.down : "rgba(255,255,255,0.16)",
-              alignItems: "center",
-              justifyContent: "center",
-            }}>
-              {step.state === "done" ? <Text style={{ color: "#07140F", fontSize: 10, fontWeight: "800" }}>✓</Text> : null}
-              {step.state === "active" ? <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#fff" }} /> : null}
-            </View>
-            {stepIndex < steps.length - 1 ? <View style={{ width: 2, flex: 1, backgroundColor: "rgba(255,255,255,0.12)", marginTop: 2 }} /> : null}
+    );
+  }
+  if (state === "action") {
+    return <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "#FF5A5A", alignItems: "center", justifyContent: "center" }}><Text style={{ color: "#fff", fontSize: 13, fontWeight: "800" }}>!</Text></View>;
+  }
+  return <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: "rgba(255,255,255,0.28)" }} />;
+}
+
+function trackPill(steps: TimelineStep[]): { label: string; tone: "green" | "orange" | "red" | "blue"; mark: "dot" | "check" | "bang" } | null {
+  if (steps.some((step) => step.state === "action")) return { label: "Action chahiye", tone: "red", mark: "bang" };
+  if (timelineFinished(steps)) return { label: "Mukammal", tone: "green", mark: "check" };
+  const active = steps.find((step) => step.state === "active");
+  if (active) return { label: active.label, tone: "blue", mark: "dot" };
+  return null;
+}
+
+export function Timeline({ title, detail, steps, onAction, showProgress = false, progressNote, index = 4 }: {
+  title: string;
+  detail?: string | null;
+  steps: TimelineStep[];
+  onAction?: () => void;
+  showProgress?: boolean;
+  progressNote?: string | null;
+  index?: number;
+}) {
+  const pill = trackPill(steps);
+  const percent = timelinePercent(steps);
+  const border = steps.some((step) => step.state === "action")
+    ? "rgba(255,90,90,0.95)"
+    : timelineFinished(steps)
+      ? "rgba(61,220,151,0.9)"
+      : "rgba(61,220,151,0.35)";
+  return (
+    <Rise index={index}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#FF5A7A", marginRight: 6 }} />
+        <Text style={{ color: glass.text, fontWeight: "700" }}>Live tracking</Text>
+      </View>
+      <View style={{ backgroundColor: glass.card, borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1.5, borderColor: border }}>
+        <View style={{ flexDirection: "row", alignItems: "flex-start", marginBottom: 12 }}>
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <Text style={{ color: glass.text, fontWeight: "800", fontSize: 16 }}>{title}</Text>
+            {detail ? <Text style={{ color: glass.muted, marginTop: 2 }}>{detail}</Text> : null}
           </View>
-          <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text style={{ color: step.state === "pending" ? glass.muted : glass.text, fontWeight: "700" }}>{step.label}</Text>
-            {step.time && step.state === "done" ? <Text style={{ color: glass.muted, fontSize: 12 }}>{step.time}</Text> : null}
-            {step.state === "action" ? (
-              <Pressable onPress={onAction} style={{ marginTop: 6, alignSelf: "flex-start", backgroundColor: "#3A1518", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 }}>
-                <Text style={{ color: glass.down, fontWeight: "800" }}>{step.actionLabel || "Action chahiye"}</Text>
-              </Pressable>
-            ) : null}
-          </View>
+          {pill ? <Pill label={pill.label} tone={pill.tone} mark={pill.mark} /> : null}
         </View>
-      ))}
-      {done ? <Text style={{ color: glass.up, fontWeight: "800" }}>Mukammal</Text> : null}
-    </GlassCard>
+        {steps.map((step, stepIndex) => {
+          const time = step.time || (step.state === "active" ? "Abhi" : step.state === "pending" || step.state === "done" || step.state === "action" ? "—" : "");
+          const line = step.state === "done" ? glass.up : "rgba(255,255,255,0.16)";
+          return (
+            <View key={`${step.label}-${stepIndex}`} style={{ flexDirection: "row", alignItems: "stretch" }}>
+              <View style={{ width: 28, alignItems: "center" }}>
+                <StepMark state={step.state} />
+                {stepIndex < steps.length - 1 ? <View style={{ width: 2, flex: 1, backgroundColor: line, marginVertical: 2 }} /> : null}
+              </View>
+              <View style={{ flex: 1, paddingBottom: stepIndex < steps.length - 1 ? 12 : 0, marginLeft: 8 }}>
+                <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <Text style={{ color: step.state === "pending" ? glass.muted : glass.text, fontWeight: "800" }}>{step.label}</Text>
+                    {step.detail ? <Text style={{ color: glass.muted, fontSize: 12, marginTop: 1 }}>{step.detail}</Text> : null}
+                  </View>
+                  <Text style={{ color: glass.muted, fontSize: 12 }}>{time}</Text>
+                </View>
+                {step.state === "action" ? (
+                  <Pressable onPress={onAction} style={{ marginTop: 8, alignSelf: "flex-start", backgroundColor: "#FF4B4B", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 8 }}>
+                    <Text style={{ color: "#fff", fontWeight: "800" }}>{step.actionLabel || "Action chahiye"}</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            </View>
+          );
+        })}
+        {showProgress ? (
+          <View style={{ marginTop: 14 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+              <Text style={{ color: glass.muted, fontSize: 12 }}>{progressNote || ""}</Text>
+              <Text style={{ color: glass.muted, fontSize: 12 }}>{percent}%</Text>
+            </View>
+            <View style={{ height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.1)" }}>
+              <View style={{ width: `${percent}%`, height: 6, borderRadius: 3, backgroundColor: glass.up }} />
+            </View>
+          </View>
+        ) : null}
+      </View>
+    </Rise>
   );
 }
 

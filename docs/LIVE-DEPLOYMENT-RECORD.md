@@ -1,6 +1,6 @@
 ## Phone homes — 22 October 2026 — NO NEW SQL
 
-versionCode 610, tag `v0.6.1-beta-testdb`. Wasela Eco Mahabali dark glass homes for 8 roles. Numbers database se. Koi nayi migration nahi. Live APK nahi badli.
+versionCode 610, tag `v0.6.1-beta-testdb`. Wasela Eco Mahabali dark glass homes for 8 roles. Live tracking card: Customer order (Orders tab), Kisan doodh (Wallet tab), Admin manzoori (Approve tab). Numbers database se. Koi nayi migration nahi. Live APK nahi badli.
 
 ## Phone Phase C — 22 October 2026 — FILE ONLY, NOT APPLIED
 

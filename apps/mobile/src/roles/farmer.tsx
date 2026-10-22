@@ -95,8 +95,35 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
   }
   const chart = salesByDay(days.map((day) => ({ created_at: day, total_amount: byDay.get(day) ?? 0, status: "ok" })), days);
 
-  if (tab === "home") {
-    return <FarmerGlass live={live} onTab={onTab} onProfile={onProfile} khata={khata} milk={milk} names={names} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />;
+  if (tab === "home" || tab === "khata") {
+    return (
+      <FarmerGlass
+        focus={tab === "khata" ? "track" : "home"}
+        live={live}
+        onTab={onTab}
+        onProfile={onProfile}
+        khata={khata}
+        milk={milk}
+        names={names}
+        refreshing={refreshing}
+        onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
+        footer={tab === "khata" ? (
+          <View>
+            <View style={{ backgroundColor: colors.gold, borderRadius: 18, padding: 16, marginBottom: 12 }}>
+              <Text style={{ color: "#3d2e10", fontWeight: "700" }}>Mera Wallet</Text>
+              <Text style={{ color: "#1c1408", fontSize: 28, fontWeight: "800", marginTop: 4 }}>{khataText}</Text>
+              <Text style={{ color: "#3d2e10", marginTop: 4 }}>{khata.note || "Baqaya, aap ki apni lines se"}</Text>
+            </View>
+            {khata.linesNote ? <Text style={{ color: "#8FA399" }}>{khata.linesNote}</Text> : null}
+            {khata.lines.map((line, index) => (
+              <Text key={`${line.entry_date}-${index}`} style={{ color: "#F4F7F4", marginBottom: 6 }}>
+                {line.entry_date} · {line.tafseel || line.category || "Line"} · baqaya {line.baqaya ?? "—"}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+      />
+    );
   }
 
   return (

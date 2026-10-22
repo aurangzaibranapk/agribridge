@@ -303,6 +303,9 @@ export type MilkRow = {
   mca_profile_id?: string | null;
   farmer_id?: string | null;
   created_by?: string | null;
+  collected_at?: string | null;
+  fat_at?: string | null;
+  verified_at?: string | null;
 };
 export type MilkSettingsRow = {
   standard_rate?: number | string | null;
@@ -587,7 +590,7 @@ export async function searchParties(auth: LiveAuth, query: string, fetchImpl: Fe
   return { farmers, customers };
 }
 
-const MILK_LIST_SELECT = "id,entry_date,shift,quantity_liters,fat_percentage,snf_percentage,lr,rate_per_liter,total_amount,route_name,chiller_name,status,mca_profile_id,farmer_id,created_by";
+const MILK_LIST_SELECT = "id,entry_date,shift,quantity_liters,fat_percentage,snf_percentage,lr,rate_per_liter,total_amount,route_name,chiller_name,status,mca_profile_id,farmer_id,created_by,collected_at,fat_at,verified_at";
 
 export async function loadMilkList(auth: LiveAuth, fetchImpl: FetchLike, limit = 40): Promise<ReadResult<MilkRow>> {
   const cap = Math.max(1, Math.min(200, Math.floor(limit)));
