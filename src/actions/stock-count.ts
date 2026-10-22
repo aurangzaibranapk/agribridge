@@ -1,5 +1,5 @@
 "use server";
-import { isSelfApproval, stockCountPostCheck, extraItemCountLine, partialCountPosterCheck } from "@/lib/approval/guards";
+import { isSelfApproval, mayDecideEntry, stockCountPostCheck, extraItemCountLine, partialCountPosterCheck } from "@/lib/approval/guards";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -545,7 +545,7 @@ export async function forceCloseCount(_prev: ActionState, formData: FormData): P
   if (!count) return { error: "Ginti nahi mili." };
   if (count.status !== "counting") return { error: "Ye ginti pehle hi band ho chuki hai." };
   // Self guard: jis ne ginti shuru ki wo khud force-close nahi kar sakta.
-  if (isSelfApproval(count.started_by, user.id)) {
+  if (isSelfApproval(count.started_by, user.id) && !mayDecideEntry(me?.role, user.id, [count.started_by])) {
     return { error: "Ye ginti aap ne shuru ki hai — force-close doosra Admin/Owner karega." };
   }
 
@@ -608,7 +608,7 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
     .eq("id", countId)
     .maybeSingle();
   if (!count) return { error: "Ginti nahi mili." };
-  const postCheck = stockCountPostCheck(count, user.id);
+  const postCheck = stockCountPostCheck(count, user.id, guard.caller.role);
   if (!postCheck.ok && count.status !== "verified") return { error: postCheck.error };
   if (!postCheck.ok) {
     await logAudit({
@@ -632,7 +632,7 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
   const rows = lines ?? [];
   const unfilled = rows.filter((r) => r.counted_qty === null);
 
-  const partialChk = partialCountPosterCheck(unfilled.length, (count as { verified_by?: string | null }).verified_by, user.id);
+  const partialChk = partialCountPosterCheck(unfilled.length, (count as { verified_by?: string | null }).verified_by, user.id, guard.caller.role);
   if (!partialChk.ok) return { error: partialChk.error };
   if (unfilled.length > 0) {
     if (!isAdminOrOwner) {

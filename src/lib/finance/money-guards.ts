@@ -1,9 +1,12 @@
+import { mayDecideEntry } from "@/lib/approval/guards";
+
 /**
  * Finance fixes (review on main 434fcf2). Pure functions — server actions
  * inhe call karte hain, tests/finance-money-guards.cjs seedha jaanchta hai.
  *
- * Maker-checker: jo entry banaye wo khud manzoor nahi karta. Null creator
- * purana record hai, us par ye rok nahi lagti.
+ * Maker-checker: staff apni entry khud manzoor nahi karta. Admin, Owner
+ * aur Super Admin apni entry bhi kar sakte hain (mayDecideEntry).
+ * Null creator purana record hai, us par ye rok nahi lagti.
  */
 
 export const MONEY_WRITER_ROLES = ["owner", "super_admin", "admin"] as const;
@@ -51,11 +54,13 @@ export function kharchaApproveGate(
   if (row.status !== "verified") {
     return { ok: false, error: "Pehle tasdeeq (verified) zaroori hai — phir doosra Owner/Admin manzoor kare." };
   }
-  if (samePerson(row.requested_by, actorId)) {
-    return { ok: false, error: "Apni banayi hui request khud manzoor nahi kar sakte — doosra Owner/Admin kare." };
-  }
-  if (samePerson(row.verified_by, actorId)) {
-    return { ok: false, error: "Jis ne tasdeeq ki wo khud manzoor nahi kar sakta — doosra Owner/Admin kare." };
+  if (!mayDecideEntry(role, actorId, [row.requested_by, row.verified_by])) {
+    if (samePerson(row.requested_by, actorId)) {
+      return { ok: false, error: "Apni banayi hui request khud manzoor nahi kar sakte — doosra Owner/Admin kare." };
+    }
+    if (samePerson(row.verified_by, actorId)) {
+      return { ok: false, error: "Jis ne tasdeeq ki wo khud manzoor nahi kar sakta — doosra Owner/Admin kare." };
+    }
   }
   return { ok: true };
 }
@@ -87,7 +92,7 @@ export function cashCloseApproveGate(
   if (row.approval_status && row.approval_status !== "recorded") {
     return { ok: false, error: "Ye ginti manzoori ke marhale mein nahi." };
   }
-  if (samePerson(row.counted_by, actorId)) {
+  if (!mayDecideEntry(role, actorId, [row.counted_by]) && samePerson(row.counted_by, actorId)) {
     return { ok: false, error: "Jis ne ginti ki wo khud farq manzoor nahi kar sakta — doosra Owner/Admin kare." };
   }
   return { ok: true };
@@ -106,7 +111,7 @@ export function paymentApproveGate(
   if (row.status !== "pending" && row.status !== "approving") {
     return { ok: false, error: "Ye adaigi manzoori ke marhale mein nahi." };
   }
-  if (samePerson(row.created_by, actorId)) {
+  if (!mayDecideEntry(role, actorId, [row.created_by]) && samePerson(row.created_by, actorId)) {
     return { ok: false, error: "Apni darj ki hui adaigi khud manzoor nahi kar sakte — doosra Owner/Admin kare." };
   }
   return { ok: true };

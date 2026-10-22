@@ -16,14 +16,19 @@ import {
   claimForHref,
   inboxGroup,
   parsePendingRoute,
+  CATEGORY_KEYS,
   type PendingCount,
   type PendingItem,
 } from "@/lib/pending/categories";
 import { pendingKey } from "@/lib/pending/decide";
 import { attachProductExtras } from "@/lib/pending/product-attach";
 import { loadProductPendingExtras } from "@/lib/pending/product-diff-load";
+import { isSelfApproveRole } from "@/lib/approval/guards";
+import { itemMatchesFilter, type PendingListFilter } from "@/lib/pending/escalation";
+import { attachEscalation } from "@/lib/pending/load-escalation";
 import { LiveGroupMarks, PendingFilterPills, PendingGroupFrame, PendingKpis, PendingLive } from "./live-state";
 import { PendingCard, PendingTableRow } from "./pending-rows";
+import { OwnerEscalationSummary, SlaSettings } from "./escalation-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +40,8 @@ export const dynamic = "force-dynamic";
 type Rpc = (fn: string, a?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
 const ERR: Record<string, "apb_e_bad" | "apb_e_reason" | "apb_e_gone" | "apb_own_tip" | "apb_code_tip"> = { bad: "apb_e_bad", reason: "apb_e_reason", gone: "apb_e_gone", own: "apb_own_tip", code: "apb_code_tip" };
 
+const FILTERS = ["all", "mine", "new", "escalated", "overdue"] as const;
+
 export default async function PendingApprovalsPage({ searchParams }: { searchParams?: { f?: string; ok?: string; e?: string; route?: string } }) {
   const sb = createClient();
   const {
@@ -43,7 +50,8 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
   if (!user) redirect("/login");
   const lang = getLanguageFromCookies("rm");
   const { data: me } = await sb.from("profiles").select("role").eq("id", user.id).single();
-  const nav = await loadNav(user.id, (me as { role?: string } | null)?.role ?? "", lang);
+  const viewerRole = (me as { role?: string } | null)?.role ?? "";
+  const nav = await loadNav(user.id, viewerRole, lang);
   const allowed = nav.unrestricted ? null : nav.allowedRoutes;
   const can = (route: string) => allowed === null || routeAllowed(allowed, route.split(/[?#]/, 1)[0]);
   const rpc = sb.rpc.bind(sb) as unknown as Rpc;
@@ -72,13 +80,15 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
   const editIds = rawItems.filter((i) => i.category === "product_edits").map((i) => i.item_id);
   const mergeIds = rawItems.filter((i) => i.category === "product_merge").map((i) => i.item_id);
   const extras = editIds.length || mergeIds.length ? await loadProductPendingExtras(sb as never, editIds, mergeIds).catch(() => new Map()) : new Map();
-  const allItems = attachProductExtras(markCodeOwn(rawItems, codeBy, user.id), extras);
+  const marked = attachProductExtras(markCodeOwn(rawItems, codeBy, user.id), extras);
+  const overlay = await attachEscalation(sb as never, marked, viewerRole, user.id).catch(() => null);
+  const allItems = overlay?.items ?? marked;
   const counts = adjustMineForCode(rawCounts, allItems);
   const scopeCounts = focus ? counts.filter((c) => focusCats.includes(c.category)) : counts;
   const tot = calcTotals(scopeCounts);
-  const filter = searchParams?.f === "mine" ? "mine" : searchParams?.f === "new" ? "new" : "all";
+  const filter: PendingListFilter = (FILTERS as readonly string[]).includes(searchParams?.f ?? "") ? (searchParams!.f as PendingListFilter) : "all";
   const inScope = focus ? allItems.filter((i) => focusCats.includes(i.category)) : allItems;
-  const items = inScope.filter((i) => (filter === "mine" ? !i.is_own && !i.code_own : filter === "new" ? i.is_new : true));
+  const items = inScope.filter((i) => itemMatchesFilter(filter, i, viewerRole));
   const byCat = new Map(scopeCounts.map((c) => [c.category, c]));
   const shownPerCat = new Map<string, number>();
   for (const i of inScope) shownPerCat.set(i.category, (shownPerCat.get(i.category) ?? 0) + 1);
@@ -98,14 +108,14 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
   }
 
   return (
-    <PendingLive counts={counts}>
+    <PendingLive counts={counts} viewerRole={viewerRole}>
     <div data-pending-page className="mx-auto max-w-6xl space-y-5 pb-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-surface-900 dark:text-white">{t("apb_title", lang)}</h1>
           <p className="mt-1 max-w-2xl text-sm text-surface-500 dark:text-surface-400">{t("apb_sub", lang)}</p>
         </div>
-        <PendingFilterPills filter={filter} base={tot} route={focus} />
+        <PendingFilterPills filter={filter} base={tot} route={focus} escalated={overlay?.escalatedToMe ?? 0} overdue={overlay?.overdue ?? 0} />
       </div>
 
       {focus && (
@@ -128,6 +138,18 @@ export default async function PendingApprovalsPage({ searchParams }: { searchPar
       )}
 
       <PendingKpis base={tot} />
+
+      {overlay?.summary && (
+        <OwnerEscalationSummary count={overlay.summary.count} oldest={overlay.summary.oldest} byPerson={overlay.summary.byPerson} />
+      )}
+      {isSelfApproveRole(viewerRole) && (
+        <SlaSettings
+          options={(CATEGORY_KEYS as readonly string[]).filter((c) => c !== "data_health").map((category) => ({
+            category,
+            hours: overlay?.sla[category] ?? 24,
+          }))}
+        />
+      )}
 
       {unreadable.length > 0 && (
         <p data-pending-unreadable className="flex items-start gap-2 rounded-xl border border-amber-300/60 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-800 dark:border-amber-400/20 dark:text-amber-200">

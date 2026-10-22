@@ -1,3 +1,5 @@
+import { mayDecideEntry } from "@/lib/approval/guards";
+
 /**
  * Sales/POS aur Parties review (20 Oct 2026) ke paise wale faisle.
  * SQL migrations 631–633 yahi hadd lagati hain. Ye file DB nahi chhoti,
@@ -59,9 +61,13 @@ export function marginAllowed(margin: number): boolean {
   return Number.isFinite(margin) && margin >= CREDIT_MARGIN_MIN && margin <= CREDIT_MARGIN_MAX;
 }
 
-/** Maker-checker: banane wala khud manzoor nahi karta. */
-export function makerIsNotChecker(createdBy: string | null | undefined, actor: string | null | undefined): boolean {
-  return !!actor && String(createdBy ?? "") !== String(actor);
+/** Maker-checker: staff apni entry nahi karta. Admin/Owner kar sakte hain. */
+export function makerIsNotChecker(
+  createdBy: string | null | undefined,
+  actor: string | null | undefined,
+  role?: string | null,
+): boolean {
+  return mayDecideEntry(role, actor, [createdBy]);
 }
 
 /** Catalog rate. Thok gahak par wholesale, warna selling. */

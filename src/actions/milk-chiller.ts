@@ -302,7 +302,8 @@ export async function verifyMilkEntries(_prev: ActionState, formData: FormData):
   const service = createServiceClient();
   const { data: owned } = await service.from("milk_entries").select("id, created_by").in("id", ids);
   if ((owned ?? []).some((e) => e.created_by && e.created_by === who.userId)) {
-    return { error: selfApprovalError(who.userId, who.userId) ?? "Apni entry khud tasdeeq nahi kar sakte." };
+    const sod = selfApprovalError(who.userId, who.userId, null, who.role);
+    if (sod) return { error: sod };
   }
 
   // Manager: sirf apni branch. `data_scope='own_branch'` seed to

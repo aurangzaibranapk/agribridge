@@ -7,6 +7,8 @@
  * constant chalta hai; qatar na ho to andaza lagane ki ijazat nahi.
  */
 
+import { mayDecideEntry } from "@/lib/approval/guards";
+
 export const FAT_MIN = 1;
 export const FAT_MAX = 12;
 export const LR_MIN = 15;
@@ -106,7 +108,13 @@ export function karachiYear2(now = new Date()): number {
   return karachiParts(now).year % 100;
 }
 
-export function selfApprovalError(actorId: string, createdBy: string | null | undefined, alsoNot?: string | null): string | null {
+export function selfApprovalError(
+  actorId: string,
+  createdBy: string | null | undefined,
+  alsoNot?: string | null,
+  role?: string | null,
+): string | null {
+  if (mayDecideEntry(role, actorId, [createdBy, alsoNot])) return null;
   if (createdBy && actorId === createdBy) return "Apni entry khud manzoor nahi kar sakte.";
   if (alsoNot && actorId === alsoNot) return "Jis ne pehle verify kiya, wahi aakhri manzoori nahi de sakta.";
   return null;
