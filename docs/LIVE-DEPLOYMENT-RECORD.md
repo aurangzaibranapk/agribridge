@@ -1,11 +1,12 @@
-## Pending — 22 October 2026: Careers i18n columns (public apply modal)
+## Done on Live — 22 October 2026: Careers i18n columns (public apply modal)
 
-Branch `cursor/careers-apply-modal-i18n-552c`. Migration **not applied** on Testing or Live. Files only. Live par koi likhai is PR se nahi hui.
+Branch `cursor/careers-apply-modal-i18n-552c` (PR #213). Live `ktskwawkslaznkjjacni` only. Testing was not touched.
 
-- Migration: `supabase/migrations/20261022082729_job_vacancy_public_i18n.sql`
-- Nullable columns: `title_en`, `title_ur`, `title_roman`, `description_en`, `description_ur`, `description_roman`, aur optional brand tag `brand`, `brand_en`, `brand_ur`, `brand_roman`. Khali brand = card par koi tag nahi. Purana `title` / `description` fallback rehta hai. RLS nahi badli. AgriBridge platform hai; brand alag hai.
-- Manual data (auto-run nahi, migrations folder mein nahi): `supabase/manual/job_vacancy_i18n_live_rows.sql` — sirf do live rows (`4142631f-5e2c-4b77-99b7-07b0ea8d2613`, `bb95b584-c11b-4c31-a31e-75986f4fcdc4`). Backup ke baad, migration ke baad. Ids na milen to update nahi likhta. Brand khana khali rehta hai — site par trading-house ka naam nahi likhta.
-- Naya build in columns ke baghair bhi careers safha kholta hai (purana select). Tarjuma columns + manual SQL ke baad dikhta hai.
+- Backup before the change: `backups.job_vacancies_20261022_brand` — 2 rows, 10 columns, same as `public.job_vacancies` at that moment. Schema `backups` is revoked from public, anon, and authenticated.
+- Migration `supabase/migrations/20261022082729_job_vacancy_public_i18n.sql` applied on Live. Nullable columns only. No other table.
+- Manual `supabase/manual/job_vacancy_i18n_live_rows.sql` then wrote the two MCO rows only. Base `title` / `description` unchanged. `brand`, `brand_en`, `brand_ur` are null.
+- Checked after write: Mahanbali and 157NB have English, Roman, and Urdu titles. Row count stayed 2.
+- Columns: `title_en`, `title_ur`, `title_roman`, `description_en`, `description_ur`, `description_roman`, plus optional `brand`, `brand_en`, `brand_ur`, `brand_roman`. Empty brand means no public tag. RLS unchanged.
 
 ## Pending — 21 October 2026: Bharti offer → structure → barhotri → salary slip (691)
 
