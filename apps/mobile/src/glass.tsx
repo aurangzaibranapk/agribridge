@@ -1,9 +1,9 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Animated, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Path, Polyline, Rect, Stop } from "react-native-svg";
 import type { TimelineStep } from "../../../src/lib/mobile/glass-metrics";
 import { ringDashOffset, timelineFinished, timelinePercent } from "../../../src/lib/mobile/glass-metrics";
-import { loadAppMark, taglineLines, type AppMark, type Tagline } from "../../../src/lib/mobile/sub-brand";
+import { brandLockup, loadAppMark, taglineWithDefault, type AppLang, type AppMark } from "../../../src/lib/mobile/sub-brand";
 import { liveAuth, type LiveBag } from "./bits";
 import { liveGet, liveGetScoped } from "../../../src/lib/mobile/live-read";
 
@@ -45,12 +45,22 @@ export function Rise({ index, children }: { index: number; children: ReactNode }
   return <Animated.View style={{ opacity, transform: [{ translateY: shift }] }}>{children}</Animated.View>;
 }
 
+const LangContext = createContext<AppLang>("rm");
+
+export function LanguageProvider({ lang, children }: { lang: AppLang; children: ReactNode }) {
+  return <LangContext.Provider value={lang}>{children}</LangContext.Provider>;
+}
+
+export function useAppLang(): AppLang {
+  return useContext(LangContext);
+}
+
 function useAppMark(live?: LiveBag): AppMark {
   const auth = liveAuth(live);
-  const [mark, setMark] = useState<AppMark>({ brand: null, tagline: { roman: null, urdu: null, english: null } });
+  const [mark, setMark] = useState<AppMark>({ brand: null, tagline: taglineWithDefault(null) });
   useEffect(() => {
     if (!auth) {
-      setMark({ brand: null, tagline: { roman: null, urdu: null, english: null } });
+      setMark({ brand: null, tagline: taglineWithDefault(null) });
       return;
     }
     let gone = false;
@@ -62,14 +72,13 @@ function useAppMark(live?: LiveBag): AppMark {
   return mark;
 }
 
-export function TaglineBlock({ tagline, size = 13 }: { tagline: Tagline; size?: number }) {
-  const lines = taglineLines(tagline);
-  if (!lines.length) return null;
+export function BrandStack({ title, line, rtl, titleSize, lineSize }: { title: string; line: string; rtl: boolean; titleSize: number; lineSize: number }) {
+  const align = rtl ? "right" : "left";
+  const direction = rtl ? "rtl" : "ltr";
   return (
-    <View style={{ marginTop: 2 }}>
-      {lines.map((line) => (
-        <Text key={line.text} style={{ color: glass.muted, fontSize: size, marginTop: 1, writingDirection: line.urdu ? "rtl" : "ltr" }}>{line.text}</Text>
-      ))}
+    <View>
+      <Text style={{ color: glass.text, fontSize: titleSize, fontWeight: "800", textAlign: align, writingDirection: direction }}>{title}</Text>
+      <Text style={{ color: glass.muted, fontSize: lineSize, marginTop: 2, textAlign: align, writingDirection: direction }}>{line}</Text>
     </View>
   );
 }
@@ -77,10 +86,10 @@ export function TaglineBlock({ tagline, size = 13 }: { tagline: Tagline; size?: 
 export function BrandHeader({ role, name, onProfile, live }: { role: string; name: string; onProfile?: () => void; live?: LiveBag }) {
   const initial = (name.trim().charAt(0) || role.charAt(0) || "A").toUpperCase();
   const mark = useAppMark(live);
+  const lock = brandLockup(useAppLang(), mark.tagline);
   return (
     <Rise index={0}>
-      <Text style={{ color: glass.text, fontSize: 22, fontWeight: "800" }}>AgriBridge</Text>
-      <TaglineBlock tagline={mark.tagline} size={11} />
+      <BrandStack title={lock.title} line={lock.line} rtl={lock.rtl} titleSize={22} lineSize={13} />
       <Text style={{ color: glass.gold, fontSize: 11, letterSpacing: 0.4, fontWeight: "700", marginTop: 2 }}>{role.toUpperCase()}</Text>
       <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6, marginBottom: 12 }}>
         <Text style={{ color: glass.text, fontSize: 26, fontWeight: "800", flex: 1, paddingRight: 8 }}>Assalam o Alaikum, {name || "—"}</Text>

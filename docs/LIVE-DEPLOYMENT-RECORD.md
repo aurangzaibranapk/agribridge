@@ -1,3 +1,7 @@
+## Phone tagline lockup — 22 October 2026
+
+versionCode 619. English aur Roman: AgriBridge, seedha neeche Kisan ka Wasela. Urdu: ایگری بریج, seedha neeche کسان کا وسیلہ. English gloss nahi. Default app mein hai, 706 baad mein roman/urdu badal sakti hai. Live par 706 nahi. Live APK nahi badli.
+
 ## Phone identity — 22 October 2026 — NO NEW SQL
 
 versionCode 618. Phone par sirf AgriBridge aur tagline. Login aur header koi company naam ya logo nahi likhte, chahe settings mein ho. Website wala naam sirf domain `alranatraders.pk` aur package id mein hai. 705 aur 706 ab bhi file only, live par nahi. Live APK nahi badli.

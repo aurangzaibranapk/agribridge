@@ -10,8 +10,8 @@ import { StatusBar } from "expo-status-bar";
 import { normalizeChannel, showTesterReport } from "../../src/lib/mobile/channel";
 import { dataFlavor, failureLine, signInMobile } from "../../src/lib/mobile/live-login";
 import { liveGetScoped, loadMyFarmerId, type MilkRow } from "../../src/lib/mobile/live-read";
-import { loadAppMark, type AppMark } from "../../src/lib/mobile/sub-brand";
-import { TaglineBlock } from "./src/glass";
+import { brandLockup, loadAppMark, taglineWithDefault, type AppLang, type AppMark } from "../../src/lib/mobile/sub-brand";
+import { BrandStack, LanguageProvider } from "./src/glass";
 import { readTestAccount, showRolePreview, showRoleSwitch, SWITCH_ROLES, switchRoleLabel } from "../../src/lib/mobile/test-account";
 import { refreshSupabaseSession, SESSION_EXPIRED, singleFlight, type RefreshFailure, type RefreshSuccess } from "../../src/lib/mobile/session-refresh";
 import { ROLE_NAV } from "../../src/lib/mobile/nav";
@@ -51,7 +51,7 @@ function uuid() {
 }
 
 function useLoginMark(): AppMark {
-  const [mark, setMark] = useState<AppMark>({ brand: null, tagline: { roman: null, urdu: null, english: null } });
+  const [mark, setMark] = useState<AppMark>({ brand: null, tagline: taglineWithDefault(null) });
   useEffect(() => {
     if (!SUPABASE_URL || !SUPABASE_ANON) return;
     let gone = false;
@@ -99,7 +99,18 @@ export default function App() {
   const [homeRole, setHomeRole] = useState<AppRole | null>(null);
   const [switchOpen, setSwitchOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [lang, setLang] = useState<AppLang>("rm");
   const loginMark = useLoginMark();
+  const lock = brandLockup(lang, loginMark.tagline);
+  useEffect(() => {
+    void SecureStore.getItemAsync("agribridge.lang").then((value) => {
+      if (value === "en" || value === "rm" || value === "ur") setLang(value);
+    });
+  }, []);
+  function chooseLang(next: AppLang) {
+    setLang(next);
+    void SecureStore.setItemAsync("agribridge.lang", next);
+  }
   const sessionRef = useRef<{ token: string; refresh: string; expiresAt: number | null } | null>(null);
   const refreshFlight = useRef<(() => Promise<RefreshSuccess | RefreshFailure>) | null>(null);
 
@@ -405,7 +416,10 @@ export default function App() {
 
   if (!ready) return <ActivityIndicator style={{ marginTop: 80 }} color={colors.green} />;
 
+  const loginTitle = FLAVOR === "test" ? `${lock.title} TEST` : lock.title;
+
   return (
+    <LanguageProvider lang={lang}>
     <SafeAreaView style={styles.root}>
       <StatusBar style="light" />
       {FLAVOR === "test" ? (
@@ -415,9 +429,11 @@ export default function App() {
       ) : null}
       {stage !== "app" ? (
         <ScrollView contentContainerStyle={{ padding: 20 }}>
-          <Text style={styles.brand}>{FLAVOR === "test" ? "AgriBridge TEST" : "AgriBridge"}</Text>
-          <TaglineBlock tagline={loginMark.tagline} />
+          <View style={{ marginTop: 24 }}>
+            <BrandStack title={loginTitle} line={lock.line} rtl={lock.rtl} titleSize={32} lineSize={16} />
+          </View>
           <Text style={styles.sub}>Version {VERSION || "—"}{VERSION_CODE ? ` · ${VERSION_CODE}` : ""} · {CHANNEL}</Text>
+          <LangPick lang={lang} onPick={chooseLang} />
           {stage === "login" ? (
             <View>
               <TextInput value={identifier} onChangeText={setIdentifier} placeholder="ID, mobile ya CNIC" autoCapitalize="none" style={styles.input} />
@@ -445,7 +461,7 @@ export default function App() {
       ) : (
         <View style={{ flex: 1, backgroundColor: "#07140F" }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 4 }}>
-            <Text style={{ color: "#8FA399", fontSize: 12 }}>AgriBridge · {VERSION || "v0.6.1 Beta"}{VERSION_CODE ? ` · ${VERSION_CODE}` : ""}</Text>
+            <Text style={{ color: "#8FA399", fontSize: 12 }}>{lock.title} · {VERSION || "v0.6.1 Beta"}{VERSION_CODE ? ` · ${VERSION_CODE}` : ""}</Text>
             <Pressable onPress={() => setProfileOpen(true)}><Text style={{ color: "#3DDC97", fontWeight: "700" }}>Profile</Text></Pressable>
           </View>
           <View style={{ flex: 1 }}>
@@ -560,6 +576,8 @@ export default function App() {
           testAccount={isTest}
           version={VERSION}
           versionCode={VERSION_CODE}
+          lang={lang}
+          onLang={chooseLang}
           onSupport={() => { setProfileOpen(false); setSupportOpen(true); }}
           onClose={() => setProfileOpen(false)}
         />
@@ -577,10 +595,28 @@ export default function App() {
         />
       </Modal>
     </SafeAreaView>
+    </LanguageProvider>
   );
 }
 
-function ProfileSheet({ url, anonKey, token, userId, channel, flavor, testAccount, version, versionCode, onSupport, onClose }: { url: string; anonKey: string; token: string | null; userId: string | null; channel: ReturnType<typeof normalizeChannel>; flavor: ReturnType<typeof dataFlavor>; testAccount: boolean; version: string; versionCode: number; onSupport: () => void; onClose: () => void }) {
+function LangPick({ lang, onPick }: { lang: AppLang; onPick: (lang: AppLang) => void }) {
+  const items: { id: AppLang; label: string }[] = [
+    { id: "en", label: "EN" },
+    { id: "rm", label: "Roman" },
+    { id: "ur", label: "اردو" },
+  ];
+  return (
+    <View style={{ flexDirection: "row", marginBottom: 12 }}>
+      {items.map((item) => (
+        <Pressable key={item.id} onPress={() => onPick(item.id)} style={{ marginRight: 8, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: lang === item.id ? "#146B3A" : "transparent", borderWidth: 1, borderColor: "#3DDC97" }}>
+          <Text style={{ color: "#F4F7F4", fontWeight: "700", writingDirection: item.id === "ur" ? "rtl" : "ltr" }}>{item.label}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+function ProfileSheet({ url, anonKey, token, userId, channel, flavor, testAccount, version, versionCode, lang, onLang, onSupport, onClose }: { url: string; anonKey: string; token: string | null; userId: string | null; channel: ReturnType<typeof normalizeChannel>; flavor: ReturnType<typeof dataFlavor>; testAccount: boolean; version: string; versionCode: number; lang: AppLang; onLang: (lang: AppLang) => void; onSupport: () => void; onClose: () => void }) {
   const [displayId, setDisplayId] = useState("");
   const [notes, setNotes] = useState<string[]>([]);
   useEffect(() => {
@@ -612,6 +648,8 @@ function ProfileSheet({ url, anonKey, token, userId, channel, flavor, testAccoun
           autoCapitalize="none"
           style={styles.input}
         />
+        <Text style={styles.help}>Zuban</Text>
+        <LangPick lang={lang} onPick={onLang} />
         <Text style={styles.help}>Account · {userId || "—"}</Text>
         <Text style={styles.help}>Settings · Version {version || "—"} · {versionCode || "—"} · {channel} · {flavor === "test" ? "TEST database" : "live database"}</Text>
         <Text style={styles.help}>PIN aur fingerprint login ke unlock par hain. Yahan se band nahi hote.</Text>
