@@ -1,6 +1,6 @@
 ## Phone tagline — 22 October 2026 — FILE ONLY, NOT APPLIED
 
-versionCode 616. AgriBridge ke neeche tagline: Roman, Urdu, English. `website_settings` key `app_tagline`. Migration **706 not applied** by this agent. Owner testing par: `supabase/migrations/706_app_tagline.sql`. Live par 706 nahi. Key na ho to tagline nahi, koi likha hua jumla nahi. 705 ab bhi file only.
+versionCode 616. AgriBridge ke neeche tagline: Roman `Wasela Kisan Ka`, Urdu `وسیلہ کسان کا`, English `The farmer's bridge`. `website_settings` key `app_tagline`. Migration **706 not applied** by this agent. Owner testing par: `supabase/migrations/706_app_tagline.sql`. Live par 706 nahi. Key na ho to tagline nahi, koi likha hua jumla nahi. 705 ab bhi file only.
 
 ## Phone sub-brand — 22 October 2026 — FILE ONLY, NOT APPLIED
 

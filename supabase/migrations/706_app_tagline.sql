@@ -7,6 +7,6 @@
 insert into public.website_settings (key, value)
 values (
   'app_tagline',
-  '{"roman":"Kisan ki Seerhi","urdu":"کسان کی سیڑھی","english":"The farmer''s ladder"}'::jsonb
+  '{"roman":"Wasela Kisan Ka","urdu":"وسیلہ کسان کا","english":"The farmer''s bridge"}'::jsonb
 )
 on conflict (key) do nothing;
