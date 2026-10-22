@@ -583,7 +583,6 @@ export function AdminGlass({ live, home, milk, orders, focus = "home", footer, o
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Admin" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
-      {live?.testAccount ? <Text style={{ color: glass.gold, fontSize: 10, fontWeight: "700", marginBottom: 6 }}>TEST</Text> : null}
       <KpiGrid>
         <Kpi index={2} label="Total sales" value={home.sales.state === "ok" ? rupees(home.sales.total) : "—"} sub={home.sales.state === "error" ? "Asal bills nahi" : `${home.sales.bills} bill`} color="#C4B5FD" series={days} pct={pctChange(days[days.length - 1] ?? null, days[days.length - 2] ?? null)} />
         <Kpi index={3} label="Milk collection" value={milkToday == null ? "—" : `${Math.round(milkToday)} L`} color="#3DDC97" series={milkToday == null ? [] : [milkToday, milkToday]} pct={null} />
@@ -617,8 +616,9 @@ export function AdminGlass({ live, home, milk, orders, focus = "home", footer, o
 }
 
 function featuredOrder(rows: OrderRow[]): OrderRow | null {
-  const open = rows.find((row) => !["delivered", "completed", "grn_submitted", "cancelled", "rejected"].includes(String(row.status || "").toLowerCase()));
-  return open ?? rows[0] ?? null;
+  const open = rows.filter((row) => !["delivered", "completed", "grn_submitted", "cancelled", "rejected"].includes(String(row.status || "").toLowerCase()));
+  const moving = open.find((row) => ["dispatched", "in_transit", "processing", "approved"].includes(String(row.status || "").toLowerCase()));
+  return moving ?? open[0] ?? rows[0] ?? null;
 }
 
 function orderCard(row: OrderRow | null, extra: ReturnType<typeof useOrderExtra>) {
@@ -887,10 +887,7 @@ export function VetGlass({ live, health, ...bar }: Refresh & { live?: LiveBag; h
         <Kpi index={4} label="Ilaj mukammal" value={health ? String(visits.filter((row) => !row.next_due).length) : "—"} color="#3DDC97" series={health ? flatSeries(visits.filter((row) => !row.next_due).length) : []} pct={null} />
         <Kpi index={5} label="Kisan ke janwar" value={animals == null ? "—" : String(animals)} sub={animalNote || ""} color="#C4B5FD" series={flatSeries(animals)} pct={null} />
       </KpiGrid>
-      <GlassCard title="7 din ke visits" sub="Tareekh alag alag" index={6}>
-        {health ? <LineChart values={visitSeries} labels={days.map(romanWeekday)} color="#5B8CFF" /> : <Text style={{ color: glass.muted }}>{bar.error || "Visits khul rahe hain."}</Text>}
-      </GlassCard>
-      <GlassCard title="Aaj ke visits" index={7}>
+      <GlassCard title="Aaj ke visits" index={6}>
         {bar.error ? <Text style={{ color: glass.muted }}>{bar.error}</Text> : null}
         {todayVisits.length === 0 ? <Text style={{ color: glass.muted }}>Aaj koi visit nahi.</Text> : null}
         {todayVisits.slice(0, 5).map((row, index) => (

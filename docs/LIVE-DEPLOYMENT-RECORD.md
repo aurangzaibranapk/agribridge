@@ -1,3 +1,7 @@
+## Phone sales fix — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 623. 708 ne is_test bills ko din 1–12 par rakh diya tha, is liye 22 October ki Total sales Rs 0 / 0 bill thi aur ring ~6% reh gayi. App ki Total sales card aaj ki hai; query nahi badli. Badge 0% aur 300% se upar chhup jati hai. Admin par alag TEST label nahi. Vet par 7 din ka chart nahi, aaj ki ~3 visits. Customer tracking beech ka step (dispatched, ~50%). `709_app_phone_sales_fix.sql` testing par Boss chalayen: zyada se zyada 17 counted bills aaj par, is mahine ~2.6 lakh (TEST-709 receipts, ledger trigger band), pichle mahine alag, Farmer order dispatched, aaj ke 3 ilaj. Live par mat chalana. Rollback file saath hai. 708 Boss testing par laga chuke hain.
+
 ## Phone role home fix — 22 October 2026 — FILE ONLY, NOT APPLIED
 
 versionCode 622. Header ek compact line: centre aur role, Assalam o Alaikum, gol photo. AgriBridge aur Kisan ka Wasela chhote. Mausam card chhota. Sifar ya khali pichli value par badge nahi. 300% se aage 300%+. Staff ki doosri line alag row, kat-ti nahi. Admin revenue 6 mahine. Donut 4 qismen jab notes hon. Dealer bar par 1.6L / Rs, stock par product naam. Vet par visit ka naam aur 7 din ki line. `708_app_phone_role_fix.sql` testing par Boss chalayen: demo naam, MCA fat/status (6 pending rehti hain), centre, (TEST) hatao, aaj ke ilaj, bills 6 mahine. Live par mat chalana. Rollback file saath hai. 707 Boss testing par laga chuke hain.

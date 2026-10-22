@@ -431,9 +431,9 @@ export function Donut({ parts, center }: { parts: { label: string; value: number
 }
 
 export function Pct({ value }: { value: number | null }) {
-  if (value == null || value === 0) return null;
+  if (value == null || value === 0 || Math.abs(value) > 300) return null;
   const up = value > 0;
-  const shown = Math.abs(value) >= 300 ? "300%+" : `${Math.abs(value)}%`;
+  const shown = `${Math.abs(value)}%`;
   return (
     <View style={{ backgroundColor: up ? "rgba(61,220,151,0.15)" : "rgba(255,107,107,0.15)", borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
       <Text style={{ color: up ? glass.up : glass.down, fontSize: 11, fontWeight: "700" }}>{up ? "▲" : "▼"} {shown}</Text>

@@ -23,13 +23,11 @@ export function romanWeekday(isoDate: string): string {
   return WEEKDAY[utc.getUTCDay()] ?? "";
 }
 
-/** Pichli value 0 ho, ya farq sifar ho, to badge nahi. 300 se aage cap. */
+/** Pichli value 0 ho, farq sifar ho, ya 300% se aage ho, to badge nahi. */
 export function pctChange(current: number | null, previous: number | null): number | null {
   if (current == null || previous == null || !(previous > 0) || !Number.isFinite(current)) return null;
   const raw = Math.round(((current - previous) / previous) * 1000) / 10;
-  if (raw === 0) return null;
-  if (raw > 300) return 300;
-  if (raw < -300) return -300;
+  if (raw === 0 || raw > 300 || raw < -300) return null;
   return raw;
 }
 
