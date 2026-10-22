@@ -1,3 +1,7 @@
+## Phone brand label — 22 October 2026 — FILE ONLY
+
+versionCode 617. Phone par sirf AgriBridge aur tagline. Website wala naam app ki seed aur screen par nahi. `app_brands` khali rehti hai jab tak koi doosri brand settings mein na ho. Package id aur domain nahi badle. 705 aur 706 ab bhi file only, live par nahi.
+
 ## Phone tagline — 22 October 2026 — FILE ONLY, NOT APPLIED
 
 versionCode 616. AgriBridge ke neeche tagline: Roman `Kisan ka Wasela`, Urdu `کسان کا وسیلہ`, English `The farmer's bridge`. `website_settings` key `app_tagline`. Migration **706 not applied** by this agent. Owner testing par: `supabase/migrations/706_app_tagline.sql`. Live par 706 nahi. Key na ho to tagline nahi, koi likha hua jumla nahi. 705 ab bhi file only.

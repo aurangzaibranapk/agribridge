@@ -27,7 +27,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: https://hwaiuwxqldxsoukkfefn.supabase.co
       # Public testing anon key.
       EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3YWl1d3hxbGR4c291a2tmZWZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MjU1NjMsImV4cCI6MjEwMzUwMTU2M30.UwchGHJHRCdKHwpJRr-fdNTreeVNLlfbpo7nBqQv9l4"
-      AGRIBRIDGE_VERSION_CODE: "616"
+      AGRIBRIDGE_VERSION_CODE: "617"
       CI: "1"
     steps:
       - uses: actions/checkout@v4
@@ -129,8 +129,8 @@ jobs:
           notes=$(cat <<'EOF'
           AgriBridge TEST sideload builds. Not the live app and not a Play Store upload.
           App name AgriBridge TEST. Package pk.alranatraders.agribridge.test.
-          versionName v0.6.1 Beta, versionCode 616, APP_CHANNEL=internal.
-          Home screens: AgriBridge. The small brand and the tagline come from website_settings keys app_brands and app_tagline. Owner applies 705_app_sub_brand.sql and 706_app_tagline.sql on testing. Not on live. Dark glass, TEST database numbers.
+          versionName v0.6.1 Beta, versionCode 617, APP_CHANNEL=internal.
+          Home screens: AgriBridge and the tagline from website_settings key app_tagline. The website company name is not shown. Owner applies 706_app_tagline.sql on testing. Not on live. Dark glass, TEST database numbers.
           Goal card: Kisan, MCA, MCO, Staff, Admin. Owner applies 704_app_goal_targets.sql on testing before targets show. Numbers stay empty until the owner sets them. Not on live.
           Owner applies 703_app_test_read_policies.sql on testing before home cards (bills, stock, cash, salary, activity). Not on live.
           Phase C: Customer draft karyana, Staff check-in, Vet ilaj, Dealer orders and HQ khata, Profile.

@@ -89,9 +89,10 @@ assert.doesNotMatch(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /Wasela E
 assert.match(readFileSync("apps/mobile/App.tsx", "utf8"), /loadAppMark/);
 assert.match(readFileSync("apps/mobile/App.tsx", "utf8"), /TaglineBlock/);
 assert.doesNotMatch(readFileSync("apps/mobile/App.tsx", "utf8"), /Al Rana Traders|Kisan ka Wasela|کسان کا وسیلہ|farmer's bridge/);
-assert.equal(currentSubBrand([{ name: "Al Rana Traders", logo_url: null, current: true }, { name: "Doosra", logo_url: "https://example.com/a.png", current: false }])?.name, "Al Rana Traders");
-assert.equal(currentSubBrand([{ name: "Al Rana Traders", logo_url: "http://insecure.example/a.png", current: true }])?.logoUrl, null);
-assert.equal(currentSubBrand([{ name: "Al Rana Traders", logo_url: "https://example.com/logo.png", current: true }])?.logoUrl, "https://example.com/logo.png");
+assert.equal(currentSubBrand([{ name: "Al Rana Traders", logo_url: null, current: true }, { name: "Doosra", logo_url: "https://example.com/a.png", current: false }]), null);
+assert.equal(currentSubBrand([{ name: "by Al Rana Traders", logo_url: "https://example.com/logo.png", current: true }]), null);
+assert.equal(currentSubBrand([{ name: "Doosra Brand", logo_url: "http://insecure.example/a.png", current: true }])?.logoUrl, null);
+assert.equal(currentSubBrand([{ name: "Doosra Brand", logo_url: "https://example.com/logo.png", current: true }])?.name, "Doosra Brand");
 assert.equal(currentSubBrand([{ name: "Doosra", current: false }]), null);
 assert.equal(currentSubBrand(null), null);
 assert.equal(currentSubBrand("[]"), null);
@@ -273,7 +274,7 @@ const testSideload = readFileSync(".github/workflows/mobile-sideload-test.yml", 
 assert.match(testSideload, /EXPO_PUBLIC_APP_FLAVOR: test/);
 assert.match(testSideload, /APP_CHANNEL: internal/);
 assert.match(testSideload, /EXPO_PUBLIC_SUPABASE_URL: https:\/\/hwaiuwxqldxsoukkfefn\.supabase\.co/);
-assert.match(testSideload, /AGRIBRIDGE_VERSION_CODE: "616"/);
+assert.match(testSideload, /AGRIBRIDGE_VERSION_CODE: "617"/);
 assert.match(testSideload, /pk\.alranatraders\.agribridge\.test/);
 assert.match(testSideload, /v0\.6\.1-beta-testdb/);
 assert.match(testSideload, /ktskwawkslaznkjjacni/);
@@ -442,8 +443,9 @@ const rollback705 = readFileSync("supabase/migrations/705_app_sub_brand.rollback
 assert.match(mig705, /website_settings/);
 assert.match(mig705, /app_brands/);
 assert.match(mig705, /on conflict \(key\) do nothing/);
-assert.match(mig705, /"current":true/);
-assert.match(mig705, /"logo_url":null/);
+assert.match(mig705, /'\[\]'::jsonb/);
+assert.match(mig705, /al\[\[:space:\]\]\*rana/);
+assert.doesNotMatch(mig705, /"name":"Al Rana Traders"/);
 assert.doesNotMatch(mig705, /security definer/i);
 assert.doesNotMatch(mig705, /ktskwawkslaznkjjacni/);
 assert.doesNotMatch(mig705, /923\d{9}/);

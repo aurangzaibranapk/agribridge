@@ -50,6 +50,11 @@ function httpsLogo(value: unknown): string | null {
   return /^https:\/\//i.test(url) ? url : null;
 }
 
+/** Website ka naam phone par nahi. Doosri brand baad mein settings se aa sakti hai. */
+export function blockedAppBrand(name: string): boolean {
+  return /al\s*rana/i.test(name);
+}
+
 /** Sirf current: true wali pehli brand. Naam khali ho to null. Logo sirf https. */
 export function currentSubBrand(value: unknown): SubBrand | null {
   let parsed = value;
@@ -66,7 +71,7 @@ export function currentSubBrand(value: unknown): SubBrand | null {
     const row = item as BrandRow;
     if (row.current !== true) continue;
     const name = typeof row.name === "string" ? row.name.trim() : "";
-    if (!name) continue;
+    if (!name || blockedAppBrand(name)) continue;
     return { name, logoUrl: httpsLogo(row.logo_url) };
   }
   return null;
