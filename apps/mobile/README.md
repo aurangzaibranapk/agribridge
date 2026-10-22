@@ -50,8 +50,10 @@ Field writes sit in a local outbox and sync with `client_uuid`. The server accep
 
 ## Sideload test APKs
 
-Workflow **Mobile sideload APKs** builds two release APKs, not the fat debug APK. `APP_CHANNEL=internal`, versionName `v0.6.1 Beta`, versionCode 602 (`AGRIBRIDGE_VERSION_CODE`). R8 minify and Hermes are on. Each APK is one ABI (`arm64-v8a` or `armeabi-v7a`) and is signed with the Android debug keystore. minSdk is 24, so Android 8 and newer can install. `android:testOnly` is rejected by `apps/mobile/scripts/verify-sideload-apk.sh`. The job fails if the live Supabase URL or anon key secret is missing. Internal and debug builds append the HTTP status to login and support errors. Production builds keep the short Urdu line.
+Phase 2 homes (admin, farmer, customer, staff) read the live project with the signed-in user JWT and existing RLS. They do not wait for `/api/mobile/v1/*`. A denied query stays a message, and an empty finance list is not shown as Rs 0.
+
+Workflow **Mobile sideload APKs** builds two release APKs, not the fat debug APK. `APP_CHANNEL=internal`, versionName `v0.6.1 Beta`, versionCode 603 (`AGRIBRIDGE_VERSION_CODE`). R8 minify and Hermes are on. Each APK is one ABI (`arm64-v8a` or `armeabi-v7a`) and is signed with the Android debug keystore. minSdk is 24, so Android 8 and newer can install. `android:testOnly` is rejected by `apps/mobile/scripts/verify-sideload-apk.sh`. The job fails if the live Supabase URL or anon key secret is missing. Internal and debug builds append the HTTP status to login and support errors. Production builds keep the short Urdu line.
 
 ## CI artifact
 
-Workflow **Mobile debug APK** uploads `agribridge-mobile-debug-apk` (14 days). The APK is not in git. Email login can reach live Supabase before the portal build is uploaded. Sync, milk, attendance, feedback, support chat, and non-email login still need this PR's portal routes on alranatraders.pk.
+Workflow **Mobile debug APK** uploads `agribridge-mobile-debug-apk` (14 days). The APK is not in git. Email login and the phase 2 homes read live Supabase before the portal build is uploaded. Sync, feedback, support chat, and non-email login still need this PR's portal routes on alranatraders.pk.

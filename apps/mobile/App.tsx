@@ -301,7 +301,7 @@ export default function App() {
             onAction={() => setSupportOpen(true)}
           />
           <View style={{ flex: 1 }}>
-            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
+            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
           </View>
           {nav ? <Tabs tabs={nav.tabs} current={tab} onChange={(key) => { setTab(key); setRoute(`/${appRole}/${key}`); }} /> : null}
           {tab === "more" ? (
