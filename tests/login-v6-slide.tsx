@@ -36,6 +36,10 @@ assert.match(SLIDE_CSS, /@keyframes ab-sl\{from\{opacity:0;transform:translateY\
 assert.match(SLIDE_CSS, /@media \(prefers-reduced-motion:reduce\)\{[^}]*transition:none!important;animation:none!important/);
 // Desktop: dono panel ek hi card height, andar scroll nahi. Mobile: safha scroll, nested scroll nahi.
 assert.match(SLIDE_CSS, /height:min\(640px,calc\(100dvh - 128px\)\)/);
+// Attribute selector ke quotes <style>{text}</style> mein SSR par &quot; ban jaate hain.
+const slideSrc = readFileSync("src/app/login/slide-card.tsx", "utf8");
+assert.match(slideSrc, /<style dangerouslySetInnerHTML=\{\{ __html: SLIDE_CSS \}\} \/>/);
+assert.doesNotMatch(slideSrc, /<style>\{SLIDE_CSS\}<\/style>/);
 assert.match(SLIDE_CSS, /\.ab-form\{[^}]*height:100%[^}]*overflow:hidden/);
 assert.match(SLIDE_CSS, /\.ab-pn\{[^}]*height:100%/);
 assert.doesNotMatch(SLIDE_CSS, /overflow-y:\s*auto/);

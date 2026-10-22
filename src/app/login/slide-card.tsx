@@ -59,7 +59,8 @@ export function SlideCard({ mode, onMode, tr, login, signup, logo }: { mode: Sli
   const up = mode === "signup";
   return (
     <div className={slideBoxClass(mode)} data-mode={mode} dir="ltr">
-      <style>{SLIDE_CSS}</style>
+      {/* " quote style ke text-child mein SSR par &quot; ban kar hydration tod deta hai. */}
+      <style dangerouslySetInnerHTML={{ __html: SLIDE_CSS }} />
       <section className="ab-form ab-in" aria-hidden={up} {...(up ? { inert: "" } : {}) as object} data-panel="login">
         <MobileStrip title={tr("slide_hi_title")} sub={tr("m_new")} pill={tr("pill_signup")} onClick={() => onMode("signup")} />
         {login}
