@@ -10,7 +10,8 @@ import { StatusBar } from "expo-status-bar";
 import { normalizeChannel, showTesterReport } from "../../src/lib/mobile/channel";
 import { dataFlavor, failureLine, signInMobile } from "../../src/lib/mobile/live-login";
 import { liveGetScoped, loadMyFarmerId, type MilkRow } from "../../src/lib/mobile/live-read";
-import { loadCurrentSubBrand, type SubBrand } from "../../src/lib/mobile/sub-brand";
+import { loadAppMark, type AppMark } from "../../src/lib/mobile/sub-brand";
+import { TaglineBlock } from "./src/glass";
 import { readTestAccount, showRolePreview, showRoleSwitch, SWITCH_ROLES, switchRoleLabel } from "../../src/lib/mobile/test-account";
 import { refreshSupabaseSession, SESSION_EXPIRED, singleFlight, type RefreshFailure, type RefreshSuccess } from "../../src/lib/mobile/session-refresh";
 import { ROLE_NAV } from "../../src/lib/mobile/nav";
@@ -49,23 +50,23 @@ function uuid() {
   return Crypto.randomUUID();
 }
 
-function useLoginBrand(): SubBrand | null {
-  const [brand, setBrand] = useState<SubBrand | null>(null);
+function useLoginMark(): AppMark {
+  const [mark, setMark] = useState<AppMark>({ brand: null, tagline: { roman: null, urdu: null, english: null } });
   useEffect(() => {
     if (!SUPABASE_URL || !SUPABASE_ANON) return;
     let gone = false;
-    void loadCurrentSubBrand({
+    void loadAppMark({
       url: SUPABASE_URL,
       anonKey: SUPABASE_ANON,
       token: SUPABASE_ANON,
       channel: CHANNEL,
       flavor: FLAVOR,
     }, fetch).then((row) => {
-      if (!gone) setBrand(row);
+      if (!gone) setMark(row);
     });
     return () => { gone = true; };
   }, []);
-  return brand;
+  return mark;
 }
 
 export default function App() {
@@ -98,7 +99,8 @@ export default function App() {
   const [homeRole, setHomeRole] = useState<AppRole | null>(null);
   const [switchOpen, setSwitchOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const loginBrand = useLoginBrand();
+  const loginMark = useLoginMark();
+  const loginBrand = loginMark.brand;
   const [loginLogoOk, setLoginLogoOk] = useState(true);
   const sessionRef = useRef<{ token: string; refresh: string; expiresAt: number | null } | null>(null);
   const refreshFlight = useRef<(() => Promise<RefreshSuccess | RefreshFailure>) | null>(null);
@@ -416,6 +418,7 @@ export default function App() {
       {stage !== "app" ? (
         <ScrollView contentContainerStyle={{ padding: 20 }}>
           <Text style={styles.brand}>{FLAVOR === "test" ? "AgriBridge TEST" : "AgriBridge"}</Text>
+          <TaglineBlock tagline={loginMark.tagline} />
           {loginBrand ? (
             <View style={styles.bylineRow}>
               {loginBrand.logoUrl && loginLogoOk ? (

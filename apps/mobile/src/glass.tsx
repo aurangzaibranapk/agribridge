@@ -3,7 +3,7 @@ import { Animated, Image, Pressable, RefreshControl, ScrollView, Text, View } fr
 import Svg, { Circle, Defs, LinearGradient, Path, Polyline, Rect, Stop } from "react-native-svg";
 import type { TimelineStep } from "../../../src/lib/mobile/glass-metrics";
 import { ringDashOffset, timelineFinished, timelinePercent } from "../../../src/lib/mobile/glass-metrics";
-import { loadCurrentSubBrand, type SubBrand } from "../../../src/lib/mobile/sub-brand";
+import { loadAppMark, taglineLines, type AppMark, type Tagline } from "../../../src/lib/mobile/sub-brand";
 import { liveAuth, type LiveBag } from "./bits";
 import { liveGet, liveGetScoped } from "../../../src/lib/mobile/live-read";
 
@@ -45,32 +45,46 @@ export function Rise({ index, children }: { index: number; children: ReactNode }
   return <Animated.View style={{ opacity, transform: [{ translateY: shift }] }}>{children}</Animated.View>;
 }
 
-function useSubBrand(live?: LiveBag): SubBrand | null {
+function useAppMark(live?: LiveBag): AppMark {
   const auth = liveAuth(live);
-  const [brand, setBrand] = useState<SubBrand | null>(null);
+  const [mark, setMark] = useState<AppMark>({ brand: null, tagline: { roman: null, urdu: null, english: null } });
   useEffect(() => {
     if (!auth) {
-      setBrand(null);
+      setMark({ brand: null, tagline: { roman: null, urdu: null, english: null } });
       return;
     }
     let gone = false;
-    void loadCurrentSubBrand(auth, fetch).then((row) => {
-      if (!gone) setBrand(row);
+    void loadAppMark(auth, fetch).then((row) => {
+      if (!gone) setMark(row);
     });
     return () => { gone = true; };
   }, [auth?.token, auth?.url, auth?.anonKey]);
-  return brand;
+  return mark;
+}
+
+export function TaglineBlock({ tagline, size = 13 }: { tagline: Tagline; size?: number }) {
+  const lines = taglineLines(tagline);
+  if (!lines.length) return null;
+  return (
+    <View style={{ marginTop: 2 }}>
+      {lines.map((line) => (
+        <Text key={line.text} style={{ color: glass.muted, fontSize: size, marginTop: 1, writingDirection: line.urdu ? "rtl" : "ltr" }}>{line.text}</Text>
+      ))}
+    </View>
+  );
 }
 
 export function BrandHeader({ role, name, onProfile, live }: { role: string; name: string; onProfile?: () => void; live?: LiveBag }) {
   const initial = (name.trim().charAt(0) || role.charAt(0) || "A").toUpperCase();
-  const brand = useSubBrand(live);
+  const mark = useAppMark(live);
+  const brand = mark.brand;
   const [logoOk, setLogoOk] = useState(true);
   useEffect(() => { setLogoOk(true); }, [brand?.logoUrl]);
   const label = brand ? `${brand.name} · ${role.toUpperCase()}` : role.toUpperCase();
   return (
     <Rise index={0}>
       <Text style={{ color: glass.text, fontSize: 22, fontWeight: "800" }}>AgriBridge</Text>
+      <TaglineBlock tagline={mark.tagline} size={11} />
       <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
         {brand?.logoUrl && logoOk ? (
           <Image source={{ uri: brand.logoUrl }} onError={() => setLogoOk(false)} style={{ width: 16, height: 16, borderRadius: 3, marginRight: 6 }} />

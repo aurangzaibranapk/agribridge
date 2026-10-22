@@ -5,7 +5,44 @@ import { liveGet, type LiveAuth } from "./live-read";
 
 export type SubBrand = { name: string; logoUrl: string | null };
 
+export type Tagline = { roman: string | null; urdu: string | null; english: string | null };
+
+export type AppMark = { brand: SubBrand | null; tagline: Tagline };
+
 type BrandRow = { name?: unknown; logo_url?: unknown; current?: unknown };
+
+export function emptyTagline(): Tagline {
+  return { roman: null, urdu: null, english: null };
+}
+
+function textLine(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  return text ? text : null;
+}
+
+/** Khali field null. App khud tagline nahi likhti. */
+export function taglineFrom(value: unknown): Tagline {
+  let parsed = value;
+  if (typeof parsed === "string") {
+    try {
+      parsed = JSON.parse(parsed) as unknown;
+    } catch {
+      return emptyTagline();
+    }
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return emptyTagline();
+  const row = parsed as { roman?: unknown; urdu?: unknown; english?: unknown };
+  return { roman: textLine(row.roman), urdu: textLine(row.urdu), english: textLine(row.english) };
+}
+
+export function taglineLines(tagline: Tagline): { text: string; urdu: boolean }[] {
+  const lines: { text: string; urdu: boolean }[] = [];
+  if (tagline.roman) lines.push({ text: tagline.roman, urdu: false });
+  if (tagline.urdu) lines.push({ text: tagline.urdu, urdu: true });
+  if (tagline.english) lines.push({ text: tagline.english, urdu: false });
+  return lines;
+}
 
 function httpsLogo(value: unknown): string | null {
   if (typeof value !== "string") return null;
@@ -35,9 +72,16 @@ export function currentSubBrand(value: unknown): SubBrand | null {
   return null;
 }
 
-/** Key na ho ya read fail ho to null. App khud naam nahi banati. */
-export async function loadCurrentSubBrand(auth: LiveAuth, fetchImpl: FetchLike): Promise<SubBrand | null> {
-  const res = await liveGet<{ value?: unknown }>(auth, "website_settings?select=value&key=eq.app_brands&limit=1", fetchImpl);
-  if (!res.ok) return null;
-  return currentSubBrand(res.rows[0]?.value);
+/** Brand aur tagline ek saath. Key na ho ya read fail ho to khali. App khud naam nahi banati. */
+export async function loadAppMark(auth: LiveAuth, fetchImpl: FetchLike): Promise<AppMark> {
+  const blank: AppMark = { brand: null, tagline: emptyTagline() };
+  const res = await liveGet<{ key?: string; value?: unknown }>(auth, "website_settings?select=key,value&key=in.(app_brands,app_tagline)&limit=2", fetchImpl);
+  if (!res.ok) return blank;
+  let brand: SubBrand | null = null;
+  let tagline = emptyTagline();
+  for (const row of res.rows) {
+    if (row.key === "app_brands") brand = currentSubBrand(row.value);
+    if (row.key === "app_tagline") tagline = taglineFrom(row.value);
+  }
+  return { brand, tagline };
 }
