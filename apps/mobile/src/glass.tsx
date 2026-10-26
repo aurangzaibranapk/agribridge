@@ -4,7 +4,7 @@ import Svg, { Circle, Defs, LinearGradient, Path, Polyline, Rect, Stop } from "r
 import { greetingName, roleNameKey } from "../../../src/lib/mobile/display-name";
 import type { TimelineStep } from "../../../src/lib/mobile/glass-metrics";
 import { pctChange, ringDashOffset, timelineFinished, timelinePercent } from "../../../src/lib/mobile/glass-metrics";
-import { brandLockup, loadAppMark, taglineWithDefault, type AppLang, type AppMark } from "../../../src/lib/mobile/sub-brand";
+import { type AppLang } from "../../../src/lib/mobile/sub-brand";
 import { liveAuth, type LiveBag } from "./bits";
 import { liveGet, liveGetScoped, loadPhoneNotes } from "../../../src/lib/mobile/live-read";
 import { pickPakistan, preferVillage, shortPlace, usablePlace } from "../../../src/lib/mobile/weather-place";
@@ -106,23 +106,6 @@ export function useAppLang(): AppLang {
   return useContext(LangContext);
 }
 
-function useAppMark(live?: LiveBag): AppMark {
-  const auth = liveAuth(live);
-  const [mark, setMark] = useState<AppMark>({ brand: null, tagline: taglineWithDefault(null) });
-  useEffect(() => {
-    if (!auth) {
-      setMark({ brand: null, tagline: taglineWithDefault(null) });
-      return;
-    }
-    let gone = false;
-    void loadAppMark(auth, fetch).then((row) => {
-      if (!gone) setMark(row);
-    });
-    return () => { gone = true; };
-  }, [auth?.token, auth?.url, auth?.anonKey]);
-  return mark;
-}
-
 export function BrandStack({ title, line, rtl, titleSize, lineSize }: { title: string; line: string; rtl: boolean; titleSize: number; lineSize: number }) {
   const align = rtl ? "right" : "left";
   const direction = rtl ? "rtl" : "ltr";
@@ -134,18 +117,14 @@ export function BrandStack({ title, line, rtl, titleSize, lineSize }: { title: s
   );
 }
 
-export function BrandHeader({ role, name, centre, onProfile, live }: { role: string; name: string; centre?: string; onProfile?: () => void; live?: LiveBag }) {
+export function BrandHeader({ role, name, centre, onProfile }: { role: string; name: string; centre?: string; onProfile?: () => void; live?: LiveBag }) {
   const initial = (name.trim().charAt(0) || role.charAt(0) || "A").toUpperCase();
-  const mark = useAppMark(live);
-  const lock = brandLockup(useAppLang(), mark.tagline);
   const where = centre?.trim() ? `${role.toUpperCase()} · ${centre.trim()}` : role.toUpperCase();
   return (
     <Rise index={0}>
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
         <View style={{ flex: 1, paddingRight: 8 }}>
-          <Text style={{ color: glass.text, fontSize: 12, lineHeight: 14, fontWeight: "800", textAlign: lock.rtl ? "right" : "left", writingDirection: lock.rtl ? "rtl" : "ltr" }}>{lock.title}</Text>
-          <Text style={{ color: glass.muted, fontSize: 10, lineHeight: 12, textAlign: lock.rtl ? "right" : "left", writingDirection: lock.rtl ? "rtl" : "ltr" }}>{lock.line}</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Text style={{ color: glass.gold, fontSize: 11, fontWeight: "700", marginRight: 8, flexShrink: 1, maxWidth: "46%" }} numberOfLines={1}>{where}</Text>
             <Text style={{ color: glass.text, fontSize: 15, lineHeight: 18, fontWeight: "800", flex: 1 }} numberOfLines={1}>Assalam o Alaikum, {name || "—"}</Text>
           </View>

@@ -1,3 +1,7 @@
+## Phone sales fix, no replica role — 26 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 624. Role home par greeting ke upar chhoti AgriBridge / Kisan ka Wasela line nahi. Login par brand stack waisi hai. Vet par "7 din ke visits" chart pehle hi hata hua hai. `709_app_phone_sales_fix.sql` dubara likhi gayi: `session_replication_role` nahi. `post_pos_source` aur `fn_staff_sales_reward_on_sale` TEST-709 receipt par seedha laut te hain. Payment row nahi banti. Journal ho to migration rukti hai, delete nahi. Testing par Boss chalayen. Live par mat chalana. Rollback function wapas purani body par laata hai. Pichli 709 Testing par 42501 se poori roll back ho chuki hai.
+
 ## Phone sales fix — 22 October 2026 — FILE ONLY, NOT APPLIED
 
 versionCode 623. 708 ne is_test bills ko din 1–12 par rakh diya tha, is liye 22 October ki Total sales Rs 0 / 0 bill thi aur ring ~6% reh gayi. App ki Total sales card aaj ki hai; query nahi badli. Badge 0% aur 300% se upar chhup jati hai. Admin par alag TEST label nahi. Vet par 7 din ka chart nahi, aaj ki ~3 visits. Customer tracking beech ka step (dispatched, ~50%). `709_app_phone_sales_fix.sql` testing par Boss chalayen: zyada se zyada 17 counted bills aaj par, is mahine ~2.6 lakh (TEST-709 receipts, ledger trigger band), pichle mahine alag, Farmer order dispatched, aaj ke 3 ilaj. Live par mat chalana. Rollback file saath hai. 708 Boss testing par laga chuke hain.
