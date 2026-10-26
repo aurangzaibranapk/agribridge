@@ -1,3 +1,7 @@
+## Phone milk today — 26 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 624. App code nahi badla. Test milk_entries ~22 October par atki thin, phone ka aaj 26 October hai, is liye Kisan / MCA / MCO / Admin ki aaj ki doodh cards 0 L thin. `710_app_phone_milk_today.sql` sirf testing: is_test subah, shaam, test kisan, aur route collection_date ko Asia/Karachi ke aaj par sarkati hai. Litre, rate, fat, status wahi rehte hain. Dobara chalane par sirf naya farq. Rollback notes se utne din wapas kaat ta hai. Live par mat chalana. Boss testing par chalayen, phir wahi 624 APK se dobara dekhein.
+
 ## Phone sales fix, no replica role — 26 October 2026 — FILE ONLY, NOT APPLIED
 
 versionCode 624. Role home par greeting ke upar chhoti AgriBridge / Kisan ka Wasela line nahi. Login par brand stack waisi hai. Vet par "7 din ke visits" chart pehle hi hata hua hai. `709_app_phone_sales_fix.sql` dubara likhi gayi: `session_replication_role` nahi. `post_pos_source` aur `fn_staff_sales_reward_on_sale` TEST-709 receipt par seedha laut te hain. Payment row nahi banti. Journal ho to migration rukti hai, delete nahi. Testing par Boss chalayen. Live par mat chalana. Rollback function wapas purani body par laata hai. Pichli 709 Testing par 42501 se poori roll back ho chuki hai.
