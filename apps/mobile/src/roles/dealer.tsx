@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
-import { loadKhata, loadOrders, testOrdersFor, rupees, type KhataView, type OrderRow, type ReadResult } from "../../../../src/lib/mobile/live-read";
+import { loadKhata, loadRoleOrders, testOrdersFor, rupees, type KhataView, type OrderRow, type ReadResult } from "../../../../src/lib/mobile/live-read";
 import { Empty, Section, liveAuth, type LiveBag } from "../bits";
 import { DealerGlass } from "./glass-homes";
 import { colors } from "../kit";
@@ -12,7 +12,7 @@ export function RoleScreen({ tab, live, onProfile, onTab }: { tab: string; live?
   const [refreshing, setRefreshing] = useState(false);
   const load = useCallback(async () => {
     if (!auth) return;
-    const [nextKhata, nextOrders] = await Promise.all([loadKhata(auth, fetch), loadOrders(auth, fetch)]);
+    const [nextKhata, nextOrders] = await Promise.all([loadKhata(auth, fetch), loadRoleOrders(auth, "dealer", fetch)]);
     setKhata(nextKhata);
     setOrders(nextOrders.ok && auth.testAccount ? { ok: true, rows: testOrdersFor(nextOrders.rows, "dealer") } : nextOrders);
   }, [auth?.token, auth?.url, auth?.testAccount, auth?.flavor]);

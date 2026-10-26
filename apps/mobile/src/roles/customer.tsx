@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
-import { karachiDate, liveGetScoped, liveInsert, loadCatalog, loadKhata, loadOrders, testOrdersFor, rupees, type CatalogRow, type KhataView, type OrderRow, type PartyRow, type ReadResult } from "../../../../src/lib/mobile/live-read";
+import { karachiDate, liveGetScoped, liveInsert, loadCatalog, loadKhata, loadRoleOrders, testOrdersFor, rupees, type CatalogRow, type KhataView, type OrderRow, type PartyRow, type ReadResult } from "../../../../src/lib/mobile/live-read";
 import { Empty, Section, liveAuth, type LiveBag } from "../bits";
 import { CustomerGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
@@ -20,7 +20,7 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
     if (!auth) return;
     const [nextKhata, nextOrders, nextShop] = await Promise.all([
       loadKhata(auth, fetch),
-      loadOrders(auth, fetch),
+      loadRoleOrders(auth, "customer", fetch),
       auth.testAccount ? Promise.resolve({ ok: true as const, rows: [] as CatalogRow[] }) : loadCatalog(auth, fetch),
     ]);
     setKhata(nextKhata);

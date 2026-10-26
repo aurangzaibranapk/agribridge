@@ -796,8 +796,24 @@ export async function loadCatalog(auth: LiveAuth, fetchImpl: FetchLike): Promise
   return liveGet<CatalogRow>(auth, "products?select=id,name,selling_price,unit&is_available=eq.true&is_deleted=eq.false&order=name.asc&limit=40", fetchImpl);
 }
 
+const ORDER_LIST = "id,order_number,status,grand_total,created_at,requested_by,order_to_type";
+
 export async function loadOrders(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<OrderRow>> {
-  return liveGetScoped<OrderRow>(auth, "agri_orders?select=id,order_number,status,grand_total,created_at,requested_by,order_to_type&order=created_at.desc&limit=40", fetchImpl);
+  return liveGetScoped<OrderRow>(auth, `agri_orders?select=${ORDER_LIST}&order=created_at.desc&limit=40`, fetchImpl);
+}
+
+/** Test login: customer sirf Farmer, dealer sirf dukan/dealer, is mahine ki ginti ke liye 120. Live mixed fehrist rehti hai. */
+export function roleOrderPath(role: "customer" | "dealer"): string {
+  const filter = role === "customer"
+    ? "order_to_type=eq.Farmer"
+    : 'or=(order_to_type.eq."Agri Dealer",order_to_type.eq."Kisan Dukan")';
+  const limit = role === "dealer" ? 120 : 40;
+  return `agri_orders?select=${ORDER_LIST}&${encodeURI(filter)}&order=created_at.desc&limit=${limit}`;
+}
+
+export async function loadRoleOrders(auth: LiveAuth, role: "customer" | "dealer", fetchImpl: FetchLike): Promise<ReadResult<OrderRow>> {
+  if (auth.testAccount) return liveGetScoped<OrderRow>(auth, roleOrderPath(role), fetchImpl);
+  return loadOrders(auth, fetchImpl);
 }
 
 export type KhataView = {

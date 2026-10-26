@@ -1,3 +1,7 @@
+## Phone dealer and vet — 26 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 626. Dealer test list ab sirf Agri Dealer / Kisan Dukan hai, is mahine ki ginti Karachi mahine se, badge order count se. `711_app_phone_dealer_vet.sql` testing par: is_test dealer orders ko is mahine ~38 aur pichle mahine ~34 par rakhti hai, kam hon to TEST-711 qatarein. Vet ki test visits jin ka next due khali hai, 7 din aage, taake Pending cases dikhein. Live par mat chalana. Rollback created_at wapas aur TEST-711 hataata hai.
+
 ## Phone polish — 26 October 2026 — app only
 
 versionCode 625. Badge tab chhupti hai jab farq 0 ho, 90% ya us se bara ho, ya 300% se aage ho. Customer home se "Doosre orders" list hata di. Mockup mein sirf mahine ka chart aur ek order ki timeline hai. Koi nayi migration nahi. Live database par kuch nahi.

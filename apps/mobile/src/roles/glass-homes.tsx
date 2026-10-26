@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { cleanPerson } from "../../../../src/lib/mobile/display-name";
 import { approvalJourney, approvalTimeline, compactRupee, goalDeadline, goalRemaining, karachiClock, milkTimeline, monthBuckets, monthEnd, monthShare, orderTimeline, pctChange, romanWeekday } from "../../../../src/lib/mobile/glass-metrics";
-import { karachiDate, karachiDaySeries, liveGet, liveGetScoped, loadFarmerNames, loadGoalTargets, loadMilkList, loadMilkWindow, loadMonthPurchases, loadMonthSales, loadOwnAttendance, loadPhoneNotes, loadSalesMonths, milkLitres, pricedMilkTotal, rupees, shiftLabel, type AdminHome, type GoalTargetRow, type HealthRow, type KhataView, type MilkRow, type OrderRow, type PhoneNote, type ReadResult } from "../../../../src/lib/mobile/live-read";
+import { karachiDate, karachiDaySeries, liveGet, liveGetScoped, loadFarmerNames, loadGoalTargets, loadMilkList, loadMilkWindow, loadMonthPurchases, loadMonthSales, loadOwnAttendance, loadPhoneNotes, loadSalesMonths, milkLitres, pricedMilkTotal, rupees, saleMonthKey, shiftLabel, type AdminHome, type GoalTargetRow, type HealthRow, type KhataView, type MilkRow, type OrderRow, type PhoneNote, type ReadResult } from "../../../../src/lib/mobile/live-read";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { liveAuth, type LiveBag } from "../bits";
 import { BarChart, BarTrack, BrandHeader, Donut, GlassCard, GlassScreen, GoalCard, Kpi, KpiGrid, LineChart, Pill, RingMeter, Rise, TankRow, Timeline, WeatherCard, glass, useFace, useWeather } from "../glass";
@@ -149,7 +149,7 @@ function monthTotals(rows: OrderRow[], today: string): { values: number[]; label
   const buckets = monthBuckets(today, 6);
   return {
     labels: buckets.map((bucket) => bucket.label),
-    values: buckets.map((bucket) => rows.filter((row) => String(row.created_at || "").startsWith(bucket.key)).reduce((sum, row) => sum + num(row.grand_total), 0)),
+    values: buckets.map((bucket) => rows.filter((row) => saleMonthKey(row.created_at) === bucket.key).reduce((sum, row) => sum + num(row.grand_total), 0)),
   };
 }
 
@@ -676,9 +676,14 @@ export function DealerGlass({ live, khata, orders, ...bar }: Refresh & { live?: 
   const notes = usePhoneNotes(live);
   if (!khata || !orders) return <ActivityIndicator color={glass.up} style={{ marginTop: 24 }} />;
   const list = orders.ok ? orders.rows : [];
-  const monthKey = karachiDate().slice(0, 7);
-  const dated = list.filter((row) => String(row.created_at || "").length >= 7);
-  const monthCount = dated.filter((row) => String(row.created_at).startsWith(monthKey)).length;
+  const buckets = monthBuckets(karachiDate(), 6);
+  const monthKey = buckets[buckets.length - 1]?.key ?? "";
+  const prevKey = buckets[buckets.length - 2]?.key ?? "";
+  const countOf = (key: string) => list.filter((row) => saleMonthKey(row.created_at) === key).length;
+  const monthCount = countOf(monthKey);
+  const prevCount = countOf(prevKey);
+  const dated = list.some((row) => saleMonthKey(row.created_at).length === 7);
+  const countSeries = buckets.map((bucket) => countOf(bucket.key));
   const months = monthTotals(list, karachiDate());
   const stockItems = noteNumber(notes, "home.dealer.items");
   const stockLow = noteNumber(notes, "home.dealer.low");
@@ -691,7 +696,7 @@ export function DealerGlass({ live, khata, orders, ...bar }: Refresh & { live?: 
       <BrandHeader role="Dealer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
       <KpiGrid>
-        <Kpi index={2} label="Is mahine orders" value={orders.ok ? (dated.length ? String(monthCount) : String(list.length)) : "—"} sub={dated.length ? "Is mahine" : "Aakhri fehrist"} color="#3DDC97" series={months.values.some((value) => value > 0) ? months.values : flatSeries(orders.ok ? list.length : null)} pct={null} />
+        <Kpi index={2} label="Is mahine orders" value={orders.ok ? (dated ? String(monthCount) : String(list.length)) : "—"} sub={dated ? "Is mahine" : "Aakhri fehrist"} color="#3DDC97" series={countSeries.some((value) => value > 0) ? countSeries : flatSeries(orders.ok ? list.length : null)} pct={dated ? pctChange(monthCount, prevCount) : null} />
         <Kpi index={3} label="HQ khata balance" value={hq.value} sub={hq.sub} color="#FF6B6B" series={flatSeries(khata.owed == null ? null : Math.abs(khata.owed))} pct={null} />
         <Kpi index={4} label="Stock items" value={stockItems == null ? "—" : String(Math.round(stockItems))} sub={notes == null ? "" : stockItems == null ? "Stock record nahi mila" : "Items"} color="#3DDC97" series={flatSeries(stockItems)} pct={null} />
         <Kpi index={5} label="Kam stock" value={stockLow == null ? "—" : String(Math.round(stockLow))} sub={notes == null ? "" : stockLow == null ? "Hadd se kam maal nahi mila" : "Hadd se kam"} color="#F5B942" series={flatSeries(stockLow)} pct={null} />

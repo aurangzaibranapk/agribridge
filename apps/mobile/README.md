@@ -50,7 +50,7 @@ Field writes sit in a local outbox and sync with `client_uuid`. The server accep
 
 ## AgriBridge TEST
 
-`EXPO_PUBLIC_APP_FLAVOR=test` builds a second app, `AgriBridge TEST`, package `pk.alranatraders.agribridge.test`, so it installs beside the live app. An orange bar says `TEST · testing database`. That flavor talks only to `https://hwaiuwxqldxsoukkfefn.supabase.co` and does not call `/api/mobile/v1/*`. The live flavor still refuses the testing host. Workflow **Mobile TEST database APKs** publishes arm64 and armeabi-v7a to prerelease `v0.6.1-beta-testdb` at versionCode 625. It does not replace `v0.6.1-beta-test1`. On the TEST flavor the test account can save an MCA pickup, MCO fat, Admin Manzoor, a customer draft order, staff check-in, and a vet visit. Role dekho and the live-flavor test account stay read-only.
+`EXPO_PUBLIC_APP_FLAVOR=test` builds a second app, `AgriBridge TEST`, package `pk.alranatraders.agribridge.test`, so it installs beside the live app. An orange bar says `TEST · testing database`. That flavor talks only to `https://hwaiuwxqldxsoukkfefn.supabase.co` and does not call `/api/mobile/v1/*`. The live flavor still refuses the testing host. Workflow **Mobile TEST database APKs** publishes arm64 and armeabi-v7a to prerelease `v0.6.1-beta-testdb` at versionCode 626. It does not replace `v0.6.1-beta-test1`. On the TEST flavor the test account can save an MCA pickup, MCO fat, Admin Manzoor, a customer draft order, staff check-in, and a vet visit. Role dekho and the live-flavor test account stay read-only.
 
 ## Sideload test APKs
 
