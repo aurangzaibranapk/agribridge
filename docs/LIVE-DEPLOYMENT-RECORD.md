@@ -1,12 +1,14 @@
-## Pending — 22 October 2026: Pending approval escalation (698)
+## Done on Live — 26 October 2026: Pending approval escalation (713, was 698)
 
-Branch `cursor/pending-approval-escalation-e154`. Migration **698 not applied** on Testing or Live. Files only. Backup pehle, phir Testing (`hwaiuwxqldxsoukkfefn`), phir Live. Live par tab tak nahi jab tak backup ka size chat mein na aa jaye.
+Branch `cursor/pending-approval-escalation-e154` (PR #216). File renamed 698 → **713** because live already has `698_mobile_phase1`.
+- Live `ktskwawkslaznkjjacni`: applied 26 Oct 2026 14:51 PKT, recorded as `20261026095127 713_pending_escalation`. Backup: box `/workspace/backups/2026-10-26-live-214-215-216/`.
+- Testing `hwaiuwxqldxsoukkfefn`: applied earlier, recorded as version `698216` (same SQL). Do not re-apply.
 
 - `pending_escalation_settings` / `_state` / `_events`. `fn_pending_escalate` har 15 minute (pg_cron, warna `/api/cron/pending-escalation`). Sirf in-app notification. SMS/WhatsApp nahi.
 - Manager SLA (default 24h, category settings) ke baad item **Admin aur Owner dono** ke paas. Koi bhi ek faisla kar sakta hai.
 - `fn_may_decide_entry` / `fn_actor_may_decide`: Admin, Owner, Super Admin apni entry bhi. Manager aur baqi staff apni entry nahi. Fuel, generator, maintenance checks aur POS review isi guard par.
 - Timeline: `Khud approve (Admin)` / `Khud approve (Owner)`. Season import SELECT staff policy (pending warning).
-- Rollback: `supabase/migrations/698_pending_escalation.rollback.sql`.
+- Rollback: `supabase/migrations/713_pending_escalation.rollback.sql`.
 
 ## Done on Live — 22 October 2026: Careers i18n columns (public apply modal)
 

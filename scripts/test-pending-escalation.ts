@@ -48,7 +48,7 @@ assert.equal(itemMatchesFilter("overdue", { overdue: true }, "manager"), true);
 assert.equal(itemMatchesFilter("mine", { is_own: true }, "manager"), false);
 assert.equal(itemMatchesFilter("all", { is_own: true }, "manager"), true);
 
-const sql = readFileSync("supabase/migrations/698_pending_escalation.sql", "utf8");
+const sql = readFileSync("supabase/migrations/713_pending_escalation.sql", "utf8");
 assert.match(sql, /fn_pending_escalate/);
 assert.match(sql, /fn_may_decide_entry/);
 assert.doesNotMatch(sql.replace(/--.*$/gm, ""), /whatsapp|twilio|sms_outbox/i);

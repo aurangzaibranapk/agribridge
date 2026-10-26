@@ -73,7 +73,7 @@ insert into profiles values
   ('${STF}','sales_staff',null,'Staff',true);
 `);
 
-const M = fs.readFileSync("supabase/migrations/698_pending_escalation.sql", "utf8");
+const M = fs.readFileSync("supabase/migrations/713_pending_escalation.sql", "utf8");
 assert.doesNotMatch(M, /whatsapp_send|net\.http|pg_net|send_email|sms_outbox/i);
 await run(M);
 await run(M);
