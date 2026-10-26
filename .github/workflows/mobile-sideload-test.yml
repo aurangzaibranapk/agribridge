@@ -27,7 +27,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: https://hwaiuwxqldxsoukkfefn.supabase.co
       # Public testing anon key.
       EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3YWl1d3hxbGR4c291a2tmZWZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MjU1NjMsImV4cCI6MjEwMzUwMTU2M30.UwchGHJHRCdKHwpJRr-fdNTreeVNLlfbpo7nBqQv9l4"
-      AGRIBRIDGE_VERSION_CODE: "624"
+      AGRIBRIDGE_VERSION_CODE: "625"
       CI: "1"
     steps:
       - uses: actions/checkout@v4
@@ -129,8 +129,8 @@ jobs:
           notes=$(cat <<'EOF'
           AgriBridge TEST sideload builds. Not the live app and not a Play Store upload.
           App name AgriBridge TEST. Package pk.alranatraders.agribridge.test.
-          versionName v0.6.1 Beta, versionCode 624, APP_CHANNEL=internal.
-          Role homes open on one line: centre, role, Assalam o Alaikum, and the round photo. The small AgriBridge and Kisan ka Wasela stack stays on login, not above the greeting. Weather card is short. A zero change, or a change above 300%, hides the badge.
+          versionName v0.6.1 Beta, versionCode 625, APP_CHANNEL=internal.
+          Role homes open on one line: centre, role, Assalam o Alaikum, and the round photo. The small AgriBridge and Kisan ka Wasela stack stays on login, not above the greeting. Weather card is short. A zero change, a change of 90% or more, or a change above 300%, hides the badge. Customer home has the month chart and one order timeline, not a second order list.
           Admin home no longer shows a stray TEST label. Vet home lists today's visits and does not add a 7-day visit chart. Customer tracking prefers a mid-step order. Owner applies the rewritten 709_app_phone_sales_fix.sql on testing. It does not set session_replication_role. TEST-709 receipts skip the ledger and staff-reward functions. Not on live.
           Role switch uses a demo name from phone notes (708, testing only). MCA fat and status mix, MCO pending near 6, centre names, vet visits, dealer product bars, admin monthly revenue and four categories. Not on live.
           Phone notes (707, testing only) fill tanks, grain maund, dealer stock, staff advance, and tasks. Goal numbers fill only where still null. Not on live.

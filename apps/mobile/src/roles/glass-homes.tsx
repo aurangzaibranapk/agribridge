@@ -642,33 +642,13 @@ export function CustomerGlass({ live, khata, orders, focus = "home", ...bar }: R
   if (!khata || !orders) return <ActivityIndicator color={glass.up} style={{ marginTop: 24 }} />;
   const list = orders.ok ? orders.rows : [];
   const latest = featuredOrder(list);
-  const rest = list.filter((row) => row !== latest);
   const card = orderCard(latest, extra);
   const months = monthTotals(list, karachiDate());
-  const others = (
-    <GlassCard title="Doosre orders" index={6}>
-      {!orders.ok ? <Text style={{ color: glass.muted }}>{orders.message}</Text> : null}
-      {orders.ok && rest.length === 0 ? <Text style={{ color: glass.muted }}>Koi doosra order nahi.</Text> : null}
-      {rest.slice(0, 6).map((row, index) => {
-        const tone = orderTone(row.status);
-        return (
-          <View key={row.id ?? String(index)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: glass.text, fontWeight: "700" }}>{row.order_number || "Order"}</Text>
-              <Text style={{ color: glass.muted }}>{row.grand_total == null ? "—" : rupees(num(row.grand_total))}</Text>
-            </View>
-            <Pill label={tone.label} tone={tone.tone} mark={tone.tone === "green" ? "check" : undefined} />
-          </View>
-        );
-      })}
-    </GlassCard>
-  );
   if (focus === "track") {
     return (
       <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
         <BrandHeader role="Customer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
         <Timeline title={card.title} detail={card.detail} steps={card.steps} showProgress progressNote={card.progressNote} onAction={() => bar.onTab?.("orders")} index={2} />
-        {others}
       </GlassScreen>
     );
   }
@@ -683,7 +663,6 @@ export function CustomerGlass({ live, khata, orders, focus = "home", ...bar }: R
       <GlassCard title="Mahana kharch" sub="6 mahine" index={4}>
         {orders.ok && months.values.some((value) => value > 0) ? <LineChart values={months.values} labels={months.labels} color="#F5B942" /> : <Text style={{ color: glass.muted }}>{orders.ok ? "Chart ke liye qatarein nahi." : orders.message}</Text>}
       </GlassCard>
-      {others}
       <Timeline title={card.title} detail={card.detail} steps={card.steps} showProgress progressNote={card.progressNote} onAction={() => bar.onTab?.("orders")} />
     </GlassScreen>
   );

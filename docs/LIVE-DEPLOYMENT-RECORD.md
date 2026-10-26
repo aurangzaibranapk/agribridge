@@ -1,3 +1,7 @@
+## Phone polish — 26 October 2026 — app only
+
+versionCode 625. Badge tab chhupti hai jab farq 0 ho, 90% ya us se bara ho, ya 300% se aage ho. Customer home se "Doosre orders" list hata di. Mockup mein sirf mahine ka chart aur ek order ki timeline hai. Koi nayi migration nahi. Live database par kuch nahi.
+
 ## Phone milk today — 26 October 2026 — FILE ONLY, NOT APPLIED
 
 versionCode 624. App code nahi badla. Test milk_entries ~22 October par atki thin, phone ka aaj 26 October hai, is liye Kisan / MCA / MCO / Admin ki aaj ki doodh cards 0 L thin. `710_app_phone_milk_today.sql` sirf testing: is_test subah, shaam, test kisan, aur route collection_date ko Asia/Karachi ke aaj par sarkati hai. Litre, rate, fat, status wahi rehte hain. Dobara chalane par sirf naya farq. Rollback notes se utne din wapas kaat ta hai. Live par mat chalana. Boss testing par chalayen, phir wahi 624 APK se dobara dekhein.

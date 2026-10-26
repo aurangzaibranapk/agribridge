@@ -410,7 +410,7 @@ export function Donut({ parts, center }: { parts: { label: string; value: number
 }
 
 export function Pct({ value }: { value: number | null }) {
-  if (value == null || value === 0 || Math.abs(value) > 300) return null;
+  if (value == null || value === 0 || Math.abs(value) >= 90 || Math.abs(value) > 300) return null;
   const up = value > 0;
   const shown = `${Math.abs(value)}%`;
   return (
