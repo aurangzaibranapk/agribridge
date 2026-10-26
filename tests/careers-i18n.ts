@@ -93,6 +93,10 @@ const romanKept: Record<string, string> = {
   sp_basic_info: "Buniyadi maloomat",
   sp_full_name: "Poora naam",
   sp_email: "Email",
+  sp_gender: "Jins",
+  sp_gender_male: "Mard",
+  sp_gender_female: "Aurat",
+  sp_gender_other: "Dusra",
   sp_phone: "Phone",
   sp_cnic_number: "Shanakhti card number",
   sp_address: "Pata",
@@ -118,6 +122,10 @@ const english: Record<string, string> = {
   sp_basic_info: "Basic information",
   sp_full_name: "Full name",
   sp_email: "Email",
+  sp_gender: "Gender",
+  sp_gender_male: "Male",
+  sp_gender_female: "Female",
+  sp_gender_other: "Other",
   sp_phone: "Phone",
   sp_cnic_number: "CNIC number",
   sp_address: "Address",
@@ -153,7 +161,7 @@ assert.equal(t("sp_careers_title", "en").includes("Al Rana"), false);
 const uiKeys = [
   "sp_careers_title", "sp_careers_tagline", "sp_careers_company", "sp_careers_lead", "sp_no_vacancy", "sp_apply", "sp_salary", "sp_currency",
   "sp_positions", "sp_per_month", "sp_job_location", "sp_apply_for", "sp_close", "sp_basic_info",
-  "sp_full_name", "sp_email", "sp_phone", "sp_cnic_number", "sp_address", "sp_expected_salary",
+  "sp_full_name", "sp_email", "sp_gender", "sp_gender_male", "sp_gender_female", "sp_gender_other", "sp_phone", "sp_cnic_number", "sp_address", "sp_expected_salary",
   "sp_exp_qual", "sp_qualification", "sp_past_work", "sp_about_you", "sp_documents", "sp_cnic_front",
   "sp_cnic_back", "sp_qual_cert", "sp_exp_cert", "sp_cv", "sp_drop_or_browse", "sp_file_ready",
   "sp_clear_file", "sp_cancel", "sp_submit", "sp_submitting", "sp_step_basic", "sp_step_experience",
@@ -173,7 +181,18 @@ assert.equal(applyInputError(readApplyFields(bag({}))), t("sp_apply_required", "
 assert.equal(applyInputError(readApplyFields(bag({ ui_lang: "ur", full_name: "Ali" }))), t("sp_apply_required", "ur"));
 assert.equal(applyInputError(readApplyFields(bag({
   ui_lang: "rm", vacancy_id: "v", full_name: "Ali", email: "a@b.c",
-}))), null);
+}))), t("sp_apply_required", "rm"), "gender required");
+assert.equal(applyInputError(readApplyFields(bag({
+  ui_lang: "en", vacancy_id: "v", full_name: "Ali", email: "a@b.c", gender: "nope",
+}))), t("sp_apply_required", "en"));
+for (const gender of ["male", "female", "other"]) {
+  assert.equal(applyInputError(readApplyFields(bag({
+    ui_lang: "rm", vacancy_id: "v", full_name: "Ali", email: "a@b.c", gender,
+  }))), null, gender);
+}
+assert.equal(t("sp_gender_male", "ur"), "مرد");
+assert.equal(t("sp_gender_female", "ur"), "عورت");
+assert.equal(t("sp_gender_other", "ur"), "دیگر");
 
 const manual = fs.readFileSync("supabase/manual/job_vacancy_i18n_live_rows.sql", "utf8");
 const migration = fs.readFileSync("supabase/migrations/20261022082729_job_vacancy_public_i18n.sql", "utf8");

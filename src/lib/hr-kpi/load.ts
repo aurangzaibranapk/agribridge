@@ -9,6 +9,15 @@ import { type HrFilters, type HrRaw, previousPeriod, addMonths, monthStart, addD
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = { from: (t: string) => any; rpc: (f: string, a: Record<string, unknown>) => any };
 
+async function loadApplications(db: Db, earliest: string) {
+  const filter = `created_at.gte.${pktStartIso(earliest)},hired_at.gte.${pktStartIso(earliest)}`;
+  const withGender = await db.from("job_applications").select("created_at,screened_at,interview_at,offer_at,hired_at,gender").or(filter).limit(20000);
+  if (!withGender.error) return withGender.data ?? [];
+  if (!/gender/i.test(String(withGender.error.message ?? withGender.error))) return [];
+  const plain = await db.from("job_applications").select("created_at,screened_at,interview_at,offer_at,hired_at").or(filter).limit(20000);
+  return plain.data ?? [];
+}
+
 const PKT = 5 * 3600000;
 const pktStartIso = (d: string) => new Date(Date.parse(`${d}T00:00:00Z`) - PKT).toISOString();
 const pktMonth = (ts: string) => new Date(Date.parse(ts) + PKT).toISOString().slice(0, 7) + "-01";
@@ -27,7 +36,7 @@ export async function loadHrRaw(f: HrFilters, today: string): Promise<HrRaw> {
     db.from("profiles").select("id,full_name"),
     db.from("departments").select("key,label").order("sort_order"),
     db.from("attendance_records").select("profile_id,attendance_date,status,late_minutes").gte("attendance_date", earliest).lte("attendance_date", f.to).limit(20000),
-    db.from("job_applications").select("created_at,screened_at,interview_at,offer_at,hired_at").or(`created_at.gte.${pktStartIso(earliest)},hired_at.gte.${pktStartIso(earliest)}`).limit(20000),
+    loadApplications(db, earliest),
     db.from("hr_training_records").select("profile_id,training_type,training_date,hours,cost").gte("training_date", earliest).lte("training_date", f.to),
     db.from("hr_performance_reviews").select("profile_id,period_month,rating,status").gte("period_month", monthStart(earliest)).lte("period_month", f.to),
     user.rpc("fn_hr_pulse_summary", { p_from: earliest, p_to: f.to }),
@@ -67,7 +76,7 @@ export async function loadHrRaw(f: HrFilters, today: string): Promise<HrRaw> {
     staff,
     departments: ((deptQ.data ?? []) as { key: string; label: string }[]),
     attendance: (attQ.data ?? []) as HrRaw["attendance"],
-    applications: (appQ.data ?? []) as HrRaw["applications"],
+    applications: (appQ ?? []) as HrRaw["applications"],
     training: (trQ.data ?? []) as HrRaw["training"],
     reviews: (revQ.data ?? []) as HrRaw["reviews"],
     pulse: ((pulseQ.data ?? []) as { period_month: string; responses: number; avg_score: number; engaged: number }[]).map((p) => ({ ...p, avg_score: Number(p.avg_score) })),
