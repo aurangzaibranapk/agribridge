@@ -4,10 +4,14 @@ const ts = require("typescript");
 
 function load(path) {
   const source = ts.transpileModule(fs.readFileSync(path, "utf8"), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, esModuleInterop: true },
   }).outputText;
   const mod = { exports: {} };
-  new Function("module", "exports", source)(mod, mod.exports);
+  const localRequire = (id) => {
+    if (String(id).includes("approval/guards")) return load("src/lib/approval/guards.ts");
+    throw new Error("unexpected import " + id);
+  };
+  new Function("module", "exports", "require", source)(mod, mod.exports, localRequire);
   return mod.exports;
 }
 const g = load("src/lib/finance/money-guards.ts");
@@ -23,8 +27,9 @@ assert.equal(g.isMoneyWriter("owner"), true);
 assert.equal(g.isMoneyWriter("finance"), false);
 assert.equal(g.isMoneyWriter("manager"), false);
 assert.equal(g.kharchaApproveGate({ status: "pending", requested_by: "a" }, "b", "owner").ok, false);
-assert.equal(g.kharchaApproveGate({ status: "verified", requested_by: "a", verified_by: "b" }, "a", "admin").ok, false);
-assert.equal(g.kharchaApproveGate({ status: "verified", requested_by: "a", verified_by: "b" }, "b", "admin").ok, false);
+assert.equal(g.kharchaApproveGate({ status: "verified", requested_by: "a", verified_by: "b" }, "a", "admin").ok, true);
+assert.equal(g.kharchaApproveGate({ status: "verified", requested_by: "a", verified_by: "b" }, "b", "admin").ok, true);
+assert.equal(g.kharchaApproveGate({ status: "verified", requested_by: "a", verified_by: "b" }, "a", "manager").ok, false);
 assert.equal(g.kharchaApproveGate({ status: "verified", requested_by: "a", verified_by: "b" }, "c", "finance").ok, false);
 assert.equal(g.kharchaApproveGate({ status: "verified", requested_by: "a", verified_by: "b" }, "c", "owner").ok, true);
 
@@ -32,11 +37,12 @@ assert.equal(g.cashCloseRecordGate("finance", null, "b1").ok, false);
 assert.equal(g.cashCloseRecordGate("manager", "b1", "b2").ok, false);
 assert.equal(g.cashCloseRecordGate("manager", "b1", "b1").ok, true);
 assert.equal(g.cashCloseRecordGate("admin", null, "b9").ok, true);
-assert.equal(g.cashCloseApproveGate({ counted_by: "a", difference: 10, approval_status: "recorded", journal_entry_id: null }, "a", "owner").ok, false);
+assert.equal(g.cashCloseApproveGate({ counted_by: "a", difference: 10, approval_status: "recorded", journal_entry_id: null }, "a", "owner").ok, true);
 assert.equal(g.cashCloseApproveGate({ counted_by: "a", difference: 10, approval_status: "recorded", journal_entry_id: null }, "b", "admin").ok, true);
 assert.equal(g.cashCloseApproveGate({ counted_by: "a", difference: 0, approval_status: "recorded" }, "b", "admin").ok, false);
 
-assert.equal(g.paymentApproveGate({ status: "pending", created_by: "a" }, "a", "owner").ok, false);
+assert.equal(g.paymentApproveGate({ status: "pending", created_by: "a" }, "a", "owner").ok, true);
+assert.equal(g.paymentApproveGate({ status: "pending", created_by: "a" }, "a", "manager").ok, false);
 assert.equal(g.paymentApproveGate({ status: "pending", created_by: "a" }, "b", "sales_staff").ok, false);
 assert.equal(g.paymentApproveGate({ status: "pending", created_by: "a" }, "b", "super_admin").ok, true);
 assert.equal(g.paymentApproveGate({ status: "posted", created_by: "a" }, "b", "admin").ok, false);

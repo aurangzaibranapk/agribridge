@@ -1,4 +1,6 @@
 import type { TranslationKey } from "@/lib/i18n/translations";
+import { isSelfApproveRole } from "@/lib/approval/guards";
+import type { EscalationLevel, PendingTimelineEvent } from "@/lib/pending/escalation";
 
 /**
  * Admin pending badges -- saaf (pure) hisaab. Database se 582 ka
@@ -46,6 +48,13 @@ export interface PendingItem {
   product_extra?: import("./product-diff").ProductPendingExtra;
   /** Approve band (masalan product ko khud mein merge). */
   block_approve?: boolean;
+  /** 698: Manager, phir SLA ke baad Admin aur Owner ek sath. */
+  escalation_level?: EscalationLevel;
+  escalation_since?: string | null;
+  sla_hours?: number;
+  overdue?: boolean;
+  timeline?: PendingTimelineEvent[];
+  can_delay_note?: boolean;
 }
 
 /** 582 ki registry jaisi hi fehrist (test dono ko milata hai). */
@@ -95,9 +104,16 @@ export const INLINE_DECISIONS: Readonly<Record<string, { approve: boolean; rejec
   product_merge: { approve: true, reject: true, rejectNeedsReason: false },
 };
 
-/** Approve ka button: sirf inline wali category, aur kabhi apni entry par nahi. */
-export function approveState(item: Pick<PendingItem, "category" | "is_own"> & { code_own?: boolean }): "enabled" | "own" | "code" | "page" {
+/**
+ * Approve ka button: inline category.
+ * Admin/Owner apni entry bhi. Manager aur baqi staff apni entry nahi.
+ */
+export function approveState(
+  item: Pick<PendingItem, "category" | "is_own"> & { code_own?: boolean },
+  role?: string | null,
+): "enabled" | "own" | "code" | "page" {
   if (!INLINE_DECISIONS[item.category]) return "page";
+  if (isSelfApproveRole(role)) return "enabled";
   if (item.is_own) return "own";
   return item.code_own ? "code" : "enabled";
 }

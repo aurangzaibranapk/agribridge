@@ -8,14 +8,42 @@ export function isSelfApproval(creatorId: string | null | undefined, actorId: st
   return Boolean(creatorId) && Boolean(actorId) && creatorId === actorId;
 }
 
+/**
+ * Ek hi maker-checker. Admin, Owner aur Super Admin apni entry bhi,
+ * kisi bhi level par, approve ya reject kar sakte hain. Manager aur
+ * baqi har staff apni entry kabhi nahi. DB: fn_may_decide_entry.
+ */
+export const SELF_APPROVE_ROLES = ["owner", "super_admin", "admin"] as const;
+
+export function isSelfApproveRole(role: string | null | undefined): boolean {
+  return (SELF_APPROVE_ROLES as readonly string[]).includes(role ?? "");
+}
+
+export function mayDecideEntry(
+  role: string | null | undefined,
+  actorId: string | null | undefined,
+  makers: Array<string | null | undefined>,
+): boolean {
+  if (!actorId) return false;
+  if (isSelfApproveRole(role)) return true;
+  return !makers.some((m) => !!m && m === actorId);
+}
+
+/** Timeline par Admin/Owner ki apni entry. */
+export function selfDecisionLabel(role: string, decision: "approve" | "reject"): string {
+  const who = role === "owner" ? "Owner" : "Admin";
+  return decision === "approve" ? `Khud approve (${who})` : `Khud reject (${who})`;
+}
+
 /** Stock count post: sirf verified, aur starter khud post nahi kar sakta. */
 export function stockCountPostCheck(
   count: { status: string; started_by?: string | null },
-  posterId: string
+  posterId: string,
+  posterRole?: string | null,
 ): { ok: true } | { ok: false; error: string } {
   if (count.status === "counting") return { ok: false, error: "Pehle ginti ki tasdeeq (verify) zaroori hai — phir post hogi." };
   if (count.status !== "verified") return { ok: false, error: "Ye ginti pehle hi mukammal ho chuki hai." };
-  if (isSelfApproval(count.started_by, posterId)) return { ok: false, error: "Ye ginti aap ne shuru ki hai — post doosra approver karega." };
+  if (!mayDecideEntry(posterRole, posterId, [count.started_by])) return { ok: false, error: "Ye ginti aap ne shuru ki hai — post doosra approver karega." };
   return { ok: true };
 }
 
@@ -44,21 +72,27 @@ const MASTER_ROLES = ["owner", "admin", "super_admin"];
 export function purchaseApproveCheck(
   p: { review_status: string | null; verified_by?: string | null },
   creatorRole: string | null | undefined,
-  approverId: string
+  approverId: string,
+  approverRole?: string | null,
 ): { ok: true } | { ok: false; error: string } {
   const rs = p.review_status ?? "submitted";
   if (rs === "approved") return { ok: false, error: "Ye purchase pehle hi manzoor ho chuki hai." };
   if (rs === "sent_back" || rs === "rejected") return { ok: false, error: "Ye purchase wapas bheji/radd ho chuki hai — banane wala pehle dobara submit kare." };
   const creatorIsMaster = MASTER_ROLES.includes(creatorRole ?? "");
   if (rs === "submitted" && !creatorIsMaster) return { ok: false, error: "Pehle Manager verify kare, phir manzoori hogi." };
-  if (rs === "verified" && isSelfApproval(p.verified_by, approverId)) return { ok: false, error: "Jis ne verify kiya wo khud manzoor nahi kar sakta — doosra Owner/Admin kare." };
+  if (rs === "verified" && !mayDecideEntry(approverRole, approverId, [p.verified_by])) return { ok: false, error: "Jis ne verify kiya wo khud manzoor nahi kar sakta — doosra Owner/Admin kare." };
   if (rs !== "submitted" && rs !== "verified") return { ok: false, error: "Purchase manzoori ke marhale mein nahi." };
   return { ok: true };
 }
 
 /** Partial/force-close ginti: jis ne force-close (verify) kiya wo post nahi kar sakta. */
-export function partialCountPosterCheck(unfilled: number, verifiedBy: string | null | undefined, posterId: string): { ok: true } | { ok: false; error: string } {
-  if (unfilled > 0 && isSelfApproval(verifiedBy, posterId)) {
+export function partialCountPosterCheck(
+  unfilled: number,
+  verifiedBy: string | null | undefined,
+  posterId: string,
+  posterRole?: string | null,
+): { ok: true } | { ok: false; error: string } {
+  if (unfilled > 0 && !mayDecideEntry(posterRole, posterId, [verifiedBy])) {
     return { ok: false, error: "Na-gini cheezon wali ginti aap ne band ki hai — post doosra Admin/Owner karega." };
   }
   return { ok: true };
@@ -77,11 +111,11 @@ export function posReturnReviewCheck(
 ): { ok: true } | { ok: false; error: string } {
   if (!MASTER_ROLES.includes(reviewerRole ?? "")) return { ok: false, error: "POS wapsi ka review sirf Owner/Admin kar sakta hai." };
   if ((r.admin_review_status ?? "pending") !== "pending") return { ok: false, error: "Is wapsi ka review ho chuka hai." };
-  if (isSelfApproval(r.created_by, reviewerId)) {
+  if (!mayDecideEntry(reviewerRole, reviewerId, [r.created_by, r.authorized_by])) {
+    if (isSelfApproval(r.authorized_by, reviewerId)) {
+      return { ok: false, error: "Is wapsi par aap ka manager code laga tha — review Owner / doosra Admin karega." };
+    }
     return { ok: false, error: "Ye wapsi aap ne khud ki hai — review Owner / doosra Admin karega." };
-  }
-  if (isSelfApproval(r.authorized_by, reviewerId)) {
-    return { ok: false, error: "Is wapsi par aap ka manager code laga tha — review Owner / doosra Admin karega." };
   }
   return { ok: true };
 }

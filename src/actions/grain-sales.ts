@@ -427,7 +427,7 @@ export async function approveGrainSaleDraft(_prev: ActionState, formData: FormDa
     .select("id, payload, created_by")
     .maybeSingle();
   if (claimError) return { error: claimError.message };
-  if (claimed && makerCheckerBlock(guard.userId, claimed.created_by)) {
+  if (claimed && makerCheckerBlock(guard.userId, claimed.created_by, guard.role)) {
     await service.from("grain_sale_drafts").update({ status: "pending", approval_claimed_at: null, approval_claimed_by: null }).eq("id", draftId);
     return { error: "Apni entry khud manzoor nahi kar sakte." };
   }
@@ -485,7 +485,7 @@ export async function rejectGrainSaleDraft(_prev: ActionState, formData: FormDat
   if (reason.length < 3) return { error: "Reject ki wajah likhein." };
   const service = createServiceClient() as any;
   const { data: draftRow } = await service.from("grain_sale_drafts").select("created_by").eq("id", draftId).maybeSingle();
-  if (makerCheckerBlock(guard.userId, draftRow?.created_by)) return { error: "Apni entry khud manzoor nahi kar sakte." };
+  if (makerCheckerBlock(guard.userId, draftRow?.created_by, guard.role)) return { error: "Apni entry khud manzoor nahi kar sakte." };
   const { data, error } = await service
     .from("grain_sale_drafts")
     .update({ status: "rejected", reject_reason: reason, reviewed_by: guard.userId, reviewed_at: new Date().toISOString() })

@@ -177,9 +177,10 @@ await testAsync("failure: original action's reason is returned unchanged (not sw
   if (!perm.ok) assert.match(perm.error, /ijazat nahi/);
 });
 
-await testAsync("own-entry block: stopped before any approval action", async () => {
+await testAsync("manager own-entry block: stopped before any approval action", async () => {
   let called = 0;
   const res = await runDecidePending(form("approve"), ports({
+    actorRole: async () => "manager",
     loadRow: async () => item({ is_own: true }),
     reviewPosReturn: async () => {
       called++;
@@ -196,6 +197,33 @@ await testAsync("own-entry block: stopped before any approval action", async () 
     assert.equal(decideMessage(res, "rm"), "Apni entry — koi doosra approve karega");
     assert.match(decideMessage(res, "en"), /own entry/i);
   }
+});
+
+await testAsync("admin and owner may approve their own entry and it is logged", async () => {
+  const seen: string[] = [];
+  const admin = await runDecidePending(form("approve"), ports({
+    actorId: async () => "admin-1",
+    actorRole: async () => "admin",
+    loadRow: async () => item({ is_own: true, entered_by: "admin-1" }),
+    logSelfDecision: async (_c, _id, decision, label) => { seen.push(`${decision}:${label}`); },
+  }));
+  assert.equal(admin.ok, true);
+  const owner = await runDecidePending(form("reject", { note: "wajah likhi hai" }), ports({
+    actorId: async () => "owner-1",
+    actorRole: async () => "owner",
+    loadRow: async () => item({ is_own: true }),
+    logSelfDecision: async (_c, _id, decision, label) => { seen.push(`${decision}:${label}`); },
+  }));
+  assert.equal(owner.ok, true);
+  assert.deepEqual(seen, ["approve:Khud approve (Admin)", "reject:Khud reject (Owner)"]);
+  const staff = await runDecidePending(form("approve"), ports({
+    actorId: async () => "staff-1",
+    actorRole: async () => "sales_staff",
+    loadRow: async () => item({ is_own: true }),
+    reviewPosReturn: async () => { seen.push("staff"); return {}; },
+  }));
+  assert.equal(staff.ok, false);
+  assert.ok(!seen.includes("staff"));
 });
 
 await testAsync("code-maker block: manager who authorised the return cannot approve it", async () => {

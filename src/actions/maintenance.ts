@@ -146,7 +146,7 @@ export async function branchVerifyMaintenance(_prev: ActionState, formData: Form
     .maybeSingle();
   if (!log) return { error: "Entry nahi mili." };
   if (log.status !== "pending") return { error: "Is par pehla faisla ho chuka hai." };
-  const branchSod = selfApprovalError(who.userId, log.created_by);
+  const branchSod = selfApprovalError(who.userId, log.created_by, null, who.role);
   if (branchSod) return { error: branchSod };
 
   const isAdmin = ["owner", "super_admin", "admin"].includes(who.role);
@@ -214,7 +214,7 @@ export async function approveMaintenance(_prev: ActionState, formData: FormData)
     return { error: "Pehle branch manager ko verify karna hai — ye qadam chhora nahi ja sakta." };
   }
   if (log.status !== "branch_verified") return { error: "Is par faisla pehle hi ho chuka hai." };
-  const approveSod = selfApprovalError(who.userId, log.created_by, log.branch_verified_by);
+  const approveSod = selfApprovalError(who.userId, log.created_by, log.branch_verified_by, who.role);
   if (approveSod) return { error: approveSod };
 
   const { error } = await service
@@ -264,7 +264,7 @@ export async function rejectMaintenance(_prev: ActionState, formData: FormData):
   const service = createServiceClient();
   const { data: existing } = await service.from("maintenance_logs").select("created_by, branch_verified_by").eq("id", id).maybeSingle();
   if (!existing) return { error: "Entry nahi mili." };
-  const rejectSod = selfApprovalError(who.userId, existing.created_by, existing.branch_verified_by);
+  const rejectSod = selfApprovalError(who.userId, existing.created_by, existing.branch_verified_by, who.role);
   if (rejectSod) return { error: rejectSod };
   const { error } = await service
     .from("maintenance_logs")

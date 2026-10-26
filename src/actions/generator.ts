@@ -107,7 +107,7 @@ export async function approveGeneratorEntry(_prev: ActionState, formData: FormDa
   if ("error" in gate) return { error: gate.error };
   const { data: row } = await supabase.from("generator_logs").select("created_by, approval_status").eq("id", logId).maybeSingle();
   if (!row || row.approval_status !== "pending") return { error: "Ye entry manzoori ke liye nahi hai." };
-  const sod = selfApprovalError(gate.caller.userId, row.created_by);
+  const sod = selfApprovalError(gate.caller.userId, row.created_by, null, gate.caller.role);
   if (sod) return { error: sod };
   const { error } = await supabase.from("generator_logs").update({
     approval_status: "approved",
