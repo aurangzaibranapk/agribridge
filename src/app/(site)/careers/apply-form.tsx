@@ -143,6 +143,14 @@ export function ApplyForm({ vacancy, onClose }: { vacancy: CareerCard; onClose: 
                 <Field label={t("sp_email", lang)} className={show(0)} urdu={urdu}>
                   <input type="email" name="email" required dir="ltr" autoComplete="email" placeholder={t("sp_email", lang)} className={inputCls(urdu)} />
                 </Field>
+                <Field label={t("sp_gender", lang)} className={show(0)} urdu={urdu}>
+                  <select name="gender" required defaultValue="" className={inputCls(urdu)}>
+                    <option value="" disabled>{t("sp_gender", lang)}</option>
+                    <option value="male">{t("sp_gender_male", lang)}</option>
+                    <option value="female">{t("sp_gender_female", lang)}</option>
+                    <option value="other">{t("sp_gender_other", lang)}</option>
+                  </select>
+                </Field>
                 <Field label={t("sp_phone", lang)} className={show(0)} urdu={urdu}>
                   <input name="phone" dir="ltr" autoComplete="tel" placeholder={t("sp_phone", lang)} className={inputCls(urdu)} />
                 </Field>

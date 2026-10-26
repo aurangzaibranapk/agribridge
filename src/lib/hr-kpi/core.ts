@@ -95,7 +95,15 @@ export interface StaffRow {
   is_active: boolean | null;
 }
 export interface AttendanceRow { profile_id: string; attendance_date: string; status: string | null; late_minutes: number | null }
-export interface ApplicationRow { created_at: string; screened_at: string | null; interview_at: string | null; offer_at: string | null; hired_at: string | null }
+export interface ApplicationRow {
+  created_at: string;
+  screened_at: string | null;
+  interview_at: string | null;
+  offer_at: string | null;
+  hired_at: string | null;
+  /** Applicant ka gender. Staff diversity is se alag hai. Column na ho to khali. */
+  gender?: string | null;
+}
 export interface TrainingRow { profile_id: string; training_type: string; training_date: string; hours: number; cost: number }
 export interface ReviewRow { profile_id: string; period_month: string; rating: string; status: string }
 export interface PulseRow { period_month: string; responses: number; avg_score: number; engaged: number }
@@ -187,6 +195,19 @@ export function funnel(apps: ApplicationRow[], from: string, to: string) {
   return stages.map((s) => ({ ...s, pct: n ? Math.round((s.count / n) * 100) : 0 }));
 }
 
+/** Is arse ki applications ka gender. Staff wali Gender Diversity card is se nahi banti. */
+export function applicantGenderSplit(apps: ApplicationRow[], from: string, to: string) {
+  const xs = apps.filter((a) => inRange(a.created_at, from, to));
+  const known = new Set<string>(GENDERS);
+  const g = countBy(xs, (a) => (a.gender && known.has(a.gender) ? a.gender : "none"));
+  return [
+    { key: "male", label: "Male", count: g.get("male") ?? 0 },
+    { key: "female", label: "Female", count: g.get("female") ?? 0 },
+    { key: "other", label: "Other", count: g.get("other") ?? 0 },
+    { key: "none", label: "Darj nahi", count: g.get("none") ?? 0 },
+  ];
+}
+
 /** Average time to hire: hired_at - created_at (din), jo is arse mein hire hue. */
 export function timeToHire(apps: ApplicationRow[], from: string, to: string): number | null {
   const xs = apps.filter((a) => inRange(a.hired_at, from, to));
@@ -231,6 +252,7 @@ export interface HrDashboard {
   ratings: { key: Rating; label: string; count: number }[];
   gender: { key: string; label: string; count: number }[];
   funnel: { key: string; label: string; count: number; pct: number }[];
+  applicantGender: { key: string; label: string; count: number }[];
   training: { key: TrainingType; label: string; hours: number; sessions: number; cost: number }[];
   satisfaction: { pct: number | null; prev: number | null; responses: number };
   attritionTrend: { label: string; rate: number | null }[];
@@ -349,6 +371,7 @@ export function buildDashboard(raw: HrRaw, f: HrFilters): HrDashboard {
     ratings,
     gender,
     funnel: funnel(raw.applications, f.from, f.to),
+    applicantGender: applicantGenderSplit(raw.applications, f.from, f.to),
     training,
     satisfaction: { pct: eng.satisfactionPct, prev: engPrev.satisfactionPct, responses: eng.responses },
     attritionTrend,
