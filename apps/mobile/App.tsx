@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, Linking, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, AppState, Linking, Modal, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import Constants from "expo-constants";
 import * as Crypto from "expo-crypto";
 import * as LocalAuthentication from "expo-local-authentication";
@@ -20,6 +20,7 @@ import { pinLock, pinProblem } from "../../src/lib/mobile/pin";
 import { applyFlushResult, enqueue, flushPlan, type OutboxItem } from "../../src/lib/mobile/queue";
 import { reportContext } from "../../src/lib/mobile/report";
 import { elapsed } from "../../src/lib/mobile/perf";
+import { PHONE_VERSION_CODE, shownVersionCode } from "../../src/lib/mobile/shown-version";
 import { mergeById, type NetState } from "../../src/lib/mobile/sync";
 import { bootMark, marks } from "./src/boot";
 import { loadRoleModule } from "./src/roles/load";
@@ -35,7 +36,11 @@ const extra = (Constants.expoConfig?.extra ?? {}) as {
   supabaseAnonKey?: string;
 };
 const VERSION = extra.productVersion || "";
-const VERSION_CODE = extra.versionCode || 0;
+const VERSION_CODE = shownVersionCode({
+  platform: Platform.OS,
+  embedded: extra.versionCode,
+  phone: PHONE_VERSION_CODE,
+});
 const CHANNEL = normalizeChannel(extra.appChannel);
 const FLAVOR = dataFlavor(extra.appFlavor);
 const PORTAL = (extra.portalUrl || "").replace(/\/$/, "");

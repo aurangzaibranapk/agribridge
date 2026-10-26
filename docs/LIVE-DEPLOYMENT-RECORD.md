@@ -1,3 +1,7 @@
+## Phone version line — 26 October 2026 — app only
+
+versionCode 627. Home footer `AgriBridge · v0.6.1 Beta · …` web par Metro ke cache hue manifest se 625 par atka tha. Web ab source ka phone code dikhata hai. Android APK apna embedded versionCode dikhata hai. Live workflow 605 par hai. Koi migration nahi. Live database par kuch nahi.
+
 ## Phone dealer and vet — 26 October 2026 — FILE ONLY, NOT APPLIED
 
 versionCode 626. Dealer test list ab sirf Agri Dealer / Kisan Dukan hai, is mahine ki ginti Karachi mahine se, badge order count se. `711_app_phone_dealer_vet.sql` testing par: is_test dealer orders ko is mahine ~38 aur pichle mahine ~34 par rakhti hai, kam hon to TEST-711 qatarein. Vet ki test visits jin ka next due khali hai, 7 din aage, taake Pending cases dikhein. Live par mat chalana. Rollback created_at wapas aur TEST-711 hataata hai.

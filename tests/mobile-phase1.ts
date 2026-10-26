@@ -25,6 +25,7 @@ import { cleanPerson, greetingName, roleNameKey } from "../src/lib/mobile/displa
 import { brandLockup, currentSubBrand, taglineFrom, taglineLines, taglineWithDefault } from "../src/lib/mobile/sub-brand";
 import { pickPakistan, preferVillage, shortPlace, usablePlace } from "../src/lib/mobile/weather-place";
 import { elapsed, withinBudget, MOBILE_BUNDLE_BUDGET_BYTES } from "../src/lib/mobile/perf";
+import { PHONE_VERSION_CODE, shownVersionCode } from "../src/lib/mobile/shown-version";
 import { shiftTotals } from "../src/lib/mobile/shifts";
 import { calculateMilkValue } from "../src/lib/utils/milk-formula";
 
@@ -52,6 +53,13 @@ assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.pa
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.appFlavor, "test");
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.android.versionCode, 606);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.version, AGRIBRIDGE_OS_VERSION);
+assert.equal(PHONE_VERSION_CODE, 627);
+assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.versionCode, PHONE_VERSION_CODE);
+assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.versionCode, PHONE_VERSION_CODE);
+assert.equal(shownVersionCode({ platform: "web", embedded: 625, phone: PHONE_VERSION_CODE }), PHONE_VERSION_CODE);
+assert.equal(shownVersionCode({ platform: "android", embedded: 627, phone: PHONE_VERSION_CODE }), 627);
+assert.equal(shownVersionCode({ platform: "android", embedded: 605, phone: PHONE_VERSION_CODE }), 605);
+assert.equal(shownVersionCode({ platform: "android", embedded: null, phone: PHONE_VERSION_CODE }), PHONE_VERSION_CODE);
 
 assert.equal(showTesterReport("debug"), true);
 assert.equal(showTesterReport("internal"), true);
@@ -337,7 +345,8 @@ const testSideload = readFileSync(".github/workflows/mobile-sideload-test.yml", 
 assert.match(testSideload, /EXPO_PUBLIC_APP_FLAVOR: test/);
 assert.match(testSideload, /APP_CHANNEL: internal/);
 assert.match(testSideload, /EXPO_PUBLIC_SUPABASE_URL: https:\/\/hwaiuwxqldxsoukkfefn\.supabase\.co/);
-assert.match(testSideload, /AGRIBRIDGE_VERSION_CODE: "626"/);
+assert.match(testSideload, new RegExp(`AGRIBRIDGE_VERSION_CODE: "${PHONE_VERSION_CODE}"`));
+assert.match(testSideload, new RegExp(`versionCode ${PHONE_VERSION_CODE}`));
 assert.match(testSideload, /pk\.alranatraders\.agribridge\.test/);
 assert.match(testSideload, /v0\.6\.1-beta-testdb/);
 assert.match(testSideload, /ktskwawkslaznkjjacni/);
@@ -353,6 +362,9 @@ assert.equal(anonPayload.role, "anon");
 assert.doesNotMatch(testSideload, /service_role/);
 assert.match(readFileSync("apps/mobile/scripts/verify-sideload-apk.sh", "utf8"), /testOnly/);
 assert.match(readFileSync("apps/mobile/scripts/verify-sideload-apk.sh", "utf8"), /versionCode='\$\{code\}'/);
+assert.match(appSource, /shownVersionCode\(/);
+assert.match(appSource, /PHONE_VERSION_CODE/);
+assert.doesNotMatch(appSource, /versionCode \|\| 0/);
 assert.match(appSource, /showTesterReport\(CHANNEL\)/);
 assert.match(appSource, /Role badlo/);
 assert.match(appSource, /Role dekho/);

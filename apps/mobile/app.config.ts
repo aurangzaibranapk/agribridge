@@ -47,4 +47,7 @@ export function buildExpoConfig(env: NodeJS.ProcessEnv = process.env) {
   };
 }
 
-export default buildExpoConfig();
+/** Expo calls this on each config read. The argument is Expo's request, not env. */
+export default function agribridgeExpoConfig() {
+  return buildExpoConfig(process.env);
+}
