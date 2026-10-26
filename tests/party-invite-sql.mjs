@@ -1,10 +1,10 @@
-// 698 party invite. PGlite. Live database nahi.
+// 712 party invite. PGlite. Live database nahi.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 
-const file = fs.readFileSync("supabase/migrations/698_party_invite.sql", "utf8");
-const rollback = fs.readFileSync("supabase/migrations/698_party_invite.rollback.sql", "utf8");
+const file = fs.readFileSync("supabase/migrations/712_party_invite.sql", "utf8");
+const rollback = fs.readFileSync("supabase/migrations/712_party_invite.rollback.sql", "utf8");
 
 assert.doesNotMatch(file, /ktskwawkslaznkjjacni|hwaiuwxqldxsoukkfefn/);
 assert.doesNotMatch(file, /\bdelete\s+from\b/i);
@@ -18,7 +18,7 @@ assert.match(file, /fn_party_invite_phone_taken/);
 assert.match(file, /hr\.party-invite/);
 assert.match(file, /'hr\.party-invite', 'rm'/);
 assert.doesNotMatch(file, /farmer-signup|job_applications/);
-console.log("  ok  698 file: additive, testing id nahi, brand nahi");
+console.log("  ok  712 file: additive, testing id nahi, brand nahi");
 
 const db = new PGlite();
 const run = (sql) => db.exec(sql);
@@ -109,7 +109,7 @@ await run(`
 
 await run(file);
 await run(file);
-console.log("  ok  698 applies twice");
+console.log("  ok  712 applies twice");
 
 const org = "11111111-1111-4111-8111-111111111111";
 const admin = "22222222-2222-4222-8222-222222222222";

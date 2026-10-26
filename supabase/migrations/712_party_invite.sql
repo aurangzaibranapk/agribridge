@@ -1,4 +1,4 @@
--- 698: Admin dealer / buyer (aur investor, vendor) invite.
+-- 712: Admin dealer / buyer (aur investor, vendor) invite.
 --
 -- ADDITIVE. Public kisan signup ko nahi chherta.
 -- Account HR / Users se banta hai. WhatsApp, email ya SMS alag qadam hai.
@@ -6,7 +6,7 @@
 -- kis ko, poora paigham, aur nakaami ki wajah.
 --
 -- Live par mat chalayein jab tak backup verify na ho.
--- Pehle Testing. Rollback: 698_party_invite.rollback.sql
+-- Pehle Testing. Rollback: 712_party_invite.rollback.sql
 
 create table if not exists public.party_invite_accounts (
   id uuid primary key default gen_random_uuid(),
@@ -82,7 +82,7 @@ create policy party_invite_sends_admin_select on public.party_invite_sends
   );
 
 comment on table public.party_invite_sends is
-  'Admin invite ki har koshish: kab, channel, recipient, poora paigham, wajah. Dekhein isi content ko kholta hai (698).';
+  'Admin invite ki har koshish: kab, channel, recipient, poora paigham, wajah. Dekhein isi content ko kholta hai (712).';
 
 -- Phone pehle se kisi party ka hai? Sirf service_role.
 create or replace function public.fn_party_invite_phone_taken(p_key text)

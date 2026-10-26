@@ -46,7 +46,7 @@ export default async function PartyInvitePage() {
     .order("created_at", { ascending: false })
     .limit(30);
   if (loaded.error) {
-    dbError = "Invite ka record abhi nahi mila. Migration 698 pehle Testing par lagayein.";
+    dbError = "Invite ka record abhi nahi mila. Migration 712 pehle Testing par lagayein.";
   } else {
     accounts = (loaded.data ?? []).map(mapAccount).filter(Boolean) as InviteAccount[];
     const ids = accounts.map((a) => a.id);

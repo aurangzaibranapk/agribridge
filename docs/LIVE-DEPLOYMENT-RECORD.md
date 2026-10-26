@@ -1,11 +1,11 @@
-## Pending — 26 October 2026: Admin dealer / buyer invite (698)
+## Pending — 26 October 2026: Admin dealer / buyer invite (712)
 
-Branch `cursor/admin-party-invite-72a5`. Migration **698 not applied** on Testing or Live. Files only. Public kisan signup is file mein nahi chhera. Backup ke baad pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live. App 698 ke baghair bhi chalta hai; HR / Users ka account tabhi banta hai jab 698 lag jaye.
+Branch `cursor/admin-party-invite-72a5`. Migration **712 not applied** on Testing or Live. Files only. Public kisan signup is file mein nahi chhera. Backup ke baad pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live. App 712 ke baghair bhi chalta hai; HR / Users ka account tabhi banta hai jab 712 lag jaye.
 
 - `party_invite_accounts` + `party_invite_sends` (poora paigham, channel, recipient, wajah). RLS: sirf Owner/Admin apni organization. Likhai service role se.
 - `fn_party_invite_phone_taken` — service_role.
 - Feature `hr.party-invite` → `/admin/hr/users`. HR role ko ijazat nahi.
-- Rollback: `698_party_invite.rollback.sql`.
+- Rollback: `712_party_invite.rollback.sql`.
 
 ## Done on Live — 22 October 2026: Careers i18n columns (public apply modal)
 

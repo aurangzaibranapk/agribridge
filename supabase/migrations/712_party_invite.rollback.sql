@@ -1,4 +1,4 @@
--- 698 rollback. Tables aur feature hataata hai. Party rows (dealers/buyers/...) nahi.
+-- 712 rollback. Tables aur feature hataata hai. Party rows (dealers/buyers/...) nahi.
 
 delete from public.dashboard_features where feature_key = 'hr.party-invite';
 delete from public.role_feature_permissions where feature_key = 'hr.party-invite';

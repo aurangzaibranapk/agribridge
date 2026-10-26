@@ -108,7 +108,7 @@ export async function createPartyInvite(_prev: CreateInviteState, formData: Form
 
   const taken = await service.rpc("fn_party_invite_phone_taken", { p_key: key });
   if (taken.error) {
-    return { error: "Phone check nahi ho saka. Migration 698 testing par lagayein, phir dobara." };
+    return { error: "Phone check nahi ho saka. Migration 712 testing par lagayein, phir dobara." };
   }
   if (taken.data === true) return { error: "Ye mobile pehle se kisi account par hai." };
 
