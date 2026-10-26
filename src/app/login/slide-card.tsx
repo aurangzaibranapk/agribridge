@@ -15,7 +15,7 @@ export function slideBoxClass(m: SlideMode): string { return m === "signup" ? "a
 
 export const SLIDE_CSS = `
 .ab-slide{position:relative;width:100%;max-width:920px;min-height:700px;background:#fff;border-radius:26px;box-shadow:0 30px 70px -30px rgba(15,61,42,.4);overflow:hidden}
-.ab-slide .ab-form{position:absolute;top:0;left:0;width:50%;height:100%;padding:30px 46px;display:flex;flex-direction:column;justify-content:safe center;overflow-y:auto;transition:transform .7s ease-in-out,opacity .5s}
+.ab-slide .ab-form{position:absolute;top:0;left:0;width:50%;height:100%;padding:30px 46px;display:flex;flex-direction:column;justify-content:safe center;overflow-y:hidden;transition:transform .7s ease-in-out,opacity .5s}
 .ab-slide .ab-in{z-index:2}.ab-slide .ab-up{opacity:0;z-index:1}
 .ab-slide.up .ab-in{transform:translateX(100%);opacity:0}.ab-slide.up .ab-up{transform:translateX(100%);opacity:1;z-index:5}
 .ab-ovw{position:absolute;top:0;left:50%;width:50%;height:100%;overflow:hidden;z-index:10;border-radius:150px 0 0 110px;transition:transform .7s ease-in-out,border-radius .7s ease-in-out}

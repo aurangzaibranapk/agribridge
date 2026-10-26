@@ -1,3 +1,7 @@
+## Phone glass homes — 26 October 2026 — app only
+
+versionCode 628. Owner ne final glass home mockups manzoor kiye. Header do line: tagline aur role, phir Assalam o Alaikum. Mausam card bara, sirf Kisan, Customer, MCA, Vet. Goal card home se hata. Tracking card home par nahi: Kisan wallet, Admin approvals, Customer orders. Customer home par Order status. Login card par User ID nahi, andar scroll nahi. Brand AgriBridge, tagline Kisan ka Wasela. Koi migration nahi. Live database par kuch nahi. Live workflow 605 par hai.
+
 ## Phone version line — 26 October 2026 — app only
 
 versionCode 627. Home footer `AgriBridge · v0.6.1 Beta · …` web par Metro ke cache hue manifest se 625 par atka tha. Web ab source ka phone code dikhata hai. Android APK apna embedded versionCode dikhata hai. Live workflow 605 par hai. Koi migration nahi. Live database par kuch nahi.

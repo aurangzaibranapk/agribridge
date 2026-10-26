@@ -4,10 +4,10 @@ import { tx as v5tx, type V5Lang } from "@/app/login/v5-text";
 export type V6Lang = V5Lang;
 type Row = Record<V6Lang, string>;
 const T = {
-  brand_sub: { en: "Al Rana Traders", rm: "Al Rana Traders", ur: "الرانا ٹریڈرز" },
+  brand_sub: { en: "Kisan ka Wasela", rm: "Kisan ka Wasela", ur: "کسان کا وسیلہ" },
   welcome: { en: "Welcome back", rm: "Khush aamdeed", ur: "خوش آمدید" },
   welcome_p: { en: "Sign in to your AgriBridge account", rm: "Apne AgriBridge account mein login karein", ur: "اپنے ایگری برج اکاؤنٹ میں لاگ ان کریں" },
-  id_label: { en: "User ID, email, mobile or CNIC", rm: "User ID, email, mobile ya CNIC", ur: "یوزر آئی ڈی، ای میل، موبائل یا شناختی کارڈ" },
+  id_label: { en: "Email, mobile or CNIC", rm: "Email, mobile ya CNIC", ur: "ای میل، موبائل یا شناختی کارڈ" },
   id_ph: { en: "0300 1234567", rm: "0300 1234567", ur: "0300 1234567" },
   pw: { en: "Password", rm: "Password", ur: "پاس ورڈ" },
   show: { en: "Show password", rm: "Password dikhayein", ur: "پاس ورڈ دکھائیں" },
@@ -28,7 +28,7 @@ const T = {
   m_have: { en: "Already have an account", rm: "Pehle se account hai", ur: "پہلے سے اکاؤنٹ ہے" },
   pill_signup: { en: "SIGN UP", rm: "SIGN UP", ur: "سائن اپ" },
   pill_login: { en: "LOGIN", rm: "LOGIN", ur: "لاگ ان" },
-  tagline: { en: "Pakistan's Digital Agri Platform · Al Rana Traders", rm: "Pakistan ka Digital Agri Platform · Al Rana Traders", ur: "پاکستان کا ڈیجیٹل ایگری پلیٹ فارم · الرانا ٹریڈرز" },
+  tagline: { en: "Kisan ka Wasela", rm: "Kisan ka Wasela", ur: "کسان کا وسیلہ" },
   // signup
   su_title: { en: "Create your account", rm: "Naya account banayein", ur: "نیا اکاؤنٹ بنائیں" },
   su_p: { en: "Enter your details", rm: "Apni maloomat darj karein", ur: "اپنی معلومات درج کریں" },

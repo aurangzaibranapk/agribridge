@@ -71,7 +71,7 @@ export default async function LoginPage({ searchParams }: { searchParams?: Recor
 }
 
 function Brand() {
-  return <div className="flex items-center gap-3.5"><Logo /><div><p className="font-v5display text-[22px] font-semibold tracking-[-0.01em]">AgriBridge</p><p className="text-[12.5px] text-[#a9cdb9]">by Al Rana Traders</p></div></div>;
+  return <div className="flex items-center gap-3.5"><Logo /><div><p className="font-v5display text-[22px] font-semibold tracking-[-0.01em]">AgriBridge</p><p className="text-[12.5px] text-[#a9cdb9]">Kisan ka Wasela</p></div></div>;
 }
 function Logo({ id = "ablg" }: { id?: string }) {
   return (

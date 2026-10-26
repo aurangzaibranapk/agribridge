@@ -24,6 +24,7 @@ import { PHONE_VERSION_CODE, shownVersionCode } from "../../src/lib/mobile/shown
 import { mergeById, type NetState } from "../../src/lib/mobile/sync";
 import { bootMark, marks } from "./src/boot";
 import { loadRoleModule } from "./src/roles/load";
+import { GlassPreview, glassPreviewOn } from "./src/roles/glass-preview";
 import { Btn, Header, Tabs, colors } from "./src/kit";
 
 const extra = (Constants.expoConfig?.extra ?? {}) as {
@@ -419,12 +420,20 @@ export default function App() {
   }
   const startup = elapsed(marks, "js-start", "first-screen");
 
+  if (Platform.OS === "web" && glassPreviewOn()) {
+    return (
+      <LanguageProvider lang={lang} line={lock.line}>
+        <GlassPreview />
+      </LanguageProvider>
+    );
+  }
+
   if (!ready) return <ActivityIndicator style={{ marginTop: 80 }} color={colors.green} />;
 
   const loginTitle = FLAVOR === "test" ? `${lock.title} TEST` : lock.title;
 
   return (
-    <LanguageProvider lang={lang}>
+    <LanguageProvider lang={lang} line={lock.line}>
     <SafeAreaView style={styles.root}>
       <StatusBar style="light" />
       {FLAVOR === "test" ? (
@@ -433,7 +442,7 @@ export default function App() {
         </View>
       ) : null}
       {stage !== "app" ? (
-        <ScrollView contentContainerStyle={{ padding: 20 }}>
+        <View style={{ flex: 1, padding: 20, justifyContent: "center" }}>
           <View style={{ marginTop: 24 }}>
             <BrandStack title={loginTitle} line={lock.line} rtl={lock.rtl} titleSize={32} lineSize={16} />
           </View>
@@ -441,7 +450,7 @@ export default function App() {
           <LangPick lang={lang} onPick={chooseLang} />
           {stage === "login" ? (
             <View>
-              <TextInput value={identifier} onChangeText={setIdentifier} placeholder="ID, mobile ya CNIC" autoCapitalize="none" style={styles.input} />
+              <TextInput value={identifier} onChangeText={setIdentifier} placeholder="Mobile ya email" autoCapitalize="none" style={styles.input} />
               <TextInput value={password} onChangeText={setPassword} placeholder="Password" secureTextEntry style={styles.input} />
               <Btn label="Login" onPress={() => void login()} />
             </View>
@@ -462,7 +471,7 @@ export default function App() {
           ) : null}
           {error ? <Text style={styles.err}>{error}</Text> : null}
           {whatsapp ? <Text style={styles.link} onPress={() => void Linking.openURL(whatsapp)}>WhatsApp support</Text> : null}
-        </ScrollView>
+        </View>
       ) : (
         <View style={{ flex: 1, backgroundColor: "#07140F" }}>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 4 }}>
