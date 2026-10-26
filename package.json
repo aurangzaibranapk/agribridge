@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:careers": "npx --yes tsx tests/careers-i18n.ts && node tests/careers-i18n-sql.mjs && npx --yes tsx tests/job-application-actions.ts && node tests/job-application-gender-sql.mjs && node scripts/check-i18n.mjs",
+    "test:chat": "npx --yes tsx tests/chat-assistant.ts",
     "test:kisan-wallet-v2": "npx --yes tsx scripts/test-kisan-wallet-v2.ts",
     "test:glassy-ui": "npx --yes tsx scripts/test-glassy-ui.ts",
     "test:hr-meetings": "npx --yes tsx tests/hr-meetings-lib.ts && node tests/hr-meetings-db.mjs",

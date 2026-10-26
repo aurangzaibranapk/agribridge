@@ -10,7 +10,11 @@ const MODEL = "gemini-3.6-flash";
  * ke baghair mahine ke aakhir mein ye sawal jawab nahi paata ke istemal
  * kis taraf se aaya.
  */
-export async function generateGeminiText(prompt: string, feature = "likhai"): Promise<string | null> {
+export async function generateGeminiText(
+  prompt: string,
+  feature = "likhai",
+  systemInstruction?: string,
+): Promise<string | null> {
   const apiKey = geminiApiKey();
   if (!apiKey) return null;
   const shuru = Date.now();
@@ -21,6 +25,9 @@ export async function generateGeminiText(prompt: string, feature = "likhai"): Pr
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...(systemInstruction
+            ? { systemInstruction: { parts: [{ text: systemInstruction }] } }
+            : {}),
           contents: [{ parts: [{ text: prompt }] }],
         }),
       }
