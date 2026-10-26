@@ -1,7 +1,9 @@
 import { BRAND_NAME } from "@/lib/brand";
 import { createServiceClient } from "@/lib/supabase/service";
 import { generateOfferLetterPDF } from "@/lib/offer-letter-pdf";
-import { sendDeptMail, mailWrapper, type MailDept } from "@/lib/mailer";
+import { sendDeptMail, mailWrapper, type MailDept, type MailResult } from "@/lib/mailer";
+import { escapeHtml, isDeliverableEmail } from "@/lib/hr-emails";
+import { failedDispatch, sentOrFailed, type CandidateDispatch } from "@/lib/jobs/candidate-message";
 
 const SITE_URL = "https://alranatraders.pk";
 
@@ -30,10 +32,41 @@ async function send(
   subject: string,
   html: string,
   attachments?: { filename: string; content: Buffer }[]
-) {
+): Promise<MailResult> {
   const result = await sendDeptMail({ dept, to: toEmail, subject, html, attachments });
   if (!result.sent) console.error("Failed to send email:", result.error);
   return result;
+}
+
+/** Candidate ko jane wali mail: subject, body, link, aur sent/failed wapas. */
+async function sendComposed(
+  dept: MailDept,
+  toEmail: string,
+  subject: string,
+  body: string,
+  extra?: { linkUrl?: string | null; attachmentName?: string | null; attachments?: { filename: string; content: Buffer }[] },
+): Promise<CandidateDispatch> {
+  const to = toEmail.trim();
+  if (!isDeliverableEmail(to)) {
+    return failedDispatch({
+      to: to || null,
+      subject,
+      body,
+      linkUrl: extra?.linkUrl,
+      attachmentName: extra?.attachmentName,
+      missing: !to,
+    });
+  }
+  const result = await send(dept, to, subject, emailWrapper(body, dept), extra?.attachments);
+  return sentOrFailed({
+    to,
+    subject,
+    body,
+    linkUrl: extra?.linkUrl,
+    attachmentName: extra?.attachmentName,
+    ok: result.sent,
+    error: result.sent ? null : result.error,
+  });
 }
 
 async function getCustomTemplate(key: string): Promise<{ subject: string; body: string } | null> {
@@ -56,19 +89,17 @@ async function sendWithTemplate(
   toEmail: string,
   vars: Record<string, string>,
   fallbackSubject: string,
-  fallbackBody: string
-) {
+  fallbackBody: string,
+): Promise<CandidateDispatch> {
   const custom = await getCustomTemplate(templateKey);
-  if (custom) {
-    await send(dept, toEmail, fillPlaceholders(custom.subject, vars), emailWrapper(fillPlaceholders(custom.body, vars), dept));
-  } else {
-    await send(dept, toEmail, fallbackSubject, emailWrapper(fallbackBody, dept));
-  }
+  const subject = custom ? fillPlaceholders(custom.subject, vars) : fallbackSubject;
+  const body = custom ? fillPlaceholders(custom.body, vars) : fallbackBody;
+  return sendComposed(dept, toEmail, subject, body);
 }
 
 export async function sendApplicationReceivedEmail(toEmail: string, fullName: string, jobTitle: string, applicationId: string) {
   const vars = { fullName, jobTitle, applicationId: applicationId.slice(0, 8).toUpperCase(), date: new Date().toLocaleDateString() };
-  await sendWithTemplate(
+  return sendWithTemplate(
     "jobs",
     "application_received",
     toEmail,
@@ -88,7 +119,7 @@ export async function sendApplicationReceivedEmail(toEmail: string, fullName: st
 
 export async function sendUnderReviewEmail(toEmail: string, fullName: string, jobTitle: string) {
   const vars = { fullName, jobTitle };
-  await sendWithTemplate(
+  return sendWithTemplate(
     "jobs",
     "under_review",
     toEmail,
@@ -103,7 +134,7 @@ export async function sendUnderReviewEmail(toEmail: string, fullName: string, jo
 export async function sendEligibilityEmail(toEmail: string, fullName: string, jobTitle: string, eligible: boolean) {
   const vars = { fullName, jobTitle };
   if (eligible) {
-    await sendWithTemplate(
+    return sendWithTemplate(
     "hr",
     "eligibility_shortlisted",
       toEmail,
@@ -114,7 +145,7 @@ export async function sendEligibilityEmail(toEmail: string, fullName: string, jo
       <p>Our HR team will contact you shortly with details of the next stage.</p>`
     );
   } else {
-    await sendWithTemplate(
+    return sendWithTemplate(
     "hr",
     "eligibility_rejected",
       toEmail,
@@ -127,10 +158,22 @@ export async function sendEligibilityEmail(toEmail: string, fullName: string, jo
   }
 }
 
-export async function sendInterviewInvitationEmail(toEmail: string, fullName: string, jobTitle: string, interviewDate: string) {
+function interviewLink(location: string | null | undefined): string | null {
+  const value = location?.trim() ?? "";
+  return /^https?:\/\//i.test(value) ? value : null;
+}
+
+export async function sendInterviewInvitationEmail(
+  toEmail: string,
+  fullName: string,
+  jobTitle: string,
+  interviewDate: string,
+  location?: string | null,
+) {
   const formattedDate = new Date(interviewDate).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-  const vars = { fullName, jobTitle, interviewDate: formattedDate };
-  await sendWithTemplate(
+  const where = location?.trim() ? `<p style="margin:4px 0 0;"><strong>Place / link:</strong> ${escapeHtml(location.trim())}</p>` : "";
+  const vars = { fullName, jobTitle, interviewDate: formattedDate, interviewLocation: location?.trim() ?? "" };
+  const mail = await sendWithTemplate(
     "jobs",
     "interview_invitation",
     toEmail,
@@ -140,16 +183,26 @@ export async function sendInterviewInvitationEmail(toEmail: string, fullName: st
     <p>We are pleased to invite you for an interview for the position of <strong>${jobTitle}</strong> at ${BRAND_NAME}.</p>
     <div style="background:#f9fafb; border-radius:8px; padding:14px; margin:16px 0; font-size:13px;">
       <p style="margin:0;"><strong>Date:</strong> ${formattedDate}</p>
+      ${where}
     </div>
     <p>Please bring a valid copy of your CV and relevant documents. If you are unable to attend, please contact our HR team as soon as possible.</p>
     <p>We look forward to meeting you.</p>`
   );
+  const link = interviewLink(location);
+  return link ? { ...mail, linkUrl: link } : mail;
 }
 
-export async function sendInterviewRescheduledEmail(toEmail: string, fullName: string, jobTitle: string, newDate: string) {
+export async function sendInterviewRescheduledEmail(
+  toEmail: string,
+  fullName: string,
+  jobTitle: string,
+  newDate: string,
+  location?: string | null,
+) {
   const formattedDate = new Date(newDate).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-  const vars = { fullName, jobTitle, interviewDate: formattedDate };
-  await sendWithTemplate(
+  const where = location?.trim() ? `<p style="margin:4px 0 0;"><strong>Place / link:</strong> ${escapeHtml(location.trim())}</p>` : "";
+  const vars = { fullName, jobTitle, interviewDate: formattedDate, interviewLocation: location?.trim() ?? "" };
+  const mail = await sendWithTemplate(
     "jobs",
     "interview_rescheduled",
     toEmail,
@@ -159,15 +212,18 @@ export async function sendInterviewRescheduledEmail(toEmail: string, fullName: s
     <p>Please be informed that your interview for the position of <strong>${jobTitle}</strong> has been rescheduled.</p>
     <div style="background:#f9fafb; border-radius:8px; padding:14px; margin:16px 0; font-size:13px;">
       <p style="margin:0;"><strong>New Date:</strong> ${formattedDate}</p>
+      ${where}
     </div>
     <p>We apologize for any inconvenience and appreciate your understanding.</p>`
   );
+  const link = interviewLink(location);
+  return link ? { ...mail, linkUrl: link } : mail;
 }
 
 export async function sendInterviewReminderEmail(toEmail: string, fullName: string, jobTitle: string, interviewDate: string) {
   const formattedDate = new Date(interviewDate).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const vars = { fullName, jobTitle, interviewDate: formattedDate };
-  await sendWithTemplate(
+  return sendWithTemplate(
     "jobs",
     "interview_reminder",
     toEmail,
@@ -186,7 +242,7 @@ export async function sendInterviewReminderEmail(toEmail: string, fullName: stri
 export async function sendInterviewResultEmail(toEmail: string, fullName: string, jobTitle: string, selected: boolean) {
   const vars = { fullName, jobTitle };
   if (selected) {
-    await sendWithTemplate(
+    return sendWithTemplate(
     "hr",
     "interview_result_pass",
       toEmail,
@@ -198,7 +254,7 @@ export async function sendInterviewResultEmail(toEmail: string, fullName: string
       <p>Congratulations, and thank you for your interest in joining ${BRAND_NAME}.</p>`
     );
   } else {
-    await sendWithTemplate(
+    return sendWithTemplate(
     "hr",
     "interview_result_fail",
       toEmail,
@@ -248,12 +304,17 @@ export async function sendJobOfferEmail(
       </p>
       <p style="color:#6b7280; font-size:12px;">Agar button kaam na kare, ye link browser mein paste karein:<br/>${link}</p>`;
 
-  await send("jobs", toEmail, subject, emailWrapper(body, "jobs"), [{ filename: `Offer-Letter-${fullName.replace(/\s+/g, "-")}.pdf`, content: pdfBuffer }]);
+  const attachmentName = `Offer-Letter-${fullName.replace(/\s+/g, "-")}.pdf`;
+  return sendComposed("jobs", toEmail, subject, body, {
+    linkUrl: link,
+    attachmentName,
+    attachments: [{ filename: attachmentName, content: pdfBuffer }],
+  });
 }
 
 export async function sendOfferExpiredEmail(toEmail: string, fullName: string, jobTitle: string) {
   const vars = { fullName, jobTitle };
-  await sendWithTemplate(
+  return sendWithTemplate(
     "jobs",
     "offer_expired",
     toEmail,
@@ -267,7 +328,7 @@ export async function sendOfferExpiredEmail(toEmail: string, fullName: string, j
 
 export async function sendWelcomeEmail(toEmail: string, fullName: string, designation: string) {
   const vars = { fullName, designation };
-  await sendWithTemplate(
+  return sendWithTemplate(
     "hr",
     "welcome",
     toEmail,
@@ -281,7 +342,7 @@ export async function sendWelcomeEmail(toEmail: string, fullName: string, design
 }
 
 export async function sendOfficialLoginEmail(toEmail: string, fullName: string, officialEmail: string, password: string) {
-  const html = emailWrapper(`
+  const body = `
     <p>Dear <strong>${fullName}</strong>,</p>
     <p>Welcome to ${BRAND_NAME}! Your official company account has been created.</p>
     <p style="margin:16px 0 6px; font-weight:600;">1) Website/System Login:</p>
@@ -298,8 +359,8 @@ export async function sendOfficialLoginEmail(toEmail: string, fullName: string, 
       <p style="margin:4px 0 0;"><strong>SMTP Server:</strong> mail.alranatraders.pk (Port 587)</p>
     </div>
     <p style="color:#b91c1c; font-size:13px;">Barah-e-meherbani apna password pehli login ke baad badal lein, aur ye details kisi ke sath share na karein.</p>
-  `, "hr");
-  await send("hr", toEmail, `Aapka Official Login - ${BRAND_NAME}`, html);
+  `;
+  return sendComposed("hr", toEmail, `Aapka Official Login - ${BRAND_NAME}`, body, { linkUrl: `${SITE_URL}/login` });
 }
 
 export async function sendPasswordResetEmail(toEmail: string, fullName: string, resetLink: string) {

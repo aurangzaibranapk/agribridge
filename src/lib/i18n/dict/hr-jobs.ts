@@ -16,6 +16,7 @@ export const hrJobsDict = {
   hj_suspend_reason: { en: "Reason", rm: "Wajah", ur: "وجہ" },
   hj_ok: { en: "OK", rm: "Theek", ur: "ٹھیک" },
   hj_email_label: { en: "Email:", rm: "Email:", ur: "ای میل:" },
+  hj_gender_label: { en: "Gender:", rm: "Jins:", ur: "جنس:" },
   hj_phone_label: { en: "Phone:", rm: "Phone:", ur: "فون:" },
   hj_cnic_label: { en: "CNIC:", rm: "CNIC:", ur: "CNIC:" },
   hj_address_label: { en: "Address:", rm: "Pata:", ur: "پتہ:" },
@@ -40,6 +41,7 @@ export const hrJobsDict = {
   hj_doc_experience: { en: "Experience Certificate", rm: "Tajurbe ki sanad", ur: "تجربے کی سند" },
   hj_doc_cv: { en: "CV / Resume", rm: "CV", ur: "CV" },
   hj_login_created: { en: "Login created.", rm: "Login ban gaya.", ur: "لاگ ان بن گیا۔" },
+  hj_create_login: { en: "Create login", rm: "Login banayein", ur: "لاگ ان بنائیں" },
   hj_official_email: {
     en: "Official Email (create it in cPanel first)",
     rm: "Daftari email (pehle cPanel mein banayein)",
