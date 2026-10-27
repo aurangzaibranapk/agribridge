@@ -10,6 +10,7 @@ import { closeShift, getShiftSummary, shiftCashRecipients, shiftCashCarriers, ty
 import { sendCash, type ActionState as HandoverState } from "@/actions/cash-handover";
 import { bankAccountsForCollectionDeposit, submitCollectionDeposit, type ActionState as DepositState } from "@/actions/pos-collection";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
+import { CustodySlipLinks } from "@/components/pos/custody-slip-links";
 import type { ShiftCashSummary } from "@/lib/pos/shift-cash";
 
 const KHALI: ActionState = {};
@@ -657,6 +658,14 @@ export function ShiftBar({
                   Rs {Math.round(pendingHandover.pendingDepositAmount).toLocaleString()} ka deposit submit ho chuka hai — Finance ki tasdeeq ka intezar hai.
                 </p>
               )}
+              <a
+                href={`/admin/cash-custody/shift/${pendingHandover.shiftId}/slip?copy=both&print=1`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-3 flex w-full items-center justify-center rounded-lg border border-surface-200 px-3 py-2 text-xs font-medium text-surface-700"
+              >
+                Do slips — staff copy + jama copy
+              </a>
               <ShiftCashHandoverForm
                 shiftId={pendingHandover.shiftId}
                 shiftIds={pendingHandover.shiftIds}
@@ -705,6 +714,9 @@ export function ShiftBar({
                   </div>
                   <p className="text-sm font-medium text-surface-900 dark:text-white">{state.message}</p>
                 </div>
+                {state.custodyPacketId && (state.countedCash ?? 0) > 0 && (
+                  <CustodySlipLinks packetId={state.custodyPacketId} />
+                )}
                 {cashHandoverDue && (
                   <div className="mt-3">
                     <p className="mb-2 text-xs text-surface-600 dark:text-surface-400">

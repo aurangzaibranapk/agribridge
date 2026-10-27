@@ -6,6 +6,21 @@ Branch `cursor/batch-ginti-align-8978`. Migration **718 file only**. Testing aur
 - Snapshot: `backup_718_inventory_ginti`. Rollback: `718_batch_ginti_align.rollback.sql` (ek transaction, `psql -1`).
 - 27 Oct read-only: raw 3b farq 91. Un mein 90 scale `numeric(14,3)` par seedha barabar ho sakte hain (ginti +2032 / −59). Ek jora ginti 0 aur batch 0.000232 hai — ginti column itna barik adad rakh nahi sakta, raw 3b us par reh sakti hai.
 
+## Pending — 27 October 2026: POS cash custody chain (717)
+
+Branch `cursor/pos-cash-custody-slips-1947`. Migration **717 not applied** on Testing or Live. File only. Number 716 customer khata / 2030 (PR #225) ka hai — ye alag hai. Testing project MCP list mein nahi tha, is liye yahan nahi chali. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- Har dukan, shift band: staff copy + jama copy. Har hop (bheja, wasoli, bank jama, verify) zimmedar + waqt. Dashboard `/admin/cash-custody`. 1 din bina verify: Admin, Super Admin, Owner ko in-app alert.
+- Custody se bank jama sirf wasoli ke baad (`with_holder`). Verify 1000 se bank karti hai; 1030 par atki cash is darwaze se nahi nikalti.
+- Wasoli qanoon PR #223 ka hai, jo main par merge ho chuka. Is migration ne `receiveCash` nahi chhera.
+- Yasir / 2030 customer ledger is mein nahi — wo 716 hai.
+- Cron: pg_cron `agribridge_cash_custody_overdue` har ghante :15, warna `GET /api/cron/cash-custody-overdue` with `CRON_SECRET`. SMS/WhatsApp nahi.
+- Rollback: `supabase/migrations/717_pos_cash_custody_chain.rollback.sql`.
+
+## Phone glass 631 — 27 October 2026 — app only
+
+versionCode 631. Header: AgriBridge aur version upar, tagline aur role gold line, phir Assalam o Alaikum. Wasela Eco Mahabali nahi. Kisan wallet tab sirf tracking card. Purana gold wallet list hata. Dealer bars chauri. Khali approval sab green check nahi. Jhoota MISAAL number nahi. Live SQL nahi. Live package `pk.alranatraders.agribridge`, production channel. TEST package alag.
+
 ## Pending — 27 October 2026: POS close Cash Handover Slip (code only)
 
 Branch `cursor/pos-close-cash-handover-slip-fc03`. **Koi migration nahi.** Testing/Live DB par kuch nahi chalana. Sirf naya build.

@@ -93,6 +93,7 @@ export async function submitCollectionDeposit(_prev: ActionState, formData: Form
     .insert({
       deposit_number: depositNumber,
       staff_id: user.id,
+      submitted_by: user.id,
       shop_id: shopId,
       branch_id: outstanding.branchId,
       bank_account_id: bankAccountId,
@@ -169,7 +170,7 @@ export async function verifyCollectionDeposit(_prev: ActionState, formData: Form
   const service = createServiceClient();
   const { data: deposit } = await service
     .from("pos_collection_deposits")
-    .select("id, deposit_number, staff_id, shop_id, branch_id, amount, status")
+    .select("id, deposit_number, staff_id, submitted_by, shop_id, branch_id, amount, status")
     .eq("id", depositId)
     .maybeSingle();
   if (!deposit) return { error: "Deposit nahi mila." };
@@ -185,7 +186,7 @@ export async function verifyCollectionDeposit(_prev: ActionState, formData: Form
       return { error: "Ye deposit aapki branch ki nahi hai." };
     }
   }
-  if (deposit.staff_id === user.id) {
+  if (deposit.staff_id === user.id || deposit.submitted_by === user.id) {
     return { error: "Apni jama karayi hui deposit khud tasdeeq nahi kar sakte." };
   }
 
