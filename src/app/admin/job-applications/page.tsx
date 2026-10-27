@@ -5,8 +5,18 @@ import Link from "next/link";
 import { ApplicationDetailButton } from "./application-detail";
 import { DeleteApplicationButton } from "./delete-application-button";
 import { IdCard } from "lucide-react";
-import { t } from "@/lib/i18n/translations";
+import { t, type Lang } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { staffGenderOrNull } from "@/lib/jobs/apply-input";
+import type { TimelineMessage } from "./timeline";
+
+function genderCell(value: string | null | undefined, lang: Lang) {
+  const gender = staffGenderOrNull(value);
+  if (gender === "male") return t("sp_gender_male", lang);
+  if (gender === "female") return t("sp_gender_female", lang);
+  if (gender === "other") return t("sp_gender_other", lang);
+  return "—";
+}
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +43,35 @@ export default async function AdminJobApplicationsPage() {
     .from("application_activity_log")
     .select("id, application_id, event_type, event_description, created_at")
     .order("created_at", { ascending: true });
+  const messageQuery = await supabase
+    .from("job_application_messages")
+    .select("id, application_id, channel, to_address, subject, body, link_url, attachment_name, status, error, triggered_by, created_at")
+    .order("created_at", { ascending: true });
+  const rawMessages = messageQuery.error ? [] : (messageQuery.data ?? []);
+  const actorIds = Array.from(new Set(rawMessages.map((m) => m.triggered_by).filter((id): id is string => !!id)));
+  const { data: actors } = actorIds.length
+    ? await supabase.from("profiles").select("id, full_name").in("id", actorIds)
+    : { data: [] as { id: string; full_name: string | null }[] };
+  const actorName = new Map((actors ?? []).map((p) => [p.id, p.full_name]));
+  const messageMap = new Map<string, TimelineMessage[]>();
+  rawMessages.forEach((m) => {
+    const list = messageMap.get(m.application_id) ?? [];
+    const channel = m.channel === "sms" || m.channel === "whatsapp" ? m.channel : "email";
+    list.push({
+      id: m.id,
+      channel,
+      to_address: m.to_address,
+      subject: m.subject,
+      body: m.body,
+      link_url: m.link_url,
+      attachment_name: m.attachment_name,
+      status: m.status === "failed" ? "failed" : "sent",
+      error: m.error,
+      triggered_name: m.triggered_by ? actorName.get(m.triggered_by) ?? null : null,
+      created_at: m.created_at,
+    });
+    messageMap.set(m.application_id, list);
+  });
   const timelineMap = new Map<string, typeof rawTimeline>();
   (rawTimeline ?? []).forEach((t) => {
     const list = timelineMap.get(t.application_id) ?? [];
@@ -45,6 +84,7 @@ export default async function AdminJobApplicationsPage() {
     expected_salary: a.expected_salary ? Number(a.expected_salary) : null,
     interview_score: scoresMap.get(a.id) ?? null,
     timeline: timelineMap.get(a.id) ?? [],
+    messages: messageMap.get(a.id) ?? [],
   }));
   function statusTone(status: string) {
     if (status === "accepted" || status === "joined") return "green" as const;
@@ -69,6 +109,7 @@ export default async function AdminJobApplicationsPage() {
             <thead>
               <tr className="border-b border-surface-200 bg-surface-50 text-left dark:border-surface-800 dark:bg-surface-800">
                 <th className="px-3 py-2 font-medium text-surface-500">{t("c_name", lang)}</th>
+                <th className="px-3 py-2 font-medium text-surface-500" data-testid="job-app-gender">{t("ja_gender", lang)}</th>
                 <th className="px-3 py-2 font-medium text-surface-500">{t("ja_vacancy", lang)}</th>
                 <th className="px-3 py-2 font-medium text-surface-500">{t("fp_contact", lang)}</th>
                 <th className="px-3 py-2 font-medium text-surface-500">{t("c_status", lang)}</th>
@@ -79,6 +120,7 @@ export default async function AdminJobApplicationsPage() {
               {applications.map((a) => (
                 <tr key={a.id} className="border-b border-surface-100 last:border-0 dark:border-surface-800">
                   <td className="px-3 py-2 text-surface-700 dark:text-surface-300">{a.full_name}</td>
+                  <td className="px-3 py-2 text-surface-500">{genderCell(a.gender, lang)}</td>
                   <td className="px-3 py-2 text-surface-500">{a.vacancy_title}</td>
                   <td className="px-3 py-2 text-surface-500">{a.email} {a.phone ? `- ${a.phone}` : ""}</td>
                   <td className="px-3 py-2"><Badge tone={statusTone(a.status)}>{a.status.replace("_", " ")}</Badge></td>

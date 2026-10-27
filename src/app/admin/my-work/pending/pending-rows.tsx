@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils/format";
 import { DecideButtons } from "./decide-buttons";
 import { usePendingLive } from "./live-state";
 import { ProductPendingSummary } from "@/components/pending/product-diff-ui";
+import { EscalatedBadge, TimelinePanel } from "./escalation-ui";
 
 type Run = (fd: FormData) => Promise<DecideResult | undefined>;
 
@@ -58,6 +59,7 @@ export function PendingTableRow({ item, run }: { item: PendingItem; run?: Run })
     <tr data-pending-row={h?.status ?? (item.is_new ? "new" : "pending")} data-pending-decision={h?.status ?? "open"} className={rowTone(h?.status, h?.phase === "fading", item.is_new)}>
       <td className="px-4 py-2.5 align-top">
         <StateCell status={h?.status} isNew={item.is_new} />
+        {item.escalation_level === "escalated" && <EscalatedBadge />}
       </td>
       <td className="px-2 py-2.5 align-top">
         {item.product_extra ? <ProductPendingSummary extra={item.product_extra} lang={lang} /> : <>
@@ -66,6 +68,17 @@ export function PendingTableRow({ item, run }: { item: PendingItem; run?: Run })
         </p>
         {item.title && <p className="truncate text-[11.5px] text-surface-500 dark:text-surface-400">{item.title}</p>}
         </>}
+        {item.escalation_level && (
+          <TimelinePanel
+            category={item.category}
+            itemId={item.item_id}
+            level={item.escalation_level}
+            since={item.escalation_since ?? item.created_at}
+            slaHours={item.sla_hours ?? 24}
+            events={item.timeline ?? []}
+            canNote={!!item.can_delay_note}
+          />
+        )}
       </td>
       <td className="px-2 py-2.5 text-right align-top font-semibold tabular-nums text-surface-800 dark:text-surface-100">{item.amount != null ? fmtRs(item.amount) : "—"}</td>
       <td className="px-2 py-2.5 align-top"><AgeChip days={ageDays(item.created_at)} lang={lang} /></td>
@@ -100,10 +113,22 @@ export function PendingCard({ item, run }: { item: PendingItem; run?: Run }) {
       </div>
       <div className="flex flex-wrap items-center gap-2 text-[11px]">
         <StateCell status={h?.status} isNew={item.is_new} />
+        {item.escalation_level === "escalated" && <EscalatedBadge />}
         <AgeChip days={ageDays(item.created_at)} lang={lang} />
         <span className="text-surface-500 dark:text-surface-400">{t("apb_entered", lang)}: {item.is_own ? t("apb_you", lang) : item.entered_by_name ?? t("apb_noname", lang)}</span>
         <span className="inline-flex items-center gap-1 font-semibold text-surface-700 dark:text-surface-200"><UserRound className="h-3 w-3" />{item.actor_name ?? t(roleLabelKey(item.pending_with), lang)}</span>
       </div>
+      {item.escalation_level && (
+        <TimelinePanel
+          category={item.category}
+          itemId={item.item_id}
+          level={item.escalation_level}
+          since={item.escalation_since ?? item.created_at}
+          slaHours={item.sla_hours ?? 24}
+          events={item.timeline ?? []}
+          canNote={!!item.can_delay_note}
+        />
+      )}
       {h ? <div className="flex justify-end"><DecisionBadge status={h.status} /></div> : <DecideButtons item={item} href={href} run={run} />}
     </li>
   );

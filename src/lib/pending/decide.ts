@@ -1,3 +1,4 @@
+import { isSelfApproveRole, mayDecideEntry, selfDecisionLabel } from "@/lib/approval/guards";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { CODE_MAKER_COLS, INLINE_DECISIONS, type PendingItem } from "@/lib/pending/categories";
 
@@ -57,7 +58,9 @@ export function pendingKey(category: string, id: string): string {
 export interface DecidePorts {
   loadRow: (category: string, id: string) => Promise<PendingItem | null>;
   actorId: () => Promise<string | null>;
+  actorRole?: () => Promise<string | null>;
   codeMakerId: (category: string, id: string) => Promise<string | null>;
+  logSelfDecision?: (category: string, id: string, decision: Decision, label: string) => Promise<void>;
   reviewPosReturn: (fd: FormData) => Promise<{ error?: string }>;
   approveProductEdit: (fd: FormData) => Promise<{ error?: string }>;
   rejectProductEdit: (fd: FormData) => Promise<{ error?: string }>;
@@ -67,7 +70,8 @@ export interface DecidePorts {
 
 /**
  * Validation + maker-checker, phir wahi purana action.
- * Apni entry / apna manager-code yahan se aage nahi jaata.
+ * Admin/Owner apni entry bhi aage jaati hai (timeline: Khud approve).
+ * Manager aur baqi staff ki apni entry yahan rukti hai.
  */
 export async function runDecidePending(fd: FormData, ports: DecidePorts): Promise<DecideResult> {
   const category = String(fd.get("category") ?? "");
@@ -80,12 +84,20 @@ export async function runDecidePending(fd: FormData, ports: DecidePorts): Promis
 
   const row = await ports.loadRow(category, id);
   if (!row || row.item_id !== id) return fail("gone");
-  if (row.is_own) return fail("own");
+  const actor = await ports.actorId();
+  const role = ports.actorRole ? await ports.actorRole() : null;
+  const makers: Array<string | null> = [];
+  if (row.is_own && actor) makers.push(actor);
+  let codeMaker: string | null = null;
   if (CODE_MAKER_COLS[category]) {
-    const actor = await ports.actorId();
-    const maker = await ports.codeMakerId(category, id);
-    if (actor && maker && maker === actor) return fail("code");
+    codeMaker = await ports.codeMakerId(category, id);
+    if (codeMaker) makers.push(codeMaker);
   }
+  if (!mayDecideEntry(role, actor, makers)) {
+    if (row.is_own) return fail("own");
+    return fail("code");
+  }
+  const self = !!role && !!actor && (row.is_own || codeMaker === actor);
 
   const f = new FormData();
   let res: { error?: string } = {};
@@ -107,6 +119,9 @@ export async function runDecidePending(fd: FormData, ports: DecidePorts): Promis
   }
   if (!res || typeof res !== "object") return actionFail("no response");
   if (res.error) return actionFail(res.error);
+  if (self && role && isSelfApproveRole(role)) {
+    await ports.logSelfDecision?.(category, id, decision, selfDecisionLabel(role, decision));
+  }
   return { ok: true, decision };
 }
 

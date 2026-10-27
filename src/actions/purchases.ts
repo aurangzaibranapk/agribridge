@@ -798,7 +798,7 @@ export async function reviewPurchase(_prev: ActionState, formData: FormData): Pr
     const { data: creator } = purchase.created_by
       ? await supabase.from("profiles").select("role").eq("id", purchase.created_by).maybeSingle()
       : { data: null };
-    const chk = purchaseApproveCheck(purchase as { review_status: string | null; verified_by?: string | null }, creator?.role ?? null, user.id);
+    const chk = purchaseApproveCheck(purchase as { review_status: string | null; verified_by?: string | null }, creator?.role ?? null, user.id, guard.caller.role);
     if (!chk.ok) return { error: chk.error };
   } else if (!finishingHeld && purchase.review_status === "rejected") {
     return { error: "Ye purchase pehle hi radd ho chuki hai." };

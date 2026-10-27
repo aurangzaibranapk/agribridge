@@ -1,5 +1,5 @@
 "use server";
-import { isSelfApproval } from "@/lib/approval/guards";
+import { isSelfApproval, mayDecideEntry } from "@/lib/approval/guards";
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
@@ -95,7 +95,7 @@ export async function approveSupplierPayment(_prev: ActionState, formData: FormD
   if (request.status === "approved") return { success: true };
   if (request.status !== "pending") return { error: "Ye request already process ho chuki hai." };
   // Self-approval guard: jis ne request banayi wo khud approve nahi kar sakta.
-  if (isSelfApproval(request.requested_by, user.id)) {
+  if (isSelfApproval(request.requested_by, user.id) && !mayDecideEntry(role, user.id, [request.requested_by])) {
     return { error: "Aap ne khud ye request banayi hai — doosra Admin/Owner approve karega." };
   }
   const reqExtra = request as { finance_account_id?: string | null; payment_date?: string | null };

@@ -1,3 +1,26 @@
+## Done on Live — 26 October 2026: Pending approval escalation (713, was 698)
+
+Branch `cursor/pending-approval-escalation-e154` (PR #216). File renamed 698 → **713** because live already has `698_mobile_phase1`.
+- Live `ktskwawkslaznkjjacni`: applied 26 Oct 2026 14:51 PKT, recorded as `20261026095127 713_pending_escalation`. Backup: box `/workspace/backups/2026-10-26-live-214-215-216/`.
+- Testing `hwaiuwxqldxsoukkfefn`: applied earlier, recorded as version `698216` (same SQL). Do not re-apply.
+
+- `pending_escalation_settings` / `_state` / `_events`. `fn_pending_escalate` har 15 minute (pg_cron, warna `/api/cron/pending-escalation`). Sirf in-app notification. SMS/WhatsApp nahi.
+- Manager SLA (default 24h, category settings) ke baad item **Admin aur Owner dono** ke paas. Koi bhi ek faisla kar sakta hai.
+- `fn_may_decide_entry` / `fn_actor_may_decide`: Admin, Owner, Super Admin apni entry bhi. Manager aur baqi staff apni entry nahi. Fuel, generator, maintenance checks aur POS review isi guard par.
+- Timeline: `Khud approve (Admin)` / `Khud approve (Owner)`. Season import SELECT staff policy (pending warning).
+- Rollback: `supabase/migrations/713_pending_escalation.rollback.sql`.
+
+## Done on Live — 26 October 2026: application gender + candidate message log (PR #214)
+
+Applied on Live 26 Oct 2026 ~14:51 PKT as `job_application_gender` + `job_application_messages` (grants included). Usama Saleem duplicate Shortlist row deleted after read check (1 row). Older note below:
+
+Branch `cursor/careers-gender-messages-552c`. **Not applied on Live** (`ktskwawkslaznkjjacni`). Testing project `hwaiuwxqldxsoukkfefn` was not in this session's Supabase project list (permission denied on a direct lookup), so these two files are **unapplied everywhere**:
+
+- `supabase/migrations/20261022100000_job_application_gender.sql` — nullable `job_applications.gender`, check `male/female/other`. No backfill.
+- `supabase/migrations/20261022100100_job_application_messages.sql` — `job_application_messages` for email/SMS/WhatsApp. RLS: hr, admin, owner, super_admin, manager.
+
+Do not run them on Live until there is a verified backup and a separate approval. The duplicate Shortlist cleanup for M Usama Saleem is also **not run**. Read-only SQL and the separate DELETE are in `supabase/manual/job_application_shortlist_duplicate_20261022_read.sql` and `..._delete.sql`.
+
 ## Pending — 26 October 2026: Admin dealer / buyer invite (712)
 
 Branch `cursor/admin-party-invite-72a5`. Migration **712 not applied** on Testing or Live. Files only. Public kisan signup is file mein nahi chhera. Backup ke baad pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live. App 712 ke baghair bhi chalta hai; HR / Users ka account tabhi banta hai jab 712 lag jaye.

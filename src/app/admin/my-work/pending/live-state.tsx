@@ -45,11 +45,12 @@ interface Ctx {
   hit: (key: string) => DecisionHit | undefined;
   mark: (item: PendingItem, status: RowStatus) => void;
   notifyError: (text: string) => void;
+  viewerRole: string | null;
 }
 
 const LiveCtx = createContext<Ctx | null>(null);
 
-export function PendingLive({ counts, children }: { counts: PendingCount[]; children: React.ReactNode }) {
+export function PendingLive({ counts, viewerRole = null, children }: { counts: PendingCount[]; viewerRole?: string | null; children: React.ReactNode }) {
   const [hits, setHits] = useState<DecisionHit[]>([]);
   const [toast, setToast] = useState<Toast | null>(null);
   const countsRef = useRef(counts);
@@ -92,7 +93,7 @@ export function PendingLive({ counts, children }: { counts: PendingCount[]; chil
 
   const notifyError = useCallback((text: string) => setToast({ kind: "error", text }), []);
 
-  const value = useMemo(() => ({ hits, hit, mark, notifyError }), [hits, hit, mark, notifyError]);
+  const value = useMemo(() => ({ hits, hit, mark, notifyError, viewerRole }), [hits, hit, mark, notifyError, viewerRole]);
 
   return (
     <LiveCtx.Provider value={value}>
@@ -145,19 +146,47 @@ export function useLiveNumbers(base: PendingTotals): PendingTotals {
   return applyDeltas(base, hits.map((h) => h.delta));
 }
 
-export function PendingFilterPills({ filter, base, route }: { filter: "all" | "mine" | "new"; base: PendingTotals; route?: string | null }) {
+export type PendingListFilter = "all" | "mine" | "new" | "escalated" | "overdue";
+
+export function PendingFilterPills({
+  filter,
+  base,
+  route,
+  escalated = 0,
+  overdue = 0,
+}: {
+  filter: PendingListFilter;
+  base: PendingTotals;
+  route?: string | null;
+  escalated?: number;
+  overdue?: number;
+}) {
   const lang = useLang();
   const live = useLiveNumbers(base);
-  const hrefFor = (k: "all" | "mine" | "new") => {
+  const hrefFor = (k: PendingListFilter) => {
     const q = new URLSearchParams();
     if (route) q.set("route", route);
     if (k !== "all") q.set("f", k);
     const s = q.toString();
     return s ? `?${s}` : "?";
   };
+  const label = {
+    all: "apb_filter_all",
+    mine: "apb_filter_mine",
+    new: "apb_filter_new",
+    escalated: "apb_filter_escalated",
+    overdue: "apb_filter_overdue",
+  } as const;
+  const n = {
+    all: live.pending,
+    mine: live.mine,
+    new: live.naya,
+    escalated,
+    overdue,
+  };
   return (
-    <div className="flex gap-1.5" role="tablist">
-      {(["all", "mine", "new"] as const).map((k) => (
+    <div className="flex flex-wrap gap-1.5" role="tablist">
+      {(["all", "mine", "new", "escalated", "overdue"] as const).map((k) => (
         <Link
           key={k}
           href={hrefFor(k)}
@@ -167,8 +196,8 @@ export function PendingFilterPills({ filter, base, route }: { filter: "all" | "m
             filter === k ? "bg-gradient-to-r from-[#1e3a8a] to-[#2563eb] text-white" : "border border-surface-200 bg-white text-surface-600 dark:border-white/10 dark:bg-white/5 dark:text-surface-300"
           )}
         >
-          {t(k === "all" ? "apb_filter_all" : k === "mine" ? "apb_filter_mine" : "apb_filter_new", lang)}
-          <span className="opacity-80">· {k === "all" ? live.pending : k === "mine" ? live.mine : live.naya}</span>
+          {t(label[k], lang)}
+          <span className="opacity-80">· {n[k]}</span>
         </Link>
       ))}
     </div>

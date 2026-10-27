@@ -187,6 +187,9 @@ test("H2 payout cannot exceed the priced balance", () => {
 
 test("H3 maker cannot approve their own entry", () => {
   assert.match(selfApprovalError("a", "a") ?? "", /khud manzoor/);
+  assert.match(selfApprovalError("a", "a", null, "manager") ?? "", /khud manzoor/);
+  assert.equal(selfApprovalError("a", "a", null, "admin"), null);
+  assert.equal(selfApprovalError("a", "a", null, "owner"), null);
   assert.equal(selfApprovalError("a", "b"), null);
   assert.match(selfApprovalError("a", "b", "a") ?? "", /verify/);
   assert.equal(selfApprovalError("a", null), null);
@@ -195,7 +198,7 @@ test("H3 maker cannot approve their own entry", () => {
   const maint = read("src/actions/maintenance.ts");
   assert.match(fuel, /selfApprovalError/);
   assert.match(gen, /selfApprovalError/);
-  assert.match(maint, /selfApprovalError\(who\.userId, log\.created_by, log\.branch_verified_by\)/);
+  assert.match(maint, /selfApprovalError\(who\.userId, log\.created_by, log\.branch_verified_by, who\.role\)/);
   assert.match(read("src/actions/milk-chiller.ts"), /created_by === who\.userId/);
 });
 
