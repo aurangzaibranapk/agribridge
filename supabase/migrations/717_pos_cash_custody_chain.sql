@@ -1,5 +1,5 @@
 -- =====================================================================
--- AgriBridge — Migration 716: POS cash custody chain
+-- AgriBridge — Migration 717: POS cash custody chain
 -- =====================================================================
 -- Har dukan, shift band hote hi:
 --   (a) Staff copy — jama karne wala rakhta hai, dastakhat + system
@@ -14,7 +14,7 @@
 -- sirf us qadam ko packet ki timeline par likhta hai.
 --
 -- Live par tab tak mat chalayein jab tak backup verify na ho.
--- Pehle Testing. Rollback: 716_pos_cash_custody_chain.rollback.sql
+-- Pehle Testing. Rollback: 717_pos_cash_custody_chain.rollback.sql
 
 alter table public.pos_collection_deposits
   add column if not exists submitted_by uuid references public.profiles(id);

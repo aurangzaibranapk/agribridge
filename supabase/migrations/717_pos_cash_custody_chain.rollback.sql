@@ -1,4 +1,4 @@
--- Rollback 716. Cash handover wasoli (receiveCash) isse nahi badli thi.
+-- Rollback 717. Cash handover wasoli (receiveCash) isse nahi badli thi.
 
 do $$
 begin

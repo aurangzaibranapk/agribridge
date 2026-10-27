@@ -78,7 +78,7 @@ const shiftBar = readFileSync("src/components/pos/shift-bar.tsx", "utf8");
 assert.match(shiftBar, /CustodySlipLinks/);
 assert.match(shiftBar, /copy=both/);
 
-const sql = readFileSync("supabase/migrations/716_pos_cash_custody_chain.sql", "utf8");
+const sql = readFileSync("supabase/migrations/717_pos_cash_custody_chain.sql", "utf8");
 assert.match(sql, /interval '1 day'/);
 assert.match(sql, /fn_cash_custody_overdue_notify/);
 assert.match(sql, /'CS-' \|\| v_year::text \|\| '-' \|\| v_num/);

@@ -134,16 +134,16 @@ Rollback: `698_mobile_phase1.rollback.sql`. Us se pehle `attendance_records` ki 
 
 WhatsApp number code mein nahi. Live par link tabhi dikhe jab `SUPPORT_WHATSAPP_E164` ya `website_settings.support_whatsapp` ya `contact_phone` set ho.
 
-## Pending — 27 October 2026: POS cash custody chain (716)
+## Pending — 27 October 2026: POS cash custody chain (717)
 
-Branch `cursor/pos-cash-custody-slips-1947`. Migration **716 not applied** on Testing or Live. File only. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+Branch `cursor/pos-cash-custody-slips-1947`. Migration **717 not applied** on Testing or Live. File only. Number 716 customer khata / 2030 (PR #225) ka hai — ye alag hai. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
 
 - Har dukan, shift band: staff copy + jama copy. Har hop (bheja, wasoli, bank jama, verify) zimmedar + waqt. Dashboard `/admin/cash-custody`. 1 din bina verify: Admin, Super Admin, Owner ko in-app alert.
 - Custody se bank jama sirf wasoli ke baad (`with_holder`). Verify 1000 se bank karti hai; 1030 par atki cash is darwaze se nahi nikalti.
 - `receiveCash` / wasoli qanoon is migration aur is branch mein nahi badla. PR #223 alag hai.
 - Yasir / 2030 customer ledger is mein nahi.
 - Cron: pg_cron `agribridge_cash_custody_overdue` har ghante :15, warna `GET /api/cron/cash-custody-overdue` with `CRON_SECRET`. SMS/WhatsApp nahi.
-- Rollback: `supabase/migrations/716_pos_cash_custody_chain.rollback.sql`.
+- Rollback: `supabase/migrations/717_pos_cash_custody_chain.rollback.sql`.
 
 ## Pending — 27 October 2026: self-merge Reject (715)
 

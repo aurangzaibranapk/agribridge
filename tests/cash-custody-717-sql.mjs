@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const sql = readFileSync("supabase/migrations/716_pos_cash_custody_chain.sql", "utf8");
-const rollback = readFileSync("supabase/migrations/716_pos_cash_custody_chain.rollback.sql", "utf8");
+const sql = readFileSync("supabase/migrations/717_pos_cash_custody_chain.sql", "utf8");
+const rollback = readFileSync("supabase/migrations/717_pos_cash_custody_chain.rollback.sql", "utf8");
 
 assert.match(sql, /cash_custody_packets/);
 assert.match(sql, /cash_custody_hops/);
@@ -32,4 +32,4 @@ assert.match(receive, /to_profile_id !== user\.id/);
 assert.doesNotMatch(receive, /canRecordHandoverReceipt/);
 assert.doesNotMatch(receive, /custody_packet/);
 
-console.log("716 sql checks passed");
+console.log("717 sql checks passed");

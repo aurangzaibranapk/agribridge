@@ -16,7 +16,7 @@ export interface ActionState {
   message?: string;
   countedCash?: number;
   shiftId?: string;
-  /** Band shift ki do slips (staff + jama). Migration 716 ke baghair khali. */
+  /** Band shift ki do slips (staff + jama). Migration 717 ke baghair khali. */
   custodyPacketId?: string;
 }
 
