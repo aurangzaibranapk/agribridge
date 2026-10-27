@@ -19259,6 +19259,10 @@ export type Database = {
           experience_certificate_url: string | null
           full_name: string
           gender: string | null
+          blood_group: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          photo_url: string | null
           id: string
           interview_date: string | null
           interview_location: string | null
@@ -19285,6 +19289,10 @@ export type Database = {
           experience_certificate_url?: string | null
           full_name: string
           gender?: string | null
+          blood_group?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          photo_url?: string | null
           id?: string
           interview_date?: string | null
           interview_location?: string | null
@@ -19311,6 +19319,10 @@ export type Database = {
           experience_certificate_url?: string | null
           full_name?: string
           gender?: string | null
+          blood_group?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          photo_url?: string | null
           id?: string
           interview_date?: string | null
           interview_location?: string | null
@@ -34512,6 +34524,7 @@ export type Database = {
       staff_details: {
         Row: {
           address: string | null
+          application_id: string | null
           bank_account: string | null
           basic_salary: number | null
           blood_group: string | null
@@ -34535,6 +34548,7 @@ export type Database = {
           is_active: boolean
           milk_chiller_name: string | null
           milk_route_name: string | null
+          offer_id: string | null
           phone: string | null
           photo_url: string | null
           position_key: string | null
@@ -34547,6 +34561,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          application_id?: string | null
           bank_account?: string | null
           basic_salary?: number | null
           blood_group?: string | null
@@ -34570,6 +34585,7 @@ export type Database = {
           is_active?: boolean
           milk_chiller_name?: string | null
           milk_route_name?: string | null
+          offer_id?: string | null
           phone?: string | null
           photo_url?: string | null
           position_key?: string | null
@@ -34582,6 +34598,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          application_id?: string | null
           bank_account?: string | null
           basic_salary?: number | null
           blood_group?: string | null
@@ -34605,6 +34622,7 @@ export type Database = {
           is_active?: boolean
           milk_chiller_name?: string | null
           milk_route_name?: string | null
+          offer_id?: string | null
           phone?: string | null
           photo_url?: string | null
           position_key?: string | null

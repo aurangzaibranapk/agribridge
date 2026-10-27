@@ -1,4 +1,5 @@
 import { TRAINING_TYPES, RATINGS, EXIT_REASONS, GENDERS, STAGE_STATUS, type Stage } from "@/lib/hr-kpi/core";
+import { bloodGroupOrNull } from "@/lib/jobs/apply-input";
 
 /** Form ki jaanch -- pure, test ho sakti hai. Ghalti par Roman Urdu paighaam. */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -63,18 +64,51 @@ export function parseJoinExit(f: FormData, today: string): R<{ id: string; gende
   return { ok: true, value: { id, gender, hire_date: hire, exit_date: exit, exit_reason: exit ? reason : null } };
 }
 
-export function parseCandidate(f: FormData): R<{ vacancy_id: string; full_name: string; email: string; phone: string | null; gender: string | null; status: string }> {
+export function parseCandidate(f: FormData): R<{
+  vacancy_id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  cnic: string | null;
+  gender: string | null;
+  blood_group: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  status: string;
+}> {
   const vacancy_id = s(f, "vacancy_id");
   const full_name = s(f, "full_name");
   const email = s(f, "email").toLowerCase();
   const phone = s(f, "phone") || null;
+  const cnic = s(f, "cnic") || null;
   const gender = s(f, "gender").toLowerCase() || null;
+  const bloodRaw = s(f, "blood_group");
+  const emergencyName = s(f, "emergency_contact_name") || null;
+  const emergencyPhone = s(f, "emergency_contact_phone") || null;
   if (!UUID.test(vacancy_id)) return { ok: false, error: "Vacancy chunein" };
   if (full_name.length < 2) return { ok: false, error: "Naam likhein" };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: "Sahi email likhein" };
   if (phone && !/^[0-9+\- ]{7,16}$/.test(phone)) return { ok: false, error: "Sahi mobile likhein" };
+  if (cnic && cnic.length > 20) return { ok: false, error: "CNIC ghalat" };
   if (gender && !(GENDERS as readonly string[]).includes(gender)) return { ok: false, error: "Gender ghalat" };
-  return { ok: true, value: { vacancy_id, full_name, email, phone, gender, status: "pending" } };
+  if (bloodRaw && !bloodGroupOrNull(bloodRaw)) return { ok: false, error: "Blood group ghalat (jaise O+)" };
+  if (emergencyName && emergencyName.length > 80) return { ok: false, error: "Emergency ka naam chhota rakhein" };
+  if (emergencyPhone && !/^[0-9+\- ]{7,16}$/.test(emergencyPhone)) return { ok: false, error: "Emergency number ghalat" };
+  return {
+    ok: true,
+    value: {
+      vacancy_id,
+      full_name,
+      email,
+      phone,
+      cnic,
+      gender,
+      blood_group: bloodGroupOrNull(bloodRaw),
+      emergency_contact_name: emergencyName,
+      emergency_contact_phone: emergencyPhone,
+      status: "pending",
+    },
+  };
 }
 
 export function stageToStatus(stage: string): string | null {
