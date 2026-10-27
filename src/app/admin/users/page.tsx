@@ -1,9 +1,9 @@
+import { Fragment } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { RoleSelector } from "@/app/admin/users/role-selector";
 import { ExtraDepartments } from "@/app/admin/users/extra-departments";
-import { BranchSelector } from "@/app/admin/users/branch-selector";
-import { ShopSelector } from "@/app/admin/users/shop-selector";
+import { UserPlaceCard } from "@/app/admin/users/user-place-card";
 import { StaffStatusManager } from "@/app/admin/users/staff-status-manager";
 import { formatDate } from "@/lib/utils/format";
 import { STAFF_ROLES } from "@/lib/utils/roles";
@@ -11,6 +11,7 @@ import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { createServiceClient } from "@/lib/supabase/service";
 import { gapsFor } from "@/lib/access/profile-gaps";
+import { canEditLoginPlace, placeCaption, type PlaceBranch, type PlaceShop } from "@/lib/access/login-place";
 export const dynamic = "force-dynamic";
 
 /**
@@ -24,18 +25,34 @@ export const dynamic = "force-dynamic";
  * Ab fehrist STAFF_ROLES se banti hai -- wohi jagah jo tay karti hai ke
  * mulazim kaun hai.
  */
+function caption(rows: { id: string; name: string }[], id: string | null, none: string, missing: string) {
+  const place = placeCaption(rows, id);
+  if (place.tone === "named") return place.text ?? missing;
+  if (place.tone === "missing") return missing;
+  return none;
+}
+
 export default async function UsersPage() {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: me } = user
+    ? await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle()
+    : { data: null };
+  const canEditPlace = canEditLoginPlace(me?.role, me?.is_active);
   const [{ data: profiles }, { data: branches }, { data: shops }] = await Promise.all([
     supabase
       .from("profiles")
       .select("*")
       .in("role", STAFF_ROLES)
       .order("created_at", { ascending: false }),
-    supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
-    supabase.from("shops").select("id, name, branch_id, business_type").eq("is_active", true).order("name"),
+    supabase.from("branches").select("id, name, is_active").order("name"),
+    supabase.from("shops").select("id, name, branch_id, business_type, is_active").order("name"),
   ]);
+  const branchRows = (branches ?? []) as PlaceBranch[];
+  const shopRows = (shops ?? []) as PlaceShop[];
 
   // HR ka record ek hi dafa, sab ke liye. Har bande ke liye alag sawal
   // poochne se safha dheema ho jata hai aur us ka jawab wohi rehta hai.
@@ -68,6 +85,9 @@ export default async function UsersPage() {
           wo team ke darakht mein kahin nazar nahi aata. Role <b>wapas lena ya kam karna</b> hamesha
           chalta hai — rok sirf ikhtiyar barhane par hai.
         </p>
+        <p className="mt-2 text-xs leading-relaxed text-surface-600 dark:text-surface-300">
+          {t("us_place_rule", lang)} {t("us_place_audit_note", lang)}
+        </p>
       </Card>
       <Card>
         <table className="w-full text-sm">
@@ -86,8 +106,8 @@ export default async function UsersPage() {
           </thead>
           <tbody>
             {(profiles ?? []).map((p: any) => (
-              <>
-                <tr key={p.id} className="border-b border-surface-50">
+              <Fragment key={p.id}>
+                <tr className="border-b border-surface-50">
                   <td className="py-3">
                     <p className="font-medium text-surface-800">{p.full_name}</p>
                     {p.phone_number && <p className="text-xs text-surface-400">{p.phone_number}</p>}
@@ -129,11 +149,22 @@ export default async function UsersPage() {
                       current={(p.extra_roles as string[] | null) ?? []}
                     />
                   </td>
-                  <td className="py-3">
-                    <BranchSelector userId={p.id} currentBranchId={p.branch_id} branches={branches ?? []} />
+                  <td className="py-3 text-xs text-surface-700">
+                    {caption(branchRows, p.branch_id, t("us_place_none", lang), t("us_place_missing", lang))}
+                    {canEditPlace ? (
+                      <UserPlaceCard
+                        userId={p.id}
+                        fullName={p.full_name ?? ""}
+                        role={p.role}
+                        branchId={p.branch_id}
+                        shopId={p.shop_id}
+                        branches={branchRows}
+                        shops={shopRows}
+                      />
+                    ) : null}
                   </td>
-                  <td className="py-3">
-                    <ShopSelector userId={p.id} currentShopId={p.shop_id} currentBranchId={p.branch_id} shops={shops ?? []} />
+                  <td className="py-3 text-xs text-surface-700">
+                    {caption(shopRows, p.shop_id, t("us_place_shop_none", lang), t("us_place_missing", lang))}
                   </td>
                   <td className="py-3 text-surface-500">{formatDate(p.created_at)}</td>
                   <td className="py-3">
@@ -146,13 +177,13 @@ export default async function UsersPage() {
                   <td className="py-3"><StaffStatusManager userId={p.id} status={p.status ?? "active"} /></td>
                 </tr>
                 {p.status_reason && (
-                  <tr key={`${p.id}-reason`}>
+                  <tr>
                     <td colSpan={9} className="pb-2 text-xs text-surface-500">
                       <strong>{t("br_reason_label", lang)}</strong> {p.status_reason}
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>

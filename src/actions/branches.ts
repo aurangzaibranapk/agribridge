@@ -1,8 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { createServiceClient } from "@/lib/supabase/service";
-import { profileKaKhanaBadlein } from "@/lib/profile-write";
 import { createClient } from "@/lib/supabase/server";
+import { commitLoginPlace, readPlaceForm } from "@/lib/access/commit-login-place";
 import { TENANT_PLAN_LIMITS, tenantPlan } from "@/lib/tenant/plan-limits";
 export interface ActionState {
   error?: string;
@@ -121,40 +120,14 @@ export async function saveBranchLocation(_prev: ActionState, formData: FormData)
 }
 
 export async function assignUserBranch(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: me } = await supabase.from("profiles").select("role, is_active").eq("id", user?.id ?? "").maybeSingle();
-  if (!me?.is_active || !["owner", "super_admin", "admin"].includes(String(me.role))) {
-    return { error: "Shaakh sirf Owner ya Admin badal sakta hai." };
-  }
-
-  const userId = String(formData.get("user_id") ?? "");
-  const branchId = (formData.get("branch_id") as string) || null;
-  if (!userId) return { error: "Missing user id." };
-
-  // Tasdeeq ke sath -- dekhein `lib/profile-write.ts`.
-  const res = await profileKaKhanaBadlein(userId, { branch_id: branchId });
-  if (res.error) return { error: res.error };
-
-  // Shaakh badalne se us bande ki dukan bemaani ho jati hai: dukan
-  // hamesha kisi ek shaakh ke neeche hoti hai. Purani dukan wahin lagi
-  // rehne se banda doosri shaakh mein baith kar pehli shaakh ka maal
-  // dekhta rehta.
-  if (branchId) {
-    const service = createServiceClient();
-    const { data: me2 } = await service.from("profiles").select("shop_id").eq("id", userId).maybeSingle();
-    if (me2?.shop_id) {
-      const { data: sh } = await service.from("shops").select("branch_id").eq("id", me2.shop_id).maybeSingle();
-      if (sh && sh.branch_id !== branchId) {
-        await profileKaKhanaBadlein(userId, { shop_id: null });
-      }
-    }
-  }
-
-  revalidatePath("/admin/users");
-  return { success: true };
+  const form = readPlaceForm(formData);
+  const result = await commitLoginPlace({
+    userId: form.userId,
+    policy: "branch",
+    branchId: form.branchId,
+    shopId: null,
+  });
+  return { error: result.error, success: result.success };
 }
 
 // Deletes a branch outright. First tries to clear out its empty
