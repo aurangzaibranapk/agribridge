@@ -1,3 +1,12 @@
+## Pending — 27 October 2026: POS close Cash Handover Slip (code only)
+
+Branch `cursor/pos-close-cash-handover-slip-fc03`. **Koi migration nahi.** Testing/Live DB par kuch nahi chalana. Sirf naya build.
+
+- POS Shift Band par counted cash > 0 ho to Daily Cash Slip upar se form ko nahi dhakti.
+- Cash bhejte hi Cash Handover Slip isi screen par khulti hai (`?embed=1&print=1`).
+- Sales staff ke paas list (`/admin/cash-handover`) ki view ijazat nahi — slip ka raasta ab khulta hai. List phir bhi band.
+- Wasoli: Finance role ke naam bheja cash Manager / Finance / Admin / Owner darj kar sakte hain. Bhejne wala khud nahi. Koi migration nahi.
+
 ## Phone live APK — 27 October 2026 — app only, Live SQL nahi
 
 Live sideload versionCode 630. Package `pk.alranatraders.agribridge`. Tag `v0.6.1-beta-test1`. Supabase `ktskwawkslaznkjjacni`. `APP_CHANNEL=production`: Masla, Role dekho, aur Role badlo band. TEST APK `pk.alranatraders.agribridge.test` alag rehti hai. Play TWA versionCode 1 tha, installed sideload 605 tha, is liye 630 usi package par upgrade hai. 698 pehle se Live par hai. 700 se 711 tak testing data aur test function patches hain — Live par nahi chalani. `app_phone_notes` Live par na ho to phone dash dikhata hai, crash nahi. Koi nayi Live SQL is build ke liye zaroori nahi. Backup maange baghair Live database par kuch nahi chala.
