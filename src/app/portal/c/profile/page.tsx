@@ -18,7 +18,7 @@ function Box({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="mb-3">
       <span className="mb-1 block text-[11px] font-semibold text-surface-500 dark:text-slate-400">{label}</span>
-      <div className="rounded-xl border border-surface-200 bg-surface-50 px-3 py-2 text-[13px] font-semibold text-surface-900 dark:border-[#1e3160] dark:bg-[#0d1a3a] dark:text-white">{value || "—"}</div>
+      <div className="gl-sec px-3 py-2 text-[13px] font-semibold text-surface-900 dark:text-white">{value || "—"}</div>
     </div>
   );
 }
@@ -56,7 +56,7 @@ export default async function CustomerProfilePage({ searchParams }: { searchPara
             <Box label={L("pc_f_branch")} value={c.branch} /><Box label={L("pc_f_address")} value={c.address} />
             <Box label={L("pc_f_email")} value={c.email} /><Box label={L("pc_f_contact")} value={c.contact_person} />
           </div>
-          <form id="pc-change" action={requestChangeAction} className="mt-2 rounded-xl border border-surface-200 p-3 dark:border-[#1e3160]">
+          <form id="pc-change" action={requestChangeAction} className="gl-sec mt-2 p-3">
             <b className="mb-2 block text-[13px] text-surface-900 dark:text-white">✏ {L("pc_req_change")}</b>
             <div className="grid gap-x-3 sm:grid-cols-2">
               <Field label={L("pc_change_field")}>

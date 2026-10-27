@@ -45865,6 +45865,7 @@ export type Database = {
         Returns: {
           animals: number
           centre_litres: number
+          cost_basis: string
           cost_per_litre: number
           customer_name: string
           expense: number
@@ -45873,6 +45874,8 @@ export type Database = {
           full_name: string
           income: number
           litres: number
+          litres_centre: number
+          litres_home: number
           milking: number
           profit: number
           village: string

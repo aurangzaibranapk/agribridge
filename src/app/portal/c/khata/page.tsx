@@ -55,7 +55,7 @@ export default async function CustomerKhata({ searchParams }: { searchParams: Re
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap gap-1.5">
             {(["month", "last", "3m", "all"] as const).map((k) => (
-              <Link key={k} href={`/portal/c/khata?p=${k}`} className={`rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${pk === k ? "bg-indigo-100 text-indigo-900 dark:bg-[#1a2c58] dark:text-white" : "bg-surface-100 text-surface-600 dark:bg-[#0d1a3a] dark:text-slate-300"}`}>
+              <Link key={k} href={`/portal/c/khata?p=${k}`} className={`rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${pk === k ? "bg-gradient-to-r from-emerald-700 to-[#16356e] text-white" : "gl-act text-surface-600 dark:text-slate-200"}`}>
                 {L(`pc_p_${k === "3m" ? "3m" : k}` as TranslationKey)}
               </Link>
             ))}

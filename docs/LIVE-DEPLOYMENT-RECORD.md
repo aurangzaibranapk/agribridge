@@ -1,3 +1,11 @@
+## Pending — 27 October 2026: dairy cost/litre basis (714) + customer portal glass
+
+Branch `cursor/dairy-cost-portal-glass-c2d9`. Migration **714 not applied** on Testing or Live. Files only. Do not run until a verified backup is in chat, then Testing, then Live.
+
+- `714_dairy_cost_per_litre_basis.sql` — `fn_dairy_pnl_for` and `fn_admin_dairy_totals`. Cost/L = expense ÷ home yields when home > 0, otherwise centre litres. Does not add the two. New fields: `litres_home`, `litres_centre`, `cost_basis` (`home` | `centre` | null). `litres` stays home yield.
+- Rollback: `714_dairy_cost_per_litre_basis.rollback.sql` (back to 577/578: home yields only).
+- Customer portal glass is UI only (`/portal/c/*`, `/admin/customer-portal`). No schema.
+
 ## Done on Live — 26 October 2026: Pending approval escalation (713, was 698)
 
 Branch `cursor/pending-approval-escalation-e154` (PR #216). File renamed 698 → **713** because live already has `698_mobile_phase1`.

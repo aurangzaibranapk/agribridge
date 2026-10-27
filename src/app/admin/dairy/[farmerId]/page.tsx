@@ -41,11 +41,11 @@ export default async function AdminDairyFarmer({ params, searchParams }: { param
       </Hero>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <Kpi tone="sky" label={L("ad_k_animals")} value={String(d.animals.filter((a) => a.status !== "sold" && a.status !== "dead").length)} sub={`${d.animals.filter((a) => a.status === "milking").length} ${L("ad_milking")}`} />
-        <Kpi tone="teal" label={L("dy2_k_milk")} value={fmtL(S.litres)} sub={`${L("dy2_centre")} ${fmtL(S.income.centre_litres ?? 0)}`} />
+        <Kpi tone="teal" label={L("dy2_k_milk")} value={fmtL(S.cost_basis === "centre" ? S.litres_centre : S.litres_home)} sub={`${L("dy2_home")} ${fmtL(S.litres_home)} · ${L("dy2_centre")} ${fmtL(S.litres_centre)}`} />
         <Kpi tone="rose" label={L("dy2_expense")} value={rs(S.expense_total)} sub={`${cats.length} ${L("dy2_k_cats")}`} />
         <Kpi tone="green" label={L("dy2_income")} value={rs(S.income_total)} sub={L("dy2_k_income_sub")} />
         <Kpi tone="violet" label={L(S.profit >= 0 ? "dy2_k_profit" : "dy2_k_loss")} value={`${S.profit < 0 ? "-" : ""}${rs(Math.abs(S.profit))}`} sub={per.key} />
-        <Kpi tone="amber" label={L("dy2_k_cpl")} value={S.cost_per_litre === null ? "—" : `Rs ${Math.round(S.cost_per_litre)}`} sub={`${L("dy2_k_feed")} ${S.feed_per_animal === null ? "—" : rs(S.feed_per_animal)}`} />
+        <Kpi tone="amber" label={L("dy2_k_cpl")} value={S.cost_per_litre === null ? "—" : `Rs ${Math.round(S.cost_per_litre)}`} sub={`${L(S.cost_basis === "centre" ? "dy2_basis_centre" : S.cost_basis === "home" ? "dy2_basis_home" : S.cost_basis === "mixed" ? "dy2_basis_mixed" : "dy2_basis_none")} · ${L("dy2_k_feed")} ${S.feed_per_animal === null ? "—" : rs(S.feed_per_animal)}`} />
       </div>
       <div className="grid gap-4 lg:grid-cols-[1.45fr_1fr]">
         <Card><CardHead title={L("dy2_chart_title")} /><GroupBars height={220} groups={(six?.pnl ?? []).map((r) => ({ label: mon(r.period), a: r.income_total, b: r.expense_total }))} names={[L("dy2_income"), L("dy2_expense")]} /></Card>

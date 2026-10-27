@@ -105,6 +105,24 @@ test("cost per litre skips farmers/periods with zero milk records", () => {
   assert.equal(S.cost_per_litre, 30); assert.equal(S.expense_total, 26000);
   assert.equal(sumPnl(parsePnl([{ period: "2026-10-01", income: {}, income_total: 0, expense: {}, expense_total: 500, profit: -500, litres: 0, animals: 1 }])).cost_per_litre, null);
 });
+test("cost per litre basis: home if home yield, else centre, never summed", () => {
+  const centre = sumPnl(parsePnl([{ period: "2026-10-01", income: { centre_litres: 80 }, income_total: 0, expense: {}, expense_total: 4000, profit: -4000, litres: 0, litres_home: 0, litres_centre: 80, cost_basis: "centre", animals: 1 }]));
+  assert.equal(centre.cost_per_litre, 50); assert.equal(centre.cost_basis, "centre"); assert.equal(centre.cost_litres, 80);
+  const home = sumPnl(parsePnl([{ period: "2026-10-01", income: {}, income_total: 0, expense: {}, expense_total: 2000, profit: -2000, litres: 40, litres_home: 40, litres_centre: 0, cost_basis: "home", animals: 1 }]));
+  assert.equal(home.cost_per_litre, 50); assert.equal(home.cost_basis, "home"); assert.equal(home.litres_home, 40); assert.equal(home.litres_centre, 0);
+  const both = sumPnl(parsePnl([{ period: "2026-10-01", income: { centre_litres: 100 }, income_total: 0, expense: {}, expense_total: 3000, profit: -3000, litres: 20, litres_home: 20, litres_centre: 100, cost_basis: "home", animals: 1 }]));
+  assert.equal(both.cost_per_litre, 150); assert.equal(both.cost_basis, "home"); assert.equal(both.cost_litres, 20);
+  assert.notEqual(both.cost_per_litre, 25);
+  const rows = parseAdminRows([
+    { farmer_id: "h", litres: 20, centre_litres: 100, expense: 2000, litres_home: 20, litres_centre: 100, cost_basis: "home", cost_per_litre: 100 },
+    { farmer_id: "c", litres: 0, centre_litres: 50, expense: 2500, litres_home: 0, litres_centre: 50, cost_basis: "centre", cost_per_litre: 50 },
+    { farmer_id: "o", litres: 30, centre_litres: 0, expense: 1500, litres_home: 30, litres_centre: 0, cost_basis: "home", cost_per_litre: 50 },
+  ]);
+  const g = grandTotal(rows);
+  assert.equal(g.cost_per_litre, 60); // (2000+2500+1500)/(20+50+30) — centre-only shamil, dono jama nahi
+  assert.equal(g.milk_farmers, 3); assert.equal(g.cost_basis, "mixed");
+  assert.equal(rows.find((r) => r.farmer_id === "c")?.cost_basis, "centre");
+});
 test("photo limits and paths", () => {
   assert.ok(photoOk({ size: 500000, type: "image/webp" }));
   assert.ok(!photoOk({ size: PHOTO_MAX_BYTES + 1, type: "image/webp" }));
