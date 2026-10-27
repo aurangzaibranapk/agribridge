@@ -5,7 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
 import { ACC } from "@/lib/ledger/rules";
 import { cashBookLikhein } from "@/lib/ledger/cash-book";
-import { REASON_MIN } from "@/lib/ledger/handover";
+import { canRecordHandoverReceipt, REASON_MIN } from "@/lib/ledger/handover";
 import { requireAction } from "@/lib/access/guard";
 import { logAudit } from "@/lib/audit";
 import { notifyRoles, notifyUser } from "@/lib/notifications";
@@ -259,9 +259,14 @@ export async function carrierConfirm(_prev: ActionState, formData: FormData): Pr
 /**
  * Cash wusool karna.
  *
- * Sirf WOHI shakhs kar sakta hai jis ke naam bheja gaya. Bhejne wale ko
- * ye ijazat dena poore amal ko bekaar kar deta: wo apni marzi ka adad
- * dono taraf likh deta aur farq kabhi nahi nikalta.
+ * Bhejne wala kabhi khud wasool nahi likhta — warna wo dono taraf apni
+ * marzi ka adad likh de aur farq gayab ho jaye.
+ *
+ * Naam wale bande ke ilawa: agar cash Finance role (shared Finance Team
+ * ya kisi finance login) ke naam hai, to Finance, Manager, Admin ya
+ * Owner — jis ke paas receive ijazat ho — wasoli darj kar sakta hai.
+ * Ledger par raaste wala naam wahi rehta hai jis ke naam bheja gaya
+ * tha; `received_by` us shakhs ka hai jis ne haath se tasdeeq ki.
  */
 export async function receiveCash(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
@@ -281,6 +286,7 @@ export async function receiveCash(_prev: ActionState, formData: FormData): Promi
 
   const guard = await requireAction("cash-handover", "receive");
   if ("error" in guard) return { error: guard.error };
+  const { caller } = guard;
 
   const { data: h } = await service
     .from("cash_handovers")
@@ -291,10 +297,24 @@ export async function receiveCash(_prev: ActionState, formData: FormData): Promi
   if (!h) return { error: "Handover nahi mila." };
   if (h.status !== "sent") return { error: "Ye handover pehle hi mukammal ho chuka hai." };
 
-  if (h.to_profile_id !== user.id) {
+  if (h.from_profile_id === user.id) {
+    return { error: "Bhejne wala khud wusool nahi likh sakta. Jis ne cash liya hai, wahi tasdeeq kare." };
+  }
+
+  const { data: toProfile } = h.to_profile_id
+    ? await service.from("profiles").select("role").eq("id", h.to_profile_id).maybeSingle()
+    : { data: null };
+
+  if (!canRecordHandoverReceipt({
+    userId: user.id,
+    userRole: caller.role,
+    fromProfileId: h.from_profile_id,
+    toProfileId: h.to_profile_id,
+    toRole: toProfile?.role ?? null,
+  })) {
     return {
       error:
-        "Ye cash aap ke naam nahi bheja gaya. Wusooli sirf wohi shakhs darj kar sakta hai jis ke naam bheji gayi ho.",
+        "Ye cash aap ke naam nahi bheja gaya. Wusooli sirf wohi shakhs darj kar sakta hai jis ke naam bheji gayi ho — ya Finance ke naam ho to Manager / Finance.",
     };
   }
 

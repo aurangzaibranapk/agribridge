@@ -5,6 +5,7 @@ Branch `cursor/pos-close-cash-handover-slip-fc03`. **Koi migration nahi.** Testi
 - POS Shift Band par counted cash > 0 ho to Daily Cash Slip upar se form ko nahi dhakti.
 - Cash bhejte hi Cash Handover Slip isi screen par khulti hai (`?embed=1&print=1`).
 - Sales staff ke paas list (`/admin/cash-handover`) ki view ijazat nahi — slip ka raasta ab khulta hai. List phir bhi band.
+- Wasoli: Finance role ke naam bheja cash Manager / Finance / Admin / Owner darj kar sakte hain. Bhejne wala khud nahi. Koi migration nahi.
 
 ## Pending — 27 October 2026: self-merge Reject (715)
 

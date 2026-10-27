@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { redirect } from "next/navigation";
+import { canRecordHandoverReceipt } from "@/lib/ledger/handover";
 import { SlipClient } from "./slip-client";
 
 export const dynamic = "force-dynamic";
@@ -36,15 +37,6 @@ export default async function SlipPage({
     .eq("id", user.id)
     .maybeSingle();
 
-  const isAdmin = ["owner", "super_admin", "admin", "manager", "finance"].includes(me?.role ?? "");
-  const isSender = h.from_profile_id === user.id;
-  const isRecipient = h.to_profile_id === user.id;
-  const isCarrier = h.carrier_profile_id === user.id;
-
-  if (!isAdmin && !isSender && !isRecipient && !isCarrier) {
-    return <div className="p-8 text-center text-surface-400">Aap ko ye slip dekhne ki ijazat nahi.</div>;
-  }
-
   const profileIds = [h.from_profile_id, h.to_profile_id, h.received_by, h.carrier_profile_id, h.carrier_confirmed_by]
     .filter(Boolean) as string[];
   const { data: profileRows } = await service
@@ -53,6 +45,23 @@ export default async function SlipPage({
     .in("id", profileIds);
 
   const byId = new Map((profileRows ?? []).map((p) => [p.id, p]));
+
+  const isAdmin = ["owner", "super_admin", "admin", "manager", "finance"].includes(me?.role ?? "");
+  const isSender = h.from_profile_id === user.id;
+  const isNamedRecipient = h.to_profile_id === user.id;
+  const isCarrier = h.carrier_profile_id === user.id;
+  const recipientRole = h.to_profile_id ? (byId.get(h.to_profile_id)?.role ?? null) : null;
+  const canReceive = canRecordHandoverReceipt({
+    userId: user.id,
+    userRole: me?.role ?? "",
+    fromProfileId: h.from_profile_id,
+    toProfileId: h.to_profile_id,
+    toRole: recipientRole,
+  });
+
+  if (!isAdmin && !isSender && !isNamedRecipient && !isCarrier && !canReceive) {
+    return <div className="p-8 text-center text-surface-400">Aap ko ye slip dekhne ki ijazat nahi.</div>;
+  }
 
   // POS receipt jaisa header: Shop ka naam, Branch, POS counter aur shift.
   // Shift band kar ke bheja gaya cash pos_shifts.cash_handover_id se
@@ -119,7 +128,8 @@ export default async function SlipPage({
       }}
       autoPrint={searchParams?.print === "1"}
       embedded={searchParams?.embed === "1"}
-      isRecipient={isRecipient || isAdmin}
+      isRecipient={canReceive}
+      receivingForDesk={canReceive && !isNamedRecipient}
       isCarrier={isCarrier}
       viewerName={me?.full_name ?? ""}
     />

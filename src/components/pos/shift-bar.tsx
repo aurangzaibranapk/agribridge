@@ -217,6 +217,9 @@ export function ShiftCashHandoverForm({
             <p className="text-xs font-medium text-surface-600 dark:text-surface-400">
               Kis ko bhejein?
             </p>
+            <p className="text-[11px] text-surface-400">
+              Naam wala banda behtar hai. Shared Finance Team par bhejne se Manager ya Finance baad mein wasoli kar sakte hain.
+            </p>
             <select
               name="to_profile_id"
               required

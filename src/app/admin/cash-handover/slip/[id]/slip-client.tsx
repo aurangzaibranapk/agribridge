@@ -60,6 +60,7 @@ export function SlipClient({
   autoPrint = false,
   embedded = false,
   isRecipient,
+  receivingForDesk = false,
   isCarrier,
   viewerName,
 }: {
@@ -94,6 +95,8 @@ export function SlipClient({
   /** POS close ke popup iframe — admin shell chhupao, slip + tasdeeq dikhao. */
   embedded?: boolean;
   isRecipient: boolean;
+  /** Naam "Finance Team" hai, tasdeeq koi aur (Manager/Finance) kar raha hai. */
+  receivingForDesk?: boolean;
   isCarrier: boolean;
   viewerName: string;
 }) {
@@ -324,6 +327,11 @@ export function SlipClient({
       {isRecipient && isPending && !receiveState.success && (
         <div className="mt-6 print:hidden">
           <h2 className="mb-3 text-sm font-semibold text-surface-900 dark:text-white">Raqam tasdeeq karein (Finance)</h2>
+          {receivingForDesk && (
+            <p className="mb-3 text-xs text-surface-500">
+              Ye cash {handover.recipientName} ke naam bheja gaya tha. Aap wasoli darj kar sakte hain — aap ka naam record par lagega.
+            </p>
+          )}
           <form action={receiveAction} className="space-y-3 rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-surface-700 dark:bg-surface-900">
             <input type="hidden" name="handover_id" value={handover.id} />
             <label className="block">

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { pickTopBranch, paymentSplit } from "../src/lib/utils/daily-briefing-summary";
 import { pathAllowed } from "../src/lib/access/route-match";
+import { canRecordHandoverReceipt } from "../src/lib/ledger/handover";
 
 let n = 0;
 function test(name: string, fn: () => void) { fn(); n++; console.log(`ok  ${name}`); }
@@ -51,5 +52,25 @@ test("POS close shows Cash Handover Slip instead of covering it with the daily s
   assert.equal(pathAllowed(["/admin/cash-handover/slip"], "/admin/cash-handover/slip/91ad8099"), true);
   assert.equal(pathAllowed(["/admin/cash-handover/slip"], "/admin/cash-handover"), false);
   assert.equal(pathAllowed(["/admin/pos"], "/admin/cash-handover/slip/91ad8099"), false);
+});
+test("manager can record wasoli when cash was sent to a finance profile, sender cannot", () => {
+  const financeTeam = "c6834b12-0000-4000-8000-000000000001";
+  const manager = "aaaaaaaa-0000-4000-8000-000000000002";
+  const sender = "bbbbbbbb-0000-4000-8000-000000000003";
+  assert.equal(canRecordHandoverReceipt({
+    userId: manager, userRole: "manager", fromProfileId: sender, toProfileId: financeTeam, toRole: "finance",
+  }), true);
+  assert.equal(canRecordHandoverReceipt({
+    userId: sender, userRole: "manager", fromProfileId: sender, toProfileId: financeTeam, toRole: "finance",
+  }), false);
+  assert.equal(canRecordHandoverReceipt({
+    userId: manager, userRole: "manager", fromProfileId: sender, toProfileId: "other", toRole: "manager",
+  }), false);
+  assert.equal(canRecordHandoverReceipt({
+    userId: "sales", userRole: "sales_staff", fromProfileId: sender, toProfileId: financeTeam, toRole: "finance",
+  }), false);
+  assert.equal(canRecordHandoverReceipt({
+    userId: financeTeam, userRole: "finance", fromProfileId: sender, toProfileId: financeTeam, toRole: "finance",
+  }), true);
 });
 console.log(`\n${n} tests passed`);
