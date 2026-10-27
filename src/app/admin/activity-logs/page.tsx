@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState } from "@/components/ui/layout-primitives";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { formatAuditChangeLines } from "@/lib/access/login-place";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +76,17 @@ export default async function ActivityLogsPage({
                   </td>
                   <td className="px-4 py-3"><span className={`rounded-full px-2 py-0.5 text-xs font-medium ${actionColor(l.action_type)}`}>{l.action_type}</span></td>
                   <td className="px-4 py-3 text-surface-600 dark:text-surface-300">{l.module}</td>
-                  <td className="px-4 py-3 text-surface-600 dark:text-surface-300">{l.record_label ?? l.description ?? "-"}</td>
+                  <td className="px-4 py-3 text-surface-600 dark:text-surface-300">
+                    <p>{l.record_label ?? l.description ?? "-"}</p>
+                    {l.record_label && l.description ? (
+                      <p className="mt-0.5 text-xs leading-relaxed text-surface-500">{l.description}</p>
+                    ) : null}
+                    {formatAuditChangeLines(l.changes)
+                      .filter((line) => !l.description?.includes(line))
+                      .map((line) => (
+                        <p key={line} className="mt-0.5 text-xs leading-relaxed text-surface-500">{line}</p>
+                      ))}
+                  </td>
                   <td className="px-4 py-3 text-right text-xs text-surface-400 dark:text-surface-500">{new Date(l.created_at).toLocaleString()}</td>
                 </tr>
               ))}
