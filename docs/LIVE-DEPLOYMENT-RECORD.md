@@ -1,3 +1,139 @@
+## Phone live APK — 27 October 2026 — app only, Live SQL nahi
+
+Live sideload versionCode 630. Package `pk.alranatraders.agribridge`. Tag `v0.6.1-beta-test1`. Supabase `ktskwawkslaznkjjacni`. `APP_CHANNEL=production`: Masla, Role dekho, aur Role badlo band. TEST APK `pk.alranatraders.agribridge.test` alag rehti hai. Play TWA versionCode 1 tha, installed sideload 605 tha, is liye 630 usi package par upgrade hai. 698 pehle se Live par hai. 700 se 711 tak testing data aur test function patches hain — Live par nahi chalani. `app_phone_notes` Live par na ho to phone dash dikhata hai, crash nahi. Koi nayi Live SQL is build ke liye zaroori nahi. Backup maange baghair Live database par kuch nahi chala.
+
+## Phone glass homes — 27 October 2026 — app only
+
+versionCode 630. Approved glass chrome: ek gold line par product, tagline, role, phir Assalam o Alaikum. Jhoota MISAAL number nahi — khali card par dash, asal TEST record par asal adad. Litre grouping, order date 18 Oct jaisa, rupee en-IN grouping, task Jari jab record kehta hai, vet pending row par janwar aur dawai. Tank °C aur staff shift sirf jab note ya schedule ho. Dealer hazar axis aur unit note se. Koi migration nahi. Live database par kuch nahi. Live workflow 605 par hai.
+
+versionCode 629. Header ab do gold lines: product naam, phir tagline aur role, phir Assalam o Alaikum. Tank card par temperature line, number ho to °C, na ho to dash. Count badge sirf jab pichli ginti alag ho. Vet row par naam, gaon, waqt, Urgent, Day n/m jab record par hon. Staff duty par schedule ka shift window jab hr_work_schedules parhe. Dealer bar hazar mein, stock unit note se. Kisan wallet tab se purana gold wallet hata. Koi naya number nahi. Koi migration nahi. Live database par kuch nahi. Live workflow 605 par hai.
+
+versionCode 628. Owner ne final glass home mockups manzoor kiye. Header do line: tagline aur role, phir Assalam o Alaikum. Mausam card bara, sirf Kisan, Customer, MCA, Vet. Goal card home se hata. Tracking card home par nahi: Kisan wallet, Admin approvals, Customer orders. Customer home par Order status. Login card par User ID nahi, andar scroll nahi. Brand AgriBridge, tagline Kisan ka Wasela. Koi migration nahi. Live database par kuch nahi. Live workflow 605 par hai.
+
+## Phone version line — 26 October 2026 — app only
+
+versionCode 627. Home footer `AgriBridge · v0.6.1 Beta · …` web par Metro ke cache hue manifest se 625 par atka tha. Web ab source ka phone code dikhata hai. Android APK apna embedded versionCode dikhata hai. Live workflow 605 par hai. Koi migration nahi. Live database par kuch nahi.
+
+## Phone dealer and vet — 26 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 626. Dealer test list ab sirf Agri Dealer / Kisan Dukan hai, is mahine ki ginti Karachi mahine se, badge order count se. `711_app_phone_dealer_vet.sql` testing par: is_test dealer orders ko is mahine ~38 aur pichle mahine ~34 par rakhti hai, kam hon to TEST-711 qatarein. Vet ki test visits jin ka next due khali hai, 7 din aage, taake Pending cases dikhein. Live par mat chalana. Rollback created_at wapas aur TEST-711 hataata hai.
+
+## Phone polish — 26 October 2026 — app only
+
+versionCode 625. Badge tab chhupti hai jab farq 0 ho, 90% ya us se bara ho, ya 300% se aage ho. Customer home se "Doosre orders" list hata di. Mockup mein sirf mahine ka chart aur ek order ki timeline hai. Koi nayi migration nahi. Live database par kuch nahi.
+
+## Phone milk today — 26 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 624. App code nahi badla. Test milk_entries ~22 October par atki thin, phone ka aaj 26 October hai, is liye Kisan / MCA / MCO / Admin ki aaj ki doodh cards 0 L thin. `710_app_phone_milk_today.sql` sirf testing: is_test subah, shaam, test kisan, aur route collection_date ko Asia/Karachi ke aaj par sarkati hai. Litre, rate, fat, status wahi rehte hain. Dobara chalane par sirf naya farq. Rollback notes se utne din wapas kaat ta hai. Live par mat chalana. Boss testing par chalayen, phir wahi 624 APK se dobara dekhein.
+
+## Phone sales fix, no replica role — 26 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 624. Role home par greeting ke upar chhoti AgriBridge / Kisan ka Wasela line nahi. Login par brand stack waisi hai. Vet par "7 din ke visits" chart pehle hi hata hua hai. `709_app_phone_sales_fix.sql` dubara likhi gayi: `session_replication_role` nahi. `post_pos_source` aur `fn_staff_sales_reward_on_sale` TEST-709 receipt par seedha laut te hain. Payment row nahi banti. Journal ho to migration rukti hai, delete nahi. Testing par Boss chalayen. Live par mat chalana. Rollback function wapas purani body par laata hai. Pichli 709 Testing par 42501 se poori roll back ho chuki hai.
+
+## Phone sales fix — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 623. 708 ne is_test bills ko din 1–12 par rakh diya tha, is liye 22 October ki Total sales Rs 0 / 0 bill thi aur ring ~6% reh gayi. App ki Total sales card aaj ki hai; query nahi badli. Badge 0% aur 300% se upar chhup jati hai. Admin par alag TEST label nahi. Vet par 7 din ka chart nahi, aaj ki ~3 visits. Customer tracking beech ka step (dispatched, ~50%). `709_app_phone_sales_fix.sql` testing par Boss chalayen: zyada se zyada 17 counted bills aaj par, is mahine ~2.6 lakh (TEST-709 receipts, ledger trigger band), pichle mahine alag, Farmer order dispatched, aaj ke 3 ilaj. Live par mat chalana. Rollback file saath hai. 708 Boss testing par laga chuke hain.
+
+## Phone role home fix — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 622. Header ek compact line: centre aur role, Assalam o Alaikum, gol photo. AgriBridge aur Kisan ka Wasela chhote. Mausam card chhota. Sifar ya khali pichli value par badge nahi. 300% se aage 300%+. Staff ki doosri line alag row, kat-ti nahi. Admin revenue 6 mahine. Donut 4 qismen jab notes hon. Dealer bar par 1.6L / Rs, stock par product naam. Vet par visit ka naam aur 7 din ki line. `708_app_phone_role_fix.sql` testing par Boss chalayen: demo naam, MCA fat/status (6 pending rehti hain), centre, (TEST) hatao, aaj ke ilaj, bills 6 mahine. Live par mat chalana. Rollback file saath hai. 707 Boss testing par laga chuke hain.
+
+## Phone glass home and TEST seed — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 621. Starry glass, compact header, greeting drops the word TEST, weather keeps the asked place (Chak 157 NB) plus a condition icon. Every number card has an icon, a line, and a change badge. Admin par chhoti TEST nishani aur "Is mahina munafa". Customer aur dealer charts 6 mahine. Khata ka minus Credit dikhta hai. `707_app_phone_home.sql` testing par: tanks, maund, dealer stock, staff advance/tasks, goal numbers sirf jahan null, centre names, vet next_due aaj, 8 janwar, orders 6 mahine. Live par mat chalana. Rollback file saath hai.
+
+## Phone KPI grid and weather — 22 October 2026
+
+versionCode 620. KPI card ki chaudai flex item par 48% hai, is liye 2x2 grid rehti hai. Mausam Open-Meteo se: apna gaon, warna TEST kisan ka asal gaon (district "TEST" shehar nahi). Pakistan wali geocode. Aakhri kamiyab reading cache. Live APK nahi badli. 705 aur 706 file only.
+
+## Phone tagline lockup — 22 October 2026
+
+versionCode 619. English aur Roman: AgriBridge, seedha neeche Kisan ka Wasela. Urdu: ایگری بریج, seedha neeche کسان کا وسیلہ. English gloss nahi. Default app mein hai, 706 baad mein roman/urdu badal sakti hai. Live par 706 nahi. Live APK nahi badli.
+
+## Phone identity — 22 October 2026 — NO NEW SQL
+
+versionCode 618. Phone par sirf AgriBridge aur tagline. Login aur header koi company naam ya logo nahi likhte, chahe settings mein ho. Website wala naam sirf domain `alranatraders.pk` aur package id mein hai. 705 aur 706 ab bhi file only, live par nahi. Live APK nahi badli.
+
+## Phone brand label — 22 October 2026 — FILE ONLY
+
+versionCode 617. Phone par sirf AgriBridge aur tagline. Website wala naam app ki seed aur screen par nahi. `app_brands` khali rehti hai jab tak koi doosri brand settings mein na ho. Package id aur domain nahi badle. 705 aur 706 ab bhi file only, live par nahi.
+
+## Phone tagline — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 616. AgriBridge ke neeche tagline: Roman `Kisan ka Wasela`, Urdu `کسان کا وسیلہ`, English `The farmer's bridge`. `website_settings` key `app_tagline`. Migration **706 not applied** by this agent. Owner testing par: `supabase/migrations/706_app_tagline.sql`. Live par 706 nahi. Key na ho to tagline nahi, koi likha hua jumla nahi. 705 ab bhi file only.
+
+## Phone sub-brand — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 615. AgriBridge umbrella code mein hai. Chhota brand naam aur logo `website_settings` key `app_brands` se. Migration **705 not applied** by this agent. Owner testing par: `supabase/migrations/705_app_sub_brand.sql`. Live par 705 nahi. Key na ho to sirf AgriBridge, koi banaya hua naam nahi. Logo tab jab https URL ho.
+
+## Phone brand — 22 October 2026 — NO NEW SQL
+
+versionCode 614. Home brand AgriBridge hai. Neeche chhota `by Al Rana Traders`. Wasela Eco Mahabali home brand nahi. Baqi approved cards waise hi. Live APK nahi badli. 704 ab bhi file only.
+
+## Phone goal card — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 613. Goal card on Kisan (mahine ke litre), MCA aur MCO (aaj ki collection), Staff (mahine ki hazri), Admin home (mahine ki sale). Ring 0 se count karti hai jab target number ho. Target na ho to dash, sifar nahi. Migration **704 not applied** by this agent. Owner testing par: `supabase/migrations/704_app_goal_targets.sql`. Live par 704 nahi. Row insert hoti hai, chaaron numbers NULL rehte hain jab tak owner khud set na kare. Koi sample target nahi. Live APK nahi badli.
+
+## Phone ring meter — 22 October 2026 — NO NEW SQL
+
+versionCode 612. Kisan home: mahine ka target ring (target record nahi, beech mein dash, litres asal). MCO home: chiller ring (tank level track nahi, beech mein dash) aur purane tank bars. Koi nayi migration nahi. Live APK nahi badli.
+
+## Phone homes read TEST data — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 611, tag `v0.6.1-beta-testdb`. Home cards TEST qatarein parhti hain: bills, stock, cash, tankhwah, activity, admin ki TEST manzooriyan. Kisan sirf apna doodh. Migration **703 not applied** by this agent. Owner testing par: `supabase/migrations/703_app_test_read_policies.sql`. Live par 703 nahi. Seed ka mass `is_test = true` is file mein nahi. Live APK nahi badli.
+
+## Phone homes — 22 October 2026 — NO NEW SQL
+
+versionCode 610, tag `v0.6.1-beta-testdb`. Wasela Eco Mahabali dark glass homes for 8 roles. Live tracking card: Customer order (Orders tab), Kisan doodh (Wallet tab), Admin manzoori (Approve tab). Numbers database se. Koi nayi migration nahi. Live APK nahi badli.
+
+## Phone Phase C — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 609, tag `v0.6.1-beta-testdb`. Customer draft karyana, Staff check-in (`source = app`), Vet ilaj, Dealer orders/HQ khata, Profile (optional User ID, settings, PIN note, notifications). Migration **702 not applied** by this agent. Owner testing par: `supabase/migrations/702_app_test_phase_c.sql`. Live par 702 nahi. Live APK tag replace nahi hoti. Tankhwah aur advance jaan kar khali hain.
+
+## Phone Phase B — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 608, tag `v0.6.1-beta-testdb`. MCO check (fat/LR, rate settings se), subah/shaam, din/hafta/mahina, kisan alerts aur trend. Admin Manzoor priced TEST doodh par. Migration **701 not applied** by this agent. Owner testing par: `supabase/migrations/701_app_test_mco_admin.sql`. Live par 701 nahi. Live APK tag replace nahi hoti.
+
+## Phone Phase A — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 607, tag `v0.6.1-beta-testdb`. Kisan screens (wallet, doodh, khata, vet, karyana) aur MCA pickup. Migration **700 not applied** by this agent. Owner testing par khud lagaye: `supabase/migrations/700_app_test_milk_write.sql`, phir `scripts/seed-app-test-account.sql` dobara. Live database par 700 nahi. Live APK tag `v0.6.1-beta-test1` replace nahi hoti.
+
+## Phone TEST flavor — 22 October 2026 — NO SQL FROM THIS COMMIT
+
+Owner ka faisla: mobile testing testing project `hwaiuwxqldxsoukkfefn` par. Alag APK `AgriBridge TEST`, package `pk.alranatraders.agribridge.test`, tag `v0.6.1-beta-testdb`, versionCode 606. Live APK tag `v0.6.1-beta-test1` is commit se replace nahi hoti. Is commit ne testing ya live par koi SQL nahi chalayi. 699 aur seed owner testing par khud laga rahe hain. Live database par 699 tab tak nahi jab tak owner alag se na kahein.
+
+## Pending — 22 October 2026: App test account (699)
+
+Branch `cursor/mobile-phase1-4b80`. Is agent ne migration apply nahi ki. Auth user `app-test@alranatraders.pk` owner ne testing par bana liya hai. 699 aur seed owner testing par alag se laga rahe hain. Live par 699 nahi.
+
+- `supabase/migrations/699_app_test_account.sql` — `profiles.is_test_account`, `is_test` columns, `app_test_accounts` / `app_test_links`, sirf SELECT policies. Koi likhai policy nahi.
+- `scripts/seed-app-test-account.sql` — tab chale jab Auth mein `app-test@alranatraders.pk` ban chuka ho. Password SQL mein nahi.
+- Seed aaj ka TEST doodh daalti hai (subah 12.5 L, shaam 8 L, `pending_fat`, notes `TEST milk`). Mobile admin `is_test = false` se chhupata hai. Portal ka doodh total in litres ko tab tak jod sakta hai jab tak report `is_test = false` na lagaye. Tankhwah aur advance jaan kar nahi daale, taake qist na bane. `pos_sales` aur cash/bank ko test account nahi parhta.
+- Rollback: `699_app_test_account.rollback.sql` (TEST rows pehle delete).
+
+## Applied — 22 October 2026 ~00:10 PKT: Mobile phase 1 (698) on Live
+
+Branch `cursor/mobile-phase1-4b80`, commit `caa6b91d`. Migration **698 applied** on Live `ktskwawkslaznkjjacni` on 2026-10-22 at ~00:10 PKT. Testing par is dafe ka alag record nahi. Portal build abhi is PR ke sath deploy nahi hui.
+
+Phase 2 screens (admin, farmer, customer, staff) bhi isi live database ko user JWT aur maujooda RLS se parhti hain. Nayi migration ya naya portal route in screens ke liye zaroori nahi. Likhai nahi hoti.
+
+Email login is APK se live Supabase password grant par chal sakta hai, portal route ke baghair. Mobile, CNIC, sync, feedback, milk, attendance, aur support chat ke liye is PR ka portal build chahiye: `POST /api/mobile/v1/session`, `POST /api/mobile/v1/sync`, `POST /api/mobile/v1/feedback`, `GET /api/mobile/v1/support`, aur bearer auth wale `/api/farmer-ai` aur `/api/bridge-ai`. Ye build abhi upload nahi hui. Command tab bhejni hai jab Boss system par hon.
+
+Backups `backups` schema mein hain, suffix `_20261022_mig698`: `staff_details`, `milk_rate_settings`, `attendance_records`, `support_tickets`, `support_ticket_attachments`, `milk_route_collections`, `storage_buckets`, aur constraints.
+
+Rollback: `698_mobile_phase1.rollback.sql`. Us se pehle `attendance_records` ki woh qatarein delete karni hain jin ka `source = 'app'` hai, warna purana check nahi baithta.
+
+- staff_details.field_app_role: null, mca, ya mco
+- milk_rate_settings: fat/lr/snf alert columns, nullable, koi sample default nahi
+- attendance source check: live ki saat qismein rehti hain (web, pwa, whatsapp, biometric, correction, offline, leave) aur `app` izafa. Rollback wahi live array wapas rakhta hai.
+- support_tickets intake: `mobile_app`
+- support evidence mime: voice types
+- milk_route_collections.client_uuid
+- mobile_sync_inbox (service role likhta hai; authenticated sirf apni row padhta hai)
+- Rollback: `698_mobile_phase1.rollback.sql` (nayi qadron wali rows hon to purana check wapas nahi lagega)
+
+WhatsApp number code mein nahi. Live par link tabhi dikhe jab `SUPPORT_WHATSAPP_E164` ya `website_settings.support_whatsapp` ya `contact_phone` set ho.
+
 ## Pending — 27 October 2026: self-merge Reject (715)
 
 Branch `cursor/reject-self-product-merge-ae81`. Migration **715 not applied** on Testing or Live. File only. Number 714 PR #220 (`714_dairy_cost_per_litre_basis`) ke paas hai. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
@@ -58,7 +194,6 @@ Branch `cursor/careers-apply-modal-i18n-552c` (PR #213). Live `ktskwawkslaznkjja
 - Columns: `title_en`, `title_ur`, `title_roman`, `description_en`, `description_ur`, `description_roman`, plus optional `brand`, `brand_en`, `brand_ur`, `brand_roman`. Empty brand means no public tag. RLS unchanged.
 - Merged to `main` as `f22757b12a9ca6a88d20ae08fbad2428a8dc8237` (PR #213, normal merge). CI on that commit: AgriBridge Build Check and Build AgriBridge cPanel Package both succeeded.
 - cPanel package from that commit: `agribridge-cpanel-release.tar.gz` (191,787,268 bytes). SHA256 `f3761bfb8d9f12a614dc313cf1f50d8e6e92721d19608e951abf5611006d3326`. `.next` BUILD_ID `Jqfn_IvJI8XREv-mwPfs5`. Actions run 39755713629. The archive includes `.next`, `public`, `package.json`, `package-lock.json`, `next.config.js`, `server.js`, and `node_modules`.
-
 ## Pending — 21 October 2026: Bharti offer → structure → barhotri → salary slip (691)
 
 Branch `feat/salary-offer-slip`. Migration **691 not applied** on Testing or Live. Files only. 689 reserved, 690 left free. Backup pehle (lines file ke upar likhi hain), phir Testing, phir Live. App 691 ke baghair bhi chalta hai (purani payslip, purani offer), magar naye hissay 691 ke baad hi kaam karte hain.

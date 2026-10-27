@@ -1,0 +1,872 @@
+/**
+ * Phone par live data: user ka JWT + maujooda RLS / RPC.
+ * Naya portal route zaroori nahi. Khali RLS jawab ko Rs 0 nahi likhte.
+ */
+
+import { monthBuckets } from "./glass-metrics";
+import { acceptedSupabaseUrl, dataFlavor, clipDetail, failureLine, type DataFlavor, type FetchLike, type MobileChannel } from "./live-login";
+import { jwtExpired, SESSION_EXPIRED, type RefreshFailure, type RefreshSuccess } from "./session-refresh";
+
+export type LiveAuth = {
+  url: string;
+  anonKey: string;
+  token: string;
+  channel: MobileChannel;
+  /** Test flavor sirf testing host. Khali ya live flavor sirf live host. */
+  flavor?: DataFlavor;
+  /** Test account sirf is_test qatarein parhta hai. Asal admin inhen chhupata hai. */
+  testAccount?: boolean;
+  /** 401 JWT expired par ek dafa. Naya token, ya dead/offline. */
+  refreshSession?: () => Promise<RefreshSuccess | RefreshFailure>;
+  userId?: string | null;
+};
+
+export type ReadScope = "live" | "test";
+
+export type ReadResult<T> =
+  | { ok: true; rows: T[] }
+  | { ok: false; status: number; message: string; detail?: string };
+
+const SALES_LIMIT = 2000;
+const ITEM_LIMIT = 800;
+const STOCK_LIMIT = 2000;
+
+export function karachiDate(now = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Karachi", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}
+
+export function karachiDaySeries(days: number, now = new Date()): string[] {
+  const [year, month, day] = karachiDate(now).split("-").map(Number);
+  const start = new Date(Date.UTC(year, month - 1, day));
+  const out: string[] = [];
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const next = new Date(start);
+    next.setUTCDate(start.getUTCDate() - i);
+    out.push(next.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+export function karachiStartIso(day: string): string {
+  return `${day}T00:00:00+05:00`;
+}
+
+/** Bill ki mahine ki key, Karachi. UTC string seedha kaatne se mahina nahi badalta. */
+export function saleMonthKey(created: string | null | undefined): string {
+  const raw = String(created || "");
+  if (!raw) return "";
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return raw.slice(0, 7);
+  return karachiDate(date).slice(0, 7);
+}
+
+export function rupees(value: number | null | undefined): string {
+  if (value == null || Number.isNaN(value)) return "—";
+  return `Rs ${Math.round(value).toLocaleString("en-PK")}`;
+}
+
+export function readError(status: number, body: string, channel: MobileChannel): string {
+  const denied = status === 401 || status === 403 || /42501|permission denied|row-level security/i.test(body);
+  return failureLine({
+    channel,
+    fallback: denied ? "Is hisaab ki ijazat nahi." : "Ye fehrist nahi khuli.",
+    status: status || null,
+    detail: body,
+  });
+}
+
+function parseArray(text: string): unknown[] | null {
+  try {
+    const value = JSON.parse(text) as unknown;
+    return Array.isArray(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+async function refreshOnce(auth: LiveAuth): Promise<string | "dead" | "skip"> {
+  if (!auth.refreshSession) return "skip";
+  const outcome = await auth.refreshSession();
+  if (outcome.ok) return outcome.accessToken;
+  return outcome.dead ? "dead" : "skip";
+}
+
+export async function liveGet<T>(auth: LiveAuth, path: string, fetchImpl: FetchLike): Promise<ReadResult<T>> {
+  const first = await liveGetOnce<T>(auth, auth.token, path, fetchImpl);
+  if (first.ok || !jwtExpired(first.status, first.detail)) return first;
+  const next = await refreshOnce(auth);
+  if (next === "dead") return { ok: false, status: 401, message: SESSION_EXPIRED };
+  if (next === "skip") return first;
+  return liveGetOnce<T>(auth, next, path, fetchImpl);
+}
+
+async function liveGetOnce<T>(auth: LiveAuth, token: string, path: string, fetchImpl: FetchLike): Promise<ReadResult<T>> {
+  const base = acceptedSupabaseUrl(auth.url, dataFlavor(auth.flavor));
+  if (!base || !auth.anonKey.trim() || !token.trim()) {
+    return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Live read is build mein set nahi." }) };
+  }
+  try {
+    const res = await fetchImpl(`${base}/rest/v1/${path}`, {
+      method: "GET",
+      headers: {
+        apikey: auth.anonKey,
+        authorization: `Bearer ${token}`,
+        accept: "application/json",
+      },
+    });
+    const text = await res.text();
+    if (res.status >= 400) return { ok: false, status: res.status, message: readError(res.status, text, auth.channel), detail: text };
+    const rows = parseArray(text);
+    if (!rows) return { ok: false, status: res.status, message: readError(res.status, text || "JSON nahi", auth.channel) };
+    return { ok: true, rows: rows as T[] };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      message: failureLine({
+        channel: auth.channel,
+        fallback: "Network nahi mila.",
+        detail: err instanceof Error ? err.message : "fetch failed",
+      }),
+    };
+  }
+}
+
+export async function liveInsert<T>(auth: LiveAuth, table: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<ReadResult<T>> {
+  const first = await liveInsertOnce<T>(auth, auth.token, table, body, fetchImpl);
+  if (first.ok || !jwtExpired(first.status, first.detail)) return first;
+  const next = await refreshOnce(auth);
+  if (next === "dead") return { ok: false, status: 401, message: SESSION_EXPIRED };
+  if (next === "skip") return first;
+  return liveInsertOnce<T>(auth, next, table, body, fetchImpl);
+}
+
+async function liveInsertOnce<T>(auth: LiveAuth, token: string, table: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<ReadResult<T>> {
+  const base = acceptedSupabaseUrl(auth.url, dataFlavor(auth.flavor));
+  if (!base || !auth.anonKey.trim() || !token.trim()) {
+    return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Live read is build mein set nahi." }) };
+  }
+  if (!/^[a-z_][a-z0-9_]*$/.test(table)) {
+    return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Ye fehrist nahi khuli." }) };
+  }
+  try {
+    const res = await fetchImpl(`${base}/rest/v1/${table}`, {
+      method: "POST",
+      headers: {
+        apikey: auth.anonKey,
+        authorization: `Bearer ${token}`,
+        accept: "application/json",
+        "content-type": "application/json",
+        prefer: "return=representation",
+      },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    if (res.status >= 400) return { ok: false, status: res.status, message: readError(res.status, text, auth.channel), detail: text };
+    const rows = parseArray(text);
+    if (!rows) return { ok: false, status: res.status, message: readError(res.status, text || "JSON nahi", auth.channel) };
+    return { ok: true, rows: rows as T[] };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      message: failureLine({
+        channel: auth.channel,
+        fallback: "Network nahi mila.",
+        detail: err instanceof Error ? err.message : "fetch failed",
+      }),
+    };
+  }
+}
+
+const ROW_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function livePatch<T>(auth: LiveAuth, table: string, id: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<ReadResult<T>> {
+  const first = await livePatchOnce<T>(auth, auth.token, table, id, body, fetchImpl);
+  if (first.ok || !jwtExpired(first.status, first.detail)) return first;
+  const next = await refreshOnce(auth);
+  if (next === "dead") return { ok: false, status: 401, message: SESSION_EXPIRED };
+  if (next === "skip") return first;
+  return livePatchOnce<T>(auth, next, table, id, body, fetchImpl);
+}
+
+async function livePatchOnce<T>(auth: LiveAuth, token: string, table: string, id: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<ReadResult<T>> {
+  const base = acceptedSupabaseUrl(auth.url, dataFlavor(auth.flavor));
+  if (!base || !auth.anonKey.trim() || !token.trim()) {
+    return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Live read is build mein set nahi." }) };
+  }
+  if (!/^[a-z_][a-z0-9_]*$/.test(table) || !ROW_ID.test(id)) {
+    return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Ye fehrist nahi khuli." }) };
+  }
+  try {
+    const res = await fetchImpl(`${base}/rest/v1/${table}?id=eq.${id}`, {
+      method: "PATCH",
+      headers: {
+        apikey: auth.anonKey,
+        authorization: `Bearer ${token}`,
+        accept: "application/json",
+        "content-type": "application/json",
+        prefer: "return=representation",
+      },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    if (res.status >= 400) return { ok: false, status: res.status, message: readError(res.status, text, auth.channel), detail: text };
+    const rows = parseArray(text);
+    if (!rows) return { ok: false, status: res.status, message: readError(res.status, text || "JSON nahi", auth.channel) };
+    return { ok: true, rows: rows as T[] };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      message: failureLine({
+        channel: auth.channel,
+        fallback: "Network nahi mila.",
+        detail: err instanceof Error ? err.message : "fetch failed",
+      }),
+    };
+  }
+}
+
+export async function liveRpc<T>(auth: LiveAuth, name: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<{ ok: true; data: T } | { ok: false; status: number; message: string; detail?: string }> {
+  const first = await liveRpcOnce<T>(auth, auth.token, name, body, fetchImpl);
+  if (first.ok || !jwtExpired(first.status, first.detail)) return first;
+  const next = await refreshOnce(auth);
+  if (next === "dead") return { ok: false, status: 401, message: SESSION_EXPIRED };
+  if (next === "skip") return first;
+  return liveRpcOnce<T>(auth, next, name, body, fetchImpl);
+}
+
+async function liveRpcOnce<T>(auth: LiveAuth, token: string, name: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<{ ok: true; data: T } | { ok: false; status: number; message: string; detail?: string }> {
+  const base = acceptedSupabaseUrl(auth.url, dataFlavor(auth.flavor));
+  if (!base || !auth.anonKey.trim() || !token.trim()) {
+    return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Live read is build mein set nahi." }) };
+  }
+  try {
+    const res = await fetchImpl(`${base}/rest/v1/rpc/${name}`, {
+      method: "POST",
+      headers: {
+        apikey: auth.anonKey,
+        authorization: `Bearer ${token}`,
+        accept: "application/json",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    if (res.status >= 400) return { ok: false, status: res.status, message: readError(res.status, text, auth.channel), detail: text };
+    try {
+      return { ok: true, data: JSON.parse(text) as T };
+    } catch {
+      return { ok: false, status: res.status, message: readError(res.status, text || "JSON nahi", auth.channel) };
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      message: failureLine({
+        channel: auth.channel,
+        fallback: "Network nahi mila.",
+        detail: err instanceof Error ? err.message : "fetch failed",
+      }),
+    };
+  }
+}
+
+export function scopeFor(auth: LiveAuth): ReadScope {
+  return auth.testAccount ? "test" : "live";
+}
+
+export function withScope(path: string, scope: ReadScope): string {
+  const filter = scope === "test" ? "is_test=eq.true" : "is_test=eq.false";
+  return path.includes("?") ? `${path}&${filter}` : `${path}?${filter}`;
+}
+
+/** PostgREST tab ye kehta hai jab migration 699 abhi lagi nahi. */
+export function columnMissing(detail: string | undefined, column: string): boolean {
+  const body = detail ?? "";
+  return body.includes(column) && /does not exist|schema cache|42703|PGRST204/i.test(body);
+}
+
+export async function liveGetScoped<T>(auth: LiveAuth, path: string, fetchImpl: FetchLike, scope = scopeFor(auth)): Promise<ReadResult<T>> {
+  const filtered = await liveGet<T>(auth, withScope(path, scope), fetchImpl);
+  if (filtered.ok || scope === "test" || !columnMissing(filtered.detail, "is_test")) return filtered;
+  return liveGet<T>(auth, path, fetchImpl);
+}
+
+export type SaleRow = { total_amount?: number | string | null; created_at?: string | null; status?: string | null; payment_mode?: string | null };
+export type MilkRow = {
+  id?: string;
+  shift?: string | null;
+  quantity_liters?: number | string | null;
+  field_collected_volume?: number | string | null;
+  entry_date?: string | null;
+  collection_date?: string | null;
+  fat_percentage?: number | string | null;
+  snf_percentage?: number | string | null;
+  lr?: number | string | null;
+  rate_per_liter?: number | string | null;
+  total_amount?: number | string | null;
+  route_name?: string | null;
+  chiller_name?: string | null;
+  status?: string | null;
+  mca_profile_id?: string | null;
+  farmer_id?: string | null;
+  created_by?: string | null;
+  collected_at?: string | null;
+  fat_at?: string | null;
+  verified_at?: string | null;
+};
+export type MilkSettingsRow = {
+  standard_rate?: number | string | null;
+  self_dropoff_incentive?: number | string | null;
+  snf_constant?: number | string | null;
+  reference_ts?: number | string | null;
+};
+export type HealthRow = {
+  id?: string;
+  farmer_id?: string | null;
+  animal_id?: string | null;
+  kind?: string | null;
+  diagnosis?: string | null;
+  medicine?: string | null;
+  dose?: string | null;
+  event_date?: string | null;
+  last_dose_date?: string | null;
+  withdrawal_days?: number | null;
+  vet_name?: string | null;
+  vaccine_code?: string | null;
+  next_due?: string | null;
+  notes?: string | null;
+  voided?: boolean | null;
+  created_at?: string | null;
+};
+export type VaccineRow = { code?: string | null; name_rm?: string | null };
+export type AccountRow = { account_type?: string | null; current_balance?: number | string | null; is_active?: boolean | null };
+export type ProductRow = { id?: string; name?: string | null; category_id?: string | null; min_stock_threshold?: number | string | null; selling_price?: number | string | null; unit?: string | null; is_available?: boolean | null };
+export type InventoryRow = { product_id?: string | null; quantity_on_hand?: number | string | null };
+export type CategoryRow = { id?: string; name?: string | null };
+export type ItemRow = { subtotal?: number | string | null; product_id?: string | null; created_at?: string | null };
+
+function num(value: number | string | null | undefined): number {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function dayOf(iso: string | null | undefined): string {
+  if (!iso) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso.slice(0, 10);
+  return karachiDate(date);
+}
+
+function countedSale(row: SaleRow): boolean {
+  const status = String(row.status ?? "").toLowerCase();
+  return status !== "void" && status !== "cancelled";
+}
+
+export function salesTotal(rows: SaleRow[]): number {
+  let total = 0;
+  for (const row of rows) {
+    if (!countedSale(row)) continue;
+    total += num(row.total_amount);
+  }
+  return Math.round(total * 100) / 100;
+}
+
+export function salesOnDay(rows: SaleRow[], day: string): { total: number; bills: number } {
+  let total = 0;
+  let bills = 0;
+  for (const row of rows) {
+    if (!countedSale(row) || dayOf(row.created_at) !== day) continue;
+    bills += 1;
+    total += num(row.total_amount);
+  }
+  return { total, bills };
+}
+
+export function salesByDay(rows: SaleRow[], days: string[]): { day: string; amount: number }[] {
+  return days.map((day) => ({ day, amount: salesOnDay(rows, day).total }));
+}
+
+export function shiftLabel(shift: string | null | undefined): string {
+  const value = String(shift ?? "").toLowerCase();
+  if (value === "evening" || value === "shaam") return "Shaam";
+  return "Subah";
+}
+
+/** Priced/verified rows ka jama. Koi priced raqam na ho to null — Rs 0 nahi. */
+export function pricedMilkTotal(rows: MilkRow[]): number | null {
+  let total = 0;
+  let priced = 0;
+  for (const row of rows) {
+    const status = String(row.status ?? "").toLowerCase();
+    if (status === "pending_fat" || status === "rejected") continue;
+    if (row.total_amount == null || row.total_amount === "") continue;
+    total += num(row.total_amount);
+    priced += 1;
+  }
+  return priced === 0 ? null : Math.round(total * 100) / 100;
+}
+
+export function milkInRange(rows: MilkRow[], from: string, to: string): MilkRow[] {
+  return rows.filter((row) => {
+    const day = String(row.entry_date || "");
+    return day >= from && day <= to;
+  });
+}
+
+export function milkLitres(rows: MilkRow[]): number {
+  let total = 0;
+  for (const row of rows) {
+    const litres = row.quantity_liters != null ? num(row.quantity_liters) : num(row.field_collected_volume);
+    total += litres;
+  }
+  return Math.round(total * 100) / 100;
+}
+
+export function milkByShift(rows: MilkRow[]): { subah: number; shaam: number } {
+  let subah = 0;
+  let shaam = 0;
+  for (const row of rows) {
+    const liters = row.quantity_liters != null ? num(row.quantity_liters) : num(row.field_collected_volume);
+    const shift = String(row.shift ?? "").toLowerCase();
+    if (shift === "morning" || shift === "subah") subah += liters;
+    else if (shift === "evening" || shift === "shaam") shaam += liters;
+    else subah += liters;
+  }
+  return { subah, shaam };
+}
+
+export type CashPosition =
+  | { state: "ok"; cash: number; bank: number; wallet: number; accounts: number }
+  | { state: "empty" }
+  | { state: "error"; message: string };
+
+export function cashPosition(result: ReadResult<AccountRow>): CashPosition {
+  if (!result.ok) return { state: "error", message: result.message };
+  if (result.rows.length === 0) return { state: "empty" };
+  let cash = 0;
+  let bank = 0;
+  let wallet = 0;
+  for (const row of result.rows) {
+    const amount = num(row.current_balance);
+    const kind = String(row.account_type ?? "");
+    if (kind === "cash") cash += amount;
+    else if (kind === "bank") bank += amount;
+    else if (kind === "mobile_wallet") wallet += amount;
+  }
+  return { state: "ok", cash, bank, wallet, accounts: result.rows.length };
+}
+
+export function stockAlerts(products: ProductRow[], inventory: InventoryRow[]): { name: string; qty: number; min: number }[] {
+  const qty = new Map<string, number>();
+  for (const row of inventory) {
+    if (!row.product_id) continue;
+    qty.set(row.product_id, (qty.get(row.product_id) ?? 0) + num(row.quantity_on_hand));
+  }
+  const alerts: { name: string; qty: number; min: number }[] = [];
+  for (const product of products) {
+    if (!product.id || product.min_stock_threshold == null || product.min_stock_threshold === "") continue;
+    const min = num(product.min_stock_threshold);
+    const have = qty.get(product.id) ?? 0;
+    if (have < min) alerts.push({ name: product.name || "Product", qty: have, min });
+  }
+  alerts.sort((a, b) => a.qty - b.qty);
+  return alerts.slice(0, 8);
+}
+
+export function categoryShare(items: ItemRow[], products: ProductRow[], categories: CategoryRow[]): { label: string; amount: number }[] {
+  const categoryOf = new Map<string, string>();
+  const names = new Map(categories.map((row) => [row.id, row.name || "Qism"]));
+  for (const product of products) {
+    if (!product.id) continue;
+    categoryOf.set(product.id, product.category_id ? names.get(product.category_id) || "Qism" : "Bina qism");
+  }
+  const totals = new Map<string, number>();
+  for (const item of items) {
+    const label = item.product_id ? categoryOf.get(item.product_id) || "Bina qism" : "Bina qism";
+    totals.set(label, (totals.get(label) ?? 0) + num(item.subtotal));
+  }
+  return [...totals.entries()]
+    .map(([label, amount]) => ({ label, amount }))
+    .filter((row) => row.amount > 0)
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 6);
+}
+
+export type PendingRow = { category?: string | null; pending?: number | null; mine_to_act?: number | null; readable?: boolean | null };
+export type ActivityRow = { action?: string | null; created_at?: string | null };
+
+export type AdminHome = {
+  today: string;
+  sales: { state: "ok"; total: number; bills: number; partial: boolean } | { state: "error"; message: string };
+  days: { day: string; amount: number }[];
+  categories: { label: string; amount: number }[];
+  categoryScope: "today" | "week" | "none";
+  cash: CashPosition;
+  milk: { state: "ok"; subah: number; shaam: number; source: string } | { state: "error"; message: string };
+  alerts: { name: string; qty: number; min: number }[];
+  alertsNote: string | null;
+  pending: { label: string; count: number }[];
+  pendingNote: string | null;
+  activity: { action: string; at: string }[];
+  activityNote: string | null;
+  banner: string | null;
+};
+
+export async function loadAdminHome(auth: LiveAuth, fetchImpl: FetchLike, now = new Date()): Promise<AdminHome> {
+  const days = karachiDaySeries(7, now);
+  const today = days[days.length - 1];
+  const since = encodeURIComponent(karachiStartIso(days[0]));
+  const test = auth.testAccount === true;
+  const banner = null;
+  const salesPath = `pos_sales?select=total_amount,created_at,status,payment_mode&created_at=gte.${since}&order=created_at.desc&limit=${SALES_LIMIT}`;
+  const accountPath = "finance_accounts?select=account_type,current_balance,is_active&is_active=eq.true&limit=100";
+  const inventoryPath = `inventory?select=product_id,quantity_on_hand&limit=${STOCK_LIMIT}`;
+  const itemPath = `pos_sale_items?select=subtotal,product_id,created_at&created_at=gte.${since}&limit=${ITEM_LIMIT}`;
+  const activityPath = "activity_logs?select=action,created_at&order=created_at.desc&limit=8";
+  const [sales, accounts, milk, route, products, inventory, categories, items, pending, activity] = await Promise.all([
+    test ? liveGetScoped<SaleRow>(auth, salesPath, fetchImpl) : liveGet<SaleRow>(auth, salesPath, fetchImpl),
+    test ? liveGetScoped<AccountRow>(auth, accountPath, fetchImpl) : liveGet<AccountRow>(auth, accountPath, fetchImpl),
+    liveGetScoped<MilkRow>(auth, `milk_entries?select=shift,quantity_liters&entry_date=eq.${today}&limit=500`, fetchImpl),
+    liveGetScoped<MilkRow>(auth, `milk_route_collections?select=shift,field_collected_volume&collection_date=eq.${today}&limit=200`, fetchImpl),
+    liveGet<ProductRow>(auth, "products?select=id,name,category_id,min_stock_threshold,selling_price,unit,is_available&is_deleted=eq.false&limit=400", fetchImpl),
+    test ? liveGetScoped<InventoryRow>(auth, inventoryPath, fetchImpl) : liveGet<InventoryRow>(auth, inventoryPath, fetchImpl),
+    liveGet<CategoryRow>(auth, "categories?select=id,name&limit=200", fetchImpl),
+    // Items have no is_test column. Test policy is the parent sale. Do not add is_test=eq.
+    liveGet<ItemRow>(auth, itemPath, fetchImpl),
+    test ? loadTestPending(auth, fetchImpl) : liveRpc<PendingRow[] | null>(auth, "fn_admin_pending_counts", {}, fetchImpl),
+    test ? liveGetScoped<ActivityRow>(auth, activityPath, fetchImpl) : liveGet<ActivityRow>(auth, activityPath, fetchImpl),
+  ]);
+
+  const todaySales = sales.ok ? salesOnDay(sales.rows, today) : null;
+  const milkOk = milk.ok ? milkByShift(milk.rows) : null;
+  const routeOk = route.ok ? milkByShift(route.rows) : null;
+  const milkState: AdminHome["milk"] = milk.ok
+    ? { state: "ok", ...milkOk!, source: "farmer entries" }
+    : route.ok
+      ? { state: "ok", ...routeOk!, source: "route" }
+      : { state: "error", message: milk.message };
+
+  const pendingRows = pending.ok && Array.isArray(pending.data) ? pending.data : [];
+  const todayItems = items.ok ? items.rows.filter((row) => dayOf(row.created_at) === today) : [];
+  const categoryRows = todayItems.some((row) => num(row.subtotal) > 0) ? todayItems : items.ok ? items.rows : [];
+  const categoryScope: AdminHome["categoryScope"] = !items.ok || !products.ok ? "none" : todayItems.some((row) => num(row.subtotal) > 0) ? "today" : categoryRows.length ? "week" : "none";
+  return {
+    today,
+    sales: sales.ok
+      ? { state: "ok", total: todaySales!.total, bills: todaySales!.bills, partial: sales.rows.length >= SALES_LIMIT }
+      : { state: "error", message: sales.message },
+    days: sales.ok ? salesByDay(sales.rows, days) : [],
+    categories: items.ok && products.ok ? categoryShare(categoryRows, products.rows, categories.ok ? categories.rows : []) : [],
+    categoryScope,
+    cash: cashPosition(accounts),
+    milk: milkState,
+    alerts: products.ok && inventory.ok ? stockAlerts(products.rows, inventory.rows) : [],
+    alertsNote: !products.ok ? products.message : !inventory.ok ? inventory.message : inventory.rows.length >= STOCK_LIMIT ? "Stock ki fehrist adhoori hai." : null,
+    pending: pendingRows
+      .filter((row) => num(row.pending) > 0 && row.readable !== false)
+      .slice(0, 6)
+      .map((row) => ({ label: String(row.category || "Kaam"), count: num(row.pending) })),
+    pendingNote: pending.ok ? null : pending.message,
+    activity: activity.ok
+      ? activity.rows.map((row) => ({ action: String(row.action || "Kaam"), at: String(row.created_at || "") }))
+      : [],
+    activityNote: activity.ok ? null : activity.message,
+    banner,
+  };
+}
+
+export type PartyRow = { id?: string; full_name?: string | null; name?: string | null; farmer_code?: string | null; current_balance?: number | string | null };
+export type PurchaseRow = { purchase_number?: string | null; purchase_date?: string | null; total_amount?: number | string | null; status?: string | null; supplier_bill_no?: string | null };
+export type AttendanceRow = { attendance_date?: string | null; status?: string | null; check_in_at?: string | null; profile_id?: string | null };
+export type ProfileRow = { id?: string; full_name?: string | null };
+export type OrderRow = { id?: string; order_number?: string | null; status?: string | null; grand_total?: number | string | null; created_at?: string | null; requested_by?: string | null; order_to_type?: string | null };
+export type KhataLine = { entry_date?: string | null; tafseel?: string | null; udhaar?: number | string | null; adaigi?: number | string | null; baqaya?: number | string | null; is_opening?: boolean | null; category?: string | null };
+export type SalaryRow = { net_salary?: number | string | null; status?: string | null; pay_month?: number | null; pay_year?: number | null };
+export type AdvanceRow = { amount?: number | string | null; status?: string | null; created_at?: string | null };
+
+export async function searchParties(auth: LiveAuth, query: string, fetchImpl: FetchLike): Promise<{ farmers: ReadResult<PartyRow>; customers: ReadResult<PartyRow> }> {
+  const q = encodeURIComponent(`*${query.trim()}*`);
+  const farmerPath = query.trim()
+    ? `farmers?select=id,full_name&full_name=ilike.${q}&order=full_name.asc&limit=30`
+    : "farmers?select=id,full_name&order=full_name.asc&limit=30";
+  const customerPath = query.trim()
+    ? `customers?select=id,name,current_balance&name=ilike.${q}&order=name.asc&limit=30`
+    : "customers?select=id,name,current_balance&order=name.asc&limit=30";
+  const [farmers, customers] = await Promise.all([
+    liveGetScoped<PartyRow>(auth, farmerPath, fetchImpl),
+    liveGetScoped<PartyRow>(auth, customerPath, fetchImpl),
+  ]);
+  return { farmers, customers };
+}
+
+const MILK_LIST_SELECT = "id,entry_date,shift,quantity_liters,fat_percentage,snf_percentage,lr,rate_per_liter,total_amount,route_name,chiller_name,status,mca_profile_id,farmer_id,created_by,collected_at,fat_at,verified_at";
+
+/** Logged-in kisan. Pehle farmers.user_id, phir app_test_links role=farmer. Id hardcode nahi. */
+export async function loadMyFarmerId(auth: LiveAuth, fetchImpl: FetchLike): Promise<string | null> {
+  const uid = auth.userId?.trim();
+  if (!uid) return null;
+  const id = encodeURIComponent(uid);
+  const own = await liveGetScoped<{ id?: string }>(auth, `farmers?select=id&user_id=eq.${id}&limit=1`, fetchImpl);
+  if (own.ok && own.rows[0]?.id) return own.rows[0].id;
+  if (auth.testAccount !== true) return null;
+  const link = await liveGet<{ record_id?: string | null }>(auth, `app_test_links?select=record_id&account_id=eq.${id}&role=eq.farmer&limit=1`, fetchImpl);
+  return link.ok && link.rows[0]?.record_id ? link.rows[0].record_id : null;
+}
+
+/**
+ * Milk list. farmerId string = sirf woh kisan.
+ * Test kisan par null = doosre is_test kisan nahi dikhate.
+ * MCA/MCO/Admin farmerId na bhejein — unki fehrist saari scoped rows hai.
+ */
+export async function loadMilkList(auth: LiveAuth, fetchImpl: FetchLike, limit = 40, farmerId?: string | null): Promise<ReadResult<MilkRow>> {
+  const cap = Math.max(1, Math.min(200, Math.floor(limit)));
+  if (auth.testAccount === true && farmerId === null) {
+    return { ok: false, status: 0, message: "Is login ka kisan record nahi mila. Doosre kisanon ka doodh nahi dikhaya." };
+  }
+  const farmer = farmerId ? `&farmer_id=eq.${encodeURIComponent(farmerId)}` : "";
+  return liveGetScoped<MilkRow>(auth, `milk_entries?select=${MILK_LIST_SELECT}${farmer}&order=entry_date.desc,created_at.desc&limit=${cap}`, fetchImpl);
+}
+
+/** Haftay ka litre. Sirf tareekh aur litre, taake 7 din ki collection chart mein aaye. */
+export async function loadMilkWindow(auth: LiveAuth, start: string, end: string, fetchImpl: FetchLike): Promise<ReadResult<Pick<MilkRow, "entry_date" | "shift" | "quantity_liters">>> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+    return { ok: false, status: 0, message: "Haftay ki tareekh theek nahi." };
+  }
+  return liveGetScoped(auth, `milk_entries?select=entry_date,shift,quantity_liters&entry_date=gte.${start}&entry_date=lte.${end}&order=entry_date.asc&limit=500`, fetchImpl);
+}
+
+const TEST_PENDING: { label: string; path: string; cap: number }[] = [
+  { label: "Doodh ki tasdeeq", path: "milk_entries?select=id&status=in.(pending_fat,priced)&limit=500", cap: 500 },
+  { label: "Khareed", path: "purchases?select=id&review_status=in.(submitted,verified)&limit=200", cap: 200 },
+  { label: "Orders", path: "agri_orders?select=id&status=in.(submitted,sales_verified,finance_verified)&limit=200", cap: 200 },
+];
+
+/** Admin role (test login ya Role dekho nahi — test account) ki TEST manzooriyan. Live RPC asal rows gin sakta hai, is liye yahan scoped count. */
+export async function loadTestPending(auth: LiveAuth, fetchImpl: FetchLike): Promise<{ ok: true; data: PendingRow[] } | { ok: false; status: number; message: string; detail?: string }> {
+  const data: PendingRow[] = [];
+  const errors: string[] = [];
+  for (const spec of TEST_PENDING) {
+    const res = await liveGetScoped<{ id?: string }>(auth, spec.path, fetchImpl);
+    if (!res.ok) {
+      errors.push(res.message);
+      continue;
+    }
+    const count = res.rows.length;
+    if (count > 0) data.push({ category: count >= spec.cap ? `${spec.label} ${spec.cap}+` : spec.label, pending: count, readable: true });
+  }
+  if (!data.length && errors.length) return { ok: false, status: 0, message: errors[0] };
+  return { ok: true, data };
+}
+
+/** Test login par customer sirf Farmer orders, dealer sirf dealer/dukaan. Live fehrist nahi chhanti. */
+export function testOrdersFor(rows: OrderRow[], role: "customer" | "dealer"): OrderRow[] {
+  if (role === "customer") return rows.filter((row) => row.order_to_type === "Farmer");
+  return rows.filter((row) => row.order_to_type === "Agri Dealer" || row.order_to_type === "Kisan Dukan");
+}
+
+export type GoalTargetRow = {
+  farmer_month_litres?: number | string | null;
+  collection_day_litres?: number | string | null;
+  staff_month_present?: number | string | null;
+  admin_month_sales?: number | string | null;
+  farmer_deadline?: string | null;
+  staff_deadline?: string | null;
+  admin_deadline?: string | null;
+};
+
+/** 704 ki ek settings row. is_test column nahi. Na ho to ijazat/missing message. */
+export async function loadGoalTargets(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<GoalTargetRow>> {
+  return liveGet<GoalTargetRow>(
+    auth,
+    "app_goal_targets?select=farmer_month_litres,collection_day_litres,staff_month_present,admin_month_sales,farmer_deadline,staff_deadline,admin_deadline&id=eq.1&limit=1",
+    fetchImpl,
+  );
+}
+
+const MONTH_SALES_CAP = 2000;
+
+/** Is mahine ki sale. Fehrist cap par ruk jaye to total null. */
+export type PhoneNote = { key?: string | null; value?: number | string | null; label?: string | null; detail?: string | null };
+
+/** 707 ki phone home rows. Table na ho to message, sifar nahi. */
+export async function loadPhoneNotes(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<PhoneNote>> {
+  return liveGet<PhoneNote>(auth, "app_phone_notes?select=key,value,label,detail&order=key.asc&limit=80", fetchImpl);
+}
+
+export async function loadFarmerNames(auth: LiveAuth, ids: string[], fetchImpl: FetchLike): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (!unique.length) return names;
+  const listed = unique.map((id) => encodeURIComponent(id)).join(",");
+  const rows = await liveGetScoped<PartyRow>(auth, `farmers?select=id,full_name&id=in.(${listed})&limit=80`, fetchImpl);
+  if (rows.ok) {
+    for (const farmer of rows.rows) if (farmer.id) names.set(farmer.id, farmer.full_name || "");
+  }
+  return names;
+}
+
+/** Chhe mahine ki sale. Cap par rukay to cut. */
+export async function loadSalesMonths(auth: LiveAuth, today: string, fetchImpl: FetchLike): Promise<{ ok: true; values: number[]; labels: string[]; cut: boolean } | { ok: false; message: string }> {
+  const buckets = monthBuckets(today, 6);
+  if (!buckets.length) return { ok: false, message: "Mahine ki tareekh theek nahi." };
+  const start = `${buckets[0].key}-01`;
+  const path = `pos_sales?select=total_amount,created_at,status&created_at=gte.${encodeURIComponent(karachiStartIso(start))}&order=created_at.desc&limit=${MONTH_SALES_CAP}`;
+  const res = auth.testAccount ? await liveGetScoped<SaleRow>(auth, path, fetchImpl) : await liveGet<SaleRow>(auth, path, fetchImpl);
+  if (!res.ok) return { ok: false, message: res.message };
+  const values = buckets.map((bucket) => res.rows
+    .filter((row) => saleMonthKey(row.created_at) === bucket.key && !["void", "cancelled"].includes(String(row.status || "").toLowerCase()))
+    .reduce((sum, row) => sum + num(row.total_amount), 0));
+  return { ok: true, values, labels: buckets.map((bucket) => bucket.label), cut: res.rows.length >= MONTH_SALES_CAP };
+}
+
+export async function loadMonthPurchases(auth: LiveAuth, monthStart: string, fetchImpl: FetchLike): Promise<{ total: number | null; note: string | null }> {
+  const path = `purchases?select=total_amount,purchase_date,status&purchase_date=gte.${encodeURIComponent(monthStart)}&limit=500`;
+  const res = auth.testAccount ? await liveGetScoped<PurchaseRow>(auth, path, fetchImpl) : await liveGet<PurchaseRow>(auth, path, fetchImpl);
+  if (!res.ok) return { total: null, note: res.message };
+  const total = res.rows
+    .filter((row) => !["void", "cancelled"].includes(String(row.status || "").toLowerCase()))
+    .reduce((sum, row) => sum + num(row.total_amount), 0);
+  return { total, note: null };
+}
+
+export async function loadMonthSales(auth: LiveAuth, monthStart: string, fetchImpl: FetchLike): Promise<{ total: number | null; note: string | null }> {
+  const path = `pos_sales?select=total_amount,created_at,status&created_at=gte.${encodeURIComponent(karachiStartIso(monthStart))}&order=created_at.desc&limit=${MONTH_SALES_CAP}`;
+  const res = auth.testAccount ? await liveGetScoped<SaleRow>(auth, path, fetchImpl) : await liveGet<SaleRow>(auth, path, fetchImpl);
+  if (!res.ok) return { total: null, note: res.message };
+  if (res.rows.length >= MONTH_SALES_CAP) return { total: null, note: "Sale ki fehrist adhoori hai." };
+  return { total: salesTotal(res.rows), note: null };
+}
+
+export async function loadOwnAttendance(auth: LiveAuth, userId: string, fromDay: string, fetchImpl: FetchLike): Promise<ReadResult<AttendanceRow>> {
+  const id = encodeURIComponent(userId);
+  return liveGetScoped<AttendanceRow>(
+    auth,
+    `attendance_records?select=attendance_date,status&profile_id=eq.${id}&attendance_date=gte.${encodeURIComponent(fromDay)}&limit=40`,
+    fetchImpl,
+  );
+}
+
+export async function loadMilkSettings(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<MilkSettingsRow>> {
+  return liveGet<MilkSettingsRow>(auth, "milk_rate_settings?select=standard_rate,self_dropoff_incentive,snf_constant,reference_ts&limit=1", fetchImpl);
+}
+
+export async function loadHealth(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<HealthRow>> {
+  return liveGet<HealthRow>(auth, "dairy_health_events?select=id,farmer_id,animal_id,kind,diagnosis,medicine,dose,event_date,last_dose_date,withdrawal_days,vet_name,vaccine_code,next_due,notes,voided,created_at&voided=eq.false&order=event_date.desc&limit=40", fetchImpl);
+}
+
+export async function loadVaccines(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<VaccineRow>> {
+  return liveGet<VaccineRow>(auth, "dairy_vaccine_schedule?select=code,name_rm&order=code.asc&limit=20", fetchImpl);
+}
+
+export async function loadProfileNames(auth: LiveAuth, ids: string[], fetchImpl: FetchLike): Promise<Map<string, string>> {
+  const names = new Map<string, string>();
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (!unique.length) return names;
+  const listed = unique.map((id) => encodeURIComponent(id)).join(",");
+  const profiles = await liveGet<ProfileRow>(auth, `profiles?select=id,full_name&id=in.(${listed})`, fetchImpl);
+  if (profiles.ok) {
+    for (const profile of profiles.rows) {
+      if (profile.id) names.set(profile.id, profile.full_name || "MCA");
+    }
+  }
+  return names;
+}
+
+export async function loadPurchases(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<PurchaseRow>> {
+  return liveGetScoped<PurchaseRow>(auth, "purchases?select=purchase_number,purchase_date,total_amount,status,supplier_bill_no&order=purchase_date.desc&limit=30", fetchImpl);
+}
+
+export async function loadAttendance(auth: LiveAuth, day: string, fetchImpl: FetchLike): Promise<{ rows: ReadResult<AttendanceRow>; names: Map<string, string> }> {
+  const rows = await liveGetScoped<AttendanceRow>(auth, `attendance_records?select=attendance_date,status,check_in_at,profile_id&attendance_date=eq.${day}&order=check_in_at.desc&limit=40`, fetchImpl);
+  const names = new Map<string, string>();
+  if (!rows.ok) return { rows, names };
+  const ids = [...new Set(rows.rows.map((row) => row.profile_id).filter((id): id is string => Boolean(id)))];
+  if (!ids.length) return { rows, names };
+  const listed = ids.map((id) => encodeURIComponent(id)).join(",");
+  const profiles = await liveGet<ProfileRow>(auth, `profiles?select=id,full_name&id=in.(${listed})`, fetchImpl);
+  if (profiles.ok) {
+    for (const profile of profiles.rows) {
+      if (profile.id) names.set(profile.id, profile.full_name || "Staff");
+    }
+  }
+  return { rows, names };
+}
+
+export type CatalogRow = { id?: string; name?: string | null; selling_price?: number | string | null; unit?: string | null };
+
+export async function loadCatalog(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<CatalogRow>> {
+  return liveGet<CatalogRow>(auth, "products?select=id,name,selling_price,unit&is_available=eq.true&is_deleted=eq.false&order=name.asc&limit=40", fetchImpl);
+}
+
+const ORDER_LIST = "id,order_number,status,grand_total,created_at,requested_by,order_to_type";
+
+export async function loadOrders(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<OrderRow>> {
+  return liveGetScoped<OrderRow>(auth, `agri_orders?select=${ORDER_LIST}&order=created_at.desc&limit=40`, fetchImpl);
+}
+
+/** Test login: customer sirf Farmer, dealer sirf dukan/dealer, is mahine ki ginti ke liye 120. Live mixed fehrist rehti hai. */
+export function roleOrderPath(role: "customer" | "dealer"): string {
+  const filter = role === "customer"
+    ? "order_to_type=eq.Farmer"
+    : 'or=(order_to_type.eq."Agri Dealer",order_to_type.eq."Kisan Dukan")';
+  const limit = role === "dealer" ? 120 : 40;
+  return `agri_orders?select=${ORDER_LIST}&${encodeURI(filter)}&order=created_at.desc&limit=${limit}`;
+}
+
+export async function loadRoleOrders(auth: LiveAuth, role: "customer" | "dealer", fetchImpl: FetchLike): Promise<ReadResult<OrderRow>> {
+  if (auth.testAccount) return liveGetScoped<OrderRow>(auth, roleOrderPath(role), fetchImpl);
+  return loadOrders(auth, fetchImpl);
+}
+
+export type KhataView = {
+  owed: number | null;
+  note: string | null;
+  lines: KhataLine[];
+  linesNote: string | null;
+};
+
+export async function loadKhata(auth: LiveAuth, fetchImpl: FetchLike, now = new Date()): Promise<KhataView> {
+  const today = karachiDate(now);
+  const [year, month, day] = today.split("-").map(Number);
+  const from = new Date(Date.UTC(year, month - 1, day));
+  from.setUTCDate(from.getUTCDate() - 90);
+  const start = from.toISOString().slice(0, 10);
+  const [summary, lines] = await Promise.all([
+    liveRpc<{ owed?: number | null } | null>(auth, "fn_my_khata_summary", { p_as_of: today }, fetchImpl),
+    liveRpc<KhataLine[] | null>(auth, "fn_my_khata_statement", { p_from: start, p_to: today }, fetchImpl),
+  ]);
+  const owed = summary.ok && summary.data && typeof summary.data === "object" && summary.data.owed != null ? num(summary.data.owed) : null;
+  return {
+    owed: summary.ok ? owed : null,
+    note: !summary.ok ? summary.message : summary.data == null ? "Is account ka khata track nahi hota." : null,
+    lines: lines.ok && Array.isArray(lines.data) ? lines.data.filter((row) => !row.is_opening).slice(-20).reverse() : [],
+    linesNote: lines.ok ? null : lines.message,
+  };
+}
+
+export async function loadStaffHome(auth: LiveAuth, userId: string, fetchImpl: FetchLike): Promise<{
+  attendance: ReadResult<AttendanceRow>;
+  salary: ReadResult<SalaryRow>;
+  advances: ReadResult<AdvanceRow>;
+  tasks: { label: string; count: number }[];
+  tasksNote: string | null;
+}> {
+  const id = encodeURIComponent(userId);
+  const test = auth.testAccount === true;
+  const [attendance, salary, advances, pending] = await Promise.all([
+    liveGetScoped<AttendanceRow>(auth, `attendance_records?select=attendance_date,status,check_in_at&profile_id=eq.${id}&order=attendance_date.desc&limit=14`, fetchImpl),
+    liveGetScoped<SalaryRow>(auth, `salary_payments?select=net_salary,status,pay_month,pay_year&profile_id=eq.${id}&order=pay_year.desc,pay_month.desc&limit=6`, fetchImpl),
+    liveGet<AdvanceRow>(auth, `staff_advances?select=amount,status,created_at&profile_id=eq.${id}&order=created_at.desc&limit=6`, fetchImpl),
+    test
+      ? Promise.resolve({ ok: false as const, status: 0, message: "TEST tasks asal RPC se nahi. Admin home par TEST manzooriyan hain." })
+      : liveRpc<PendingRow[] | null>(auth, "fn_admin_pending_counts", {}, fetchImpl),
+  ]);
+  const tasks = pending.ok && Array.isArray(pending.data)
+    ? pending.data.filter((row) => num(row.mine_to_act) > 0).slice(0, 8).map((row) => ({ label: String(row.category || "Kaam"), count: num(row.mine_to_act) }))
+    : [];
+  return { attendance, salary, advances, tasks, tasksNote: pending.ok ? null : pending.message };
+}
