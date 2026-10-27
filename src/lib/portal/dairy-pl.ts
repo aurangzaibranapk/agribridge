@@ -55,9 +55,9 @@ const n = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const nn = (v: unknown) => (v === null || v === undefined ? null : Number.isFinite(Number(v)) ? Number(v) : null);
 const pick = (v: unknown): number | null => (v == null || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
 /** Ghar ka yield (`litres`) agar > 0, warna centre. Dono jama nahi — dohra count nahi. */
-export function costBasisOf(r: { litres?: number; litres_home?: number; litres_centre?: number; centre_litres?: number; income?: Record<string, number>; cost_basis?: string | null }): { home: number; centre: number; basis: CostBasis; litres: number } {
+export function costBasisOf(r: { litres?: number; litres_home?: number; litres_centre?: number; centre_litres?: number; income?: Record<string, number> | number; cost_basis?: string | null }): { home: number; centre: number; basis: CostBasis; litres: number } {
   const home = pick(r.litres) ?? pick(r.litres_home) ?? 0;
-  const centre = pick(r.litres_centre) ?? pick(r.centre_litres) ?? pick(r.income?.centre_litres) ?? 0;
+  const centre = pick(r.litres_centre) ?? pick(r.centre_litres) ?? pick(typeof r.income === "object" ? r.income?.centre_litres : undefined) ?? 0;
   if (home > 0) return { home, centre, basis: "home", litres: home };
   if (centre > 0) return { home, centre, basis: "centre", litres: centre };
   return { home, centre, basis: null, litres: 0 };
@@ -191,7 +191,7 @@ export function parseAdminRows(raw: unknown): AdminRow[] {
     };
   });
 }
-type MilkRow = { litres: number; expense: number; litres_home?: number; litres_centre?: number; centre_litres?: number; income?: Record<string, number>; cost_basis?: string | null };
+type MilkRow = { litres: number; expense: number; litres_home?: number; litres_centre?: number; centre_litres?: number; income?: Record<string, number> | number; cost_basis?: string | null };
 /** Jis period/kisan ka litre-basis > 0 (ghar, warna centre). */
 export function withMilk<T extends MilkRow>(rows: T[]): T[] {
   return rows.filter((r) => costBasisOf(r).litres > 0);
@@ -207,7 +207,9 @@ export function avgCostPerLitre(rows: MilkRow[]): number | null {
   const m = withMilk(rows).map((r) => ({ litres: costBasisOf(r).litres, expense: Number.isFinite(r.expense) ? r.expense : 0 }));
   return m.length ? r2(m.reduce((a, r) => a + r.expense / r.litres, 0) / m.length) : null;
 }
-export function grandTotal(rows: AdminRow[]) {
+/** Admin totals; per-row litres split/basis are optional (derived via costBasisOf when absent). */
+export type GrandRow = Omit<AdminRow, "litres_home" | "litres_centre" | "cost_basis"> & Partial<Pick<AdminRow, "litres_home" | "litres_centre" | "cost_basis">>;
+export function grandTotal(rows: GrandRow[]) {
   const t = rows.reduce((a, r) => ({ animals: a.animals + r.animals, milking: a.milking + r.milking, litres: a.litres + r.litres, centre_litres: a.centre_litres + r.centre_litres,
     expense: a.expense + r.expense, income: a.income + r.income, profit: a.profit + r.profit }), { animals: 0, milking: 0, litres: 0, centre_litres: 0, expense: 0, income: 0, profit: 0 });
   const bases = new Set(rows.map((r) => costBasisOf(r).basis).filter((b): b is "home" | "centre" => b != null));
