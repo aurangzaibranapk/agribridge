@@ -11,14 +11,13 @@ import { isPortalAdmin, type AppRole } from "./roles";
 
 export const TEST_LOGIN_EMAIL = "app-test@alranatraders.pk";
 
-export const SWITCH_ROLES = ["admin", "farmer", "customer", "mca", "mco", "vet", "staff", "dealer"] as const;
+export const SWITCH_ROLES = ["admin", "farmer", "mca", "mco", "vet", "staff", "dealer"] as const;
 
 export type SwitchRole = (typeof SWITCH_ROLES)[number];
 
 const LABELS: Record<SwitchRole, string> = {
   admin: "Admin",
-  farmer: "Kisan",
-  customer: "Customer",
+  farmer: "Kisan / Customer",
   mca: "MCA",
   mco: "MCO",
   vet: "Vet",
@@ -31,6 +30,7 @@ export function isSwitchRole(value: string | null | undefined): value is SwitchR
 }
 
 export function switchRoleLabel(role: AppRole): string {
+  if (role === "customer") return LABELS.farmer;
   return isSwitchRole(role) ? LABELS[role] : role;
 }
 

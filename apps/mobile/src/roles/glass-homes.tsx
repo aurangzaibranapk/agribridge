@@ -155,7 +155,7 @@ function useOrderExtra(live: LiveBag | undefined, orderId: string | null) {
 }
 
 export function FarmerGlass({ live, khata, milk, names, focus = "home", footer, ...bar }: Refresh & { live?: LiveBag; khata: KhataView | null; milk: ReadResult<MilkRow> | null; names: Map<string, string>; focus?: "home" | "track"; footer?: ReactNode }) {
-  const face = useFace(live, "Kisan");
+  const face = useFace(live, "Kisan / Customer");
   const weather = useWeather(face.place);
   if (!khata || !milk) return <ActivityIndicator color={glass.up} style={{ marginTop: 24 }} />;
   const rows = milk.ok ? milk.rows : [];
@@ -203,14 +203,14 @@ export function FarmerGlass({ live, khata, milk, names, focus = "home", footer, 
   if (focus === "track") {
     return (
       <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-        <BrandHeader role="Kisan" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+        <BrandHeader role="Kisan / Customer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
         {track}
       </GlassScreen>
     );
   }
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-      <BrandHeader role="Kisan" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+      <BrandHeader role="Kisan / Customer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
       <KpiGrid>
         <Kpi index={2} label="Wallet balance" value={walletParts(khata.owed, Boolean(khata.note && khata.owed == null), khata.note || "Khata baqaya").value} sub={walletParts(khata.owed, Boolean(khata.note && khata.owed == null), khata.note || "Khata baqaya").sub} color="#C8A058" series={payLine} pct={pctChange(weekPay, prevPay)} />

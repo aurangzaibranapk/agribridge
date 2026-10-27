@@ -15,7 +15,7 @@ import { BrandStack, LanguageProvider } from "./src/glass";
 import { readTestAccount, showRolePreview, showRoleSwitch, SWITCH_ROLES, switchRoleLabel } from "../../src/lib/mobile/test-account";
 import { refreshSupabaseSession, SESSION_EXPIRED, singleFlight, type RefreshFailure, type RefreshSuccess } from "../../src/lib/mobile/session-refresh";
 import { ROLE_NAV } from "../../src/lib/mobile/nav";
-import type { AppRole } from "../../src/lib/mobile/roles";
+import { canonicalAppRole, type AppRole } from "../../src/lib/mobile/roles";
 import { pinLock, pinProblem } from "../../src/lib/mobile/pin";
 import { applyFlushResult, enqueue, flushPlan, type OutboxItem } from "../../src/lib/mobile/queue";
 import { reportContext } from "../../src/lib/mobile/report";
@@ -192,8 +192,9 @@ export default function App() {
         };
         setToken(session.token);
         setRole(session.role);
-        setAppRole(session.appRole);
-        setHomeRole(session.appRole);
+        const savedRole = canonicalAppRole(session.appRole);
+        setAppRole(savedRole);
+        setHomeRole(savedRole);
         setUserId(session.userId);
         setIsTest(session.isTest === true);
         setStage("unlock");
@@ -249,8 +250,9 @@ export default function App() {
     }, body.user_id, (url, init) => fetch(url, init));
     setToken(body.access_token);
     setRole(body.role);
-    setAppRole(body.appRole);
-    setHomeRole(body.appRole);
+    const resolvedRole = canonicalAppRole(body.appRole);
+    setAppRole(resolvedRole);
+    setHomeRole(resolvedRole);
     setUserId(body.user_id);
     setIsTest(test);
     await rememberSession({
@@ -258,7 +260,7 @@ export default function App() {
       refresh: body.refresh_token,
       expiresAt: body.expires_at,
       role: body.role,
-      appRole: body.appRole,
+      appRole: resolvedRole,
       userId: body.user_id,
       isTest: test,
     });

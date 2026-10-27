@@ -1,6 +1,5 @@
 import type { ComponentType } from "react";
 import * as admin from "./admin";
-import * as customer from "./customer";
 import * as dealer from "./dealer";
 import * as farmer from "./farmer";
 import * as later from "./later";
@@ -15,7 +14,7 @@ export interface RoleModule {
 
 const modules: Record<string, RoleModule> = {
   farmer,
-  customer,
+  customer: farmer,
   staff,
   admin,
   mca,
