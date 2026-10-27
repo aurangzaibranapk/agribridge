@@ -1,10 +1,33 @@
-## Pending — 27 October 2026: reel website pages (717)
+## Pending — 27 October 2026: reel website pages (719)
 
-Branch `cursor/reel-website-features-3d67`. Migration **717 not applied** on Testing or Live. File only. Number 716 (`716_customer_khata_advance_2030`) ke baad. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+Branch `cursor/reel-website-features-3d67`. Migration **719 not applied** on Testing or Live. File only. 717 cash custody hai, 718 batch ginti. Ye un ke baad. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
 
-- `717_sales_analytics_help.sql` — sirf feature + feature_help + dashboard link. Koi table, koi rate, koi qatarein nahi badalti.
+- `719_sales_analytics_help.sql` — sirf feature + feature_help + dashboard link. Koi table, koi rate, koi qatarein nahi badalti.
 - Public safhe code se hain: `/faslon-ke-tips`, `/mahabali-doodh-gandum-rate`. Admin: `/admin/reports/sales/analytics`.
-- Rollback: `717_sales_analytics_help.rollback.sql`.
+- Rollback: `719_sales_analytics_help.rollback.sql`.
+
+## Pending — 27 October 2026: batch remaining = ginti (718) — NOT applied
+
+Branch `cursor/batch-ginti-align-8978`. Migration **718 file only**. Testing aur Live dono par **nahi** chali. Live (`ktskwawkslaznkjjacni`) par sirf read-only scan hua. Apply tab, jab backup verify ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live.
+
+- `718_batch_ginti_align.sql` — product + godam (3b wala join) par `inventory.quantity_on_hand` ko `sum(stock_batches.remaining_quantity)` ke barabar karta hai, `stock_movements` adjustment se. Batch remaining aur ledger (1200/1210/1220) nahi cherta.
+- Snapshot: `backup_718_inventory_ginti`. Rollback: `718_batch_ginti_align.rollback.sql` (ek transaction, `psql -1`).
+- 27 Oct read-only: raw 3b farq 91. Un mein 90 scale `numeric(14,3)` par seedha barabar ho sakte hain (ginti +2032 / −59). Ek jora ginti 0 aur batch 0.000232 hai — ginti column itna barik adad rakh nahi sakta, raw 3b us par reh sakti hai.
+
+## Pending — 27 October 2026: POS cash custody chain (717)
+
+Branch `cursor/pos-cash-custody-slips-1947`. Migration **717 not applied** on Testing or Live. File only. Number 716 customer khata / 2030 (PR #225) ka hai — ye alag hai. Testing project MCP list mein nahi tha, is liye yahan nahi chali. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- Har dukan, shift band: staff copy + jama copy. Har hop (bheja, wasoli, bank jama, verify) zimmedar + waqt. Dashboard `/admin/cash-custody`. 1 din bina verify: Admin, Super Admin, Owner ko in-app alert.
+- Custody se bank jama sirf wasoli ke baad (`with_holder`). Verify 1000 se bank karti hai; 1030 par atki cash is darwaze se nahi nikalti.
+- Wasoli qanoon PR #223 ka hai, jo main par merge ho chuka. Is migration ne `receiveCash` nahi chhera.
+- Yasir / 2030 customer ledger is mein nahi — wo 716 hai.
+- Cron: pg_cron `agribridge_cash_custody_overdue` har ghante :15, warna `GET /api/cron/cash-custody-overdue` with `CRON_SECRET`. SMS/WhatsApp nahi.
+- Rollback: `supabase/migrations/717_pos_cash_custody_chain.rollback.sql`.
+
+## Phone glass 631 — 27 October 2026 — app only
+
+versionCode 631. Header: AgriBridge aur version upar, tagline aur role gold line, phir Assalam o Alaikum. Wasela Eco Mahabali nahi. Kisan wallet tab sirf tracking card. Purana gold wallet list hata. Dealer bars chauri. Khali approval sab green check nahi. Jhoota MISAAL number nahi. Live SQL nahi. Live package `pk.alranatraders.agribridge`, production channel. TEST package alag.
 
 ## Pending — 27 October 2026: POS close Cash Handover Slip (code only)
 

@@ -8,6 +8,7 @@
 
 export type AppRole =
   | "farmer"
+  /** Purane saved sessions ke liye. Naya customer login farmer ghar par canonical hota hai. */
   | "customer"
   | "staff"
   | "supplier"
@@ -46,7 +47,7 @@ export function appRoleFor(input: {
 
   const role = String(input.role ?? "").trim();
   if (role === "farmer") return "farmer";
-  if (role === "customer") return "customer";
+  if (role === "customer") return "farmer";
   if (role === "dealer") return "dealer";
   if (role === "machinery_vendor") return "supplier";
   if (role === "agronomist") return "vet";
@@ -60,10 +61,15 @@ export function appRoleFor(input: {
   return "staff";
 }
 
+/** Kisan aur customer ek hi mobile account/ghar hain. Purana saved role bhi yahin aata hai. */
+export function canonicalAppRole(role: AppRole | string | null | undefined): AppRole {
+  return role === "customer" ? "farmer" : (role as AppRole);
+}
+
 /** Portal LLM: kisan ka assistant, ya staff ka Abram. Baqi ke liye chat nahi. */
 export function supportChatKind(portalRole: string | null | undefined): "farmer" | "staff" | null {
   const role = String(portalRole ?? "");
-  if (role === "farmer") return "farmer";
+  if (role === "farmer" || role === "customer") return "farmer";
   const staff = new Set([
     "owner", "super_admin", "admin", "admin_assistant", "manager",
     "sales_staff", "finance", "warehouse", "hr", "procurement", "milk_collection",

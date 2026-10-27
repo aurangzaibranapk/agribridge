@@ -1,5 +1,5 @@
 -- =====================================================================
--- 717: Aaj ka Sales Dashboard — feature + help
+-- 719: Aaj ka Sales Dashboard — feature + help
 -- =====================================================================
 -- Naya table nahi. Koi rate ya bikri nahi badalti. Sirf staff help aur
 -- dashboard card, taake /admin/reports/sales/analytics ka "?" khali na ho.

@@ -18,22 +18,24 @@ export interface RoleNav {
  */
 export const ROLE_NAV: Record<AppRole, RoleNav> = {
   farmer: {
-    title: "Kisan",
+    title: "Kisan / Customer",
     phase1: true,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "doodh", label: "Doodh" },
-      { key: "khata", label: "Wallet" },
+      { key: "farm", label: "Farm" },
+      { key: "doodh", label: "Dairy" },
+      { key: "karyana", label: "Market" },
       { key: "more", label: "Profile" },
     ],
   },
   customer: {
-    title: "Customer",
-    phase1: false,
+    title: "Kisan / Customer",
+    phase1: true,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "shop", label: "Order" },
-      { key: "orders", label: "Orders" },
+      { key: "farm", label: "Farm" },
+      { key: "doodh", label: "Dairy" },
+      { key: "karyana", label: "Market" },
       { key: "more", label: "Profile" },
     ],
   },
@@ -68,7 +70,7 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     ],
   },
   mca: {
-    title: "MCA",
+    title: "DCA / Milk Collection",
     phase1: true,
     tabs: [
       { key: "home", label: "Home" },

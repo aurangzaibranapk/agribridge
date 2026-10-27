@@ -16,6 +16,8 @@ export interface ActionState {
   message?: string;
   countedCash?: number;
   shiftId?: string;
+  /** Band shift ki do slips (staff + jama). Migration 717 ke baghair khali. */
+  custodyPacketId?: string;
 }
 
 async function main() {
@@ -375,11 +377,23 @@ export async function closeShift(_prev: ActionState, formData: FormData): Promis
     }
   }
 
+  let custodyPacketId: string | undefined;
+  if (countedCash > 0) {
+    const packetLookup = await (service as any)
+      .from("cash_custody_packets")
+      .select("id")
+      .eq("shift_id", shiftId)
+      .maybeSingle();
+    if (!packetLookup.error && packetLookup.data?.id) custodyPacketId = packetLookup.data.id as string;
+  }
+
   revalidatePath("/admin/pos");
+  revalidatePath("/admin/cash-custody");
   return {
     success: true,
     shiftId,
     countedCash,
+    custodyPacketId,
     message:
       difference === 0
         ? "Shift band — cash poora milta hai."
