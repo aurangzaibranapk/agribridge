@@ -59,29 +59,40 @@ jobs:
           set -euo pipefail
           [[ -s .next/BUILD_ID ]] || { echo "::error::Production build missing; run npm run build first."; exit 1; }
           package_dir="$(mktemp -d)"
-          trap 'rm -rf -- "$package_dir"' EXIT
+          list_file="$(mktemp)"
+          trap 'rm -rf -- "$package_dir"; rm -f -- "$list_file"' EXIT
           for item in .next public package.json package-lock.json next.config.js server.js; do
             [[ -e "$item" ]] || { echo "::error::Required runtime file missing: $item"; exit 1; }
             cp -R -- "$item" "$package_dir/"
           done
+          # Same cleanup as scripts/package-cpanel.sh: cache, types, and trace only.
           rm -rf -- "$package_dir/.next/cache" "$package_dir/.next/types"
+          rm -f -- "$package_dir/.next/trace"
+          [[ -s "$package_dir/.next/BUILD_ID" ]] || { echo "::error::.next/BUILD_ID missing after cleanup"; exit 1; }
+          [[ -d "$package_dir/.next/server" && -d "$package_dir/.next/static" ]] || { echo "::error::.next server or static missing after cleanup"; exit 1; }
+          echo "Kept .next/BUILD_ID=$(tr -d '\n' < "$package_dir/.next/BUILD_ID")"
           mkdir -p "$package_dir/ab-maintenance"
           cp public/system-update.html "$package_dir/ab-maintenance/index.html"
           mkdir -p "$package_dir/.release/maintenance"
           cp docs/deploy/maintenance/htaccess-snippet.conf scripts/maintenance-on.sh scripts/maintenance-off.sh "$package_dir/.release/maintenance/"
-          rm -f -- "$package_dir/.next/trace"
           cp scripts/verify-cpanel-runtime.mjs "$package_dir/.release/verify.mjs"
           node scripts/create-cpanel-manifest.mjs "$package_dir"
           node "$package_dir/.release/verify.mjs" "$package_dir"
           tar -czf agribridge-cpanel-release.tar.gz -C "$package_dir" .next public package.json package-lock.json next.config.js server.js .release ab-maintenance
           sha256sum agribridge-cpanel-release.tar.gz > agribridge-cpanel-release.sha256
-          listing="$(tar -tzf agribridge-cpanel-release.tar.gz)"
-          if printf '%s\n' "$listing" | grep -E '(^|/)node_modules(/|$)' >/dev/null; then
+          # Do not pipe this listing into grep -q. Under pipefail, grep -q closes
+          # the pipe on the first hit, printf dies with SIGPIPE (exit 141), and
+          # the step reports a present file as missing. Run 40437689561 did that
+          # for .next/BUILD_ID after verify.mjs had already accepted the build.
+          tar -tzf agribridge-cpanel-release.tar.gz | sed 's|^\./||' > "$list_file"
+          if grep -E -q '(^|/)node_modules(/|$)' "$list_file"; then
             echo "::error::Archive contains node_modules. cPanel keeps the server copy; do not pack it."
             exit 1
           fi
           required=(
             .next/BUILD_ID
+            .next/server
+            .next/static
             public/system-update.html
             package.json
             package-lock.json
@@ -95,7 +106,8 @@ jobs:
             ab-maintenance/index.html
           )
           for path in "${required[@]}"; do
-            printf '%s\n' "$listing" | grep -Fxq "$path" || { echo "::error::Archive missing $path"; exit 1; }
+            awk -v path="$path" 'index($0, path "/") == 1 || $0 == path { found = 1; exit } END { exit found ? 0 : 1 }' "$list_file" \
+              || { echo "::error::Archive missing $path"; exit 1; }
           done
           bytes="$(wc -c < agribridge-cpanel-release.tar.gz)"
           awk -v bytes="$bytes" 'BEGIN { printf "Size: %.2f MB (%d bytes)\n", bytes/1000000, bytes }'
