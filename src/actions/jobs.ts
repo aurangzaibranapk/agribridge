@@ -3,7 +3,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
-import { applyInputError, readApplyFields, staffGenderOrNull } from "@/lib/jobs/apply-input";
+import { applyInputError, bloodGroupOrNull, readApplyFields } from "@/lib/jobs/apply-input";
+import { hireStaffPatch, type HireApplication } from "@/lib/hr/id-card-profile";
 import { dispatchNotice, redactSecrets, type CandidateDispatch } from "@/lib/jobs/candidate-message";
 import { interviewDay, isDuplicateInterviewSchedule } from "@/lib/jobs/status-guard";
 import { t } from "@/lib/i18n/translations";
@@ -125,6 +126,22 @@ export async function deleteVacancy(_prev: ActionState, formData: FormData): Pro
   return { success: true };
 }
 
+const OPTIONAL_APPLICATION_COLUMNS = ["gender", "blood_group", "emergency_contact_name", "emergency_contact_phone", "photo_url"] as const;
+
+/** Migration se pehle wale database par naye khane na hon to darkhwast phir bhi save ho. */
+async function insertApplication(serviceClient: ReturnType<typeof createServiceClient>, payload: Record<string, unknown>) {
+  const body = { ...payload };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const result = await (serviceClient as any).from("job_applications").insert(body).select("id").single();
+    if (!result.error) return { data: result.data as { id: string }, error: null as string | null };
+    const message = String(result.error.message ?? "").toLowerCase();
+    const missing = OPTIONAL_APPLICATION_COLUMNS.filter((key) => message.includes(key) && key in body);
+    if (!missing.length) return { data: null, error: String(result.error.message ?? "") };
+    for (const key of missing) delete body[key];
+  }
+  return { data: null, error: "Application save nahi hui." };
+}
+
 async function uploadJobDoc(serviceClient: ReturnType<typeof createServiceClient>, applicantEmail: string, fieldName: string, file: File): Promise<string | null> {
   const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
   const path = `${applicantEmail.replace(/[^a-zA-Z0-9]/g, "_")}/${fieldName}-${Date.now()}-${safeName}`;
@@ -139,7 +156,7 @@ export async function applyToVacancy(_prev: ActionState, formData: FormData): Pr
   const fields = readApplyFields(formData);
   const invalid = applyInputError(fields);
   if (invalid) return { error: invalid };
-  const { vacancyId, fullName, email, gender, lang } = fields;
+  const { vacancyId, fullName, email, gender, lang, bloodGroup, emergencyName, emergencyPhone } = fields;
 
   const { data: vacancy } = await serviceClient.from("job_vacancies").select("title").eq("id", vacancyId).single();
 
@@ -155,9 +172,13 @@ export async function applyToVacancy(_prev: ActionState, formData: FormData): Pr
     cnic: (formData.get("cnic") as string) || null,
     expected_salary: formData.get("expected_salary") ? Number(formData.get("expected_salary")) : null,
     gender,
+    blood_group: bloodGroupOrNull(bloodGroup),
+    emergency_contact_name: emergencyName || null,
+    emergency_contact_phone: emergencyPhone || null,
   };
 
   const fileFields: Array<[string, string]> = [
+    ["photo", "photo_url"],
     ["cnic_front_image", "cnic_image_url"],
     ["cnic_back_image", "cnic_back_image_url"],
     ["certificate", "certificate_url"],
@@ -173,8 +194,9 @@ export async function applyToVacancy(_prev: ActionState, formData: FormData): Pr
     }
   }
 
-  const { data: application, error } = await (serviceClient as any).from("job_applications").insert(payload).select("id").single();
-  if (error) return { error: t("sp_apply_failed", lang) };
+  const inserted = await insertApplication(serviceClient, payload);
+  if (inserted.error) return { error: t("sp_apply_failed", lang) };
+  const application = inserted.data;
 
   if (application) {
     const mail = await sendApplicationReceivedEmail(email, fullName, vacancy?.title ?? "Position", application.id);
@@ -506,6 +528,95 @@ export async function respondToOffer(token: string, accept: boolean): Promise<{ 
   return {};
 }
 
+type HireRow = HireApplication & {
+  full_name: string;
+  email: string;
+  vacancy_id: string | null;
+  status: string;
+  created_profile_id: string | null;
+  gender: string | null;
+};
+
+async function loadHireApplication(
+  serviceClient: ReturnType<typeof createServiceClient>,
+  applicationId: string,
+): Promise<{ application: HireRow | null; error: string | null }> {
+  const base = "id, full_name, email, vacancy_id, status, created_profile_id, phone, cnic, address";
+  const extra = "gender, blood_group, emergency_contact_name, emergency_contact_phone, photo_url";
+  let result = await (serviceClient as any).from("job_applications").select(`${base}, ${extra}`).eq("id", applicationId).single();
+  if (result.error && /column|blood_group|emergency_contact|photo_url|gender/i.test(String(result.error.message ?? ""))) {
+    result = await (serviceClient as any).from("job_applications").select(`${base}, gender`).eq("id", applicationId).single();
+    if (result.error && /gender/i.test(String(result.error.message ?? ""))) {
+      result = await serviceClient.from("job_applications").select(base).eq("id", applicationId).single();
+    }
+  }
+  if (result.error || !result.data) return { application: null, error: result.error?.message ?? "Application not found." };
+  return {
+    application: {
+      gender: null,
+      blood_group: null,
+      emergency_contact_name: null,
+      emergency_contact_phone: null,
+      photo_url: null,
+      ...result.data,
+    },
+    error: null,
+  };
+}
+
+async function copyHireOntoStaff(
+  serviceClient: ReturnType<typeof createServiceClient>,
+  profileId: string,
+  application: HireApplication,
+  latestOffer: { designation: string | null; proposed_salary: number | null } | null,
+  acceptedOffer: { id: string } | null,
+) {
+  const wide = await serviceClient
+    .from("staff_details")
+    .select("phone, cnic, address, gender, blood_group, emergency_contact_name, emergency_contact_phone, photo_url, application_id, offer_id, designation, basic_salary")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  const narrow = wide.error && /application_id|offer_id/i.test(wide.error.message)
+    ? await serviceClient
+      .from("staff_details")
+      .select("phone, cnic, address, gender, blood_group, emergency_contact_name, emergency_contact_phone, photo_url, designation, basic_salary")
+      .eq("profile_id", profileId)
+      .maybeSingle()
+    : null;
+  if ((narrow ?? wide).error) {
+    console.error("staff_details hire read:", (narrow ?? wide).error?.message);
+    return;
+  }
+  const existing = (narrow?.data ?? wide.data) as Record<string, unknown> | null;
+  const patch = hireStaffPatch(existing, application, {
+    id: acceptedOffer?.id ?? null,
+    status: acceptedOffer ? "accepted" : null,
+    designation: latestOffer?.designation ?? null,
+    proposed_salary: latestOffer?.proposed_salary ?? null,
+  });
+  const dropLinks = (row: Record<string, unknown>) => {
+    const rest = { ...row };
+    delete rest.application_id;
+    delete rest.offer_id;
+    return rest;
+  };
+  if (!existing) {
+    let res = await serviceClient.from("staff_details").insert({ profile_id: profileId, ...patch });
+    if (res.error && /application_id|offer_id/i.test(res.error.message)) {
+      res = await serviceClient.from("staff_details").insert({ profile_id: profileId, ...dropLinks(patch) });
+    }
+    if (res.error) console.error("staff_details hire copy:", res.error.message);
+    return;
+  }
+  if (!Object.keys(patch).length) return;
+  let res = await serviceClient.from("staff_details").update(patch).eq("profile_id", profileId);
+  if (res.error && /application_id|offer_id/i.test(res.error.message)) {
+    const rest = dropLinks(patch);
+    if (Object.keys(rest).length) res = await serviceClient.from("staff_details").update(rest).eq("profile_id", profileId);
+  }
+  if (res.error) console.error("staff_details hire copy:", res.error.message);
+}
+
 export async function createOfficialLogin(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const serviceClient = createServiceClient();
   const applicationId = String(formData.get("application_id") ?? "");
@@ -515,34 +626,20 @@ export async function createOfficialLogin(_prev: ActionState, formData: FormData
   if (!officialEmail) return { error: "Official email zaroori hai." };
   if (!password || password.length < 6) return { error: "Password kam az kam 6 characters ka hona chahiye." };
 
-  const loaded = await serviceClient
-    .from("job_applications")
-    .select("full_name, email, vacancy_id, gender, status, created_profile_id")
-    .eq("id", applicationId)
-    .single();
-  let application = loaded.data;
-  if (loaded.error && /gender/i.test(loaded.error.message)) {
-    const again = await serviceClient
-      .from("job_applications")
-      .select("full_name, email, vacancy_id, status, created_profile_id")
-      .eq("id", applicationId)
-      .single();
-    if (again.error || !again.data) return { error: again.error?.message ?? "Application not found." };
-    application = { ...again.data, gender: null };
-  } else if (loaded.error || !application) {
-    return { error: loaded.error?.message ?? "Application not found." };
-  }
+  const loaded = await loadHireApplication(serviceClient, applicationId);
+  if (loaded.error || !loaded.application) return { error: loaded.error ?? "Application not found." };
+  const application = loaded.application;
   if (application.status === "joined" || application.created_profile_id) {
     return { success: true };
   }
 
-  const { data: latestOffer } = await serviceClient
+  const { data: offers } = await serviceClient
     .from("job_offers")
-    .select("designation, branch_id, proposed_salary")
+    .select("id, designation, branch_id, proposed_salary, status")
     .eq("application_id", applicationId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
+    .order("created_at", { ascending: false });
+  const latestOffer = offers?.[0] ?? null;
+  const acceptedOffer = (offers ?? []).find((offer) => offer.status === "accepted") ?? null;
 
   const { data: authUser, error: createError } = await serviceClient.auth.admin.createUser({
     email: officialEmail,
@@ -567,13 +664,7 @@ export async function createOfficialLogin(_prev: ActionState, formData: FormData
     is_active: true,
   });
 
-  const hiredGender = staffGenderOrNull(application.gender);
-  await serviceClient.from("staff_details").insert({
-    profile_id: authUser.user.id,
-    designation: latestOffer?.designation ?? null,
-    basic_salary: latestOffer?.proposed_salary ?? null,
-    ...(hiredGender ? { gender: hiredGender } : {}),
-  });
+  await copyHireOntoStaff(serviceClient, authUser.user.id, application, latestOffer, acceptedOffer);
 
   await serviceClient.from("job_applications").update({ status: "joined", created_profile_id: authUser.user.id }).eq("id", applicationId);
 

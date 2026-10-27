@@ -162,6 +162,7 @@ const uiKeys = [
   "sp_careers_title", "sp_careers_tagline", "sp_careers_company", "sp_careers_lead", "sp_no_vacancy", "sp_apply", "sp_salary", "sp_currency",
   "sp_positions", "sp_per_month", "sp_job_location", "sp_apply_for", "sp_close", "sp_basic_info",
   "sp_full_name", "sp_email", "sp_gender", "sp_gender_male", "sp_gender_female", "sp_gender_other", "sp_phone", "sp_cnic_number", "sp_address", "sp_expected_salary",
+  "sp_blood_group", "sp_blood_unknown", "sp_blood_invalid", "sp_emergency_name", "sp_emergency_phone", "sp_emergency_invalid", "sp_id_photo",
   "sp_exp_qual", "sp_qualification", "sp_past_work", "sp_about_you", "sp_documents", "sp_cnic_front",
   "sp_cnic_back", "sp_qual_cert", "sp_exp_cert", "sp_cv", "sp_drop_or_browse", "sp_file_ready",
   "sp_clear_file", "sp_cancel", "sp_submit", "sp_submitting", "sp_step_basic", "sp_step_experience",
@@ -190,6 +191,12 @@ for (const gender of ["male", "female", "other"]) {
     ui_lang: "rm", vacancy_id: "v", full_name: "Ali", email: "a@b.c", gender,
   }))), null, gender);
 }
+assert.equal(applyInputError(readApplyFields(bag({
+  ui_lang: "en", vacancy_id: "v", full_name: "Ali", email: "a@b.c", gender: "male", blood_group: "O positive",
+}))), null);
+assert.equal(applyInputError(readApplyFields(bag({
+  ui_lang: "ur", vacancy_id: "v", full_name: "Ali", email: "a@b.c", gender: "male", blood_group: "nope",
+}))), t("sp_blood_invalid", "ur"));
 assert.equal(t("sp_gender_male", "ur"), "مرد");
 assert.equal(t("sp_gender_female", "ur"), "عورت");
 assert.equal(t("sp_gender_other", "ur"), "دیگر");

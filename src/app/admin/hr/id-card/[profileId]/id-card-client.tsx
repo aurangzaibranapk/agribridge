@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { saveIdCardDetails, type ActionState } from "@/actions/staff-id-card";
+import { cardMessage, mailtoUrl, whatsAppUrl, type IdCardFields } from "@/lib/hr/id-card-profile";
 import { Printer, Download, Mail, MessageCircle, User, Settings } from "lucide-react";
 import { t as tr } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
@@ -31,46 +32,62 @@ const DESIGNS = [
   { id: "red", name: "Bold Red" },
 ];
 
+function asCard(props: Props): IdCardFields {
+  return props;
+}
+
+async function photoDataUrl(url: string | null): Promise<string | null> {
+  if (!url) return null;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export function IdCardClient(props: Props) {
   const [design, setDesign] = useState("blue");
   const lang = useLang();
   const [showSettings, setShowSettings] = useState(false);
-
-  function cardText() {
-    return [
-      "AgriBridge - Staff ID Card",
-      `Name: ${props.fullName}`,
-      `Designation: ${props.designation}`,
-      props.employeeCode ? `Employee Code: ${props.employeeCode}` : "",
-      props.branchName ? `Branch: ${props.branchName}` : "",
-      props.phone ? `Phone: ${props.phone}` : "",
-      props.cnic ? `CNIC: ${props.cnic}` : "",
-      props.bloodGroup ? `Blood Group: ${props.bloodGroup}` : "",
-      props.emergencyName ? `Emergency Contact: ${props.emergencyName} (${props.emergencyPhone ?? "-"})` : "",
-    ].filter(Boolean).join("\n");
-  }
+  const emptyLabel = tr("ic_not_on_file", lang);
 
   function handlePrint() {
     window.print();
   }
-  function handleDownload() {
-    const blob = new Blob([cardText()], { type: "text/plain;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${props.fullName.replace(/\s+/g, "-")}-id-card.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+  async function handleDownload() {
+    const { buildIdCardPdf, downloadIdCardPdf } = await import("@/lib/hr/id-card-pdf");
+    const bytes = buildIdCardPdf(asCard(props), design, emptyLabel, await photoDataUrl(props.photoUrl));
+    downloadIdCardPdf(`${props.fullName.replace(/\s+/g, "-")}-id-card.pdf`, bytes);
   }
   function handleWhatsApp() {
-    window.open(`https://wa.me/?text=${encodeURIComponent(cardText())}`, "_blank");
+    window.open(whatsAppUrl(props.phone, cardMessage(asCard(props), emptyLabel)), "_blank", "noopener,noreferrer");
   }
   function handleEmail() {
-    window.location.href = `mailto:?subject=${encodeURIComponent(`${props.fullName} - ID Card`)}&body=${encodeURIComponent(cardText())}`;
+    window.location.href = mailtoUrl(props.fullName, cardMessage(asCard(props), emptyLabel));
   }
 
   return (
     <div>
+      <style>{`
+        @media print {
+          body * { visibility: hidden !important; }
+          #staff-id-print, #staff-id-print * { visibility: visible !important; }
+          #staff-id-print {
+            position: absolute; left: 0; top: 0;
+            display: flex; gap: 8mm;
+            -webkit-print-color-adjust: exact; print-color-adjust: exact;
+          }
+          @page { size: A4 landscape; margin: 12mm; }
+        }
+      `}</style>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div className="flex flex-wrap gap-1.5">
           {DESIGNS.map((d) => (
@@ -84,17 +101,17 @@ export function IdCardClient(props: Props) {
           ))}
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowSettings(true)} aria-label={tr("ic_settings", lang)} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Settings className="h-4 w-4" /></button>
-          <button onClick={handlePrint} aria-label={tr("ic_print", lang)} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Printer className="h-4 w-4" /></button>
-          <button onClick={handleDownload} aria-label={tr("ic_download", lang)} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Download className="h-4 w-4" /></button>
-          <button onClick={handleWhatsApp} aria-label={tr("ic_share_whatsapp", lang)} className="rounded-lg border border-green-200 bg-green-50 p-2 text-green-700 hover:bg-green-100"><MessageCircle className="h-4 w-4" /></button>
-          <button onClick={handleEmail} aria-label={tr("ic_share_email", lang)} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Mail className="h-4 w-4" /></button>
+          <button type="button" onClick={() => setShowSettings(true)} aria-label={tr("ic_settings", lang)} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Settings className="h-4 w-4" /></button>
+          <button type="button" onClick={handlePrint} aria-label={tr("ic_print", lang)} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Printer className="h-4 w-4" /></button>
+          <button type="button" onClick={handleDownload} aria-label={tr("ic_download", lang)} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Download className="h-4 w-4" /></button>
+          <button type="button" onClick={handleWhatsApp} aria-label={tr("ic_share_whatsapp", lang)} className="rounded-lg border border-green-200 bg-green-50 p-2 text-green-700 hover:bg-green-100"><MessageCircle className="h-4 w-4" /></button>
+          <button type="button" onClick={handleEmail} aria-label={tr("ic_share_email", lang)} className="rounded-lg border border-surface-200 p-2 text-surface-600 hover:bg-surface-50"><Mail className="h-4 w-4" /></button>
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-center gap-6">
-        <CardFace design={design} side="front" {...props} />
-        <CardFace design={design} side="back" {...props} />
+      <div id="staff-id-print" className="flex flex-wrap justify-center gap-6 print:[-webkit-print-color-adjust:exact] print:[print-color-adjust:exact]">
+        <CardFace design={design} side="front" emptyLabel={emptyLabel} {...props} />
+        <CardFace design={design} side="back" emptyLabel={emptyLabel} {...props} />
       </div>
 
       {showSettings && <SettingsModal {...props} onClose={() => setShowSettings(false)} />}
@@ -102,20 +119,20 @@ export function IdCardClient(props: Props) {
   );
 }
 
-function CardFace({ design, side, fullName, designation, phone, photoUrl, bloodGroup, emergencyName, emergencyPhone, employeeCode, cnic, branchName }: Props & { design: string; side: "front" | "back" }) {
+function CardFace({ design, side, fullName, designation, phone, photoUrl, bloodGroup, emergencyName, emergencyPhone, employeeCode, cnic, branchName, emptyLabel }: Props & { design: string; side: "front" | "back"; emptyLabel: string }) {
   const lang = useLang();
   const themes: Record<string, { bg: string; accent: string; text: string; subtext: string }> = {
-    blue: { bg: "bg-gradient-to-br from-blue-600 to-blue-800", accent: "bg-blue-500", text: "text-white", subtext: "text-blue-100" },
+    blue: { bg: "bg-blue-700 bg-gradient-to-br from-blue-600 to-blue-800", accent: "bg-blue-500", text: "text-white", subtext: "text-blue-100" },
     navy: { bg: "bg-[#0f172a]", accent: "bg-amber-500", text: "text-white", subtext: "text-slate-300" },
-    green: { bg: "bg-gradient-to-br from-green-600 to-green-800", accent: "bg-green-400", text: "text-white", subtext: "text-green-100" },
+    green: { bg: "bg-green-700 bg-gradient-to-br from-green-600 to-green-800", accent: "bg-green-400", text: "text-white", subtext: "text-green-100" },
     white: { bg: "bg-white border-2 border-surface-200", accent: "bg-surface-800", text: "text-surface-900", subtext: "text-surface-500" },
-    red: { bg: "bg-gradient-to-br from-red-600 to-red-800", accent: "bg-red-400", text: "text-white", subtext: "text-red-100" },
+    red: { bg: "bg-red-700 bg-gradient-to-br from-red-600 to-red-800", accent: "bg-red-400", text: "text-white", subtext: "text-red-100" },
   };
   const t = themes[design];
 
   if (side === "front") {
     return (
-      <div className={`h-[214px] w-[340px] overflow-hidden rounded-2xl shadow-xl ${t.bg}`}>
+      <div className={`h-[214px] w-[340px] overflow-hidden rounded-2xl shadow-xl print:[-webkit-print-color-adjust:exact] print:[print-color-adjust:exact] ${t.bg}`}>
         <div className={`h-2 w-full ${t.accent}`} />
         <div className="flex h-full flex-col items-center justify-center p-4">
           <p className={`text-xs font-bold uppercase tracking-wider ${t.text}`}>{tr("sh_company", lang)}</p>
@@ -123,7 +140,7 @@ function CardFace({ design, side, fullName, designation, phone, photoUrl, bloodG
             {photoUrl ? (
               <img src={photoUrl} alt={fullName} className="h-full w-full object-cover" />
             ) : (
-              <div className="flex h-full w-full items-center justify-center"><User className={`h-10 w-10 ${t.subtext}`} /></div>
+              <div className="flex h-full w-full items-center justify-center" title={emptyLabel}><User className={`h-10 w-10 ${t.subtext}`} /></div>
             )}
           </div>
           <p className={`text-center font-display text-base font-bold ${t.text}`}>{fullName}</p>
@@ -136,13 +153,13 @@ function CardFace({ design, side, fullName, designation, phone, photoUrl, bloodG
   }
 
   return (
-    <div className={`h-[214px] w-[340px] overflow-hidden rounded-2xl shadow-xl ${t.bg}`}>
+    <div className={`h-[214px] w-[340px] overflow-hidden rounded-2xl shadow-xl print:[-webkit-print-color-adjust:exact] print:[print-color-adjust:exact] ${t.bg}`}>
       <div className={`h-2 w-full ${t.accent}`} />
       <div className="flex h-full flex-col justify-center gap-1.5 p-5 text-xs">
-        <p className={t.text}><strong>{tr("hj_cnic_label", lang)}</strong> {cnic ?? "-"}</p>
-        <p className={t.text}><strong>{tr("hj_phone_label", lang)}</strong> {phone ?? "-"}</p>
-        <p className={t.text}><strong>{tr("ic_blood_label", lang)}</strong> {bloodGroup ?? "-"}</p>
-        <p className={t.text}><strong>{tr("ic_emergency_label", lang)}</strong> {emergencyName ?? "-"} {emergencyPhone ? `(${emergencyPhone})` : ""}</p>
+        <p className={t.text}><strong>{tr("hj_cnic_label", lang)}</strong> {cnic ?? emptyLabel}</p>
+        <p className={t.text}><strong>{tr("hj_phone_label", lang)}</strong> {phone ?? emptyLabel}</p>
+        <p className={t.text}><strong>{tr("ic_blood_label", lang)}</strong> {bloodGroup ?? emptyLabel}</p>
+        <p className={t.text}><strong>{tr("ic_emergency_label", lang)}</strong> {emergencyName ?? emptyLabel} {emergencyPhone ? `(${emergencyPhone})` : ""}</p>
         <div className={`mt-2 border-t pt-2 ${design === "white" ? "border-surface-200" : "border-white/20"}`}>
           <p className={`text-[10px] ${t.subtext}`}>{tr("at_card_return_note", lang)}</p>
         </div>
@@ -174,6 +191,8 @@ function SettingsModal({ profileId, onClose, ...current }: Props & { onClose: ()
             <label className="text-xs text-surface-500">{tr("c_photo", lang)}</label>
             <input type="file" name="photo" accept="image/*" className="mt-1 w-full text-xs" />
           </div>
+          <input name="phone" defaultValue={current.phone ?? ""} placeholder={tr("sp_phone", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
+          <input name="cnic" defaultValue={current.cnic ?? ""} placeholder={tr("sp_cnic_number", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input name="employee_code" defaultValue={current.employeeCode ?? ""} placeholder={tr("ic_employee_code", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input name="blood_group" defaultValue={current.bloodGroup ?? ""} placeholder={tr("ic_blood_group", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
           <input name="emergency_contact_name" defaultValue={current.emergencyName ?? ""} placeholder={tr("ic_emergency_name", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />

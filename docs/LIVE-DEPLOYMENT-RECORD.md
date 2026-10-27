@@ -6,6 +6,15 @@ Branch `cursor/cash-needs-you-queue-9b60`. Migration **721 not applied** on Test
 - `721_cash_needs_you_help.sql`. Rollback: `721_cash_needs_you_help.rollback.sql`.
 - Fuel / payroll is mein nahi.
 
+## Done on Live — 27 October 2026: staff ID card hire fields (720)
+
+Branch `cursor/id-card-fill-print-e442`. PR #233. Migration **720 Live par lag chuki** (aaj raat). Dobara mat chalana. Number 721 cash custody ka hai, 720 nahi.
+
+- `720_id_card_application_fields.sql` — `job_applications` par blood group, emergency naam/number, aur ID photo. Joined staff ke **khali** `staff_details` khane (phone, CNIC, address, gender, blood, emergency, photo, application/offer link) application se bharte hain. Jo HR ne pehle likha hai wo nahi mitta.
+- Blood aur emergency pehle application par the hi nahi, is liye purane staff (jaise M Usama Saleem) par ye do khali reh sakte hain. Phone aur CNIC application par the, copy unhein staff record par laati hai.
+- Rollback: `720_id_card_application_fields.rollback.sql` — naye columns hataata hai. Copy ho chuki phone/CNIC wapas khali nahi karta.
+- Code us se pehle bhi card par application se phone/CNIC dikhata hai. Blood tabhi save hota hai jab ye migration chal chuki ho.
+
 ## Pending — 27 October 2026: reel website pages (719)
 
 Branch `cursor/reel-website-features-3d67`. Migration **719 not applied** on Testing or Live. File only. 717 cash custody hai, 718 batch ginti. Ye un ke baad. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).

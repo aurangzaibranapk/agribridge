@@ -74,6 +74,10 @@ interface Application {
   certificate_url: string | null;
   experience_certificate_url: string | null;
   cv_url: string | null;
+  blood_group?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  photo_url?: string | null;
   interview_score: InterviewScore | null;
   created_profile_id: string | null;
   timeline: TimelineEvent[];
@@ -172,6 +176,8 @@ function DetailModal({ application, branches, onClose }: { application: Applicat
           <p><strong>{t("hj_email_label", lang)}</strong> {application.email}</p>
           <p><strong>{t("hj_phone_label", lang)}</strong> {application.phone ?? "-"}</p>
           <p><strong>{t("hj_cnic_label", lang)}</strong> {application.cnic ?? "-"}</p>
+          <p><strong>{t("ic_blood_label", lang)}</strong> {application.blood_group ?? t("ic_not_on_file", lang)}</p>
+          <p><strong>{t("ic_emergency_label", lang)}</strong> {application.emergency_contact_name ?? t("ic_not_on_file", lang)} {application.emergency_contact_phone ? `(${application.emergency_contact_phone})` : ""}</p>
           <p><strong>{t("hj_address_label", lang)}</strong> {application.address ?? "-"}</p>
           <p><strong>{t("hj_expected_salary", lang)}</strong> {application.expected_salary ? `Rs ${application.expected_salary.toLocaleString()}` : "-"}</p>
           <p><strong>{t("hj_qualification", lang)}</strong> {application.qualification ?? "-"}</p>
