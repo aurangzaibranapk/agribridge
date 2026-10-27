@@ -1,4 +1,4 @@
--- 720 rollback: menu naam aur madad 717 / 171 par wapas.
+-- 721 rollback: menu naam aur madad 717 / 171 par wapas.
 -- Koi table nahi girti.
 
 update public.features

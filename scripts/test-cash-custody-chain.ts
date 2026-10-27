@@ -164,11 +164,13 @@ assert.match(custodyAction, /CUSTODY_ASK_PREFIX/);
 assert.match(custodyAction, /Apni jama karayi hui deposit khud tasdeeq nahi kar sakte/);
 assert.doesNotMatch(readFileSync("src/app/admin/cash-custody/page.tsx", "utf8"), /fuel|payroll|petty/i);
 
-const help = readFileSync("supabase/migrations/720_cash_needs_you_help.sql", "utf8");
+const help = readFileSync("supabase/migrations/721_cash_needs_you_help.sql", "utf8");
 assert.match(help, /Cash custody/);
 assert.match(help, /Ask why/);
+assert.match(help, /721_cash_needs_you_help.rollback.sql/);
 assert.doesNotMatch(help, /create table/i);
 assert.doesNotMatch(help, /yasir|2030/i);
-assert.match(readFileSync("supabase/migrations/720_cash_needs_you_help.rollback.sql", "utf8"), /Kis ke paas Cash/);
+assert.match(readFileSync("supabase/migrations/721_cash_needs_you_help.rollback.sql", "utf8"), /Kis ke paas Cash/);
+assert.equal(readFileSync("supabase/migrations/721_cash_needs_you_help.sql", "utf8").includes("720_cash_needs"), false);
 
 console.log("cash custody chain tests passed");

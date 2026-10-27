@@ -1,11 +1,12 @@
 -- =====================================================================
--- 720: Cash custody queue — menu naam + feature_help
+-- 721: Cash custody queue — menu naam + feature_help
 -- =====================================================================
 -- Koi naya table, koi naya RPC, koi raqam nahi badalti.
 -- Safha /admin/cash-custody pehle se 717 ke packets par hai.
 -- Yahan sirf menu ka naam "Cash custody" aur Needs-you ki madad.
 -- Pehle Testing. Live par tab jab backup verify ho.
--- Rollback: 720_cash_needs_you_help.rollback.sql
+-- Rollback: 721_cash_needs_you_help.rollback.sql
+-- 720 id card fields (PR #233) hai. Ye number us se baad hai.
 
 update public.features
    set label = 'Cash custody',
