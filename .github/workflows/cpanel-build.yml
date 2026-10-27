@@ -47,18 +47,63 @@ jobs:
       - name: Production build
         run: npm run build
 
+      # Same file set as scripts/package-cpanel.sh (.next public package.json
+      # package-lock.json next.config.js server.js .release ab-maintenance).
+      # Do not call that script here: check-cpanel-env.cjs accepts only the
+      # live Supabase URL, and this job must keep Live and Testing validation.
+      # The script also re-runs npm ci, the regression suite, and a second build.
+      # node_modules stays off the archive. Softaculous installs it on the server.
       - name: Create complete cPanel archive
         shell: bash
         run: |
-          rm -rf cpanel-package
-          mkdir -p cpanel-package
-          cp -a .next cpanel-package/.next
-          [ -d public ] && cp -a public cpanel-package/public || true
-          cp package.json package-lock.json next.config.js server.js cpanel-package/
-          cp -a node_modules cpanel-package/node_modules
-          find cpanel-package/node_modules -type d -name .cache -prune -exec rm -rf {} + || true
-          tar -czf agribridge-cpanel-release.tar.gz -C cpanel-package .
+          set -euo pipefail
+          [[ -s .next/BUILD_ID ]] || { echo "::error::Production build missing; run npm run build first."; exit 1; }
+          package_dir="$(mktemp -d)"
+          trap 'rm -rf -- "$package_dir"' EXIT
+          for item in .next public package.json package-lock.json next.config.js server.js; do
+            [[ -e "$item" ]] || { echo "::error::Required runtime file missing: $item"; exit 1; }
+            cp -R -- "$item" "$package_dir/"
+          done
+          rm -rf -- "$package_dir/.next/cache" "$package_dir/.next/types"
+          mkdir -p "$package_dir/ab-maintenance"
+          cp public/system-update.html "$package_dir/ab-maintenance/index.html"
+          mkdir -p "$package_dir/.release/maintenance"
+          cp docs/deploy/maintenance/htaccess-snippet.conf scripts/maintenance-on.sh scripts/maintenance-off.sh "$package_dir/.release/maintenance/"
+          rm -f -- "$package_dir/.next/trace"
+          cp scripts/verify-cpanel-runtime.mjs "$package_dir/.release/verify.mjs"
+          node scripts/create-cpanel-manifest.mjs "$package_dir"
+          node "$package_dir/.release/verify.mjs" "$package_dir"
+          tar -czf agribridge-cpanel-release.tar.gz -C "$package_dir" .next public package.json package-lock.json next.config.js server.js .release ab-maintenance
           sha256sum agribridge-cpanel-release.tar.gz > agribridge-cpanel-release.sha256
+          listing="$(tar -tzf agribridge-cpanel-release.tar.gz)"
+          if printf '%s\n' "$listing" | grep -E '(^|/)node_modules(/|$)' >/dev/null; then
+            echo "::error::Archive contains node_modules. cPanel keeps the server copy; do not pack it."
+            exit 1
+          fi
+          required=(
+            .next/BUILD_ID
+            public/system-update.html
+            package.json
+            package-lock.json
+            next.config.js
+            server.js
+            .release/verify.mjs
+            .release/manifest.json
+            .release/maintenance/htaccess-snippet.conf
+            .release/maintenance/maintenance-on.sh
+            .release/maintenance/maintenance-off.sh
+            ab-maintenance/index.html
+          )
+          for path in "${required[@]}"; do
+            printf '%s\n' "$listing" | grep -Fxq "$path" || { echo "::error::Archive missing $path"; exit 1; }
+          done
+          bytes="$(wc -c < agribridge-cpanel-release.tar.gz)"
+          awk -v bytes="$bytes" 'BEGIN { printf "Size: %.2f MB (%d bytes)\n", bytes/1000000, bytes }'
+          # Runtime-only packages are about 20MB. The old node_modules archive was about 190MB.
+          if [[ "$bytes" -gt 80000000 ]]; then
+            echo "::error::Archive is ${bytes} bytes. Expected about 20MB without node_modules."
+            exit 1
+          fi
           ls -lh agribridge-cpanel-release.tar.gz agribridge-cpanel-release.sha256
 
       - name: Upload cPanel build artifact
