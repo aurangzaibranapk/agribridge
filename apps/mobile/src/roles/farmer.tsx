@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { settingsOrError } from "../../../../src/lib/mobile/pricing";
 import { priceFromSettings } from "../../../../src/lib/mobile/pricing";
 import type { MilkSettings } from "../../../../src/lib/dairy/rules";
-import { karachiDaySeries, loadCatalog, loadHealth, loadKhata, loadMilkList, loadMilkSettings, loadMyFarmerId, loadOrders, loadProfileNames, loadVaccines, pricedMilkTotal, rupees, salesByDay, shiftLabel, type CatalogRow, type HealthRow, type KhataView, type MilkRow, type OrderRow, type ReadResult, type VaccineRow } from "../../../../src/lib/mobile/live-read";
+import { karachiDaySeries, liveGet, liveGetScoped, liveInsert, loadCatalog, loadHealth, loadKhata, loadMilkList, loadMilkSettings, loadMyFarmerId, loadProfileNames, loadRoleOrders, loadVaccines, pricedMilkTotal, rupees, salesByDay, shiftLabel, testOrdersFor, type CatalogRow, type HealthRow, type KhataView, type MilkRow, type OrderRow, type PartyRow, type ReadResult, type VaccineRow } from "../../../../src/lib/mobile/live-read";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { Empty, SaleChart, Section, liveAuth, type LiveBag } from "../bits";
 import { FarmerGlass } from "./glass-homes";
-import { colors } from "../kit";
+import { Btn, colors } from "../kit";
 
 function num(value: number | string | null | undefined): number {
   const n = typeof value === "number" ? value : Number(value);
@@ -52,6 +52,9 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
   const [settings, setSettings] = useState<MilkSettings | null>(null);
   const [names, setNames] = useState<Map<string, string>>(new Map());
   const [refreshing, setRefreshing] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [orderNote, setOrderNote] = useState("");
+  const [orderBusy, setOrderBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!auth) return;
@@ -59,7 +62,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
     const [nextKhata, nextMilk, nextOrders, nextShop, nextHealth, nextVaccines, nextSettings] = await Promise.all([
       loadKhata(auth, fetch),
       loadMilkList(auth, fetch, 80, auth.testAccount ? farmerId ?? null : undefined),
-      loadOrders(auth, fetch),
+      loadRoleOrders(auth, "customer", fetch),
       loadCatalog(auth, fetch),
       loadHealth(auth, fetch),
       loadVaccines(auth, fetch),
@@ -67,7 +70,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
     ]);
     setKhata(nextKhata);
     setMilk(nextMilk);
-    setOrders(nextOrders);
+    setOrders(nextOrders.ok && auth.testAccount ? { ok: true, rows: testOrdersFor(nextOrders.rows, "customer") } : nextOrders);
     setShop(nextShop);
     setHealth(nextHealth);
     setVaccines(nextVaccines);
@@ -79,14 +82,13 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
   }, [auth?.token, auth?.url, auth?.userId, auth?.testAccount, auth?.flavor]);
 
   useEffect(() => { void load(); }, [load]);
-  if (!auth) return <ScrollView style={{ padding: 16 }}><Section title="Kisan"><Empty title="Login chahiye" body="Wallet aur doodh testing account se aate hain. Is build mein Supabase key set nahi." /></Section></ScrollView>;
+  if (!auth) return <ScrollView style={{ padding: 16 }}><Section title="Kisan / Customer"><Empty title="Login chahiye" body="Wallet, khata, orders aur doodh isi account se aate hain." /></Section></ScrollView>;
   if (!khata || !milk || !orders || !shop || !health || !vaccines) return <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />;
 
   const milkRows = milk.ok ? milk.rows : [];
   const week = karachiWeek();
   const weekRows = milkRows.filter((row) => inWeek(row.entry_date ?? null, week));
   const weekLitres = Math.round(weekRows.reduce((sum, row) => sum + litresOf(row), 0) * 100) / 100;
-  const khataText = khata.note && khata.owed == null ? "—" : rupees(khata.owed);
   const days = karachiDaySeries(7);
   const byDay = new Map<string, number>();
   for (const row of milkRows) {
@@ -95,6 +97,50 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
     byDay.set(day, (byDay.get(day) ?? 0) + litresOf(row));
   }
   const chart = salesByDay(days.map((day) => ({ created_at: day, total_amount: byDay.get(day) ?? 0, status: "ok" })), days);
+
+  async function placeOrder() {
+    if (!auth) return;
+    const total = Number(amount);
+    if (!(total > 0)) { setOrderNote("Raqam sahi likhein."); return; }
+    const uid = encodeURIComponent(auth.userId || "");
+    let customer: PartyRow | null = null;
+    if (uid) {
+      const own = await liveGetScoped<PartyRow>(auth, `customers?select=id,name&user_id=eq.${uid}&limit=1`, fetch);
+      if (own.ok) customer = own.rows[0] ?? null;
+    }
+    const farmerId = await loadMyFarmerId(auth, fetch);
+    if (!customer && farmerId) {
+      const linked = await liveGetScoped<PartyRow>(auth, `customers?select=id,name&farmer_id=eq.${encodeURIComponent(farmerId)}&limit=1`, fetch);
+      if (linked.ok) customer = linked.rows[0] ?? null;
+    }
+    if (!customer && auth.testAccount && auth.userId) {
+      const link = await liveGet<{ record_id?: string | null }>(auth, `app_test_links?select=record_id&account_id=eq.${encodeURIComponent(auth.userId)}&role=eq.customer&limit=1`, fetch);
+      const recordId = link.ok ? link.rows[0]?.record_id : null;
+      if (recordId) {
+        const linked = await liveGetScoped<PartyRow>(auth, `customers?select=id,name&id=eq.${encodeURIComponent(recordId)}&limit=1`, fetch);
+        if (linked.ok) customer = linked.rows[0] ?? null;
+      }
+    }
+    setOrderBusy(true);
+    const saved = await liveInsert<OrderRow>(auth, "agri_orders", {
+      order_number: `APP-${Date.now()}`,
+      order_type: "Karyana",
+      order_to_type: "Farmer",
+      partner_name: customer?.name || "Kisan / Customer",
+      customer_id: customer?.id ?? null,
+      party_link_state: customer?.id ? "linked" : "unlinked_unknown",
+      status: "draft",
+      grand_total: total,
+      notes: "Mobile app karyana",
+      requested_by: auth.userId,
+      is_test: auth.testAccount === true,
+    }, fetch);
+    setOrderBusy(false);
+    if (!saved.ok) { setOrderNote(saved.message); return; }
+    setAmount("");
+    setOrderNote("Draft order ban gaya.");
+    await load();
+  }
 
   if (tab === "home" || tab === "khata") {
     return (
@@ -113,7 +159,22 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
   }
 
   return (
-    <ScrollView style={{ padding: 16, backgroundColor: "#07140F" }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
+    <ScrollView style={{ padding: 16, backgroundColor: "#F7F8F3" }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
+      {tab === "farm" ? (
+        <View>
+          <Section title="Mera Farm" sub="Kisan aur Customer ka aik hi account">
+            <ServiceLink label="Crops / Faslein" detail="Fasal ka record aur schedule" />
+            <ServiceLink label="Dairy Management" detail="Doodh, janwar aur health" onPress={() => onTab?.("doodh")} />
+            <ServiceLink label="Livestock" detail="Janwar aur treatment record" onPress={() => onTab?.("vet")} />
+            <ServiceLink label="Inputs" detail="Seed, fertilizer aur pesticide" onPress={() => onTab?.("karyana")} />
+            <ServiceLink label="Machinery" detail="Farm machinery services" />
+            <ServiceLink label="Kisan AI" detail="Farm help aur rehnumai" />
+          </Section>
+          <Section title="Mera Khata" sub="Asal receivable/payable record">
+            <ServiceLink label="Wallet / Khata" detail={khata.note || (khata.owed == null ? "Record nahi mila" : rupees(Math.abs(khata.owed)))} onPress={() => onTab?.("khata")} />
+          </Section>
+        </View>
+      ) : null}
       {tab === "doodh" ? (
         <View>
           <MilkList title="Mera doodh" sub="Kis ne uthaya, litre, fat, SNF, LR, rate, raqam" result={milk} rows={milkRows} names={names} settings={settings} />
@@ -126,24 +187,6 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
             {weekRows.map((row, index) => (
               <Text key={`${row.id ?? row.entry_date}-${index}`} style={{ color: colors.text, marginTop: 6 }}>
                 {row.entry_date} · {shiftLabel(row.shift)} · {litresOf(row)} L · {amountLine(row)}
-              </Text>
-            ))}
-          </Section>
-        </View>
-      ) : null}
-      {tab === "khata" ? (
-        <View>
-          <View style={{ backgroundColor: colors.gold, borderRadius: 18, padding: 16, marginBottom: 12 }}>
-            <Text style={{ color: "#3d2e10", fontWeight: "700" }}>Mera Wallet</Text>
-            <Text style={{ color: "#1c1408", fontSize: 28, fontWeight: "800", marginTop: 4 }}>{khataText}</Text>
-            <Text style={{ color: "#3d2e10", marginTop: 4 }}>{khata.note || "Baqaya, aap ki apni lines se"}</Text>
-          </View>
-          <Section title="Haal ka len-den" sub="Pichle 90 din">
-            {khata.linesNote ? <Empty title="Lines nahi khulin" body={khata.linesNote} /> : null}
-            {!khata.linesNote && khata.lines.length === 0 ? <Empty title="Koi line nahi" body="Udhaar ya adaigi jab darj hogi, tareekh aur raqam yahan aayenge. Track na ho to dash rehta hai." /> : null}
-            {khata.lines.map((line, index) => (
-              <Text key={`${line.entry_date}-${index}`} style={{ color: colors.text, marginBottom: 6 }}>
-                {line.entry_date} · {line.tafseel || line.category || "Line"} · {line.udhaar ? `udhaar ${line.udhaar}` : ""} {line.adaigi ? `adaigi ${line.adaigi}` : ""} · baqaya {line.baqaya ?? "—"}
               </Text>
             ))}
           </Section>
@@ -173,18 +216,35 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
       ) : null}
       {tab === "more" ? (
         <View>
-          <Text style={{ color: "#F4F7F4", fontWeight: "800", marginBottom: 8 }} onPress={() => onTab?.("vet")}>Vet doctor</Text>
-          <Text style={{ color: "#F4F7F4", fontWeight: "800" }} onPress={() => onTab?.("karyana")}>Karyana</Text>
+          <Section title="Profile & Services" sub="Isi account ka tamam record">
+            <ServiceLink label="Wallet / Khata" detail="Receivable aur payable" onPress={() => onTab?.("khata")} />
+            <ServiceLink label="Vet doctor" detail="Treatment aur vaccine" onPress={() => onTab?.("vet")} />
+            <ServiceLink label="Karyana / Orders" detail="Market aur order history" onPress={() => onTab?.("karyana")} />
+            <ServiceLink label="Farm services" detail="Crops, dairy, livestock aur machinery" onPress={() => onTab?.("farm")} />
+          </Section>
         </View>
       ) : null}
       {tab === "karyana" ? (
         <View>
+          <Section title="Naya order" sub="Isi Kisan / Customer account ke khata se link hoga">
+            {orderNote ? <Text style={{ color: colors.greenDark, marginBottom: 6 }}>{orderNote}</Text> : null}
+            <TextInput value={amount} onChangeText={setAmount} placeholder="Order ki raqam" keyboardType="decimal-pad" style={{ borderWidth: 1, borderColor: colors.line, borderRadius: 10, padding: 12, color: colors.text, backgroundColor: "#fff", marginBottom: 8 }} />
+            <Btn label={orderBusy ? "Ban raha hai" : "Order bhejein"} onPress={() => { if (!orderBusy) void placeOrder(); }} />
+          </Section>
           <Orders result={orders} />
           <Catalog result={shop} />
         </View>
       ) : null}
       <View style={{ height: 24 }} />
     </ScrollView>
+  );
+}
+
+function ServiceLink({ label, detail, onPress }: { label: string; detail: string; onPress?: () => void }) {
+  return (
+    <Text onPress={onPress} style={{ color: colors.text, backgroundColor: "#F3F8F2", borderWidth: 1, borderColor: colors.line, borderRadius: 12, padding: 12, marginBottom: 8, fontWeight: "800" }}>
+      {label}{"\n"}<Text style={{ color: colors.muted, fontWeight: "400" }}>{detail}{onPress ? "  →" : ""}</Text>
+    </Text>
   );
 }
 

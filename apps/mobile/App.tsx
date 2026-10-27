@@ -15,7 +15,7 @@ import { BrandStack, LanguageProvider } from "./src/glass";
 import { readTestAccount, showRolePreview, showRoleSwitch, SWITCH_ROLES, switchRoleLabel } from "../../src/lib/mobile/test-account";
 import { refreshSupabaseSession, SESSION_EXPIRED, singleFlight, type RefreshFailure, type RefreshSuccess } from "../../src/lib/mobile/session-refresh";
 import { ROLE_NAV } from "../../src/lib/mobile/nav";
-import type { AppRole } from "../../src/lib/mobile/roles";
+import { canonicalAppRole, type AppRole } from "../../src/lib/mobile/roles";
 import { pinLock, pinProblem } from "../../src/lib/mobile/pin";
 import { applyFlushResult, enqueue, flushPlan, type OutboxItem } from "../../src/lib/mobile/queue";
 import { reportContext } from "../../src/lib/mobile/report";
@@ -192,8 +192,9 @@ export default function App() {
         };
         setToken(session.token);
         setRole(session.role);
-        setAppRole(session.appRole);
-        setHomeRole(session.appRole);
+        const savedRole = canonicalAppRole(session.appRole);
+        setAppRole(savedRole);
+        setHomeRole(savedRole);
         setUserId(session.userId);
         setIsTest(session.isTest === true);
         setStage("unlock");
@@ -249,8 +250,9 @@ export default function App() {
     }, body.user_id, (url, init) => fetch(url, init));
     setToken(body.access_token);
     setRole(body.role);
-    setAppRole(body.appRole);
-    setHomeRole(body.appRole);
+    const resolvedRole = canonicalAppRole(body.appRole);
+    setAppRole(resolvedRole);
+    setHomeRole(resolvedRole);
     setUserId(body.user_id);
     setIsTest(test);
     await rememberSession({
@@ -258,7 +260,7 @@ export default function App() {
       refresh: body.refresh_token,
       expiresAt: body.expires_at,
       role: body.role,
-      appRole: body.appRole,
+      appRole: resolvedRole,
       userId: body.user_id,
       isTest: test,
     });
@@ -435,7 +437,7 @@ export default function App() {
   return (
     <LanguageProvider lang={lang} line={lock.line} mark={lock.title}>
     <SafeAreaView style={styles.root}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       {FLAVOR === "test" ? (
         <View style={styles.flavorBar}>
           <Text style={styles.flavorText}>TEST · testing database</Text>
@@ -473,11 +475,7 @@ export default function App() {
           {whatsapp ? <Text style={styles.link} onPress={() => void Linking.openURL(whatsapp)}>WhatsApp support</Text> : null}
         </View>
       ) : (
-        <View style={{ flex: 1, backgroundColor: "#07140F" }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 4 }}>
-            <Text style={{ color: "#8FA399", fontSize: 12 }}>{lock.title} · {VERSION || "v0.6.1 Beta"}{VERSION_CODE ? ` · ${VERSION_CODE}` : ""}</Text>
-            <Pressable onPress={() => setProfileOpen(true)}><Text style={{ color: "#3DDC97", fontWeight: "700" }}>Profile</Text></Pressable>
-          </View>
+        <View style={{ flex: 1, backgroundColor: "#F7F8F3" }}>
           <View style={{ flex: 1, minHeight: 0 }}>
             {isTest ? (
               <View style={styles.testBar}>
@@ -623,7 +621,7 @@ function LangPick({ lang, onPick }: { lang: AppLang; onPick: (lang: AppLang) => 
     <View style={{ flexDirection: "row", marginBottom: 12 }}>
       {items.map((item) => (
         <Pressable key={item.id} onPress={() => onPick(item.id)} style={{ marginRight: 8, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: lang === item.id ? "#146B3A" : "transparent", borderWidth: 1, borderColor: "#3DDC97" }}>
-          <Text style={{ color: "#F4F7F4", fontWeight: "700", writingDirection: item.id === "ur" ? "rtl" : "ltr" }}>{item.label}</Text>
+          <Text style={{ color: colors.text, fontWeight: "700", writingDirection: item.id === "ur" ? "rtl" : "ltr" }}>{item.label}</Text>
         </Pressable>
       ))}
     </View>
@@ -720,7 +718,7 @@ function SupportSheet({ portal, token, chat, whatsapp, channel, flavor, onClose 
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#07140F" },
+  root: { flex: 1, backgroundColor: "#F7F8F3" },
   brand: { fontSize: 32, fontWeight: "800", color: colors.green, marginTop: 24 },
   sub: { color: colors.muted, marginBottom: 16 },
   help: { color: colors.muted, marginBottom: 8 },

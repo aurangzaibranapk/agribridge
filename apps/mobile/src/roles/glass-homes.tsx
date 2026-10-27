@@ -6,7 +6,7 @@ import { approvalJourney, approvalTimeline, compactRupee, hazarFigure, karachiCl
 import { karachiDate, karachiDaySeries, liveGet, liveGetScoped, loadFarmerNames, loadMilkList, loadMilkWindow, loadMonthPurchases, loadMonthSales, loadOwnAttendance, loadPhoneNotes, loadSalesMonths, milkLitres, pricedMilkTotal, rupees, saleMonthKey, shiftLabel, type AdminHome, type HealthRow, type KhataView, type MilkRow, type OrderRow, type PhoneNote, type ReadResult } from "../../../../src/lib/mobile/live-read";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { liveAuth, type LiveBag } from "../bits";
-import { BarChart, BarTrack, BrandHeader, Donut, GlassCard, GlassScreen, Kpi, KpiGrid, LineChart, Pill, Rise, TankRow, TankTemp, Timeline, WeatherCard, glass, useFace, useWeather } from "../glass";
+import { ActionGrid, BarChart, BarTrack, BrandHeader, Donut, GlassCard, GlassScreen, Kpi, KpiGrid, LineChart, Pill, Rise, TankRow, TankTemp, Timeline, WeatherCard, glass, useFace, useWeather } from "../glass";
 
 type Refresh = { refreshing?: boolean; onRefresh?: () => void; onProfile?: () => void; onTab?: (key: string) => void };
 
@@ -33,10 +33,10 @@ function dayValues(rows: MilkRow[], days: string[]): number[] {
   return days.map((day) => milkLitres(rows.filter((row) => row.entry_date === day)));
 }
 
-function orderTone(status: string | null | undefined): { label: string; tone: "green" | "orange" | "red" | "blue" } {
+function orderTone(status: string | null | undefined, surface: "customer" | "dealer" = "customer"): { label: string; tone: "green" | "orange" | "red" | "blue" } {
   const key = String(status ?? "").toLowerCase();
   if (key === "delivered" || key === "completed" || key === "grn_submitted") return { label: "Delivered", tone: "green" };
-  if (key === "in_transit" || key === "dispatched") return { label: "Raste mein", tone: "blue" };
+  if (key === "in_transit" || key === "dispatched") return surface === "dealer" ? { label: "Dispatch", tone: "blue" } : { label: "Raste mein", tone: "blue" };
   if (key === "cancelled" || key === "rejected") return { label: "Cancel", tone: "red" };
   if (key === "processing" || key === "approved") return { label: "Pack", tone: "orange" };
   if (key === "submitted" || key === "draft" || key === "sales_verified" || key === "finance_verified" || !key) return { label: "Pending", tone: "orange" };
@@ -155,7 +155,7 @@ function useOrderExtra(live: LiveBag | undefined, orderId: string | null) {
 }
 
 export function FarmerGlass({ live, khata, milk, names, focus = "home", footer, ...bar }: Refresh & { live?: LiveBag; khata: KhataView | null; milk: ReadResult<MilkRow> | null; names: Map<string, string>; focus?: "home" | "track"; footer?: ReactNode }) {
-  const face = useFace(live, "Kisan");
+  const face = useFace(live, "Kisan / Customer");
   const weather = useWeather(face.place);
   if (!khata || !milk) return <ActivityIndicator color={glass.up} style={{ marginTop: 24 }} />;
   const rows = milk.ok ? milk.rows : [];
@@ -203,15 +203,23 @@ export function FarmerGlass({ live, khata, milk, names, focus = "home", footer, 
   if (focus === "track") {
     return (
       <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-        <BrandHeader role="Kisan" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+        <BrandHeader role="Kisan / Customer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
         {track}
       </GlassScreen>
     );
   }
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-      <BrandHeader role="Kisan" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+      <BrandHeader role="Kisan / Customer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
+      <ActionGrid title="Meri Services" actions={[
+        { label: "Farms", key: "farm", onPress: () => bar.onTab?.("farm") },
+        { label: "Dairy", key: "doodh", onPress: () => bar.onTab?.("doodh") },
+        { label: "Orders", key: "karyana", onPress: () => bar.onTab?.("karyana") },
+        { label: "Wallet", key: "khata", onPress: () => bar.onTab?.("khata") },
+        { label: "Vet", key: "vet", onPress: () => bar.onTab?.("vet") },
+        { label: "Profile", key: "more", onPress: bar.onProfile },
+      ]} />
       <KpiGrid>
         <Kpi index={2} label="Wallet balance" value={walletParts(khata.owed, Boolean(khata.note && khata.owed == null), khata.note || "Khata baqaya").value} sub={walletParts(khata.owed, Boolean(khata.note && khata.owed == null), khata.note || "Khata baqaya").sub} color="#C8A058" series={payLine} pct={pctChange(weekPay, prevPay)} />
         <Kpi index={3} label="Aaj ka doodh" value={milk.ok ? litreText(milkLitres(todayRows)) : "—"} sub={milk.ok ? "" : milk.message} color="#5B8CFF" series={series} pct={pctChange(milkLitres(todayRows), yesterday ? milkLitres(yesterdayRows) : null)} />
@@ -289,8 +297,16 @@ export function McaGlass({ live, farmers, ...bar }: Refresh & { live?: LiveBag; 
   const yFat = avg(yFats);
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-      <BrandHeader role="MCA" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+      <BrandHeader role="DCA / Milk Collection" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
+      <ActionGrid actions={[
+        { label: "Entry", key: "route", onPress: () => bar.onTab?.("route") },
+        { label: "Kisan", key: "fuel", onPress: () => bar.onTab?.("fuel") },
+        { label: "Pending", key: "route", onPress: () => bar.onTab?.("route") },
+        { label: "Meter", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Petrol", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Profile", key: "more", onPress: bar.onProfile },
+      ]} />
       <KpiGrid>
         <Kpi index={2} label="Aaj ki collection" value={milk?.ok ? litreText(milkLitres(todayRows)) : "—"} color="#3DDC97" series={series} pct={pctChange(milkLitres(todayRows), milkLitres(rows.filter((row) => row.entry_date === yesterday)))} />
         <Kpi index={3} label="Kisan count" value={String(farmers.length)} color="#F5B942" series={flatSeries(farmers.length)} pct={null} badge="count" />
@@ -343,6 +359,14 @@ export function McoGlass({ live, rows, error, names, ...bar }: Refresh & { live?
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="MCO / Chiller" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+      <ActionGrid actions={[
+        { label: "Receive", key: "fat", onPress: () => bar.onTab?.("fat") },
+        { label: "Tanks", key: "drop", onPress: () => bar.onTab?.("drop") },
+        { label: "Pending", key: "fat", onPress: () => bar.onTab?.("fat") },
+        { label: "Kisan", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Reports", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Profile", key: "more", onPress: bar.onProfile },
+      ]} />
       <KpiGrid>
         <Kpi index={2} label="Subah ka doodh" value={rows ? litreText(milkLitres(subah)) : "—"} color="#5B8CFF" series={subahSeries} pct={pctChange(subahSeries[subahSeries.length - 1] ?? null, subahSeries[subahSeries.length - 2] ?? null)} />
         <Kpi index={3} label="Shaam ka doodh" value={rows ? litreText(milkLitres(shaam)) : "—"} color="#C4B5FD" series={shaamSeries} pct={pctChange(shaamSeries[shaamSeries.length - 1] ?? null, shaamSeries[shaamSeries.length - 2] ?? null)} />
@@ -427,20 +451,29 @@ export function AdminGlass({ live, home, milk, orders: _orders, focus = "home", 
   const baqi = (
     <GlassCard title="Baqi approvals" index={5}>
       {priced.filter((row) => row !== hero).map((row, index) => (
-        <View key={row.id ?? String(index)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-          <Text style={{ color: glass.text, flex: 1 }}>Doodh {row.entry_date || "—"} · {row.total_amount == null || row.total_amount === "" ? "—" : rupees(num(row.total_amount))}</Text>
+        <View key={row.id ?? String(index)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <Text style={{ color: glass.text, fontWeight: "700" }}>Doodh {row.entry_date || "—"}</Text>
+            <Text style={{ color: glass.muted }}>{row.total_amount == null || row.total_amount === "" ? "Raqam —" : rupees(num(row.total_amount))}</Text>
+          </View>
           <Pill label="Check baqi" tone="orange" />
         </View>
       ))}
       {milk.filter((row) => row.status === "pending_fat" && row !== hero).slice(0, 4).map((row, index) => (
-        <View key={row.id ?? `fat-${index}`} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-          <Text style={{ color: glass.text, flex: 1 }}>Doodh {row.entry_date || "—"} · fat baqi</Text>
+        <View key={row.id ?? `fat-${index}`} style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <Text style={{ color: glass.text, fontWeight: "700" }}>Doodh {row.entry_date || "—"}</Text>
+            <Text style={{ color: glass.muted }}>Fat check baqi</Text>
+          </View>
           <Pill label="Pending" tone="orange" />
         </View>
       ))}
       {home.pending.map((row) => (
-        <View key={row.label} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-          <Text style={{ color: glass.text, flex: 1 }}>{row.label} · {row.count}</Text>
+        <View key={row.label} style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <Text style={{ color: glass.text, fontWeight: "700" }}>{row.label}</Text>
+            <Text style={{ color: glass.muted }}>{row.count} baqi</Text>
+          </View>
           <Pill label="Pending" tone="orange" />
         </View>
       ))}
@@ -461,6 +494,14 @@ export function AdminGlass({ live, home, milk, orders: _orders, focus = "home", 
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Admin" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+      <ActionGrid actions={[
+        { label: "Reports", key: "reports", onPress: () => bar.onTab?.("reports") },
+        { label: "Approvals", key: "approvals", onPress: () => bar.onTab?.("approvals") },
+        { label: "Branches", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Shops", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Alerts", key: "approvals", onPress: () => bar.onTab?.("approvals") },
+        { label: "Profile", key: "more", onPress: bar.onProfile },
+      ]} />
       <KpiGrid>
         <Kpi index={2} label="Total sales" value={home.sales.state === "ok" ? rupees(home.sales.total) : "—"} sub={home.sales.state === "error" ? "Asal bills nahi" : `${home.sales.bills} bill`} color="#C4B5FD" series={days} pct={pctChange(days[days.length - 1] ?? null, days[days.length - 2] ?? null)} />
         <Kpi index={3} label="Milk collection" value={milkToday == null ? "—" : litreText(milkToday)} color="#3DDC97" series={milkSeries.some((value) => value > 0) ? milkSeries : milkToday == null ? [] : [milkToday, milkToday]} pct={milkSeries.some((value) => value > 0) ? pctChange(milkSeries[milkSeries.length - 1], milkSeries[milkSeries.length - 2]) : null} />
@@ -540,7 +581,15 @@ export function CustomerGlass({ live, khata, orders, focus = "home", ...bar }: R
     return (
       <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
         <BrandHeader role="Customer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
-        <Timeline title={card.title} detail={card.detail} steps={card.steps} showProgress progressNote={card.progressNote} onAction={() => bar.onTab?.("orders")} index={2} />
+        <Timeline
+          title={latest ? card.title : "Order"}
+          detail={latest ? card.detail : null}
+          steps={latest ? card.steps : ["Order mila", "Pack hua", "Rawana hua", "Raste mein", "Pohanch gaya"].map((label) => ({ label, state: "pending" as const }))}
+          showProgress={Boolean(latest)}
+          progressNote={latest ? card.progressNote : null}
+          onAction={() => bar.onTab?.("orders")}
+          index={2}
+        />
         <GlassCard title="Doosre orders" index={3}>
           {others.length === 0 ? <Text style={{ color: glass.muted }}>{orders.ok ? "Koi doosra order nahi." : orders.message}</Text> : null}
           {others.slice(0, 4).map((row, index) => {
@@ -632,6 +681,14 @@ export function DealerGlass({ live, khata, orders, ...bar }: Refresh & { live?: 
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Dealer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+      <ActionGrid actions={[
+        { label: "Orders", key: "orders", onPress: () => bar.onTab?.("orders") },
+        { label: "Khata", key: "khata", onPress: () => bar.onTab?.("khata") },
+        { label: "Stock", key: "home", onPress: () => bar.onTab?.("home") },
+        { label: "Reports", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Recovery", key: "khata", onPress: () => bar.onTab?.("khata") },
+        { label: "Profile", key: "more", onPress: bar.onProfile },
+      ]} />
       <KpiGrid>
         <Kpi index={2} label="Is mahine orders" value={orders.ok ? (dated ? String(monthCount) : String(list.length)) : "—"} sub={dated ? "Is mahine" : "Aakhri fehrist"} color="#3DDC97" series={countSeries.some((value) => value > 0) ? countSeries : flatSeries(orders.ok ? list.length : null)} pct={dated ? pctChange(monthCount, prevCount) : null} />
         <Kpi index={3} label="HQ khata balance" value={hq.value} sub={hq.sub} color="#FF6B6B" series={flatSeries(khata.owed == null ? null : Math.abs(khata.owed))} pct={null} />
@@ -653,7 +710,7 @@ export function DealerGlass({ live, khata, orders, ...bar }: Refresh & { live?: 
       </GlassCard>
       <GlassCard title="Recent orders" index={8}>
         {list.slice(0, 4).map((row, index) => {
-          const tone = orderTone(row.status);
+          const tone = orderTone(row.status, "dealer");
           return (
             <View key={row.id ?? String(index)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
               <View style={{ flex: 1, paddingRight: 8 }}>
@@ -742,6 +799,14 @@ export function StaffGlass({ live, attendance, salary, advances, tasks, tasksNot
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Staff" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+      <ActionGrid actions={[
+        { label: "Hazri", key: "visits", onPress: () => bar.onTab?.("visits") },
+        { label: "Tasks", key: "orders", onPress: () => bar.onTab?.("orders") },
+        { label: "POS", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Recovery", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Khata", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Profile", key: "more", onPress: bar.onProfile },
+      ]} />
       <Rise index={2}>
         <View style={{ backgroundColor: "#146B3A", borderRadius: 18, padding: 14, marginBottom: 12, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "rgba(61,220,151,0.35)" }}>
           <View style={{ flex: 1, paddingRight: 10 }}>
@@ -838,6 +903,14 @@ export function VetGlass({ live, health, ...bar }: Refresh & { live?: LiveBag; h
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Vet" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
+      <ActionGrid actions={[
+        { label: "Visits", key: "visits", onPress: () => bar.onTab?.("visits") },
+        { label: "Janwar", key: "stock", onPress: () => bar.onTab?.("stock") },
+        { label: "Kisan", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Treatment", key: "visits", onPress: () => bar.onTab?.("visits") },
+        { label: "Vaccine", key: "stock", onPress: () => bar.onTab?.("stock") },
+        { label: "Profile", key: "more", onPress: bar.onProfile },
+      ]} />
       <KpiGrid>
         <Kpi index={2} label="Aaj ke visits" value={health ? String(todayVisits.length) : "—"} color="#5B8CFF" badge="count" series={health ? visitSeries : []} pct={null} />
         <Kpi index={3} label="Pending cases" value={health ? String(pending.length) : "—"} color="#F5B942" badge="count" series={health ? pendingSeries : []} pct={null} />
