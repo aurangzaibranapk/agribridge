@@ -172,6 +172,7 @@ export function milkTimeline(row: {
   route_name?: string | null;
   chiller_name?: string | null;
   collected_at?: string | null;
+  entry_date?: string | null;
   fat_at?: string | null;
   verified_at?: string | null;
 } | null, actionLabel = "Fat check karwayein"): TimelineStep[] {
