@@ -120,7 +120,7 @@ export async function sendFarmerOtp(
     return { ok: false, error: "OTP nahi bana. Dobara koshish karein." };
   }
 
-  const text = `${code} — Al Rana Traders ke portal mein daakhil hone ka code. ${VALID_MINUTES} minute tak chalega. Kisi ko na batayein.`;
+  const text = `${code} — AgriBridge ke portal mein daakhil hone ka code. ${VALID_MINUTES} minute tak chalega. Kisi ko na batayein.`;
   let sentVia: "whatsapp" | "sms" | null = null;
   const problems: string[] = [];
 

@@ -59,5 +59,5 @@ export async function deliverRecoveryNotice(input: {
 export function khataReminderText(amount: number, dueDate: string | null): string {
   const due = dueDate ? ` Due: ${dueDate}.` : "";
   const rs = Math.round(Number(amount) || 0).toLocaleString("en-PK");
-  return `Al Rana Traders: Aap ke khate par Rs ${rs} baqi hain.${due} Meharbani farma kar adaigi kar dein.`;
+  return `AgriBridge: Aap ke khate par Rs ${rs} baqi hain.${due} Meharbani farma kar adaigi kar dein.`;
 }

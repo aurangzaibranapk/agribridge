@@ -50,7 +50,7 @@ export function WalletStatementClient({
       .slice(-15)
       .map((t) => `${new Date(t.date).toLocaleDateString()} - ${t.typeLabel}: ${t.direction === "credit" ? "+" : "-"}Rs ${t.amount.toLocaleString()}`)
       .join("\n");
-    const text = `Al Rana Traders - Wallet Statement\n${farmer.name} (${farmer.code})\nCurrent Balance: Rs ${currentBalance.toLocaleString()}\n\n${lines}`;
+    const text = `AgriBridge - Wallet Statement\n${farmer.name} (${farmer.code})\nCurrent Balance: Rs ${currentBalance.toLocaleString()}\n\n${lines}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
 
@@ -74,7 +74,7 @@ export function WalletStatementClient({
       <div className="rounded-card border border-surface-200 bg-white p-6 shadow-card print:border-0 print:shadow-none">
         <div className="mb-4 flex items-center justify-between border-b border-surface-200 pb-3">
           <div>
-            <h1 className="font-display text-lg font-bold text-surface-900">Al Rana Traders — {t("st_wallet_statement", lang)}</h1>
+            <h1 className="font-display text-lg font-bold text-surface-900">AgriBridge — {t("st_wallet_statement", lang)}</h1>
             <p className="text-sm text-surface-500">{farmer.name} ({farmer.code}){farmer.phone ? ` - ${farmer.phone}` : ""}</p>
           </div>
           <div className="text-right">

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ChevronRight, Menu, X } from "lucide-react";
+import { BrandMark, BrandWord } from "@/components/brand/brand-mark";
+import { BRAND_TAGLINE } from "@/lib/brand";
 
 /**
  * Website ka header.
@@ -13,12 +15,12 @@ import { ChevronRight, Menu, X } from "lucide-react";
  *
  *   *"ye top bara hona chahiye. WhatsApp message hai wo mita dein. Book
  *   demo mita dein. Kisan AI ke backend AI Doctor laga dein. Ooper jo
- *   'Al Rana Traders' aur 'Beej se Beej' se wo bhi hata dein. Top bar
+ *   'AgriBridge' aur 'Beej se Beej' se wo bhi hata dein. Top bar
  *   ko thora bara karein aur khoobsurat bana dein."*
  *
  * Chaar cheezein nikal gayin:
  *
- * 1. Ooper wali kaali patti (Al Rana Traders • Beej se Bazaar tak).
+ * 1. Ooper wali kaali patti (AgriBridge • Beej se Bazaar tak).
  * 2. WhatsApp ka gol button.
  * 3. "ERP Demo" ka button (yehi wo "book demo" hai).
  * 4. Un ke sath jane wala `whatsapp` prop -- ab header ko us number ki
@@ -63,16 +65,10 @@ export function PublicHeader() {
       <div className="mx-auto flex h-20 max-w-7xl items-center px-4 sm:px-6 lg:h-[104px] lg:px-8">
         {/* LOGO */}
         <Link href="/" className="group flex shrink-0 items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-800 text-lg font-black text-white shadow-sm shadow-emerald-900/20 transition group-hover:shadow-md lg:h-14 lg:w-14 lg:text-xl">
-            ART
-          </div>
+          <BrandMark className="h-12 w-12 lg:h-14 lg:w-14" />
           <div className="leading-tight">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500 lg:text-[11px]">
-              Al Rana Traders
-            </p>
-            <p className="text-xl font-black tracking-tight text-slate-950 lg:text-[26px]">
-              Agri<span className="text-emerald-700">Bridge</span>
-            </p>
+            <BrandWord className="block text-xl font-black tracking-tight text-slate-950 lg:text-[26px]" />
+            <p className="text-[11px] text-slate-500 lg:text-xs">{BRAND_TAGLINE}</p>
           </div>
         </Link>
 

@@ -12,7 +12,7 @@ export default function FarmerRegistrationThankYouPage() {
       </div>
       <h1 className="font-display text-2xl font-semibold text-surface-900">{t("au_registration_received", lang)}</h1>
       <p className="mt-3 text-surface-500">
-        Thank you for registering with Al Rana Traders. Our team will review and verify your account shortly.
+        Thank you for registering with AgriBridge. Our team will review and verify your account shortly.
         Once approved, you&apos;ll have full access to your Farmer Portal, Khata account, and AI Crop Doctor.
       </p>
       <Link href="/" className="mt-6 inline-block text-brand-700 hover:underline">{t("au_back_home", lang)}</Link>

@@ -10,7 +10,7 @@ export interface GeneratedBlogDraft {
 }
 
 export async function generateBlogDraft(topic: string): Promise<GeneratedBlogDraft | null> {
-  const prompt = `You are a content writer for AgriBridge, an agriculture platform in Pakistan run by Al Rana Traders. Write a blog post draft about this topic: "${topic}"
+  const prompt = `You are a content writer for AgriBridge, an agriculture platform in Pakistan for farmers. Write a blog post draft about this topic: "${topic}"
 
 Respond with ONLY a JSON object with these exact keys:
 - title: a catchy, clear blog post title (under 70 characters)

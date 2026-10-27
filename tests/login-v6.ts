@@ -74,6 +74,13 @@ function world() {
     async identityTaken(p, e, c) { const o: ("phone" | "email" | "cnic")[] = []; if (users.some((u) => u.phone === p)) o.push("phone"); if (e && users.some((u) => u.email === e)) o.push("email"); if (c && users.some((u) => u.cnic === c)) o.push("cnic"); return o; },
     async userIdAvailable(name) { return ["admin"].includes(name) ? "reserved" : users.some((u) => u.uid === name) ? "taken" : "ok"; },
     async saveUserId(id, name) { const u = users.find((x) => x.id === id); if (!u) return "no_profile"; if (u.uid) return "already"; u.uid = name; return "ok"; },
+    async replaceUserId(id, name) {
+      const u = users.find((x) => x.id === id);
+      if (!u) return "no_profile";
+      if (users.some((x) => x.uid === name && x.id !== id)) return "taken";
+      u.uid = name;
+      return "ok";
+    },
     async createMember({ fullName, phoneKey, email, password, cnic }) {
       void fullName; const u: U = { id: "new" + ++n, email: email ?? `${phoneKey}@phone.agribridge.local`, pw: password, role: "farmer", phone: phoneKey, cnic: cnic ?? undefined };
       users.push(u); return { ok: true, loginEmail: u.email };
@@ -140,6 +147,22 @@ async function main() {
     assert.equal(users.find((u) => u.id === "mail")!.uid, "aslam.farms");
     assert.deepEqual(await F.saveUserId(d, "mail", "other.one"), { ok: false, error: "e_uid_already" });
     assert.ok((await F.loginWithPassword(d, "aslam.farms", "Mail2026xx")).ok, "login by new User ID");
+  }
+  // Profile par User ID badalna -- purani ID login par chalti rehti hai jab tak badli na jaye
+  {
+    const { d, users } = world();
+    assert.deepEqual(await F.changeUserId(d, null, "aslam.farms", []), { ok: false, error: "e_grant" });
+    assert.deepEqual(await F.changeUserId(d, "mail", "ab", []), { ok: false, error: "e_uid_shape" });
+    assert.deepEqual(await F.changeUserId(d, "mail", "admin", []), { ok: false, error: "e_uid_taken" });
+    assert.deepEqual(await F.changeUserId(d, "mail", "kisan1", []), { ok: false, error: "e_uid_taken" });
+    assert.deepEqual(await F.changeUserId(d, "kisan", "kisan1", ["kisan1"]), { ok: true, name: "kisan1" }, "apni ID dobara save karna taken nahi");
+    assert.equal(users.find((u) => u.id === "kisan")!.uid, "kisan1");
+    assert.ok((await F.loginWithPassword(d, "kisan1", "Kisan2026x")).ok, "purani User ID login par chalti hai");
+    assert.deepEqual(await F.changeUserId(d, "mail", "aslam.farms", []), { ok: true, name: "aslam.farms" });
+    assert.deepEqual(await F.changeUserId(d, "mail", "aslam.farm2", ["aslam.farms"]), { ok: true, name: "aslam.farm2" });
+    assert.equal(users.find((u) => u.id === "mail")!.uid, "aslam.farm2");
+    assert.ok(!(await F.loginWithPassword(d, "aslam.farms", "Mail2026xx")).ok, "purani ID badalne ke baad band");
+    assert.ok((await F.loginWithPassword(d, "aslam.farm2", "Mail2026xx")).ok, "nayi User ID se login");
   }
   console.log("login-v6: all assertions passed");
 }

@@ -76,8 +76,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const result = await sendDeptMail({
         dept: "accounts",
         to: recipientValue,
-        subject: `Al Rana Traders Khata Statement - ${partyName}`,
-        html: mailWrapper(`<p>Assalam-o-Alaikum <strong>${partyName}</strong>,</p><p>Your Al Rana Traders Khata statement is attached.</p><p><strong>Closing balance:</strong> Rs ${Math.round(closingBalance).toLocaleString("en-PK")}</p>`, "accounts"),
+        subject: `AgriBridge Khata Statement - ${partyName}`,
+        html: mailWrapper(`<p>Assalam-o-Alaikum <strong>${partyName}</strong>,</p><p>Your AgriBridge Khata statement is attached.</p><p><strong>Closing balance:</strong> Rs ${Math.round(closingBalance).toLocaleString("en-PK")}</p>`, "accounts"),
         attachments: [{ filename, content: pdf }],
       });
       if (!result.sent) throw new Error(result.error);
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const signed = await service.storage.from("statement-files").createSignedUrl(path, 60 * 60);
       if (signed.error || !signed.data?.signedUrl) throw new Error(signed.error?.message || "Statement ka secure link nahi bana.");
       documentUrl = path;
-      await sendWhatsAppDocument(recipientValue, String(signed.data.signedUrl), filename, `Assalam-o-Alaikum ${partyName} Sahib, aap ka Al Rana Traders Khata Statement attached hai. Closing balance: Rs ${Math.round(closingBalance).toLocaleString("en-PK")}.`);
+      await sendWhatsAppDocument(recipientValue, String(signed.data.signedUrl), filename, `Assalam-o-Alaikum ${partyName} Sahib, aap ka AgriBridge Khata Statement attached hai. Closing balance: Rs ${Math.round(closingBalance).toLocaleString("en-PK")}.`);
     } else {
       throw new Error("Unsupported channel.");
     }

@@ -39,6 +39,9 @@ assert.equal(marginAllowed(25.01), false);
 assert.equal(marginAllowed(-1), false);
 
 assert.equal(makerIsNotChecker("a", "a"), false);
+assert.equal(makerIsNotChecker("a", "a", "manager"), false);
+assert.equal(makerIsNotChecker("a", "a", "admin"), true);
+assert.equal(makerIsNotChecker("a", "a", "owner"), true);
 assert.equal(makerIsNotChecker("a", "b"), true);
 assert.equal(makerIsNotChecker(null, "b"), true);
 assert.equal(makerIsNotChecker("a", null), false);

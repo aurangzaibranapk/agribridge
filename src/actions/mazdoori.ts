@@ -23,7 +23,7 @@ export interface ActionState {
  *   *"Agar us ne pehle Rs 3,000 advance liye aur agle din Rs 2,000 ki
  *   mazdoori ki: Labour Earned 2,000, Advance Adjusted 2,000, Advance
  *   remaining 1,000. Kal phir Rs 1,500 ki mazdoori kare: remaining
- *   advance Rs 1,000 adjust, ab ART ko us ko Rs 500 dena hai. Yehi
+ *   advance Rs 1,000 adjust, ab AgriBridge ko us ko Rs 500 dena hai. Yehi
  *   automatic settlement chahiye."*
  *
  * Aur us se bhi bunyadi baat:

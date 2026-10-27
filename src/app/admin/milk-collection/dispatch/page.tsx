@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * company. Pehle do pehle se darj hote the (Route & Shortage wala
  * safha); teesra kahin nahi hota tha.
  *
- * Aur wohi sab se ahem hai: Al Rana doodh bechta nahi, jama karta hai
+ * Aur wohi sab se ahem hai: AgriBridge doodh bechta nahi, jama karta hai
  * aur company ko deta hai FI LITRE service rate par. Yani kamai us adad
  * par hai jo COMPANY ne mana ke usay mila -- hamare apne adad par nahi.
  */

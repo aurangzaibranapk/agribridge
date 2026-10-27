@@ -149,10 +149,4 @@ export function formatCnic(key: string): string {
 }
 
 /** Login v6: SMS ka code 4 hindse, WhatsApp/email 6 (malik, 20 Oct). Client-safe copy: login-v6-ui.ts */
-export { SMS_CODE_LENGTH, WHATSAPP_CODE_LENGTH, OTP_VALID_MINUTES, OTP_MAX_TRIES, OTP_RESEND_SECONDS, codeLengthFor } from "@/lib/auth/login-v6-ui";
-
-/** User ID ki shakl (DB chk_farmer_username_shakl / chk_profiles_username_shakl jaisi). */
-export function userIdProblem(raw: unknown): string | null {
-  const v = String(raw ?? "").trim().toLowerCase();
-  return /^[a-z][a-z0-9._]{3,19}$/.test(v) ? null : "e_uid_shape";
-}
+export { SMS_CODE_LENGTH, WHATSAPP_CODE_LENGTH, OTP_VALID_MINUTES, OTP_MAX_TRIES, OTP_RESEND_SECONDS, codeLengthFor, userIdProblem } from "@/lib/auth/login-v6-ui";

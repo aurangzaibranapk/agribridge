@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendInterviewReminderEmail } from "@/lib/email";
+import { dispatchNotice } from "@/lib/jobs/candidate-message";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +29,22 @@ export async function GET(request: Request) {
   let sentCount = 0;
   for (const app of applications ?? []) {
     const jobTitle = Array.isArray(app.job_vacancies) ? (app.job_vacancies[0] as any)?.title : (app.job_vacancies as any)?.title;
-    await sendInterviewReminderEmail(app.email, app.full_name, jobTitle ?? "Position", app.interview_date as string);
-    sentCount += 1;
+    const mail = await sendInterviewReminderEmail(app.email, app.full_name, jobTitle ?? "Position", app.interview_date as string);
+    const { error: logError } = await serviceClient.from("job_application_messages").insert({
+      application_id: app.id,
+      channel: mail.channel,
+      to_address: mail.to,
+      subject: mail.subject,
+      body: mail.body,
+      link_url: mail.linkUrl,
+      attachment_name: mail.attachmentName,
+      status: mail.status,
+      error: mail.error,
+      triggered_by: null,
+    });
+    if (logError) console.error("interview reminder log:", logError.message);
+    if (dispatchNotice(mail)) console.error("interview reminder:", dispatchNotice(mail));
+    if (mail.status === "sent") sentCount += 1;
   }
 
   return NextResponse.json({ success: true, sent: sentCount, date: tomorrowStr });

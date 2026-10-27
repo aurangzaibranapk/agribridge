@@ -32,7 +32,7 @@ export function reminderText(target: ReminderTarget): string {
   return [
     `Assalam-o-Alaikum ${target.farmerName ?? ""}`.trim(),
     ``,
-    `Al Rana Traders — machinery booking ${target.bookingNumber}`,
+    `AgriBridge — machinery booking ${target.bookingNumber}`,
     `Aap ke zimme Rs ${target.amount.toLocaleString()} baqi hain.${wada}`,
     ``,
     `Meharbani farma kar adaigi kar dein. Koi masla ho to hamein bata dein.`,

@@ -7,7 +7,7 @@ import { EcosystemFlow } from "@/components/site/ecosystem-flow";
 import { WebsiteCta } from "@/components/site/website-cta";
 
 export const metadata: Metadata = {
-  title: "Kisan Digital Services | ART AgriBridge",
+  title: "Kisan Digital Services | AgriBridge",
   description:
     "Farmer profile, Kisan Khata, wallet, crop plan, machinery booking, milk aur grain records — ek kisan, ek juRa hua record.",
 };

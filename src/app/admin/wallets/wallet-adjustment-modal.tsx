@@ -36,7 +36,7 @@ function AdjustModal({ walletId, ownerName, onClose }: { walletId: string; owner
     setTimeout(onClose, 800);
   }
   if (showReceipt) {
-    return <ReceiptPrint receipt={{ kind: "wallet", no: sent.current!.no, date: new Date().toLocaleString("en-PK"), from: "Al Rana Traders", to: ownerName, amount: sent.current!.amount }} onClose={onClose} />;
+    return <ReceiptPrint receipt={{ kind: "wallet", no: sent.current!.no, date: new Date().toLocaleString("en-PK"), from: "AgriBridge", to: ownerName, amount: sent.current!.amount }} onClose={onClose} />;
   }
 
   return (

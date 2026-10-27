@@ -9,6 +9,7 @@ import { Field, L3, Lock, Notice, PageHead, Panel, PanelHead, Pill, Row, btnGhos
 import { NoCustomer } from "@/components/portal/customer/gate";
 import { requestChangeAction } from "../actions";
 import { EmptyState } from "@/components/portal/empty-state";
+import { UserIdAccountSection } from "@/components/account/user-id-section";
 
 export const dynamic = "force-dynamic";
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
@@ -44,6 +45,8 @@ export default async function CustomerProfilePage({ searchParams }: { searchPara
       {ok && <Notice tone="ok">✔ {L("pc_ok_sent")}</Notice>}
       {e && <Notice tone="err">{t(e as TranslationKey, lang)}</Notice>}
       <div className="pf-grow pf-grid grid gap-3.5 lg:grid-cols-[1.4fr_1fr] fit:grid-cols-[1.5fr_1fr_1fr] fit:gap-2.5">
+        <div className="space-y-3.5">
+        <UserIdAccountSection />
         <Panel className="pf-scroll pf-navy fit:p-3.5">
           <PanelHead title={<L3 k="pc_personal" lang={lang} />} right={<Pill tone={complete ? "green" : "amber"}>{complete ? L("pc_verified") : L("pc_incomplete")}</Pill>} />
           <div className="grid gap-x-3 sm:grid-cols-2">
@@ -68,6 +71,7 @@ export default async function CustomerProfilePage({ searchParams }: { searchPara
           </form>
           <div className="mt-3"><Lock>{L("pc_profile_lock")}</Lock></div>
         </Panel>
+        </div>
         <div className="space-y-3.5 fit:contents">
           <div className="pf-scroll space-y-3.5 fit:space-y-2.5">
           <Panel className="fit:p-3.5">

@@ -2,21 +2,23 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import { v5CompleteSignup, v5Login, v5SendCode, v5SetPassword, v5VerifyCode, v6CheckSignup, v6NeedsUserId, v6SaveUserId, v6UserIdCheck } from "@/actions/login-v5";
+import { v5CompleteSignup, v5Login, v5SendCode, v5SetPassword, v5VerifyCode, v6CheckSignup } from "@/actions/login-v5";
 import { createClient } from "@/lib/supabase/client";
 import { goAfterLogin, routeAfterLogin } from "@/lib/navigation/after-login";
 import { t6, type V6Lang } from "@/app/login/v6-text";
+import { brandName, brandTagline } from "@/lib/brand";
 import { SlideCard } from "@/app/login/slide-card";
 import { codeLengthFor, OTP_MAX_TRIES, OTP_RESEND_SECONDS, OTP_VALID_MINUTES } from "@/lib/auth/login-v6-ui";
 
 /**
  * Login v6 -- design1 (malik ki manzoori, 20 Oct 2026).
  * Aik khana (User ID / email / mobile / CNIC) + password. Signup, password
- * bhool gaye (SMS 4 hindse / WhatsApp 6 hindse), naya password, aur login ke
- * baad ikhtiyari "Apni User ID banayein". Faisle server par (login-v5-flow.ts).
+ * bhool gaye (SMS 4 hindse / WhatsApp 6 hindse), naya password. Login ke baad
+ * seedha dashboard -- User ID profile / account settings par lagti hai.
+ * Faisle server par (login-v5-flow.ts).
  */
 
-type Step = "login" | "signup" | "forgot" | "otp" | "newpw" | "userid";
+type Step = "login" | "signup" | "forgot" | "otp" | "newpw";
 type Ch = "sms" | "whatsapp";
 type Purpose = "signup" | "first_time" | "reset";
 type Res = { ok: boolean; error?: string; retryAfterSeconds?: number; [k: string]: unknown };
@@ -51,7 +53,6 @@ export function LoginV6({ initialLang }: { initialLang: V6Lang }) {
   const [sentAt, setSentAt] = useState(0);
   const [fails, setFails] = useState(0);
   const [grant, setGrant] = useState("");
-  const [redirect, setRedirect] = useState("/portal/dashboard");
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(id); }, []);
 
@@ -70,9 +71,7 @@ export function LoginV6({ initialLang }: { initialLang: V6Lang }) {
     } catch { setError(tr("e_try_again")); } finally { setBusy(false); }
   }
   const finish = (to: string) => goAfterLogin(routeAfterLogin(search?.get("redirectTo"), to));
-  async function afterSignedIn(to: string) {
-    setRedirect(to);
-    if (await v6NeedsUserId().catch(() => false)) { setStep("userid"); return; }
+  function afterSignedIn(to: string) {
     finish(to);
   }
   function go(s: Step) { setError(null); setStep(s); }
@@ -116,9 +115,9 @@ export function LoginV6({ initialLang }: { initialLang: V6Lang }) {
   const dirCls = rtl ? "font-urdu leading-[1.9]" : "font-v5";
   return (
     <div lang={lang === "ur" ? "ur" : "en"} className={`mx-auto w-full max-w-[920px] ${dirCls}`}>
-      <header dir={rtl ? "rtl" : "ltr"} className="mb-[18px] flex items-center gap-3">
+      <header dir={rtl ? "rtl" : "ltr"} className="mb-2 flex items-center gap-3">
         <Logo size={44} />
-        <div><p className="font-v5 text-[19px] font-bold">AgriBridge</p><p className={`text-[12px] ${MUTED}`}>{tr("tagline")}</p></div>
+        <div dir={rtl ? "rtl" : "ltr"} className={rtl ? "text-right leading-snug" : "text-left leading-tight"}><p className={`text-[19px] font-bold leading-tight ${rtl ? "" : "font-v5"}`}>{brandName(lang)}</p><p className={`text-[12px] leading-tight ${MUTED}`}>{brandTagline(lang)}</p></div>
         <div className="ms-auto"><LangToggle lang={lang} onChange={setLang} /></div>
       </header>
       {slide ? (
@@ -130,7 +129,7 @@ export function LoginV6({ initialLang }: { initialLang: V6Lang }) {
       ) : (
       <div dir={rtl ? "rtl" : "ltr"} className="mx-auto max-w-[440px] rounded-[24px] border border-[#e6efe9] bg-white px-6 py-7 shadow-[0_30px_70px_-30px_rgba(15,61,42,0.33)] dark:border-[#22324f] dark:bg-[#101c33] sm:px-[34px] sm:py-[34px]">
         {back && <div className="mb-1.5"><button type="button" onClick={back} className={`text-[14px] ${LINK}`}>{rtl ? "→" : "←"} {tr("back")}</button></div>}
-        <div className="mb-4 mt-1.5 flex flex-col items-center gap-2 text-center"><Logo size={52} /><div><p className="font-v5 text-[19px] font-bold">AgriBridge</p><p className={`text-[12px] ${MUTED}`}>{tr("brand_sub")}</p></div></div>
+        <div className="mb-4 mt-1.5 flex flex-col items-center gap-2 text-center"><Logo size={52} /><div dir={rtl ? "rtl" : "ltr"}><p className={`text-[19px] font-bold leading-tight ${rtl ? "" : "font-v5"}`}>{brandName(lang)}</p><p className={`text-[12px] leading-tight ${MUTED}`}>{brandTagline(lang)}</p></div></div>
         {error && <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[13.5px] text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">{error}</div>}
         {step === "forgot" && (
           <form onSubmit={(e) => { e.preventDefault(); sendCode(purpose, otpIdent, channel); }}>
@@ -150,8 +149,6 @@ export function LoginV6({ initialLang }: { initialLang: V6Lang }) {
         )}
 
         {step === "newpw" && <NewPassword tr={tr} busy={busy} sentTo={sentTo} onSave={onNewPassword} />}
-
-        {step === "userid" && <UserIdStep tr={tr} name={su.name} onDone={() => finish(redirect)} />}
       </div>
       )}
       <Footer tr={tr} />
@@ -192,23 +189,23 @@ export function LoginForm({ tr, busy, ident, setIdent, password, setPassword, on
 export function SignupForm({ tr, busy, su, setSu, fieldErr, channel, setChannel, onSubmit, onReset, onLogin, onOAuth }:
   { tr: Tr; busy: boolean; su: SignupValues; setSu: (v: SignupValues) => void; fieldErr: FieldErr; channel: Ch; setChannel: (c: Ch) => void; onSubmit: () => void; onReset: (prefill: string) => void; onLogin: () => void; onOAuth: OAuthFn }) {
   return (
-          <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} noValidate>
+          <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} noValidate data-layout="compact">
             <Title t={tr("su_title")} p={tr("su_p")} />
-            <div className="grid gap-x-3 md:grid-cols-2"><Field id="su-name" label={tr("name")} err={fieldErr.name && tr(fieldErr.name)}><input id="su-name" autoComplete="name" value={su.name} onChange={(e) => setSu({ ...su, name: e.target.value })} placeholder={tr("name_ph")} className={INPUT} /></Field>
-            <Field id="su-email" label={tr("email")} err={fieldErr.email && tr(fieldErr.email)} dupLink={fieldErr.email === "e_email_taken" ? <ResetLink tr={tr} onClick={() => onReset(su.email)} /> : null}>
+            <div className="grid grid-cols-1 gap-x-3 md:grid-cols-2"><Field id="su-name" boxClass="ab-box" label={tr("name")} err={fieldErr.name && tr(fieldErr.name)}><input id="su-name" autoComplete="name" value={su.name} onChange={(e) => setSu({ ...su, name: e.target.value })} placeholder={tr("name_ph")} className={INPUT} /></Field>
+            <Field id="su-email" boxClass="ab-box" label={tr("email")} err={fieldErr.email && tr(fieldErr.email)} dupLink={fieldErr.email === "e_email_taken" ? <ResetLink tr={tr} onClick={() => onReset(su.email)} /> : null}>
               <input id="su-email" dir="ltr" type="email" autoComplete="email" value={su.email} onChange={(e) => setSu({ ...su, email: e.target.value })} placeholder={tr("email_ph")} className={INPUT} /></Field>
-            <Field id="su-phone" label={tr("mobile")} err={fieldErr.phone && tr(fieldErr.phone)} dupLink={fieldErr.phone === "e_phone_taken" ? <ResetLink tr={tr} onClick={() => onReset(su.phone)} /> : null}>
+            <Field id="su-phone" boxClass="ab-box" label={tr("mobile")} err={fieldErr.phone && tr(fieldErr.phone)} dupLink={fieldErr.phone === "e_phone_taken" ? <ResetLink tr={tr} onClick={() => onReset(su.phone)} /> : null}>
               <input id="su-phone" dir="ltr" inputMode="tel" autoComplete="tel" value={su.phone} onChange={(e) => setSu({ ...su, phone: e.target.value })} placeholder="0300 1234567" className={INPUT} /></Field>
-            <Field id="su-cnic" label={tr("cnic")} help={tr("cnic_help")} err={fieldErr.cnic && tr(fieldErr.cnic)} dupLink={fieldErr.cnic === "e_cnic_taken" ? <ResetLink tr={tr} onClick={() => onReset(su.cnic)} /> : null}>
-              <input id="su-cnic" dir="ltr" inputMode="numeric" value={su.cnic} onChange={(e) => setSu({ ...su, cnic: formatCnicInput(e.target.value) })} placeholder="12345-1234567-1" className={INPUT} /></Field></div>
+            <Field id="su-cnic" boxClass="ab-box" label={tr("cnic")} help={tr("cnic_help")} helpMode="tip" err={fieldErr.cnic && tr(fieldErr.cnic)} dupLink={fieldErr.cnic === "e_cnic_taken" ? <ResetLink tr={tr} onClick={() => onReset(su.cnic)} /> : null}>
+              <input id="su-cnic" dir="ltr" inputMode="numeric" aria-describedby="su-cnic-hint" title={tr("cnic_help")} value={su.cnic} onChange={(e) => setSu({ ...su, cnic: formatCnicInput(e.target.value) })} placeholder="12345-1234567-1" className={INPUT} /></Field></div>
             <label htmlFor="su-pw" className={LABEL}>{tr("pw")}</label>
-            <Password id="su-pw" value={su.password} onChange={(v) => setSu({ ...su, password: v })} tr={tr} autoComplete="new-password" err={Boolean(fieldErr.password)} />
-            {fieldErr.password ? <p className="mt-1.5 text-[13px] font-medium text-[#c62828]">{tr(fieldErr.password)}</p> : <p className={`mt-1.5 text-[12.5px] ${MUTED}`}>{tr("pw_rule")}</p>}
+            <Password id="su-pw" boxClass="ab-box" value={su.password} onChange={(v) => setSu({ ...su, password: v })} tr={tr} autoComplete="new-password" err={Boolean(fieldErr.password)} />
+            {fieldErr.password ? <p className="ab-rule mt-1.5 text-[13px] font-medium text-[#c62828]">{tr(fieldErr.password)}</p> : <p className={`ab-rule mt-1.5 text-[12.5px] ${MUTED}`}>{tr("pw_rule")}</p>}
             <p className={LABEL}>{tr("how")}</p>
-            <Channels value={channel} onChange={setChannel} tr={tr} />
-            <button type="submit" disabled={busy} className={BTN}>{busy ? tr("wait") : tr("create")}</button>
-            <p className={`mt-2.5 text-center text-[12.5px] ${MUTED}`}>{tr("unique_note")}</p>
-            <Social tr={tr} onOAuth={onOAuth} />
+            <Channels value={channel} onChange={setChannel} tr={tr} compact />
+            <button type="submit" disabled={busy} className={`${BTN} ab-go`}>{busy ? tr("wait") : tr("create")}</button>
+            <p className={`ab-note mt-2.5 text-center text-[12.5px] ${MUTED}`}>{tr("unique_short")}</p>
+            <Social tr={tr} onOAuth={onOAuth} compact />
             <p className="mt-4 text-center text-[14px] text-[#3d4a5c] dark:text-[#c2cde0] md:hidden">{tr("have_acc")} <button type="button" className={LINK} onClick={onLogin}>{tr("login")}</button></p>
           </form>
   );
@@ -219,22 +216,22 @@ type Tr = (k: string, v?: Record<string, string | number>) => string;
 function Title({ t, p }: { t: string; p?: string }) {
   return <><h1 className="mb-1.5 text-center text-[26px] font-bold text-[#0d1b2e] dark:text-white">{t}</h1>{p && <p className={`mb-4 text-center text-[14.5px] leading-6 ${MUTED}`}>{p}</p>}</>;
 }
-function Field({ id, label, help, err, dupLink, children }: { id: string; label: string; help?: string; err?: string | false; dupLink?: ReactNode; children: ReactNode }) {
+function Field({ id, label, help, helpMode, err, dupLink, boxClass = "", children }: { id: string; label: string; help?: string; helpMode?: "text" | "tip"; err?: string | false; dupLink?: ReactNode; boxClass?: string; children: ReactNode }) {
   return (
     <div>
       <label htmlFor={id} className={LABEL}>{label}</label>
-      <div className={`${INPUT_BOX} ${err ? "!border-[#c62828] shadow-[0_0_0_4px_rgba(198,40,40,0.11)]" : ""}`}>{children}</div>
-      {err ? <p role="alert" className="mt-1.5 text-[13px] font-medium text-[#c62828]">⚠ {err} {dupLink}</p> : help ? <p className={`mt-1.5 text-[12.5px] ${MUTED}`}>{help}</p> : null}
+      <div className={`${INPUT_BOX} ${boxClass} ${err ? "!border-[#c62828] shadow-[0_0_0_4px_rgba(198,40,40,0.11)]" : ""}`}>{children}</div>
+      {err ? <p role="alert" className="mt-1.5 text-[13px] font-medium text-[#c62828]">⚠ {err} {dupLink}</p> : help && helpMode === "tip" ? <p id={`${id}-hint`} className="sr-only">{help}</p> : help ? <p className={`mt-1.5 text-[12.5px] ${MUTED}`}>{help}</p> : null}
     </div>
   );
 }
 function ResetLink({ tr, onClick }: { tr: Tr; onClick: () => void }) {
   return <button type="button" onClick={onClick} className="font-semibold text-[#c62828] underline">{tr("reset_instead")}</button>;
 }
-function Password({ id, value, onChange, tr, autoComplete, err }: { id: string; value: string; onChange: (v: string) => void; tr: Tr; autoComplete: string; err?: boolean }) {
+function Password({ id, value, onChange, tr, autoComplete, err, boxClass = "" }: { id: string; value: string; onChange: (v: string) => void; tr: Tr; autoComplete: string; err?: boolean; boxClass?: string }) {
   const [show, setShow] = useState(false);
   return (
-    <div className={`${INPUT_BOX} ${err ? "!border-[#c62828]" : ""}`}>
+    <div className={`${INPUT_BOX} ${boxClass} ${err ? "!border-[#c62828]" : ""}`}>
       <input id={id} dir="ltr" type={show ? "text" : "password"} autoComplete={autoComplete} value={value} onChange={(e) => onChange(e.target.value)} className={INPUT} />
       <button type="button" onClick={() => setShow(!show)} aria-label={tr(show ? "hide" : "show")} title={tr(show ? "hide" : "show")} className="ms-2 flex text-[#6b7a8c]">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">{show ? <path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6" /> : <><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" /><circle cx="12" cy="12" r="3" /></>}</svg>
@@ -242,15 +239,15 @@ function Password({ id, value, onChange, tr, autoComplete, err }: { id: string; 
     </div>
   );
 }
-function Channels({ value, onChange, tr }: { value: Ch; onChange: (c: Ch) => void; tr: Tr }) {
+function Channels({ value, onChange, tr, compact }: { value: Ch; onChange: (c: Ch) => void; tr: Tr; compact?: boolean }) {
   const opts: [Ch, string, string][] = [["sms", "ch_sms", "ch_sms_p"], ["whatsapp", "ch_wa", "ch_wa_p"]];
   return (
-    <div role="radiogroup" className="flex flex-col gap-2.5 md:flex-row">
+    <div role="radiogroup" data-compact={compact ? "1" : undefined} className={compact ? "ab-ch grid grid-cols-2 gap-2" : "flex flex-col gap-2.5 md:flex-row"}>
       {opts.map(([c, a, b]) => (
         <button key={c} type="button" role="radio" aria-checked={value === c} onClick={() => onChange(c)}
-          className={`flex flex-1 items-center gap-3 rounded-xl border-[1.5px] px-3.5 py-3 text-start ${value === c ? "border-[#157a4b] bg-[#f1f9f4] dark:bg-[#0f2a1f]" : "border-[#d3dbe2] dark:border-[#22324f]"}`}>
-          <span className={`h-[18px] w-[18px] flex-none rounded-full ${value === c ? "border-[5px] border-[#157a4b]" : "border-2 border-[#b8c4cf]"}`} />
-          <span><b className="block text-[15px]">{tr(a)}</b><span className={`text-[12.5px] ${MUTED}`}>{tr(b)}</span></span>
+          className={`flex items-center text-start ${compact ? "gap-2 rounded-lg border-[1.5px] px-2 py-1.5" : "flex-1 gap-3 rounded-xl border-[1.5px] px-3.5 py-3"} ${value === c ? "border-[#157a4b] bg-[#f1f9f4] dark:bg-[#0f2a1f]" : "border-[#d3dbe2] dark:border-[#22324f]"}`}>
+          <span className={`flex-none rounded-full ${compact ? "h-3.5 w-3.5" : "h-[18px] w-[18px]"} ${value === c ? "border-[5px] border-[#157a4b]" : "border-2 border-[#b8c4cf]"}`} />
+          <span><b className={compact ? "block text-[13px] leading-tight" : "block text-[15px]"}>{tr(a)}</b><span className={`${compact ? "block text-[11px] leading-tight" : "text-[12.5px]"} ${MUTED}`}>{tr(b)}</span></span>
         </button>
       ))}
     </div>
@@ -259,11 +256,11 @@ function Channels({ value, onChange, tr }: { value: Ch; onChange: (c: Ch) => voi
 function Steps({ at }: { at: number }) {
   return <div className="mb-4 flex gap-1.5">{[1, 2, 3].map((i) => <i key={i} className={`h-1 flex-1 rounded ${i <= at ? "bg-[#157a4b]" : "bg-[#e3e8ee] dark:bg-[#22324f]"}`} />)}</div>;
 }
-function Social({ tr, onOAuth }: { tr: Tr; onOAuth: (p: "google" | "facebook") => void }) {
+function Social({ tr, onOAuth, compact }: { tr: Tr; onOAuth: (p: "google" | "facebook") => void; compact?: boolean }) {
   const btn = "flex h-[50px] w-[50px] items-center justify-center rounded-full border border-[#dfe5ea] bg-white shadow-[0_2px_6px_rgba(0,0,0,0.07)] transition hover:shadow-md dark:border-[#22324f]";
   return (
     <>
-      <div className="mb-3 mt-6 flex items-center gap-2.5 text-[13px] text-[#8a97a8] before:h-px before:flex-1 before:bg-[#e3e8ee] after:h-px after:flex-1 after:bg-[#e3e8ee]">{tr("social")}</div>
+      <div className={`${compact ? "ab-social" : ""} mb-3 mt-6 flex items-center gap-2.5 text-[13px] text-[#8a97a8] before:h-px before:flex-1 before:bg-[#e3e8ee] after:h-px after:flex-1 after:bg-[#e3e8ee]`}>{tr("social")}</div>
       <div className="flex justify-center gap-4">
         <button type="button" onClick={() => onOAuth("google")} aria-label={tr("google")} title={tr("google")} className={btn}><GoogleMark /></button>
         <button type="button" onClick={() => onOAuth("facebook")} aria-label={tr("facebook")} title={tr("facebook")} className={btn}><FacebookMark /></button>
@@ -326,38 +323,6 @@ function NewPassword({ tr, busy, sentTo, onSave }: { tr: Tr; busy: boolean; sent
     </form>
   );
 }
-function UserIdStep({ tr, name, onDone }: { tr: Tr; name: string; onDone: () => void }) {
-  const [v, setV] = useState("");
-  const [state, setState] = useState<{ ok: boolean; msg: string } | null>(null);
-  const [busy, setBusy] = useState(false);
-  useEffect(() => {
-    if (!v.trim()) { setState(null); return; }
-    const id = setTimeout(async () => {
-      setState({ ok: false, msg: tr("uid_checking") });
-      const r = await v6UserIdCheck(v).catch(() => ({ ok: false, error: "e_try_again" })) as Res;
-      setState(r.ok ? { ok: true, msg: tr("uid_ok", { u: String(r.name) }) } : { ok: false, msg: tr(r.error ?? "e_try_again") });
-    }, 400);
-    return () => clearTimeout(id);
-  }, [v]); // eslint-disable-line react-hooks/exhaustive-deps
-  async function save() {
-    setBusy(true);
-    const r = await v6SaveUserId(v).catch(() => ({ ok: false, error: "e_try_again" })) as Res;
-    setBusy(false);
-    if (r.ok) onDone(); else setState({ ok: false, msg: tr(r.error ?? "e_try_again") });
-  }
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); save(); }}>
-      <div className="mb-3.5 rounded-xl bg-[#eef6f1] px-3.5 py-2.5 text-center text-[13.5px] text-[#0f3d2a] dark:bg-[#0f2a1f] dark:text-[#bfe8d0]">👋 {tr("uid_hi")}{name ? `, ${name}` : ""}</div>
-      <Title t={tr("uid_title")} p={tr("uid_p")} />
-      <label htmlFor="uid" className={LABEL}>{tr("uid")}</label>
-      <div className={INPUT_BOX}><input id="uid" dir="ltr" autoFocus value={v} onChange={(e) => setV(e.target.value.toLowerCase().replace(/\s/g, ""))} placeholder="aslam.farms" className={INPUT} />{state?.ok && <span className="text-[#157a4b]">✓</span>}</div>
-      {state && <p className={`mt-1.5 text-[13px] font-semibold ${state.ok ? "text-[#157a4b]" : "text-[#c62828]"}`}>{state.ok ? "✓ " : ""}{state.msg}</p>}
-      <p className={`mt-1.5 text-[12.5px] ${MUTED}`}>{tr("uid_rule")}</p>
-      <button type="submit" disabled={busy || !state?.ok} className={BTN}>{busy ? tr("wait") : tr("uid_save")}</button>
-      <div className="mt-3 text-center text-[14px]"><button type="button" onClick={onDone} className={LINK}>{tr("skip")}</button></div>
-    </form>
-  );
-}
 function LangToggle({ lang, onChange }: { lang: V6Lang; onChange: (l: V6Lang) => void }) {
   const opts: [V6Lang, string][] = [["en", "EN"], ["rm", "Roman"], ["ur", "اردو"]];
   return (
@@ -371,7 +336,7 @@ function LangToggle({ lang, onChange }: { lang: V6Lang; onChange: (l: V6Lang) =>
 }
 function Footer({ tr }: { tr: Tr }) {
   return (
-    <div dir={tr("back") === "واپس" ? "rtl" : "ltr"} className={`mt-[18px] flex flex-col items-center gap-2 px-1.5 text-[13px] sm:flex-row sm:justify-between ${MUTED}`}>
+    <div dir={tr("back") === "واپس" ? "rtl" : "ltr"} className={`mt-2 flex flex-col items-center gap-2 px-1.5 text-[13px] sm:flex-row sm:justify-between ${MUTED}`}>
       <a href="https://wa.me/923226275476" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5">
         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#25D366" /><path fill="#fff" d="M17 14.4c-.3-.1-1.6-.8-1.8-.9-.3-.1-.4-.1-.6.1l-.8 1c-.2.2-.3.2-.6.1-1.6-.8-2.6-1.5-3.6-3.2-.3-.5.3-.4.8-1.4.1-.2 0-.3 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.8.8-1 2.1-.3 3.4.9 1.6 2.3 3.6 5.2 4.6 1.6.5 2.4.4 3 .1.5-.3 1.1-1 1.2-1.5.1-.5.1-.8-.4-1z" /></svg>
         {tr("help")} <bdi dir="ltr" className="font-semibold text-[#0d1b2e] dark:text-white">0322 6275476</bdi>

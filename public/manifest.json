@@ -1,7 +1,7 @@
 {
-  "name": "Al Rana Traders — AgriBridge",
+  "name": "AgriBridge — The farmer's bridge",
   "short_name": "AgriBridge",
-  "description": "Pakistan's agriculture bridge — farmers, dealers, and investors, connected.",
+  "description": "AgriBridge — The farmer's bridge. Pakistan's agriculture bridge — farmers, dealers, and investors, connected.",
   "start_url": "/admin",
   "scope": "/",
   "display": "standalone",

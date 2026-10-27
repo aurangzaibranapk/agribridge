@@ -7,8 +7,8 @@ import { grainAmountFromRate, grainMaundRateAllowed, grainRatePresentation } fro
 import { grainSaleEditAllowed, grainSaleWithinOnHand } from "../src/lib/grain/sold-vs-bought";
 import { statementPartyVisible } from "../src/lib/statements/branch-scope";
 
-const triple = JSON.stringify(JSON.stringify(JSON.stringify("Al Rana Traders — AgriBridge")));
-assert.equal(unwrapWebsiteSetting(triple), "Al Rana Traders — AgriBridge");
+const triple = JSON.stringify(JSON.stringify(JSON.stringify("AgriBridge")));
+assert.equal(unwrapWebsiteSetting(triple), "AgriBridge");
 assert.equal(unwrapWebsiteSetting('"Pakistan"'), "Pakistan");
 assert.equal(unwrapWebsiteSetting("0312-6513294"), "0312-6513294");
 assert.equal(SHOP_PHONE_E164, "+923126513294");
@@ -24,6 +24,9 @@ assert.equal(ownerAccountChangeBlocked("owner"), "Owner account suspend, band ya
 assert.equal(ownerAccountChangeBlocked("admin"), null);
 assert.ok(makerCheckerBlock("a", "a"));
 assert.equal(makerCheckerBlock("a", "b"), null);
+assert.equal(makerCheckerBlock("a", "a", "manager"), "Apni entry khud manzoor nahi kar sakte.");
+assert.equal(makerCheckerBlock("a", "a", "admin"), null);
+assert.equal(makerCheckerBlock("a", "a", "owner"), null);
 
 assert.equal(payrollPayDecision({ status: "paid", createdBy: "m", actorId: "a", payJournalId: "j", payLock: null, payLockAt: null }), "already_paid");
 assert.equal(payrollPayDecision({ status: "approved", createdBy: "a", actorId: "a", payJournalId: null, payLock: null, payLockAt: null }), "maker");

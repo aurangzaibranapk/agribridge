@@ -191,7 +191,7 @@ const CURATED_FEATURES: ErpFeature[] = [
   { section: "Administration", label: "Dashboard aur Feature Manager", href: "/admin/dashboard-manager", description: "Kaunsa feature kisay dikhega — role-wise feature on/off.", who: "Admin" },
   { section: "Administration", label: "Meri Team (Head)", href: "/admin/my-department", description: "Apni team dekhein aur manage karein — department head ka view.", who: "Department Head" },
   { section: "Administration", label: "Staff & Access Control", href: "/admin/staff-access", description: "Staff ki permissions — kaun kya dekh sakta hai, kya nahi.", who: "Admin" },
-  { section: "Administration", label: "Users aur Role", href: "/admin/users", description: "Tamam users — role assign karo, account enable/disable.", who: "Admin" },
+  { section: "Administration", label: "Users aur Role", href: "/admin/users", description: "Tamam users — role, ek shaakh, aur ikhtiyari dukan. Sirf Owner/Admin jagah badalte hain; pehle se baad Activity Log par.", who: "Owner / Admin" },
   { section: "Administration", label: "Ittilaat (Notifications)", href: "/admin/notifications", description: "System notifications — kya hua, kab hua.", who: "Admin / Staff" },
   { section: "Administration", label: "Kaam ka Record (Activity Logs)", href: "/admin/activity-logs", description: "Tamam users ki activity — login, changes, deletions.", who: "Admin / Audit" },
   { section: "Administration", label: "Website Settings", href: "/admin/settings", description: "Website ki bunyadi settings — naam, logo, contact.", who: "Admin" },

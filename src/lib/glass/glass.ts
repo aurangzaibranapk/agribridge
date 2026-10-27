@@ -2,6 +2,7 @@
  * Glassy UI (owner approved 20 Oct 2026) -- pure helpers, koi DB call nahi.
  * Wallet card, payment summary aur receipt-print animation yahin se.
  */
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 export type GLang = "en" | "rm" | "ur";
 
 /** FRM-000047 -> "FRM •••• •••• 0047" (sirf aakhri 4 hindse). */
@@ -43,7 +44,7 @@ export function receiptText(r: ReceiptData): string {
   const head = r.kind === "pos" ? "POS Raseed" : r.kind === "wallet" ? "Wallet Jama Raseed" : "Payment Raseed";
   const flow = r.from || r.to ? `${r.from ?? "—"} se -> ${r.to ?? "—"}` : "";
   return [
-    `AL RANA TRADERS · AgriBridge`, head, `Raseed #: ${r.no}`, `Tarikh: ${r.date}`, flow, `Raqam: ${rsFmt(r.amount)}`,
+    BRAND_NAME, BRAND_TAGLINE, head, `Raseed #: ${r.no}`, `Tarikh: ${r.date}`, flow, `Raqam: ${rsFmt(r.amount)}`,
     ...(r.lines ?? []).map(([a, b]) => `${a}: ${b}`),
   ].filter(Boolean).join("\n");
 }

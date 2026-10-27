@@ -1,10 +1,11 @@
 /** Login v6 (design1) ki ibaarat -- EN / Roman / Urdu. Ek waqt mein sirf ek zaban. */
 import { tx as v5tx, type V5Lang } from "@/app/login/v5-text";
+import { BRAND_COPY } from "@/lib/brand";
 
 export type V6Lang = V5Lang;
 type Row = Record<V6Lang, string>;
 const T = {
-  brand_sub: { en: "Kisan ka Wasela", rm: "Kisan ka Wasela", ur: "کسان کا وسیلہ" },
+  brand_sub: { en: BRAND_COPY.en.tagline, rm: BRAND_COPY.rm.tagline, ur: BRAND_COPY.ur.tagline },
   welcome: { en: "Welcome back", rm: "Khush aamdeed", ur: "خوش آمدید" },
   welcome_p: { en: "Sign in to your AgriBridge account", rm: "Apne AgriBridge account mein login karein", ur: "اپنے ایگری برج اکاؤنٹ میں لاگ ان کریں" },
   id_label: { en: "Email, mobile or CNIC", rm: "Email, mobile ya CNIC", ur: "ای میل، موبائل یا شناختی کارڈ" },
@@ -28,7 +29,7 @@ const T = {
   m_have: { en: "Already have an account", rm: "Pehle se account hai", ur: "پہلے سے اکاؤنٹ ہے" },
   pill_signup: { en: "SIGN UP", rm: "SIGN UP", ur: "سائن اپ" },
   pill_login: { en: "LOGIN", rm: "LOGIN", ur: "لاگ ان" },
-  tagline: { en: "Kisan ka Wasela", rm: "Kisan ka Wasela", ur: "کسان کا وسیلہ" },
+  tagline: { en: BRAND_COPY.en.tagline, rm: BRAND_COPY.rm.tagline, ur: BRAND_COPY.ur.tagline },
   // signup
   su_title: { en: "Create your account", rm: "Naya account banayein", ur: "نیا اکاؤنٹ بنائیں" },
   su_p: { en: "Enter your details", rm: "Apni maloomat darj karein", ur: "اپنی معلومات درج کریں" },
@@ -42,6 +43,7 @@ const T = {
   pw_rule: { en: "At least 8 characters, including a number.", rm: "Kam az kam 8 harf, aik number zaroor ho.", ur: "کم از کم 8 حروف، ایک ہندسہ ضرور ہو۔" },
   create: { en: "Create account", rm: "Account banayein", ur: "اکاؤنٹ بنائیں" },
   unique_note: { en: "Each email, mobile number, CNIC and User ID can be used for one account only.", rm: "Har email, mobile, CNIC aur User ID sirf aik account par istemal ho sakta hai.", ur: "ہر ای میل، موبائل، شناختی کارڈ اور یوزر آئی ڈی صرف ایک اکاؤنٹ پر استعمال ہو سکتا ہے۔" },
+  unique_short: { en: "One account per email, mobile, CNIC and User ID.", rm: "Har email, mobile, CNIC aur User ID sirf aik account.", ur: "ہر ای میل، موبائل، شناختی کارڈ اور یوزر آئی ڈی صرف ایک اکاؤنٹ۔" },
   have_acc: { en: "Already have an account?", rm: "Pehle se account hai?", ur: "پہلے سے اکاؤنٹ ہے؟" },
   reset_instead: { en: "Reset your password", rm: "Password reset karein", ur: "پاس ورڈ ری سیٹ کریں" },
   // forgot
@@ -83,6 +85,11 @@ const T = {
   uid_checking: { en: "Checking…", rm: "Dekh rahe hain…", ur: "دیکھ رہے ہیں…" },
   uid_rule: { en: "4–20 characters: letters, numbers, dot or underscore; starts with a letter.", rm: "4 se 20 harf: huroof, hindse, dot ya underscore; pehla harf huroof.", ur: "4 سے 20 حروف: حروف، ہندسے، ڈاٹ یا انڈر اسکور؛ پہلا حرف انگریزی حرف۔" },
   uid_save: { en: "Save User ID", rm: "User ID save karein", ur: "یوزر آئی ڈی محفوظ کریں" },
+  uid_settings_title: { en: "Set your User ID", rm: "Apni User ID rakhein", ur: "اپنی یوزر آئی ڈی رکھیں" },
+  uid_have_title: { en: "Your User ID", rm: "Aap ki User ID", ur: "آپ کی یوزر آئی ڈی" },
+  uid_settings_p: { en: "Optional. Sign in with this instead of your mobile or CNIC. You can change it here any time.", rm: "Ikhtiyari. Is se mobile ya CNIC ke baghair login ho sakta hai. Yahan kabhi bhi badal sakte hain.", ur: "اختیاری۔ اس سے موبائل یا شناختی کارڈ کے بغیر لاگ ان ہو سکتا ہے۔ یہاں کبھی بھی بدل سکتے ہیں۔" },
+  uid_yours: { en: "This is your User ID", rm: "Yeh aap ki User ID hai", ur: "یہ آپ کی یوزر آئی ڈی ہے" },
+  uid_saved: { en: "Saved. You can sign in with this User ID.", rm: "Save ho gayi. Ab is User ID se login ho sakta hai.", ur: "محفوظ ہو گئی۔ اب اس یوزر آئی ڈی سے لاگ ان ہو سکتا ہے۔" },
   skip: { en: "Not now, later", rm: "Abhi nahi, baad mein", ur: "ابھی نہیں، بعد میں" },
   wait: { en: "Please wait…", rm: "Thora intezar…", ur: "انتظار کریں…" },
   help: { en: "Help on WhatsApp", rm: "WhatsApp madad", ur: "واٹس ایپ مدد" },

@@ -16,7 +16,7 @@ import {
 export const metadata: Metadata = {
   title: "Account Deletion — AgriBridge",
   description:
-    "How to delete your AgriBridge (Al Rana Traders) account, what data is deleted and which financial records are kept by law.",
+    "How to delete your AgriBridge account, what data is deleted and which financial records are kept by law.",
   alternates: { canonical: "/account-deletion" },
   robots: { index: true, follow: true },
 };

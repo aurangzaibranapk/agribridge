@@ -1,3 +1,7 @@
+## Phone live APK — 27 October 2026 — app only, Live SQL nahi
+
+Live sideload versionCode 630. Package `pk.alranatraders.agribridge`. Tag `v0.6.1-beta-test1`. Supabase `ktskwawkslaznkjjacni`. `APP_CHANNEL=production`: Masla, Role dekho, aur Role badlo band. TEST APK `pk.alranatraders.agribridge.test` alag rehti hai. Play TWA versionCode 1 tha, installed sideload 605 tha, is liye 630 usi package par upgrade hai. 698 pehle se Live par hai. 700 se 711 tak testing data aur test function patches hain — Live par nahi chalani. `app_phone_notes` Live par na ho to phone dash dikhata hai, crash nahi. Koi nayi Live SQL is build ke liye zaroori nahi. Backup maange baghair Live database par kuch nahi chala.
+
 ## Phone glass homes — 27 October 2026 — app only
 
 versionCode 630. Approved glass chrome: ek gold line par product, tagline, role, phir Assalam o Alaikum. Jhoota MISAAL number nahi — khali card par dash, asal TEST record par asal adad. Litre grouping, order date 18 Oct jaisa, rupee en-IN grouping, task Jari jab record kehta hai, vet pending row par janwar aur dawai. Tank °C aur staff shift sirf jab note ya schedule ho. Dealer hazar axis aur unit note se. Koi migration nahi. Live database par kuch nahi. Live workflow 605 par hai.
@@ -130,6 +134,58 @@ Rollback: `698_mobile_phase1.rollback.sql`. Us se pehle `attendance_records` ki 
 
 WhatsApp number code mein nahi. Live par link tabhi dikhe jab `SUPPORT_WHATSAPP_E164` ya `website_settings.support_whatsapp` ya `contact_phone` set ho.
 
+## Pending — 27 October 2026: self-merge Reject (715)
+
+Branch `cursor/reject-self-product-merge-ae81`. Migration **715 not applied** on Testing or Live. File only. Number 714 PR #220 (`714_dairy_cost_per_litre_basis`) ke paas hai. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `product_merge_requests_not_self` ab `status = 'rejected' OR source <> target`, ab bhi NOT VALID. Koi row update/delete nahi.
+- Pending self-merge (Sprite Mint 1 Le, source = target) Reject isi row par status `rejected` + wajah likhega. Nayi merge request nahi.
+- Approve of self-merge app aur check dono rokte hain.
+- Rollback: `715_product_merge_reject_self.rollback.sql` — purana check wapas, Reject phir ruk jayega.
+
+## Done on Live — 26 October 2026: Pending approval escalation (713, was 698)
+
+Branch `cursor/pending-approval-escalation-e154` (PR #216). File renamed 698 → **713** because live already has `698_mobile_phase1`.
+- Live `ktskwawkslaznkjjacni`: applied 26 Oct 2026 14:51 PKT, recorded as `20261026095127 713_pending_escalation`. Backup: box `/workspace/backups/2026-10-26-live-214-215-216/`.
+- Testing `hwaiuwxqldxsoukkfefn`: applied earlier, recorded as version `698216` (same SQL). Do not re-apply.
+
+- `pending_escalation_settings` / `_state` / `_events`. `fn_pending_escalate` har 15 minute (pg_cron, warna `/api/cron/pending-escalation`). Sirf in-app notification. SMS/WhatsApp nahi.
+- Manager SLA (default 24h, category settings) ke baad item **Admin aur Owner dono** ke paas. Koi bhi ek faisla kar sakta hai.
+- `fn_may_decide_entry` / `fn_actor_may_decide`: Admin, Owner, Super Admin apni entry bhi. Manager aur baqi staff apni entry nahi. Fuel, generator, maintenance checks aur POS review isi guard par.
+- Timeline: `Khud approve (Admin)` / `Khud approve (Owner)`. Season import SELECT staff policy (pending warning).
+- Rollback: `supabase/migrations/713_pending_escalation.rollback.sql`.
+
+## Done on Live — 26 October 2026: application gender + candidate message log (PR #214)
+
+Applied on Live 26 Oct 2026 ~14:51 PKT as `job_application_gender` + `job_application_messages` (grants included). Usama Saleem duplicate Shortlist row deleted after read check (1 row). Older note below:
+
+Branch `cursor/careers-gender-messages-552c`. **Not applied on Live** (`ktskwawkslaznkjjacni`). Testing project `hwaiuwxqldxsoukkfefn` was not in this session's Supabase project list (permission denied on a direct lookup), so these two files are **unapplied everywhere**:
+
+- `supabase/migrations/20261022100000_job_application_gender.sql` — nullable `job_applications.gender`, check `male/female/other`. No backfill.
+- `supabase/migrations/20261022100100_job_application_messages.sql` — `job_application_messages` for email/SMS/WhatsApp. RLS: hr, admin, owner, super_admin, manager.
+
+Do not run them on Live until there is a verified backup and a separate approval. The duplicate Shortlist cleanup for M Usama Saleem is also **not run**. Read-only SQL and the separate DELETE are in `supabase/manual/job_application_shortlist_duplicate_20261022_read.sql` and `..._delete.sql`.
+
+## Done on Live — 27 October 2026: Admin dealer / buyer invite (712, PR #217)
+
+Live `ktskwawkslaznkjjacni`: applied 27 Oct 2026 07:01 PKT, recorded as `20261027020151 712_party_invite`. Backup: box `/workspace/backups/2026-10-27-live-217/`. Testing `hwaiuwxqldxsoukkfefn`: applied 26 Oct (backup `/workspace/backups/2026-10-26-testing-712/`). Do not re-apply.
+
+- `party_invite_accounts` + `party_invite_sends` (poora paigham, channel, recipient, wajah). RLS: sirf Owner/Admin apni organization. Likhai service role se.
+- `fn_party_invite_phone_taken` — service_role.
+- Feature `hr.party-invite` → `/admin/hr/users`. HR role ko ijazat nahi.
+- Rollback: `712_party_invite.rollback.sql`.
+
+## Done on Live — 22 October 2026: Careers i18n columns (public apply modal)
+
+Branch `cursor/careers-apply-modal-i18n-552c` (PR #213). Live `ktskwawkslaznkjjacni` only. Testing was not touched.
+
+- Backup before the change: `backups.job_vacancies_20261022_brand` — 2 rows, 10 columns, same as `public.job_vacancies` at that moment. Schema `backups` is revoked from public, anon, and authenticated.
+- Migration `supabase/migrations/20261022082729_job_vacancy_public_i18n.sql` applied on Live. Nullable columns only. No other table.
+- Manual `supabase/manual/job_vacancy_i18n_live_rows.sql` then wrote the two MCO rows only. Base `title` / `description` unchanged. `brand`, `brand_en`, `brand_ur` are null.
+- Checked after write: Mahanbali and 157NB have English, Roman, and Urdu titles. Row count stayed 2.
+- Columns: `title_en`, `title_ur`, `title_roman`, `description_en`, `description_ur`, `description_roman`, plus optional `brand`, `brand_en`, `brand_ur`, `brand_roman`. Empty brand means no public tag. RLS unchanged.
+- Merged to `main` as `f22757b12a9ca6a88d20ae08fbad2428a8dc8237` (PR #213, normal merge). CI on that commit: AgriBridge Build Check and Build AgriBridge cPanel Package both succeeded.
+- cPanel package from that commit: `agribridge-cpanel-release.tar.gz` (191,787,268 bytes). SHA256 `f3761bfb8d9f12a614dc313cf1f50d8e6e92721d19608e951abf5611006d3326`. `.next` BUILD_ID `Jqfn_IvJI8XREv-mwPfs5`. Actions run 39755713629. The archive includes `.next`, `public`, `package.json`, `package-lock.json`, `next.config.js`, `server.js`, and `node_modules`.
 ## Pending — 21 October 2026: Bharti offer → structure → barhotri → salary slip (691)
 
 Branch `feat/salary-offer-slip`. Migration **691 not applied** on Testing or Live. Files only. 689 reserved, 690 left free. Backup pehle (lines file ke upar likhi hain), phir Testing, phir Live. App 691 ke baghair bhi chalta hai (purani payslip, purani offer), magar naye hissay 691 ke baad hi kaam karte hain.

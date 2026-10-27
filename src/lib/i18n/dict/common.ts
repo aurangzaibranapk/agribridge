@@ -17,7 +17,7 @@
  * pehle se tay ho chuka hai.
  *
  * JO YAHAN JAAN BOOJH KAR NAHI HAIN: "WhatsApp", "CNIC", "IBAN",
- * "JazzCash", "EasyPaisa", "Al Rana Traders" -- naam aur nishan har
+ * "JazzCash", "EasyPaisa", "{brand}" -- naam aur nishan har
  * zaban mein ek hi rehte hain. Unhen tarjuma karna kisi ki madad nahi
  * karta, aur "ایزی پیسہ" likh dena us app ka naam badal deta hai jo
  * bande ke phone par kuch aur likha hua hai.

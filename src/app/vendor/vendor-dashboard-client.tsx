@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { aajKaKhana } from "@/lib/utils/format";
 import { LogoutButton } from "@/components/layout/logout-button";
 import { t } from "@/lib/i18n/translations";
@@ -180,6 +180,7 @@ export interface AlertRow {
 }
 
 export function VendorDashboardClient({
+  account,
   alerts,
   vendorName,
   awaitingCheck,
@@ -193,6 +194,7 @@ export function VendorDashboardClient({
   payments,
   commissionRows,
 }: {
+  account?: ReactNode;
   alerts: AlertRow[];
   vendorName: string;
   awaitingCheck: number;
@@ -292,6 +294,7 @@ export function VendorDashboardClient({
             </div>
           </div>
         </header>
+        {account}
 
         {/* Nayi khabrein -- sab se upar, hero se bhi pehle.
             Machine rawana hoti hai to khabar yahin milti hai. Pehle wo
@@ -399,7 +402,7 @@ export function VendorDashboardClient({
             icon={<ShieldCheck className="h-4 w-4" />}
             value={awaitingCheck}
             label={t("v_verification_pending", lang)}
-            sub={awaitingCheck > 0 ? "ART ki tasdeeq ka intezar" : "kuch baqi nahi"}
+            sub={awaitingCheck > 0 ? "AgriBridge ki tasdeeq ka intezar" : "kuch baqi nahi"}
             barPct={0}
             tone={awaitingCheck > 0 ? "amber" : "neutral"}
             onClick={() => toggle("verify")}
@@ -470,10 +473,10 @@ export function VendorDashboardClient({
               <div>
                 <SectionHead
                   title={t("v_pending_verification_t", lang)}
-                  hint={`${pendingVerify.length} job ART ki tasdeeq ke intezar mein`}
+                  hint={`${pendingVerify.length} job AgriBridge ki tasdeeq ke intezar mein`}
                 />
                 <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                  Ye kaam abhi kisi hisaab mein shamil NAHI hai — na mukammal acre mein, na kamai mein. ART ki tasdeeq
+                  Ye kaam abhi kisi hisaab mein shamil NAHI hai — na mukammal acre mein, na kamai mein. AgriBridge ki tasdeeq
                   ke baad hi shamil hoga.
                 </p>
                 <div className="space-y-3">
@@ -589,7 +592,7 @@ export function VendorDashboardClient({
             <div>
               <SectionHead title={t("v_my_machines", lang)} hint={`${machines.length} machine`} />
               {machines.length === 0 ? (
-                <EmptyCard icon={<Tractor className="h-5 w-5" />} title={t("v_no_machine", lang)} text="ART se kahein ke aap ki machine darj kar de." />
+                <EmptyCard icon={<Tractor className="h-5 w-5" />} title={t("v_no_machine", lang)} text="AgriBridge se kahein ke aap ki machine darj kar de." />
               ) : (
                 <div className="space-y-2">
                   {machines.map((m) => (
@@ -899,7 +902,7 @@ const DRILL_TITLE: Record<string, string> = {
   received: "Jin par paisa mila",
   withArt: "Jin ka paisa baqi hai",
   withFarmer: "Jin ka paisa baqi hai",
-  dieselAdvance: "Jin par ART ka diesel laga",
+  dieselAdvance: "Jin par AgriBridge ka diesel laga",
 };
 
 /** Card ke peeche ki asal qatarein -- koi naya hisaab nahi, sirf chhantai. */
@@ -998,7 +1001,7 @@ function DrillCommission({ rows }: { rows: CommissionRow[] }) {
   return (
     <div className="mb-4 rounded-card border border-brand-200 bg-brand-50/40 p-3">
       <p className="mb-2 text-xs font-medium uppercase tracking-wide text-brand-700">
-        ART commission ({rows.length})
+        AgriBridge commission ({rows.length})
       </p>
       {rows.length === 0 ? (
         <p className="py-2 text-center text-xs text-surface-400">{t("v_no_bill_yet", lang)}</p>
@@ -1023,7 +1026,7 @@ function DrillCommission({ rows }: { rows: CommissionRow[] }) {
 
 function DrillDiesel({ rows, kind }: { rows: Booking[]; kind: string }) {
   const label =
-    kind === "dieselVendor" ? "Main ne diya" : kind === "dieselFarmer" ? "Kisan ne diya" : kind === "dieselArt" ? "ART ne diya" : "Sab diesel";
+    kind === "dieselVendor" ? "Main ne diya" : kind === "dieselFarmer" ? "Kisan ne diya" : kind === "dieselArt" ? "AgriBridge ne diya" : "Sab diesel";
   const filtered =
     kind === "dieselFarmer"
       ? rows.filter((b) => b.farmerDiesel > 0)
@@ -1049,7 +1052,7 @@ function DrillDiesel({ rows, kind }: { rows: Booking[]; kind: string }) {
                 {kind === "dieselFarmer" && `Rs ${b.farmerDiesel.toLocaleString()}`}
                 {kind === "dieselArt" && `Rs ${b.artDiesel.toLocaleString()} (mujh se wapas)`}
                 {kind === "dieselAll" &&
-                  `kisan Rs ${b.farmerDiesel.toLocaleString()} · ART Rs ${b.artDiesel.toLocaleString()}`}
+                  `kisan Rs ${b.farmerDiesel.toLocaleString()} · AgriBridge Rs ${b.artDiesel.toLocaleString()}`}
               </span>
             </div>
           ))}
@@ -1175,7 +1178,7 @@ function BookingCard({ booking }: { booking: Booking }) {
 
       {/* Paisa.
           Commission ki lakeer yahan JAAN BOOJH KAR nahi hai (malik ka
-          faisla). Us ki raqam upar "ART Commission" ke card mein alag
+          faisla). Us ki raqam upar "AgriBridge Commission" ke card mein alag
           dikhti hai; fisad vendor ko kahin nahi dikhta.
 
           "Verified Earning" wo raqam hai jo tasdeeq shuda kaam se bani

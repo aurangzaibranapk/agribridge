@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { buildDashboard, parseHrFilters, previousPeriod, attritionRate, funnel, timeToHire, engagement, headcountOn, type HrRaw, type StaffRow } from "../src/lib/hr-kpi/core";
+import { applicantGenderSplit, buildDashboard, parseHrFilters, previousPeriod, attritionRate, funnel, timeToHire, engagement, headcountOn, type HrRaw, type StaffRow } from "../src/lib/hr-kpi/core";
 import { buildSalary, parseSalFilters, dueDate, onTimePct, currentSalary, empStatus, rSquared, type SalaryRaw } from "../src/lib/hr-kpi/salary";
 import { parseTraining, parseReview, parseTarget, parseJoinExit, parseCandidate, parsePulse, stageToStatus } from "../src/lib/hr-kpi/validate";
 
@@ -74,6 +74,13 @@ assert.strictEqual(d.training[0].hours, 4);
 assert.deepStrictEqual(d.extras.salary, { due: 500, paid: 0, pending: 500, runs: 2 });
 assert.deepStrictEqual([d.extras.shifts.closed, d.extras.shifts.open, d.extras.shifts.short], [1, 1, 1]);
 assert.strictEqual(d.gender.find((g) => g.key === "none")!.count, 1);
+assert.strictEqual(d.gender.find((g) => g.key === "female")!.count, 1, "staff gender card unchanged");
+assert.strictEqual(d.applicantGender.find((g) => g.key === "none")!.count, 2);
+assert.deepStrictEqual(applicantGenderSplit([
+  { created_at: "2026-10-01T05:00:00Z", screened_at: null, interview_at: null, offer_at: null, hired_at: null, gender: "female" },
+  { created_at: "2026-10-02T05:00:00Z", screened_at: null, interview_at: null, offer_at: null, hired_at: null, gender: "male" },
+  { created_at: "2026-10-03T05:00:00Z", screened_at: null, interview_at: null, offer_at: null, hired_at: null, gender: "other" },
+], "2026-10-01", "2026-10-21").map((g) => g.count), [1, 1, 1, 0]);
 assert.ok(d.insights.some((x) => x.includes("joining date")));
 d = buildDashboard(raw, { ...f, department: "ops" });
 assert.strictEqual(d.employeeCount, 0, "department filter");
@@ -90,6 +97,9 @@ assert.ok(!parseJoinExit(fd({ id: U(1), hire_date: "2026-10-05", exit_date: "202
 assert.ok(parseJoinExit(fd({ id: U(1), gender: "female", hire_date: "2026-10-05" }), "2026-10-21").ok);
 assert.ok(!parseCandidate(fd({ vacancy_id: U(1), full_name: "Ali", email: "bad" })).ok);
 assert.ok(parseCandidate(fd({ vacancy_id: U(1), full_name: "Ali", email: "a@b.pk", phone: "03001234567" })).ok);
+assert.ok(!parseCandidate(fd({ vacancy_id: U(1), full_name: "Ali", email: "a@b.pk", gender: "nope" })).ok);
+const hiredGender = parseCandidate(fd({ vacancy_id: U(1), full_name: "Ali", email: "a@b.pk", gender: "female" }));
+assert.ok(hiredGender.ok && hiredGender.value.gender === "female");
 assert.ok(!parsePulse(fd({ score: "6" }), "2026-10-21").ok);
 assert.strictEqual(stageToStatus("hired"), "joined"); assert.strictEqual(stageToStatus("x"), null);
 

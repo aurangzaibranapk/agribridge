@@ -9,7 +9,7 @@ export function GlassDebitCard({ code, name, balanceLabel, balance, sub, right }
       <div className="relative z-[1] flex h-full flex-col justify-between">
         <div className="flex items-start justify-between">
           <p className="text-[15px] font-bold sm:text-[17px]">AgriBridge <span className="font-normal opacity-70">Kisan</span></p>
-          <p className="text-[10px] opacity-85 sm:text-xs">DEBIT · Al Rana Traders</p>
+          <p className="text-[10px] opacity-85 sm:text-xs">DEBIT · AgriBridge</p>
         </div>
         <span className="gl-chip" />
         <p className="font-mono text-[17px] font-semibold tracking-[.18em] sm:text-[22px]" data-testid="glass-card-number">{maskFrm(code)}</p>

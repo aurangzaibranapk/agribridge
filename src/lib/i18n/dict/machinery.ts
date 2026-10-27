@@ -127,8 +127,8 @@ export const machineryDict = {
     ur: "\u0646\u06c1\u06cc\u06ba \u2014 \u0627\u0628\u06be\u06cc \u0646\u06c1\u06cc\u06ba \u062f\u06cc\u0627",
   },
   mc_vendor_outstanding_note: {
-    en: "Fine. {amount} stays outstanding to {vendor} \u2014 the money is held with ART and shows in his account until it is paid.",
-    rm: "Theek hai. {amount} {vendor} ka baqi rahega \u2014 wo paisa ART ke paas jama hai aur us ke khate mein khara rahega jab tak diya na jaye.",
+    en: "Fine. {amount} stays outstanding to {vendor} \u2014 the money is held with {brand} and shows in his account until it is paid.",
+    rm: "Theek hai. {amount} {vendor} ka baqi rahega \u2014 wo paisa {brand} ke paas jama hai aur us ke khate mein khara rahega jab tak diya na jaye.",
     ur: "\u0679\u06be\u06cc\u06a9 \u06c1\u06d2\u06d4 {amount} {vendor} \u06a9\u0627 \u0628\u0627\u0642\u06cc \u0631\u06c1\u06d2 \u06af\u0627 \u2014 \u0648\u06c1 \u067e\u06cc\u0633\u06c1 \u0627\u06cc \u0622\u0631 \u0679\u06cc \u06a9\u06d2 \u067e\u0627\u0633 \u062c\u0645\u0639 \u06c1\u06d2 \u0627\u0648\u0631 \u0627\u0633 \u06a9\u06d2 \u06a9\u06be\u0627\u062a\u06d2 \u0645\u06cc\u06ba \u06a9\u06be\u0691\u0627 \u0631\u06c1\u06d2 \u06af\u0627\u06d4",
   },
   mc_how_much_paid: {
@@ -598,7 +598,7 @@ export const machineryDict = {
   mc_diesel_paid_by: { en: "Who paid for the diesel", rm: "Diesel kis ne dala", ur: "ڈیزل کس نے ڈالا" },
   mc_diesel_by_farmer: { en: "Farmer", rm: "Kisan ne", ur: "کسان نے" },
   mc_diesel_by_vendor: { en: "Machine vendor", rm: "Vendor ne", ur: "وینڈر نے" },
-  mc_diesel_by_company: { en: "We did (ART)", rm: "ART ne (hum ne)", ur: "اے آر ٹی نے (ہم نے)" },
+  mc_diesel_by_company: { en: "We did ({brand})", rm: "{brand} ne (hum ne)", ur: "{brand} نے (ہم نے)" },
   mc_diesel_not_ours: {
     en: "This diesel is not our expense — it is recorded for the work history only, and does not touch our accounts.",
     rm: "Ye diesel hamara kharcha nahi -- sirf kaam ke record ke liye likha ja raha hai, hamare khaton par is ka koi asar nahi.",
@@ -1042,8 +1042,8 @@ export const machineryDict = {
     ur: "\u0641\u06cc \u0644\u0679\u0631 \u0631\u06cc\u0679 (\u0631\u0648\u067e\u06d2)",
   },
   mc_diesel_recoverable: {
-    en: "ART paid \u2014 recoverable from the vendor",
-    rm: "ART ne diya \u2014 vendor se wapas aana hai",
+    en: "{brand} paid \u2014 recoverable from the vendor",
+    rm: "{brand} ne diya \u2014 vendor se wapas aana hai",
     ur: "\u0627\u06d2 \u0622\u0631 \u0679\u06cc \u0646\u06d2 \u062f\u06cc\u0627 \u2014 \u0648\u06cc\u0646\u0688\u0631 \u0633\u06d2 \u0648\u0627\u067e\u0633 \u0622\u0646\u0627 \u06c1\u06d2",
   },
   mc_diesel_from_bill: {
@@ -1158,8 +1158,8 @@ export const machineryDict = {
     ur: "\u0627\u0628\u06be\u06cc \u06a9\u0633\u0627\u0646 \u06a9\u06d2 \u067e\u0627\u0633",
   },
   vs_diesel_advance: {
-    en: "ART diesel (recoverable)",
-    rm: "ART ka diesel (wapas aana hai)",
+    en: "{brand} diesel (recoverable)",
+    rm: "{brand} ka diesel (wapas aana hai)",
     ur: "\u0627\u06d2 \u0622\u0631 \u0679\u06cc \u06a9\u0627 \u0688\u06cc\u0632\u0644 (\u0648\u0627\u067e\u0633)",
   },
   vs_extra_given: { en: "Given over his share", rm: "Hisse se zyada diya", ur: "حصے سے زیادہ دیا" },
@@ -1174,8 +1174,8 @@ export const machineryDict = {
     ur: "\u0627\u0628\u06be\u06cc \u06a9\u0633\u06cc \u0648\u06cc\u0646\u0688\u0631 \u06a9\u0627 \u062d\u0633\u0627\u0628 \u0646\u06c1\u06cc\u06ba \u0628\u0646\u0627\u06d4",
   },
   vs_note: {
-    en: "\"Payable now\" is what can genuinely be paid today: held with us, minus ART diesel. What is still with the farmer is not in it \u2014 that money has not reached us.",
-    rm: "\"Ab dena banta hai\" wo raqam hai jo waqai aaj di ja sakti hai: hamare paas jama, mainus ART ka diesel. Kisan ke paas wali raqam us mein nahi \u2014 wo hamare paas aayi hi nahi.",
+    en: "\"Payable now\" is what can genuinely be paid today: held with us, minus {brand} diesel. What is still with the farmer is not in it \u2014 that money has not reached us.",
+    rm: "\"Ab dena banta hai\" wo raqam hai jo waqai aaj di ja sakti hai: hamare paas jama, mainus {brand} ka diesel. Kisan ke paas wali raqam us mein nahi \u2014 wo hamare paas aayi hi nahi.",
     ur: "\"\u0627\u0628 \u062f\u06cc\u0646\u0627 \u0628\u0646\u062a\u0627 \u06c1\u06d2\" \u0648\u06c1 \u0631\u0642\u0645 \u06c1\u06d2 \u062c\u0648 \u0648\u0627\u0642\u0639\u06cc \u0622\u062c \u062f\u06cc \u062c\u0627 \u0633\u06a9\u062a\u06cc \u06c1\u06d2\u06d4",
   },
   // --- Machines master ---
@@ -1207,7 +1207,7 @@ export const machineryDict = {
   md_total_cost: { en: "Total cost", rm: "Kul raqam", ur: "\u06a9\u0644 \u0631\u0642\u0645" },
   md_by_farmer: { en: "Farmer paid", rm: "Kisan ne diya", ur: "\u06a9\u0633\u0627\u0646 \u0646\u06d2 \u062f\u06cc\u0627" },
   md_by_vendor: { en: "Vendor paid", rm: "Vendor ne diya", ur: "\u0648\u06cc\u0646\u0688\u0631 \u0646\u06d2 \u062f\u06cc\u0627" },
-  md_by_art: { en: "ART paid", rm: "ART ne diya", ur: "\u0627\u06d2 \u0622\u0631 \u0679\u06cc \u0646\u06d2 \u062f\u06cc\u0627" },
+  md_by_art: { en: "{brand} paid", rm: "{brand} ne diya", ur: "\u0627\u06d2 \u0622\u0631 \u0679\u06cc \u0646\u06d2 \u062f\u06cc\u0627" },
   md_by_machine: { en: "By machine", rm: "Machine ke hisaab se", ur: "\u0645\u0634\u06cc\u0646 \u06a9\u06d2 \u062d\u0633\u0627\u0628 \u0633\u06d2" },
   md_by_machine_hint: {
     en: "One machine at 4 L/acre and another at 9 means something is wrong on the second one.",
@@ -1257,12 +1257,12 @@ export const machineryDict = {
     ur: "\u06a9\u0645\u0627\u0626\u06cc \u0628\u0644 \u06a9\u06cc \u062a\u0627\u0631\u06cc\u062e \u067e\u0631 \u06af\u0646\u06cc \u062c\u0627\u062a\u06cc \u06c1\u06d2\u06d4",
   },
   mp_kpi_acres: { en: "Total work", rm: "Kul kaam", ur: "\u06a9\u0644 \u06a9\u0627\u0645" },
-  mp_kpi_margin: { en: "ART gross margin", rm: "ART ka gross margin", ur: "\u0627\u06cc \u0622\u0631 \u0679\u06cc \u06a9\u0627 \u0645\u0627\u0631\u062c\u0646" },
-  mp_kpi_expense: { en: "ART own expenses", rm: "ART ke apne kharche", ur: "\u0627\u067e\u0646\u06d2 \u06a9\u06be\u0631\u0686\u06d2" },
+  mp_kpi_margin: { en: "{brand} gross margin", rm: "{brand} ka gross margin", ur: "\u0627\u06cc \u0622\u0631 \u0679\u06cc \u06a9\u0627 \u0645\u0627\u0631\u062c\u0646" },
+  mp_kpi_expense: { en: "{brand} own expenses", rm: "{brand} ke apne kharche", ur: "\u0627\u067e\u0646\u06d2 \u06a9\u06be\u0631\u0686\u06d2" },
   mp_kpi_net: { en: "Net profit / loss", rm: "Net munafa / nuqsan", ur: "\u062e\u0627\u0644\u0635 \u0645\u0646\u0627\u0641\u0639 / \u0646\u0642\u0635\u0627\u0646" },
   mp_own_diesel: {
-    en: "ART own / non-recoverable diesel",
-    rm: "ART ka apna diesel (wapas nahi aata)",
+    en: "{brand} own / non-recoverable diesel",
+    rm: "{brand} ka apna diesel (wapas nahi aata)",
     ur: "\u0627\u06cc \u0622\u0631 \u0679\u06cc \u06a9\u0627 \u0627\u067e\u0646\u0627 \u0688\u06cc\u0632\u0644 (\u0648\u0627\u067e\u0633 \u0646\u06c1\u06cc\u06ba \u0622\u062a\u0627)",
   },
   mp_breakdown: { en: "How the profit is built", rm: "Munafa kaise banta hai", ur: "\u0645\u0646\u0627\u0641\u0639 \u06a9\u06cc\u0633\u06d2 \u0628\u0646\u062a\u0627 \u06c1\u06d2" },
@@ -1277,7 +1277,7 @@ export const machineryDict = {
   mp_operator: { en: "Operator / staff cost", rm: "Operator ki dihari", ur: "\u0622\u067e\u0631\u06cc\u0679\u0631 \u06a9\u06cc \u062f\u06c1\u0627\u0691\u06cc" },
   mp_three: { en: "Billed, received, earned \u2014 three different things", rm: "Bill, wasooli, munafa \u2014 teen alag cheezein", ur: "\u0628\u0644\u060c \u0648\u0635\u0648\u0644\u06cc\u060c \u0645\u0646\u0627\u0641\u0639 \u2014 \u062a\u06cc\u0646 \u0627\u0644\u06af \u0628\u0627\u062a\u06cc\u06ba" },
   mp_received: { en: "Cash received", rm: "Wasool hua", ur: "\u0648\u0635\u0648\u0644 \u06c1\u0648\u0627" },
-  mp_recoverable: { en: "ART diesel to come back", rm: "ART ka diesel (wapas aana hai)", ur: "\u0688\u06cc\u0632\u0644 \u062c\u0648 \u0648\u0627\u067e\u0633 \u0622\u0646\u0627 \u06c1\u06d2" },
+  mp_recoverable: { en: "{brand} diesel to come back", rm: "{brand} ka diesel (wapas aana hai)", ur: "\u0688\u06cc\u0632\u0644 \u062c\u0648 \u0648\u0627\u067e\u0633 \u0622\u0646\u0627 \u06c1\u06d2" },
   mp_farmer_diesel: { en: "Farmer-paid diesel (neither income nor cost)", rm: "Kisan ka diesel (na aamdani, na kharcha)", ur: "\u06a9\u0633\u0627\u0646 \u06a9\u0627 \u0688\u06cc\u0632\u0644" },
   mp_chart_trend: { en: "Billing, cost and profit by month", rm: "Maheene ke hisaab se billing, lagat aur munafa", ur: "\u0645\u06c1\u06cc\u0646\u06d2 \u06a9\u06d2 \u062d\u0633\u0627\u0628 \u0633\u06d2" },
   mp_chart_machine: { en: "Profit by machine", rm: "Machine ka munafa", ur: "\u0645\u0634\u06cc\u0646 \u06a9\u0627 \u0645\u0646\u0627\u0641\u0639" },
@@ -1287,8 +1287,8 @@ export const machineryDict = {
   mp_bookings_word: { en: "Bookings", rm: "Bookings", ur: "\u0628\u06a9\u0646\u06af" },
   mp_none_in_period: { en: "Nothing billed in this period.", rm: "Is arse mein koi bill nahi bana.", ur: "\u0627\u0633 \u0639\u0631\u0635\u06d2 \u0645\u06cc\u06ba \u06a9\u0648\u0626\u06cc \u0628\u0644 \u0646\u06c1\u06cc\u06ba \u0628\u0646\u0627\u06d4" },
   mp_diesel_note: {
-    en: "ART diesel that is recoverable from the vendor is NOT counted as a cost here \u2014 it is money coming back, not money spent. Counting it would make machinery look less profitable than it is.",
-    rm: "ART ka wo diesel jo vendor se wapas aata hai, yahan kharche mein NAHI gina \u2014 wo wapas aane wali raqam hai, kharcha nahi. Usay ginna machinery ka munafa jhooti tarah kam dikhata hai.",
+    en: "{brand} diesel that is recoverable from the vendor is NOT counted as a cost here \u2014 it is money coming back, not money spent. Counting it would make machinery look less profitable than it is.",
+    rm: "{brand} ka wo diesel jo vendor se wapas aata hai, yahan kharche mein NAHI gina \u2014 wo wapas aane wali raqam hai, kharcha nahi. Usay ginna machinery ka munafa jhooti tarah kam dikhata hai.",
     ur: "\u0627\u06d2 \u0622\u0631 \u0679\u06cc \u06a9\u0627 \u0648\u06c1 \u0688\u06cc\u0632\u0644 \u062c\u0648 \u0648\u06cc\u0646\u0688\u0631 \u0633\u06d2 \u0648\u0627\u067e\u0633 \u0622\u062a\u0627 \u06c1\u06d2\u060c \u06cc\u06c1\u0627\u06ba \u062e\u0631\u0686\u06d2 \u0645\u06cc\u06ba \u0646\u06c1\u06cc\u06ba \u06af\u0646\u0627 \u06af\u06cc\u0627\u06d4",
   },
 

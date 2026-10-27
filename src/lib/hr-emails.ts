@@ -17,7 +17,7 @@ import { sendDeptMail, mailWrapper, type MailResult } from "@/lib/mailer";
  */
 
 const SITE_URL = "https://alranatraders.pk";
-const COMPANY = "Al Rana Traders / AgriBridge";
+const COMPANY = "AgriBridge / AgriBridge";
 
 export type HrMailKind = "joining" | "separation";
 export type HrMailSender = typeof sendDeptMail;

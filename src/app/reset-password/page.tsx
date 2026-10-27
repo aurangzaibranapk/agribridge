@@ -4,6 +4,8 @@ import { ResetPasswordForm } from "./reset-password-form";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { LangProvider } from "@/lib/i18n/lang-context";
 import { t } from "@/lib/i18n/translations";
+import { BrandMark } from "@/components/brand/brand-mark";
+import { BRAND_NAME, brandTagline } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +26,9 @@ export default function ResetPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-brand-900 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <Link href="/" className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-white text-lg font-bold text-brand-700">{t("au_ar", lang)}</Link>
+          <Link href="/" aria-label={BRAND_NAME} className="mx-auto mb-3 flex h-12 w-12 items-center justify-center"><BrandMark className="h-12 w-12" /></Link>
+          <p className="font-display text-lg font-semibold text-white">{BRAND_NAME}</p>
+          <p dir={lang === "ur" ? "rtl" : "ltr"} className={`mb-2 text-xs text-emerald-100/80 ${lang === "ur" ? "font-urdu" : ""}`}>{brandTagline(lang)}</p>
           <h1 className="font-display text-xl font-semibold text-white">{t("au_set_new_password", lang)}</h1>
         </div>
         <Suspense fallback={<div className="rounded-card bg-white p-6 text-center text-sm text-surface-500">{t("au_loading", lang)}</div>}>

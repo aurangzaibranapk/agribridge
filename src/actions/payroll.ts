@@ -260,3 +260,19 @@ export async function payStaffAdvance(_p: PayrollState, fd: FormData): Promise<P
   paths();
   return ok("Advance ada -- qist plan tankhwah se chalu.");
 }
+
+// ---------------- 696 Draft line badlao (wajah ke sath, audit) ----------------
+export async function adjustPayrollLine(_p: PayrollState, fd: FormData): Promise<PayrollState> {
+  const { sb, user } = await me();
+  if (!user) return err("Login zaroori hai.");
+  const value = Number(fd.get("value"));
+  if (!Number.isFinite(value) || value < 0) return err("Sahi raqam likhein.");
+  const reason = String(fd.get("reason") ?? "").trim();
+  if (!reason) return err("Badalne ki wajah likhein.");
+  const { error } = await sb.rpc("fn_payroll_line_adjust", {
+    p_line: String(fd.get("line_id")), p_field: String(fd.get("field")), p_value: value, p_reason: reason,
+  });
+  if (error) return err(error);
+  paths();
+  return ok("Line badal gayi -- wajah record ho gayi.");
+}

@@ -433,7 +433,7 @@ export function AgentsScreen({ data }: { data: AgentsData }) {
               <input name="phone" placeholder="03xxxxxxxxx" defaultValue={data.example ? "0300-0000000" : ""} readOnly={data.example} className="mt-1 block h-11 w-48 rounded-xl border border-[#e4eaf2] px-3 text-[14px]" />
             </label>
             <label className="min-w-[240px] flex-1 text-[12px] text-[#607089]">Paighaam
-              <input name="message" defaultValue="Al Rana Traders: yeh test SMS hai." readOnly={data.example} className="mt-1 block h-11 w-full rounded-xl border border-[#e4eaf2] px-3 text-[14px]" />
+              <input name="message" defaultValue="AgriBridge: yeh test SMS hai." readOnly={data.example} className="mt-1 block h-11 w-full rounded-xl border border-[#e4eaf2] px-3 text-[14px]" />
             </label>
             <button className="h-11 rounded-xl bg-[#101a4a] px-4 text-sm font-semibold text-white">Test SMS</button>
           </form>

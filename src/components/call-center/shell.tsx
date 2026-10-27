@@ -41,7 +41,7 @@ export function Shell({
       <aside className="flex w-[232px] shrink-0 flex-col bg-[#0c1c36] text-white">
         <div className="px-5 pb-6 pt-6">
           <div className="font-display text-[22px] font-bold tracking-tight">AgriBridge</div>
-          <div className="mt-0.5 text-[12px] text-white/60">Al Rana Traders · Call Center</div>
+          <div className="mt-0.5 text-[12px] text-white/60">AgriBridge · Call Center</div>
         </div>
         <div className="px-3 pb-4">
           <a
