@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { performance } from "node:perf_hooks";
 import { createHash } from "node:crypto";
 import { AGRIBRIDGE_OS_VERSION, versionCodeFor } from "../src/lib/app-version";
@@ -26,7 +26,6 @@ import { brandLockup, currentSubBrand, taglineFrom, taglineLines, taglineWithDef
 import { pickPakistan, preferVillage, shortPlace, usablePlace } from "../src/lib/mobile/weather-place";
 import { elapsed, withinBudget, MOBILE_BUNDLE_BUDGET_BYTES } from "../src/lib/mobile/perf";
 import { PHONE_VERSION_CODE, shownVersionCode } from "../src/lib/mobile/shown-version";
-import { demoBadge, demoChromeOn, demoShift, demoTank, demoValue, setAppFlavor } from "../apps/mobile/src/glass-demo";
 import { shiftTotals } from "../src/lib/mobile/shifts";
 import { calculateMilkValue } from "../src/lib/utils/milk-formula";
 
@@ -122,21 +121,8 @@ assert.deepEqual(brandLockup("ur"), { title: "ایگری بریج", line: "کس�
 assert.equal(brandLockup("en", taglineFrom({ roman: "Kisan ka Wasela", urdu: "کسان کا وسیلہ", english: "The farmer's bridge" })).line, "Kisan ka Wasela");
 assert.doesNotMatch(brandLockup("rm", taglineFrom({ roman: "The farmer's bridge" })).line, /farmer/i);
 assert.equal(taglineFrom('{"roman":"Kisan ka Wasela"}').roman, "Kisan ka Wasela");
-assert.doesNotMatch(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /MISAAL/);
-assert.match(readFileSync("apps/mobile/src/glass-demo.ts", "utf8"), /MISAAL/);
-setAppFlavor("live");
-assert.equal(demoChromeOn(), false);
-setAppFlavor("test");
-assert.equal(demoChromeOn(), true);
-setAppFlavor(null);
-assert.equal(demoChromeOn(), false);
-assert.deepEqual(demoBadge("Active farmers"), { kind: "count", value: 18 });
-assert.equal(demoBadge("Hazri (Oct)")?.kind, "pct");
-assert.equal(demoBadge("Hazri (Oct)")?.value, 90);
-assert.equal(demoTank().celsius, 3.8);
-assert.match(demoShift().window, /8:00/);
-assert.match(demoShift().window, /5:00/);
-assert.equal(demoValue("Total sales"), "Rs 4.8M");
+assert.doesNotMatch(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /MISAAL|18,?450|31°C|Rs 4\.8M/);
+assert.equal(existsSync("apps/mobile/src/glass-demo.ts"), false);
 assert.match(readFileSync("apps/mobile/src/roles/glass-homes.tsx", "utf8"), /Jari/);
 const glassHomes = readFileSync("apps/mobile/src/roles/glass-homes.tsx", "utf8");
 const glassUi = readFileSync("apps/mobile/src/glass.tsx", "utf8");

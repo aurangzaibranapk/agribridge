@@ -8,7 +8,6 @@ import { type AppLang } from "../../../src/lib/mobile/sub-brand";
 import { liveAuth, type LiveBag } from "./bits";
 import { liveGet, liveGetScoped, loadPhoneNotes } from "../../../src/lib/mobile/live-read";
 import { pickPakistan, preferVillage, shortPlace, usablePlace } from "../../../src/lib/mobile/weather-place";
-import { demoBadge, demoChromeOn, demoFace, demoSeries, demoSub, demoTag, demoValue, demoWeather, previewChip, previewOn, type DemoBadge } from "./glass-demo";
 
 export const glass = {
   bg: "#071018",
@@ -126,19 +125,11 @@ export function BrandHeader({ role, name, onProfile }: { role: string; name: str
   const ctx = useContext(LangContext);
   const mark = ctx.mark.trim();
   const line = ctx.line.trim();
-  const chip = previewChip();
   const initial = (name.trim().charAt(0) || role.charAt(0) || "A").toUpperCase();
   const brandLine = [mark, line, role].map((bit) => bit.trim()).filter(Boolean).map(upperBit).join(" · ");
   return (
     <Rise index={0}>
       <View style={{ marginBottom: 10 }}>
-        {chip ? (
-          <View style={{ alignItems: "flex-end", marginBottom: 6 }}>
-            <View style={{ backgroundColor: "#E37A1A", borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}>
-              <Text style={{ color: "#fff", fontSize: 10, fontWeight: "800" }}>{chip}</Text>
-            </View>
-          </View>
-        ) : null}
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <View style={{ flex: 1, paddingRight: 10 }}>
             <Text style={{ color: glass.gold, fontSize: 11, fontWeight: "800", letterSpacing: /[A-Za-z]/.test(brandLine) ? 0.6 : 0 }} numberOfLines={2}>{brandLine}</Text>
@@ -184,11 +175,10 @@ const WMO: Record<number, string> = {
 
 export function useFace(live?: LiveBag, role?: string): { name: string; place: string } {
   const auth = liveAuth(live);
-  const preview = previewOn();
   const [name, setName] = useState("");
   const [place, setPlace] = useState("");
   useEffect(() => {
-    if (preview || !auth?.userId) return;
+    if (!auth?.userId) return;
     const id = encodeURIComponent(auth.userId);
     const key = roleNameKey(role);
     void (async () => {
@@ -209,8 +199,7 @@ export function useFace(live?: LiveBag, role?: string): { name: string; place: s
       }
       setPlace(place);
     });
-  }, [auth?.token, auth?.userId, auth?.url, auth?.testAccount, role, preview]);
-  if (preview) return demoFace(role);
+  }, [auth?.token, auth?.userId, auth?.url, auth?.testAccount, role]);
   return { name, place };
 }
 
@@ -240,18 +229,12 @@ async function fetchWeather(place: string): Promise<WeatherView | null> {
 }
 
 export function useWeather(place: string): WeatherView | null {
-  const preview = previewOn();
-  const demo = demoChromeOn();
-  const [view, setView] = useState<WeatherView | null>(preview ? demoWeather() : cachedWeather);
+  const [view, setView] = useState<WeatherView | null>(cachedWeather);
   useEffect(() => {
-    if (preview) {
-      setView(demoWeather());
-      return;
-    }
     let stop = false;
     void (async () => {
       if (!place.trim()) {
-        if (!stop) setView(demo ? demoWeather() : (cachedWeather ?? NO_PLACE));
+        if (!stop) setView(cachedWeather ?? NO_PLACE);
         return;
       }
       try {
@@ -268,8 +251,8 @@ export function useWeather(place: string): WeatherView | null {
       }
     })();
     return () => { stop = true; };
-  }, [place, preview, demo]);
-  return preview ? demoWeather() : view;
+  }, [place]);
+  return view;
 }
 
 function weatherGlyph(condition: string | undefined): string {
@@ -448,17 +431,10 @@ export function Pct({ value }: { value: number | null }) {
 
 function CountBadge({ value }: { value: number | null }) {
   if (value == null || value === 0) return null;
-  return <BadgeMark kind="count" value={value} />;
-}
-
-/** Demo badge, including a 90 mark that Pct hides on real series. */
-function BadgeMark({ kind, value }: { kind: DemoBadge["kind"]; value: number }) {
-  if (value === 0) return null;
   const up = value > 0;
-  const shown = kind === "pct" ? `${Math.abs(value)}%` : String(Math.abs(value));
   return (
     <View style={{ backgroundColor: up ? "rgba(61,220,151,0.15)" : "rgba(255,107,107,0.15)", borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
-      <Text style={{ color: up ? glass.up : glass.down, fontSize: 11, fontWeight: "700" }}>{up ? "▲" : "▼"} {shown}</Text>
+      <Text style={{ color: up ? glass.up : glass.down, fontSize: 11, fontWeight: "700" }}>{up ? "▲" : "▼"} {Math.abs(value)}</Text>
     </View>
   );
 }
@@ -507,25 +483,11 @@ function glyphFor(label: string): string {
   return (key && GLYPH[key]) || "M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0";
 }
 
-export function Kpi({ label, value, sub, color, series, pct, index, badge = "pct", sampleKey, holdSample = false }: { label: string; value: string; sub?: string; color: string; series: number[]; pct: number | null; index: number; badge?: "pct" | "count"; sampleKey?: string; holdSample?: boolean }) {
-  const key = sampleKey || label;
-  const preview = previewOn();
-  const demo = demoChromeOn();
-  const sampleValue = demoValue(key);
-  const empty = value === "—" || value === "";
-  const useSampleValue = !holdSample && sampleValue != null && (preview || (demo && empty && !(sub && sub.trim())));
-  const shownValue = useSampleValue ? sampleValue : value;
-  const sampleLine = useSampleValue ? demoSeries(key) : null;
-  const shownSeries = sampleLine && sampleLine.length >= 2 ? sampleLine : series;
-  const shownSub = useSampleValue ? (preview ? demoSub(key) : (demoSub(key) || demoTag())) : (sub || "");
-  const clean = shownSeries.filter((point) => Number.isFinite(point));
+export function Kpi({ label, value, sub, color, series, pct, index, badge = "pct" }: { label: string; value: string; sub?: string; color: string; series: number[]; pct: number | null; index: number; badge?: "pct" | "count" }) {
+  const clean = series.filter((point) => Number.isFinite(point));
   const line = clean.length >= 2 ? clean : clean.length === 1 ? [clean[0], clean[0]] : [];
-  const realClean = series.filter((point) => Number.isFinite(point));
-  const realLine = realClean.length >= 2 ? realClean : realClean.length === 1 ? [realClean[0], realClean[0]] : [];
-  const change = badge === "count" ? null : pct != null ? pct : realLine.length >= 2 ? pctChange(realLine[realLine.length - 1], realLine[realLine.length - 2]) : null;
-  const delta = badge === "count" ? countDelta(realLine) : null;
-  const sample = demoBadge(key);
-  const showSampleBadge = !holdSample && sample != null && (preview || (demo && change == null && delta == null));
+  const change = badge === "count" ? null : pct != null ? pct : line.length >= 2 ? pctChange(line[line.length - 1], line[line.length - 2]) : null;
+  const delta = badge === "count" ? countDelta(line) : null;
   return (
     <Rise index={index} style={{ width: "48%", maxWidth: "48%", flexBasis: "48%", flexGrow: 0, flexShrink: 0 }}>
       <View style={{ width: "100%", backgroundColor: glass.card, borderRadius: 18, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: glass.line }}>
@@ -535,11 +497,11 @@ export function Kpi({ label, value, sub, color, series, pct, index, badge = "pct
               <Path d={glyphFor(label)} stroke="#07140F" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
           </View>
-          {showSampleBadge && sample ? <BadgeMark kind={sample.kind} value={sample.value} /> : badge === "count" ? <CountBadge value={delta} /> : <Pct value={change} />}
+          {badge === "count" ? <CountBadge value={delta} /> : <Pct value={change} />}
         </View>
         <Text style={{ color: glass.muted, marginTop: 10, fontSize: 12, lineHeight: 16 }} numberOfLines={2}>{label}</Text>
-        <Text style={{ color: glass.text, fontSize: 20, fontWeight: "800", marginTop: 2, lineHeight: 24 }} numberOfLines={1}>{shownValue}</Text>
-        {shownSub ? <Text style={{ color: glass.muted, fontSize: 11, lineHeight: 14 }}>{shownSub}</Text> : null}
+        <Text style={{ color: glass.text, fontSize: 20, fontWeight: "800", marginTop: 2, lineHeight: 24 }} numberOfLines={1}>{value}</Text>
+        {sub ? <Text style={{ color: glass.muted, fontSize: 11, lineHeight: 14 }}>{sub}</Text> : null}
         <Spark values={line} color={color} />
       </View>
     </Rise>

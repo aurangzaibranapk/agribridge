@@ -24,7 +24,6 @@ import { PHONE_VERSION_CODE, shownVersionCode } from "../../src/lib/mobile/shown
 import { mergeById, type NetState } from "../../src/lib/mobile/sync";
 import { bootMark, marks } from "./src/boot";
 import { loadRoleModule } from "./src/roles/load";
-import { setAppFlavor } from "./src/glass-demo";
 import { GlassPreview, glassPreviewOn } from "./src/roles/glass-preview";
 import { Btn, Header, Tabs, colors } from "./src/kit";
 
@@ -77,7 +76,6 @@ function useLoginMark(): AppMark {
 }
 
 export default function App() {
-  setAppFlavor(FLAVOR);
   const [ready, setReady] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
