@@ -1,4 +1,4 @@
--- Rollback 714 — purana check wapas. Reject of a grandfathered self-merge
+-- Rollback 715 — purana check wapas. Reject of a grandfathered self-merge
 -- phir se usi CHECK par ruk jayega. NOT VALID, taake jo row pehle hi
 -- rejected ho chuki ho us par rollback fail na ho.
 alter table public.product_merge_requests

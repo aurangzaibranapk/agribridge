@@ -1,4 +1,4 @@
-// 714: same-product merge reject updates the existing row. Live DB nahi. PGlite.
+// 715: same-product merge reject updates the existing row. Live DB nahi. PGlite.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
@@ -24,8 +24,8 @@ const REQ = "33333333-3333-4333-8333-333333333333";
 const REQ2 = "44444444-4444-4444-8444-444444444444";
 const REQ3 = "55555555-5555-4555-8555-555555555555";
 
-const mig = fs.readFileSync("supabase/migrations/714_product_merge_reject_self.sql", "utf8");
-const rb = fs.readFileSync("supabase/migrations/714_product_merge_reject_self.rollback.sql", "utf8");
+const mig = fs.readFileSync("supabase/migrations/715_product_merge_reject_self.sql", "utf8");
+const rb = fs.readFileSync("supabase/migrations/715_product_merge_reject_self.rollback.sql", "utf8");
 const sqlBody = mig.replace(/--.*$/gm, "");
 assert.match(sqlBody, /drop constraint if exists product_merge_requests_not_self/i);
 assert.match(sqlBody, /status = 'rejected' or source_product_id <> target_product_id/);

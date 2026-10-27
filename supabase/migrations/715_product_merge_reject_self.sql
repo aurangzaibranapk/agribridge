@@ -1,5 +1,5 @@
 -- =====================================================================
--- AgriBridge — Migration 714: Self-merge ko Reject karna
+-- AgriBridge — Migration 715: Self-merge ko Reject karna
 -- =====================================================================
 -- Pending Approvals par "Sprite Mint 1 Le" (source = target, status
 -- pending) Reject is error par rukta hai:
@@ -27,7 +27,7 @@
 -- hai (status rejected). Koi data update / delete nahi.
 --
 -- Live par tab tak mat chalayein jab tak backup verify na ho.
--- Pehle Testing. Rollback: 714_product_merge_reject_self.rollback.sql
+-- Pehle Testing. Rollback: 715_product_merge_reject_self.rollback.sql
 
 alter table public.product_merge_requests
   drop constraint if exists product_merge_requests_not_self;
@@ -39,4 +39,4 @@ alter table public.product_merge_requests
 
 comment on constraint product_merge_requests_not_self
   on public.product_merge_requests is
-  'Nayi pending/approved self-merge (source = target) nahi. Purani pending self-merge ko Reject (status = rejected) karna jaiz hai. Approve nahi. NOT VALID taake 693 se pehle pari pending row migration rok na de (714).';
+  'Nayi pending/approved self-merge (source = target) nahi. Purani pending self-merge ko Reject (status = rejected) karna jaiz hai. Approve nahi. NOT VALID taake 693 se pehle pari pending row migration rok na de (715).';
