@@ -1,3 +1,11 @@
+## Pending — 27 October 2026: batch remaining = ginti (718) — NOT applied
+
+Branch `cursor/batch-ginti-align-8978`. Migration **718 file only**. Testing aur Live dono par **nahi** chali. Live (`ktskwawkslaznkjjacni`) par sirf read-only scan hua. Apply tab, jab backup verify ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live.
+
+- `718_batch_ginti_align.sql` — product + godam (3b wala join) par `inventory.quantity_on_hand` ko `sum(stock_batches.remaining_quantity)` ke barabar karta hai, `stock_movements` adjustment se. Batch remaining aur ledger (1200/1210/1220) nahi cherta.
+- Snapshot: `backup_718_inventory_ginti`. Rollback: `718_batch_ginti_align.rollback.sql` (ek transaction, `psql -1`).
+- 27 Oct read-only: raw 3b farq 91. Un mein 90 scale `numeric(14,3)` par seedha barabar ho sakte hain (ginti +2032 / −59). Ek jora ginti 0 aur batch 0.000232 hai — ginti column itna barik adad rakh nahi sakta, raw 3b us par reh sakti hai.
+
 ## Pending — 27 October 2026: POS cash custody chain (717)
 
 Branch `cursor/pos-cash-custody-slips-1947`. Migration **717 not applied** on Testing or Live. File only. Number 716 customer khata / 2030 (PR #225) ka hai — ye alag hai. Testing project MCP list mein nahi tha, is liye yahan nahi chali. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
