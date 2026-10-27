@@ -110,15 +110,15 @@ export async function applyOutboxItem(input: {
     if (!vehicle) return { ok: false, error: "Is bande par koi gaari assign nahi." };
     const mime = String(body.photo_mime ?? "image/jpeg");
     const photo = await savePhoto(METER_BUCKET, `${aajKaKhana()}/${input.userId}/${input.item.clientUuid}.jpg`, String(body.photo_base64), mime);
-    if ("error" in photo) return photo;
+    if ("error" in photo) return { ok: false, error: photo.error };
     if (checked.kind === "meter") {
       const result = await recordOpening(vehicle, input.userId, input.branchId, Number(body.km), { photoPath: photo.path });
-      if ("error" in result) return result;
+      if ("error" in result) return { ok: false, error: result.error };
       return { ok: true };
     }
     const rates = await db.from("fuel_rate_settings").select("petrol_rate, margin").limit(1).maybeSingle();
     const locked = lockedFuelRate(rates.data?.petrol_rate, rates.data?.margin, body.rate == null ? null : Number(body.rate));
-    if ("error" in locked) return locked;
+    if ("error" in locked) return { ok: false, error: locked.error };
     const liters = Number(body.liters);
     const amount = Math.round(liters * locked.rate * 100) / 100;
     const result = await recordFuel(
@@ -128,7 +128,7 @@ export async function applyOutboxItem(input: {
       { liters, ratePerLiter: locked.rate, amount, receiptPath: photo.path },
       { photoPath: photo.path }
     );
-    if ("error" in result) return result;
+    if ("error" in result) return { ok: false, error: result.error };
     return { ok: true };
   }
 
@@ -149,7 +149,7 @@ export async function applyOutboxItem(input: {
       lrImage: body.photo_base64 ? { base64: String(body.photo_base64), mimeType: String(body.photo_mime ?? "image/jpeg") } : null,
       notes: typeof body.notes === "string" ? body.notes : null,
     });
-    if ("error" in result) return result;
+    if ("error" in result) return { ok: false, error: result.error };
     return { ok: true };
   }
 
@@ -160,7 +160,7 @@ export async function applyOutboxItem(input: {
     const thresholds = resolveThresholds(settings.data);
     const field = Number(body.field_liters ?? body.liters);
     const variance = dropVariance(field, Number(body.liters), thresholds.shortagePct);
-    if ("error" in variance) return variance;
+    if ("error" in variance) return { ok: false, error: variance.error };
     const row: Record<string, unknown> = {
       route_name: input.routeName || String(body.route_name ?? "Bagair route"),
       branch_id: input.branchId,
@@ -198,7 +198,7 @@ export async function applyOutboxItem(input: {
       if (updated.error) return { ok: false, error: updated.error.message };
     }
     const result = await applyFat(String(body.entry_id), Number(body.fat), input.userId, { allowOverride: false });
-    if ("error" in result) return result;
+    if ("error" in result) return { ok: false, error: result.error };
     return { ok: true };
   }
 
@@ -311,7 +311,10 @@ export async function syncMobile(input: {
       const rows = await query;
       const ids = [...new Set((rows.data ?? []).map((row) => row.mca_profile_id).filter(Boolean))] as string[];
       const names = ids.length ? await db.from("profiles").select("id, full_name").in("id", ids) : { data: [] };
-      const nameOf = new Map((names.data ?? []).map((row: { id: string; full_name: string }) => [row.id, row.full_name]));
+      const nameOf = new Map<string, string | null>();
+      for (const row of (names.data ?? []) as { id: string; full_name: string | null }[]) {
+        nameOf.set(row.id, row.full_name);
+      }
       milk = (rows.data ?? []).map((row) => toMilkNotice({
         ...row,
         collector: row.mca_profile_id ? nameOf.get(row.mca_profile_id) ?? null : null,
