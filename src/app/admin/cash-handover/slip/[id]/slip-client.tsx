@@ -10,6 +10,11 @@ import { thermalReceiptCss } from "@/components/pos/thermal-receipt-print";
 
 const PRINT_AREA_ID = "handover-receipt-print-area";
 
+const COPIES = [
+  { kind: "staff", label: "Staff copy — signature + apne paas" },
+  { kind: "jama", label: "Jama copy — payment ke sath" },
+] as const;
+
 const INIT: ActionState = {};
 
 function rs(n: number): string {
@@ -161,7 +166,11 @@ export function SlipClient({
         <style>{`@media screen { body * { visibility: hidden; } #handover-slip-embed, #handover-slip-embed * { visibility: visible; } #handover-slip-embed { position: fixed; inset: 0; z-index: 9999; overflow: auto; background: #fff; } }`}</style>
       )}
       <div className="mx-auto w-full max-w-sm px-3 py-6 print:p-0">
-      <style>{thermalReceiptCss(PRINT_AREA_ID, { pageMode: true })}</style>
+      <style>{`${thermalReceiptCss(PRINT_AREA_ID, { pageMode: true })}
+        .handover-cut { margin-top: 1.5rem; }
+        @media print {
+          .handover-cut { margin-top: 8mm; padding-top: 4mm; border-top: 1px dashed #000; break-before: page; page-break-before: always; }
+        }`}</style>
 
       {/* Nav */}
       <div className="mb-3 flex items-center justify-between print:hidden">
@@ -172,18 +181,26 @@ export function SlipClient({
           onClick={() => window.print()}
           className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700"
         >
-          <Printer className="h-3.5 w-3.5" /> Print
+          <Printer className="h-3.5 w-3.5" /> Do copy print
         </button>
       </div>
+      <p className="mb-3 text-xs text-surface-500 print:hidden">
+        Har shop par do copy: pehli staff ke paas (dastakhat + system mein tasdeeq), doosri payment ke sath Finance / bank ko.
+      </p>
 
-      {/* Slip -- POS sale receipt (receipt-modal.tsx) jaisi thermal slip */}
-      <div
-        id={PRINT_AREA_ID}
-        className="w-full rounded-card bg-white p-5 font-mono text-black shadow-xl print:w-[74mm] print:max-w-[74mm] print:rounded-none print:p-[2mm] print:text-[13px] print:shadow-none"
-      >
+      {/* Ek print: do thermal copy. Har POS shop, ek branch nahi. */}
+      <div id={PRINT_AREA_ID} className="space-y-4 print:space-y-0">
+        {COPIES.map((copy) => (
+        <div
+          key={copy.kind}
+          data-copy={copy.kind}
+          className={`handover-paper w-full rounded-card bg-white p-5 font-mono text-black shadow-xl print:w-[74mm] print:max-w-[74mm] print:rounded-none print:p-[2mm] print:text-[13px] print:shadow-none ${copy.kind === "jama" ? "handover-cut" : ""}`}
+        >
         <div className="receipt-watermark" aria-hidden="true">
           <img src="/branding/kisan-watermark.svg" alt="" />
         </div>
+
+        <p className="mb-2 text-center text-[11px] font-bold uppercase tracking-wide text-surface-900">{copy.label}</p>
 
         {/* Header -- POS receipt jaisa */}
         <div className="text-center">
@@ -198,9 +215,7 @@ export function SlipClient({
 
         <div className="space-y-1 text-xs">
           <ReceiptRow label="Slip #" value={handover.id.slice(0, 8).toUpperCase()} />
-          {header && header.shiftNumbers.length > 0 && (
-            <ReceiptRow label="Shift" value={header.shiftNumbers.join(", ")} />
-          )}
+          <ReceiptRow label="Shift" value={header && header.shiftNumbers.length > 0 ? header.shiftNumbers.join(", ") : "—"} />
           <ReceiptRow label="Bhejne wala" value={handover.senderName} />
           {handover.senderRole && <ReceiptRow label="" value={handover.senderRole} capitalize />}
           <ReceiptRow label="Pane wala" value={handover.recipientName} />
@@ -292,10 +307,25 @@ export function SlipClient({
 
         <div className="receipt-footer">
           <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400" />
-          <p className="text-center text-xs font-medium text-surface-600">Cash ke sath ye slip office jama karayein</p>
-          <p className="text-center text-[11px] text-surface-500">POS Solution by ZR Technologies</p>
+          {copy.kind === "staff" ? (
+            <div className="text-xs">
+              <p className="font-semibold text-surface-900">Staff dastakhat</p>
+              <div className="mt-8 border-b border-black" />
+              <p className="mt-1 text-surface-700">{handover.senderName}</p>
+              <p className="mt-2 text-center text-[11px] font-medium text-surface-600">
+                Ye copy apne paas rakhein. Dastakhat karein, aur system mein ye handover ki tasdeeq bhi rakhein.
+              </p>
+            </div>
+          ) : (
+            <p className="text-center text-xs font-medium text-surface-600">
+              Ye copy payment ke sath jaye — Finance, bank, ya lene wale ko.
+            </p>
+          )}
+          <p className="mt-2 text-center text-[11px] text-surface-500">POS Solution by ZR Technologies</p>
           <p className="text-center text-[11px] text-surface-500">📞 0312-6513294</p>
         </div>
+        </div>
+        ))}
       </div>
 
       {/* Carrier confirm form */}

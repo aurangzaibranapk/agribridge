@@ -6,6 +6,7 @@ import type { Lang } from "@/lib/i18n/translations";
 import { loadCostSheet } from "@/lib/milk-cost-per-liter";
 import { quantityReport } from "@/lib/ledger/quantity-money";
 import { trialBalance } from "@/lib/ledger/statements";
+import { loadOpenCash } from "@/lib/ledger/open-cash";
 
 /**
  * Owner Command Center ke aankre.
@@ -804,30 +805,21 @@ export async function loadAlerts(): Promise<Alert[]> {
     });
   }
 
-  // ---- Cash jo abhi kisi ke haath mein hai ----
-  // Ye raqam "raaste mein" hai, gum nahi -- magar jitna waqt guzarta
-  // hai, utna kam mumkin hota jata hai ke wo kabhi mile. Is liye din
-  // ginte hain, sirf raqam nahi.
-  const { data: inTransit } = await service
-    .from("v_cash_in_transit")
-    .select("amount_sent, din_guzray, lene_wala, le_jane_wala");
-
-  const transitRows = inTransit ?? [];
-  if (transitRows.length > 0) {
-    const total = transitRows.reduce((sum, r) => sum + n(r.amount_sent), 0);
-    const stale = transitRows.filter((r) => n(r.din_guzray) >= 2);
-    const names = Array.from(
-      new Set(stale.map((r) => r.le_jane_wala ?? r.lene_wala ?? "—"))
-    );
-
+  // Khula cash: bheja gaya, wasoli baqi, Manager ke paas, ya jama/verify baqi.
+  // 24 ghante se purana ho to laal. Har shop. Sirf raaste wali fehrist nahi.
+  const openCash = await loadOpenCash().catch(() => []);
+  if (openCash.length > 0) {
+    const total = openCash.reduce((sum, r) => sum + r.amount, 0);
+    const overdue = openCash.filter((r) => r.overdue);
+    const holders = Array.from(new Set(overdue.map((r) => r.holder)));
     alerts.push({
-      tone: stale.length > 0 ? "red" : "amber",
-      title: `Rs ${Math.round(total).toLocaleString()} abhi kisi ke haath mein hai`,
+      tone: overdue.length > 0 ? "red" : "amber",
+      title: `Rs ${Math.round(total).toLocaleString()} khula cash`,
       detail:
-        stale.length > 0
-          ? `${stale.length} raqam do ya us se zyada din se raaste mein hai — ${names.join(", ")}. Tasdeeq abhi tak nahi hui.`
-          : `${transitRows.length} handover ki tasdeeq baqi hai.`,
-      href: "/admin/cash-handover",
+        overdue.length > 0
+          ? `${overdue.length} raqam 24 ghante se jama ya verify nahi — ${holders.join(", ")}.`
+          : `${openCash.length} handover abhi kisi ke paas hai ya jama baqi hai.`,
+      href: "/admin/cash-handover#open-cash",
     });
   }
 

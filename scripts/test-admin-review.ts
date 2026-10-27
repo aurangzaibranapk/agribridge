@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { pickTopBranch, paymentSplit } from "../src/lib/utils/daily-briefing-summary";
 import { pathAllowed } from "../src/lib/access/route-match";
 import { canRecordHandoverReceipt } from "../src/lib/ledger/handover";
+import { classifyOpenCash, hoursHeld, OPEN_CASH_REASON, openCashHolder, openCashTimelineNote } from "../src/lib/ledger/open-cash";
 
 let n = 0;
 function test(name: string, fn: () => void) { fn(); n++; console.log(`ok  ${name}`); }
@@ -72,5 +73,36 @@ test("manager can record wasoli when cash was sent to a finance profile, sender 
   assert.equal(canRecordHandoverReceipt({
     userId: financeTeam, userRole: "finance", fromProfileId: sender, toProfileId: financeTeam, toRole: "finance",
   }), true);
+});
+test("cash handover prints a staff copy and a jama copy for every shop", () => {
+  const src = readFileSync("src/app/admin/cash-handover/slip/[id]/slip-client.tsx", "utf8");
+  assert.ok(src.includes('data-copy="staff"') || src.includes('kind: "staff"'));
+  assert.ok(src.includes("Staff copy — signature + apne paas"));
+  assert.ok(src.includes("Jama copy — payment ke sath"));
+  assert.ok(src.includes("Staff dastakhat"));
+  assert.ok(src.includes("Do copy print"));
+  assert.equal((src.match(/data-copy=\{copy\.kind\}/g) ?? []).length, 1);
+});
+test("open cash is overdue until deposit is approved, clock starts at send", () => {
+  const sent = "2026-10-25T00:00:00.000Z";
+  const now = new Date("2026-10-26T00:00:00.000Z").getTime();
+  const young = new Date("2026-10-25T12:00:00.000Z").getTime();
+  assert.equal(classifyOpenCash({ status: "sent", sentAt: sent, receiverRole: null, deposit: "none", now }).stage, "awaiting_wasoli");
+  assert.equal(classifyOpenCash({ status: "sent", sentAt: sent, receiverRole: null, deposit: "none", now }).overdue, true);
+  assert.equal(classifyOpenCash({ status: "sent", sentAt: sent, receiverRole: null, deposit: "none", now: young }).overdue, false);
+  assert.equal(classifyOpenCash({ status: "received", sentAt: sent, receiverRole: "manager", deposit: "none", now }).stage, "with_manager");
+  assert.equal(classifyOpenCash({ status: "received", sentAt: sent, receiverRole: "finance", deposit: "pending", now }).stage, "awaiting_verify");
+  assert.equal(classifyOpenCash({ status: "received", sentAt: sent, receiverRole: "finance", deposit: "approved", now }).stage, "settled");
+  assert.equal(classifyOpenCash({ status: "received", sentAt: sent, receiverRole: "finance", deposit: "approved", now }).overdue, false);
+  assert.equal(openCashHolder({ stage: "awaiting_wasoli", toName: "Finance Team", receivedByName: "Manager" }), "Finance Team");
+  assert.equal(openCashHolder({ stage: "with_manager", toName: "Finance Team", receivedByName: "Manager" }), "Manager");
+  assert.equal(hoursHeld(sent, now), 24);
+  const note = openCashTimelineNote({ sender: "Anwar", holder: "Manager", shop: "Karyana", shift: "12", amount: 780, sentAt: sent, hours: 24 });
+  assert.ok(note.includes("Anwar") && note.includes("Manager") && note.includes("24 ghante"));
+  assert.ok(OPEN_CASH_REASON.includes("q nahi jama hua"));
+  const cron = readFileSync("src/app/api/cron/pending-escalation/route.ts", "utf8");
+  assert.ok(cron.includes("escalateOpenCash"));
+  const list = readFileSync("src/app/admin/cash-handover/page.tsx", "utf8");
+  assert.ok(list.includes('id="open-cash"'));
 });
 console.log(`\n${n} tests passed`);

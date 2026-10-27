@@ -4,6 +4,7 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { SendCashForm, ReceiveCard } from "./handover-client";
 import { cashInTransit, FINANCE_DESK_RECEIVE_ROLES, recentHandovers, TRANSIT_ALERT_DAYS } from "@/lib/ledger/handover";
+import { escalateOpenCash, loadOpenCash, type OpenCashRow } from "@/lib/ledger/open-cash";
 import { AlertTriangle, CheckCircle2, Send, HandCoins, Clock } from "lucide-react";
 import Link from "next/link";
 
@@ -81,6 +82,21 @@ export default async function CashHandoverPage() {
 
   const transitTotal = transit.reduce((s, t) => s + t.amount, 0);
   const stale = transit.filter((t) => t.daysOld >= TRANSIT_ALERT_DAYS);
+  const trackOpen = ["owner", "super_admin", "admin", "finance"].includes(me.role);
+  if (["owner", "super_admin", "admin"].includes(me.role)) {
+    await escalateOpenCash().catch(() => undefined);
+  }
+  let openCash: OpenCashRow[] | null = trackOpen ? [] : null;
+  if (trackOpen) {
+    try {
+      openCash = await loadOpenCash();
+    } catch {
+      openCash = null;
+    }
+  }
+  const openRows = openCash ?? [];
+  const openTotal = openRows.reduce((s, r) => s + r.amount, 0);
+  const openOverdue = openRows.filter((r) => r.overdue).length;
 
   return (
     <div className="space-y-4">
@@ -124,6 +140,58 @@ export default async function CashHandoverPage() {
           </div>
         </div>
       </Card>
+
+      {trackOpen && (
+        <section id="open-cash">
+        <Card className="overflow-hidden">
+          <div className="border-b border-surface-200 px-4 py-3 dark:border-surface-800">
+            <p className="text-sm font-semibold text-surface-900 dark:text-white">Khula cash</p>
+            <p className="mt-0.5 text-xs text-surface-500">
+              Har shop. Kahan se nikla, kis ke paas hai, kahan atka hai.
+              {openRows.length > 0 ? ` ${rs(openTotal)} — ${openRows.length} raqam.` : ""}
+              {openOverdue > 0 ? ` ${openOverdue} 24 ghante se jama/verify nahi.` : ""}
+            </p>
+          </div>
+          {openCash === null ? (
+            <p className="px-4 py-6 text-center text-sm text-surface-500">Khula cash is waqt load nahi hua.</p>
+          ) : openRows.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-green-700 dark:text-green-400">
+              Koi khula cash nahi — jama aur verify ho chuka, ya abhi koi handover khula nahi.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead className="border-b border-surface-200 text-left text-xs text-surface-500 dark:border-surface-800">
+                  <tr>
+                    <th className="px-4 py-2 font-medium">Kahan se</th>
+                    <th className="px-4 py-2 font-medium">Kis ke paas</th>
+                    <th className="px-4 py-2 font-medium">Kahan atka</th>
+                    <th className="px-4 py-2 text-right font-medium">Raqam</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
+                  {openRows.map((row) => (
+                    <tr key={row.id} className={row.overdue ? "bg-red-50/70 dark:bg-red-950/20" : ""}>
+                      <td className="px-4 py-2">
+                        <Link href={`/admin/cash-handover/slip/${row.id}`} className="font-medium text-surface-800 hover:text-brand-600 hover:underline dark:text-surface-200">
+                          {row.shop ?? "Shop darj nahi"}
+                        </Link>
+                        <span className="block text-xs text-surface-400">
+                          {row.shift ? `Shift ${row.shift}` : "Shift darj nahi"} · {row.sender ?? "—"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-surface-700 dark:text-surface-300">{row.holder}</td>
+                      <td className="px-4 py-2 text-xs text-surface-600 dark:text-surface-400">{row.stuck}</td>
+                      <td className="px-4 py-2 text-right tabular-nums font-medium text-surface-900 dark:text-white">{rs(row.amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+        </section>
+      )}
 
       {/* ---- Mere naam aaya hua cash ---- */}
       {awaitingMe.length > 0 && (

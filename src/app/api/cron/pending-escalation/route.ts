@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { escalateOpenCash } from "@/lib/ledger/open-cash";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,10 @@ async function run(req: NextRequest) {
     "fn_pending_escalate",
   );
   if (error) return NextResponse.json({ error: "Escalation nahi chali." }, { status: 500 });
-  return NextResponse.json(data ?? { ok: true });
+  // 713 SQL cron sirf fn_pending_escalate chalata hai. Cash ka 24h
+  // alert isi HTTP cron par hai, maujooda tables par. Nayi migration nahi.
+  const cashOpen = await escalateOpenCash().catch(() => ({ error: "cash open escalate nahi chali" }));
+  return NextResponse.json({ ...(typeof data === "object" && data ? data as object : { ok: true }), cashOpen });
 }
 
 export const GET = run;
