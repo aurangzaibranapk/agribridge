@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 function khataLabel(code?: string | null): string {
   if (code === "1150") return "Kisan udhaar (khaad/loan)";
   if (code === "2040") return "Kisan payable (grain)";
+  if (code === "2030") return "Customer ka advance (2030)";
   return "Gahak (1100)";
 }
 
@@ -50,7 +51,7 @@ function rs(n: number): string {
  * jawab ko "sifar" samajh lena is project mein pehle bhi ghalat adad de
  * chuka hai.
  */
-type KhataRow = { entry_date: string; entry_number: string; tafseel: string; debit: number; credit: number; khata_code?: string | null };
+type KhataRow = { entry_date: string; entry_number: string; tafseel: string; debit: number; credit: number; khata_code?: string | null; slip_url?: string | null };
 
 async function loadPartyKhata(
   supabase: ReturnType<typeof createClient>,
@@ -217,7 +218,14 @@ export async function CustomerStatementPage({
                   <tr key={`${r.entry_number}-${i}`} className={ST.tr}>
                     <td className={`${ST.td} whitespace-nowrap text-xs text-surface-500`}>{formatDate(r.entry_date)}</td>
                     <td className={`${ST.td} font-mono text-xs`}>{r.entry_number}</td>
-                    <td className={ST.td}>{r.tafseel}</td>
+                    <td className={ST.td}>
+                      {r.tafseel}
+                      {r.slip_url && (
+                        <a href={r.slip_url} target="_blank" rel="noopener noreferrer" className="ml-2 text-xs font-medium text-primary-600 underline">
+                          Slip dekhein
+                        </a>
+                      )}
+                    </td>
                     {combined && <td className={`${ST.td} text-xs text-surface-500`}>{khataLabel(r.khata_code)}</td>}
                     <td className={ST.tdAmt}>{fmtAmt(Number(r.debit))}</td>
                     <td className={ST.tdAmt}>{fmtAmt(Number(r.credit))}</td>
