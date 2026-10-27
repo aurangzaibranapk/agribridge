@@ -176,7 +176,7 @@ export function milkTimeline(row: {
   verified_at?: string | null;
 } | null, actionLabel = "Fat check karwayein"): TimelineStep[] {
   if (!row) {
-    return MILK_STEPS.map((label, index) => ({ label, state: index === 0 ? "active" : "pending" }));
+    return MILK_STEPS.map((label) => ({ label, state: "pending" }));
   }
   const litres = filled(row.quantity_liters) ? `${row.quantity_liters} L` : null;
   const place = [row.chiller_name || row.route_name, litres].filter(Boolean).join(" · ") || null;
@@ -219,7 +219,7 @@ export function approvalJourney(row: {
   verified_at?: string | null;
 } | null, actionLabel = "Manzoor karein"): TimelineStep[] {
   if (!row) {
-    return APPROVAL_STEPS.map((label) => ({ label, state: "done" }));
+    return APPROVAL_STEPS.map((label) => ({ label, state: "pending" }));
   }
   const checked = filled(row.fat_percentage);
   const verified = String(row.status ?? "") === "verified";

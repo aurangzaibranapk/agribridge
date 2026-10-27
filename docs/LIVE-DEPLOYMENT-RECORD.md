@@ -1,3 +1,7 @@
+## Phone glass 631 — 27 October 2026 — app only
+
+versionCode 631. Header: AgriBridge aur version upar, tagline aur role gold line, phir Assalam o Alaikum. Wasela Eco Mahabali nahi. Kisan wallet tab sirf tracking card. Purana gold wallet list hata. Dealer bars chauri. Khali approval sab green check nahi. Jhoota MISAAL number nahi. Live SQL nahi. Live package `pk.alranatraders.agribridge`, production channel. TEST package alag.
+
 ## Pending — 27 October 2026: POS close Cash Handover Slip (code only)
 
 Branch `cursor/pos-close-cash-handover-slip-fc03`. **Koi migration nahi.** Testing/Live DB par kuch nahi chalana. Sirf naya build.

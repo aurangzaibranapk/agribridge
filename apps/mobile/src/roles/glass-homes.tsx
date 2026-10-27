@@ -33,10 +33,10 @@ function dayValues(rows: MilkRow[], days: string[]): number[] {
   return days.map((day) => milkLitres(rows.filter((row) => row.entry_date === day)));
 }
 
-function orderTone(status: string | null | undefined): { label: string; tone: "green" | "orange" | "red" | "blue" } {
+function orderTone(status: string | null | undefined, surface: "customer" | "dealer" = "customer"): { label: string; tone: "green" | "orange" | "red" | "blue" } {
   const key = String(status ?? "").toLowerCase();
   if (key === "delivered" || key === "completed" || key === "grn_submitted") return { label: "Delivered", tone: "green" };
-  if (key === "in_transit" || key === "dispatched") return { label: "Raste mein", tone: "blue" };
+  if (key === "in_transit" || key === "dispatched") return surface === "dealer" ? { label: "Dispatch", tone: "blue" } : { label: "Raste mein", tone: "blue" };
   if (key === "cancelled" || key === "rejected") return { label: "Cancel", tone: "red" };
   if (key === "processing" || key === "approved") return { label: "Pack", tone: "orange" };
   if (key === "submitted" || key === "draft" || key === "sales_verified" || key === "finance_verified" || !key) return { label: "Pending", tone: "orange" };
@@ -427,20 +427,29 @@ export function AdminGlass({ live, home, milk, orders: _orders, focus = "home", 
   const baqi = (
     <GlassCard title="Baqi approvals" index={5}>
       {priced.filter((row) => row !== hero).map((row, index) => (
-        <View key={row.id ?? String(index)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-          <Text style={{ color: glass.text, flex: 1 }}>Doodh {row.entry_date || "—"} · {row.total_amount == null || row.total_amount === "" ? "—" : rupees(num(row.total_amount))}</Text>
+        <View key={row.id ?? String(index)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <Text style={{ color: glass.text, fontWeight: "700" }}>Doodh {row.entry_date || "—"}</Text>
+            <Text style={{ color: glass.muted }}>{row.total_amount == null || row.total_amount === "" ? "Raqam —" : rupees(num(row.total_amount))}</Text>
+          </View>
           <Pill label="Check baqi" tone="orange" />
         </View>
       ))}
       {milk.filter((row) => row.status === "pending_fat" && row !== hero).slice(0, 4).map((row, index) => (
-        <View key={row.id ?? `fat-${index}`} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-          <Text style={{ color: glass.text, flex: 1 }}>Doodh {row.entry_date || "—"} · fat baqi</Text>
+        <View key={row.id ?? `fat-${index}`} style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <Text style={{ color: glass.text, fontWeight: "700" }}>Doodh {row.entry_date || "—"}</Text>
+            <Text style={{ color: glass.muted }}>Fat check baqi</Text>
+          </View>
           <Pill label="Pending" tone="orange" />
         </View>
       ))}
       {home.pending.map((row) => (
-        <View key={row.label} style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-          <Text style={{ color: glass.text, flex: 1 }}>{row.label} · {row.count}</Text>
+        <View key={row.label} style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
+          <View style={{ flex: 1, paddingRight: 8 }}>
+            <Text style={{ color: glass.text, fontWeight: "700" }}>{row.label}</Text>
+            <Text style={{ color: glass.muted }}>{row.count} baqi</Text>
+          </View>
           <Pill label="Pending" tone="orange" />
         </View>
       ))}
@@ -540,7 +549,15 @@ export function CustomerGlass({ live, khata, orders, focus = "home", ...bar }: R
     return (
       <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
         <BrandHeader role="Customer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
-        <Timeline title={card.title} detail={card.detail} steps={card.steps} showProgress progressNote={card.progressNote} onAction={() => bar.onTab?.("orders")} index={2} />
+        <Timeline
+          title={latest ? card.title : "Order"}
+          detail={latest ? card.detail : null}
+          steps={latest ? card.steps : ["Order mila", "Pack hua", "Rawana hua", "Raste mein", "Pohanch gaya"].map((label) => ({ label, state: "pending" as const }))}
+          showProgress={Boolean(latest)}
+          progressNote={latest ? card.progressNote : null}
+          onAction={() => bar.onTab?.("orders")}
+          index={2}
+        />
         <GlassCard title="Doosre orders" index={3}>
           {others.length === 0 ? <Text style={{ color: glass.muted }}>{orders.ok ? "Koi doosra order nahi." : orders.message}</Text> : null}
           {others.slice(0, 4).map((row, index) => {
@@ -653,7 +670,7 @@ export function DealerGlass({ live, khata, orders, ...bar }: Refresh & { live?: 
       </GlassCard>
       <GlassCard title="Recent orders" index={8}>
         {list.slice(0, 4).map((row, index) => {
-          const tone = orderTone(row.status);
+          const tone = orderTone(row.status, "dealer");
           return (
             <View key={row.id ?? String(index)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
               <View style={{ flex: 1, paddingRight: 8 }}>
