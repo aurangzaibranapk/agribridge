@@ -1,9 +1,9 @@
-## Pending — 27 October 2026: batch remaining = ginti (717) — NOT applied
+## Pending — 27 October 2026: batch remaining = ginti (718) — NOT applied
 
-Branch `cursor/batch-ginti-align-8978`. Migration **717 file only**. Testing aur Live dono par **nahi** chali. Live (`ktskwawkslaznkjjacni`) par sirf read-only scan hua. Apply tab, jab backup verify ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live.
+Branch `cursor/batch-ginti-align-8978`. Migration **718 file only**. Testing aur Live dono par **nahi** chali. Live (`ktskwawkslaznkjjacni`) par sirf read-only scan hua. Apply tab, jab backup verify ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live.
 
-- `717_batch_ginti_align.sql` — product + godam (3b wala join) par `inventory.quantity_on_hand` ko `sum(stock_batches.remaining_quantity)` ke barabar karta hai, `stock_movements` adjustment se. Batch remaining aur ledger (1200/1210/1220) nahi cherta.
-- Snapshot: `backup_717_inventory_ginti`. Rollback: `717_batch_ginti_align.rollback.sql` (ek transaction, `psql -1`).
+- `718_batch_ginti_align.sql` — product + godam (3b wala join) par `inventory.quantity_on_hand` ko `sum(stock_batches.remaining_quantity)` ke barabar karta hai, `stock_movements` adjustment se. Batch remaining aur ledger (1200/1210/1220) nahi cherta.
+- Snapshot: `backup_718_inventory_ginti`. Rollback: `718_batch_ginti_align.rollback.sql` (ek transaction, `psql -1`).
 - 27 Oct read-only: raw 3b farq 91. Un mein 90 scale `numeric(14,3)` par seedha barabar ho sakte hain (ginti +2032 / −59). Ek jora ginti 0 aur batch 0.000232 hai — ginti column itna barik adad rakh nahi sakta, raw 3b us par reh sakti hai.
 
 ## Pending — 27 October 2026: POS close Cash Handover Slip (code only)

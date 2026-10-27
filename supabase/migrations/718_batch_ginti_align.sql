@@ -1,5 +1,5 @@
 -- =====================================================================
--- AgriBridge — Migration 717: Ginti = batch remaining (product + godam)
+-- AgriBridge — Migration 718: Ginti = batch remaining (product + godam)
 -- =====================================================================
 -- Malik ka faisla (27 October 2026): batch sach hai.
 -- fn_data_health_scan section 3b yahi jorh dekhti hai:
@@ -13,7 +13,7 @@
 -- rokta hai, aur agla stock movement fn_sync_inventory_quantity se ginti
 -- ko harkaton ke jorh par wapas le aata. Farq is liye stock_movements
 -- mein adjustment_increase / adjustment_decrease se likha jata hai.
--- reference_type = 'migration_717'. AFTER trigger khud ginti likh deta hai.
+-- reference_type = 'migration_718'. AFTER trigger khud ginti likh deta hai.
 --
 -- Ginti numeric(14,3) hai. remaining_quantity bina scale ke numeric hai.
 -- Jo farq is scale par sifar ho (maslan ginti 0 aur batch 0.000232) us
@@ -25,11 +25,11 @@
 -- Dobara chalao to matched pairs par no-op. Snapshot pehli dafa ka
 -- rehta hai (ON CONFLICT DO NOTHING).
 --
--- Rollback: 717_batch_ginti_align.rollback.sql
--- Snapshot: public.backup_717_inventory_ginti
+-- Rollback: 718_batch_ginti_align.rollback.sql
+-- Snapshot: public.backup_718_inventory_ginti
 -- Live par mat chalayein jab tak backup verify na ho. Pehle Testing.
 
-create table if not exists public.backup_717_inventory_ginti (
+create table if not exists public.backup_718_inventory_ginti (
   inventory_id uuid primary key,
   product_id uuid not null,
   warehouse_id uuid not null,
@@ -40,19 +40,19 @@ create table if not exists public.backup_717_inventory_ginti (
   snapped_at timestamptz not null default now()
 );
 
-comment on table public.backup_717_inventory_ginti is
-  '717 se pehle inventory.quantity_on_hand. Rollback isi se ginti wapas lata hai. stock_batches is table mein nahi — unhein chhua hi nahi.';
+comment on table public.backup_718_inventory_ginti is
+  '718 se pehle inventory.quantity_on_hand. Rollback isi se ginti wapas lata hai. stock_batches is table mein nahi — unhein chhua hi nahi.';
 
-comment on column public.backup_717_inventory_ginti.quantity_on_hand is
+comment on column public.backup_718_inventory_ginti.quantity_on_hand is
   'Pehli snapshot. Dobara migration chalane par ye adad overwrite nahi hota.';
 
-comment on column public.backup_717_inventory_ginti.movement_ids is
-  'Is row par 717 ne jo adjustment movements likhi hain. Rollback unhein mitata hai.';
+comment on column public.backup_718_inventory_ginti.movement_ids is
+  'Is row par 718 ne jo adjustment movements likhi hain. Rollback unhein mitata hai.';
 
-alter table public.backup_717_inventory_ginti enable row level security;
+alter table public.backup_718_inventory_ginti enable row level security;
 
-revoke all on table public.backup_717_inventory_ginti from public, anon, authenticated;
-grant select, insert, update, delete on table public.backup_717_inventory_ginti to service_role;
+revoke all on table public.backup_718_inventory_ginti from public, anon, authenticated;
+grant select, insert, update, delete on table public.backup_718_inventory_ginti to service_role;
 
 do $$
 declare
@@ -74,13 +74,13 @@ declare
   v_lowered numeric(14,3) := 0;
   v_raw_left integer := 0;
 begin
-  drop table if exists _717_pair;
-  create temp table _717_pair (
+  drop table if exists _718_pair;
+  create temp table _718_pair (
     product_id uuid not null,
     warehouse_id uuid
   ) on commit drop;
 
-  insert into _717_pair (product_id, warehouse_id)
+  insert into _718_pair (product_id, warehouse_id)
   select coalesce(i.product_id, b.product_id),
          coalesce(i.warehouse_id, b.warehouse_id)
     from (
@@ -100,7 +100,7 @@ begin
   -- Lock order: inventory id, phir batch id. Deadlock se bachne ke liye.
   perform i.id
     from public.inventory i
-    join _717_pair p
+    join _718_pair p
       on p.product_id = i.product_id
      and p.warehouse_id is not distinct from i.warehouse_id
    order by i.id
@@ -108,7 +108,7 @@ begin
 
   perform sb.id
     from public.stock_batches sb
-    join _717_pair p
+    join _718_pair p
       on p.product_id = sb.product_id
      and p.warehouse_id is not distinct from sb.warehouse_id
    order by sb.id
@@ -117,13 +117,13 @@ begin
   select coalesce(sum(sb.remaining_quantity), 0)
     into v_rem_before
     from public.stock_batches sb
-    join _717_pair p
+    join _718_pair p
       on p.product_id = sb.product_id
      and p.warehouse_id is not distinct from sb.warehouse_id;
 
   for v_pair in
     select product_id, warehouse_id
-      from _717_pair
+      from _718_pair
      order by product_id, warehouse_id nulls first
   loop
     select coalesce(sum(quantity_on_hand), 0)
@@ -148,11 +148,11 @@ begin
 
     if v_target < 0 then
       raise exception
-        '717: batch remaining manfi hai, ginti nahi likhi. product %, warehouse %, remaining %',
+        '718: batch remaining manfi hai, ginti nahi likhi. product %, warehouse %, remaining %',
         v_pair.product_id, v_pair.warehouse_id, v_rem;
     end if;
 
-    insert into public.backup_717_inventory_ginti (
+    insert into public.backup_718_inventory_ginti (
       inventory_id, product_id, warehouse_id, batch_id, quantity_on_hand
     )
     select id, product_id, warehouse_id, batch_id, quantity_on_hand
@@ -169,7 +169,7 @@ begin
     ) then
       if v_pair.warehouse_id is null then
         raise exception
-          '717: batch ka godam khali hai aur inventory row nahi. product %',
+          '718: batch ka godam khali hai aur inventory row nahi. product %',
           v_pair.product_id;
       end if;
 
@@ -177,7 +177,7 @@ begin
       values (v_pair.product_id, v_pair.warehouse_id)
       returning id into v_anchor;
 
-      insert into public.backup_717_inventory_ginti (
+      insert into public.backup_718_inventory_ginti (
         inventory_id, product_id, warehouse_id, batch_id, quantity_on_hand, created_row
       )
       values (v_anchor, v_pair.product_id, v_pair.warehouse_id, null, 0, true);
@@ -194,7 +194,7 @@ begin
 
       if v_anchor is null then
         raise exception
-          '717: inventory row nahi mili. product %, warehouse %',
+          '718: inventory row nahi mili. product %, warehouse %',
           v_pair.product_id, v_pair.warehouse_id;
       end if;
 
@@ -205,17 +205,17 @@ begin
         v_anchor,
         'adjustment_increase',
         v_delta,
-        'migration_717',
-        '717: ginti ko stock_batches.remaining ke jorh ke barabar kiya. Batch nahi kata.'
+        'migration_718',
+        '718: ginti ko stock_batches.remaining ke jorh ke barabar kiya. Batch nahi kata.'
       )
       returning id into v_movement;
 
-      update public.backup_717_inventory_ginti
+      update public.backup_718_inventory_ginti
          set movement_ids = movement_ids || v_movement
        where inventory_id = v_anchor;
 
       if not found then
-        raise exception '717: snapshot row nahi mili, inventory %', v_anchor;
+        raise exception '718: snapshot row nahi mili, inventory %', v_anchor;
       end if;
 
       v_movements := v_movements + 1;
@@ -243,17 +243,17 @@ begin
           v_row.id,
           'adjustment_decrease',
           v_take,
-          'migration_717',
-          '717: ginti ko stock_batches.remaining ke jorh ke barabar kiya. Batch nahi kata.'
+          'migration_718',
+          '718: ginti ko stock_batches.remaining ke jorh ke barabar kiya. Batch nahi kata.'
         )
         returning id into v_movement;
 
-        update public.backup_717_inventory_ginti
+        update public.backup_718_inventory_ginti
            set movement_ids = movement_ids || v_movement
          where inventory_id = v_row.id;
 
         if not found then
-          raise exception '717: snapshot row nahi mili, inventory %', v_row.id;
+          raise exception '718: snapshot row nahi mili, inventory %', v_row.id;
         end if;
 
         v_left := v_left - v_take;
@@ -263,7 +263,7 @@ begin
 
       if v_left <> 0 then
         raise exception
-          '717: ginti batch se zyada hai magar rows par itni ginti nahi. product %, warehouse %, baqi %',
+          '718: ginti batch se zyada hai magar rows par itni ginti nahi. product %, warehouse %, baqi %',
           v_pair.product_id, v_pair.warehouse_id, v_left;
       end if;
     end if;
@@ -274,13 +274,13 @@ begin
   select coalesce(sum(sb.remaining_quantity), 0)
     into v_rem_after
     from public.stock_batches sb
-    join _717_pair p
+    join _718_pair p
       on p.product_id = sb.product_id
      and p.warehouse_id is not distinct from sb.warehouse_id;
 
   if v_rem_after is distinct from v_rem_before then
     raise exception
-      '717: stock_batches.remaining badal gayi (% -> %). Ye migration batch nahi cherti.',
+      '718: stock_batches.remaining badal gayi (% -> %). Ye migration batch nahi cherti.',
       v_rem_before, v_rem_after;
   end if;
 
@@ -300,7 +300,7 @@ begin
        and b.warehouse_id is not distinct from i.warehouse_id
      where coalesce(i.oh, 0)::numeric(14,3) <> coalesce(b.rem, 0)::numeric(14,3)
   ) then
-    raise exception '717: alignment ke baad bhi numeric(14,3) par 3b farq bacha.';
+    raise exception '718: alignment ke baad bhi numeric(14,3) par 3b farq bacha.';
   end if;
 
   select count(*)
@@ -323,6 +323,6 @@ begin
     ) leftover;
 
   raise notice
-    '717: pairs %, movements %, ginti barhi %, ginti ghati %, raw 3b baqi % (sirf woh jo numeric(14,3) mein sama nahi aate)',
+    '718: pairs %, movements %, ginti barhi %, ginti ghati %, raw 3b baqi % (sirf woh jo numeric(14,3) mein sama nahi aate)',
     v_pairs, v_movements, v_raised, v_lowered, v_raw_left;
 end $$;
