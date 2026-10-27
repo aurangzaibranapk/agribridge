@@ -150,6 +150,37 @@ async function safe<T>(fn: () => Promise<T>): Promise<T | { ok: false; error: st
 
 export async function v5Lookup(identifier: string) { return safe(async () => Flow.lookup(await deps(), identifier)); }
 export async function v5Login(identifier: string, password: string) { return safe(async () => Flow.loginWithPassword(await deps(), identifier, password)); }
+
+/**
+ * Mobile app: wahi identifier + password, wahi taala aur rate limit.
+ * Jawab mein session ke token — cookie sirf portal ke liye rehti hai.
+ */
+export async function mobilePasswordLogin(raw: unknown, password: string) {
+  return safe(async () => {
+    const d = await deps();
+    let tokens: { access_token: string; refresh_token: string; expires_at: number | null; user_id: string } | null = null;
+    const wrapped: Deps = {
+      ...d,
+      async signIn(email, pw) {
+        const supabase = createClient();
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password: pw });
+        if (error || !data.session || !data.user) return false;
+        tokens = {
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+          expires_at: data.session.expires_at ?? null,
+          user_id: data.user.id,
+        };
+        return true;
+      },
+    };
+    const result = await Flow.loginWithPassword(wrapped, raw, password);
+    if (!result.ok) return result;
+    if (!tokens) return { ok: false as const, error: "e_try_again" };
+    const profile = await d.profile(tokens.user_id);
+    return { ok: true as const, ...tokens, role: profile?.role ?? null, redirect: result.redirect };
+  });
+}
 export async function v5SendCode(purpose: OtpPurpose, identifier: string, channel: OtpChannel, email?: string) {
   return safe(async () => Flow.sendCode(await deps(), purpose, identifier, channel, email));
 }

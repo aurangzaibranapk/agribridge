@@ -7,7 +7,7 @@
  * constant chalta hai; qatar na ho to andaza lagane ki ijazat nahi.
  */
 
-import { mayDecideEntry } from "@/lib/approval/guards";
+import { mayDecideEntry } from "../approval/guards";
 
 export const FAT_MIN = 1;
 export const FAT_MAX = 12;
@@ -24,10 +24,10 @@ export interface MilkSettings {
 
 /** Settings ki qatar na ho to chup chaap 145 / 10 / 0.805 mat bharo. */
 export function requireMilkSettings(row: {
-  standard_rate?: number | null;
-  self_dropoff_incentive?: number | null;
-  snf_constant?: number | null;
-  reference_ts?: number | null;
+  standard_rate?: number | string | null;
+  self_dropoff_incentive?: number | string | null;
+  snf_constant?: number | string | null;
+  reference_ts?: number | string | null;
 } | null): MilkSettings | { error: string } {
   if (!row || row.standard_rate == null || !(Number(row.standard_rate) > 0)) {
     return { error: "Doodh ka rate settings mein nahi. Andaza nahi lagate — pehle rate darj karein." };

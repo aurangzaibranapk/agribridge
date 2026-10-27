@@ -250,7 +250,7 @@ export default async function DevelopmentSupportDashboard() {
     .from("support_tickets")
     .select("id,ticket_no,title,description,status,created_at,intake_source,suggested_department,routed_label,reporter_id,reporter:profiles!support_tickets_reporter_id_fkey(full_name),assignee:profiles!support_tickets_assigned_to_fkey(full_name)")
     .eq("organization_id", profile.organization_id)
-    .in("intake_source", ["staff", "call_center"])
+    .in("intake_source", ["staff", "call_center", "mobile_app"])
     .order("created_at", { ascending: false })
     .limit(80);
   if (complaintQuery.error) {

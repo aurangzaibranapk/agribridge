@@ -8,7 +8,7 @@ const T = {
   brand_sub: { en: BRAND_COPY.en.tagline, rm: BRAND_COPY.rm.tagline, ur: BRAND_COPY.ur.tagline },
   welcome: { en: "Welcome back", rm: "Khush aamdeed", ur: "خوش آمدید" },
   welcome_p: { en: "Sign in to your AgriBridge account", rm: "Apne AgriBridge account mein login karein", ur: "اپنے ایگری برج اکاؤنٹ میں لاگ ان کریں" },
-  id_label: { en: "User ID, email, mobile or CNIC", rm: "User ID, email, mobile ya CNIC", ur: "یوزر آئی ڈی، ای میل، موبائل یا شناختی کارڈ" },
+  id_label: { en: "Email, mobile or CNIC", rm: "Email, mobile ya CNIC", ur: "ای میل، موبائل یا شناختی کارڈ" },
   id_ph: { en: "0300 1234567", rm: "0300 1234567", ur: "0300 1234567" },
   pw: { en: "Password", rm: "Password", ur: "پاس ورڈ" },
   show: { en: "Show password", rm: "Password dikhayein", ur: "پاس ورڈ دکھائیں" },
