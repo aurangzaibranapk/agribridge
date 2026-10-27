@@ -144,7 +144,14 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
   });
   if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
 
-  const shiftId = (formData.get("shift_id") as string) || null;
+  // shift_id slip ke header ke liye hai (shop / POS / shift number).
+  // shift_ids sirf tab pos_shifts ko "bhej diya" mark karti hai jab poori
+  // raqam gayi ho. Khali shift_ids = partial — shift pending rehti hai.
+  // Purani calls shift_ids bhejti hi nahi thin; un par shift_id se link.
+  const recordShiftId = ((formData.get("shift_id") as string) || "").trim() || null;
+  const shiftIdsFieldPresent = formData.has("shift_ids");
+  const shiftIdsRaw = ((formData.get("shift_ids") as string) || "").trim();
+  const shiftIdsList = shiftIdsRaw ? shiftIdsRaw.split(",").map((id) => id.trim()).filter(Boolean) : [];
   const { data: handoverRow, error } = await service
     .from("cash_handovers")
     .insert({
@@ -157,33 +164,33 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
       from_source: fromSource,
       sent_note: note,
       sent_entry_id: posted.id,
+      shift_id: recordShiftId,
       status: "sent",
     })
     .select("id")
     .single();
   if (error) return { error: error.message };
 
-  // POS Shift se seedha bheja gaya ho to un shifts par nishan laga do.
-  // shift_ids (comma-sep) agar poori raqam bheji to; partial mein khali
-  // rehti hai -- shifts pending rahengi tab tak ke full settle na ho.
-  const shiftIdsRaw = ((formData.get("shift_ids") as string) || "").trim();
-  const shiftIdsList = shiftIdsRaw ? shiftIdsRaw.split(",").filter(Boolean) : [];
-  // Backward compat: purani calls sirf shift_id bhejti thi
-  const legacyShiftId = ((formData.get("shift_id") as string) || "").trim();
-  if (shiftIdsList.length > 0) {
-    await service
+  const settleIds = shiftIdsList.length > 0 ? shiftIdsList : !shiftIdsFieldPresent && recordShiftId ? [recordShiftId] : [];
+  if (settleIds.length > 0) {
+    const linked = await service
       .from("pos_shifts")
       .update({ cash_handover_id: handoverRow.id })
-      .in("id", shiftIdsList)
+      .in("id", settleIds)
       .eq("staff_id", user.id)
-      .is("cash_handover_id", null);
-  } else if (legacyShiftId) {
-    await service
-      .from("pos_shifts")
-      .update({ cash_handover_id: handoverRow.id })
-      .eq("id", legacyShiftId)
-      .eq("staff_id", user.id)
-      .is("cash_handover_id", null);
+      .is("cash_handover_id", null)
+      .select("id");
+    // Owner/admin kisi aur ki shift band karke cash bheje to staff_id
+    // us ka nahi hota — closed_by se jodein, warna slip par shift/shop
+    // gayab rehta hai aur "bhejna baqi" dubara nazar aata hai.
+    if (!linked.error && (linked.data?.length ?? 0) === 0) {
+      await service
+        .from("pos_shifts")
+        .update({ cash_handover_id: handoverRow.id })
+        .in("id", settleIds)
+        .eq("closed_by", user.id)
+        .is("cash_handover_id", null);
+    }
   }
 
   revalidatePath("/admin/cash-handover");
@@ -196,9 +203,10 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
   const receiverName = (toProfile?.full_name as string | null) ?? "Koi";
   const notifTitle = `Cash Handover — Rs ${amount.toLocaleString()}`;
   const notifMsg = `${senderName} ne Rs ${amount.toLocaleString()} bheja ${receiverName} ko. Status: raaste mein. Tasdeeq ka intezar.`;
-  await notifyRoles(["finance", "admin", "manager", "owner", "super_admin"], notifTitle, notifMsg, "/admin/cash-handover");
-  // Lene wale ko seedha bhi batao
-  await notifyUser(toProfileId, notifTitle, `${senderName} ne aapko Rs ${amount.toLocaleString()} bheja hai — Cash Handover par tasdeeq karein.`, "/admin/cash-handover");
+  const slipPath = `/admin/cash-handover/slip/${handoverRow.id}`;
+  await notifyRoles(["finance", "admin", "manager", "owner", "super_admin"], notifTitle, notifMsg, slipPath);
+  // Lene wale ko seedha slip par le jayein — list par nahi.
+  await notifyUser(toProfileId, notifTitle, `${senderName} ne aapko Rs ${amount.toLocaleString()} bheja hai — Cash Handover Slip par tasdeeq karein.`, slipPath);
 
   return {
     success: true,

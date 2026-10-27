@@ -10,7 +10,7 @@ export default async function SlipPage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams?: { print?: string };
+  searchParams?: { print?: string; embed?: string };
 }) {
   const supabase = createClient();
   const service = createServiceClient();
@@ -22,7 +22,7 @@ export default async function SlipPage({
 
   const { data: h } = await (service as any)
     .from("cash_handovers")
-    .select("id, amount_sent, amount_received, difference, difference_reason, status, sent_note, from_source, sent_at, received_at, from_profile_id, from_branch_id, to_profile_id, received_by, carrier_profile_id, carrier_confirmed_at, carrier_confirmed_by")
+    .select("id, amount_sent, amount_received, difference, difference_reason, status, sent_note, from_source, sent_at, received_at, from_profile_id, from_branch_id, to_profile_id, received_by, carrier_profile_id, carrier_confirmed_at, carrier_confirmed_by, shift_id")
     .eq("id", params.id)
     .maybeSingle();
 
@@ -64,7 +64,17 @@ export default async function SlipPage({
     .select("shift_number, counter_id, opened_at")
     .eq("cash_handover_id", h.id)
     .order("opened_at", { ascending: true });
-  const shifts = (shiftRows ?? []) as { shift_number: string | null; counter_id: string | null }[];
+  let shifts = (shiftRows ?? []) as { shift_number: string | null; counter_id: string | null }[];
+  // pos_shifts.cash_handover_id kabhi staff filter ki wajah se khali reh
+  // jata hai. Handover par shift_id phir bhi hota hai — usi se shop/POS.
+  if (shifts.length === 0 && h.shift_id) {
+    const { data: one } = await (service as any)
+      .from("pos_shifts")
+      .select("shift_number, counter_id, opened_at")
+      .eq("id", h.shift_id)
+      .maybeSingle();
+    if (one) shifts = [one];
+  }
   const counterId = shifts.find((s) => s.counter_id)?.counter_id ?? null;
   const { data: counter } = counterId
     ? await (service as any).from("pos_counters").select("name, shop_id, branch_id").eq("id", counterId).maybeSingle()
@@ -108,6 +118,7 @@ export default async function SlipPage({
         shiftNumbers: shifts.map((s) => s.shift_number).filter(Boolean) as string[],
       }}
       autoPrint={searchParams?.print === "1"}
+      embedded={searchParams?.embed === "1"}
       isRecipient={isRecipient || isAdmin}
       isCarrier={isCarrier}
       viewerName={me?.full_name ?? ""}

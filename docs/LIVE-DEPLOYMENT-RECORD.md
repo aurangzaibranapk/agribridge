@@ -1,3 +1,11 @@
+## Pending — 27 October 2026: POS close Cash Handover Slip (code only)
+
+Branch `cursor/pos-close-cash-handover-slip-fc03`. **Koi migration nahi.** Testing/Live DB par kuch nahi chalana. Sirf naya build.
+
+- POS Shift Band par counted cash > 0 ho to Daily Cash Slip upar se form ko nahi dhakti.
+- Cash bhejte hi Cash Handover Slip isi screen par khulti hai (`?embed=1&print=1`).
+- Sales staff ke paas list (`/admin/cash-handover`) ki view ijazat nahi — slip ka raasta ab khulta hai. List phir bhi band.
+
 ## Pending — 27 October 2026: self-merge Reject (715)
 
 Branch `cursor/reject-self-product-merge-ae81`. Migration **715 not applied** on Testing or Live. File only. Number 714 PR #220 (`714_dairy_cost_per_litre_basis`) ke paas hai. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).

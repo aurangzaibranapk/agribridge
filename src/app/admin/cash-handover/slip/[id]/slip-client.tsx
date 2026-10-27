@@ -58,6 +58,7 @@ export function SlipClient({
   handover,
   header,
   autoPrint = false,
+  embedded = false,
   isRecipient,
   isCarrier,
   viewerName,
@@ -90,6 +91,8 @@ export function SlipClient({
   };
   /** POS close ke baad khule to slip khud print ho (?print=1). */
   autoPrint?: boolean;
+  /** POS close ke popup iframe — admin shell chhupao, slip + tasdeeq dikhao. */
+  embedded?: boolean;
   isRecipient: boolean;
   isCarrier: boolean;
   viewerName: string;
@@ -150,7 +153,11 @@ export function SlipClient({
     : "bg-amber-50 dark:bg-amber-950/20";
 
   return (
-    <div className="mx-auto w-full max-w-sm px-3 py-6 print:p-0">
+    <div id={embedded ? "handover-slip-embed" : undefined}>
+      {embedded && (
+        <style>{`@media screen { body * { visibility: hidden; } #handover-slip-embed, #handover-slip-embed * { visibility: visible; } #handover-slip-embed { position: fixed; inset: 0; z-index: 9999; overflow: auto; background: #fff; } }`}</style>
+      )}
+      <div className="mx-auto w-full max-w-sm px-3 py-6 print:p-0">
       <style>{thermalReceiptCss(PRINT_AREA_ID, { pageMode: true })}</style>
 
       {/* Nav */}
@@ -375,6 +382,7 @@ export function SlipClient({
           <p className="mt-1 text-xs text-emerald-600">Page refresh karein slip mein signature dekhne ke liye.</p>
         </div>
       )}
+      </div>
     </div>
   );
 }

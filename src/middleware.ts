@@ -17,6 +17,11 @@ const ALWAYS_OPEN = [
   "/admin/hr/corrections",
   "/admin/hr/meetings",
   "/admin/company-expenses",
+  // Slip alag hai list safhe se. Sales staff ke paas cash-handover par
+  // sirf 'send' hai, 'view' nahi — is liye /admin/cash-handover band
+  // rehta hai. POS close ke baad slip isi bande ko dikhni hai (sender).
+  // Lene wala aur carrier bhi. Asal rok slip page khud lagati hai.
+  "/admin/cash-handover/slip",
 ];
 
 export async function middleware(request: NextRequest) {
