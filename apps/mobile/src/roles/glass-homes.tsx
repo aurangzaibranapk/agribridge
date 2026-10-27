@@ -549,7 +549,15 @@ export function CustomerGlass({ live, khata, orders, focus = "home", ...bar }: R
     return (
       <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
         <BrandHeader role="Customer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
-        <Timeline title={card.title} detail={card.detail} steps={card.steps} showProgress progressNote={card.progressNote} onAction={() => bar.onTab?.("orders")} index={2} />
+        <Timeline
+          title={latest ? card.title : "Order"}
+          detail={latest ? card.detail : null}
+          steps={latest ? card.steps : ["Order mila", "Pack hua", "Rawana hua", "Raste mein", "Pohanch gaya"].map((label) => ({ label, state: "pending" as const }))}
+          showProgress={Boolean(latest)}
+          progressNote={latest ? card.progressNote : null}
+          onAction={() => bar.onTab?.("orders")}
+          index={2}
+        />
         <GlassCard title="Doosre orders" index={3}>
           {others.length === 0 ? <Text style={{ color: glass.muted }}>{orders.ok ? "Koi doosra order nahi." : orders.message}</Text> : null}
           {others.slice(0, 4).map((row, index) => {

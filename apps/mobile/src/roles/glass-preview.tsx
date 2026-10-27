@@ -12,12 +12,12 @@ const advances: ReadResult<{ amount?: number | string | null }> = { ok: true, ro
 const health: HealthRow[] = [];
 const home: AdminHome = {
   today: "",
-  sales: { state: "error", message: "Preview" },
+  sales: { state: "error", message: "Sale nahi mili" },
   days: [],
   categories: [],
   categoryScope: "none",
   cash: { state: "empty" },
-  milk: { state: "error", message: "Preview" },
+  milk: { state: "error", message: "Collection nahi mili" },
   alerts: [],
   alertsNote: null,
   pending: [],
@@ -47,7 +47,7 @@ export function GlassPreview() {
         <Frame title="MCO"><McoGlass rows={[]} error="" names={new Map()} /></Frame>
         <Frame title="Admin"><AdminGlass home={home} milk={[]} orders={[]} /></Frame>
         <Frame title="Customer"><CustomerGlass khata={khata} orders={orders} /></Frame>
-        <Frame title="Staff"><StaffGlass attendance={attendance} salary={salary} advances={advances} tasks={[]} tasksNote={null} checkLabel="Check-in · aaj" checkBusy={false} readOnly onCheckIn={() => undefined} /></Frame>
+        <Frame title="Staff"><StaffGlass attendance={attendance} salary={salary} advances={advances} tasks={[]} tasksNote={null} checkLabel="Check-in · aaj" checkBusy={false} readOnly={false} onCheckIn={() => undefined} /></Frame>
         <Frame title="Vet"><VetGlass health={health} error="" /></Frame>
         <Frame title="Dealer"><DealerGlass khata={khata} orders={orders} /></Frame>
         <Frame title="Track kisan"><FarmerGlass focus="track" khata={khata} milk={milk} names={new Map()} /></Frame>

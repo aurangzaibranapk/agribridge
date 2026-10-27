@@ -576,7 +576,9 @@ export function Timeline({ title, detail, steps, onAction, showProgress = false,
     ? "rgba(255,90,90,0.95)"
     : timelineFinished(steps)
       ? "rgba(61,220,151,0.9)"
-      : "rgba(61,220,151,0.35)";
+      : steps.some((step) => step.state === "active" || step.state === "done")
+        ? "rgba(91,140,255,0.55)"
+        : "rgba(255,255,255,0.18)";
   return (
     <Rise index={index}>
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
