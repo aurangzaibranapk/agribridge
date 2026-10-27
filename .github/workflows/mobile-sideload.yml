@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - cursor/mobile-glass-631-4b80
+      - fix/mobile-unify-kisan-customer
 
 permissions:
   contents: write
@@ -27,7 +27,7 @@ jobs:
       EXPO_PUBLIC_PORTAL_URL: https://alranatraders.pk
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      AGRIBRIDGE_VERSION_CODE: "631"
+      AGRIBRIDGE_VERSION_CODE: "632"
       CI: "1"
     steps:
       - uses: actions/checkout@v4
@@ -123,11 +123,11 @@ jobs:
           tag=v0.6.1-beta-test1
           notes=$(cat <<'EOF'
           Sideload test builds for phones. Not a Play Store upload.
-          versionName v0.6.1 Beta, versionCode 631, APP_CHANNEL=production.
+          versionName v0.6.1 Beta, versionCode 632, APP_CHANNEL=production.
           Live package pk.alranatraders.agribridge. Live Supabase project only. Not the TEST apk.
           Masla batayein, Role dekho, and Role badlo stay off on this production channel.
           The saved Supabase session refreshes on foreground and once after JWT expired. A dead refresh returns to login in Urdu. Raw HTTP/JSON stays on debug builds only.
-          Admin, farmer, customer, and staff homes read the live Supabase project with the user JWT.
+          Kisan and Customer are one mobile account/home; farming, orders and khata use the same login. Admin and staff keep their own homes.
           Email login uses the live Supabase project when /api/mobile/v1/session is not on the portal yet.
           Mobile, CNIC, sync, milk, and feedback still need this PR's portal build on alranatraders.pk.
           arm64-v8a is the APK for almost every phone since 2019.

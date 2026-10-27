@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { ScrollView, Text, View } from "react-native";
 import type { AdminHome, HealthRow, KhataView, MilkRow, OrderRow, ReadResult } from "../../../../src/lib/mobile/live-read";
-import { AdminGlass, CustomerGlass, DealerGlass, FarmerGlass, McaGlass, McoGlass, StaffGlass, VetGlass } from "./glass-homes";
+import { AdminGlass, DealerGlass, FarmerGlass, McaGlass, McoGlass, StaffGlass, VetGlass } from "./glass-homes";
 
 const khata: KhataView = { owed: null, note: "Khata", lines: [], linesNote: null };
 const milk: ReadResult<MilkRow> = { ok: true, rows: [] };
@@ -42,17 +42,15 @@ export function GlassPreview() {
     <ScrollView style={{ flex: 1, backgroundColor: "#05080c" }} contentContainerStyle={{ padding: 16 }}>
       <Text style={{ color: "#F4F7F4", fontSize: 16, fontWeight: "800", marginBottom: 8 }}>Glass layout · khali data</Text>
       <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-        <Frame title="Kisan"><FarmerGlass khata={khata} milk={milk} names={new Map()} /></Frame>
+        <Frame title="Kisan / Customer"><FarmerGlass khata={khata} milk={milk} names={new Map()} /></Frame>
         <Frame title="MCA"><McaGlass farmers={[]} /></Frame>
         <Frame title="MCO"><McoGlass rows={[]} error="" names={new Map()} /></Frame>
         <Frame title="Admin"><AdminGlass home={home} milk={[]} orders={[]} /></Frame>
-        <Frame title="Customer"><CustomerGlass khata={khata} orders={orders} /></Frame>
         <Frame title="Staff"><StaffGlass attendance={attendance} salary={salary} advances={advances} tasks={[]} tasksNote={null} checkLabel="Check-in · aaj" checkBusy={false} readOnly={false} onCheckIn={() => undefined} /></Frame>
         <Frame title="Vet"><VetGlass health={health} error="" /></Frame>
         <Frame title="Dealer"><DealerGlass khata={khata} orders={orders} /></Frame>
         <Frame title="Track kisan"><FarmerGlass focus="track" khata={khata} milk={milk} names={new Map()} /></Frame>
         <Frame title="Track admin"><AdminGlass focus="track" home={home} milk={[]} orders={[]} /></Frame>
-        <Frame title="Track customer"><CustomerGlass focus="track" khata={khata} orders={orders} /></Frame>
       </View>
     </ScrollView>
   );

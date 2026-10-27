@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { settingsOrError } from "../../../../src/lib/mobile/pricing";
 import { priceFromSettings } from "../../../../src/lib/mobile/pricing";
 import type { MilkSettings } from "../../../../src/lib/dairy/rules";
-import { karachiDaySeries, loadCatalog, loadHealth, loadKhata, loadMilkList, loadMilkSettings, loadMyFarmerId, loadOrders, loadProfileNames, loadVaccines, pricedMilkTotal, rupees, salesByDay, shiftLabel, type CatalogRow, type HealthRow, type KhataView, type MilkRow, type OrderRow, type ReadResult, type VaccineRow } from "../../../../src/lib/mobile/live-read";
+import { karachiDaySeries, liveGet, liveGetScoped, liveInsert, loadCatalog, loadHealth, loadKhata, loadMilkList, loadMilkSettings, loadMyFarmerId, loadProfileNames, loadRoleOrders, loadVaccines, pricedMilkTotal, rupees, salesByDay, shiftLabel, testOrdersFor, type CatalogRow, type HealthRow, type KhataView, type MilkRow, type OrderRow, type PartyRow, type ReadResult, type VaccineRow } from "../../../../src/lib/mobile/live-read";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { Empty, SaleChart, Section, liveAuth, type LiveBag } from "../bits";
 import { FarmerGlass } from "./glass-homes";
-import { colors } from "../kit";
+import { Btn, colors } from "../kit";
 
 function num(value: number | string | null | undefined): number {
   const n = typeof value === "number" ? value : Number(value);
@@ -52,6 +52,9 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
   const [settings, setSettings] = useState<MilkSettings | null>(null);
   const [names, setNames] = useState<Map<string, string>>(new Map());
   const [refreshing, setRefreshing] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [orderNote, setOrderNote] = useState("");
+  const [orderBusy, setOrderBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!auth) return;
@@ -59,7 +62,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
     const [nextKhata, nextMilk, nextOrders, nextShop, nextHealth, nextVaccines, nextSettings] = await Promise.all([
       loadKhata(auth, fetch),
       loadMilkList(auth, fetch, 80, auth.testAccount ? farmerId ?? null : undefined),
-      loadOrders(auth, fetch),
+      loadRoleOrders(auth, "customer", fetch),
       loadCatalog(auth, fetch),
       loadHealth(auth, fetch),
       loadVaccines(auth, fetch),
@@ -67,7 +70,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
     ]);
     setKhata(nextKhata);
     setMilk(nextMilk);
-    setOrders(nextOrders);
+    setOrders(nextOrders.ok && auth.testAccount ? { ok: true, rows: testOrdersFor(nextOrders.rows, "customer") } : nextOrders);
     setShop(nextShop);
     setHealth(nextHealth);
     setVaccines(nextVaccines);
@@ -79,7 +82,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
   }, [auth?.token, auth?.url, auth?.userId, auth?.testAccount, auth?.flavor]);
 
   useEffect(() => { void load(); }, [load]);
-  if (!auth) return <ScrollView style={{ padding: 16 }}><Section title="Kisan"><Empty title="Login chahiye" body="Wallet aur doodh testing account se aate hain. Is build mein Supabase key set nahi." /></Section></ScrollView>;
+  if (!auth) return <ScrollView style={{ padding: 16 }}><Section title="Kisan / Customer"><Empty title="Login chahiye" body="Wallet, khata, orders aur doodh isi account se aate hain." /></Section></ScrollView>;
   if (!khata || !milk || !orders || !shop || !health || !vaccines) return <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />;
 
   const milkRows = milk.ok ? milk.rows : [];
@@ -94,6 +97,50 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
     byDay.set(day, (byDay.get(day) ?? 0) + litresOf(row));
   }
   const chart = salesByDay(days.map((day) => ({ created_at: day, total_amount: byDay.get(day) ?? 0, status: "ok" })), days);
+
+  async function placeOrder() {
+    if (!auth) return;
+    const total = Number(amount);
+    if (!(total > 0)) { setOrderNote("Raqam sahi likhein."); return; }
+    const uid = encodeURIComponent(auth.userId || "");
+    let customer: PartyRow | null = null;
+    if (uid) {
+      const own = await liveGetScoped<PartyRow>(auth, `customers?select=id,name&user_id=eq.${uid}&limit=1`, fetch);
+      if (own.ok) customer = own.rows[0] ?? null;
+    }
+    const farmerId = await loadMyFarmerId(auth, fetch);
+    if (!customer && farmerId) {
+      const linked = await liveGetScoped<PartyRow>(auth, `customers?select=id,name&farmer_id=eq.${encodeURIComponent(farmerId)}&limit=1`, fetch);
+      if (linked.ok) customer = linked.rows[0] ?? null;
+    }
+    if (!customer && auth.testAccount && auth.userId) {
+      const link = await liveGet<{ record_id?: string | null }>(auth, `app_test_links?select=record_id&account_id=eq.${encodeURIComponent(auth.userId)}&role=eq.customer&limit=1`, fetch);
+      const recordId = link.ok ? link.rows[0]?.record_id : null;
+      if (recordId) {
+        const linked = await liveGetScoped<PartyRow>(auth, `customers?select=id,name&id=eq.${encodeURIComponent(recordId)}&limit=1`, fetch);
+        if (linked.ok) customer = linked.rows[0] ?? null;
+      }
+    }
+    setOrderBusy(true);
+    const saved = await liveInsert<OrderRow>(auth, "agri_orders", {
+      order_number: `APP-${Date.now()}`,
+      order_type: "Karyana",
+      order_to_type: "Farmer",
+      partner_name: customer?.name || "Kisan / Customer",
+      customer_id: customer?.id ?? null,
+      party_link_state: customer?.id ? "linked" : "unlinked_unknown",
+      status: "draft",
+      grand_total: total,
+      notes: "Mobile app karyana",
+      requested_by: auth.userId,
+      is_test: auth.testAccount === true,
+    }, fetch);
+    setOrderBusy(false);
+    if (!saved.ok) { setOrderNote(saved.message); return; }
+    setAmount("");
+    setOrderNote("Draft order ban gaya.");
+    await load();
+  }
 
   if (tab === "home" || tab === "khata") {
     return (
@@ -155,11 +202,16 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
       {tab === "more" ? (
         <View>
           <Text style={{ color: "#F4F7F4", fontWeight: "800", marginBottom: 8 }} onPress={() => onTab?.("vet")}>Vet doctor</Text>
-          <Text style={{ color: "#F4F7F4", fontWeight: "800" }} onPress={() => onTab?.("karyana")}>Karyana</Text>
+          <Text style={{ color: "#F4F7F4", fontWeight: "800" }} onPress={() => onTab?.("karyana")}>Karyana / Orders</Text>
         </View>
       ) : null}
       {tab === "karyana" ? (
         <View>
+          <Section title="Naya order" sub="Isi Kisan / Customer account ke khata se link hoga">
+            {orderNote ? <Text style={{ color: colors.greenDark, marginBottom: 6 }}>{orderNote}</Text> : null}
+            <TextInput value={amount} onChangeText={setAmount} placeholder="Order ki raqam" keyboardType="decimal-pad" style={{ borderWidth: 1, borderColor: colors.line, borderRadius: 10, padding: 12, color: colors.text, backgroundColor: "#fff", marginBottom: 8 }} />
+            <Btn label={orderBusy ? "Ban raha hai" : "Order bhejein"} onPress={() => { if (!orderBusy) void placeOrder(); }} />
+          </Section>
           <Orders result={orders} />
           <Catalog result={shop} />
         </View>
