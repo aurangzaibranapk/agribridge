@@ -181,10 +181,13 @@ export function milkTimeline(row: {
   const litres = filled(row.quantity_liters) ? `${row.quantity_liters} L` : null;
   const place = [row.chiller_name || row.route_name, litres].filter(Boolean).join(" · ") || null;
   const fatOk = filled(row.fat_percentage);
-  const rateOk = filled(row.rate_per_liter) && filled(row.total_amount);
+  const rateShown = filled(row.rate_per_liter);
+  const rateOk = rateShown && filled(row.total_amount);
   const paid = String(row.status ?? "") === "verified";
   const rejected = String(row.status ?? "") === "rejected";
   const needsFat = rejected || !fatOk;
+  const amount = Number(row.total_amount);
+  const amountText = Number.isFinite(amount) ? Math.round(amount).toLocaleString("en-PK") : String(row.total_amount ?? "");
   const states: StepState[] = needsFat
     ? ["done", "action", "pending", "pending"]
     : !rateOk
@@ -195,8 +198,8 @@ export function milkTimeline(row: {
   const details = [
     place,
     needsFat ? "Fat check baqi hai" : fatOk ? `Fat ${row.fat_percentage}` : null,
-    rateOk ? `Rs ${row.rate_per_liter}/L` : null,
-    filled(row.total_amount) ? `Rs ${row.total_amount}` : null,
+    rateShown ? `Rs ${row.rate_per_liter}/L` : null,
+    filled(row.total_amount) ? `${paid ? "Rs" : "Andaza Rs"} ${amountText}` : null,
   ];
   const times = [karachiClock(row.collected_at), karachiClock(row.fat_at), null, karachiClock(row.verified_at)];
   return MILK_STEPS.map((label, index) => ({

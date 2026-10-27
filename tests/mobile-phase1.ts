@@ -26,6 +26,7 @@ import { brandLockup, currentSubBrand, taglineFrom, taglineLines, taglineWithDef
 import { pickPakistan, preferVillage, shortPlace, usablePlace } from "../src/lib/mobile/weather-place";
 import { elapsed, withinBudget, MOBILE_BUNDLE_BUDGET_BYTES } from "../src/lib/mobile/perf";
 import { PHONE_VERSION_CODE, shownVersionCode } from "../src/lib/mobile/shown-version";
+import { demoBadge, demoChromeOn, demoShift, demoTank, demoValue, setAppFlavor } from "../apps/mobile/src/glass-demo";
 import { shiftTotals } from "../src/lib/mobile/shifts";
 import { calculateMilkValue } from "../src/lib/utils/milk-formula";
 
@@ -53,7 +54,7 @@ assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.pa
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.appFlavor, "test");
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.android.versionCode, 606);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.version, AGRIBRIDGE_OS_VERSION);
-assert.equal(PHONE_VERSION_CODE, 629);
+assert.equal(PHONE_VERSION_CODE, 630);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.versionCode, PHONE_VERSION_CODE);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.versionCode, PHONE_VERSION_CODE);
 assert.equal(shownVersionCode({ platform: "web", embedded: 625, phone: PHONE_VERSION_CODE }), PHONE_VERSION_CODE);
@@ -122,6 +123,21 @@ assert.equal(brandLockup("en", taglineFrom({ roman: "Kisan ka Wasela", urdu: "ک
 assert.doesNotMatch(brandLockup("rm", taglineFrom({ roman: "The farmer's bridge" })).line, /farmer/i);
 assert.equal(taglineFrom('{"roman":"Kisan ka Wasela"}').roman, "Kisan ka Wasela");
 assert.doesNotMatch(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /MISAAL/);
+assert.match(readFileSync("apps/mobile/src/glass-demo.ts", "utf8"), /MISAAL/);
+setAppFlavor("live");
+assert.equal(demoChromeOn(), false);
+setAppFlavor("test");
+assert.equal(demoChromeOn(), true);
+setAppFlavor(null);
+assert.equal(demoChromeOn(), false);
+assert.deepEqual(demoBadge("Active farmers"), { kind: "count", value: 18 });
+assert.equal(demoBadge("Hazri (Oct)")?.kind, "pct");
+assert.equal(demoBadge("Hazri (Oct)")?.value, 90);
+assert.equal(demoTank().celsius, 3.8);
+assert.match(demoShift().window, /8:00/);
+assert.match(demoShift().window, /5:00/);
+assert.equal(demoValue("Total sales"), "Rs 4.8M");
+assert.match(readFileSync("apps/mobile/src/roles/glass-homes.tsx", "utf8"), /Jari/);
 const glassHomes = readFileSync("apps/mobile/src/roles/glass-homes.tsx", "utf8");
 const glassUi = readFileSync("apps/mobile/src/glass.tsx", "utf8");
 assert.match(glassHomes, /orderTimeline/);
@@ -233,6 +249,10 @@ assert.equal(milkTimeline({ status: "pending_fat", entry_date: "2026-10-22" })[1
 assert.equal(milkTimeline({ status: "pending_fat", entry_date: "2026-10-22" })[1].actionLabel, "Fat check karwayein");
 assert.equal(milkTimeline({ status: "pending_fat", entry_date: "2026-10-22" })[1].detail, "Fat check baqi hai");
 assert.equal(milkTimeline({ status: "verified", fat_percentage: 4, rate_per_liter: 10, total_amount: 100, entry_date: "2026-10-22" }).every((step) => step.state === "done"), true);
+const pricedMilk = milkTimeline({ status: "pending_fat", rate_per_liter: 145, total_amount: 1813, quantity_liters: 12.5 });
+assert.equal(pricedMilk[1].state, "action");
+assert.equal(pricedMilk[2].detail, "Rs 145/L");
+assert.equal(pricedMilk[3].detail, "Andaza Rs 1,813");
 assert.equal(timelineFinished(approvalTimeline([], true)), true);
 assert.equal(approvalTimeline([{ label: "Doodh", count: 2 }], true)[0].state, "action");
 assert.equal(ROLE_NAV.mca.phase1, true);

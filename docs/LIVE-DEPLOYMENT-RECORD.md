@@ -1,4 +1,6 @@
-## Phone glass homes — 26 October 2026 — app only
+## Phone glass homes — 27 October 2026 — app only
+
+versionCode 630. TEST build aur ?glass=1 par khali cards MISAAL sample dikhate hain, taake approved mock jaisa chrome aaye. Live flavor par jhoota business number nahi. Tank 3.8°C sirf jab home.tank.temp note na ho aur TEST ya preview ho. Staff shift 8:00–5:00 sirf jab schedule khali ho. Vet ki sample rows sirf ?glass=1. Dealer hazar axis aur bori/unit. Task status Jari jab record kehta hai. Koi migration nahi. Live database par kuch nahi. Live workflow 605 par hai.
 
 versionCode 629. Header ab do gold lines: product naam, phir tagline aur role, phir Assalam o Alaikum. Tank card par temperature line, number ho to °C, na ho to dash. Count badge sirf jab pichli ginti alag ho. Vet row par naam, gaon, waqt, Urgent, Day n/m jab record par hon. Staff duty par schedule ka shift window jab hr_work_schedules parhe. Dealer bar hazar mein, stock unit note se. Kisan wallet tab se purana gold wallet hata. Koi naya number nahi. Koi migration nahi. Live database par kuch nahi. Live workflow 605 par hai.
 
