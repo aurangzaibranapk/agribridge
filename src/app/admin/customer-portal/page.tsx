@@ -4,6 +4,7 @@ import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { adminFilter, adminKpis, daysBetween, invitePreview, rs } from "@/lib/portal/customer";
 import { loadAdminCustomers, loadFinanceAccounts, loadQueue, proofUrl, todayPk } from "@/lib/portal/customer-load";
 import { CKpi, Code, L3, Lock, Notice, PageHead, Panel, PanelHead, Pill, STATUS_TONE, Sub, btnGhost, btnPrimary, inputCls } from "@/components/portal/customer/cust-parts";
+import { GlassStyles } from "@/components/glass/glass-styles";
 import { queueAction } from "./actions";
 import { InviteButton } from "./invite-button";
 
@@ -34,7 +35,8 @@ export default async function AdminCustomerPortal({ searchParams }: { searchPara
   const byKind = (kind: string) => items.filter((i) => i.kind === kind).length;
 
   return (
-    <div className="mx-auto max-w-7xl space-y-3.5 px-4 py-6 sm:px-6">
+    <div className="gl-bg mx-auto max-w-7xl space-y-3.5 px-4 py-6 sm:px-6">
+      <GlassStyles />
       <PageHead title={<L3 k="pc_ad_title" lang={lang} />} sub={L("pc_ad_sub")} />
       {ok && <Notice tone="ok">✔ {L("pc_ad_done")}</Notice>}
       {e && <Notice tone="err">{e}</Notice>}
@@ -49,11 +51,11 @@ export default async function AdminCustomerPortal({ searchParams }: { searchPara
           <PanelHead title={<L3 k="pc_ad_all" lang={lang} />} right={
             <div className="flex flex-wrap items-center gap-1.5">
               {(["all", "on", "over", "shop"] as const).map((x) => (
-                <Link key={x} href={`/admin/customer-portal?f=${x}${q ? `&q=${encodeURIComponent(q)}` : ""}`} className={`rounded-full px-3 py-1 text-[11px] font-semibold ${f === x ? "bg-indigo-100 text-indigo-900 dark:bg-[#1a2c58] dark:text-white" : "bg-surface-100 text-surface-600 dark:bg-[#0d1a3a] dark:text-slate-300"}`}>
+                <Link key={x} href={`/admin/customer-portal?f=${x}${q ? `&q=${encodeURIComponent(q)}` : ""}`} className={`rounded-full px-3 py-1 text-[11px] font-semibold ${f === x ? "bg-gradient-to-r from-emerald-700 to-[#16356e] text-white" : "gl-act text-surface-600 dark:text-slate-200"}`}>
                   {L(x === "all" ? "pc_f_all" : x === "on" ? "pc_ad_f_on" : x === "over" ? "pc_ad_f_over" : "pc_ad_f_shop")}
                 </Link>
               ))}
-              <form><input type="hidden" name="f" value={f} /><input name="q" defaultValue={q} placeholder="🔍" className="w-28 rounded-full border border-surface-200 bg-white px-3 py-1 text-xs dark:border-[#1e3160] dark:bg-[#0d1a3a] dark:text-slate-100" /></form>
+              <form><input type="hidden" name="f" value={f} /><input name="q" defaultValue={q} placeholder="🔍" className={`${inputCls} w-28 rounded-full px-3 py-1 text-xs`} /></form>
             </div>} />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-[12.5px]">

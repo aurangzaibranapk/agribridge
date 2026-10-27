@@ -109,6 +109,9 @@ html.dark .dark\:hover\:bg-surface-800:hover { background-color: #2b3a55; }
 .pf-panel { --pf-bg: #ffffff; }
 html.dark .pf-panel { --pf-bg: theme("colors.surface.900"); }
 html.dark .pf-panel.pf-navy { --pf-bg: #101f42; }
+/* Customer portal glass: sticky table head matches the frosted card, demand portal stays solid. */
+.gl-bg .pf-panel.pf-navy { --pf-bg: rgba(255,255,255,.88); }
+html.dark .gl-bg .pf-panel.pf-navy { --pf-bg: rgba(16, 28, 52, .94); }
 @media (min-width: 1024px) and (min-height: 640px) {
   /* Lambi table ka sar (column ke naam) hamesha upar dikhe. */
   .pf-body thead th, .pf-sticky thead th { position: sticky; top: 0; z-index: 2; background: var(--pf-bg, #fff); box-shadow: inset 0 -1px 0 theme("colors.surface.200"); }

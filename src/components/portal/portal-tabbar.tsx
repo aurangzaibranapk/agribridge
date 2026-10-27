@@ -11,10 +11,13 @@ export function PortalTabBar({ lang, kind, hasDairy }: { lang: Lang; kind: "farm
   const pathname = usePathname();
   const tabs = portalTabs(kind, hasDairy);
   const on = activeTab(pathname, kind, hasDairy);
-  const tone = kind === "farmer" ? "text-green-700 dark:text-green-300" : "text-blue-700 dark:text-blue-300";
+  const tone = kind === "farmer" ? "text-green-700 dark:text-green-300" : "text-emerald-800 dark:text-emerald-300";
+  const bar = kind === "customer"
+    ? "border-white/50 bg-white/70 backdrop-blur-xl dark:border-white/10 dark:bg-[#101c33]/80"
+    : "border-surface-200 bg-white/95 backdrop-blur dark:border-[#1e2b4a] dark:bg-[#0b1322]/95";
   return (
     <nav aria-label={t("ph6_tabbar_label", lang)}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-surface-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur dark:border-[#1e2b4a] dark:bg-[#0b1322]/95 sm:hidden print:hidden">
+      className={`fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] sm:hidden print:hidden ${bar}`}>
       <ul className="grid" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
         {tabs.map((tb) => {
           const Icon = NAV_ICONS[tb.icon];

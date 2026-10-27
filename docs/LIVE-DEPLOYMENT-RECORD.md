@@ -7,6 +7,14 @@ Branch `cursor/reject-self-product-merge-ae81`. Migration **715 not applied** on
 - Approve of self-merge app aur check dono rokte hain.
 - Rollback: `715_product_merge_reject_self.rollback.sql` — purana check wapas, Reject phir ruk jayega.
 
+## Done on Live — 27 October 2026: dairy cost/litre basis (714) + customer portal glass
+
+Branch `cursor/dairy-cost-portal-glass-c2d9`. Migration **714 applied on Live** (`ktskwawkslaznkjjacni`) 27 Oct 2026 after backup at `/workspace/backups/2026-10-27-live-220/` (box). Testing not applied (not reachable from MCP).
+
+- `714_dairy_cost_per_litre_basis.sql` — `fn_dairy_pnl_for` and `fn_admin_dairy_totals`. Cost/L = expense ÷ home yields when home > 0, otherwise centre litres. Does not add the two. New fields: `litres_home`, `litres_centre`, `cost_basis` (`home` | `centre` | null). `litres` stays home yield.
+- Rollback: `714_dairy_cost_per_litre_basis.rollback.sql` (back to 577/578: home yields only).
+- Customer portal glass is UI only (`/portal/c/*`, `/admin/customer-portal`). No schema.
+
 ## Done on Live — 26 October 2026: Pending approval escalation (713, was 698)
 
 Branch `cursor/pending-approval-escalation-e154` (PR #216). File renamed 698 → **713** because live already has `698_mobile_phase1`.

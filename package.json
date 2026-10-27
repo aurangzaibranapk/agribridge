@@ -65,7 +65,7 @@
     "test:portal-khata": "npx --yes tsx scripts/test-portal-khata.ts && node tests/portal-khata-sql.mjs",
     "test:portal-dairy": "npx --yes tsx scripts/test-portal-dairy.ts && node tests/portal-dairy-sql.mjs",
     "test:dairy-review": "npx --yes tsx scripts/test-dairy-review.ts && node tests/dairy-review-sql.mjs",
-    "test:portal-dairy-pl": "npx --yes tsx scripts/test-portal-dairy-pl.ts && node tests/portal-dairy-pl-sql.mjs",
+    "test:portal-dairy-pl": "npx --yes tsx scripts/test-portal-dairy-pl.ts && node tests/portal-dairy-pl-sql.mjs && node tests/dairy-cost-basis-714-sql.mjs",
     "test:portal-breeding": "npx --yes tsx scripts/test-portal-breeding.ts && node tests/portal-breeding-sql.mjs",
     "test:portal-customer": "npx --yes tsx scripts/test-portal-customer.ts && node tests/portal-customer-sql.mjs && node tests/customer-portal-role-enum.cjs",
     "test:portal-accounts": "npx --yes tsx scripts/test-portal-accounts.ts && node tests/portal-accounts-sql.mjs",
