@@ -159,7 +159,22 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
   }
 
   return (
-    <ScrollView style={{ padding: 16, backgroundColor: "#07140F" }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
+    <ScrollView style={{ padding: 16, backgroundColor: "#F7F8F3" }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
+      {tab === "farm" ? (
+        <View>
+          <Section title="Mera Farm" sub="Kisan aur Customer ka aik hi account">
+            <ServiceLink label="Crops / Faslein" detail="Fasal ka record aur schedule" />
+            <ServiceLink label="Dairy Management" detail="Doodh, janwar aur health" onPress={() => onTab?.("doodh")} />
+            <ServiceLink label="Livestock" detail="Janwar aur treatment record" onPress={() => onTab?.("vet")} />
+            <ServiceLink label="Inputs" detail="Seed, fertilizer aur pesticide" onPress={() => onTab?.("karyana")} />
+            <ServiceLink label="Machinery" detail="Farm machinery services" />
+            <ServiceLink label="Kisan AI" detail="Farm help aur rehnumai" />
+          </Section>
+          <Section title="Mera Khata" sub="Asal receivable/payable record">
+            <ServiceLink label="Wallet / Khata" detail={khata.note || (khata.owed == null ? "Record nahi mila" : rupees(Math.abs(khata.owed)))} onPress={() => onTab?.("khata")} />
+          </Section>
+        </View>
+      ) : null}
       {tab === "doodh" ? (
         <View>
           <MilkList title="Mera doodh" sub="Kis ne uthaya, litre, fat, SNF, LR, rate, raqam" result={milk} rows={milkRows} names={names} settings={settings} />
@@ -201,8 +216,12 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
       ) : null}
       {tab === "more" ? (
         <View>
-          <Text style={{ color: "#F4F7F4", fontWeight: "800", marginBottom: 8 }} onPress={() => onTab?.("vet")}>Vet doctor</Text>
-          <Text style={{ color: "#F4F7F4", fontWeight: "800" }} onPress={() => onTab?.("karyana")}>Karyana / Orders</Text>
+          <Section title="Profile & Services" sub="Isi account ka tamam record">
+            <ServiceLink label="Wallet / Khata" detail="Receivable aur payable" onPress={() => onTab?.("khata")} />
+            <ServiceLink label="Vet doctor" detail="Treatment aur vaccine" onPress={() => onTab?.("vet")} />
+            <ServiceLink label="Karyana / Orders" detail="Market aur order history" onPress={() => onTab?.("karyana")} />
+            <ServiceLink label="Farm services" detail="Crops, dairy, livestock aur machinery" onPress={() => onTab?.("farm")} />
+          </Section>
         </View>
       ) : null}
       {tab === "karyana" ? (
@@ -218,6 +237,14 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
       ) : null}
       <View style={{ height: 24 }} />
     </ScrollView>
+  );
+}
+
+function ServiceLink({ label, detail, onPress }: { label: string; detail: string; onPress?: () => void }) {
+  return (
+    <Text onPress={onPress} style={{ color: colors.text, backgroundColor: "#F3F8F2", borderWidth: 1, borderColor: colors.line, borderRadius: 12, padding: 12, marginBottom: 8, fontWeight: "800" }}>
+      {label}{"\n"}<Text style={{ color: colors.muted, fontWeight: "400" }}>{detail}{onPress ? "  →" : ""}</Text>
+    </Text>
   );
 }
 

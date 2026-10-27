@@ -59,6 +59,9 @@ export function Btn({ label, onPress, kind = "green" }: { label: string; onPress
 
 const TAB_MARK: Record<string, string> = {
   Home: "⌂",
+  Farm: "♧",
+  Dairy: "♜",
+  Market: "▣",
   Doodh: "🥛",
   Wallet: "₨",
   Profile: "◉",
@@ -122,11 +125,11 @@ const styles = StyleSheet.create({
   btnGhost: { backgroundColor: "#fff", borderWidth: 1, borderColor: colors.line },
   btnText: { color: "#fff", fontWeight: "700" },
   btnGhostText: { color: colors.green },
-  tabs: { flexDirection: "row", marginHorizontal: 12, marginBottom: 10, backgroundColor: "rgba(16,32,28,0.94)", borderRadius: 24, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", paddingVertical: 8, elevation: 8 },
+  tabs: { flexDirection: "row", marginHorizontal: 10, marginBottom: 8, backgroundColor: "#FFFFFF", borderRadius: 22, borderWidth: 1, borderColor: colors.line, paddingVertical: 9, elevation: 10, shadowColor: "#163C28", shadowOpacity: 0.12, shadowRadius: 10 },
   tab: { flex: 1, alignItems: "center" },
-  tabMark: { color: "#8FA399", fontSize: 14, marginBottom: 2 },
-  tabText: { color: "#8FA399", fontSize: 11, fontWeight: "700" },
-  tabOn: { color: "#3DDC97" },
+  tabMark: { color: "#87948D", fontSize: 15, marginBottom: 2 },
+  tabText: { color: "#748179", fontSize: 11, fontWeight: "700" },
+  tabOn: { color: "#12823D" },
   laterTitle: { fontWeight: "700", color: colors.text, marginBottom: 6 },
   laterBody: { color: colors.muted, lineHeight: 20 },
 });

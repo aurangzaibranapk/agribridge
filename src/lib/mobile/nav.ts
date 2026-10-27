@@ -22,8 +22,9 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     phase1: true,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "doodh", label: "Doodh" },
-      { key: "khata", label: "Wallet" },
+      { key: "farm", label: "Farm" },
+      { key: "doodh", label: "Dairy" },
+      { key: "karyana", label: "Market" },
       { key: "more", label: "Profile" },
     ],
   },
@@ -32,8 +33,9 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     phase1: true,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "doodh", label: "Doodh" },
-      { key: "khata", label: "Wallet" },
+      { key: "farm", label: "Farm" },
+      { key: "doodh", label: "Dairy" },
+      { key: "karyana", label: "Market" },
       { key: "more", label: "Profile" },
     ],
   },
@@ -68,7 +70,7 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     ],
   },
   mca: {
-    title: "MCA",
+    title: "DCA / Milk Collection",
     phase1: true,
     tabs: [
       { key: "home", label: "Home" },

@@ -53,7 +53,7 @@ assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.pa
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.appFlavor, "test");
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.android.versionCode, 606);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.version, AGRIBRIDGE_OS_VERSION);
-assert.equal(PHONE_VERSION_CODE, 632);
+assert.equal(PHONE_VERSION_CODE, 633);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.versionCode, PHONE_VERSION_CODE);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.versionCode, PHONE_VERSION_CODE);
 assert.equal(shownVersionCode({ platform: "web", embedded: 625, phone: PHONE_VERSION_CODE }), PHONE_VERSION_CODE);
@@ -90,8 +90,10 @@ for (const role of ["farmer", "customer", "staff", "supplier", "dealer", "mca", 
   assert.ok(ROLE_NAV[role].tabs.length >= 3, role);
 }
 assert.equal(ROLE_NAV.farmer.phase1, true);
-assert.deepEqual(ROLE_NAV.farmer.tabs.map((tab) => tab.key), ["home", "doodh", "khata", "more"]);
-assert.equal(ROLE_NAV.farmer.tabs[2].label, "Wallet");
+assert.deepEqual(ROLE_NAV.farmer.tabs.map((tab) => tab.key), ["home", "farm", "doodh", "karyana", "more"]);
+assert.equal(ROLE_NAV.farmer.tabs[1].label, "Farm");
+assert.equal(ROLE_NAV.farmer.tabs[2].label, "Dairy");
+assert.equal(ROLE_NAV.farmer.tabs[3].label, "Market");
 assert.match(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /BrandStack/);
 assert.doesNotMatch(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /brandLockup|loadAppMark|lock\.title/);
 assert.match(readFileSync("apps/mobile/App.tsx", "utf8"), /brandLockup/);
@@ -700,6 +702,9 @@ assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /limit=40/);
 assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /loadPhoneNotes/);
 assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /loadMilkWindow/);
 assert.match(readFileSync("apps/mobile/src/roles/vet.tsx", "utf8"), /Ilaj save karein/);
+assert.match(readFileSync("apps/mobile/src/roles/mco.tsx", "utf8"), /Field Collection/);
+assert.match(readFileSync("apps/mobile/src/roles/mco.tsx", "utf8"), /Drop-off save karein/);
+assert.match(readFileSync("apps/mobile/src/roles/mco.tsx", "utf8"), /collection_source: "mco_dropoff"/);
 assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /loadGoalTargets/);
 assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /app_goal_targets\?select=/);
 assert.equal(salesTotal([{ total_amount: 80, status: "paid" }, { total_amount: 20, status: "void" }]), 80);
@@ -724,7 +729,7 @@ assert.match(readFileSync("apps/mobile/src/roles/vet.tsx", "utf8"), /Ilaj save k
 assert.match(readFileSync("apps/mobile/src/roles/dealer.tsx", "utf8"), /HQ khata/);
 assert.match(readFileSync("apps/mobile/src/roles/dealer.tsx", "utf8"), /Dealer \/ Outlet/);
 assert.match(appSource, /User ID \(ikhtiyari\)/);
-assert.match(appSource, />Profile</);
+assert.match(appSource, /onProfile=/);
 assert.match(appSource, /signInMobile/);
 assert.match(appSource, /failureLine/);
 assert.match(appSource, /Masla batayein/);

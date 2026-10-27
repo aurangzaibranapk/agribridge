@@ -11,13 +11,13 @@ import { AGRIBRIDGE_OS_VERSION } from "../../../src/lib/app-version";
 import { pickPakistan, preferVillage, shortPlace, usablePlace } from "../../../src/lib/mobile/weather-place";
 
 export const glass = {
-  bg: "#071018",
-  card: "rgba(16, 36, 32, 0.55)",
-  line: "rgba(255,255,255,0.16)",
-  text: "#F4F7F4",
-  muted: "#8FA399",
-  gold: "#C8A058",
-  up: "#3DDC97",
+  bg: "#F7F8F3",
+  card: "#FFFFFF",
+  line: "#DDE7DF",
+  text: "#10271D",
+  muted: "#63736A",
+  gold: "#A86E05",
+  up: "#169447",
   down: "#FF6B6B",
   blue: "#5B8CFF",
   purple: "#C4B5FD",
@@ -40,15 +40,15 @@ export function StarField() {
   return (
     <Svg style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} width="100%" height="100%" pointerEvents="none">
       <Defs>
-        <LinearGradient id="agriSky" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#07111A" />
-          <Stop offset="0.45" stopColor="#0A1C16" />
-          <Stop offset="1" stopColor="#10261C" />
+        <LinearGradient id="agriSky" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#F1F8EF" />
+          <Stop offset="0.5" stopColor="#FAFAF6" />
+          <Stop offset="1" stopColor="#F7F3E9" />
         </LinearGradient>
       </Defs>
       <Rect width="100%" height="100%" fill="url(#agriSky)" />
-      {STARS.map((star, index) => (
-        <Circle key={index} cx={`${star.x}%`} cy={`${star.y}%`} r={star.r} fill={index % 7 === 0 ? "#C8A058" : "#F4F7F4"} opacity={star.o} />
+      {STARS.slice(0, 18).map((star, index) => (
+        <Circle key={index} cx={`${star.x}%`} cy={`${star.y}%`} r={star.r * 3} fill={index % 4 === 0 ? "#E7C97B" : "#B8DDB9"} opacity={star.o * 0.18} />
       ))}
     </Svg>
   );
@@ -60,7 +60,7 @@ export function GlassScreen({ children, refreshing, onRefresh }: { children: Rea
       <StarField />
       <ScrollView
         style={{ flex: 1, minHeight: 0, backgroundColor: "transparent" }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 120, width: "100%" }}
+        contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 118, width: "100%" }}
         refreshControl={onRefresh ? <RefreshControl refreshing={refreshing === true} onRefresh={onRefresh} tintColor={glass.up} /> : undefined}
       >
         {children}
@@ -97,6 +97,35 @@ export function KpiGrid({ children }: { children: ReactNode }) {
   );
 }
 
+const ACTION_TINTS = ["#E8F7E8", "#FFF4D8", "#E8F2FF", "#F1EAFE", "#FFE9E7", "#E7F7F2"];
+const ACTION_MARKS: Record<string, string> = {
+  Wallet: "₨", Khata: "₨", Orders: "▣", Doodh: "♜", Dairy: "♜", Farms: "⌂", Crops: "♧",
+  Vet: "+", Inputs: "▰", Machinery: "⚙", Livestock: "♞", Reports: "▤", Approvals: "✓",
+  Branches: "⌂", Shops: "▦", Alerts: "!", Entry: "+", Kisan: "☺", Petrol: "◉", Meter: "◫",
+  Receive: "↓", Tanks: "▥", Tasks: "✓", Hazri: "◷", Recovery: "₨", POS: "▣", Profile: "◉",
+};
+
+export function ActionGrid({ title = "Quick Actions", actions }: { title?: string; actions: { label: string; key: string; onPress?: () => void }[] }) {
+  return (
+    <Rise index={2}>
+      <View style={{ marginBottom: 12 }}>
+        <Text style={{ color: glass.text, fontSize: 17, fontWeight: "900", marginBottom: 9 }}>{title}</Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+          {actions.map((action, index) => {
+            const mark = ACTION_MARKS[action.label] || ACTION_MARKS[action.key] || "•";
+            return (
+              <Pressable key={`${action.key}-${index}`} onPress={action.onPress} style={{ width: "31.8%", minHeight: 86, borderRadius: 16, paddingHorizontal: 8, paddingVertical: 11, marginBottom: 8, backgroundColor: ACTION_TINTS[index % ACTION_TINTS.length], borderWidth: 1, borderColor: "rgba(20,105,57,0.07)", alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: "#12753A", fontSize: 25, fontWeight: "900" }}>{mark}</Text>
+                <Text style={{ color: glass.text, fontSize: 11, lineHeight: 14, fontWeight: "800", textAlign: "center", marginTop: 5 }} numberOfLines={2}>{action.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    </Rise>
+  );
+}
+
 const LangContext = createContext<{ lang: AppLang; line: string; mark: string }>({ lang: "rm", line: "", mark: "" });
 
 export function LanguageProvider({ lang, line = "", mark = "", children }: { lang: AppLang; line?: string; mark?: string; children: ReactNode }) {
@@ -118,29 +147,30 @@ export function BrandStack({ title, line, rtl, titleSize, lineSize }: { title: s
   );
 }
 
-function upperBit(text: string): string {
-  return /[A-Za-z]/.test(text) ? text.toUpperCase() : text;
-}
-
 export function BrandHeader({ role, name, onProfile }: { role: string; name: string; centre?: string; onProfile?: () => void; live?: LiveBag }) {
   const ctx = useContext(LangContext);
   const mark = ctx.mark.trim() || "AgriBridge";
   const line = ctx.line.trim();
   const initial = (name.trim().charAt(0) || role.charAt(0) || "A").toUpperCase();
-  const goldLine = [line, role].map((bit) => bit.trim()).filter(Boolean).map(upperBit).join(" · ");
+  const roleTitle = /dashboard$/i.test(role) ? role : `${role} Dashboard`;
   return (
     <Rise index={0}>
-      <View style={{ marginBottom: 12 }}>
-        <Text style={{ color: glass.muted, fontSize: 12, fontWeight: "700" }} numberOfLines={1}>{mark} · {AGRIBRIDGE_OS_VERSION}</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8 }}>
+      <View style={{ marginBottom: 12, backgroundColor: "rgba(255,255,255,0.92)", borderRadius: 20, padding: 14, borderWidth: 1, borderColor: glass.line, shadowColor: "#17452E", shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
           <View style={{ flex: 1, paddingRight: 10 }}>
-            <Text style={{ color: glass.gold, fontSize: 11, fontWeight: "800", letterSpacing: /[A-Za-z]/.test(goldLine) ? 0.7 : 0 }} numberOfLines={1}>{goldLine}</Text>
-            <Text style={{ color: glass.text, fontSize: 22, lineHeight: 28, fontWeight: "800", marginTop: 2 }} numberOfLines={2}>Assalam o Alaikum, {name || "—"}</Text>
+            <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+              <Text style={{ color: "#0B5D35", fontSize: 21, fontWeight: "900" }} numberOfLines={1}>{mark}</Text>
+              <Text style={{ color: glass.muted, fontSize: 10, marginLeft: 7 }}>{AGRIBRIDGE_OS_VERSION}</Text>
+            </View>
+            {line ? <Text style={{ color: "#0B5D35", fontSize: 11, marginTop: 1 }} numberOfLines={1}>{line}</Text> : null}
           </View>
-          <Pressable onPress={onProfile} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "#146B3A", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
+          <Text style={{ color: "#0B5D35", fontSize: 20, marginRight: 12 }}>♧</Text>
+          <Pressable onPress={onProfile} style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: "#176B3A", alignItems: "center", justifyContent: "center", borderWidth: 3, borderColor: "#E7F3E7" }}>
             <Text style={{ color: "#fff", fontWeight: "800", fontSize: 18 }}>{initial}</Text>
           </Pressable>
         </View>
+        <Text style={{ color: glass.text, fontSize: 24, lineHeight: 30, fontWeight: "900", marginTop: 12 }} numberOfLines={2}>{roleTitle}</Text>
+        <Text style={{ color: glass.muted, fontSize: 14, marginTop: 2 }} numberOfLines={1}>Assalam o Alaikum{name ? `, ${name}` : ""}</Text>
       </View>
     </Rise>
   );
@@ -392,7 +422,7 @@ export function Donut({ parts, center }: { parts: { label: string; value: number
     <View style={{ flexDirection: "row", alignItems: "center" }}>
       <View style={{ width: size, height: size }}>
       <Svg width={size} height={size}>
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,0.08)" strokeWidth={14} fill="none" />
+        <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(18,82,48,0.10)" strokeWidth={14} fill="none" />
         {parts.map((part) => {
           if (!(part.value > 0)) return null;
           const len = (part.value / total) * c;
@@ -492,11 +522,11 @@ export function Kpi({ label, value, sub, color, series, pct, index, badge = "pct
   const delta = badge === "count" ? countDelta(line) : null;
   return (
     <Rise index={index} style={{ width: "48%", maxWidth: "48%", flexBasis: "48%", flexGrow: 0, flexShrink: 0 }}>
-      <View style={{ width: "100%", backgroundColor: glass.card, borderRadius: 18, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: glass.line }}>
+      <View style={{ width: "100%", backgroundColor: glass.card, borderRadius: 18, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: glass.line, shadowColor: "#123E28", shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: color, opacity: 0.95, alignItems: "center", justifyContent: "center", shadowColor: color, shadowOpacity: 0.9, shadowRadius: 10, elevation: 6 }}>
+          <View style={{ width: 34, height: 34, borderRadius: 12, backgroundColor: `${color}22`, alignItems: "center", justifyContent: "center" }}>
             <Svg width={16} height={16} viewBox="0 0 24 24">
-              <Path d={glyphFor(label)} stroke="#07140F" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              <Path d={glyphFor(label)} stroke={color} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
           </View>
           {badge === "count" ? <CountBadge value={delta} /> : <Pct value={change} />}
@@ -513,7 +543,7 @@ export function Kpi({ label, value, sub, color, series, pct, index, badge = "pct
 export function GlassCard({ title, sub, badge, aside, children, index = 2 }: { title: string; sub?: string; badge?: string | null; aside?: ReactNode; children: ReactNode; index?: number }) {
   return (
     <Rise index={index}>
-      <View style={{ backgroundColor: glass.card, borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: glass.line }}>
+      <View style={{ backgroundColor: glass.card, borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: glass.line, shadowColor: "#123E28", shadowOpacity: 0.055, shadowRadius: 10, elevation: 2 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <Text style={{ color: glass.text, fontWeight: "800", flex: 1 }}>{title}</Text>
           {aside}
@@ -530,7 +560,7 @@ export function Pill({ label, tone, mark }: { label: string; tone: "green" | "or
   const color = tone === "green" ? glass.up : tone === "orange" ? glass.orange : tone === "red" ? glass.down : glass.blue;
   const glyph = mark === "check" ? "✓ " : mark === "bang" ? "! " : mark === "dot" ? "● " : "";
   return (
-    <View style={{ borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: color }}>
+    <View style={{ borderRadius: 14, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: `${color}12`, borderWidth: 1, borderColor: `${color}55` }}>
       <Text style={{ color, fontWeight: "700", fontSize: 12 }}>{glyph}{label}</Text>
     </View>
   );
@@ -550,7 +580,7 @@ function StepMark({ state }: { state: TimelineStep["state"] }) {
   if (state === "action") {
     return <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: "#FF5A5A", alignItems: "center", justifyContent: "center" }}><Text style={{ color: "#fff", fontSize: 13, fontWeight: "800" }}>!</Text></View>;
   }
-  return <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: "rgba(255,255,255,0.28)" }} />;
+  return <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: "rgba(18,82,48,0.22)" }} />;
 }
 
 function trackPill(steps: TimelineStep[]): { label: string; tone: "green" | "orange" | "red" | "blue"; mark: "dot" | "check" | "bang" } | null {
@@ -578,7 +608,7 @@ export function Timeline({ title, detail, steps, onAction, showProgress = false,
       ? "rgba(61,220,151,0.9)"
       : steps.some((step) => step.state === "active" || step.state === "done")
         ? "rgba(91,140,255,0.55)"
-        : "rgba(255,255,255,0.18)";
+        : "rgba(18,82,48,0.18)";
   return (
     <Rise index={index}>
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
@@ -595,7 +625,7 @@ export function Timeline({ title, detail, steps, onAction, showProgress = false,
         </View>
         {steps.map((step, stepIndex) => {
           const time = step.time || (step.state === "active" ? "Abhi" : step.state === "pending" || step.state === "done" || step.state === "action" ? "—" : "");
-          const line = step.state === "done" ? glass.up : "rgba(255,255,255,0.16)";
+          const line = step.state === "done" ? glass.up : "rgba(18,82,48,0.16)";
           return (
             <View key={`${step.label}-${stepIndex}`} style={{ flexDirection: "row", alignItems: "stretch" }}>
               <View style={{ width: 28, alignItems: "center" }}>
@@ -625,7 +655,7 @@ export function Timeline({ title, detail, steps, onAction, showProgress = false,
               <Text style={{ color: glass.muted, fontSize: 12 }}>{progressNote ? `🚚  ${progressNote}` : ""}</Text>
               <Text style={{ color: glass.muted, fontSize: 12 }}>{percent}%</Text>
             </View>
-            <View style={{ height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.1)" }}>
+            <View style={{ height: 6, borderRadius: 3, backgroundColor: "rgba(18,82,48,0.10)" }}>
               <View style={{ width: `${percent}%`, height: 6, borderRadius: 3, backgroundColor: glass.up }} />
             </View>
           </View>
@@ -715,7 +745,7 @@ export function RingMeter({ pct, label, size = 168 }: { pct: number | null; labe
             </LinearGradient>
           </Defs>
           <Circle cx={size / 2} cy={size / 2} r={r} stroke="#C4B5FD" strokeWidth={22} fill="none" opacity={0.16} />
-          <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} fill="none" />
+          <Circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(18,82,48,0.10)" strokeWidth={stroke} fill="none" />
           <Circle
             cx={size / 2}
             cy={size / 2}
@@ -744,9 +774,9 @@ export function RingMeter({ pct, label, size = 168 }: { pct: number | null; labe
 
 function Chip({ label, value, mark }: { label: string; value: string; mark: string }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 14, padding: 10, marginBottom: 8 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#F5F8F4", borderRadius: 14, padding: 10, marginBottom: 8, borderWidth: 1, borderColor: glass.line }}>
       <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "rgba(196,181,253,0.22)", alignItems: "center", justifyContent: "center" }}>
-        <Text style={{ color: "#F4F7F4", fontWeight: "800" }}>{mark}</Text>
+        <Text style={{ color: glass.text, fontWeight: "800" }}>{mark}</Text>
       </View>
       <View style={{ marginLeft: 8, flex: 1 }}>
         <Text style={{ color: glass.muted, fontSize: 11 }}>{label}</Text>
@@ -851,7 +881,7 @@ export function TankRow({ levels }: { levels: { name: string; pct: number | null
     <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
       {levels.map((tank, index) => (
         <View key={tank.name} style={{ alignItems: "center", width: 64 }}>
-          <View style={{ width: 36, height: 84, borderRadius: 18, borderWidth: 2, borderColor: TANK_COLOR[index % TANK_COLOR.length], overflow: "hidden", justifyContent: "flex-end", backgroundColor: "rgba(255,255,255,0.04)" }}>
+          <View style={{ width: 36, height: 84, borderRadius: 18, borderWidth: 2, borderColor: TANK_COLOR[index % TANK_COLOR.length], overflow: "hidden", justifyContent: "flex-end", backgroundColor: "rgba(18,82,48,0.04)" }}>
             {tank.pct != null ? <View style={{ height: `${Math.max(0, Math.min(100, tank.pct))}%`, backgroundColor: TANK_COLOR[index % TANK_COLOR.length] }} /> : null}
           </View>
           <Text style={{ color: glass.text, marginTop: 6, fontWeight: "700" }}>{tank.pct == null ? "—" : `${Math.round(tank.pct)}%`}</Text>
@@ -872,7 +902,7 @@ export function BarTrack({ label, value, max, color, unit }: { label: string; va
         <Text style={{ color: glass.text, flex: 1, paddingRight: 8 }}>{label}</Text>
         <Text style={{ color: glass.muted }}>{amount}</Text>
       </View>
-      <View style={{ height: 12, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 6 }}>
+      <View style={{ height: 12, borderRadius: 6, backgroundColor: "rgba(18,82,48,0.08)", marginTop: 6 }}>
         <View style={{ width: `${width}%`, height: 12, borderRadius: 6, backgroundColor: color }} />
       </View>
     </View>
