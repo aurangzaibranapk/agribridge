@@ -1,3 +1,11 @@
+## Pending — 27 October 2026: Cash Needs-you queue (720)
+
+Branch `cursor/cash-needs-you-queue-9b60`. Migration **720 not applied** on Testing or Live. File only. 717 cash custody chain pehle se Live par hai — ye us ka UI hai. 720 sirf menu ka naam aur feature_help. Koi table, koi RPC, koi raqam nahi badalti. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- Safha `/admin/cash-custody`: Aaj aapki zarurat. Ask why in-app. Approve maujooda `verifyCollectionDeposit`.
+- `720_cash_needs_you_help.sql`. Rollback: `720_cash_needs_you_help.rollback.sql`.
+- Fuel / payroll is mein nahi.
+
 ## Pending — 27 October 2026: reel website pages (719)
 
 Branch `cursor/reel-website-features-3d67`. Migration **719 not applied** on Testing or Live. File only. 717 cash custody hai, 718 batch ginti. Ye un ke baad. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).

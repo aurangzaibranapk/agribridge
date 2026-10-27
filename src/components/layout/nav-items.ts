@@ -121,7 +121,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/shaam-ka-hisaab", label: "Shaam ka Hisaab", icon: Calculator },
       { href: "/admin/cash-close", label: "Raat ki Cash Ginti", icon: Calculator },
       { href: "/admin/cash-handover", label: "Cash Haath Badalna", icon: ArrowLeftRight },
-      { href: "/admin/cash-custody", label: "Kis ke paas Cash", icon: Wallet },
+      { href: "/admin/cash-custody", label: "Cash custody", icon: Wallet },
       { href: "/admin/bank-reconcile", label: "Bank se Milaan", icon: Landmark },
       { href: "/admin/quantity-money", label: "Miqdar aur Paisa", icon: Scale },
       { href: "/admin/reconciliation", label: "Roz ka Milaan", icon: ClipboardCheck },

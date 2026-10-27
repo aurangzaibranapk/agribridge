@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createServiceClient } from "@/lib/supabase/service";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { t } from "@/lib/i18n/translations";
 import { loadCustodyPacket, loadCustodyViewer } from "@/lib/cash-custody/load";
 import { holdDuration, isCustodyOverdue, isHoldingKind, kindLabel, rs, statusLabel, whenPkt } from "@/lib/cash-custody/chain";
 import { PacketActions } from "./packet-actions";
@@ -10,6 +12,7 @@ export const dynamic = "force-dynamic";
 const DESK = new Set(["owner", "super_admin", "admin", "finance"]);
 
 export default async function CustodyPacketPage({ params }: { params: { id: string } }) {
+  const lang = getLanguageFromCookies("rm");
   const viewer = await loadCustodyViewer();
   if (!viewer) redirect("/login");
   const loaded = await loadCustodyPacket(params.id, viewer);
@@ -30,7 +33,7 @@ export default async function CustodyPacketPage({ params }: { params: { id: stri
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
-        <Link href="/admin/cash-custody" className="text-sm text-surface-500">← Kis ke paas cash</Link>
+        <Link href="/admin/cash-custody" className="text-sm text-surface-500">← {t("cny_title", lang)}</Link>
         <h1 className="mt-1 font-display text-xl font-semibold text-surface-900">
           {packet.shopName ?? packet.branchName ?? "Shop"} · {packet.shiftNumber ?? "Shift"}
         </h1>
