@@ -219,7 +219,7 @@ export function approvalJourney(row: {
   verified_at?: string | null;
 } | null, actionLabel = "Manzoor karein"): TimelineStep[] {
   if (!row) {
-    return APPROVAL_STEPS.map((label) => ({ label, state: "done" }));
+    return APPROVAL_STEPS.map((label) => ({ label, state: "pending" }));
   }
   const checked = filled(row.fat_percentage);
   const verified = String(row.status ?? "") === "verified";

@@ -86,7 +86,6 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
   const week = karachiWeek();
   const weekRows = milkRows.filter((row) => inWeek(row.entry_date ?? null, week));
   const weekLitres = Math.round(weekRows.reduce((sum, row) => sum + litresOf(row), 0) * 100) / 100;
-  const khataText = khata.note && khata.owed == null ? "—" : rupees(khata.owed);
   const days = karachiDaySeries(7);
   const byDay = new Map<string, number>();
   for (const row of milkRows) {
@@ -126,24 +125,6 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
             {weekRows.map((row, index) => (
               <Text key={`${row.id ?? row.entry_date}-${index}`} style={{ color: colors.text, marginTop: 6 }}>
                 {row.entry_date} · {shiftLabel(row.shift)} · {litresOf(row)} L · {amountLine(row)}
-              </Text>
-            ))}
-          </Section>
-        </View>
-      ) : null}
-      {tab === "khata" ? (
-        <View>
-          <View style={{ backgroundColor: colors.gold, borderRadius: 18, padding: 16, marginBottom: 12 }}>
-            <Text style={{ color: "#3d2e10", fontWeight: "700" }}>Mera Wallet</Text>
-            <Text style={{ color: "#1c1408", fontSize: 28, fontWeight: "800", marginTop: 4 }}>{khataText}</Text>
-            <Text style={{ color: "#3d2e10", marginTop: 4 }}>{khata.note || "Baqaya, aap ki apni lines se"}</Text>
-          </View>
-          <Section title="Haal ka len-den" sub="Pichle 90 din">
-            {khata.linesNote ? <Empty title="Lines nahi khulin" body={khata.linesNote} /> : null}
-            {!khata.linesNote && khata.lines.length === 0 ? <Empty title="Koi line nahi" body="Udhaar ya adaigi jab darj hogi, tareekh aur raqam yahan aayenge. Track na ho to dash rehta hai." /> : null}
-            {khata.lines.map((line, index) => (
-              <Text key={`${line.entry_date}-${index}`} style={{ color: colors.text, marginBottom: 6 }}>
-                {line.entry_date} · {line.tafseel || line.category || "Line"} · {line.udhaar ? `udhaar ${line.udhaar}` : ""} {line.adaigi ? `adaigi ${line.adaigi}` : ""} · baqaya {line.baqaya ?? "—"}
               </Text>
             ))}
           </Section>

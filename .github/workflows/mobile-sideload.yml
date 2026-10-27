@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - cursor/mobile-phase1-4b80
+      - cursor/mobile-glass-631-4b80
 
 permissions:
   contents: write
@@ -27,7 +27,7 @@ jobs:
       EXPO_PUBLIC_PORTAL_URL: https://alranatraders.pk
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-      AGRIBRIDGE_VERSION_CODE: "630"
+      AGRIBRIDGE_VERSION_CODE: "631"
       CI: "1"
     steps:
       - uses: actions/checkout@v4
@@ -123,7 +123,7 @@ jobs:
           tag=v0.6.1-beta-test1
           notes=$(cat <<'EOF'
           Sideload test builds for phones. Not a Play Store upload.
-          versionName v0.6.1 Beta, versionCode 630, APP_CHANNEL=production.
+          versionName v0.6.1 Beta, versionCode 631, APP_CHANNEL=production.
           Live package pk.alranatraders.agribridge. Live Supabase project only. Not the TEST apk.
           Masla batayein, Role dekho, and Role badlo stay off on this production channel.
           The saved Supabase session refreshes on foreground and once after JWT expired. A dead refresh returns to login in Urdu. Raw HTTP/JSON stays on debug builds only.

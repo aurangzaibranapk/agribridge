@@ -7,6 +7,7 @@ import { countDelta, pctChange, ringDashOffset, timelineFinished, timelinePercen
 import { type AppLang } from "../../../src/lib/mobile/sub-brand";
 import { liveAuth, type LiveBag } from "./bits";
 import { liveGet, liveGetScoped, loadPhoneNotes } from "../../../src/lib/mobile/live-read";
+import { AGRIBRIDGE_OS_VERSION } from "../../../src/lib/app-version";
 import { pickPakistan, preferVillage, shortPlace, usablePlace } from "../../../src/lib/mobile/weather-place";
 
 export const glass = {
@@ -123,19 +124,20 @@ function upperBit(text: string): string {
 
 export function BrandHeader({ role, name, onProfile }: { role: string; name: string; centre?: string; onProfile?: () => void; live?: LiveBag }) {
   const ctx = useContext(LangContext);
-  const mark = ctx.mark.trim();
+  const mark = ctx.mark.trim() || "AgriBridge";
   const line = ctx.line.trim();
   const initial = (name.trim().charAt(0) || role.charAt(0) || "A").toUpperCase();
-  const brandLine = [mark, line, role].map((bit) => bit.trim()).filter(Boolean).map(upperBit).join(" · ");
+  const goldLine = [line, role].map((bit) => bit.trim()).filter(Boolean).map(upperBit).join(" · ");
   return (
     <Rise index={0}>
-      <View style={{ marginBottom: 10 }}>
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
+      <View style={{ marginBottom: 12 }}>
+        <Text style={{ color: glass.muted, fontSize: 12, fontWeight: "700" }} numberOfLines={1}>{mark} · {AGRIBRIDGE_OS_VERSION}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", marginTop: 8 }}>
           <View style={{ flex: 1, paddingRight: 10 }}>
-            <Text style={{ color: glass.gold, fontSize: 11, fontWeight: "800", letterSpacing: /[A-Za-z]/.test(brandLine) ? 0.6 : 0 }} numberOfLines={2}>{brandLine}</Text>
-            <Text style={{ color: glass.text, fontSize: 22, lineHeight: 28, fontWeight: "800", marginTop: 4 }} numberOfLines={2}>Assalam o Alaikum, {name || "—"}</Text>
+            <Text style={{ color: glass.gold, fontSize: 11, fontWeight: "800", letterSpacing: /[A-Za-z]/.test(goldLine) ? 0.7 : 0 }} numberOfLines={1}>{goldLine}</Text>
+            <Text style={{ color: glass.text, fontSize: 22, lineHeight: 28, fontWeight: "800", marginTop: 2 }} numberOfLines={2}>Assalam o Alaikum, {name || "—"}</Text>
           </View>
-          <Pressable onPress={onProfile} style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: "#146B3A", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
+          <Pressable onPress={onProfile} style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "#146B3A", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
             <Text style={{ color: "#fff", fontWeight: "800", fontSize: 18 }}>{initial}</Text>
           </Pressable>
         </View>
@@ -367,12 +369,12 @@ export function BarChart({ values, labels, color, format }: { values: number[]; 
   const max = Math.max(...values, 0);
   if (!values.length) return <Text style={{ color: glass.muted }}>Chart ke liye qatarein nahi.</Text>;
   return (
-    <View style={{ flexDirection: "row", alignItems: "flex-end", height: 132 }}>
+    <View style={{ flexDirection: "row", alignItems: "flex-end", height: 156 }}>
       {values.map((value, index) => (
         <View key={`${labels[index]}-${index}`} style={{ flex: 1, alignItems: "center" }}>
-          <Text style={{ color: glass.muted, fontSize: 9, marginBottom: 4 }} numberOfLines={1}>{value > 0 ? (format ? format(value) : (Number.isInteger(value) ? String(value) : value.toFixed(1))) : ""}</Text>
-          <View style={{ width: 16, height: max > 0 ? Math.max(6, (value / max) * 84) : 6, borderRadius: 8, backgroundColor: color, opacity: value > 0 ? 1 : 0.25 }} />
-          <Text style={{ color: glass.muted, fontSize: 10, marginTop: 4 }}>{labels[index]}</Text>
+          <Text style={{ color: glass.muted, fontSize: 11, marginBottom: 6 }} numberOfLines={1}>{value > 0 ? (format ? format(value) : (Number.isInteger(value) ? String(value) : value.toFixed(1))) : ""}</Text>
+          <View style={{ width: "68%", maxWidth: 40, minWidth: 22, height: max > 0 ? Math.max(8, (value / max) * 96) : 8, borderRadius: 10, backgroundColor: color, opacity: value > 0 ? 1 : 0.25 }} />
+          <Text style={{ color: glass.muted, fontSize: 11, marginTop: 6 }}>{labels[index]}</Text>
         </View>
       ))}
     </View>
@@ -868,8 +870,8 @@ export function BarTrack({ label, value, max, color, unit }: { label: string; va
         <Text style={{ color: glass.text, flex: 1, paddingRight: 8 }}>{label}</Text>
         <Text style={{ color: glass.muted }}>{amount}</Text>
       </View>
-      <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4 }}>
-        <View style={{ width: `${width}%`, height: 8, borderRadius: 4, backgroundColor: color }} />
+      <View style={{ height: 12, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 6 }}>
+        <View style={{ width: `${width}%`, height: 12, borderRadius: 6, backgroundColor: color }} />
       </View>
     </View>
   );
