@@ -1,3 +1,11 @@
+## Pending — 27 October 2026: reel website pages (719)
+
+Branch `cursor/reel-website-features-3d67`. Migration **719 not applied** on Testing or Live. File only. 717 cash custody hai, 718 batch ginti. Ye un ke baad. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `719_sales_analytics_help.sql` — sirf feature + feature_help + dashboard link. Koi table, koi rate, koi qatarein nahi badalti.
+- Public safhe code se hain: `/faslon-ke-tips`, `/mahabali-doodh-gandum-rate`. Admin: `/admin/reports/sales/analytics`.
+- Rollback: `719_sales_analytics_help.rollback.sql`.
+
 ## Pending — 27 October 2026: batch remaining = ginti (718) — NOT applied
 
 Branch `cursor/batch-ginti-align-8978`. Migration **718 file only**. Testing aur Live dono par **nahi** chali. Live (`ktskwawkslaznkjjacni`) par sirf read-only scan hua. Apply tab, jab backup verify ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live.

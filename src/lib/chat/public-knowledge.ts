@@ -83,6 +83,8 @@ const SITE_GUIDE = `PUBLIC SITE (already on the website):
 - Dairy: /dairy — milk collection, quality checks, feed, and livestock.
 - Farm products: /#farm-products — cow and buffalo desi ghee from the farm.
 - Kisan AI: /ai-crop-doctor — upload a crop photo for disease detection, treatment, and a spray schedule. /kisan-ai is the door to that tool.
+- Faslon ke tips: /faslon-ke-tips — short public farming notes (sowing window, DAP timing, milk routine, disease signs). No spray dose on that page.
+- Today's Mahabali milk and wheat rate: /mahabali-doodh-gandum-rate. Quote a number only if PUBLIC FACTS include it. Otherwise send the visitor to that page and say the rate is shown there only when it is on record. Never invent a rate and never call an older date "today".
 - Services: /services — farm advisory, AI crop doctor, khata (buy now, settle later; no balances in this chat), reliable supply of seed and fertilizer.
 - Products and prices: /products — quote a price only when PUBLIC FACTS list it.
 - Careers: /careers — open vacancies. The visitor applies with the button on that page.
@@ -131,6 +133,8 @@ const LANGUAGE_REQUEST = /urdu men|urdu mein|roman urdu|bat kro|baat karo|baat k
 
 const TOPIC_RULES: { id: Topic; re: RegExp }[] = [
   { id: "jobs", re: /\b(job|jobs|vacancy|vacancies|career|careers|nokri|naukri|mulazmat|mco|ielan)\b|نوکری|ملازمت|آسام|ایم سی او/gi },
+  { id: "today-rate", re: /(doodh|milk|gandum|wheat|گندم|دودھ).{0,24}(rate|qeemat|ریٹ|قیمت)|(rate|qeemat|ریٹ).{0,24}(doodh|milk|gandum|wheat|گندم|دودھ)|aaj ka rate|rate aaj/gi },
+  { id: "tips", re: /faslon ke tips|farming tips|sowing tips|bijai|\bcrop tips\b|فصلوں کے/gi },
   { id: "products", re: /\b(product|products|price|prices|rate|rates|qeemat|qimat|qemat|keemat|daam|dam|stock|saman|seed|fertilizer|beej|khaad)\b|قیمت|مصنوعات|دام|سامان|بیج|کھاد/gi },
   { id: "register", re: /\b(register|registration|signup|sign-up|darj)\b|رجسٹر|درج نام/gi },
   { id: "contact", re: /\b(contact|phone|email|whatsapp|hours|rabta|raabta|number)\b|رابط|فون|واٹس|ای میل/gi },
@@ -140,7 +144,7 @@ const TOPIC_RULES: { id: Topic; re: RegExp }[] = [
   { id: "brand", re: /\b(agribridge|wasela|who are you)\b|ایگری|وسیلہ|کون ہو/gi },
 ];
 
-type Topic = "jobs" | "products" | "register" | "contact" | "branches" | "khata" | "services" | "brand";
+type Topic = "jobs" | "today-rate" | "tips" | "products" | "register" | "contact" | "branches" | "khata" | "services" | "brand";
 
 function bestTopic(question: string): Topic | null {
   let best: Topic | null = null;
@@ -495,6 +499,30 @@ function matchingFaq(question: string, faqs: PublicFaq[]): PublicFaq | null {
   return bestScore >= 2 ? best : null;
 }
 
+function todayRateAnswer(lang: ChatLang): ChatReply {
+  return {
+    answer: say(lang, {
+      en: "Today's Mahabali milk rate (per litre) and wheat rate (per 40kg) are on /mahabali-doodh-gandum-rate. If nothing is recorded yet, that page says the rate is not in. This chat does not guess a number, and an older date is not called today.",
+      rm: "Mahabali ka aaj ka doodh (fi litre) aur gandum (40kg) /mahabali-doodh-gandum-rate par hai. Record khali ho to safha kehta hai ke rate abhi nahi. Ye chat number andaza nahi lagati, aur purani tareekh ko aaj nahi kehti.",
+      ur: "مہابالی کا آج کا دودھ (فی لٹر) اور گندم (۴۰ کلو) کے ریٹ کا صفحہ الگ ہے۔ ریکارڈ خالی ہو تو صفحہ کہتا ہے کہ ریٹ ابھی نہیں۔ یہ چیٹ نمبر اندازہ نہیں لگاتی، اور پرانی تاریخ کو آج نہیں کہتی۔",
+    }),
+    source: "service",
+    link: "/mahabali-doodh-gandum-rate",
+  };
+}
+
+function tipsAnswer(lang: ChatLang): ChatReply {
+  return {
+    answer: say(lang, {
+      en: "Short farming notes are on /faslon-ke-tips: wheat sowing window, when to apply DAP, a simple milk routine, and what yellow wheat patches can mean. Spray dose is not on that page — ask an expert or use Kisan AI.",
+      rm: "Chhote mashware /faslon-ke-tips par hain: gandum ki bijai, DAP kab, doodh ka sadha tariqa, aur peele dhabbe. Spray ki dose us safhe par nahi — expert ya Kisan AI.",
+      ur: "چھوٹے مشورے فصلوں کے ٹپس کے صفحے پر ہیں: گندم کی بوائی، ڈی اے پی کب، دودھ کا سادہ طریقہ، اور پیلے دھبے۔ سپرے کی خوراک اس صفحے پر نہیں۔",
+    }),
+    source: "service",
+    link: "/faslon-ke-tips",
+  };
+}
+
 export function composePublicAnswer(question: string, lang: ChatLang, facts: PublicFacts): ChatReply | null {
   const q = question.trim();
   if (!q) {
@@ -520,6 +548,8 @@ export function composePublicAnswer(question: string, lang: ChatLang, facts: Pub
   if (isLanguageRequest(q)) return languageAnswer(lang);
 
   const topic = bestTopic(q);
+  if (topic === "today-rate") return todayRateAnswer(lang);
+  if (topic === "tips") return tipsAnswer(lang);
   if (topic === "products") return productsAnswer(q, lang, facts);
   if (topic === "jobs") return jobsAnswer(lang, facts);
   if (topic === "contact") return contactAnswer(lang, facts);

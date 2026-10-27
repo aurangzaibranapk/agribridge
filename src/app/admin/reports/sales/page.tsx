@@ -530,6 +530,11 @@ export default async function SalesReportPage({
             ? `${dukanKaNaam.get(meriDukan) ?? "Aap ki dukan"} — is arse ka poora hisaab`
             : "Sales across all branches and dealers"
         }
+        actions={
+          <Link href="/admin/reports/sales/analytics" className="text-sm font-semibold text-emerald-800 hover:underline dark:text-emerald-300">
+            Aaj ka dashboard
+          </Link>
+        }
       />
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
