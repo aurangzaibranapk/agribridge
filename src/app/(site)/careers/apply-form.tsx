@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type DragEvent, type FormEvent, type React
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { applyToVacancy, type ActionState } from "@/actions/jobs";
-import { applyInputError, readApplyFields } from "@/lib/jobs/apply-input";
+import { applyInputError, BLOOD_GROUPS, readApplyFields } from "@/lib/jobs/apply-input";
 import type { CareerCard } from "@/lib/jobs/vacancy-i18n";
 import { isHiddenBrand } from "@/lib/brand";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
@@ -16,6 +16,7 @@ const initialState: ActionState = {};
 const STEPS: TranslationKey[] = ["sp_step_basic", "sp_step_experience", "sp_step_documents"];
 
 const FILES: Array<{ name: string; label: TranslationKey; accept: string }> = [
+  { name: "photo", label: "sp_id_photo", accept: "image/*" },
   { name: "cnic_front_image", label: "sp_cnic_front", accept: "image/*" },
   { name: "cnic_back_image", label: "sp_cnic_back", accept: "image/*" },
   { name: "certificate", label: "sp_qual_cert", accept: "image/*,.pdf" },
@@ -157,6 +158,18 @@ export function ApplyForm({ vacancy, onClose }: { vacancy: CareerCard; onClose: 
                 <Field label={t("sp_cnic_number", lang)} className={show(0)} urdu={urdu}>
                   <input name="cnic" dir="ltr" placeholder={t("sp_cnic_number", lang)} className={inputCls(urdu)} />
                 </Field>
+                <Field label={t("sp_blood_group", lang)} className={show(0)} urdu={urdu}>
+                  <select name="blood_group" defaultValue="" className={inputCls(urdu)}>
+                    <option value="">{t("sp_blood_unknown", lang)}</option>
+                    {BLOOD_GROUPS.map((group) => <option key={group} value={group}>{group}</option>)}
+                  </select>
+                </Field>
+                <Field label={t("sp_emergency_name", lang)} className={show(0)} urdu={urdu}>
+                  <input name="emergency_contact_name" autoComplete="name" placeholder={t("sp_emergency_name", lang)} className={inputCls(urdu)} />
+                </Field>
+                <Field label={t("sp_emergency_phone", lang)} className={show(0)} urdu={urdu}>
+                  <input name="emergency_contact_phone" dir="ltr" autoComplete="tel" placeholder={t("sp_emergency_phone", lang)} className={inputCls(urdu)} />
+                </Field>
                 <Field label={t("sp_address", lang)} className={show(0)} urdu={urdu}>
                   <input name="address" autoComplete="street-address" placeholder={t("sp_address", lang)} className={inputCls(urdu)} />
                 </Field>
@@ -177,7 +190,7 @@ export function ApplyForm({ vacancy, onClose }: { vacancy: CareerCard; onClose: 
 
                 <h3 className={`${sectionCls} mt-1 ${show(2)}`}>{t("sp_documents", lang)}</h3>
                 <div className={`col-span-2 ${show(2)}`}>
-                <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
                   {FILES.map((file) => (
                     <FileDrop key={file.name} name={file.name} label={t(file.label, lang)} accept={file.accept} hint={t("sp_drop_or_browse", lang)} ready={t("sp_file_ready", lang)} clearLabel={t("sp_clear_file", lang)} />
                   ))}

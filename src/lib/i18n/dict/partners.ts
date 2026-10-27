@@ -111,7 +111,8 @@ export const peoplePagesDict = {
   // ---- ID card ----
   ic_settings: { en: "Card settings", rm: "Card ki settings", ur: "کارڈ کی سیٹنگز" },
   ic_print: { en: "Print ID card", rm: "ID card print karein", ur: "ID کارڈ پرنٹ کریں" },
-  ic_download: { en: "Download ID card details", rm: "ID card ki tafseel download karein", ur: "ID کارڈ کی تفصیل ڈاؤن لوڈ کریں" },
+  ic_download: { en: "Download ID card PDF", rm: "ID card ki PDF download karein", ur: "آئی ڈی کارڈ کی PDF ڈاؤن لوڈ کریں" },
+  ic_not_on_file: { en: "Not on file", rm: "Darj nahi", ur: "درج نہیں" },
   ic_share_whatsapp: { en: "Share via WhatsApp", rm: "WhatsApp par bhejein", ur: "واٹس ایپ پر بھیجیں" },
   ic_share_email: { en: "Share via Email", rm: "Email par bhejein", ur: "ای میل پر بھیجیں" },
   ic_blood_label: { en: "Blood Group:", rm: "Blood group:", ur: "بلڈ گروپ:" },

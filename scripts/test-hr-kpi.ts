@@ -100,6 +100,9 @@ assert.ok(parseCandidate(fd({ vacancy_id: U(1), full_name: "Ali", email: "a@b.pk
 assert.ok(!parseCandidate(fd({ vacancy_id: U(1), full_name: "Ali", email: "a@b.pk", gender: "nope" })).ok);
 const hiredGender = parseCandidate(fd({ vacancy_id: U(1), full_name: "Ali", email: "a@b.pk", gender: "female" }));
 assert.ok(hiredGender.ok && hiredGender.value.gender === "female");
+assert.ok(!parseCandidate(fd({ vacancy_id: U(1), full_name: "Ali", email: "a@b.pk", blood_group: "blue" })).ok);
+const withBlood = parseCandidate(fd({ vacancy_id: U(1), full_name: "Ali", email: "a@b.pk", blood_group: "o+", emergency_contact_name: "Abid", emergency_contact_phone: "03001112222", cnic: "38405-0000000-1" }));
+assert.ok(withBlood.ok && withBlood.value.blood_group === "O+" && withBlood.value.cnic === "38405-0000000-1");
 assert.ok(!parsePulse(fd({ score: "6" }), "2026-10-21").ok);
 assert.strictEqual(stageToStatus("hired"), "joined"); assert.strictEqual(stageToStatus("x"), null);
 

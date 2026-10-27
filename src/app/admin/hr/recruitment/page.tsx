@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { addCandidate, moveStage } from "@/actions/hr-kpi";
 import { STAGE_STATUS } from "@/lib/hr-kpi/core";
-import { staffGenderOrNull } from "@/lib/jobs/apply-input";
+import { BLOOD_GROUPS, staffGenderOrNull } from "@/lib/jobs/apply-input";
+import { t } from "@/lib/i18n/translations";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { Flash, Field, HrSubHeader, NoAccess, btnCls, cardCls, inputCls, requireHr } from "@/components/hr-kpi/hr-form-bits";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +23,7 @@ function stageOf(status: string): string {
 
 export default async function RecruitmentPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
   if (!(await requireHr())) return <NoAccess />;
+  const lang = getLanguageFromCookies("rm");
   const db = createClient() as unknown as Db;
   const vacQ = await db.from("job_vacancies").select("id,title,is_open").order("created_at", { ascending: false });
   let appQ = await db.from("job_applications").select("id,full_name,phone,status,created_at,hired_at,vacancy_id,gender").order("created_at", { ascending: false }).limit(200);
@@ -49,6 +52,7 @@ export default async function RecruitmentPage({ searchParams }: { searchParams?:
           <Field label="Naam"><input name="full_name" required minLength={2} className={inputCls} /></Field>
           <Field label="Email"><input type="email" name="email" required className={inputCls} /></Field>
           <Field label="Mobile"><input name="phone" className={inputCls} /></Field>
+          <Field label={t("sp_cnic_number", lang)}><input name="cnic" className={inputCls} /></Field>
           <Field label="Gender">
             <select name="gender" className={inputCls}>
               <option value="">—</option>
@@ -57,6 +61,14 @@ export default async function RecruitmentPage({ searchParams }: { searchParams?:
               <option value="other">Other</option>
             </select>
           </Field>
+          <Field label={t("sp_blood_group", lang)}>
+            <select name="blood_group" className={inputCls} defaultValue="">
+              <option value="">{t("sp_blood_unknown", lang)}</option>
+              {BLOOD_GROUPS.map((group) => <option key={group} value={group}>{group}</option>)}
+            </select>
+          </Field>
+          <Field label={t("sp_emergency_name", lang)}><input name="emergency_contact_name" className={inputCls} /></Field>
+          <Field label={t("sp_emergency_phone", lang)}><input name="emergency_contact_phone" className={inputCls} /></Field>
           <div className="sm:col-span-4"><button className={btnCls}>Candidate darj karein</button></div>
         </form>
       ) : <p className={`${cardCls} text-sm text-surface-500`}>Pehle <a className="text-brand-700 underline" href="/admin/job-applications">Careers</a> mein vacancy banayein.</p>}
