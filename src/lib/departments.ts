@@ -55,6 +55,7 @@ export const DEPARTMENTS: Department[] = [
       "/admin/products",
       "/admin/inventory",
       "/admin/reports/sales",
+      "/admin/reports/sales/analytics",
       ...REPORTS_BASIC,
     ],
   },

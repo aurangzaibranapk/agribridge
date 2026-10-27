@@ -22,6 +22,7 @@ const quickLinks = [
   ["Dairy", "/#services"],
   ["Farm Products", "/#farm-products"],
   ["Kisan AI", "/ai-crop-doctor"],
+  ["Faslon ke tips", "/faslon-ke-tips"],
   ["Partner", "/contact"],
 ] as const;
 
@@ -31,6 +32,7 @@ const companyLinks = [
   ["Our Team", "/about"],
   ["Partner With Us", "/contact"],
   ["Contact", "/contact"],
+  ["Doodh & gandum rate", "/mahabali-doodh-gandum-rate"],
 ] as const;
 
 export async function SiteFooter() {

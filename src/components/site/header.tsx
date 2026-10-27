@@ -16,6 +16,7 @@ const NAV = [
   { href: "/#services", label: "Dairy" },
   { href: "/#farm-products", label: "Farm Products" },
   { href: "/ai-crop-doctor", label: "Kisan AI" },
+  { href: "/faslon-ke-tips", label: "Faslon ke tips" },
   { href: "/contact", label: "Partner" },
 ];
 

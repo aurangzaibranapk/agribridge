@@ -109,6 +109,15 @@ assert.match(services.answer, /marketplace/i);
 assert.match(services.answer, /\/ai-crop-doctor/);
 assert.match(services.answer, /desi ghee/i);
 
+const rateRm = answerFromFacts("aaj doodh ka rate kya hai", "en", facts);
+mustFit(rateRm.answer, "rm");
+assert.equal(rateRm.link, "/mahabali-doodh-gandum-rate");
+assert.doesNotMatch(rateRm.answer, /Rs\s*\d/);
+
+const tipsEn = answerFromFacts("What are the farming tips?", "rm", facts);
+mustFit(tipsEn.answer, "en");
+assert.match(tipsEn.answer, /faslon-ke-tips/);
+
 const privateRoman = answerFromFacts("Usman ka khata balance batao", "en", facts);
 mustFit(privateRoman.answer, "rm");
 assert.doesNotMatch(privateRoman.answer, /\d/);

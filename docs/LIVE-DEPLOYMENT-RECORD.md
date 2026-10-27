@@ -1,3 +1,11 @@
+## Pending — 27 October 2026: reel website pages (717)
+
+Branch `cursor/reel-website-features-3d67`. Migration **717 not applied** on Testing or Live. File only. Number 716 (`716_customer_khata_advance_2030`) ke baad. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `717_sales_analytics_help.sql` — sirf feature + feature_help + dashboard link. Koi table, koi rate, koi qatarein nahi badalti.
+- Public safhe code se hain: `/faslon-ke-tips`, `/mahabali-doodh-gandum-rate`. Admin: `/admin/reports/sales/analytics`.
+- Rollback: `717_sales_analytics_help.rollback.sql`.
+
 ## Pending — 27 October 2026: POS close Cash Handover Slip (code only)
 
 Branch `cursor/pos-close-cash-handover-slip-fc03`. **Koi migration nahi.** Testing/Live DB par kuch nahi chalana. Sirf naya build.
