@@ -1,8 +1,8 @@
 name: Mobile sideload APKs
 
 # Live sideload stays on tag v0.6.1-beta-test1.
-# A push does not rebuild or replace those APKs. Dispatch this workflow to publish a new live build.
-# Testing-database APKs are mobile-sideload-test.yml on tag v0.6.1-beta-testdb.
+# A push to this branch publishes AgriBridge-<versionCode>.apk. Dispatch can publish the same build.
+# Testing-database APKs are mobile-sideload-test.yml on tag v0.6.1-beta-testdb. Do not upload those here.
 on:
   workflow_dispatch:
   push:
@@ -19,7 +19,7 @@ concurrency:
 jobs:
   sideload:
     name: arm64 and armeabi-v7a release APKs
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
