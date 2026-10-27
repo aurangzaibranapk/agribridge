@@ -1,3 +1,23 @@
+## Pending — 27 October 2026: POS cash custody chain (717)
+
+Branch `cursor/pos-cash-custody-slips-1947`. Migration **717 not applied** on Testing or Live. File only. Number 716 customer khata / 2030 (PR #225) ka hai — ye alag hai. Testing project MCP list mein nahi tha, is liye yahan nahi chali. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- Har dukan, shift band: staff copy + jama copy. Har hop (bheja, wasoli, bank jama, verify) zimmedar + waqt. Dashboard `/admin/cash-custody`. 1 din bina verify: Admin, Super Admin, Owner ko in-app alert.
+- Custody se bank jama sirf wasoli ke baad (`with_holder`). Verify 1000 se bank karti hai; 1030 par atki cash is darwaze se nahi nikalti.
+- Wasoli qanoon PR #223 ka hai, jo main par merge ho chuka. Is migration ne `receiveCash` nahi chhera.
+- Yasir / 2030 customer ledger is mein nahi — wo 716 hai.
+- Cron: pg_cron `agribridge_cash_custody_overdue` har ghante :15, warna `GET /api/cron/cash-custody-overdue` with `CRON_SECRET`. SMS/WhatsApp nahi.
+- Rollback: `supabase/migrations/717_pos_cash_custody_chain.rollback.sql`.
+
+## Pending — 27 October 2026: POS close Cash Handover Slip (code only)
+
+Branch `cursor/pos-close-cash-handover-slip-fc03`. **Koi migration nahi.** Testing/Live DB par kuch nahi chalana. Sirf naya build.
+
+- POS Shift Band par counted cash > 0 ho to Daily Cash Slip upar se form ko nahi dhakti.
+- Cash bhejte hi Cash Handover Slip isi screen par khulti hai (`?embed=1&print=1`).
+- Sales staff ke paas list (`/admin/cash-handover`) ki view ijazat nahi — slip ka raasta ab khulta hai. List phir bhi band.
+- Wasoli: Finance role ke naam bheja cash Manager / Finance / Admin / Owner darj kar sakte hain. Bhejne wala khud nahi. Koi migration nahi.
+
 ## Phone live APK — 27 October 2026 — app only, Live SQL nahi
 
 Live sideload versionCode 630. Package `pk.alranatraders.agribridge`. Tag `v0.6.1-beta-test1`. Supabase `ktskwawkslaznkjjacni`. `APP_CHANNEL=production`: Masla, Role dekho, aur Role badlo band. TEST APK `pk.alranatraders.agribridge.test` alag rehti hai. Play TWA versionCode 1 tha, installed sideload 605 tha, is liye 630 usi package par upgrade hai. 698 pehle se Live par hai. 700 se 711 tak testing data aur test function patches hain — Live par nahi chalani. `app_phone_notes` Live par na ho to phone dash dikhata hai, crash nahi. Koi nayi Live SQL is build ke liye zaroori nahi. Backup maange baghair Live database par kuch nahi chala.
@@ -133,17 +153,6 @@ Rollback: `698_mobile_phase1.rollback.sql`. Us se pehle `attendance_records` ki 
 - Rollback: `698_mobile_phase1.rollback.sql` (nayi qadron wali rows hon to purana check wapas nahi lagega)
 
 WhatsApp number code mein nahi. Live par link tabhi dikhe jab `SUPPORT_WHATSAPP_E164` ya `website_settings.support_whatsapp` ya `contact_phone` set ho.
-
-## Pending — 27 October 2026: POS cash custody chain (717)
-
-Branch `cursor/pos-cash-custody-slips-1947`. Migration **717 not applied** on Testing or Live. File only. Number 716 customer khata / 2030 (PR #225) ka hai — ye alag hai. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
-
-- Har dukan, shift band: staff copy + jama copy. Har hop (bheja, wasoli, bank jama, verify) zimmedar + waqt. Dashboard `/admin/cash-custody`. 1 din bina verify: Admin, Super Admin, Owner ko in-app alert.
-- Custody se bank jama sirf wasoli ke baad (`with_holder`). Verify 1000 se bank karti hai; 1030 par atki cash is darwaze se nahi nikalti.
-- `receiveCash` / wasoli qanoon is migration aur is branch mein nahi badla. PR #223 alag hai.
-- Yasir / 2030 customer ledger is mein nahi.
-- Cron: pg_cron `agribridge_cash_custody_overdue` har ghante :15, warna `GET /api/cron/cash-custody-overdue` with `CRON_SECRET`. SMS/WhatsApp nahi.
-- Rollback: `supabase/migrations/717_pos_cash_custody_chain.rollback.sql`.
 
 ## Pending — 27 October 2026: self-merge Reject (715)
 

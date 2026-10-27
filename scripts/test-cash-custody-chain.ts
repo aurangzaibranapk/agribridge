@@ -61,10 +61,10 @@ assert.match(
 );
 
 const handover = readFileSync("src/actions/cash-handover.ts", "utf8");
-assert.match(handover, /export async function receiveCash/);
-assert.match(handover, /h\.to_profile_id !== user\.id/);
-assert.match(handover, /Ye cash aap ke naam nahi bheja gaya/);
-assert.doesNotMatch(handover, /canRecordHandoverReceipt/);
+const receive = handover.slice(handover.indexOf("export async function receiveCash"));
+assert.match(receive, /canRecordHandoverReceipt/);
+assert.match(receive, /Bhejne wala khud wusool nahi likh sakta/);
+assert.doesNotMatch(receive, /custody_packet/);
 
 const custodyAction = readFileSync("src/actions/cash-custody-chain.ts", "utf8");
 assert.match(custodyAction, /packet\.status !== "with_holder"/);

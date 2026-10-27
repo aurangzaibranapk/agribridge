@@ -28,8 +28,7 @@ assert.match(rollback, /cron.unschedule/);
 
 const handover = readFileSync("src/actions/cash-handover.ts", "utf8");
 const receive = handover.slice(handover.indexOf("export async function receiveCash"));
-assert.match(receive, /to_profile_id !== user\.id/);
-assert.doesNotMatch(receive, /canRecordHandoverReceipt/);
+assert.match(receive, /canRecordHandoverReceipt/);
 assert.doesNotMatch(receive, /custody_packet/);
 
 console.log("717 sql checks passed");

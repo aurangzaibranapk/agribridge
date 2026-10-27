@@ -5,7 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
 import { ACC } from "@/lib/ledger/rules";
 import { cashBookLikhein } from "@/lib/ledger/cash-book";
-import { REASON_MIN } from "@/lib/ledger/handover";
+import { canRecordHandoverReceipt, REASON_MIN } from "@/lib/ledger/handover";
 import { requireAction } from "@/lib/access/guard";
 import { logAudit } from "@/lib/audit";
 import { notifyRoles, notifyUser } from "@/lib/notifications";
@@ -144,7 +144,14 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
   });
   if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
 
-  const shiftId = (formData.get("shift_id") as string) || null;
+  // shift_id slip ke header ke liye hai (shop / POS / shift number).
+  // shift_ids sirf tab pos_shifts ko "bhej diya" mark karti hai jab poori
+  // raqam gayi ho. Khali shift_ids = partial — shift pending rehti hai.
+  // Purani calls shift_ids bhejti hi nahi thin; un par shift_id se link.
+  const recordShiftId = ((formData.get("shift_id") as string) || "").trim() || null;
+  const shiftIdsFieldPresent = formData.has("shift_ids");
+  const shiftIdsRaw = ((formData.get("shift_ids") as string) || "").trim();
+  const shiftIdsList = shiftIdsRaw ? shiftIdsRaw.split(",").map((id) => id.trim()).filter(Boolean) : [];
   const { data: handoverRow, error } = await service
     .from("cash_handovers")
     .insert({
@@ -157,33 +164,33 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
       from_source: fromSource,
       sent_note: note,
       sent_entry_id: posted.id,
+      shift_id: recordShiftId,
       status: "sent",
     })
     .select("id")
     .single();
   if (error) return { error: error.message };
 
-  // POS Shift se seedha bheja gaya ho to un shifts par nishan laga do.
-  // shift_ids (comma-sep) agar poori raqam bheji to; partial mein khali
-  // rehti hai -- shifts pending rahengi tab tak ke full settle na ho.
-  const shiftIdsRaw = ((formData.get("shift_ids") as string) || "").trim();
-  const shiftIdsList = shiftIdsRaw ? shiftIdsRaw.split(",").filter(Boolean) : [];
-  // Backward compat: purani calls sirf shift_id bhejti thi
-  const legacyShiftId = ((formData.get("shift_id") as string) || "").trim();
-  if (shiftIdsList.length > 0) {
-    await service
+  const settleIds = shiftIdsList.length > 0 ? shiftIdsList : !shiftIdsFieldPresent && recordShiftId ? [recordShiftId] : [];
+  if (settleIds.length > 0) {
+    const linked = await service
       .from("pos_shifts")
       .update({ cash_handover_id: handoverRow.id })
-      .in("id", shiftIdsList)
+      .in("id", settleIds)
       .eq("staff_id", user.id)
-      .is("cash_handover_id", null);
-  } else if (legacyShiftId) {
-    await service
-      .from("pos_shifts")
-      .update({ cash_handover_id: handoverRow.id })
-      .eq("id", legacyShiftId)
-      .eq("staff_id", user.id)
-      .is("cash_handover_id", null);
+      .is("cash_handover_id", null)
+      .select("id");
+    // Owner/admin kisi aur ki shift band karke cash bheje to staff_id
+    // us ka nahi hota — closed_by se jodein, warna slip par shift/shop
+    // gayab rehta hai aur "bhejna baqi" dubara nazar aata hai.
+    if (!linked.error && (linked.data?.length ?? 0) === 0) {
+      await service
+        .from("pos_shifts")
+        .update({ cash_handover_id: handoverRow.id })
+        .in("id", settleIds)
+        .eq("closed_by", user.id)
+        .is("cash_handover_id", null);
+    }
   }
 
   revalidatePath("/admin/cash-handover");
@@ -196,9 +203,10 @@ export async function sendCash(_prev: ActionState, formData: FormData): Promise<
   const receiverName = (toProfile?.full_name as string | null) ?? "Koi";
   const notifTitle = `Cash Handover — Rs ${amount.toLocaleString()}`;
   const notifMsg = `${senderName} ne Rs ${amount.toLocaleString()} bheja ${receiverName} ko. Status: raaste mein. Tasdeeq ka intezar.`;
-  await notifyRoles(["finance", "admin", "manager", "owner", "super_admin"], notifTitle, notifMsg, "/admin/cash-handover");
-  // Lene wale ko seedha bhi batao
-  await notifyUser(toProfileId, notifTitle, `${senderName} ne aapko Rs ${amount.toLocaleString()} bheja hai — Cash Handover par tasdeeq karein.`, "/admin/cash-handover");
+  const slipPath = `/admin/cash-handover/slip/${handoverRow.id}`;
+  await notifyRoles(["finance", "admin", "manager", "owner", "super_admin"], notifTitle, notifMsg, slipPath);
+  // Lene wale ko seedha slip par le jayein — list par nahi.
+  await notifyUser(toProfileId, notifTitle, `${senderName} ne aapko Rs ${amount.toLocaleString()} bheja hai — Cash Handover Slip par tasdeeq karein.`, slipPath);
 
   return {
     success: true,
@@ -251,9 +259,14 @@ export async function carrierConfirm(_prev: ActionState, formData: FormData): Pr
 /**
  * Cash wusool karna.
  *
- * Sirf WOHI shakhs kar sakta hai jis ke naam bheja gaya. Bhejne wale ko
- * ye ijazat dena poore amal ko bekaar kar deta: wo apni marzi ka adad
- * dono taraf likh deta aur farq kabhi nahi nikalta.
+ * Bhejne wala kabhi khud wasool nahi likhta — warna wo dono taraf apni
+ * marzi ka adad likh de aur farq gayab ho jaye.
+ *
+ * Naam wale bande ke ilawa: agar cash Finance role (shared Finance Team
+ * ya kisi finance login) ke naam hai, to Finance, Manager, Admin ya
+ * Owner — jis ke paas receive ijazat ho — wasoli darj kar sakta hai.
+ * Ledger par raaste wala naam wahi rehta hai jis ke naam bheja gaya
+ * tha; `received_by` us shakhs ka hai jis ne haath se tasdeeq ki.
  */
 export async function receiveCash(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
@@ -273,6 +286,7 @@ export async function receiveCash(_prev: ActionState, formData: FormData): Promi
 
   const guard = await requireAction("cash-handover", "receive");
   if ("error" in guard) return { error: guard.error };
+  const { caller } = guard;
 
   const { data: h } = await service
     .from("cash_handovers")
@@ -283,10 +297,24 @@ export async function receiveCash(_prev: ActionState, formData: FormData): Promi
   if (!h) return { error: "Handover nahi mila." };
   if (h.status !== "sent") return { error: "Ye handover pehle hi mukammal ho chuka hai." };
 
-  if (h.to_profile_id !== user.id) {
+  if (h.from_profile_id === user.id) {
+    return { error: "Bhejne wala khud wusool nahi likh sakta. Jis ne cash liya hai, wahi tasdeeq kare." };
+  }
+
+  const { data: toProfile } = h.to_profile_id
+    ? await service.from("profiles").select("role").eq("id", h.to_profile_id).maybeSingle()
+    : { data: null };
+
+  if (!canRecordHandoverReceipt({
+    userId: user.id,
+    userRole: caller.role,
+    fromProfileId: h.from_profile_id,
+    toProfileId: h.to_profile_id,
+    toRole: toProfile?.role ?? null,
+  })) {
     return {
       error:
-        "Ye cash aap ke naam nahi bheja gaya. Wusooli sirf wohi shakhs darj kar sakta hai jis ke naam bheji gayi ho.",
+        "Ye cash aap ke naam nahi bheja gaya. Wusooli sirf wohi shakhs darj kar sakta hai jis ke naam bheji gayi ho — ya Finance ke naam ho to Manager / Finance.",
     };
   }
 
