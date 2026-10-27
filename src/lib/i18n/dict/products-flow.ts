@@ -696,6 +696,7 @@ export const productsFlowDict = {
     ur: "اسٹاک منظوری پر نہیں، وصولی پر ہلتا ہے",
   },
   na_cash_close_missing: { en: "Cash closing still due", rm: "Raat ki cash ginti baqi", ur: "رات کی کیش گنتی باقی" },
+  na_cash_custody_overdue: { en: "POS cash not verified within 1 day", rm: "POS cash 1 din se jama verify nahi", ur: "پی او ایس کیش ایک دن سے جمع تصدیق نہیں" },
   na_stock_count_open: { en: "Stock count in progress", rm: "Maal ki ginti chal rahi hai", ur: "مال کی گنتی چل رہی ہے" },
   na_access_conflicts: { en: "High/critical access conflicts", rm: "Ijazat ka takraao (high/critical)", ur: "اجازت کا ٹکراؤ" },
   ns_p_draft: { en: "Draft", rm: "Draft", ur: "ڈرافٹ" },

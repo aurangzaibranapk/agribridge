@@ -22,6 +22,10 @@ const ALWAYS_OPEN = [
   // rehta hai. POS close ke baad slip isi bande ko dikhni hai (sender).
   // Lene wala aur carrier bhi. Asal rok slip page khud lagati hai.
   "/admin/cash-handover/slip",
+  // Do slips (staff + jama) sales staff ko chahiye. Dashboard
+  // /admin/cash-custody view-gated rehta hai. Packet page khud rokta hai.
+  "/admin/cash-custody/packet",
+  "/admin/cash-custody/shift",
 ];
 
 export async function middleware(request: NextRequest) {

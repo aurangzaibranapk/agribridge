@@ -26662,6 +26662,7 @@ export type Database = {
           staff_note: string | null
           status: string
           submitted_at: string
+          submitted_by: string | null
           verified_at: string | null
           verified_by: string | null
         }
@@ -26684,6 +26685,7 @@ export type Database = {
           staff_note?: string | null
           status?: string
           submitted_at?: string
+          submitted_by?: string | null
           verified_at?: string | null
           verified_by?: string | null
         }
@@ -26706,6 +26708,7 @@ export type Database = {
           staff_note?: string | null
           status?: string
           submitted_at?: string
+          submitted_by?: string | null
           verified_at?: string | null
           verified_by?: string | null
         }
