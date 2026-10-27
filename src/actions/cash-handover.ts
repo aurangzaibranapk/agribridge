@@ -5,7 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
 import { ACC } from "@/lib/ledger/rules";
 import { cashBookLikhein } from "@/lib/ledger/cash-book";
-import { canRecordHandoverReceipt, REASON_MIN } from "@/lib/ledger/handover";
+import { canRecordHandoverReceipt, handoverReceiveLines, REASON_MIN } from "@/lib/ledger/handover";
 import { requireAction } from "@/lib/access/guard";
 import { logAudit } from "@/lib/audit";
 import { notifyRoles, notifyUser } from "@/lib/notifications";
@@ -348,56 +348,46 @@ export async function receiveCash(_prev: ActionState, formData: FormData): Promi
   // reh jati thi, chahe wo pahunchayi ja chuki ho. "Kis ke paas
   // kitna cash hai" wala hisaab isi wajah se kabhi sifar nahi hota
   // tha.
-  const lines: Array<{
-    account: string;
-    debit?: number;
-    credit?: number;
-    memo?: string | null;
-    partyType?: string | null;
-    partyId?: string | null;
-  }> = [];
-  if (received > 0) lines.push({ account: ACC.cash, debit: received, memo: "Cash wusool hua" });
-  if (difference < 0) {
-    lines.push({ account: ACC.cashDifference, debit: Math.abs(difference), memo: reason });
-  }
-  if (difference > 0) {
-    lines.push({ account: ACC.cashDifference, credit: difference, memo: reason });
-  }
-  lines.push({
-    account: ACC.cashWithPerson,
-    credit: sent,
-    partyType: "staff",
-    partyId: h.to_profile_id,
-    memo: "Raasta mukammal",
+  const booking = handoverReceiveLines({
+    role: caller.role,
+    userId: user.id,
+    toProfileId: h.to_profile_id,
+    sent,
+    received,
+    difference,
+    reason,
   });
 
-  const posted = await postJournal({
-    description: `Cash wusool — Rs ${received.toLocaleString()}${
-      difference !== 0 ? ` (Rs ${Math.abs(difference).toLocaleString()} ${difference < 0 ? "kam" : "zyada"})` : ""
-    }`,
-    sourceModule: "cash_handover",
-    sourceId: handoverId,
-    branchId,
-    createdBy: user.id,
-    lines,
-  });
-  if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
+  let entryId: string | null = null;
+  if (booking.lines.length > 0) {
+    const posted = await postJournal({
+      description: `Cash wusool — Rs ${received.toLocaleString()}${
+        difference !== 0 ? ` (Rs ${Math.abs(difference).toLocaleString()} ${difference < 0 ? "kam" : "zyada"})` : ""
+      }`,
+      sourceModule: "cash_handover",
+      sourceId: handoverId,
+      branchId,
+      createdBy: user.id,
+      lines: booking.lines,
+    });
+    if ("error" in posted) return { error: `Ledger mein darj nahi ho saka: ${posted.error}` };
+    entryId = posted.id;
 
-  // Cash Book ka rukh bhi (19 September ka finance review): ledger mein
-  // 1000 par cash wapas aaya to Cash Book mein bhi aaye -- shift close
-  // wala "gaya" aur ye "aaya" mil kar chakkar barabar rakhte hain.
-  if (received > 0) {
-    await cashBookLikhein([
-      {
-        glCode: ACC.cash,
-        amount: received,
-        rukh: "aaya",
-        category: "cash_handover",
-        notes: `Cash wusool — handover ${handoverId.slice(0, 8)}`,
-        createdBy: user.id,
-        entryId: posted.id,
-      },
-    ]);
+    // Cash Book tabhi jab company cash (1000) barhe. Manager ke paas
+    // rehne wali raqam abhi company khate mein nahi aayi.
+    if (booking.hitsCompanyCash) {
+      await cashBookLikhein([
+        {
+          glCode: ACC.cash,
+          amount: received,
+          rukh: "aaya",
+          category: "cash_handover",
+          notes: `Cash wusool — handover ${handoverId.slice(0, 8)}`,
+          createdBy: user.id,
+          entryId: posted.id,
+        },
+      ]);
+    }
   }
 
   const { error } = await service
@@ -408,7 +398,7 @@ export async function receiveCash(_prev: ActionState, formData: FormData): Promi
       received_by: user.id,
       difference,
       difference_reason: difference === 0 ? null : reason,
-      received_entry_id: posted.id,
+      received_entry_id: entryId,
       status: difference === 0 ? "received" : "short",
     })
     .eq("id", handoverId);
@@ -431,10 +421,14 @@ export async function receiveCash(_prev: ActionState, formData: FormData): Promi
   await notifyUser(fromProfileId, rcvTitle, rcvMsg, "/admin/cash-handover");
   await notifyRoles(["finance", "admin", "manager", "owner", "super_admin"], rcvTitle, rcvMsg, "/admin/cash-handover");
 
+  const heldByManager = caller.role === "manager";
   return {
     success: true,
-    message:
-      difference === 0
+    message: heldByManager
+      ? difference === 0
+        ? `Rs ${received.toLocaleString()} aap ke paas darj ho gaye. Ab named Finance ko bhejein, ya bank jama karein.`
+        : `Rs ${Math.abs(difference).toLocaleString()} ${difference < 0 ? "kam" : "zyada"} mile. Jo mila wo aap ke paas hai — aage Finance ya bank.`
+      : difference === 0
         ? `Rs ${received.toLocaleString()} poore mile — hisaab barabar.`
         : `Rs ${Math.abs(difference).toLocaleString()} ${
             difference < 0 ? "kam" : "zyada"

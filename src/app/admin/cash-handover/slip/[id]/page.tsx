@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { redirect } from "next/navigation";
-import { canRecordHandoverReceipt } from "@/lib/ledger/handover";
+import { canRecordHandoverReceipt, namedFinanceRecipients } from "@/lib/ledger/handover";
 import { SlipClient } from "./slip-client";
 
 export const dynamic = "force-dynamic";
@@ -98,6 +98,14 @@ export default async function SlipPage({
       : Promise.resolve({ data: null }),
   ]);
   const branchName: string | null = branch ? (branch.is_main_branch ? "Main Branch" : branch.name ?? null) : null;
+  const isManager = me?.role === "manager";
+  const { data: financeRows } = isManager
+    ? await service.from("profiles").select("id, full_name").eq("role", "finance").eq("is_active", true).neq("id", user.id)
+    : { data: [] as { id: string; full_name: string | null }[] };
+  const financePeople = namedFinanceRecipients(
+    (financeRows ?? []).map((p) => ({ id: p.id, name: p.full_name ?? "Finance" })),
+  );
+  const canForward = isManager && h.received_by === user.id && (h.status === "received" || h.status === "short");
 
   return (
     <SlipClient
@@ -132,6 +140,9 @@ export default async function SlipPage({
       receivingForDesk={canReceive && !isNamedRecipient}
       isCarrier={isCarrier}
       viewerName={me?.full_name ?? ""}
+      viewerRole={me?.role ?? ""}
+      canForward={canForward}
+      financePeople={financePeople}
     />
   );
 }

@@ -1,4 +1,5 @@
 import { createServiceClient } from "@/lib/supabase/service";
+import { ACC } from "@/lib/ledger/rules";
 
 /**
  * Cash haath badalne ka hisaab.
@@ -38,6 +39,97 @@ export function canRecordHandoverReceipt(input: {
   if (!input.userId || input.fromProfileId === input.userId) return false;
   if (input.toProfileId && input.toProfileId === input.userId) return true;
   return input.toRole === "finance" && (FINANCE_DESK_RECEIVE_ROLES as readonly string[]).includes(input.userRole);
+}
+
+export interface HandoverReceiveLine {
+  account: string;
+  debit?: number;
+  credit?: number;
+  memo?: string | null;
+  partyType?: string | null;
+  partyId?: string | null;
+}
+
+/**
+ * Manager wasoli company cash (1000) mein nahi jaati. Raqam un ke
+ * 1030 par rehti hai, taake wo named Finance ko aage bhej sakein.
+ * Finance / Admin / Owner ki wasoli pehle ki tarah 1000 par aati hai.
+ * Jis Manager ke naam seedha bheja gaya, un ke 1030 par wo debit pehle
+ * se hai — dobara debit+credit ek hi naam par net sifar kar dega.
+ */
+export function handoverReceiveLines(input: {
+  role: string;
+  userId: string;
+  toProfileId: string | null;
+  sent: number;
+  received: number;
+  difference: number;
+  reason: string;
+}): { lines: HandoverReceiveLine[]; hitsCompanyCash: boolean } {
+  const lines: HandoverReceiveLine[] = [];
+  if (input.role !== "manager") {
+    if (input.received > 0) lines.push({ account: ACC.cash, debit: input.received, memo: "Cash wusool hua" });
+    if (input.difference < 0) lines.push({ account: ACC.cashDifference, debit: Math.abs(input.difference), memo: input.reason });
+    if (input.difference > 0) lines.push({ account: ACC.cashDifference, credit: input.difference, memo: input.reason });
+    lines.push({
+      account: ACC.cashWithPerson,
+      credit: input.sent,
+      partyType: "staff",
+      partyId: input.toProfileId,
+      memo: "Raasta mukammal",
+    });
+    return { lines, hitsCompanyCash: input.received > 0 };
+  }
+
+  const alreadyOnManager = input.toProfileId === input.userId;
+  if (alreadyOnManager) {
+    if (input.difference < 0) {
+      lines.push({ account: ACC.cashDifference, debit: Math.abs(input.difference), memo: input.reason });
+      lines.push({
+        account: ACC.cashWithPerson,
+        credit: Math.abs(input.difference),
+        partyType: "staff",
+        partyId: input.userId,
+        memo: "Kam mila — Manager ke paas",
+      });
+    } else if (input.difference > 0) {
+      lines.push({
+        account: ACC.cashWithPerson,
+        debit: input.difference,
+        partyType: "staff",
+        partyId: input.userId,
+        memo: "Zyada mila — Manager ke paas",
+      });
+      lines.push({ account: ACC.cashDifference, credit: input.difference, memo: input.reason });
+    }
+    return { lines, hitsCompanyCash: false };
+  }
+
+  if (input.received > 0) {
+    lines.push({
+      account: ACC.cashWithPerson,
+      debit: input.received,
+      partyType: "staff",
+      partyId: input.userId,
+      memo: "Manager ke paas",
+    });
+  }
+  if (input.difference < 0) lines.push({ account: ACC.cashDifference, debit: Math.abs(input.difference), memo: input.reason });
+  if (input.difference > 0) lines.push({ account: ACC.cashDifference, credit: input.difference, memo: input.reason });
+  lines.push({
+    account: ACC.cashWithPerson,
+    credit: input.sent,
+    partyType: "staff",
+    partyId: input.toProfileId,
+    memo: "Raasta mukammal",
+  });
+  return { lines, hitsCompanyCash: false };
+}
+
+/** Shared "Finance Team" se named finance login behtar hai. Named koi na ho to team hi rehti hai. */
+export function namedFinanceRecipients<T extends { name: string }>(people: T[]): T[] {
+  const named = people.filter((p) => !/team/i.test(p.name));
+  return named.length > 0 ? named : people;
 }
 
 function round2(v: number): number {

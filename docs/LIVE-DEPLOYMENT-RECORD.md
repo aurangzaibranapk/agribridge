@@ -5,6 +5,7 @@ Branch `cursor/pos-two-copy-cash-slip-fc03`. **Koi nayi migration nahi.** Testin
 - Har shop: Cash Handover Slip ek print mein do copy. Staff copy (dastakhat, apne paas, system tasdeeq) aur Jama copy (payment ke sath).
 - Cash Handover par "Khula cash": shop/shift/bhejne wala, ab kis ke paas, kahan atka. Admin/Owner command center par wahi alert.
 - 24 ghante (bhejne ke waqt se) jama+verify na ho to Admin, Owner, Super Admin ko in-app alert. Wajah: q nahi jama hua / verify hua. Timeline par kis ke paas kitni der. Tables 713 ki hain (`cash_open`). pg_cron sirf `fn_pending_escalate` chalata hai — ye check `/api/cron/pending-escalation` aur Admin/Owner ke Cash Handover safhe se chalti hai.
+- Manager ki wasoli company cash (1000) mein nahi jaati. Raqam Manager ke paas (1030) rehti hai. Slip par wo named Finance ko aage bhej sakte hain, ya bank jama ka raasta. Finance ki wasoli pehle ki tarah 1000 par. Bhejne wala khud wasoli nahi.
 - Live migration nahi. 713 pehle se Live par hai.
 
 ## Phone live APK — 27 October 2026 — app only, Live SQL nahi

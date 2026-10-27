@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { pickTopBranch, paymentSplit } from "../src/lib/utils/daily-briefing-summary";
 import { pathAllowed } from "../src/lib/access/route-match";
-import { canRecordHandoverReceipt } from "../src/lib/ledger/handover";
+import { canRecordHandoverReceipt, handoverReceiveLines, namedFinanceRecipients } from "../src/lib/ledger/handover";
 import { classifyOpenCash, hoursHeld, OPEN_CASH_REASON, openCashHolder, openCashTimelineNote } from "../src/lib/ledger/open-cash";
 
 let n = 0;
@@ -104,5 +104,28 @@ test("open cash is overdue until deposit is approved, clock starts at send", () 
   assert.ok(cron.includes("escalateOpenCash"));
   const list = readFileSync("src/app/admin/cash-handover/page.tsx", "utf8");
   assert.ok(list.includes('id="open-cash"'));
+});
+test("manager wasoli stays in their custody so they can send it to named finance", () => {
+  const manager = "mgr";
+  const team = "team";
+  const desk = handoverReceiveLines({ role: "manager", userId: manager, toProfileId: team, sent: 780, received: 780, difference: 0, reason: "" });
+  assert.equal(desk.hitsCompanyCash, false);
+  assert.ok(desk.lines.some((l) => l.account === "1030" && l.debit === 780 && l.partyId === manager));
+  assert.ok(desk.lines.some((l) => l.account === "1030" && l.credit === 780 && l.partyId === team));
+  assert.ok(!desk.lines.some((l) => l.account === "1000"));
+  const named = handoverReceiveLines({ role: "manager", userId: manager, toProfileId: manager, sent: 780, received: 780, difference: 0, reason: "" });
+  assert.equal(named.lines.length, 0);
+  const finance = handoverReceiveLines({ role: "finance", userId: "fin", toProfileId: team, sent: 780, received: 780, difference: 0, reason: "" });
+  assert.equal(finance.hitsCompanyCash, true);
+  assert.ok(finance.lines.some((l) => l.account === "1000" && l.debit === 780));
+  const people = namedFinanceRecipients([
+    { id: "1", name: "Finance Team" },
+    { id: "2", name: "Sana Finance" },
+  ]);
+  assert.deepEqual(people.map((p) => p.id), ["2"]);
+  assert.deepEqual(namedFinanceRecipients([{ id: "1", name: "Finance Team" }]).map((p) => p.id), ["1"]);
+  const slip = readFileSync("src/app/admin/cash-handover/slip/[id]/slip-client.tsx", "utf8");
+  assert.ok(slip.includes("Agla qadam — Finance ya bank"));
+  assert.ok(slip.includes('name="from_source" value="my_custody"'));
 });
 console.log(`\n${n} tests passed`);

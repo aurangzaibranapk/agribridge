@@ -2,7 +2,7 @@
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { CheckCircle2, AlertTriangle, Printer, Clock, ArrowLeft, Truck } from "lucide-react";
-import { receiveCash, carrierConfirm, type ActionState } from "@/actions/cash-handover";
+import { receiveCash, carrierConfirm, sendCash, type ActionState } from "@/actions/cash-handover";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ReceiptRow } from "@/components/pos/receipt-modal";
@@ -68,6 +68,9 @@ export function SlipClient({
   receivingForDesk = false,
   isCarrier,
   viewerName,
+  viewerRole = "",
+  canForward = false,
+  financePeople = [],
 }: {
   handover: {
     id: string;
@@ -104,9 +107,14 @@ export function SlipClient({
   receivingForDesk?: boolean;
   isCarrier: boolean;
   viewerName: string;
+  viewerRole?: string;
+  /** Manager ne wasoli likh li — cash un ke paas hai, Finance ko aage bhej sakte hain. */
+  canForward?: boolean;
+  financePeople?: { id: string; name: string }[];
 }) {
   const [carrierState, carrierAction] = useFormState(carrierConfirm, INIT);
   const [receiveState, receiveAction] = useFormState(receiveCash, INIT);
+  const [forwardState, forwardAction] = useFormState(sendCash, INIT);
   const [received, setReceived] = useState(String(handover.amountSent));
   const [reason, setReason] = useState("");
 
@@ -418,6 +426,54 @@ export function SlipClient({
           <CheckCircle2 className="mb-1 h-5 w-5" />
           {receiveState.message}
           <p className="mt-1 text-xs text-emerald-600">Page refresh karein slip mein signature dekhne ke liye.</p>
+        </div>
+      )}
+
+      {(canForward || (viewerRole === "manager" && receiveState.success)) && !forwardState.success && (
+        <form action={forwardAction} className="mt-4 space-y-3 rounded-2xl border border-surface-200 bg-white p-4 shadow-sm print:hidden dark:border-surface-700 dark:bg-surface-900">
+          <h2 className="text-sm font-semibold text-surface-900 dark:text-white">Agla qadam — Finance ya bank</h2>
+          <p className="text-xs text-surface-500">
+            Ye cash ab aap ke paas hai. Named Finance ko bhejein (shared Finance Team se behtar), ya bank jama karein. Jama copy payment ke sath jaye.
+          </p>
+          <input type="hidden" name="from_source" value="my_custody" />
+          <input type="hidden" name="transfer_method" value="cash" />
+          <input type="hidden" name="amount" value={String(handover.amountReceived ?? (entered ? got : handover.amountSent))} />
+          {financePeople.length > 0 ? (
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-surface-600 dark:text-surface-400">Kis Finance ko</span>
+              <select name="to_profile_id" required className="w-full rounded-xl border border-surface-200 px-3 py-2.5 text-sm dark:border-surface-700 dark:bg-surface-900">
+                <option value="">Named Finance chunein</option>
+                {financePeople.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <p className="text-xs text-amber-700">Koi Finance login nahi mila. Bank jama karein.</p>
+          )}
+          <input name="sent_note" placeholder="Manager se Finance" className="w-full rounded-xl border border-surface-200 px-3 py-2.5 text-sm dark:border-surface-700 dark:bg-surface-900" />
+          {forwardState.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{forwardState.error}</p>}
+          {financePeople.length > 0 && (
+            <button type="submit" className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-700">
+              Finance ko bhejein
+            </button>
+          )}
+          <p className="text-center text-[11px] text-surface-500">
+            <Link href="/admin/my-collection" className="font-medium text-brand-700 underline">Bank jama — meri collection</Link>
+            {" · "}
+            <Link href="/admin/finance/pos-deposits" className="font-medium text-brand-700 underline">POS deposits verify</Link>
+          </p>
+        </form>
+      )}
+      {forwardState.success && (
+        <div className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800 print:hidden">
+          <CheckCircle2 className="mb-1 h-5 w-5" />
+          {forwardState.message}
+          {forwardState.handoverId && (
+            <p className="mt-1 text-xs">
+              <Link href={`/admin/cash-handover/slip/${forwardState.handoverId}`} className="underline">Nayi slip kholen</Link>
+            </p>
+          )}
         </div>
       )}
       </div>
