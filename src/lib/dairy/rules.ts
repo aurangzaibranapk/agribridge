@@ -7,7 +7,7 @@
  * constant chalta hai; qatar na ho to andaza lagane ki ijazat nahi.
  */
 
-import { mayDecideEntry } from "@/lib/approval/guards";
+import { mayDecideEntry } from "../approval/guards";
 
 export const FAT_MIN = 1;
 export const FAT_MAX = 12;
