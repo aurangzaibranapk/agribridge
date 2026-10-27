@@ -31,6 +31,22 @@ export function pctChange(current: number | null, previous: number | null): numb
   return raw;
 }
 
+/** Hazar axis. 180000 → 180. Formatting only; value asal rehti hai. */
+export function hazarFigure(value: number): string {
+  if (!Number.isFinite(value)) return "";
+  return String(Math.round(value / 1000));
+}
+
+/** Count badge. Farq 0 ho, ya do points na hon, to null. Percent nahi. */
+export function countDelta(series: number[]): number | null {
+  if (series.length < 2) return null;
+  const previous = series[series.length - 2];
+  const current = series[series.length - 1];
+  if (!Number.isFinite(previous) || !Number.isFinite(current)) return null;
+  const delta = Math.round(current - previous);
+  return delta === 0 ? null : delta;
+}
+
 /** Bar ke upar chhota label: 1.6L, warna Rs. */
 export function compactRupee(value: number): string {
   if (!Number.isFinite(value)) return "";

@@ -1,5 +1,7 @@
 ## Phone glass homes — 26 October 2026 — app only
 
+versionCode 629. Header ab do gold lines: product naam, phir tagline aur role, phir Assalam o Alaikum. Tank card par temperature line, number ho to °C, na ho to dash. Count badge sirf jab pichli ginti alag ho. Vet row par naam, gaon, waqt, Urgent, Day n/m jab record par hon. Staff duty par schedule ka shift window jab hr_work_schedules parhe. Dealer bar hazar mein, stock unit note se. Kisan wallet tab se purana gold wallet hata. Koi naya number nahi. Koi migration nahi. Live database par kuch nahi. Live workflow 605 par hai.
+
 versionCode 628. Owner ne final glass home mockups manzoor kiye. Header do line: tagline aur role, phir Assalam o Alaikum. Mausam card bara, sirf Kisan, Customer, MCA, Vet. Goal card home se hata. Tracking card home par nahi: Kisan wallet, Admin approvals, Customer orders. Customer home par Order status. Login card par User ID nahi, andar scroll nahi. Brand AgriBridge, tagline Kisan ka Wasela. Koi migration nahi. Live database par kuch nahi. Live workflow 605 par hai.
 
 ## Phone version line — 26 October 2026 — app only

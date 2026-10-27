@@ -325,15 +325,21 @@ export type MilkSettingsRow = {
 };
 export type HealthRow = {
   id?: string;
+  farmer_id?: string | null;
+  animal_id?: string | null;
   kind?: string | null;
   diagnosis?: string | null;
   medicine?: string | null;
+  dose?: string | null;
   event_date?: string | null;
+  last_dose_date?: string | null;
+  withdrawal_days?: number | null;
   vet_name?: string | null;
   vaccine_code?: string | null;
   next_due?: string | null;
   notes?: string | null;
   voided?: boolean | null;
+  created_at?: string | null;
 };
 export type VaccineRow = { code?: string | null; name_rm?: string | null };
 export type AccountRow = { account_type?: string | null; current_balance?: number | string | null; is_active?: boolean | null };
@@ -749,7 +755,7 @@ export async function loadMilkSettings(auth: LiveAuth, fetchImpl: FetchLike): Pr
 }
 
 export async function loadHealth(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<HealthRow>> {
-  return liveGet<HealthRow>(auth, "dairy_health_events?select=id,kind,diagnosis,medicine,event_date,vet_name,vaccine_code,next_due,notes,voided&voided=eq.false&order=event_date.desc&limit=40", fetchImpl);
+  return liveGet<HealthRow>(auth, "dairy_health_events?select=id,farmer_id,animal_id,kind,diagnosis,medicine,dose,event_date,last_dose_date,withdrawal_days,vet_name,vaccine_code,next_due,notes,voided,created_at&voided=eq.false&order=event_date.desc&limit=40", fetchImpl);
 }
 
 export async function loadVaccines(auth: LiveAuth, fetchImpl: FetchLike): Promise<ReadResult<VaccineRow>> {

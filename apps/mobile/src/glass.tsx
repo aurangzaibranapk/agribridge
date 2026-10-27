@@ -3,7 +3,7 @@ import { Animated, Pressable, RefreshControl, ScrollView, Text, View, type Style
 import Svg, { Circle, Defs, LinearGradient, Path, Polyline, Rect, Stop } from "react-native-svg";
 import { greetingName, roleNameKey } from "../../../src/lib/mobile/display-name";
 import type { TimelineStep } from "../../../src/lib/mobile/glass-metrics";
-import { pctChange, ringDashOffset, timelineFinished, timelinePercent } from "../../../src/lib/mobile/glass-metrics";
+import { countDelta, pctChange, ringDashOffset, timelineFinished, timelinePercent } from "../../../src/lib/mobile/glass-metrics";
 import { type AppLang } from "../../../src/lib/mobile/sub-brand";
 import { liveAuth, type LiveBag } from "./bits";
 import { liveGet, liveGetScoped, loadPhoneNotes } from "../../../src/lib/mobile/live-read";
@@ -96,10 +96,10 @@ export function KpiGrid({ children }: { children: ReactNode }) {
   );
 }
 
-const LangContext = createContext<{ lang: AppLang; line: string }>({ lang: "rm", line: "" });
+const LangContext = createContext<{ lang: AppLang; line: string; mark: string }>({ lang: "rm", line: "", mark: "" });
 
-export function LanguageProvider({ lang, line = "", children }: { lang: AppLang; line?: string; children: ReactNode }) {
-  return <LangContext.Provider value={{ lang, line }}>{children}</LangContext.Provider>;
+export function LanguageProvider({ lang, line = "", mark = "", children }: { lang: AppLang; line?: string; mark?: string; children: ReactNode }) {
+  return <LangContext.Provider value={{ lang, line, mark }}>{children}</LangContext.Provider>;
 }
 
 export function useAppLang(): AppLang {
@@ -118,15 +118,19 @@ export function BrandStack({ title, line, rtl, titleSize, lineSize }: { title: s
 }
 
 export function BrandHeader({ role, name, onProfile }: { role: string; name: string; centre?: string; onProfile?: () => void; live?: LiveBag }) {
-  const line = useContext(LangContext).line.trim();
+  const ctx = useContext(LangContext);
+  const mark = ctx.mark.trim();
+  const line = ctx.line.trim();
   const initial = (name.trim().charAt(0) || role.charAt(0) || "A").toUpperCase();
-  const where = line ? `${line.toUpperCase()} · ${role.toUpperCase()}` : role.toUpperCase();
+  const roleLine = [line ? line.toUpperCase() : "", role.toUpperCase()].filter(Boolean).join(" · ");
+  const latin = /[A-Za-z]/.test(mark);
   return (
     <Rise index={0}>
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
         <View style={{ flex: 1, paddingRight: 12 }}>
-          <Text style={{ color: glass.gold, fontSize: 11, fontWeight: "700", letterSpacing: 0.6 }} numberOfLines={1}>{where}</Text>
-          <Text style={{ color: glass.text, fontSize: 22, lineHeight: 28, fontWeight: "800", marginTop: 2 }} numberOfLines={2}>Assalam o Alaikum, {name || "—"}</Text>
+          {mark ? <Text style={{ color: glass.gold, fontSize: 11, fontWeight: "800", letterSpacing: latin ? 1.3 : 0 }} numberOfLines={1}>{latin ? mark.toUpperCase() : mark}</Text> : null}
+          <Text style={{ color: glass.gold, fontSize: 11, fontWeight: "700", letterSpacing: 0.5, marginTop: mark ? 2 : 0 }} numberOfLines={2}>{roleLine}</Text>
+          <Text style={{ color: glass.text, fontSize: 22, lineHeight: 28, fontWeight: "800", marginTop: 4 }} numberOfLines={2}>Assalam o Alaikum, {name || "—"}</Text>
         </View>
         <Pressable onPress={onProfile} style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: "#146B3A", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
           <Text style={{ color: "#fff", fontWeight: "800", fontSize: 18 }}>{initial}</Text>
@@ -421,6 +425,22 @@ export function Pct({ value }: { value: number | null }) {
   );
 }
 
+function CountBadge({ value }: { value: number | null }) {
+  if (value == null || value === 0) return null;
+  const up = value > 0;
+  return (
+    <View style={{ backgroundColor: up ? "rgba(61,220,151,0.15)" : "rgba(255,107,107,0.15)", borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}>
+      <Text style={{ color: up ? glass.up : glass.down, fontSize: 11, fontWeight: "700" }}>{up ? "▲" : "▼"} {Math.abs(value)}</Text>
+    </View>
+  );
+}
+
+export function TankTemp({ celsius, status }: { celsius: number | null; status?: string | null }) {
+  const note = (status || "").trim();
+  const text = celsius == null ? "—" : `${celsius}°C${note ? ` ${note}` : ""}`;
+  return <Text style={{ color: celsius == null ? glass.muted : glass.up, fontSize: 12, fontWeight: "700" }}>{text}</Text>;
+}
+
 const GLYPH: Record<string, string> = {
   "Wallet balance": "M5 9h14v9H5z M5 9l2-3h10l2 3 M13 13h3",
   "Aaj ka doodh": "M9 4h6l1 4v11a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V8z",
@@ -459,10 +479,11 @@ function glyphFor(label: string): string {
   return (key && GLYPH[key]) || "M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0-6 0";
 }
 
-export function Kpi({ label, value, sub, color, series, pct, index }: { label: string; value: string; sub?: string; color: string; series: number[]; pct: number | null; index: number }) {
+export function Kpi({ label, value, sub, color, series, pct, index, badge = "pct" }: { label: string; value: string; sub?: string; color: string; series: number[]; pct: number | null; index: number; badge?: "pct" | "count" }) {
   const clean = series.filter((point) => Number.isFinite(point));
   const line = clean.length >= 2 ? clean : clean.length === 1 ? [clean[0], clean[0]] : [];
-  const change = pct != null ? pct : line.length >= 2 ? pctChange(line[line.length - 1], line[line.length - 2]) : null;
+  const change = badge === "count" ? null : pct != null ? pct : line.length >= 2 ? pctChange(line[line.length - 1], line[line.length - 2]) : null;
+  const delta = badge === "count" ? countDelta(line) : null;
   return (
     <Rise index={index} style={{ width: "48%", maxWidth: "48%", flexBasis: "48%", flexGrow: 0, flexShrink: 0 }}>
       <View style={{ width: "100%", backgroundColor: glass.card, borderRadius: 18, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: glass.line }}>
@@ -472,7 +493,7 @@ export function Kpi({ label, value, sub, color, series, pct, index }: { label: s
               <Path d={glyphFor(label)} stroke="#07140F" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
           </View>
-          <Pct value={change} />
+          {badge === "count" ? <CountBadge value={delta} /> : <Pct value={change} />}
         </View>
         <Text style={{ color: glass.muted, marginTop: 10, fontSize: 12, lineHeight: 16 }} numberOfLines={2}>{label}</Text>
         <Text style={{ color: glass.text, fontSize: 20, fontWeight: "800", marginTop: 2, lineHeight: 24 }} numberOfLines={1}>{value}</Text>
@@ -833,13 +854,15 @@ export function TankRow({ levels }: { levels: { name: string; pct: number | null
   );
 }
 
-export function BarTrack({ label, value, max, color }: { label: string; value: number | null; max: number | null; color: string }) {
+export function BarTrack({ label, value, max, color, unit }: { label: string; value: number | null; max: number | null; color: string; unit?: string | null }) {
   const width = value != null && max != null && max > 0 ? Math.max(6, Math.min(100, (value / max) * 100)) : 0;
+  const unitText = (unit || "").trim();
+  const amount = value == null ? "—" : `${Number.isInteger(value) ? String(value) : String(Math.round(value))}${unitText ? ` ${unitText}` : ""}`;
   return (
     <View style={{ marginBottom: 8 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <Text style={{ color: glass.text }}>{label}</Text>
-        <Text style={{ color: glass.muted }}>{value == null ? "—" : String(value)}</Text>
+        <Text style={{ color: glass.text, flex: 1, paddingRight: 8 }}>{label}</Text>
+        <Text style={{ color: glass.muted }}>{amount}</Text>
       </View>
       <View style={{ height: 8, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.08)", marginTop: 4 }}>
         <View style={{ width: `${width}%`, height: 8, borderRadius: 4, backgroundColor: color }} />

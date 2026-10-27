@@ -422,7 +422,7 @@ export default function App() {
 
   if (Platform.OS === "web" && glassPreviewOn()) {
     return (
-      <LanguageProvider lang={lang} line={lock.line}>
+      <LanguageProvider lang={lang} line={lock.line} mark={lock.title}>
         <GlassPreview />
       </LanguageProvider>
     );
@@ -433,7 +433,7 @@ export default function App() {
   const loginTitle = FLAVOR === "test" ? `${lock.title} TEST` : lock.title;
 
   return (
-    <LanguageProvider lang={lang} line={lock.line}>
+    <LanguageProvider lang={lang} line={lock.line} mark={lock.title}>
     <SafeAreaView style={styles.root}>
       <StatusBar style="light" />
       {FLAVOR === "test" ? (
