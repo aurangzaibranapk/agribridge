@@ -17,6 +17,10 @@ const ALWAYS_OPEN = [
   "/admin/hr/corrections",
   "/admin/hr/meetings",
   "/admin/company-expenses",
+  // Do slips (staff + jama) sales staff ko chahiye. Dashboard
+  // /admin/cash-custody view-gated rehta hai. Packet page khud rokta hai.
+  "/admin/cash-custody/packet",
+  "/admin/cash-custody/shift",
 ];
 
 export async function middleware(request: NextRequest) {
