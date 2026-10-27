@@ -437,7 +437,7 @@ export default function App() {
   return (
     <LanguageProvider lang={lang} line={lock.line} mark={lock.title}>
     <SafeAreaView style={styles.root}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       {FLAVOR === "test" ? (
         <View style={styles.flavorBar}>
           <Text style={styles.flavorText}>TEST · testing database</Text>
@@ -475,11 +475,7 @@ export default function App() {
           {whatsapp ? <Text style={styles.link} onPress={() => void Linking.openURL(whatsapp)}>WhatsApp support</Text> : null}
         </View>
       ) : (
-        <View style={{ flex: 1, backgroundColor: "#07140F" }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingTop: 4 }}>
-            <Text style={{ color: "#8FA399", fontSize: 12 }}>{lock.title} · {VERSION || "v0.6.1 Beta"}{VERSION_CODE ? ` · ${VERSION_CODE}` : ""}</Text>
-            <Pressable onPress={() => setProfileOpen(true)}><Text style={{ color: "#3DDC97", fontWeight: "700" }}>Profile</Text></Pressable>
-          </View>
+        <View style={{ flex: 1, backgroundColor: "#F7F8F3" }}>
           <View style={{ flex: 1, minHeight: 0 }}>
             {isTest ? (
               <View style={styles.testBar}>
@@ -625,7 +621,7 @@ function LangPick({ lang, onPick }: { lang: AppLang; onPick: (lang: AppLang) => 
     <View style={{ flexDirection: "row", marginBottom: 12 }}>
       {items.map((item) => (
         <Pressable key={item.id} onPress={() => onPick(item.id)} style={{ marginRight: 8, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: lang === item.id ? "#146B3A" : "transparent", borderWidth: 1, borderColor: "#3DDC97" }}>
-          <Text style={{ color: "#F4F7F4", fontWeight: "700", writingDirection: item.id === "ur" ? "rtl" : "ltr" }}>{item.label}</Text>
+          <Text style={{ color: colors.text, fontWeight: "700", writingDirection: item.id === "ur" ? "rtl" : "ltr" }}>{item.label}</Text>
         </Pressable>
       ))}
     </View>
@@ -722,7 +718,7 @@ function SupportSheet({ portal, token, chat, whatsapp, channel, flavor, onClose 
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#07140F" },
+  root: { flex: 1, backgroundColor: "#F7F8F3" },
   brand: { fontSize: 32, fontWeight: "800", color: colors.green, marginTop: 24 },
   sub: { color: colors.muted, marginBottom: 16 },
   help: { color: colors.muted, marginBottom: 8 },
