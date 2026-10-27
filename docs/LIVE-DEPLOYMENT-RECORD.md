@@ -1,6 +1,15 @@
-## Pending — 27 October 2026: dairy cost/litre basis (714) + customer portal glass
+## Pending — 27 October 2026: self-merge Reject (715)
 
-Branch `cursor/dairy-cost-portal-glass-c2d9`. Migration **714 not applied** on Testing or Live. Files only. Do not run until a verified backup is in chat, then Testing, then Live.
+Branch `cursor/reject-self-product-merge-ae81`. Migration **715 not applied** on Testing or Live. File only. Number 714 PR #220 (`714_dairy_cost_per_litre_basis`) ke paas hai. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `product_merge_requests_not_self` ab `status = 'rejected' OR source <> target`, ab bhi NOT VALID. Koi row update/delete nahi.
+- Pending self-merge (Sprite Mint 1 Le, source = target) Reject isi row par status `rejected` + wajah likhega. Nayi merge request nahi.
+- Approve of self-merge app aur check dono rokte hain.
+- Rollback: `715_product_merge_reject_self.rollback.sql` — purana check wapas, Reject phir ruk jayega.
+
+## Done on Live — 27 October 2026: dairy cost/litre basis (714) + customer portal glass
+
+Branch `cursor/dairy-cost-portal-glass-c2d9`. Migration **714 applied on Live** (`ktskwawkslaznkjjacni`) 27 Oct 2026 after backup at `/workspace/backups/2026-10-27-live-220/` (box). Testing not applied (not reachable from MCP).
 
 - `714_dairy_cost_per_litre_basis.sql` — `fn_dairy_pnl_for` and `fn_admin_dairy_totals`. Cost/L = expense ÷ home yields when home > 0, otherwise centre litres. Does not add the two. New fields: `litres_home`, `litres_centre`, `cost_basis` (`home` | `centre` | null). `litres` stays home yield.
 - Rollback: `714_dairy_cost_per_litre_basis.rollback.sql` (back to 577/578: home yields only).
@@ -28,6 +37,15 @@ Branch `cursor/careers-gender-messages-552c`. **Not applied on Live** (`ktskwawk
 - `supabase/migrations/20261022100100_job_application_messages.sql` — `job_application_messages` for email/SMS/WhatsApp. RLS: hr, admin, owner, super_admin, manager.
 
 Do not run them on Live until there is a verified backup and a separate approval. The duplicate Shortlist cleanup for M Usama Saleem is also **not run**. Read-only SQL and the separate DELETE are in `supabase/manual/job_application_shortlist_duplicate_20261022_read.sql` and `..._delete.sql`.
+
+## Done on Live — 27 October 2026: Admin dealer / buyer invite (712, PR #217)
+
+Live `ktskwawkslaznkjjacni`: applied 27 Oct 2026 07:01 PKT, recorded as `20261027020151 712_party_invite`. Backup: box `/workspace/backups/2026-10-27-live-217/`. Testing `hwaiuwxqldxsoukkfefn`: applied 26 Oct (backup `/workspace/backups/2026-10-26-testing-712/`). Do not re-apply.
+
+- `party_invite_accounts` + `party_invite_sends` (poora paigham, channel, recipient, wajah). RLS: sirf Owner/Admin apni organization. Likhai service role se.
+- `fn_party_invite_phone_taken` — service_role.
+- Feature `hr.party-invite` → `/admin/hr/users`. HR role ko ijazat nahi.
+- Rollback: `712_party_invite.rollback.sql`.
 
 ## Done on Live — 22 October 2026: Careers i18n columns (public apply modal)
 

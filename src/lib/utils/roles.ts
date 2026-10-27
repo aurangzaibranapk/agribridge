@@ -31,6 +31,8 @@ export function getRoleRedirectPath(role: UserRole): string {
   if (role === "farmer") return "/portal/dashboard";
   // Phase 5: gahak ka apna Customer Portal (sirf apna khata / bill / adaigi).
   if (role === "customer") return "/portal/c";
+  // Dealer ka apna safha. Staff nahi, is liye /admin nahi.
+  if (role === "dealer") return "/dealer";
   // Vendor hamara mulazim nahi -- us ka apna safha hai, /admin nahi.
   if (role === "machinery_vendor") return "/vendor";
   return "/";

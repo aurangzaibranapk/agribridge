@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AgriBridge — login ki jagah</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: "Nunito Sans", "Segoe UI", sans-serif; background: #e7f2ea; color: #163028; }
+    .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+    aside { background: #0f3a2e; color: #d7efe2; padding: 16px; }
+    aside .name { color: #fff; font-weight: 700; font-size: 16px; }
+    aside .tag { color: #b7d7c4; font-size: 12px; margin: 2px 0 16px; }
+    aside .on { background: rgba(255,255,255,.15); color: #fff; border-radius: 8px; padding: 6px 8px; font-weight: 600; }
+    aside p { margin: 4px 0; font-size: 14px; }
+    main { padding: 28px 32px; }
+    h1 { margin: 4px 0 0; font-size: 28px; }
+    .note { max-width: 640px; color: #3d5c4c; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 18px; background: rgba(255,255,255,.8); border: 1px solid rgba(255,255,255,.8); border-radius: 16px; overflow: hidden; }
+    th { text-align: left; font-size: 12px; color: #8aa094; padding: 12px 16px; border-bottom: 1px solid #edf2ef; }
+    td { padding: 12px 16px; border-bottom: 1px solid #f4f7f5; font-size: 14px; }
+    .veil { position: fixed; inset: 0; background: rgba(109,127,153,.4); backdrop-filter: blur(3px); display: flex; justify-content: center; padding: 40px 16px; }
+    .gl-bg { position: relative; width: min(440px, 100%); isolation: isolate; }
+    .gl-bg:before, .gl-bg:after { content: ""; position: absolute; z-index: -1; border-radius: 9999px; filter: blur(80px); opacity: .45; }
+    .gl-bg:before { width: 280px; height: 280px; left: -80px; top: -80px; background: #7fd8a6; }
+    .gl-panel { position: relative; background: rgba(255,255,255,.6); backdrop-filter: blur(22px) saturate(160%); border: 1px solid rgba(255,255,255,.75); box-shadow: 0 18px 50px rgba(15,31,58,.10), inset 0 1px 0 rgba(255,255,255,.9); border-radius: 22px; padding: 28px; }
+    .brand { letter-spacing: .16em; text-transform: uppercase; color: #166534; font-size: 11px; font-weight: 700; margin: 0; }
+    .tagline { color: #6b7280; font-size: 11px; margin: 2px 0 0; }
+    h2 { margin: 14px 0 0; font-size: 22px; }
+    .who { margin: 2px 0 0; font-weight: 600; }
+    .rule { color: #3f5348; font-size: 12px; line-height: 1.5; }
+    label { display: block; margin-top: 16px; font-size: 12px; font-weight: 700; }
+    select { width: 100%; margin-top: 4px; border-radius: 16px; border: 1px solid rgba(255,255,255,.8); background: rgba(255,255,255,.75); padding: 10px 12px; font: inherit; }
+    .portal { margin-top: 14px; background: rgba(255,255,255,.4); border: 1px solid rgba(255,255,255,.65); border-radius: 16px; padding: 10px 12px; font-size: 12px; line-height: 1.5; }
+    .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+    button { height: 40px; border-radius: 16px; border: 0; font: inherit; cursor: pointer; }
+    .ghost { background: transparent; color: #4b5563; padding: 0 12px; }
+    .save { background: #1f7a4d; color: white; padding: 0 16px; font-weight: 700; }
+    .msg { min-height: 1.2em; font-size: 12px; margin-top: 10px; font-weight: 600; }
+    .err { color: #b91c1c; }
+    .ok { color: #166534; }
+    .hint { font-size: 12px; color: #92700a; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <p class="name">AgriBridge</p>
+      <p class="tag">Kisan ka Wasela</p>
+      <p>Dashboard</p>
+      <p class="on">Users aur Role</p>
+    </aside>
+    <main>
+      <h1>Log aur un ke darje</h1>
+      <p class="note">Har department login ek shaakh par band hai. Dukan ikhtiyari hai, aur sirf usi shaakh ki. Sirf Owner ya Admin badalte hain. Har tabdeeli Activity Log par pehle se baad likhi jati hai.</p>
+      <table>
+        <thead><tr><th>Naam</th><th>Shaakh</th><th>Dukan</th></tr></thead>
+        <tbody>
+          <tr><td>Sales Team</td><td>Main Branch Mahabali</td><td>Kisaan Dukan Mahabali</td></tr>
+          <tr><td>Finance Team</td><td>Main Branch Mahabali</td><td>Poori shaakh</td></tr>
+        </tbody>
+      </table>
+    </main>
+  </div>
+  <div class="veil">
+    <form class="gl-bg" id="card">
+      <div class="gl-panel">
+        <p class="brand">AgriBridge</p>
+        <p class="tagline">Kisan ka Wasela</p>
+        <h2>Login ki jagah</h2>
+        <p class="who">Sales Team</p>
+        <p class="rule">Ek shaakh. Dukan ikhtiyari hai aur usi shaakh ki honi chahiye.</p>
+        <label for="branch">Shaakh</label>
+        <select id="branch" name="branch_id">
+          <option value="">Shaakh chunein</option>
+          <option value="mah" selected>Main Branch Mahabali</option>
+          <option value="nb">157 NB</option>
+        </select>
+        <label for="shop">Dukan</label>
+        <select id="shop" name="shop_id"></select>
+        <p class="hint" id="empty" hidden>Is shaakh ke neeche koi dukan darj nahi. Login shaakh par rahegi.</p>
+        <p class="msg" id="msg"></p>
+        <div class="row">
+          <button class="ghost" type="button">Mansookh</button>
+          <button class="save" type="submit">Mehfooz karein</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  <script>
+    const shops = {
+      mah: [
+        ["dukan", "Kisaan Dukan Mahabali (Agri Inputs)"],
+        ["karyana", "Kisaan Karyana Mahabali (Karyana)"],
+        ["milk", "Kisaan Milk Center (Dairy)"],
+        ["grain", "Kisaan Procurement Mahabali (Grain)"]
+      ],
+      nb: [["nbk", "157 Karyana (Karyana)"]]
+    };
+    const names = { mah: "Main Branch Mahabali", nb: "157 NB", dukan: "Kisaan Dukan Mahabali", karyana: "Kisaan Karyana Mahabali", milk: "Kisaan Milk Center", grain: "Kisaan Procurement Mahabali", nbk: "157 Karyana" };
+    const branch = document.getElementById("branch");
+    const shop = document.getElementById("shop");
+    const empty = document.getElementById("empty");
+    const msg = document.getElementById("msg");
+    let before = { branch: "mah", shop: "dukan" };
+    function fill(keep) {
+      const list = shops[branch.value] || [];
+      shop.innerHTML = '<option value="">Koi dukan nahi — poori shaakh</option>' + list.map(([id, label]) => `<option value="${id}">${label}</option>`).join("");
+      shop.value = list.some(([id]) => id === keep) ? keep : "";
+      shop.hidden = !branch.value;
+      empty.hidden = !!branch.value && list.length > 0 || !branch.value;
+      if (!branch.value) empty.hidden = true;
+    }
+    branch.addEventListener("change", () => { fill(""); msg.textContent = ""; });
+    fill("dukan");
+    document.getElementById("card").addEventListener("submit", (event) => {
+      event.preventDefault();
+      msg.className = "msg";
+      if (!branch.value) {
+        msg.className = "msg err";
+        msg.textContent = "Department login ek hi shaakh par band hai — shaakh chunein.";
+        return;
+      }
+      const nextShop = shop.value;
+      const parts = [];
+      if (before.branch !== branch.value) parts.push(`Shaakh: ${names[before.branch] || "(khali)"} → ${names[branch.value]}`);
+      if (before.shop !== nextShop) parts.push(`Dukan: ${names[before.shop] || "(khali)"} → ${names[nextShop] || "(khali)"}`);
+      msg.className = "msg ok";
+      msg.textContent = parts.length ? parts.join(". ") : "Koi tabdeeli nahi — record nahi likha.";
+    });
+  </script>
+</body>
+</html>
