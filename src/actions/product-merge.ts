@@ -330,10 +330,24 @@ export async function rejectProductMerge(_prev: ActionState, formData: FormData)
   if (!requestId) return { error: "Request nahi mili." };
   const notes = (formData.get("review_notes") as string) || null;
 
+  // Faisla isi pending row par: status + wajah. Nayi product_merge_requests
+  // row nahi banti — decide bhi yahi action bulata hai. Self-merge
+  // (source = target, jaise Mint 1 Le) bhi isi update se Reject hoti hai.
+  // Approve is case mein yahan nahi aata; approveProductMerge use rokta hai.
+  const { data: request, error: loadErr } = await service
+    .from("product_merge_requests")
+    .select("id, status")
+    .eq("id", requestId)
+    .maybeSingle();
+  if (loadErr) return { error: loadErr.message };
+  if (!request) return { error: "Request nahi mili." };
+  if (request.status !== "pending") return { error: "Ye request pehle hi nipat chuki hai." };
+
   const { error } = await service
     .from("product_merge_requests")
     .update({ status: "rejected", review_notes: notes, reviewed_by: userId, reviewed_at: new Date().toISOString() })
-    .eq("id", requestId);
+    .eq("id", requestId)
+    .eq("status", "pending");
   if (error) return { error: error.message };
 
   revalidatePath("/admin/products/duplicates");
