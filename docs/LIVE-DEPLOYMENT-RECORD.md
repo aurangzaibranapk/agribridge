@@ -1,3 +1,12 @@
+## Pending — 27 October 2026: self-merge Reject (715)
+
+Branch `cursor/reject-self-product-merge-ae81`. Migration **715 not applied** on Testing or Live. File only. Number 714 PR #220 (`714_dairy_cost_per_litre_basis`) ke paas hai. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `product_merge_requests_not_self` ab `status = 'rejected' OR source <> target`, ab bhi NOT VALID. Koi row update/delete nahi.
+- Pending self-merge (Sprite Mint 1 Le, source = target) Reject isi row par status `rejected` + wajah likhega. Nayi merge request nahi.
+- Approve of self-merge app aur check dono rokte hain.
+- Rollback: `715_product_merge_reject_self.rollback.sql` — purana check wapas, Reject phir ruk jayega.
+
 ## Done on Live — 26 October 2026: Pending approval escalation (713, was 698)
 
 Branch `cursor/pending-approval-escalation-e154` (PR #216). File renamed 698 → **713** because live already has `698_mobile_phase1`.
