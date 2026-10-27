@@ -21,6 +21,15 @@ Branch `cursor/careers-gender-messages-552c`. **Not applied on Live** (`ktskwawk
 
 Do not run them on Live until there is a verified backup and a separate approval. The duplicate Shortlist cleanup for M Usama Saleem is also **not run**. Read-only SQL and the separate DELETE are in `supabase/manual/job_application_shortlist_duplicate_20261022_read.sql` and `..._delete.sql`.
 
+## Done on Live — 27 October 2026: Admin dealer / buyer invite (712, PR #217)
+
+Live `ktskwawkslaznkjjacni`: applied 27 Oct 2026 07:01 PKT, recorded as `20261027020151 712_party_invite`. Backup: box `/workspace/backups/2026-10-27-live-217/`. Testing `hwaiuwxqldxsoukkfefn`: applied 26 Oct (backup `/workspace/backups/2026-10-26-testing-712/`). Do not re-apply.
+
+- `party_invite_accounts` + `party_invite_sends` (poora paigham, channel, recipient, wajah). RLS: sirf Owner/Admin apni organization. Likhai service role se.
+- `fn_party_invite_phone_taken` — service_role.
+- Feature `hr.party-invite` → `/admin/hr/users`. HR role ko ijazat nahi.
+- Rollback: `712_party_invite.rollback.sql`.
+
 ## Done on Live — 22 October 2026: Careers i18n columns (public apply modal)
 
 Branch `cursor/careers-apply-modal-i18n-552c` (PR #213). Live `ktskwawkslaznkjjacni` only. Testing was not touched.

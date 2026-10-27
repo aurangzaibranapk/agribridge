@@ -12,6 +12,7 @@
     "test:kisan-wallet-v2": "npx --yes tsx scripts/test-kisan-wallet-v2.ts",
     "test:glassy-ui": "npx --yes tsx scripts/test-glassy-ui.ts",
     "test:hr-meetings": "npx --yes tsx tests/hr-meetings-lib.ts && node tests/hr-meetings-db.mjs",
+    "test:party-invite": "npx --yes tsx tests/party-invite.ts && node tests/party-invite-sql.mjs",
     "test:admin-badges": "npx --yes tsx scripts/test-admin-badges.ts && node tests/admin-badges-sql.mjs",
     "test:pending-decide": "npx --yes tsx scripts/test-pending-decide.ts",
     "test:pending-escalation": "npx --yes tsx scripts/test-pending-escalation.ts && node tests/pending-escalation-sql.mjs && node tests/approval-guards.cjs",
