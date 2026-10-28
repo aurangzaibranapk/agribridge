@@ -55,7 +55,7 @@ assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.pa
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.appFlavor, "test");
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.android.versionCode, 606);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.version, AGRIBRIDGE_OS_VERSION);
-assert.equal(PHONE_VERSION_CODE, 639);
+assert.equal(PHONE_VERSION_CODE, 640);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.versionCode, PHONE_VERSION_CODE);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.versionCode, PHONE_VERSION_CODE);
 assert.equal(shownVersionCode({ platform: "web", embedded: 625, phone: PHONE_VERSION_CODE }), PHONE_VERSION_CODE);
@@ -263,6 +263,15 @@ const approvedMco = readFileSync("apps/mobile/src/roles/mco-approved.tsx", "utf8
 for (const required of ["Milk Collection Officer", "Doodh receive karein", "MCC Drop-off", "MCA Field Collection", "Verify & Save", "Quality Pending", "Chiller Ledger", "Create Dispatch", "Sync & Handoff", "Dispatch Save"]) assert.match(approvedMco, new RegExp(required.replace(/[()]/g, "\\$&")));
 assert.match(approvedMco, /Admin approval farmer ledger/);
 assert.match(approvedMco, /onApplySearch/);
+assert.equal(ROLE_NAV.vet.phase1, true);
+assert.deepEqual(ROLE_NAV.vet.tabs.map((tab) => tab.key), ["home", "visits", "add", "reports", "more"]);
+const approvedVet = readFileSync("apps/mobile/src/roles/vet-approved.tsx", "utf8");
+for (const required of ["Vet Team", "Assigned Visits", "Farmer & Animal", "Treatment Entry", "Save Treatment", "Vaccination", "Mark Complete", "Emergency & Follow-up", "Vet Reports", "Send to Admin", "Apply"]) assert.match(approvedVet, new RegExp(required.replace(/[()]/g, "\\$&")));
+assert.match(readFileSync("apps/mobile/src/roles/vet.tsx", "utf8"), /dairy_health_events/);
+assert.match(readFileSync("apps/mobile/src/roles/vet.tsx", "utf8"), /Farmer history aur Admin report/);
+assert.equal(existsSync("apps/mobile/assets/animals/holstein.jpg"), true);
+assert.equal(existsSync("apps/mobile/assets/animals/sahiwal.jpg"), true);
+assert.equal(existsSync("apps/mobile/assets/animals/buffalo.jpg"), true);
 assert.equal(ROLE_NAV.customer.phase1, true);
 assert.equal(ROLE_NAV.customer.title, ROLE_NAV.farmer.title);
 
@@ -750,7 +759,7 @@ assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /saleMonthKey/
 assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /limit=40/);
 assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /loadPhoneNotes/);
 assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /loadMilkWindow/);
-assert.match(readFileSync("apps/mobile/src/roles/vet.tsx", "utf8"), /Ilaj save karein/);
+assert.match(readFileSync("apps/mobile/src/roles/vet-approved.tsx", "utf8"), /Save Treatment/);
 assert.match(readFileSync("apps/mobile/src/roles/mco.tsx", "utf8"), /Field Collection/);
 assert.match(readFileSync("apps/mobile/src/roles/mco.tsx", "utf8"), /Drop-off save karein/);
 assert.match(readFileSync("apps/mobile/src/roles/mco.tsx", "utf8"), /collection_source: "mco_dropoff"/);
@@ -774,7 +783,7 @@ assert.match(readFileSync("apps/mobile/src/roles/farmer.tsx", "utf8"), /unlinked
 assert.match(readFileSync("apps/mobile/src/roles/staff.tsx", "utf8"), /Check-in/);
 assert.match(readFileSync("apps/mobile/src/roles/staff.tsx", "utf8"), /Mere kaam/);
 assert.match(readFileSync("apps/mobile/src/roles/staff.tsx", "utf8"), /source: "app"/);
-assert.match(readFileSync("apps/mobile/src/roles/vet.tsx", "utf8"), /Ilaj save karein/);
+assert.match(readFileSync("apps/mobile/src/roles/vet-approved.tsx", "utf8"), /Save Treatment/);
 assert.match(readFileSync("apps/mobile/src/roles/dealer.tsx", "utf8"), /HQ khata/);
 assert.match(readFileSync("apps/mobile/src/roles/dealer.tsx", "utf8"), /Dealer \/ Outlet/);
 assert.match(appSource, /User ID \(ikhtiyari\)/);

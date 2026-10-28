@@ -103,11 +103,12 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
   },
   vet: {
     title: "Vet",
-    phase1: false,
+    phase1: true,
     tabs: [
       { key: "home", label: "Home" },
       { key: "visits", label: "Visits" },
-      { key: "stock", label: "Janwar" },
+      { key: "add", label: "Add" },
+      { key: "reports", label: "Reports" },
       { key: "more", label: "Profile" },
     ],
   },
