@@ -34,6 +34,9 @@ export const posDict = {
 
   // --- Cart ---
   pos_cart: { en: "Cart", rm: "Cart", ur: "ٹوکری" },
+  pos_selected_products: { en: "Selected products", rm: "Chuni hui cheezein", ur: "منتخب چیزیں" },
+  pos_cart_count_one: { en: "1 item", rm: "1 cheez", ur: "1 چیز" },
+  pos_cart_count: { en: "{n} items", rm: "{n} cheezein", ur: "{n} چیزیں" },
   pos_cart_empty: { en: "No items in cart", rm: "Cart khali hai", ur: "ٹوکری خالی ہے" },
   pos_cart_empty_error: { en: "Cart is empty.", rm: "Cart khali hai.", ur: "ٹوکری خالی ہے۔" },
   pos_clear_cart: { en: "Clear Cart", rm: "Cart khali karein", ur: "ٹوکری خالی کریں" },

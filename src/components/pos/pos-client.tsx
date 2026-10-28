@@ -23,7 +23,6 @@ import {
   Trash2,
   RotateCcw,
   ArrowLeft,
-  ChevronRight,
   Search,
   Camera,
   Plus,
@@ -725,7 +724,7 @@ export function PosClient({
   return (
     <>
     {overdueDialog && <OverdueCreditDialog info={overdueDialog.info} fallbackText={overdueDialog.text} onChoose={overdueDialog.resolve} />}
-    <div className={`grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:overflow-hidden ${selectedLine && selectedItem ? "lg:grid-cols-[minmax(0,1fr)_21rem_22rem]" : "lg:grid-cols-[minmax(0,1fr)_23rem]"}`}>
+    <div className={`grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:overflow-hidden ${selectedLine && selectedItem ? "lg:grid-cols-[minmax(0,1fr)_21rem_24rem]" : "lg:grid-cols-[minmax(0,1fr)_26rem]"}`}>
       {offlinePending > 0 && <div className="fixed bottom-4 left-4 z-30 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white shadow-lg">{offlinePending} offline bill sync ka intezar kar raha hai</div>}
       <section className="flex flex-col print:hidden lg:min-h-0">
         <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2 lg:flex-nowrap">
@@ -825,23 +824,85 @@ export function PosClient({
         </>
       )}
 
-      <Card className="flex flex-col gap-4 print:hidden lg:h-full lg:min-h-0 lg:overflow-y-auto">
-        <div className="flex items-center gap-2"><ShoppingCart className="h-5 w-5 text-brand-600" /><h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_cart", lang)}</h2></div>
-        <div className="max-h-64 space-y-2 overflow-y-auto">
-          {cart.length === 0 && <div className="py-6 text-center"><p className="text-sm text-surface-500">{t("pos_cart_empty", lang)}</p><p className="mt-1 text-xs text-surface-400">{t("pos_cart_empty_hint", lang)}</p></div>}
-          {cart.map((line) => {
-            const item = inventory.find((i) => i.product_id === line.product_id);
-            const active = line.product_id === selectedId;
-            return (
-              <button key={line.product_id} type="button" onClick={() => setSelectedId(line.product_id)} className={`flex w-full items-center gap-2 rounded-lg border p-2 text-left transition ${active ? "border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30" : "border-surface-100 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/60"}`}>
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-100 dark:bg-surface-800">{item?.products?.image_url ? <img src={item.products.image_url} alt="" className="h-full w-full object-contain" loading="lazy" /> : <Package className="h-4 w-4 text-surface-400" strokeWidth={1.5} />}</span>
-                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-surface-800 dark:text-surface-200">{line.name}<ExpiryBadge date={item?.expiry_date} className="ml-1 align-middle" /></span><span className="block text-xs text-surface-400">{line.quantity} × Rs {line.unit_price.toLocaleString()}{wholesaleOn && item?.wholesale_price == null && <span className="ml-1 text-amber-700">{t("pf_pos_no_wholesale_rate", lang)}</span>}{regularKhataOn && !(item?.products?.mrp_price != null && item.products.mrp_price > 0) && <span className="ml-1 text-amber-700">(MRP darj nahi, retail lagi)</span>}</span></span>
-                <span className="shrink-0 text-right"><span className="block text-sm font-semibold tabular-nums text-surface-900 dark:text-surface-100">Rs {(line.quantity * line.unit_price).toLocaleString()}</span><span className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] text-brand-600 dark:text-brand-400">{t("pos_details", lang)} <ChevronRight className="h-3 w-3" /></span></span>
-              </button>
-            );
-          })}
+      <Card className="flex flex-col gap-3 print:hidden lg:h-full lg:min-h-0 lg:overflow-hidden">
+        <div className="flex shrink-0 items-center gap-2">
+          <ShoppingCart className="h-5 w-5 text-brand-600" />
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_cart", lang)}</h2>
+          {cart.length > 0 && (
+            <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
+              {cart.length === 1 ? t("pos_cart_count_one", lang) : t("pos_cart_count", lang).replace("{n}", String(cart.length))}
+            </span>
+          )}
+        </div>
+        {/*
+          Selected products cart ke upar, apni height ke andar scroll
+          (Boss, 28 Oct — approved mockup). Lambi list payment ko
+          neeche dhakel kar nazar se bahar nahi le jati. Customer,
+          payment, totals, aur Checkout is scroll ke bahar hain.
+          Naam par click rate/tafseel kholta hai; qty aur remove yahin.
+        */}
+        <div className="flex max-h-64 min-h-0 shrink flex-col gap-1.5 overflow-hidden lg:max-h-[min(16rem,42%)]">
+          <p className="shrink-0 text-xs font-medium text-surface-500 dark:text-surface-400">{t("pos_selected_products", lang)}</p>
+          <div
+            data-testid="pos-cart-lines"
+            className="min-h-[6.5rem] flex-auto overflow-y-auto overscroll-y-contain rounded-xl border border-surface-200 dark:border-surface-700"
+          >
+            {cart.length === 0 ? (
+              <div className="flex h-full min-h-[6.5rem] flex-col items-center justify-center px-3 py-6 text-center">
+                <p className="text-sm text-surface-500">{t("pos_cart_empty", lang)}</p>
+                <p className="mt-1 text-xs text-surface-400">{t("pos_cart_empty_hint", lang)}</p>
+              </div>
+            ) : (
+              <ul className="space-y-2 p-2">
+                {cart.map((line) => {
+                  const item = inventory.find((i) => i.product_id === line.product_id);
+                  const active = line.product_id === selectedId;
+                  const lineTotal = line.quantity * line.unit_price;
+                  const rateWarning = wholesaleOn && item?.wholesale_price == null
+                    ? t("pf_pos_no_wholesale_rate", lang)
+                    : regularKhataOn && !(item?.products?.mrp_price != null && item.products.mrp_price > 0)
+                      ? "(MRP darj nahi, retail lagi)"
+                      : null;
+                  return (
+                    <li key={line.product_id} className={`rounded-lg border ${active ? "border-brand-500 bg-brand-50/80 dark:border-brand-700 dark:bg-brand-950/30" : "border-surface-200 bg-white dark:border-surface-700 dark:bg-surface-900"}`}>
+                      <div className="flex items-center gap-1.5 px-2 py-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedId(line.product_id)}
+                          title={t("pos_details", lang)}
+                          className="min-w-0 flex-1 truncate text-left text-[13px] font-medium text-surface-800 hover:text-brand-700 dark:text-surface-100 dark:hover:text-brand-300"
+                        >
+                          {line.name}
+                        </button>
+                        <ExpiryBadge date={item?.expiry_date} className="shrink-0" />
+                        <div className="flex shrink-0 items-center gap-0.5">
+                          <button type="button" onClick={() => updateQuantity(line.product_id, line.quantity - 1)} className="flex h-6 w-6 items-center justify-center rounded-md border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800" aria-label="-">
+                            <Minus className="h-3 w-3" />
+                          </button>
+                          <span className="w-5 text-center text-sm font-medium tabular-nums text-surface-900 dark:text-surface-100">{line.quantity}</span>
+                          <button type="button" onClick={() => updateQuantity(line.product_id, line.quantity + 1)} className="flex h-6 w-6 items-center justify-center rounded-md border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800" aria-label="+">
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <span className="shrink-0 whitespace-nowrap text-[11px] tabular-nums text-surface-500">
+                          Rs {line.unit_price.toLocaleString()}
+                          <span className="px-0.5 text-surface-300">|</span>
+                          <span className="font-semibold text-surface-900 dark:text-surface-100">Rs {lineTotal.toLocaleString()}</span>
+                        </span>
+                        <button type="button" onClick={() => removeLine(line.product_id)} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-surface-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400" aria-label={t("pos_remove_item", lang)}>
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {rateWarning && <p className="-mt-1 px-2 pb-1.5 text-[10px] leading-tight text-amber-700">{rateWarning}</p>}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         </div>
 
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
         <div className="border-t border-surface-100 pt-3 dark:border-surface-800">
           <Label>{t("pos_customer", lang)} {khataTotal > 0 && <span className="text-red-500">*</span>}</Label>
           <div className="mb-2 grid grid-cols-3 gap-1.5">
@@ -930,7 +991,8 @@ export function PosClient({
         <div className={`flex items-center justify-between text-sm ${remaining > 0.5 ? "text-amber-600" : "text-green-600"}`}><span>{remaining > 0 ? "Baaqi Rakam" : "Poora Paid"}</span><span className="font-semibold tabular-nums">Rs {Math.abs(remaining).toLocaleString()}</span></div>
         {overpayment > 0 && <div className="flex items-center justify-between text-sm font-semibold text-emerald-700"><span>Customer Jama / Advance</span><span className="tabular-nums">Rs {overpayment.toLocaleString()}</span></div>}
         {message && <div className={`rounded-lg px-3 py-2 text-sm ${message.type === "success" ? "bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-300" : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"}`}>{message.text}</div>}
-        <div className="flex gap-2"><button type="button" onClick={resetSale} disabled={submitting || cart.length === 0} className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-500 hover:bg-surface-50 disabled:opacity-40 dark:border-surface-700 dark:text-surface-400 dark:hover:bg-surface-800">{t("pos_clear_cart", lang)}</button><Button data-guide="pos-checkout" className="flex-1 py-3 text-base" onClick={handleCheckout} disabled={submitting || cart.length === 0}>{submitting ? "Processing..." : "Checkout"}</Button></div>
+        <div className="sticky bottom-0 z-10 -mx-1 flex gap-2 bg-white px-1 pt-2 dark:bg-surface-900"><button type="button" onClick={resetSale} disabled={submitting || cart.length === 0} className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-500 hover:bg-surface-50 disabled:opacity-40 dark:border-surface-700 dark:text-surface-400 dark:hover:bg-surface-800">{t("pos_clear_cart", lang)}</button><Button data-guide="pos-checkout" className="flex-1 py-3 text-base" onClick={handleCheckout} disabled={submitting || cart.length === 0}>{submitting ? "Processing..." : "Checkout"}</Button></div>
+        </div>
       </Card>
       {saleAnim && <ReceiptPrint receipt={saleAnim} autoCloseMs={2600} onClose={() => setSaleAnim(null)} />}
       {completedSaleId && !saleAnim && <ReceiptModal saleId={completedSaleId} onClose={closeReceiptAndRefreshProducts} lang={lang} />}
