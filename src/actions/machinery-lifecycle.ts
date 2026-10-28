@@ -4,6 +4,7 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { sendPaymentReminder } from "@/lib/machinery/payment-reminder";
 import { createClient } from "@/lib/supabase/server";
 import { requireAction } from "@/lib/access/guard";
+import { mayDecideEntry } from "@/lib/approval/guards";
 import { alreadyRegisteredMessage, findFarmerByPhone } from "@/lib/farmers/identity";
 import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles, notifyUser } from "@/lib/notifications";
@@ -180,6 +181,8 @@ function revalidateAll(bookingId?: string) {
   revalidatePath("/admin/machinery-rental");
   revalidatePath("/admin/machinery-rental/list");
   revalidatePath("/admin/machinery-rental/dashboard");
+  revalidatePath("/admin/finance/ops");
+  revalidatePath("/admin/milk-collection/fuel");
   if (bookingId) revalidatePath(`/admin/machinery-rental/booking/${bookingId}`);
 }
 
@@ -3749,12 +3752,15 @@ export async function verifyFuelClaim(_prev: ActionState, formData: FormData): P
 
   const { data: log } = await supabase
     .from("machinery_fuel_logs")
-    .select("id, booking_id, amount, litres, paid_by, verification_status")
+    .select("id, booking_id, amount, litres, paid_by, verification_status, created_by, submitted_by")
     .eq("id", fuelId)
     .maybeSingle();
   if (!log) return { error: "Indraj nahi mila." };
   if (log.verification_status !== "claimed") {
     return { error: "Is indraj ka faisla pehle ho chuka hai." };
+  }
+  if (!mayDecideEntry(guard.caller.role, actorId, [log.created_by, log.submitted_by])) {
+    return { error: "Apni entry khud manzoor nahi kar sakte." };
   }
 
   if (decision === "reject") {
@@ -3828,12 +3834,15 @@ export async function approveFuelClaim(_prev: ActionState, formData: FormData): 
 
   const { data: log } = await supabase
     .from("machinery_fuel_logs")
-    .select("id, booking_id, amount, litres, paid_by, verification_status")
+    .select("id, booking_id, amount, litres, paid_by, verification_status, created_by, submitted_by, manager_confirmed_by")
     .eq("id", fuelId)
     .maybeSingle();
   if (!log) return { error: "Indraj nahi mila." };
   if (log.verification_status !== "manager_confirmed") {
     return { error: "Ye indraj abhi Manager ki tasdeeq ka intezar kar raha hai, ya faisla pehle ho chuka hai." };
+  }
+  if (!mayDecideEntry(guard.caller.role, actorId, [log.created_by, log.submitted_by, log.manager_confirmed_by])) {
+    return { error: "Apni entry khud manzoor nahi kar sakte." };
   }
 
   const { data: booking } = await supabase

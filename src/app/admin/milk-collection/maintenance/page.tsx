@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { MaintenanceClient } from "./maintenance-client";
@@ -111,6 +112,7 @@ export default async function MaintenancePage() {
         title={t("mc_fleet_title", lang)}
         description="Oil ki yaad dihani, do qadam ki manzoori, aur gaari badalne ka fund."
       />
+      <Link href="/admin/milk-collection/fuel#ops-desk" className="mb-4 inline-block text-sm font-medium text-brand-700">Tel aur ops cards</Link>
 
       <Card className="mb-4 p-4">
         <h2 className="mb-1 text-sm font-semibold text-surface-900 dark:text-white">

@@ -1,3 +1,10 @@
+## Pending — 28 October 2026: Tel / ops cards + payroll desk (723)
+
+Branch `cursor/fuel-ops-payroll-desk-72d0`. Migration **723 file only**. Testing aur Live dono par **nahi** chali. **722 mat use karo** — wo `722_load_tx_id_required_help` hai. 723 sirf feature + `feature_help`. Koi table, koi column, koi naya tankhwah formula nahi. Safhe: `/admin/finance/ops` aur fuel page ke upar wahi desk. Payroll `/admin/hr/payroll` par Cards / Log / Harkatein. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `723_fuel_ops_payroll_help.sql`. Rollback: `723_fuel_ops_payroll_help.rollback.sql`.
+- Shop petty float, JazzCash aur bank brand is desk par nahi.
+
 ## Pending — 28 October 2026: load Tx ID lazmi, Help matn (722)
 
 Branch `cursor/load-tx-id-required-4aa4`. Migration **722 file only**. Testing aur Live dono par **nahi** chali. **721 mat use karo** — wo `721_cash_needs_you_help` hai (Cash Needs-you, PR #234). 722 sirf `feature_help` ka load-bill matn. Koi column nahi. Asal rok code mein hai (`createLoadTransaction` / `createBankTransfer`): Tx ID khali ho to save reject, status `darj`. Purani "Load proof missing" qatarein nahi band hoti. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).

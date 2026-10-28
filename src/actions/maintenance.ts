@@ -63,6 +63,8 @@ export async function logMaintenance(_prev: ActionState, formData: FormData): Pr
   );
 
   revalidatePath("/admin/milk-collection/maintenance");
+  revalidatePath("/admin/finance/ops");
+  revalidatePath("/admin/milk-collection/fuel");
   return { success: true };
 }
 
@@ -76,6 +78,8 @@ export async function saveServiceInterval(_prev: ActionState, formData: FormData
   if (error) return { error: error.message };
 
   revalidatePath("/admin/milk-collection/maintenance");
+  revalidatePath("/admin/finance/ops");
+  revalidatePath("/admin/milk-collection/fuel");
   return { success: true };
 }
 
@@ -100,6 +104,8 @@ export async function recordFundWithdrawal(_prev: ActionState, formData: FormDat
   if (error) return { error: error.message };
 
   revalidatePath("/admin/milk-collection/maintenance");
+  revalidatePath("/admin/finance/ops");
+  revalidatePath("/admin/milk-collection/fuel");
   return { success: true };
 }
 const BRANCH_ROLES = ["owner", "super_admin", "admin", "manager"];
@@ -183,6 +189,8 @@ export async function branchVerifyMaintenance(_prev: ActionState, formData: Form
   );
 
   revalidatePath("/admin/milk-collection/maintenance");
+  revalidatePath("/admin/finance/ops");
+  revalidatePath("/admin/milk-collection/fuel");
   return { success: true };
 }
 
@@ -249,6 +257,8 @@ export async function approveMaintenance(_prev: ActionState, formData: FormData)
   });
 
   revalidatePath("/admin/milk-collection/maintenance");
+  revalidatePath("/admin/finance/ops");
+  revalidatePath("/admin/milk-collection/fuel");
   return { success: true };
 }
 
@@ -286,5 +296,7 @@ export async function rejectMaintenance(_prev: ActionState, formData: FormData):
   });
 
   revalidatePath("/admin/milk-collection/maintenance");
+  revalidatePath("/admin/finance/ops");
+  revalidatePath("/admin/milk-collection/fuel");
   return { success: true };
 }

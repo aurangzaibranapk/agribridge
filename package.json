@@ -60,6 +60,7 @@
     "test:promise-credit": "npx --yes tsx scripts/test-promise-credit.ts && node tests/promise-credit-migration.cjs",
     "test:admin-review": "npx --yes tsx scripts/test-admin-review.ts",
     "test:cash-custody": "npx --yes tsx scripts/test-cash-custody-chain.ts && node tests/cash-custody-717-sql.mjs",
+    "test:ops-desk": "npx --yes tsx scripts/test-ops-desk.ts && npx --yes tsx scripts/test-ops-desk-render.tsx",
     "test:grain-unified": "node tests/grain-unified-receivables.cjs",
     "test:salary-qist": "npx --yes tsx scripts/test-salary-qist.ts && node tests/salary-qist-wiring.cjs && node tests/salary-qist-sql.mjs",
     "test:password-reset": "npx --yes tsx scripts/test-password-reset.ts && node tests/password-reset-sql.mjs",

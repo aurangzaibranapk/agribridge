@@ -153,6 +153,7 @@ export async function logFuelEntry(_prev: ActionState, formData: FormData): Prom
   if (error) return { error: error.message };
 
   revalidatePath("/admin/milk-collection/fuel");
+  revalidatePath("/admin/finance/ops");
   return { success: true };
 }
 
@@ -176,5 +177,6 @@ export async function approveFuelEntry(_prev: ActionState, formData: FormData): 
   }).eq("id", logId).eq("approval_status", "pending");
   if (error) return { error: error.message };
   revalidatePath("/admin/milk-collection/fuel");
+  revalidatePath("/admin/finance/ops");
   return { success: true };
 }

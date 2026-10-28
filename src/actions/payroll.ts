@@ -18,7 +18,7 @@ async function me() {
   return { sb, user };
 }
 function paths() {
-  ["/admin/hr/salary-structure", "/admin/hr/payroll", "/admin/hr/advances", "/admin/my-hr", "/admin/khata/qist"].forEach((p) => revalidatePath(p));
+  ["/admin/hr/salary-structure", "/admin/hr/payroll", "/admin/hr/advances", "/admin/my-hr", "/admin/khata/qist", "/admin/finance/ops", "/admin/milk-collection/fuel"].forEach((p) => revalidatePath(p));
 }
 
 // ---------------- 551 Structure ----------------

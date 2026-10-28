@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { GeneratorClient } from "./generator-client";
@@ -54,6 +55,7 @@ export default async function GeneratorTrackerPage() {
   return (
     <div>
       <PageHeader title={t("mc_generator_title", lang)} description="Runtime hours vs diesel consumption, cost per hour" />
+      <Link href="/admin/milk-collection/fuel#ops-desk" className="mb-4 inline-block text-sm font-medium text-brand-700">Tel aur ops cards</Link>
       <GeneratorClient logs={logs} branches={branches ?? []} summary={summary} />
     </div>
   );
