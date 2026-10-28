@@ -2,9 +2,10 @@
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
-import { markNotificationRead, sendBroadcast, type ActionState } from "@/actions/notifications";
+import { sendBroadcast, type ActionState } from "@/actions/notifications";
+import { useRouter } from "next/navigation";
 import { Bell, Send, X, Check } from "lucide-react";
-import Link from "next/link";
+import { markOpened } from "@/components/notifications/mark-read";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -43,6 +44,16 @@ export function NotificationsClient({
   const [tab, setTab] = useState<"mine" | "all">("mine");
   const lang = useLang();
   const [showBroadcast, setShowBroadcast] = useState(false);
+  const [readNow, setReadNow] = useState<ReadonlySet<string>>(() => new Set());
+
+  function noteRead(ids: string[]) {
+    if (!ids.length) return;
+    setReadNow((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) next.add(id);
+      return next;
+    });
+  }
 
   return (
     <div>
@@ -66,7 +77,9 @@ export function NotificationsClient({
           {myNotifications.length === 0 ? (
             <p className="px-4 py-10 text-center text-sm text-surface-400">{t("nt_none", lang)}</p>
           ) : (
-            myNotifications.map((n) => <MyNotificationRow key={n.id} notification={n} />)
+            myNotifications.map((n) => (
+              <MyNotificationRow key={n.id} notification={{ ...n, is_read: n.is_read || readNow.has(n.id) }} onRead={noteRead} />
+            ))
           )}
         </div>
       )}
@@ -97,33 +110,36 @@ export function NotificationsClient({
   );
 }
 
-function MyNotificationRow({ notification }: { notification: MyNotification }) {
+function MyNotificationRow({ notification, onRead }: { notification: MyNotification; onRead: (ids: string[]) => void }) {
   const lang = useLang();
-  const [, formAction] = useFormState(markNotificationRead, initialState);
-  const content = (
+  const router = useRouter();
+
+  async function save(andOpen: boolean) {
+    if (!notification.is_read) {
+      const res = await markOpened({ id: notification.id, href: andOpen ? notification.link_url : null });
+      if (res.ok) onRead(res.ids);
+      else if (!andOpen) return;
+    }
+    if (andOpen && notification.link_url) router.push(notification.link_url);
+  }
+
+  return (
     <div className={`flex items-start justify-between gap-3 border-b border-surface-100 px-4 py-3 last:border-0 dark:border-surface-800 ${!notification.is_read ? "bg-brand-50/50 dark:bg-brand-900/10" : ""}`}>
-      <div className="flex items-start gap-2">
+      <button type="button" onClick={() => void save(true)} className="flex min-w-0 flex-1 items-start gap-2 text-left">
         <Bell className={`mt-0.5 h-4 w-4 ${!notification.is_read ? "text-brand-600" : "text-surface-300"}`} />
         <div>
           <p className="text-sm font-medium text-surface-900 dark:text-white">{notification.title}</p>
           <p className="text-xs text-surface-500 whitespace-pre-line">{notification.message}</p>
           <p className="text-xs text-surface-400">{new Date(notification.created_at).toLocaleString()}</p>
         </div>
-      </div>
+      </button>
       {!notification.is_read && (
-        <form action={formAction}>
-          <input type="hidden" name="notification_id" value={notification.id} />
-          <button type="submit" className="flex items-center gap-1 rounded-lg bg-surface-100 px-2 py-1 text-xs text-surface-600 hover:bg-surface-200">
-            <Check className="h-3 w-3" />{t("nt_mark_read", lang)}</button>
-        </form>
+        <button type="button" onClick={() => void save(false)} className="flex items-center gap-1 rounded-lg bg-surface-100 px-2 py-1 text-xs text-surface-600 hover:bg-surface-200">
+          <Check className="h-3 w-3" />{t("nt_mark_read", lang)}
+        </button>
       )}
     </div>
   );
-
-  if (notification.link_url) {
-    return <Link href={notification.link_url}>{content}</Link>;
-  }
-  return content;
 }
 
 function BroadcastModal({ onClose }: { onClose: () => void }) {

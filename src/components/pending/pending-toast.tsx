@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
-import Link from "next/link";
 import { Bell, X } from "lucide-react";
+import { MarkReadLink } from "@/components/notifications/mark-read";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { catLabelKey, fmtRs, roleLabelKey, type PendingItem } from "@/lib/pending/categories";
@@ -38,9 +38,9 @@ export function PendingToast({ toast, onClose }: { toast: { item: PendingItem | 
           </p>
         )}
         <div className="mt-2 flex gap-1.5">
-          <Link href={href} onClick={onClose} className="rounded-lg bg-gradient-to-b from-emerald-500 to-emerald-600 px-2.5 py-1 text-xs font-bold text-white">
+          <MarkReadLink href={href} onDone={onClose} className="rounded-lg bg-gradient-to-b from-emerald-500 to-emerald-600 px-2.5 py-1 text-xs font-bold text-white">
             {t("apb_open", lang)}
-          </Link>
+          </MarkReadLink>
           <button type="button" onClick={onClose} className="rounded-lg border border-surface-200 px-2.5 py-1 text-xs font-bold text-surface-700 dark:border-white/10 dark:text-surface-200">
             {t("apb_later", lang)}
           </button>

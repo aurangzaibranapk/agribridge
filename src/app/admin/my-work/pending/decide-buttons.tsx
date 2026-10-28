@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { ArrowRight, Check, Loader2, Lock, X } from "lucide-react";
+import { MarkReadLink } from "@/components/notifications/mark-read";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { approveState, INLINE_DECISIONS, type PendingItem } from "@/lib/pending/categories";
@@ -13,6 +13,7 @@ import { statusOf, usePendingLive } from "./live-state";
  * Approve / Reject / Kholein. Browser confirm nahi -- app ka modal.
  * Save hote hi qataar hara/surkh, ginti taaza. Nakami par asal wajah.
  * Apni entry par Approve aur Reject band rehte hain.
+ * Kholein sirf linked notification ko read karta hai — approve nahi.
  */
 export function DecideButtons({
   item,
@@ -131,10 +132,10 @@ export function DecideButtons({
             </button>
           </>
         )}
-        {!hideOpen && <Link href={href} className="inline-flex items-center gap-1 rounded-lg border border-surface-200 bg-white px-2.5 py-1.5 text-[11.5px] font-bold text-surface-800 dark:border-white/10 dark:bg-white/5 dark:text-surface-100">
+        {!hideOpen && <MarkReadLink href={href} className="inline-flex items-center gap-1 rounded-lg border border-surface-200 bg-white px-2.5 py-1.5 text-[11.5px] font-bold text-surface-800 dark:border-white/10 dark:bg-white/5 dark:text-surface-100">
           {t("apb_open", lang)}
           <ArrowRight className="h-3 w-3" />
-        </Link>}
+        </MarkReadLink>}
       </div>
       {locked && <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300">{ownTip}</span>}
       {ask && state === "enabled" && (

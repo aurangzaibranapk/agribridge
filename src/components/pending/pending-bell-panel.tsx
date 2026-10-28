@@ -1,13 +1,14 @@
 "use client";
 import Link from "next/link";
 import { UserRound } from "lucide-react";
+import { MarkReadLink } from "@/components/notifications/mark-read";
 import { cn } from "@/lib/utils/format";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { ageDays, catLabelKey, fmtRs, groupLabelKey, roleLabelKey, type PendingItem } from "@/lib/pending/categories";
 import { AgeChip, NayaPill } from "@/components/pending/pending-ui";
 import { PENDING_PAGE } from "@/components/pending/pending-context";
 
-/** Ghanti ke andar ki fehrist (mock_badge_bell_*). Sirf dikhana -- faisla apne safhe par. */
+/** Ghanti ke andar ki fehrist (mock_badge_bell_*). Kholna notice ko read karta hai; faisla apne safhe par, approve nahi. */
 export function PendingBellList({ items, mode, lang, onNavigate }: { items: PendingItem[] | null; mode: "new" | "pending"; lang: Lang; onNavigate: () => void }) {
   if (items === null) return <p className="px-4 py-6 text-center text-xs text-surface-400">{t("nbell_loading", lang)}</p>;
   const list = (mode === "new" ? items.filter((i) => i.is_new) : items)
@@ -21,11 +22,11 @@ export function PendingBellList({ items, mode, lang, onNavigate }: { items: Pend
       {list.map((i) => {
         const days = ageDays(i.created_at);
         return (
-          <Link
+          <MarkReadLink
             key={`${i.category}:${i.item_id}`}
             href={i.link || i.route}
-            onClick={onNavigate}
-            data-bell-item={i.is_new ? "new" : "pending"}
+            onDone={onNavigate}
+            bellItem={i.is_new ? "new" : "pending"}
             className={cn("flex gap-3 px-4 py-3 hover:bg-surface-50 dark:hover:bg-white/5", i.is_new && "bg-emerald-500/[0.07]")}
           >
             <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", i.is_new ? "bg-emerald-500" : "bg-red-500")} />
@@ -51,7 +52,7 @@ export function PendingBellList({ items, mode, lang, onNavigate }: { items: Pend
                 </span>
               </span>
             </span>
-          </Link>
+          </MarkReadLink>
         );
       })}
       <Link href={PENDING_PAGE} onClick={onNavigate} className="flex justify-between px-4 py-2.5 text-xs font-bold">
