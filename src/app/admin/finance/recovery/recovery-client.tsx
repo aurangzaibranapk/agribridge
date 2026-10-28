@@ -26,6 +26,7 @@ import { enqueue, allActions } from "@/lib/offline/queue";
 import { registerSender, syncQueue } from "@/lib/offline/sync";
 import { createClient } from "@/lib/supabase/client";
 import { defaultAgainstAccount, partyAccountProblem } from "@/lib/finance/recovery-party-accounts";
+import { focusPageIndex } from "@/lib/recovery/promise-parties";
 import { GlassStyles } from "@/components/glass/glass-styles";
 import { PaymentLiveSummary } from "@/components/glass/payment-live-summary";
 import { queueReceipt, ReceiptHost } from "@/components/glass/receipt-print";
@@ -148,6 +149,7 @@ export function RecoveryClient({
   financeAccounts,
   ledgerAccounts,
   paymentDestinations,
+  initialFocusKey = null,
 }: {
   parties: RecoveryParty[];
   templates: ReminderTemplate[];
@@ -164,8 +166,10 @@ export function RecoveryClient({
   financeAccounts: FinanceAccountOption[];
   ledgerAccounts: LedgerAccountOption[];
   paymentDestinations: PaymentDestinationOption[];
+  initialFocusKey?: string | null;
 }) {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const opened = focusPageIndex(parties, initialFocusKey, PAGE_SIZE);
+  const [selected, setSelected] = useState<Set<string>>(() => (opened.key ? new Set([opened.key]) : new Set()));
   const [offlinePending, setOfflinePending] = useState(0);
 
   useEffect(() => {
@@ -198,7 +202,7 @@ export function RecoveryClient({
   const [draftType, setDraftType] = useState<"all" | string>("all");
   const [draftDueFrom, setDraftDueFrom] = useState("");
   const [draftDueTo, setDraftDueTo] = useState("");
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(opened.page);
   const [mode, setMode] = useState<"schedule" | "promise" | "money" | null>(null);
   const [moneyDirection, setMoneyDirection] = useState<"receive" | "pay">("receive");
   const [busy, setBusy] = useState(false);
@@ -210,7 +214,7 @@ export function RecoveryClient({
   const [moneyError, setMoneyError] = useState("");
   const [moneyProgress, setMoneyProgress] = useState("");
   const [channel, setChannel] = useState<(typeof CHANNELS)[number]["key"]>("whatsapp");
-  const [previewKey, setPreviewKey] = useState<string | null>(null);
+  const [previewKey, setPreviewKey] = useState<string | null>(opened.key);
   const [summaryView, setSummaryView] = useState<"receivable" | "due_today" | "overdue" | "collected">("receivable");
   const recordsRef = useRef<HTMLDivElement>(null);
   const collectedRef = useRef<HTMLDivElement>(null);
