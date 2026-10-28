@@ -10,6 +10,8 @@ import { Empty, SaleChart, Section, liveAuth, type LiveBag } from "../bits";
 import { McoGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
 import { farmerPortrait } from "../farmer-portraits";
+import type { OutboxItem } from "../../../../src/lib/mobile/queue";
+import { ApprovedMcoApp, type McoDispatch, type McoFarmer } from "./mco-approved";
 
 function num(value: number | string | null | undefined): number {
   const n = typeof value === "number" ? value : Number(value);
@@ -21,7 +23,12 @@ function amountText(rows: MilkRow[]): string {
   return amount == null ? "raqam —" : rupees(amount);
 }
 
-export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { tab: string; data?: unknown; onEnqueue?: (item: unknown) => void; readOnly?: boolean; live?: LiveBag; onProfile?: () => void; onTab?: (key: string) => void }) {
+function karachiHour(now = new Date()): number {
+  const hour = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", hour: "2-digit", hour12: false }).format(now);
+  return Number(hour) % 24;
+}
+
+export function RoleScreen({ tab, queue = [], queueCount = 0, onEnqueue, onSync, readOnly = false, live, onProfile, onTab }: { tab: string; data?: unknown; queue?: OutboxItem[]; queueCount?: number; onEnqueue?: (item: { kind: "fat" | "drop"; payload: Record<string, unknown> }) => void; onSync?: () => void; readOnly?: boolean; live?: LiveBag; onProfile?: () => void; onTab?: (key: string) => void }) {
   const auth = liveAuth(live);
   const [rows, setRows] = useState<MilkRow[] | null>(null);
   const [error, setError] = useState("");
@@ -39,13 +46,30 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
   const [receiveMode, setReceiveMode] = useState<"field" | "dropoff">("field");
   const [dropLitres, setDropLitres] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [farmers, setFarmers] = useState<McoFarmer[]>([]);
+  const [dispatches, setDispatches] = useState<McoDispatch[]>([]);
+  const [route, setRoute] = useState("");
+  const [chiller, setChiller] = useState("");
+  const [branchId, setBranchId] = useState("");
+  const [search, setSearch] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+  const [verifyOpen, setVerifyOpen] = useState(false);
+  const [dropoff, setDropoff] = useState(false);
+  const [dispatchOpen, setDispatchOpen] = useState(false);
+  const [dispatchLitres, setDispatchLitres] = useState("");
+  const [vehicle, setVehicle] = useState("");
+  const [driver, setDriver] = useState("");
+  const [destination, setDestination] = useState("");
 
   const load = useCallback(async () => {
     if (!auth) return;
-    const [milk, rate, farmers] = await Promise.all([
+    const [milk, rate, farmerRows, staff, profile, dispatchRows] = await Promise.all([
       loadMilkList(auth, fetch, 120),
       loadMilkSettings(auth, fetch),
-      liveGetScoped<PartyRow>(auth, "farmers?select=id,full_name&order=full_name.asc&limit=40", fetch),
+      liveGetScoped<McoFarmer>(auth, "farmers?select=id,full_name,farmer_code&order=full_name.asc&limit=80", fetch),
+      liveGetScoped<{ milk_route_name?: string | null; milk_chiller_name?: string | null; branch_id?: string | null }>(auth, `staff_details?select=milk_route_name,milk_chiller_name,branch_id&profile_id=eq.${encodeURIComponent(String(auth.userId || ""))}&limit=1`, fetch),
+      liveGetScoped<{ branch_id?: string | null }>(auth, `profiles?select=branch_id&id=eq.${encodeURIComponent(String(auth.userId || ""))}&limit=1`, fetch),
+      liveGetScoped<McoDispatch>(auth, "milk_dispatches?select=id,dispatch_date,shift,vehicle_name,driver_name,dispatched_liters,received_liters,shortage_liters,created_at&order=dispatch_date.desc,created_at.desc&limit=80", fetch),
     ]);
     if (!milk.ok) {
       setRows([]);
@@ -67,12 +91,21 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
       setSettingsNote("");
       setThresholds(resolveThresholds(null));
     }
-    if (farmers.ok) {
+    if (farmerRows.ok) {
+      setFarmers(farmerRows.rows);
       const map = new Map<string, string>();
-      for (const farmer of farmers.rows) if (farmer.id) map.set(farmer.id, farmer.full_name || "Kisan");
+      for (const farmer of farmerRows.rows) if (farmer.id) map.set(farmer.id, farmer.full_name || "Kisan");
       setNames(map);
-      setFarmerId((current) => current || farmers.rows[0]?.id || "");
+      setFarmerId((current) => current || farmerRows.rows[0]?.id || "");
     }
+    if (staff.ok && staff.rows[0]) {
+      setRoute(String(staff.rows[0].milk_route_name || ""));
+      setChiller(String(staff.rows[0].milk_chiller_name || ""));
+      setBranchId(String(staff.rows[0].branch_id || (profile.ok ? profile.rows[0]?.branch_id || "" : "")));
+    } else if (profile.ok) {
+      setBranchId(String(profile.rows[0]?.branch_id || ""));
+    }
+    if (dispatchRows.ok) setDispatches(dispatchRows.rows);
   }, [auth?.token, auth?.url, auth?.testAccount, auth?.flavor]);
 
   useEffect(() => { void load(); }, [load]);
@@ -128,9 +161,17 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
       rate_per_liter: settings.standardRate,
       total_amount: calc.amount,
       status: "priced",
+      fat_at: new Date().toISOString(),
     }, fetch);
     setBusy("");
     if (!saved.ok) {
+      if (saved.status === 0 && onEnqueue) {
+        onEnqueue({ kind: "fat", payload: { entry_id: chosen.id, liters: litres, fat: fatValue, lr: lrValue, snf: calc.snf, ts: calc.ts, rate_per_liter: settings.standardRate, total_amount: calc.amount, fat_at: new Date().toISOString() } });
+        setNote("Network nahi mila. Quality entry phone mein safe hai; Sync Now se upload hogi.");
+        setVerifyOpen(false);
+        setFat(""); setLr(""); setCheckedLitres("");
+        return;
+      }
       const denied = saved.status === 401 || saved.status === 403 || /42501|row-level security|is_test/i.test(saved.detail || "");
       setNote(denied ? "Save nahi hua. Testing par 701_app_test_mco_admin.sql lagani hai." : saved.message);
       return;
@@ -138,6 +179,7 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
     setFat("");
     setLr("");
     setCheckedLitres("");
+    setVerifyOpen(false);
     setNote(`Fat lag gaya. SNF ${calc.snf} · ${rupees(calc.amount)}. Kisan ki list mein ye raqam dikhega.`);
     await load();
   }
@@ -159,7 +201,7 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
     const saved = await liveInsert<MilkRow>(auth, "milk_entries", {
       farmer_id: farmerId,
       entry_date: karachiDate(),
-      shift: new Date().getHours() < 15 ? "morning" : "evening",
+      shift: karachiHour() < 12 ? "morning" : "evening",
       quantity_liters: litres,
       fat_percentage: fatValue,
       lr: lrValue,
@@ -170,19 +212,82 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
       status: "priced",
       entry_channel: "app",
       collection_source: "mco_dropoff",
+      route_name: route || null,
+      chiller_name: chiller || null,
+      branch_id: branchId || null,
       created_by: auth.userId,
       client_uuid: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${auth.userId}`,
       notes: "MCC drop-off",
       is_test: auth.testAccount === true,
     }, fetch);
     setBusy("");
-    if (!saved.ok) { setNote(saved.message); return; }
+    if (!saved.ok) {
+      if (saved.status === 0 && onEnqueue) {
+        onEnqueue({ kind: "drop", payload: { farmer_id: farmerId, entry_date: karachiDate(), shift: karachiHour() < 12 ? "morning" : "evening", liters: litres, fat: fatValue, lr: lrValue, snf: calc.snf, ts: calc.ts, rate_per_liter: settings.standardRate, total_amount: calc.amount, route_name: route || null, chiller_name: chiller || null } });
+        setNote("Network nahi mila. Drop-off phone mein safe hai; Sync Now se upload hogi.");
+        setVerifyOpen(false);
+        setDropLitres(""); setFat(""); setLr("");
+        return;
+      }
+      setNote(saved.message); return;
+    }
     setDropLitres("");
     setFat("");
     setLr("");
+    setVerifyOpen(false);
     setNote(`Drop-off save ho gaya. SNF ${calc.snf} · ${rupees(calc.amount)}. Farmer confirmation queue system se chalegi.`);
     await load();
   }
+
+  async function saveDispatch() {
+    if (!auth || !auth.userId || readOnly) return;
+    const litres = Number(dispatchLitres);
+    if (!branchId) { setNote("MCO profile ke sath branch link nahi. Dispatch se pehle branch set karein."); return; }
+    if (!(litres > 0)) { setNote("Dispatch ke litre sahi likhein."); return; }
+    setBusy("dispatch");
+    const saved = await liveInsert<McoDispatch>(auth, "milk_dispatches", {
+      branch_id: branchId,
+      dispatch_date: karachiDate(),
+      shift: karachiHour() < 12 ? "morning" : "evening",
+      dispatched_liters: litres,
+      vehicle_name: vehicle.trim() || null,
+      driver_name: driver.trim() || null,
+      notes: destination.trim() ? `Destination: ${destination.trim()}` : null,
+      created_by: auth.userId,
+    }, fetch);
+    setBusy("");
+    if (!saved.ok) {
+      setNote(/milk_dispatch_one_per_shift|duplicate|23505/i.test(saved.detail || "") ? "Is chiller ki is shift ki dispatch pehle se save hai." : saved.message);
+      return;
+    }
+    setDispatchLitres(""); setVehicle(""); setDriver(""); setDestination(""); setDispatchOpen(false);
+    setNote("Dispatch save ho gayi. Company receipt aane par Admin received litres verify karega.");
+    await load();
+  }
+
+  return <ApprovedMcoApp
+    tab={tab} today={today} rows={rows} farmers={farmers} dispatches={dispatches}
+    route={route} chiller={chiller} note={note} error={error}
+    queue={queue} queueCount={queueCount} refreshing={refreshing} readOnly={readOnly}
+    receiveMode={receiveMode} search={search} appliedSearch={appliedSearch}
+    verifyOpen={verifyOpen} dropoff={dropoff} selectedRow={chosen} selectedFarmerId={farmerId}
+    checkedLitres={dropoff ? dropLitres : checkedLitres} fat={fat} lr={lr} busy={Boolean(busy)}
+    dispatchOpen={dispatchOpen} dispatchLitres={dispatchLitres} vehicle={vehicle} driver={driver} destination={destination}
+    onTab={onTab} onProfile={onProfile}
+    onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
+    onSync={() => onSync?.()}
+    onMode={(mode) => { setReceiveMode(mode); setNote(""); }}
+    onSearch={setSearch} onApplySearch={() => setAppliedSearch(search.trim())}
+    onOpenRow={(row) => { if (!row.id) return; setDropoff(false); setPick(row.id); setCheckedLitres(String(row.quantity_liters ?? "")); setFat(row.fat_percentage == null ? "" : String(row.fat_percentage)); setLr(row.lr == null ? "" : String(row.lr)); setNote(""); setVerifyOpen(true); }}
+    onOpenFarmer={(id) => { setDropoff(true); setFarmerId(id); setDropLitres(""); setFat(""); setLr(""); setNote(""); setVerifyOpen(true); }}
+    onCloseVerify={() => { setVerifyOpen(false); setNote(""); }}
+    onCheckedLitres={dropoff ? setDropLitres : setCheckedLitres} onFat={setFat} onLr={setLr}
+    onSaveVerify={() => { if (!busy) void (dropoff ? saveDropoff() : saveFat()); }}
+    onSendBack={() => { setVerifyOpen(false); setNote("Entry pending rakhi gayi. MCA se litres correction karwa kar dobara Review karein."); }}
+    onOpenDispatch={() => { setNote(""); setDispatchOpen(true); }} onCloseDispatch={() => { setDispatchOpen(false); setNote(""); }}
+    onDispatchLitres={setDispatchLitres} onVehicle={setVehicle} onDriver={setDriver} onDestination={setDestination}
+    onSaveDispatch={() => { if (!busy) void saveDispatch(); }}
+  />;
 
   if (tab === "home") {
     return <McoGlass
@@ -240,7 +345,7 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
             </View>
           ) : (
           <View>
-          {auth.testAccount ? <Text style={{ color: colors.muted, marginBottom: 6 }}>TEST account apni TEST entry par fat laga sakta hai. Asal MCA apni uthai hui entry par nahi.</Text> : null}
+          {auth?.testAccount ? <Text style={{ color: colors.muted, marginBottom: 6 }}>TEST account apni TEST entry par fat laga sakta hai. Asal MCA apni uthai hui entry par nahi.</Text> : null}
           {settingsNote ? <Text style={{ color: colors.danger, marginBottom: 6 }}>{settingsNote}</Text> : null}
           {pending.length === 0 ? <Empty title="Check ke liye koi entry nahi" body="Jis doodh par fat baaki hai, wo yahan aayega." /> : null}
           {pending.map((row, index) => (
@@ -275,8 +380,8 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
       {tab === "totals" ? (
         <View>
           <Period title="Aaj" rows={todayRows} />
-          <Period title="Hafta" rows={rows.filter((row) => inWeek(row.entry_date ?? null, week))} sub={`${week.start} se ${week.end}`} />
-          <Period title="Mahina" rows={milkInRange(rows, monthFrom, today)} sub={`${monthFrom} se ${today}`} />
+          <Period title="Hafta" rows={(rows || []).filter((row) => inWeek(row.entry_date ?? null, week))} sub={`${week.start} se ${week.end}`} />
+          <Period title="Mahina" rows={milkInRange(rows || [], monthFrom, today)} sub={`${monthFrom} se ${today}`} />
           <Section title="7 din ka chart" sub="Litre">
             {chart.every((point) => point.amount === 0) ? <Empty title="Chart khali hai" body="Jab kai din ki entry hogi, chart yahan banega." /> : <SaleChart points={chart} />}
           </Section>
@@ -285,7 +390,7 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
       {tab === "more" ? (
         <View>
           <Section title="Kisan alerts" sub="Hadd se bahar fat, LR, ya SNF">
-            <Alerts rows={rows} names={names} thresholds={thresholds} settings={settings} />
+            <Alerts rows={rows || []} names={names} thresholds={thresholds} settings={settings} />
           </Section>
           <Section title="Kisan trend" sub="Aakhri 7 din, litre">
             {[...names.entries()].map(([id, name], index) => (

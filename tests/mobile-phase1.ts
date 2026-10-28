@@ -55,7 +55,7 @@ assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.pa
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.appFlavor, "test");
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.android.versionCode, 606);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.version, AGRIBRIDGE_OS_VERSION);
-assert.equal(PHONE_VERSION_CODE, 638);
+assert.equal(PHONE_VERSION_CODE, 639);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.versionCode, PHONE_VERSION_CODE);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.versionCode, PHONE_VERSION_CODE);
 assert.equal(shownVersionCode({ platform: "web", embedded: 625, phone: PHONE_VERSION_CODE }), PHONE_VERSION_CODE);
@@ -258,6 +258,11 @@ for (const required of ["Doodh uthana", "Aaj ki Route", "LR (ikhtiyari)", "Doodh
 assert.match(approvedMca, /12:00 pm se pehle Subah/);
 assert.match(readFileSync("apps/mobile/App.tsx", "utf8"), /client_uuid: item\.clientUuid/);
 assert.equal(ROLE_NAV.mco.phase1, true);
+assert.deepEqual(ROLE_NAV.mco.tabs.map((tab) => tab.key), ["home", "receive", "quality", "chiller", "more"]);
+const approvedMco = readFileSync("apps/mobile/src/roles/mco-approved.tsx", "utf8");
+for (const required of ["Milk Collection Officer", "Doodh receive karein", "MCC Drop-off", "MCA Field Collection", "Verify & Save", "Quality Pending", "Chiller Ledger", "Create Dispatch", "Sync & Handoff", "Dispatch Save"]) assert.match(approvedMco, new RegExp(required.replace(/[()]/g, "\\$&")));
+assert.match(approvedMco, /Admin approval farmer ledger/);
+assert.match(approvedMco, /onApplySearch/);
 assert.equal(ROLE_NAV.customer.phase1, true);
 assert.equal(ROLE_NAV.customer.title, ROLE_NAV.farmer.title);
 
@@ -345,6 +350,9 @@ const loader = readFileSync("apps/mobile/src/roles/load.ts", "utf8");
 const mcaClickSource = readFileSync("apps/mobile/src/roles/mca.tsx", "utf8");
 const mcoClickSource = readFileSync("apps/mobile/src/roles/mco.tsx", "utf8");
 const homesClickSource = readFileSync("apps/mobile/src/roles/glass-homes.tsx", "utf8");
+assert.match(appSource, /item\.kind === "fat"/);
+assert.match(appSource, /item\.kind === "drop"/);
+assert.match(appSource, /status: "priced"/);
 assert.match(mcaClickSource, /onTab=\{onTab\}/);
 assert.match(mcaClickSource, /onFarmerPress/);
 assert.match(mcoClickSource, /onFieldReceive/);

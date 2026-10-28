@@ -9,7 +9,7 @@ import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
 import { normalizeChannel, showTesterReport } from "../../src/lib/mobile/channel";
 import { dataFlavor, failureLine, sessionFromAccessToken, signInMobile, signUpMobile, type MobileSession } from "../../src/lib/mobile/live-login";
-import { karachiDate, liveGetScoped, liveInsert, loadMyFarmerId, type MilkRow } from "../../src/lib/mobile/live-read";
+import { karachiDate, liveGetScoped, liveInsert, livePatch, loadMyFarmerId, type MilkRow } from "../../src/lib/mobile/live-read";
 import { brandLockup, loadAppMark, taglineWithDefault, type AppLang, type AppMark } from "../../src/lib/mobile/sub-brand";
 import { BrandStack, LanguageProvider } from "./src/glass";
 import { readTestAccount, showRolePreview, showRoleSwitch, SWITCH_ROLES, switchRoleLabel } from "../../src/lib/mobile/test-account";
@@ -380,28 +380,45 @@ export default function App() {
   async function sync(access = token) {
     if (!access) return;
     if (FLAVOR === "test") {
-      const pickups = queue.filter((item) => item.kind === "pickup" && !item.error);
-      if (!pickups.length) return;
+      const milkItems = queue.filter((item) => ["pickup", "drop", "fat"].includes(item.kind) && !item.error);
+      if (!milkItems.length) return;
       const auth = { url: SUPABASE_URL, anonKey: SUPABASE_ANON, token: access, userId, channel: CHANNEL, flavor: FLAVOR, testAccount: true, refreshSession };
       const results: { clientUuid: string; ok: boolean; error?: string; offline?: boolean }[] = [];
-      for (const item of pickups) {
+      for (const item of milkItems) {
         const body = item.payload;
-        const saved = await liveInsert<MilkRow>(auth, "milk_entries", {
+        const saved = item.kind === "fat"
+          ? await livePatch<MilkRow>(auth, "milk_entries", String(body.entry_id || ""), {
+            quantity_liters: Number(body.liters),
+            fat_percentage: Number(body.fat),
+            lr: Number(body.lr),
+            snf_percentage: Number(body.snf),
+            ts_value: Number(body.ts),
+            rate_per_liter: Number(body.rate_per_liter),
+            total_amount: Number(body.total_amount),
+            fat_at: typeof body.fat_at === "string" ? body.fat_at : new Date().toISOString(),
+            status: "priced",
+          }, fetch)
+          : await liveInsert<MilkRow>(auth, "milk_entries", {
           farmer_id: body.farmer_id,
           entry_date: typeof body.entry_date === "string" ? body.entry_date : karachiDate(),
           shift: body.shift === "evening" ? "evening" : "morning",
           quantity_liters: Number(body.liters),
           lr: body.lr == null || body.lr === "" ? null : Number(body.lr),
+          fat_percentage: item.kind === "drop" ? Number(body.fat) : null,
+          snf_percentage: item.kind === "drop" ? Number(body.snf) : null,
+          ts_value: item.kind === "drop" ? Number(body.ts) : null,
+          rate_per_liter: item.kind === "drop" ? Number(body.rate_per_liter) : null,
+          total_amount: item.kind === "drop" ? Number(body.total_amount) : null,
           entry_channel: "app",
-          collection_source: "mca_field",
-          mca_profile_id: userId,
+          collection_source: item.kind === "drop" ? "mco_dropoff" : "mca_field",
+          mca_profile_id: item.kind === "drop" ? null : userId,
           created_by: userId,
           client_uuid: item.clientUuid,
           route_name: body.route_name ?? null,
           chiller_name: body.chiller_name ?? null,
-          notes: body.notes ?? "Offline app pickup",
+          notes: body.notes ?? (item.kind === "drop" ? "Offline MCC drop-off" : "Offline app pickup"),
           is_test: true,
-          status: "pending_fat",
+          status: item.kind === "drop" ? "priced" : "pending_fat",
         }, fetch);
         const duplicate = !saved.ok && /client_uuid|duplicate|23505/i.test(saved.detail || "");
         results.push({ clientUuid: item.clientUuid, ok: saved.ok || duplicate, error: saved.ok || duplicate ? undefined : saved.message, offline: !saved.ok && !duplicate && saved.status === 0 });

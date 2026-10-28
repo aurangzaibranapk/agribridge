@@ -74,6 +74,8 @@ const TAB_MARK: Record<string, string> = {
   Entry: "+",
   Kisan: "☺",
   Receive: "↓",
+  Quality: "✓",
+  Chiller: "▭",
   Tanks: "▭",
   Reports: "▤",
   Approve: "✓",

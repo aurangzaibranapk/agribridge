@@ -85,9 +85,10 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     phase1: true,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "fat", label: "Receive" },
-      { key: "drop", label: "Tanks" },
-      { key: "more", label: "Profile" },
+      { key: "receive", label: "Receive" },
+      { key: "quality", label: "Quality" },
+      { key: "chiller", label: "Chiller" },
+      { key: "more", label: "More" },
     ],
   },
   admin: {
