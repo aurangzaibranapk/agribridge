@@ -172,6 +172,7 @@ export function RecoveryClient({
   const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
   const [notice, setNotice] = useState("");
   const [channel, setChannel] = useState<(typeof CHANNELS)[number]["key"]>("whatsapp");
+  const [attachStatement, setAttachStatement] = useState(true);
   const [previewKey, setPreviewKey] = useState<string | null>(null);
   const [summaryView, setSummaryView] = useState<"receivable" | "due_today" | "overdue" | "collected">("receivable");
   const recordsRef = useRef<HTMLDivElement>(null);
@@ -255,7 +256,7 @@ export function RecoveryClient({
       setNotice("Pehle account select karein.");
       return;
     }
-    const payload = { action, parties: targets, channel: "whatsapp", ...extra };
+    const payload = { action, parties: targets, channel: "whatsapp", attachStatement, ...extra };
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
       try {
         await enqueue({ actionType: "recovery.action", entityType: "recovery", payload: payload as Record<string, unknown> });
@@ -279,7 +280,10 @@ export function RecoveryClient({
       setNotice(json.error || "Kaam mukammal nahi hua.");
       return;
     }
-    setNotice(`${json.count} account update ho gaye${json.sent !== undefined ? `; ${json.sent} WhatsApp sent` : ""}.`);
+    setNotice(
+      `${json.count} account update ho gaye${json.sent !== undefined ? `; ${json.sent} WhatsApp sent` : ""}` +
+        `${json.statementsSent !== undefined ? `; ${json.statementsSent} statement attached` : ""}.`
+    );
     setMode(null);
   }
 
@@ -655,10 +659,10 @@ export function RecoveryClient({
         {previewParty ? (
           <div className="rounded-lg border border-surface-200 bg-surface-50 p-4 dark:border-surface-700 dark:bg-surface-800/40">
             <div className="mb-3 flex items-center gap-2 border-b border-surface-200 pb-3 dark:border-surface-700">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">AR</span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">AB</span>
               <div>
-                <p className="text-sm font-semibold text-surface-900 dark:text-white">AL RANA TRADERS</p>
-                <p className="text-[11px] text-surface-500">Quality Inputs | Stronger Yields</p>
+                <p className="text-sm font-semibold text-surface-900 dark:text-white">AgriBridge</p>
+                <p className="text-[11px] text-surface-500">Kisan K Wasela</p>
               </div>
             </div>
             <dl className="mb-3 space-y-1 text-xs">
@@ -686,6 +690,14 @@ export function RecoveryClient({
         ) : (
           <p className="text-sm text-surface-400">Koi account chunein.</p>
         )}
+
+        <label className="mt-3 flex items-center justify-between rounded-lg border border-surface-200 px-3 py-2 text-sm dark:border-surface-700">
+          <span>
+            <span className="block font-medium text-surface-800 dark:text-surface-200">Attach customer statement (PDF)</span>
+            <span className="block text-[11px] text-surface-500">Reminder ke sath taza khata statement bhejein</span>
+          </span>
+          <input type="checkbox" checked={attachStatement} onChange={(event) => setAttachStatement(event.target.checked)} className="h-4 w-4 accent-emerald-600" />
+        </label>
 
         <button
           disabled={busy || !previewParty || channel !== "whatsapp"}
