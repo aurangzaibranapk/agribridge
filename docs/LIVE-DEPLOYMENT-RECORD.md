@@ -1,3 +1,10 @@
+## Pending — 28 October 2026: load Tx ID lazmi, Help matn (722)
+
+Branch `cursor/load-tx-id-required-4aa4`. Migration **722 file only**. Testing aur Live dono par **nahi** chali. **721 mat use karo** — wo `721_cash_needs_you_help` hai (Cash Needs-you, PR #234). 722 sirf `feature_help` ka load-bill matn. Koi column nahi. Asal rok code mein hai (`createLoadTransaction` / `createBankTransfer`): Tx ID khali ho to save reject, status `darj`. Purani "Load proof missing" qatarein nahi band hoti. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `722_load_tx_id_required_help.sql` — Help se "Save as Pending Proof" hata kar Tx ID lazmi likhta hai.
+- Rollback: `722_load_tx_id_required_help.rollback.sql`. Code ki rok is rollback se nahi hat-ti.
+
 ## Pending — 28 October 2026: POS default dukaan Karyana (code only)
 
 Branch `cursor/pos-default-karyana-8f1d`. **Koi migration nahi.** Testing/Live DB par kuch nahi chalana. Sirf naya build.
