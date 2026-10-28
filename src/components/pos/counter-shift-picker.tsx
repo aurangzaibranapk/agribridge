@@ -43,6 +43,7 @@ export function CounterShiftPicker({
   pendingHandover,
   canSendCash,
   backHref = "/admin/my-work",
+  initialCounterId = null,
 }: {
   counters: Counter[];
   /** Pichli band hui shift ka cash jo abhi Manager/Finance ko bheja nahi gaya. */
@@ -50,8 +51,18 @@ export function CounterShiftPicker({
   canSendCash: boolean;
   /** Kahan wapas jayen -- agar kahin aur pehle se shift khula hai to usi POS par, warna Dashboard (423). */
   backHref?: string;
+  /**
+   * Default dukaan ka counter. Ek se zyada counters hon to bhi us ka
+   * Shift Open form khula aata hai; "Doosri shop" se fehrist wapas.
+   */
+  initialCounterId?: string | null;
 }) {
-  const [chosen, setChosen] = useState<Counter | null>(counters.length === 1 ? counters[0] : null);
+  const [chosen, setChosen] = useState<Counter | null>(() => {
+    if (initialCounterId) {
+      return counters.find((c) => c.id === initialCounterId) ?? (counters.length === 1 ? counters[0] : null);
+    }
+    return counters.length === 1 ? counters[0] : null;
+  });
   const [state, action] = useFormState(openShift, KHALI);
 
   if (!chosen) {

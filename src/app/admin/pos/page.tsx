@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { BINA_QISM } from "@/lib/pos/constants";
+import { pickPosCounter, sortPosCounters } from "@/lib/pos/default-counter";
 import { redirect } from "next/navigation";
 import { PosClient } from "@/components/pos/pos-client";
 import { CounterShiftPicker } from "@/components/pos/counter-shift-picker";
@@ -70,11 +71,11 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     const { data: myCounterRows } = unrestricted
       ? await supabase
           .from("pos_counters")
-          .select("id, name, branch_id, shop_id, is_active, branches(name), shops(name)")
+          .select("id, name, branch_id, shop_id, is_active, branches(name), shops(name, code)")
           .eq("is_active", true)
       : await supabase
           .from("pos_counter_staff")
-          .select("counter_id, pos_counters!inner(id, name, branch_id, shop_id, is_active, branches(name), shops(name))")
+          .select("counter_id, pos_counters!inner(id, name, branch_id, shop_id, is_active, branches(name), shops(name, code))")
           .eq("profile_id", user.id)
           .eq("is_active", true)
           .eq("pos_counters.is_active", true);
@@ -82,14 +83,18 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     const myCounters = ((myCounterRows ?? []) as any[])
       .map((r) => (unrestricted ? r : Array.isArray(r.pos_counters) ? r.pos_counters[0] : r.pos_counters))
       .filter(Boolean)
-      .map((c: any) => ({
-        id: c.id as string,
-        name: c.name as string,
-        branchId: c.branch_id as string,
-        shopId: c.shop_id as string,
-        branchName: (Array.isArray(c.branches) ? c.branches[0]?.name : c.branches?.name) ?? "—",
-        shopName: (Array.isArray(c.shops) ? c.shops[0]?.name : c.shops?.name) ?? "—",
-      }));
+      .map((c: any) => {
+        const shop = Array.isArray(c.shops) ? c.shops[0] : c.shops;
+        return {
+          id: c.id as string,
+          name: c.name as string,
+          branchId: c.branch_id as string,
+          shopId: c.shop_id as string,
+          branchName: (Array.isArray(c.branches) ? c.branches[0]?.name : c.branches?.name) ?? "—",
+          shopName: (shop?.name as string | undefined) ?? "—",
+          shopCode: (shop?.code as string | null | undefined) ?? null,
+        };
+      });
 
     if (myCounters.length > 0) {
       // Ek staff ab apne kai counters par ek sath khula shift rakh
@@ -100,8 +105,13 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         .from("pos_shifts")
         .select("id, shift_number, counter_id, opened_at, opening_cash")
         .eq("staff_id", user.id)
-        .eq("status", "open");
-      const openShifts = openShiftRows ?? [];
+        .eq("status", "open")
+        .order("opened_at", { ascending: false });
+      // Naya khula shift pehle. Purana query bina order ke tha, is liye
+      // jo row pehle aa jati wahi POS ban jati thi.
+      const openShifts = [...(openShiftRows ?? [])].sort((a, b) =>
+        String(b.opened_at).localeCompare(String(a.opened_at)),
+      );
 
       // Pichli band hui shift ka cash abhi Manager/Finance ko bheja
       // nahi gaya -- malik ka kaam #3 (8 September). "Cash bheja gaya
@@ -191,15 +201,24 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         }
       }
 
-      // ?counter=<id> se banda khud chunta hai kaunsa counter dekhna
-      // hai (switcher se aya link) -- warna jo pehla khula shift mile.
+      // ?counter= switcher ki marzi hai. Warna staff ki assigned dukaan,
+      // aur Owner/Admin ke liye Kisaan Karyana Mahabali. Doosri dukaan
+      // ka khula shift (jaise Dukan par pada SHIFT) default nahi cheenta.
       const requestedCounterId =
         sp.counter && myCounters.some((c) => c.id === sp.counter) ? sp.counter : null;
-      const targetCounterId = requestedCounterId ?? openShifts[0]?.counter_id ?? null;
+      const pick = pickPosCounter({
+        counters: myCounters,
+        openShiftCounterIds: openShifts.map((s) => s.counter_id),
+        requestedCounterId,
+        assignedShopId: (profile?.shop_id as string | null) ?? null,
+        unrestricted,
+      });
+      const sortedCounters = sortPosCounters(myCounters, pick.preferredShopId);
+      const targetCounterId = pick.counterId;
       const openShift = targetCounterId ? openShifts.find((s) => s.counter_id === targetCounterId) : undefined;
-      const active = openShift ? myCounters.find((c) => c.id === openShift.counter_id) : undefined;
+      const active = openShift ? sortedCounters.find((c) => c.id === openShift.counter_id) : undefined;
 
-      otherCounters = myCounters
+      otherCounters = sortedCounters
         .filter((c) => c.id !== active?.id)
         .map((c) => ({
           id: c.id,
@@ -210,14 +229,29 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
 
       if (!active) {
         // Requested counter par abhi shift khula nahi -- seedha usi
-        // counter ka "Shift Open" form (switcher se poori fehrist
-        // dobara dikhane ki zaroorat nahi). Koi counter request nahi
-        // hua aur koi shift kahin khula bhi nahi to poori fehrist.
+        // counter ka "Shift Open" form. Default dukaan (Karyana, ya
+        // staff ki shop) bhi usi form par khulti hai, poori fehrist
+        // "Doosri shop" par rehti hai.
         const pickerCounters = requestedCounterId
-          ? myCounters.filter((c) => c.id === requestedCounterId)
-          : myCounters;
-        const backHref = openShifts[0] ? `/admin/pos?counter=${openShifts[0].counter_id}` : "/admin/my-work";
-        return <CounterShiftPicker counters={pickerCounters} pendingHandover={pendingHandover} backHref={backHref} canSendCash={canSendCash} />;
+          ? sortedCounters.filter((c) => c.id === requestedCounterId)
+          : sortedCounters;
+        const initialCounterId =
+          !requestedCounterId &&
+          pick.counterId &&
+          (pick.reason === "karyana-default" || pick.reason === "assigned-shop")
+            ? pick.counterId
+            : null;
+        const elsewhere = openShifts.find((s) => s.counter_id !== pick.counterId);
+        const backHref = elsewhere ? `/admin/pos?counter=${elsewhere.counter_id}` : "/admin/my-work";
+        return (
+          <CounterShiftPicker
+            counters={pickerCounters}
+            pendingHandover={pendingHandover}
+            backHref={backHref}
+            canSendCash={canSendCash}
+            initialCounterId={initialCounterId}
+          />
+        );
       }
 
       const { data: counterRow } = await supabase.from("pos_counters").select("warehouse_id").eq("id", active.id).maybeSingle();
