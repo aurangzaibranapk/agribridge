@@ -1,3 +1,11 @@
+## Pending — 28 October 2026: POS default dukaan Karyana (code only)
+
+Branch `cursor/pos-default-karyana-8f1d`. **Koi migration nahi.** Testing/Live DB par kuch nahi chalana. Sirf naya build.
+
+- `/admin/pos` Owner/Admin ke liye pehle **Kisaan Karyana Mahabali** (code 03). 157 NB default nahi.
+- Staff jiski `profile.shop_id` lagi ho, usi dukaan. Dukan par pada khula shift (SHIFT-26-00026) ab default nahi cheenta.
+- `?counter=` switcher apni marzi ka counter rakhta hai.
+
 ## Pending — 27 October 2026: staff ID card hire fields (720)
 
 Branch `cursor/id-card-fill-print-e442`. Migration **720 file only**. Testing aur Live dono par **nahi** chali. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`). Us ke baad naya build.
