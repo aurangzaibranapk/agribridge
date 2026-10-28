@@ -1,5 +1,8 @@
+/** Partial env bag. Next's ProcessEnv requires NODE_ENV, which this config does not. */
+type ConfigEnv = Record<string, string | undefined>;
+
 const { loadPortalVersion } = require("./portal-version.cjs") as {
-  loadPortalVersion: (env?: NodeJS.ProcessEnv) => { version: string; versionCode: number };
+  loadPortalVersion: (env?: ConfigEnv) => { version: string; versionCode: number };
 };
 
 /** Same rule as src/lib/mobile/channel.ts. Expo config cannot import that .ts file. */
@@ -8,7 +11,7 @@ function normalizeChannel(raw: unknown): "debug" | "internal" | "production" {
   return "production";
 }
 
-export function buildExpoConfig(env: NodeJS.ProcessEnv = process.env) {
+export function buildExpoConfig(env: ConfigEnv = process.env) {
   const { version, versionCode } = loadPortalVersion(env);
   const appChannel = normalizeChannel(env.APP_CHANNEL);
   const testFlavor = env.EXPO_PUBLIC_APP_FLAVOR === "test";

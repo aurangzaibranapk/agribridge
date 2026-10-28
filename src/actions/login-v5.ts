@@ -158,14 +158,18 @@ export async function v5Login(identifier: string, password: string) { return saf
 export async function mobilePasswordLogin(raw: unknown, password: string) {
   return safe(async () => {
     const d = await deps();
-    let tokens: { access_token: string; refresh_token: string; expires_at: number | null; user_id: string } | null = null;
+    // Property, not `let`: an assignment inside signIn is invisible to
+    // control-flow analysis, so a `let` stays `null` and then narrows to `never`.
+    const session: {
+      tokens: { access_token: string; refresh_token: string; expires_at: number | null; user_id: string } | null;
+    } = { tokens: null };
     const wrapped: Deps = {
       ...d,
       async signIn(email, pw) {
         const supabase = createClient();
         const { data, error } = await supabase.auth.signInWithPassword({ email, password: pw });
         if (error || !data.session || !data.user) return false;
-        tokens = {
+        session.tokens = {
           access_token: data.session.access_token,
           refresh_token: data.session.refresh_token,
           expires_at: data.session.expires_at ?? null,
@@ -176,6 +180,7 @@ export async function mobilePasswordLogin(raw: unknown, password: string) {
     };
     const result = await Flow.loginWithPassword(wrapped, raw, password);
     if (!result.ok) return result;
+    const tokens = session.tokens;
     if (!tokens) return { ok: false as const, error: "e_try_again" };
     const profile = await d.profile(tokens.user_id);
     return { ok: true as const, ...tokens, role: profile?.role ?? null, redirect: result.redirect };

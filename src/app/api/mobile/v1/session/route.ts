@@ -20,7 +20,8 @@ export async function POST(request: Request) {
   const result = await mobilePasswordLogin(body.identifier, String(body.password ?? ""));
   if (!result.ok) {
     const status = result.error === "e_rate" || result.error === "e_locked" ? 429 : 401;
-    return NextResponse.json({ ok: false, error: result.error, retryAfterSeconds: result.retryAfterSeconds ?? null }, { status });
+    const retryAfterSeconds = "retryAfterSeconds" in result ? result.retryAfterSeconds ?? null : null;
+    return NextResponse.json({ ok: false, error: result.error, retryAfterSeconds }, { status });
   }
 
   const service = createServiceClient() as any;

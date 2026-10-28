@@ -1,3 +1,11 @@
+## Pending — 28 October 2026: POS default dukaan Karyana (code only)
+
+Branch `cursor/pos-default-karyana-8f1d`. **Koi migration nahi.** Testing/Live DB par kuch nahi chalana. Sirf naya build.
+
+- `/admin/pos` Owner/Admin ke liye pehle **Kisaan Karyana Mahabali** (code 03). 157 NB default nahi.
+- Staff jiski `profile.shop_id` lagi ho, usi dukaan. Dukan par pada khula shift (SHIFT-26-00026) ab default nahi cheenta.
+- `?counter=` switcher apni marzi ka counter rakhta hai.
+
 ## Pending — 27 October 2026: Cash Needs-you queue (721)
 
 Branch `cursor/cash-needs-you-queue-9b60`. Migration **721 not applied** on Testing or Live. File only. 717 cash custody chain pehle se Live par hai — ye us ka UI hai. **720 mat use karo** — wo `720_id_card_application_fields` hai, PR #233, Live par lag chuki. 721 sirf menu ka naam aur feature_help. Koi table, koi RPC, koi raqam nahi badalti. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
