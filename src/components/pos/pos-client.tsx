@@ -841,11 +841,11 @@ export function PosClient({
           payment, totals, aur Checkout is scroll ke bahar hain.
           Naam par click rate/tafseel kholta hai; qty aur remove yahin.
         */}
-        <div className="flex max-h-64 min-h-0 shrink flex-col gap-1.5 overflow-hidden lg:max-h-[min(16rem,42%)]">
+        <div className="flex min-h-[6.5rem] shrink-0 flex-col gap-1.5 lg:min-h-0 lg:max-h-64 lg:flex-1 lg:overflow-hidden">
           <p className="shrink-0 text-xs font-medium text-surface-500 dark:text-surface-400">{t("pos_selected_products", lang)}</p>
           <div
             data-testid="pos-cart-lines"
-            className="min-h-[6.5rem] flex-auto overflow-y-auto overscroll-y-contain rounded-xl border border-surface-200 dark:border-surface-700"
+            className="min-h-[6.5rem] max-h-64 overflow-y-auto overscroll-y-contain rounded-xl border border-surface-200 [scrollbar-color:rgb(168_162_158)_transparent] [scrollbar-width:thin] dark:border-surface-700 lg:min-h-0 lg:max-h-none lg:flex-1"
           >
             {cart.length === 0 ? (
               <div className="flex h-full min-h-[6.5rem] flex-col items-center justify-center px-3 py-6 text-center">
@@ -902,7 +902,7 @@ export function PosClient({
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto">
+        <div className="flex shrink-0 flex-col gap-4 lg:min-h-0 lg:overflow-y-auto">
         <div className="border-t border-surface-100 pt-3 dark:border-surface-800">
           <Label>{t("pos_customer", lang)} {khataTotal > 0 && <span className="text-red-500">*</span>}</Label>
           <div className="mb-2 grid grid-cols-3 gap-1.5">
@@ -991,7 +991,7 @@ export function PosClient({
         <div className={`flex items-center justify-between text-sm ${remaining > 0.5 ? "text-amber-600" : "text-green-600"}`}><span>{remaining > 0 ? "Baaqi Rakam" : "Poora Paid"}</span><span className="font-semibold tabular-nums">Rs {Math.abs(remaining).toLocaleString()}</span></div>
         {overpayment > 0 && <div className="flex items-center justify-between text-sm font-semibold text-emerald-700"><span>Customer Jama / Advance</span><span className="tabular-nums">Rs {overpayment.toLocaleString()}</span></div>}
         {message && <div className={`rounded-lg px-3 py-2 text-sm ${message.type === "success" ? "bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-300" : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"}`}>{message.text}</div>}
-        <div className="sticky bottom-0 z-10 -mx-1 flex gap-2 bg-white px-1 pt-2 dark:bg-surface-900"><button type="button" onClick={resetSale} disabled={submitting || cart.length === 0} className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-500 hover:bg-surface-50 disabled:opacity-40 dark:border-surface-700 dark:text-surface-400 dark:hover:bg-surface-800">{t("pos_clear_cart", lang)}</button><Button data-guide="pos-checkout" className="flex-1 py-3 text-base" onClick={handleCheckout} disabled={submitting || cart.length === 0}>{submitting ? "Processing..." : "Checkout"}</Button></div>
+        <div className="flex gap-2"><button type="button" onClick={resetSale} disabled={submitting || cart.length === 0} className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-500 hover:bg-surface-50 disabled:opacity-40 dark:border-surface-700 dark:text-surface-400 dark:hover:bg-surface-800">{t("pos_clear_cart", lang)}</button><Button data-guide="pos-checkout" className="flex-1 py-3 text-base" onClick={handleCheckout} disabled={submitting || cart.length === 0}>{submitting ? "Processing..." : "Checkout"}</Button></div>
         </div>
       </Card>
       {saleAnim && <ReceiptPrint receipt={saleAnim} autoCloseMs={2600} onClose={() => setSaleAnim(null)} />}
