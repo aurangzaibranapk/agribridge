@@ -9,6 +9,7 @@ import { Empty, SaleChart, Section, liveAuth, type LiveBag } from "../bits";
 import { FarmerGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
 import { loadDigitalMunshi, type DigitalMunshiData } from "../../../../src/lib/mobile/digital-munshi";
+import { ApprovedFarmerApp } from "./farmer-approved";
 
 function num(value: number | string | null | undefined): number {
   const n = typeof value === "number" ? value : Number(value);
@@ -163,6 +164,31 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
     await load();
   }
 
+  return (
+    <ApprovedFarmerApp
+      tab={tab}
+      khata={khata}
+      milk={milk}
+      orders={orders}
+      shop={shop}
+      health={health}
+      vaccines={vaccines}
+      settings={settings}
+      munshi={munshi}
+      names={names}
+      refreshing={refreshing}
+      onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
+      onTab={onTab}
+      onProfile={onProfile}
+      amount={amount}
+      onAmount={setAmount}
+      orderNote={orderNote}
+      orderBusy={orderBusy}
+      onPlaceOrder={() => { if (!orderBusy) void placeOrder(); }}
+    />
+  );
+
+  /* Legacy farmer screens retained in source for a safe rollback.
   if (tab === "home" || tab === "khata") {
     return (
       <FarmerGlass
@@ -301,7 +327,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
       ) : null}
       <View style={{ height: 24 }} />
     </ScrollView>
-  );
+  ); */
 }
 
 function ServiceLink({ label, detail, onPress }: { label: string; detail: string; onPress?: () => void }) {

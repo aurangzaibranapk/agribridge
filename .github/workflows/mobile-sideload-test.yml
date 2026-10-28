@@ -27,7 +27,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: https://hwaiuwxqldxsoukkfefn.supabase.co
       # Public testing anon key.
       EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3YWl1d3hxbGR4c291a2tmZWZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MjU1NjMsImV4cCI6MjEwMzUwMTU2M30.UwchGHJHRCdKHwpJRr-fdNTreeVNLlfbpo7nBqQv9l4"
-      AGRIBRIDGE_VERSION_CODE: "636"
+      AGRIBRIDGE_VERSION_CODE: "637"
       CI: "1"
     steps:
       - uses: actions/checkout@v4
@@ -129,7 +129,7 @@ jobs:
           notes=$(cat <<'EOF'
           AgriBridge TEST sideload builds. Not the live app and not a Play Store upload.
           App name AgriBridge TEST. Package pk.alranatraders.agribridge.test.
-          versionName v0.6.1 Beta, versionCode 636, APP_CHANNEL=internal.
+          versionName v0.6.1 Beta, versionCode 637, APP_CHANNEL=internal.
           Home footer reads the installed Android versionCode. Expo web reads the same phone code from source, not a Metro-cached manifest.
           Dealer month orders use the Karachi month and a dealer-only test list. Owner applies 711_app_phone_dealer_vet.sql on testing so that card is near 38 and vet pending cases have a next date. Not on live.
           Role homes open on one line: centre, role, Assalam o Alaikum, and the round photo. The small AgriBridge and Kisan ka Wasela stack stays on login, not above the greeting. Weather card is short. A zero change, a change of 90% or more, or a change above 300%, hides the badge. Customer home has the month chart and one order timeline, not a second order list.

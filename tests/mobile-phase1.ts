@@ -55,7 +55,7 @@ assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.pa
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.appFlavor, "test");
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.android.versionCode, 606);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.version, AGRIBRIDGE_OS_VERSION);
-assert.equal(PHONE_VERSION_CODE, 636);
+assert.equal(PHONE_VERSION_CODE, 637);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.versionCode, PHONE_VERSION_CODE);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.versionCode, PHONE_VERSION_CODE);
 assert.equal(shownVersionCode({ platform: "web", embedded: 625, phone: PHONE_VERSION_CODE }), PHONE_VERSION_CODE);
@@ -92,10 +92,15 @@ for (const role of ["farmer", "customer", "staff", "supplier", "dealer", "mca", 
   assert.ok(ROLE_NAV[role].tabs.length >= 3, role);
 }
 assert.equal(ROLE_NAV.farmer.phase1, true);
-assert.deepEqual(ROLE_NAV.farmer.tabs.map((tab) => tab.key), ["home", "farm", "doodh", "karyana", "more"]);
-assert.equal(ROLE_NAV.farmer.tabs[1].label, "Farm");
-assert.equal(ROLE_NAV.farmer.tabs[2].label, "Dairy");
-assert.equal(ROLE_NAV.farmer.tabs[3].label, "Market");
+assert.deepEqual(ROLE_NAV.farmer.tabs.map((tab) => tab.key), ["home", "munshi", "add", "services", "more"]);
+assert.equal(ROLE_NAV.farmer.tabs[1].label, "Munshi");
+assert.equal(ROLE_NAV.farmer.tabs[2].label, "Add");
+assert.equal(ROLE_NAV.farmer.tabs[3].label, "Services");
+assert.deepEqual(ROLE_NAV.customer.tabs, ROLE_NAV.farmer.tabs);
+const approvedFarmer = readFileSync("apps/mobile/src/roles/farmer-approved.tsx", "utf8");
+for (const required of ["Digital Munshi", "Meri Faslein", "Dairy", "Vet Doctor", "Khata & Wallet", "Orders"]) assert.match(approvedFarmer, new RegExp(required));
+assert.match(approvedFarmer, /Kisan aur customer ek hi account/);
+assert.doesNotMatch(approvedFarmer, /MISAAL|18,?450|31°C|Rs 4\.8M/);
 assert.match(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /BrandStack/);
 assert.doesNotMatch(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /brandLockup|loadAppMark|lock\.title/);
 assert.match(readFileSync("apps/mobile/App.tsx", "utf8"), /brandLockup/);
