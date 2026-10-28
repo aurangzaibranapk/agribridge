@@ -5,12 +5,14 @@ import { t, type Lang } from "@/lib/i18n/translations";
 import { ageTone, roleLabelKey } from "@/lib/pending/categories";
 
 /** Laal ginti (mockup: mock_badge_*). */
-export function RedBadge({ n, className }: { n: number; className?: string }) {
+export function RedBadge({ n, className, title }: { n: number; className?: string; title?: string }) {
   if (n <= 0) return null;
   return (
     <span
       data-badge="pending"
       data-count={n}
+      title={title}
+      aria-label={title}
       className={cn(
         "inline-flex h-[22px] min-w-[22px] shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-gradient-to-b from-[#ff4d4f] to-[#e11d2e] px-1.5 text-[11px] font-extrabold text-white shadow-[0_4px_10px_-2px_rgba(225,29,46,.55)] ring-2 ring-white dark:ring-[#0b1430]",
         className
