@@ -8,7 +8,7 @@ import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
 import { normalizeChannel, showTesterReport } from "../../src/lib/mobile/channel";
-import { dataFlavor, failureLine, signInMobile } from "../../src/lib/mobile/live-login";
+import { dataFlavor, failureLine, sessionFromAccessToken, signInMobile, signUpMobile, type MobileSession } from "../../src/lib/mobile/live-login";
 import { liveGetScoped, loadMyFarmerId, type MilkRow } from "../../src/lib/mobile/live-read";
 import { brandLockup, loadAppMark, taglineWithDefault, type AppLang, type AppMark } from "../../src/lib/mobile/sub-brand";
 import { BrandStack, LanguageProvider } from "./src/glass";
@@ -26,6 +26,7 @@ import { bootMark, marks } from "./src/boot";
 import { loadRoleModule } from "./src/roles/load";
 import { GlassPreview, glassPreviewOn } from "./src/roles/glass-preview";
 import { Btn, Header, Tabs, colors } from "./src/kit";
+import { AppLock, WebsiteLogin, WebsiteSignup, type SignUpForm } from "./src/auth-screens";
 
 const extra = (Constants.expoConfig?.extra ?? {}) as {
   productVersion?: string;
@@ -84,6 +85,9 @@ export default function App() {
   const [stage, setStage] = useState<"login" | "pin" | "unlock" | "app">("login");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [signup, setSignup] = useState<SignUpForm>({ fullName: "", email: "", phone: "", cnic: "", password: "" });
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [tab, setTab] = useState("home");
@@ -225,6 +229,7 @@ export default function App() {
 
   async function login() {
     setError("");
+    setAuthBusy(true);
     const result = await signInMobile({
       identifier,
       password,
@@ -236,11 +241,16 @@ export default function App() {
       fetchImpl: (url, init) => fetch(url, init),
     });
     if (!result.ok) {
+      setAuthBusy(false);
       if (result.offline) setNet("offline");
       setError(result.message);
       return;
     }
-    const body = result.session;
+    await finishAuth(result.session);
+    setAuthBusy(false);
+  }
+
+  async function finishAuth(body: MobileSession) {
     const test = await readTestAccount({
       url: SUPABASE_URL,
       anonKey: SUPABASE_ANON,
@@ -269,6 +279,45 @@ export default function App() {
     setStage("pin");
     setRoute("/pin");
   }
+
+  async function createAccount() {
+    setError("");
+    setAuthBusy(true);
+    const result = await signUpMobile({ ...signup, emailRedirectTo: FLAVOR === "test" ? "agribridge-test://auth/callback" : "agribridge://auth/callback", supabaseUrl: SUPABASE_URL, supabaseAnonKey: SUPABASE_ANON, channel: CHANNEL, flavor: FLAVOR, fetchImpl: (url, init) => fetch(url, init) });
+    setAuthBusy(false);
+    if (!result.ok) { setError(result.message); return; }
+    if (result.session) { await finishAuth(result.session); return; }
+    setAuthMode("login");
+    setIdentifier(signup.email);
+    setPassword("");
+    setError(result.message);
+  }
+
+  function oauth(provider: "google" | "facebook") {
+    setError("");
+    const redirect = FLAVOR === "test" ? "agribridge-test://auth/callback" : "agribridge://auth/callback";
+    if (!SUPABASE_URL) { setError("Social login configuration nahi mili."); return; }
+    const href = `${SUPABASE_URL}/auth/v1/authorize?provider=${provider}&redirect_to=${encodeURIComponent(redirect)}`;
+    void Linking.openURL(href).catch(() => setError(`${provider} login nahi khula.`));
+  }
+
+  useEffect(() => {
+    async function accept(url: string) {
+      if (!url.includes("auth/callback")) return;
+      const raw = url.includes("#") ? url.split("#")[1] : url.split("?")[1] || "";
+      const params = new URLSearchParams(raw);
+      const accessToken = params.get("access_token") || "";
+      if (!accessToken) { setError(params.get("error_description") || "Social login session nahi mili."); return; }
+      setAuthBusy(true);
+      const result = await sessionFromAccessToken({ accessToken, refreshToken: params.get("refresh_token") || "", expiresIn: Number(params.get("expires_in") || 0) || null, supabaseUrl: SUPABASE_URL, supabaseAnonKey: SUPABASE_ANON, channel: CHANNEL, flavor: FLAVOR, fetchImpl: (next, init) => fetch(next, init) });
+      setAuthBusy(false);
+      if (!result.ok) { setError(result.message); return; }
+      await finishAuth(result.session);
+    }
+    const sub = Linking.addEventListener("url", (event) => { void accept(event.url); });
+    void Linking.getInitialURL().then((url) => { if (url) void accept(url); });
+    return () => sub.remove();
+  }, []);
 
   async function savePin() {
     const problem = pinProblem(pin);
@@ -444,19 +493,40 @@ export default function App() {
         </View>
       ) : null}
       {stage !== "app" ? (
+        stage === "login" ? (authMode === "login" ? (
+          <WebsiteLogin
+            title={loginTitle}
+            line={lock.line}
+            identifier={identifier}
+            password={password}
+            error={error}
+            busy={authBusy}
+            version={`Version ${VERSION || "—"}${VERSION_CODE ? ` · ${VERSION_CODE}` : ""} · ${CHANNEL}`}
+            onIdentifier={setIdentifier}
+            onPassword={setPassword}
+            onLogin={() => void login()}
+            onSignup={() => { setError(""); setAuthMode("signup"); }}
+            onSocial={oauth}
+          />
+        ) : (
+          <WebsiteSignup
+            title={loginTitle}
+            line={lock.line}
+            form={signup}
+            error={error}
+            busy={authBusy}
+            onChange={(key, value) => setSignup((current) => ({ ...current, [key]: value }))}
+            onCreate={() => void createAccount()}
+            onLogin={() => { setError(""); setAuthMode("login"); }}
+            onSocial={oauth}
+          />
+        )) : stage === "unlock" ? (
+          <AppLock title={loginTitle} line={lock.line} role={appRole || role || "User"} pin={pin} error={error} onDigit={(digit) => setPin((current) => current.length < 6 ? `${current}${digit}` : current)} onBackspace={() => setPin((current) => current.slice(0, -1))} onOpen={() => void unlock("pin")} onFingerprint={() => void unlock("biometric")} />
+        ) : (
         <View style={{ flex: 1, padding: 20, justifyContent: "center" }}>
-          <View style={{ marginTop: 24 }}>
-            <BrandStack title={loginTitle} line={lock.line} rtl={lock.rtl} titleSize={32} lineSize={16} />
-          </View>
+          <View style={{ marginTop: 24 }}><BrandStack title={loginTitle} line={lock.line} rtl={lock.rtl} titleSize={32} lineSize={16} /></View>
           <Text style={styles.sub}>Version {VERSION || "—"}{VERSION_CODE ? ` · ${VERSION_CODE}` : ""} · {CHANNEL}</Text>
           <LangPick lang={lang} onPick={chooseLang} />
-          {stage === "login" ? (
-            <View>
-              <TextInput value={identifier} onChangeText={setIdentifier} placeholder="Mobile ya email" autoCapitalize="none" style={styles.input} />
-              <TextInput value={password} onChangeText={setPassword} placeholder="Password" secureTextEntry style={styles.input} />
-              <Btn label="Login" onPress={() => void login()} />
-            </View>
-          ) : null}
           {stage === "pin" ? (
             <View>
               <Text style={styles.help}>Agli dafa ke liye 4 ya 6 digit PIN.</Text>
@@ -464,16 +534,10 @@ export default function App() {
               <Btn label="PIN save" onPress={() => void savePin()} />
             </View>
           ) : null}
-          {stage === "unlock" ? (
-            <View>
-              <TextInput value={pin} onChangeText={setPin} keyboardType="number-pad" secureTextEntry maxLength={6} placeholder="PIN" style={styles.input} />
-              <Btn label="PIN se kholen" onPress={() => void unlock("pin")} />
-              <Btn label="Fingerprint" kind="gold" onPress={() => void unlock("biometric")} />
-            </View>
-          ) : null}
           {error ? <Text style={styles.err}>{error}</Text> : null}
           {whatsapp ? <Text style={styles.link} onPress={() => void Linking.openURL(whatsapp)}>WhatsApp support</Text> : null}
         </View>
+        )
       ) : (
         <View style={{ flex: 1, backgroundColor: "#F7F8F3" }}>
           <View style={{ flex: 1, minHeight: 0 }}>

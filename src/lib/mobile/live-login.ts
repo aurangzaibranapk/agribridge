@@ -51,6 +51,10 @@ export type SignInResult =
   | { ok: true; session: MobileSession }
   | { ok: false; message: string; offline: boolean };
 
+export type SignUpResult =
+  | { ok: true; session: MobileSession | null; message: string }
+  | { ok: false; message: string; offline: boolean };
+
 type Json = Record<string, unknown> | unknown[] | null;
 
 /** Raw HTTP/JSON sirf debug build par. Internal sideload par Urdu hi. */
@@ -302,6 +306,95 @@ async function supabaseEmailLogin(input: {
       expires_at: expiresAtFrom(authJson),
     },
   };
+}
+
+/** OAuth/deep-link ya signup token ko app role/profile session mein badalta hai. */
+export async function sessionFromAccessToken(input: {
+  accessToken: string;
+  refreshToken?: string;
+  expiresIn?: number | null;
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+  channel: MobileChannel;
+  flavor?: DataFlavor;
+  fetchImpl: FetchLike;
+}): Promise<SignInResult> {
+  const flavor = dataFlavor(input.flavor);
+  const supabase = acceptedSupabaseUrl(input.supabaseUrl, flavor);
+  const anon = input.supabaseAnonKey.trim();
+  const access = input.accessToken.trim();
+  const secrets = [access, anon];
+  if (!supabase || !anon || !access) return { ok: false, offline: false, message: "Login configuration mukammal nahi." };
+  try {
+    const userBody = await readBody(await input.fetchImpl(`${supabase}/auth/v1/user`, {
+      method: "GET",
+      headers: { apikey: anon, authorization: `Bearer ${access}`, accept: "application/json" },
+    }));
+    const user = asRecord(userBody.json);
+    const userId = typeof user?.id === "string" ? user.id : "";
+    if (!userId || userBody.status >= 400) return { ok: false, offline: false, message: failureLine({ channel: input.channel, fallback: "Social login session nahi mili.", status: userBody.status, detail: userBody.text, secrets }) };
+    const profileBody = await readBody(await input.fetchImpl(`${supabase}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=role,is_active`, {
+      method: "GET",
+      headers: { apikey: anon, authorization: `Bearer ${access}`, accept: "application/json" },
+    }));
+    const profile = Array.isArray(profileBody.json) ? profileBody.json[0] as Record<string, unknown> | undefined : undefined;
+    if (!profile || typeof profile.role !== "string") return { ok: false, offline: false, message: failureLine({ channel: input.channel, fallback: "Profile nahi mili.", status: profileBody.status, detail: profileBody.text, secrets }) };
+    if (profile.is_active === false) return { ok: false, offline: false, message: LOGIN_TEXT.e_inactive };
+    let designation: string | null = null;
+    let fieldAppRole: string | null = null;
+    try {
+      const staff = await fetchStaff({ supabase, anon, token: access, userId, fetchImpl: input.fetchImpl });
+      designation = staff.designation;
+      fieldAppRole = staff.fieldAppRole;
+    } catch { /* role falls back to profile */ }
+    return { ok: true, session: {
+      access_token: access,
+      refresh_token: input.refreshToken || "",
+      user_id: userId,
+      role: profile.role,
+      appRole: appRoleFor({ role: profile.role, designation, fieldAppRole }),
+      expires_at: input.expiresIn ? Math.floor(Date.now() / 1000) + input.expiresIn : null,
+    } };
+  } catch (err) {
+    return { ok: false, offline: true, message: failureLine({ channel: input.channel, fallback: "Network nahi mila.", detail: err instanceof Error ? err.message : "fetch failed", secrets }) };
+  }
+}
+
+export async function signUpMobile(input: {
+  fullName: string;
+  email: string;
+  phone: string;
+  cnic: string;
+  password: string;
+  emailRedirectTo?: string;
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+  channel: MobileChannel;
+  flavor?: DataFlavor;
+  fetchImpl: FetchLike;
+}): Promise<SignUpResult> {
+  const flavor = dataFlavor(input.flavor);
+  const supabase = acceptedSupabaseUrl(input.supabaseUrl, flavor);
+  const anon = input.supabaseAnonKey.trim();
+  const email = input.email.trim().toLowerCase();
+  if (!supabase || !anon) return { ok: false, offline: false, message: "Signup configuration mukammal nahi." };
+  if (!input.fullName.trim() || !isEmailIdentifier(email) || input.password.length < 8) return { ok: false, offline: false, message: "Naam, sahi email aur kam az kam 8 digit password likhein." };
+  try {
+    const signupUrl = `${supabase}/auth/v1/signup${input.emailRedirectTo ? `?redirect_to=${encodeURIComponent(input.emailRedirectTo)}` : ""}`;
+    const body = await readBody(await input.fetchImpl(signupUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json", apikey: anon, authorization: `Bearer ${anon}` },
+      body: JSON.stringify({ email, password: input.password, data: { full_name: input.fullName.trim(), phone: input.phone.trim(), cnic: input.cnic.trim(), requested_role: "farmer" } }),
+    }));
+    const json = asRecord(body.json);
+    const access = typeof json?.access_token === "string" ? json.access_token : "";
+    if (body.status >= 400) return { ok: false, offline: false, message: failureLine({ channel: input.channel, fallback: String(json?.msg || json?.error_description || "Signup nahi hua."), status: body.status, detail: body.text, secrets: [input.password, anon] }) };
+    if (!access) return { ok: true, session: null, message: "Account ban gaya. Email confirm karke Login karein." };
+    const resolved = await sessionFromAccessToken({ accessToken: access, refreshToken: typeof json?.refresh_token === "string" ? json.refresh_token : "", expiresIn: typeof json?.expires_in === "number" ? json.expires_in : null, supabaseUrl: supabase, supabaseAnonKey: anon, channel: input.channel, flavor, fetchImpl: input.fetchImpl });
+    return resolved.ok ? { ok: true, session: resolved.session, message: "Account ban gaya." } : resolved;
+  } catch (err) {
+    return { ok: false, offline: true, message: failureLine({ channel: input.channel, fallback: "Network nahi mila.", detail: err instanceof Error ? err.message : "fetch failed", secrets: [input.password, anon] }) };
+  }
 }
 
 export async function signInMobile(input: {

@@ -16,6 +16,7 @@ export function buildExpoConfig(env: NodeJS.ProcessEnv = process.env) {
     expo: {
       name: testFlavor ? "AgriBridge TEST" : "AgriBridge",
       slug: testFlavor ? "agribridge-test" : "agribridge",
+      scheme: testFlavor ? "agribridge-test" : "agribridge",
       version,
       orientation: "portrait",
       userInterfaceStyle: "light",

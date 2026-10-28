@@ -455,7 +455,7 @@ export function McoGlass({ live, rows, error, names, onFieldReceive, onDropoff, 
 
 const DONUT_COLORS = ["#3DDC97", "#C4B5FD", "#F5B942", "#5B8CFF", "#FF6B6B"];
 
-export function AdminGlass({ live, home, milk, orders: _orders, digital, focus = "home", footer, onVerify, ...bar }: Refresh & { live?: LiveBag; home: AdminHome | null; milk: MilkRow[]; orders: OrderRow[]; digital?: AdminDigitalOverview | null; focus?: "home" | "track"; footer?: ReactNode; onVerify?: (row: MilkRow) => void }) {
+export function AdminGlass({ live, home, milk, orders: _orders, digital, focus = "home", footer, onVerify, onModule, ...bar }: Refresh & { live?: LiveBag; home: AdminHome | null; milk: MilkRow[]; orders: OrderRow[]; digital?: AdminDigitalOverview | null; focus?: "home" | "track"; footer?: ReactNode; onVerify?: (row: MilkRow) => void; onModule?: (panel: "sales" | "finance" | "stock" | "milk" | "farmers" | "activity") => void }) {
   const face = useFace(live, "Admin");
   const [farmers, setFarmers] = useState<number | null>(null);
   const [monthSales, setMonthSales] = useState<{ total: number | null; note: string | null } | null>(null);
@@ -546,9 +546,12 @@ export function AdminGlass({ live, home, milk, orders: _orders, digital, focus =
       <ActionGrid actions={[
         { label: "Reports", key: "reports", onPress: () => bar.onTab?.("reports") },
         { label: "Approvals", key: "approvals", onPress: () => bar.onTab?.("approvals") },
-        { label: "Branches", key: "more", onPress: () => bar.onTab?.("more") },
-        { label: "Shops", key: "more", onPress: () => bar.onTab?.("more") },
-        { label: "Alerts", key: "approvals", onPress: () => bar.onTab?.("approvals") },
+        { label: "POS & Sales", key: "sales", onPress: () => onModule?.("sales") },
+        { label: "Finance", key: "finance", onPress: () => onModule?.("finance") },
+        { label: "Stock", key: "stock", onPress: () => onModule?.("stock") },
+        { label: "Milk", key: "milk", onPress: () => onModule?.("milk") },
+        { label: "Farmers", key: "farmers", onPress: () => onModule?.("farmers") },
+        { label: "Alerts", key: "approvals", onPress: () => onModule?.("activity") },
         { label: "Profile", key: "more", onPress: bar.onProfile },
       ]} />
       <GlassCard title="Digital Munshi · tamam kisan" sub="Farms, crops, dairy, vet aur machinery ka operational view" index={2}>

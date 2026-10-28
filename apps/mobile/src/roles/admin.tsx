@@ -8,6 +8,7 @@ import { Empty, Kpi, SaleChart, Section, ShareBar, liveAuth, type LiveBag } from
 import { AdminGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
 import { loadAdminDigitalOverview, type AdminDigitalOverview } from "../../../../src/lib/mobile/digital-munshi";
+import { AdminWorkspace, type AdminPanel } from "./admin-workspace";
 
 type Panel = "home" | "parties" | "stock" | "milk" | "purchases" | "attendance";
 
@@ -22,6 +23,7 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
   const [note, setNote] = useState("");
   const [verifyBusy, setVerifyBusy] = useState("");
   const [digital, setDigital] = useState<AdminDigitalOverview | null>(null);
+  const [workspace, setWorkspace] = useState<AdminPanel>("menu");
 
   const load = useCallback(async () => {
     if (!auth) { setError("Live Supabase is build mein set nahi. Login ke baad hisaab yahin aata hai."); return; }
@@ -63,7 +65,15 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
   }
   useEffect(() => { if (tab === "approvals" || tab === "reports" || tab === "home") setPanel("home"); }, [tab]);
 
+  useEffect(() => { if (tab !== "more") setWorkspace("menu"); }, [tab]);
+
   if (!home && !error) return <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />;
+  if (tab === "more") {
+    return <AdminWorkspace panel={workspace} auth={auth} home={home} milk={milk} digital={digital} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} onOpen={setWorkspace} onProfile={onProfile} />;
+  }
+  if (tab === "reports" && home) {
+    return <AdminReports home={home} milk={milk} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />;
+  }
   if ((tab === "home" || tab === "approvals") && panel === "home") {
     return (
       <AdminGlass
@@ -75,6 +85,7 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
         digital={digital}
         onProfile={onProfile}
         onTab={onTab}
+        onModule={(next) => { setWorkspace(next); onTab?.("more"); }}
         refreshing={refreshing}
         onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
         onVerify={hero => { if (!verifyBusy) void verifyHero(hero); }}
@@ -162,6 +173,7 @@ function Dashboard({ tab, home, error, onOpen, milk, orders, auth, readOnly, not
 function Approvals({ home, milk, orders, auth, readOnly, note, onReload }: { home: AdminHome; milk: MilkRow[]; orders: OrderRow[]; auth: LiveAuth | null; readOnly: boolean; note: string; onReload: () => Promise<void> }) {
   const [local, setLocal] = useState(note);
   const [busy, setBusy] = useState("");
+  const [filter, setFilter] = useState<"all" | "milk" | "orders" | "payments" | "stock">("all");
   const priced = milk.filter((row) => row.status === "priced" && row.id);
   const waiting = milk.filter((row) => row.status === "pending_fat");
   async function verify(row: MilkRow) {
@@ -186,6 +198,10 @@ function Approvals({ home, milk, orders, auth, readOnly, note, onReload }: { hom
   }
   return (
     <View>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 8 }}>
+        {(["all", "milk", "orders", "payments", "stock"] as const).map((key) => <Pressable key={key} onPress={() => setFilter(key)} style={{ backgroundColor: filter === key ? colors.green : "#fff", borderWidth: 1, borderColor: filter === key ? colors.green : colors.line, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6, marginRight: 6, marginBottom: 6 }}><Text style={{ color: filter === key ? "#fff" : colors.muted, fontWeight: "700", textTransform: "capitalize" }}>{key}</Text></Pressable>)}
+      </View>
+      {filter === "all" || filter === "milk" ? (
       <Section title="Pending approvals" sub="Doodh ki tasdeeq. Manzoor asal row par likhta hai.">
         {local ? <Text style={{ color: colors.greenDark, marginBottom: 6 }}>{local}</Text> : null}
         {readOnly ? <Text style={{ color: colors.muted, marginBottom: 6 }}>Sirf dekhna. Manzoor band hai.</Text> : null}
@@ -200,6 +216,8 @@ function Approvals({ home, milk, orders, auth, readOnly, note, onReload }: { hom
           <Text key={row.id} style={{ color: colors.muted, marginBottom: 4 }}>{row.entry_date} · {shiftLabel(row.shift)} · {row.quantity_liters} L · pehle MCO fat lagaye</Text>
         ))}
       </Section>
+      ) : null}
+      {filter === "all" || filter === "orders" ? (
       <Section title="Orders" sub="Khud ki darkhwast khud manzoor nahi hoti">
         {orders.length === 0 ? <Empty title="Koi order nahi" body="TEST order jab nazar aayega, status yahan dikhega." /> : null}
         {orders.map((row) => {
@@ -212,6 +230,8 @@ function Approvals({ home, milk, orders, auth, readOnly, note, onReload }: { hom
           );
         })}
       </Section>
+      ) : null}
+      {filter === "payments" || filter === "stock" ? <Section title={filter === "payments" ? "Payments" : "Stock adjustments"}><Empty title="Pending queue" body={home.pendingNote || `${filter} ki visible pending lines yahan aayengi. Koi fake record nahi dikhaya.`} /></Section> : null}
       {!home.pendingNote && home.pending.length > 0 ? (
         <Section title="Aur pending" sub="Ginati">
           {home.pending.map((row) => <Row key={row.label} title={row.label} value={String(row.count)} />)}
@@ -219,6 +239,38 @@ function Approvals({ home, milk, orders, auth, readOnly, note, onReload }: { hom
       ) : null}
     </View>
   );
+}
+
+function AdminReports({ home, milk, refreshing, onRefresh }: { home: AdminHome; milk: MilkRow[]; refreshing: boolean; onRefresh: () => void }) {
+  const [range, setRange] = useState<"today" | "month" | "year" | "custom">("today");
+  const today = karachiDate();
+  const [from, setFrom] = useState(`${today.slice(0, 8)}01`);
+  const [to, setTo] = useState(today);
+  const activeFrom = range === "today" ? today : range === "month" ? `${today.slice(0, 8)}01` : range === "year" ? `${today.slice(0, 4)}-01-01` : from;
+  const activeTo = range === "today" ? today : to;
+  const rows = milkInRange(milk, activeFrom, activeTo);
+  const shifts = milkByShift(rows);
+  const amount = pricedMilkTotal(rows);
+  return <ScrollView style={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.green} />}>
+    <Text style={{ color: colors.text, fontSize: 22, fontWeight: "900" }}>Reports & Audit</Text>
+    <Text style={{ color: colors.muted, marginTop: 3, marginBottom: 12 }}>Date, month, year aur custom filter</Text>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 8 }}>{(["today", "month", "year", "custom"] as const).map((key) => <Pressable key={key} onPress={() => setRange(key)} style={{ backgroundColor: range === key ? colors.green : "#fff", borderWidth: 1, borderColor: range === key ? colors.green : colors.line, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 7, marginRight: 6, marginBottom: 6 }}><Text style={{ color: range === key ? "#fff" : colors.muted, fontWeight: "700", textTransform: "capitalize" }}>{key}</Text></Pressable>)}</View>
+    {range === "custom" ? <View style={{ flexDirection: "row", marginBottom: 8 }}><TextInput value={from} onChangeText={setFrom} placeholder="YYYY-MM-DD" style={{ flex: 1, backgroundColor: "#fff", borderWidth: 1, borderColor: colors.line, borderRadius: 12, padding: 10, marginRight: 6 }} /><TextInput value={to} onChangeText={setTo} placeholder="YYYY-MM-DD" style={{ flex: 1, backgroundColor: "#fff", borderWidth: 1, borderColor: colors.line, borderRadius: 12, padding: 10 }} /></View> : null}
+    <Text style={{ color: colors.muted, marginBottom: 8 }}>{activeFrom} se {activeTo}</Text>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+      <Kpi label="Sales" value={range === "today" && home.sales.state === "ok" ? rupees(home.sales.total) : "—"} sub={range === "today" ? "Asal POS bills" : "Range sale API pending"} />
+      <Kpi label="Cash / Bank" value={range === "today" && home.cash.state === "ok" ? rupees(home.cash.cash + home.cash.bank + home.cash.wallet) : "—"} sub="Visible accounts" />
+      <Kpi label="Milk" value={`${milkLitres(rows)} L`} sub={`Subah ${Math.round(shifts.subah)} · Shaam ${Math.round(shifts.shaam)}`} />
+      <Kpi label="Milk amount" value={amount == null ? "—" : rupees(amount)} sub="Priced / verified" />
+    </View>
+    <Section title="Audit health" sub="Delete nahi; pehle review">
+      {home.pendingNote ? <Empty title="Pending health nahi khuli" body={home.pendingNote} /> : home.pending.length ? home.pending.map((row) => <Row key={row.label} title={row.label} value={String(row.count)} />) : <Empty title="Visible pending zero" body="Pending queue parh li gayi aur koi visible item nahi mila." />}
+    </Section>
+    <Section title="Recent activity">
+      {home.activityNote ? <Empty title="Activity nahi khuli" body={home.activityNote} /> : home.activity.length ? home.activity.map((row, index) => <Row key={`${row.at}-${index}`} title={row.action || "Activity"} value={row.at ? row.at.slice(0, 10) : "—"} />) : <Empty title="Koi visible activity nahi" body="Is login ko recent activity lines nazar nahi aayin." />}
+    </Section>
+    <View style={{ height: 24 }} />
+  </ScrollView>;
 }
 
 function MilkReports({ milk }: { milk: MilkRow[] }) {
