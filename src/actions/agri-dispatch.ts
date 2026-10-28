@@ -170,6 +170,10 @@ export async function createDispatch(_prev: ActionState, formData: FormData): Pr
   // ka maal kisi ke bhi stock mein nahi ginta, jo durust hai: wo raaste
   // mein hai.
   //
+  // Kitab: Dr 5000 / Cr 1200, taake 1200 bhi usi waqt ghat jaye. Ye bikri
+  // nahi. GRN milne par wahi lagat Dr 1200 / Cr 5000 se wapas aati hai.
+  // Jo miqdar na pahunche (kami / toota) us ki lagat 5000 par rehti hai.
+  //
   // agri_dispatch_items sirf product_name rakhti hai, is liye product_id
   // order items se uthana parta hai.
   const sourceWarehouseId = fromBranchId ? await mainWarehouseId(fromBranchId) : await hqWarehouseId();

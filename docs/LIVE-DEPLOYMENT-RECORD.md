@@ -1,3 +1,11 @@
+## Pending — 28 October 2026: Agri HQ→shop andaruni muntaqili (code only)
+
+Branch `cursor/agri-internal-transfer-1200-fab5`. **Koi migration nahi.** Testing/Live DB par kuch nahi chalana. Sirf naya build.
+
+- Agri dispatch ab bhi bhejne wale godam se Dr 5000 / Cr 1200 karta hai (raaste ka maal). GRN usi FIFO lagat par shop batch banati hai aur Dr 1200 / Cr 5000 se wapas laati hai. Order ki transfer price stock par nahi likhti — wo payable / branch credit par rehti hai.
+- Poori miqdar, bina extra kharche: 1200 aur batch value dono wapas, COGS sifar. Kami / toota 5000 par rehta hai.
+- Rs 161,361.49 ka ek-dafa Dr 1200 is PR mein nahi. Wo ops alag post karega. Purani GRN batches yahan se nahi badalti.
+
 ## Pending — 28 October 2026: Data Health duplicate band (724)
 
 Branch `cursor/data-health-dedupe-62d3`. Migration **724 file only**. Testing aur Live dono par **nahi** chali. **723 mat use karo** — wo `723_fuel_ops_payroll_help` hai. 724 sirf findings ki zindagi: roz ki scan purani khuli naqal `superseded_by_duplicate` se band karti hai, taazi qataar khuli rehti hai. Stock, batch, ledger, journal ki koi raqam nahi badalti. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
