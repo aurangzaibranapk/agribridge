@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { generateCustomerStatementPdf } from "@/lib/customer-statement-pdf";
 import { mailWrapper, sendDeptMail } from "@/lib/mailer";
 import { sendWhatsAppDocument } from "@/lib/whatsapp-client";
+import { requireAction } from "@/lib/access/guard";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +13,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const auth = createClient();
   const { data: { user } } = await auth.auth.getUser();
   if (!user) return NextResponse.json({ error: "Login required." }, { status: 401 });
-  const { data: isStaff } = await (auth as any).rpc("fn_is_any_staff");
-  if (!isStaff) return NextResponse.json({ error: "Staff permission required." }, { status: 403 });
-
   const body = await req.json();
   const channel = String(body.channel || "download");
+  const guard = await requireAction("finance.recovery", channel === "download" ? "export" : "send");
+  if ("error" in guard) return NextResponse.json({ error: guard.error }, { status: 403 });
   const start = body.start || null;
   const end = body.end || null;
   // Farmer aur Customer ka khata statement ab EK hi raasta hai (424) --
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const openingBalance = (openingRows || []).reduce((sum: number, r: any) => sum + Number(r.debit || 0) - Number(r.credit || 0), 0);
   const closingBalance = entries.reduce((sum: number, r: any) => sum + Number(r.debit || 0) - Number(r.credit || 0), openingBalance);
   const pdf = await generateCustomerStatementPdf({ customerName: partyName, fromDate: start, toDate: end, openingBalance, closingBalance, rows: entries });
-  const filename = `ART-${partyName.replace(/[^a-z0-9]+/gi, "-")}-statement.pdf`;
+  const filename = `AgriBridge-${partyName.replace(/[^a-z0-9]+/gi, "-")}-statement.pdf`;
 
   if (channel === "download") {
     return new NextResponse(pdf, { headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename="${filename}"` } });
@@ -65,8 +65,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const result = await sendDeptMail({
         dept: "accounts",
         to: recipientValue,
-        subject: `Al Rana Traders Khata Statement - ${partyName}`,
-        html: mailWrapper(`<p>Assalam-o-Alaikum <strong>${partyName}</strong>,</p><p>Your Al Rana Traders Khata statement is attached.</p><p><strong>Closing balance:</strong> Rs ${Math.round(closingBalance).toLocaleString("en-PK")}</p>`, "accounts"),
+        subject: `Kisan Wasela Khata Statement - ${partyName}`,
+        html: mailWrapper(`<p>Assalam-o-Alaikum <strong>${partyName}</strong>,</p><p>Your Kisan Wasela Khata statement is attached.</p><p><strong>Closing balance:</strong> Rs ${Math.round(closingBalance).toLocaleString("en-PK")}</p>`, "accounts"),
         attachments: [{ filename, content: pdf }],
       });
       if (!result.sent) throw new Error(result.error);
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const signed = await service.storage.from("statement-files").createSignedUrl(path, 60 * 60);
       if (signed.error || !signed.data?.signedUrl) throw new Error(signed.error?.message || "Statement ka secure link nahi bana.");
       documentUrl = path;
-      await sendWhatsAppDocument(recipientValue, String(signed.data.signedUrl), filename, `Assalam-o-Alaikum ${partyName} Sahib, aap ka Al Rana Traders Khata Statement attached hai. Closing balance: Rs ${Math.round(closingBalance).toLocaleString("en-PK")}.`);
+      await sendWhatsAppDocument(recipientValue, String(signed.data.signedUrl), filename, `Assalam-o-Alaikum ${partyName} Sahib, aap ka Kisan Wasela Khata Statement attached hai. Closing balance: Rs ${Math.round(closingBalance).toLocaleString("en-PK")}. — AgriBridge, Kisan K Wasela`);
     } else {
       throw new Error("Unsupported channel.");
     }
