@@ -901,14 +901,13 @@ export function LoadBillClient({
               />
             </div>
 
-            {/* Saboot -- is poore safhe ki sab se ahem cheez. */}
+            {/* Tx ID isi waqt — khali chhorne se My Work par "Load proof missing" banti thi. */}
             <div className="load-form-wide load-form-evidence rounded-lg border border-brand-200 bg-brand-50/50 p-3 dark:border-brand-900/40 dark:bg-brand-950/20">
-              <Label htmlFor="provider_tid">Provider ki TID / reference</Label>
-              <Input id="provider_tid" name="provider_tid" placeholder="Jazz/Easypaisa app se copy karein" />
+              <Label htmlFor="provider_tid">Transaction ID (Trex / Tx ID) <span className="text-red-600">*</span></Label>
+              <Input id="provider_tid" name="provider_tid" placeholder="Jazz/Easypaisa app se copy karein" required minLength={3} autoComplete="off" />
               <p className="mt-1 text-[11px] leading-relaxed text-brand-800/80 dark:text-brand-200/80">
-                AgriBridge load khud nahi bhejta — wo provider ki app se jata hai. Ye TID hi is baat ka
-                saboot hai ke kaam waqai hua. Abhi na ho to baad mein bhi lag sakti hai; tab tak qatar par
-                <b> &ldquo;saboot baqi&rdquo;</b> likha rahega.
+                AgriBridge load khud nahi bhejta — wo provider ki app se jata hai. Tx ID usi waqt yahan likhein.
+                Bina is ke {kind === "bill" ? "bill" : "load"} save nahi hota.
               </p>
             </div>
 
@@ -1211,10 +1210,10 @@ function BankTransferForm({
       </div>
 
       <div className="load-form-evidence rounded-lg border border-brand-200 bg-brand-50/50 p-3 dark:border-brand-900/40 dark:bg-brand-950/20">
-        <Label htmlFor="bank_provider_tid">Bank/wallet Transaction ID</Label>
-        <Input id="bank_provider_tid" name="provider_tid" value={providerTid} onChange={(event) => onProviderTidChange(event.target.value)} placeholder="App se reference copy karein" />
+        <Label htmlFor="bank_provider_tid">Transaction ID (Trex / Tx ID) <span className="text-red-600">*</span></Label>
+        <Input id="bank_provider_tid" name="provider_tid" value={providerTid} onChange={(event) => onProviderTidChange(event.target.value)} placeholder="App se reference copy karein" required minLength={3} autoComplete="off" />
         <p className="mt-1 text-[11px] leading-relaxed text-brand-800/80 dark:text-brand-200/80">
-          Reference abhi na ho to transaction <b>Pending Proof</b> rahegi. Save proof se baad mein complete ho jayegi.
+          Bank ya wallet ki Tx ID isi waqt likhein. Bina is ke transfer save nahi hota.
         </p>
       </div>
 

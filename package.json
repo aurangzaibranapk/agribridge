@@ -79,6 +79,7 @@
     "test:hr-remaining": "npx --yes tsx tests/hr-remaining-lib.ts && node tests/hr-remaining-wiring.cjs && node tests/hr-remaining-sql.mjs",
     "test:auto-profile": "npx --yes tsx scripts/test-auto-profile.ts && node tests/auto-profile-sql.mjs",
     "test:login-crash": "npx --yes tsx scripts/test-login-crash.ts",
+    "test:load-tx-id": "npx --yes tsx scripts/test-load-tx-id.ts && npx --yes tsx --tsconfig scripts/tsconfig.inbox-test.json scripts/test-load-tx-id-render.tsx",
     "test:pos-card-cash": "npx --yes tsx scripts/test-pos-card-cash-dupes.ts",
     "test:shop-categories": "npx --yes tsx tests/shop-allowed-categories-lib.ts && node tests/shop-allowed-categories-sql.mjs",
     "test:pos-godam": "npx --yes tsx --tsconfig scripts/tsconfig.inbox-test.json tests/pos-godam-on-card.tsx && node tests/shop-godam-link-sql.mjs",
