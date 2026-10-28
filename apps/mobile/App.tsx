@@ -9,7 +9,7 @@ import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
 import { normalizeChannel, showTesterReport } from "../../src/lib/mobile/channel";
 import { dataFlavor, failureLine, sessionFromAccessToken, signInMobile, signUpMobile, type MobileSession } from "../../src/lib/mobile/live-login";
-import { liveGetScoped, loadMyFarmerId, type MilkRow } from "../../src/lib/mobile/live-read";
+import { karachiDate, liveGetScoped, liveInsert, loadMyFarmerId, type MilkRow } from "../../src/lib/mobile/live-read";
 import { brandLockup, loadAppMark, taglineWithDefault, type AppLang, type AppMark } from "../../src/lib/mobile/sub-brand";
 import { BrandStack, LanguageProvider } from "./src/glass";
 import { readTestAccount, showRolePreview, showRoleSwitch, SWITCH_ROLES, switchRoleLabel } from "../../src/lib/mobile/test-account";
@@ -378,7 +378,39 @@ export default function App() {
   }, [stage, token]);
 
   async function sync(access = token) {
-    if (!access || FLAVOR === "test" || !PORTAL) return;
+    if (!access) return;
+    if (FLAVOR === "test") {
+      const pickups = queue.filter((item) => item.kind === "pickup" && !item.error);
+      if (!pickups.length) return;
+      const auth = { url: SUPABASE_URL, anonKey: SUPABASE_ANON, token: access, userId, channel: CHANNEL, flavor: FLAVOR, testAccount: true, refreshSession };
+      const results: { clientUuid: string; ok: boolean; error?: string; offline?: boolean }[] = [];
+      for (const item of pickups) {
+        const body = item.payload;
+        const saved = await liveInsert<MilkRow>(auth, "milk_entries", {
+          farmer_id: body.farmer_id,
+          entry_date: typeof body.entry_date === "string" ? body.entry_date : karachiDate(),
+          shift: body.shift === "evening" ? "evening" : "morning",
+          quantity_liters: Number(body.liters),
+          lr: body.lr == null || body.lr === "" ? null : Number(body.lr),
+          entry_channel: "app",
+          collection_source: "mca_field",
+          mca_profile_id: userId,
+          created_by: userId,
+          client_uuid: item.clientUuid,
+          route_name: body.route_name ?? null,
+          chiller_name: body.chiller_name ?? null,
+          notes: body.notes ?? "Offline app pickup",
+          is_test: true,
+          status: "pending_fat",
+        }, fetch);
+        const duplicate = !saved.ok && /client_uuid|duplicate|23505/i.test(saved.detail || "");
+        results.push({ clientUuid: item.clientUuid, ok: saved.ok || duplicate, error: saved.ok || duplicate ? undefined : saved.message, offline: !saved.ok && !duplicate && saved.status === 0 });
+      }
+      setQueue((prev) => applyFlushResult(prev, results));
+      setNet(results.some((row) => row.offline) ? "offline" : "online");
+      return;
+    }
+    if (!PORTAL) return;
     const plan = flushPlan(queue, net === "offline" ? "offline" : "online");
     try {
       const res = await fetch(`${PORTAL}/api/mobile/v1/sync`, {
@@ -567,7 +599,7 @@ export default function App() {
                 </Pressable>
               </View>
             ) : null}
-            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} onProfile={() => setProfileOpen(true)} onTab={(key: string) => { setTab(key); if (appRole) setRoute(`/${appRole}/${key}`); }} readOnly={previewing || (isTest && FLAVOR !== "test")} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, flavor: FLAVOR, testAccount: isTest, refreshSession }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
+            {Role ? <Role tab={tab} role={appRole} data={data} queue={queue} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} onProfile={() => setProfileOpen(true)} onTab={(key: string) => { setTab(key); if (appRole) setRoute(`/${appRole}/${key}`); }} readOnly={previewing || (isTest && FLAVOR !== "test")} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, flavor: FLAVOR, testAccount: isTest, refreshSession }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
           </View>
           {nav ? <Tabs tabs={nav.tabs} current={tab} onChange={(key) => { setTab(key); setRoute(`/${appRole}/${key}`); }} /> : null}
           {tab === "more" ? (

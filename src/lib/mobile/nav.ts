@@ -74,9 +74,10 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     phase1: true,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "route", label: "Entry" },
-      { key: "fuel", label: "Kisan" },
-      { key: "more", label: "Profile" },
+      { key: "route", label: "Route" },
+      { key: "collections", label: "Collections" },
+      { key: "sync", label: "Sync" },
+      { key: "more", label: "More" },
     ],
   },
   mco: {

@@ -3,12 +3,14 @@ import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from "reac
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { lrRangeError } from "../../../../src/lib/dairy/rules";
-import { karachiDate, liveGetScoped, liveInsert, loadMilkList, shiftLabel, type MilkRow, type PartyRow } from "../../../../src/lib/mobile/live-read";
+import { karachiDate, liveGetScoped, liveInsert, livePatch, loadMilkList, shiftLabel, type MilkRow } from "../../../../src/lib/mobile/live-read";
+import type { OutboxItem } from "../../../../src/lib/mobile/queue";
 import { liveAuth, type LiveBag } from "../bits";
 import { McaGlass } from "./glass-homes";
 import { Btn, Card, Field } from "../kit";
 import { colors } from "../kit";
 import { farmerPortrait } from "../farmer-portraits";
+import { ApprovedMcaApp, type McaFarmer } from "./mca-approved";
 
 async function photo() {
   try {
@@ -43,13 +45,14 @@ function karachiHour(now = new Date()): number {
   return Number.isFinite(value) ? value : now.getHours();
 }
 
-export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly = false, live, onProfile, onTab }: { tab: string; data: any; queueCount: number; onEnqueue: (item: any) => void; onSync: () => void; readOnly?: boolean; live?: LiveBag; onProfile?: () => void; onTab?: (key: string) => void }) {
+export function RoleScreen({ tab, data, queue = [], queueCount, onEnqueue, onSync, readOnly = false, live, onProfile, onTab }: { tab: string; data: any; queue?: OutboxItem[]; queueCount: number; onEnqueue: (item: any) => void; onSync: () => void; readOnly?: boolean; live?: LiveBag; onProfile?: () => void; onTab?: (key: string) => void }) {
   const auth = liveAuth(live);
   const [liters, setLiters] = useState("");
   const [lr, setLr] = useState("");
   const [shift, setShift] = useState<"morning" | "evening">("morning");
   const [farmerId, setFarmerId] = useState("");
-  const [farmers, setFarmers] = useState<PartyRow[]>([]);
+  const [farmers, setFarmers] = useState<McaFarmer[]>([]);
+  const [collections, setCollections] = useState<MilkRow[]>([]);
   const [farmerNote, setFarmerNote] = useState("");
   const [route, setRoute] = useState(String(data?.routeName || ""));
   const [chiller, setChiller] = useState(String(data?.chillerName || ""));
@@ -59,14 +62,21 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
   const [saved, setSaved] = useState<MilkRow | null>(null);
   const [busy, setBusy] = useState(false);
   const [pickupOpen, setPickupOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [editingId, setEditingId] = useState("");
+  const [shiftUnlocked, setShiftUnlocked] = useState(false);
+  const [method, setMethod] = useState<"field" | "dropoff">("field");
+  const [transport, setTransport] = useState<"mca" | "mco">("mca");
+  const [proof, setProof] = useState<{ base64: string; mime: string } | null>(null);
 
   const loadFarmers = useCallback(async () => {
     if (!auth) return;
-    const [listed, staff] = await Promise.all([
-      liveGetScoped<PartyRow>(auth, "farmers?select=id,full_name,farmer_code&order=full_name.asc&limit=40", fetch),
+    const [listed, staff, milk] = await Promise.all([
+      liveGetScoped<McaFarmer>(auth, "farmers?select=id,full_name,farmer_code,village&order=full_name.asc&limit=40", fetch),
       auth.userId
         ? liveGetScoped<{ milk_route_name?: string | null; milk_chiller_name?: string | null }>(auth, `staff_details?select=milk_route_name,milk_chiller_name&profile_id=eq.${encodeURIComponent(auth.userId)}&limit=1`, fetch)
         : Promise.resolve({ ok: true as const, rows: [] }),
+      loadMilkList(auth, fetch, 200),
     ]);
     if (listed.ok) {
       setFarmers(listed.rows);
@@ -79,9 +89,13 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
       if (staff.rows[0].milk_route_name) setRoute(staff.rows[0].milk_route_name);
       if (staff.rows[0].milk_chiller_name) setChiller(staff.rows[0].milk_chiller_name);
     }
+    if (milk.ok) {
+      setCollections(milk.rows.filter((row) => row.entry_date === karachiDate() && (!auth.userId || row.mca_profile_id === auth.userId)));
+    }
   }, [auth?.token, auth?.url, auth?.userId, auth?.testAccount, auth?.flavor]);
 
   useEffect(() => { void loadFarmers(); }, [loadFarmers]);
+  const selectedFarmer = farmers.find((farmer) => farmer.id === farmerId);
 
   async function attendance() {
     const pos = await Location.requestForegroundPermissionsAsync();
@@ -117,6 +131,8 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
       const lrError = lrRangeError(lrValue, false);
       if (lrError) { setNote(lrError); return; }
     }
+    const duplicate = collections.find((row) => row.id !== editingId && row.farmer_id === farmerId && row.entry_date === karachiDate() && row.shift === shift);
+    if (duplicate) { setNote("Is farmer ki is shift ki entry pehle se hai. Collections se Edit karein."); return; }
     const body: Record<string, unknown> = {
       farmer_id: farmerId,
       entry_date: karachiDate(),
@@ -129,15 +145,23 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
       client_uuid: uuid(),
       route_name: route || null,
       chiller_name: chiller || null,
-      notes: "App pickup",
+      notes: `App pickup · ${method === "dropoff" ? "drop-off" : "field collection"} · ${transport === "mco" ? "MCO transport" : "MCA transport"}${proof ? " · proof captured" : ""}`,
       is_test: auth.testAccount === true,
       status: "pending_fat",
     };
     if (lrValue != null) body.lr = lrValue;
     setBusy(true);
-    const savedRow = await liveInsert<MilkRow>(auth, "milk_entries", body, fetch);
+    const savedRow = editingId
+      ? await livePatch<MilkRow>(auth, "milk_entries", editingId, { shift, quantity_liters: litres, lr: lrValue, notes: body.notes }, fetch)
+      : await liveInsert<MilkRow>(auth, "milk_entries", body, fetch);
     setBusy(false);
     if (!savedRow.ok) {
+      if (savedRow.status === 0 && !editingId) {
+        onEnqueue({ kind: "pickup", payload: { farmer_id: farmerId, farmer_name: selectedFarmer?.full_name || "Kisan", entry_date: karachiDate(), liters: litres, lr: lrValue, shift, collected_at: new Date().toISOString(), route_name: route || null, chiller_name: chiller || null, notes: body.notes, ...(proof ? { photo_base64: proof.base64, photo_mime: proof.mime } : {}) } });
+        setLiters(""); setLr(""); setProof(null); setPickupOpen(false);
+        setNote("Internet nahi mila. Entry offline queue mein safe hai.");
+        return;
+      }
       const missing = /is_test|schema cache|42703|PGRST204/i.test(savedRow.detail || "");
       const denied = savedRow.status === 401 || savedRow.status === 403 || /42501|row-level security/i.test(savedRow.detail || "");
       setNote(missing || denied
@@ -149,9 +173,9 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
     setSaved(row);
     setLiters("");
     setLr("");
-    const fresh = await loadMilkList(auth, fetch);
-    if (fresh.ok && fresh.rows[0]) setSaved(fresh.rows[0]);
-    setNote("Doodh save ho gaya. Entry MCC par Fat aur LR verification ke liye pending hai.");
+    setEditingId("");
+    await loadFarmers();
+    setNote(editingId ? "Tabdeeli save ho gayi. Entry MCO verification ke liye pending hai." : "Doodh save ho gaya. Entry MCC par Fat aur LR verification ke liye pending hai.");
   }
 
   function openPickup(id: string) {
@@ -162,9 +186,51 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
     setLr("");
     setSaved(null);
     setNote("");
+    setEditingId("");
+    setShiftUnlocked(false);
+    setMethod("field");
+    setTransport("mca");
+    setProof(null);
     setPickupOpen(true);
   }
 
+  function openEdit(row: MilkRow) {
+    if (readOnly || !row.id || row.status !== "pending_fat") return;
+    setFarmerId(row.farmer_id || "");
+    setEditingId(row.id);
+    setShift(row.shift === "evening" ? "evening" : "morning");
+    setShiftUnlocked(true);
+    setLiters(String(row.quantity_liters ?? row.field_collected_volume ?? ""));
+    setLr(row.lr == null ? "" : String(row.lr));
+    setMethod("field"); setTransport("mca"); setProof(null); setSaved(null); setNote(""); setPickupOpen(true);
+  }
+
+  async function captureProof() {
+    const shot = await photo();
+    if (!shot) { setNote("Tasveer nahi lagi."); return; }
+    setProof(shot); setNote("Photo / proof lag gayi.");
+  }
+
+  return (
+    <ApprovedMcaApp
+      tab={tab} farmers={farmers} collections={collections} route={route} chiller={chiller}
+      farmerNote={farmerNote} note={note} queue={queue} queueCount={queueCount}
+      refreshing={refreshing} readOnly={readOnly} pickupOpen={pickupOpen}
+      selectedFarmerId={farmerId} liters={liters} lr={lr} shift={shift}
+      shiftUnlocked={shiftUnlocked} method={method} transport={transport}
+      proofAttached={Boolean(proof)} busy={busy} editingId={editingId}
+      onTab={onTab} onProfile={onProfile}
+      onRefresh={() => { setRefreshing(true); void loadFarmers().finally(() => setRefreshing(false)); }}
+      onSync={onSync} onOpenFarmer={openPickup} onOpenEdit={openEdit}
+      onClosePickup={() => { if (!busy) setPickupOpen(false); }}
+      onLiters={setLiters} onLr={setLr} onShift={setShift}
+      onUnlockShift={() => setShiftUnlocked((value) => !value)}
+      onMethod={setMethod} onTransport={setTransport} onProof={() => void captureProof()}
+      onSave={() => { if (!busy) void savePickup(); }}
+    />
+  );
+
+  /* Legacy MCA screens retained in source for safe rollback.
   const box = { borderWidth: 1, borderColor: "#E2E8E0", borderRadius: 12, padding: 10, marginTop: 8, backgroundColor: "#fff" };
   const showPickup = tab === "route";
   const selectedFarmer = farmers.find((farmer) => farmer.id === farmerId);
@@ -292,5 +358,5 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
       <View style={{ height: 24 }} />
       {pickupModal}
     </ScrollView>
-  );
+  ); */
 }
