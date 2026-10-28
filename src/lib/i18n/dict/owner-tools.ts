@@ -160,6 +160,7 @@ export const ownerToolsDict = {
   // ---- Ghanti (notification bell) ----
   nbell_title: { en: "Notifications", rm: "Ittila-aat", ur: "اطلاعات" },
   nbell_unread: { en: "New", rm: "Nayi", ur: "نئی" },
+  nbell_count: { en: "Unread notifications", rm: "Na-parhi ittila-aat", ur: "نہ پڑھی اطلاعات" },
   nbell_read: { en: "Already read", rm: "Parh li hui", ur: "پڑھی ہوئی" },
   nbell_none: { en: "No notifications yet.", rm: "Abhi koi ittila nahi.", ur: "ابھی کوئی اطلاع نہیں۔" },
   nbell_mark_all: { en: "Mark all read", rm: "Sab parh liye", ur: "سب پڑھ لیے" },

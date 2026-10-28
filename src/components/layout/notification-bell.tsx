@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { MarkReadLink } from "@/components/notifications/mark-read";
 import { Bell, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { t } from "@/lib/i18n/translations";
@@ -8,6 +9,8 @@ import { useLang } from "@/lib/i18n/lang-context";
 import { usePending } from "@/components/pending/pending-context";
 import { PendingBellList } from "@/components/pending/pending-bell-panel";
 import { RedBadge, NayaPill } from "@/components/pending/pending-ui";
+import { markAllRead, markOpened } from "@/components/notifications/mark-read";
+import { NOTIFICATIONS_READ_EVENT, type NotificationsReadDetail } from "@/lib/notifications-read";
 import type { PendingItem } from "@/lib/pending/categories";
 
 /**
@@ -27,6 +30,13 @@ import type { PendingItem } from "@/lib/pending/categories";
  * "Parh li" ka nishan usi waqt lagta hai jab banda us par click kare --
  * khud ba khud nahi. Panel khulte hi sab ko parha hua likh dena wo
  * ittila mita deta hai jise banda ne dekha tak nahi.
+ *
+ * Do alag adad, ek hi ghanti par:
+ *   laal  = pending approvals (`fn_admin_pending_counts`). Kholne se
+ *           nahi ghat-ta. Faisla (approve/reject) tak rehta hai.
+ *   hara  = `notifications.is_read = false`. Notice ya usi link wali
+ *           screen khulne par ghat-ta hai. My Work ki laal 130 yahi
+ *           nahi hai — sidebar aur Mere Kaam wahi pending total hain.
  */
 
 interface Item {
@@ -168,22 +178,31 @@ export function NotificationBell({ initialCount, href }: { initialCount: number;
     }
   }
 
-  async function markRead(id: string) {
-    const supabase = createClient();
-    await supabase.from("notifications").update({ is_read: true }).eq("id", id);
-    setItems((cur) => (cur ?? []).map((i) => (i.id === id ? { ...i, is_read: true } : i)));
-    setCount((c) => Math.max(0, c - 1));
+  useEffect(() => {
+    function onRead(e: Event) {
+      const ids = new Set((e as CustomEvent<NotificationsReadDetail>).detail?.ids ?? []);
+      if (ids.size) {
+        setItems((cur) => (cur ?? []).map((i) => (ids.has(i.id) ? { ...i, is_read: true } : i)));
+      }
+      void refreshCount();
+    }
+    window.addEventListener(NOTIFICATIONS_READ_EVENT, onRead);
+    return () => window.removeEventListener(NOTIFICATIONS_READ_EVENT, onRead);
+  }, [refreshCount]);
+
+  async function markRead(id: string, href: string | null) {
+    const res = await markOpened({ id, href });
+    if (!res.ok) return;
+    const ids = new Set(res.ids);
+    setItems((cur) => (cur ?? []).map((i) => (ids.has(i.id) ? { ...i, is_read: true } : i)));
   }
 
   async function markAll() {
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase.from("notifications").update({ is_read: true }).eq("recipient_user_id", user.id).eq("is_read", false);
-    setItems((cur) => (cur ?? []).map((i) => ({ ...i, is_read: true })));
-    setCount(0);
+    const res = await markAllRead();
+    if (!res.ok) return;
+    setCount(res.remaining);
+    if (res.remaining === 0) setItems((cur) => (cur ?? []).map((i) => ({ ...i, is_read: true })));
+    else void load();
   }
 
   const unread = (items ?? []).filter((i) => !i.is_read);
@@ -206,13 +225,13 @@ export function NotificationBell({ initialCount, href }: { initialCount: number;
 
     if (item.link_url) {
       return (
-        <Link href={item.link_url} className={cls} onClick={() => { if (!item.is_read) void markRead(item.id); setOpen(false); }}>
+        <MarkReadLink href={item.link_url} notificationId={item.id} className={cls} onDone={() => setOpen(false)}>
           {body}
-        </Link>
+        </MarkReadLink>
       );
     }
     return (
-      <button type="button" className={cls} onClick={() => { if (!item.is_read) void markRead(item.id); }}>
+      <button type="button" className={cls} onClick={() => { if (!item.is_read) void markRead(item.id, null); }}>
         {body}
       </button>
     );
@@ -230,13 +249,20 @@ export function NotificationBell({ initialCount, href }: { initialCount: number;
         <Bell className="h-5 w-5" />
         {pend.enabled && pend.totals.pending > 0 && (
           <>
-            <RedBadge n={pend.totals.pending} className="absolute -right-2.5 -top-2 h-[18px] min-w-[18px] text-[10px]" />
+            <RedBadge n={pend.totals.pending} title={t("apb_title", lang)} className="absolute -right-2.5 -top-2 h-[18px] min-w-[18px] text-[10px]" />
             {pend.totals.naya > 0 && <span data-bell-new className="absolute -left-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-surface-900" />}
           </>
         )}
-        {!(pend.enabled && pend.totals.pending > 0) && count > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-green-500 px-1 text-[10px] font-bold text-white">
-            {count > 9 ? "9+" : count}
+        {count > 0 && (
+          <span
+            data-badge="unread"
+            data-count={count}
+            title={t("nbell_count", lang)}
+            className={`absolute flex h-4 min-w-4 items-center justify-center rounded-full bg-green-600 px-1 text-[10px] font-bold text-white ring-2 ring-white dark:ring-surface-900 ${
+              pend.enabled && pend.totals.pending > 0 ? "-bottom-1 -left-1" : "-right-0.5 -top-0.5"
+            }`}
+          >
+            {count > 999 ? "999+" : count}
           </span>
         )}
       </button>
@@ -270,7 +296,7 @@ export function NotificationBell({ initialCount, href }: { initialCount: number;
                     {k === "new" && <NayaPill n={pend.totals.naya} lang={lang} short className="h-4" />}
                     {k === "pending" && <RedBadge n={pend.totals.pending} className="h-[18px] min-w-[18px] text-[10px] ring-0" />}
                     {t(k === "new" ? "apb_tab_new" : k === "pending" ? "apb_tab_pending" : "apb_tab_notes", lang)}
-                    {k === "notes" && unread.length > 0 ? ` · ${unread.length}` : ""}
+                    {k === "notes" && count > 0 ? ` · ${count > 999 ? "999+" : count}` : ""}
                   </button>
                 ))}
               </div>
