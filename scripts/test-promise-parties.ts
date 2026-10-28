@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PromisePartyCell } from "../src/components/recovery/promise-party-cell";
-import { promiseCardSvg } from "../src/lib/recovery/promise-card";
+import { promiseCardFileSlug, promiseCardSvg } from "../src/lib/recovery/promise-card";
 import {
   PROMISE_PARTY_SOURCES,
   focusPageIndex,
@@ -170,13 +170,33 @@ assert.match(svg, /AL RANA TRADERS/);
 assert.match(svg, /Payment Reminder/);
 assert.match(svg, /Ali Rana/);
 assert.match(svg, /15 Nov 2026/);
-assert.match(svg, /THIS PROMISE/);
-assert.match(svg, /TOTAL OUTSTANDING/);
-assert.match(svg, /TOTAL PAYMENT/);
-assert.match(svg, /already received/);
+assert.match(svg, /PROMISED AMOUNT/);
+assert.match(svg, /Promise to Pay/);
+assert.match(svg, /Total outstanding/);
+assert.match(svg, /Total payment received/);
+assert.match(svg, /Please settle the promised amount by the date above/);
+assert.match(svg, /Thank you for your continued business/);
+assert.match(svg, /Al Rana Traders · Accounts/);
+assert.match(svg, /This is an official payment reminder/);
 assert.match(svg, new RegExp(rsLabel(160473).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-assert.match(svg, /Meherbani karke apna wada poora karein/);
+assert.match(svg, new RegExp(rsLabel(210000).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+assert.match(svg, new RegExp(rsLabel(40500).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+assert.doesNotMatch(svg, /Meherbani karke apna wada poora karein/);
+assert.doesNotMatch(svg, /THIS PROMISE|already received|Assalam/);
 assert.doesNotMatch(svg, />Customer</);
+assert.equal(promiseCardFileSlug("Bhai Zafar"), "bhai-zafar");
+assert.equal(promiseCardFileSlug("  "), "party");
+const escaped = promiseCardSvg({
+  partyName: `A & B <"'>`,
+  promiseDate: "1 < 2",
+  promiseAmount: "Rs 1 & 2",
+  totalOutstanding: "—",
+  totalReceived: "—",
+});
+assert.match(escaped, /A &amp; B &lt;&quot;&#39;&gt;/);
+assert.match(escaped, /1 &lt; 2/);
+assert.match(escaped, /Rs 1 &amp; 2/);
+assert.doesNotMatch(escaped, /A & B </);
 const unknownSvg = promiseCardSvg({
   partyName: "Naam nahi mila",
   promiseDate: "—",

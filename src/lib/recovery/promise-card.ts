@@ -1,6 +1,7 @@
 /**
  * Al Rana Traders ki payment-reminder card.
- * Tasveer hi reminder hai — plain-text bubble nahi.
+ * Corporate statement: safed card, gehra hara header, sona naam.
+ * Patte, icon, status, aur Roman Urdu wada line nahi.
  * Numbers pehle se format hon (`Rs …` ya "—").
  */
 
@@ -13,7 +14,9 @@ export type PromiseCardInput = {
 };
 
 export const PROMISE_CARD_WIDTH = 900;
-export const PROMISE_CARD_HEIGHT = 1280;
+export const PROMISE_CARD_HEIGHT = 1100;
+
+const FONT = "Inter, 'Segoe UI', Arial, Helvetica, sans-serif";
 
 function esc(value: string): string {
   return value.replace(/[&<>"']/g, (ch) => {
@@ -26,64 +29,64 @@ function esc(value: string): string {
 }
 
 function nameSize(name: string): number {
-  if (name.length > 28) return 30;
-  if (name.length > 18) return 36;
-  return 46;
+  if (name.length > 42) return 24;
+  if (name.length > 32) return 28;
+  if (name.length > 22) return 34;
+  return 42;
 }
 
 function heroSize(amount: string): number {
   if (amount.length > 16) return 40;
-  if (amount.length > 12) return 48;
-  return 58;
+  if (amount.length > 12) return 52;
+  return 64;
 }
 
-function sideSize(amount: string): number {
-  if (amount.length > 14) return 24;
-  if (amount.length > 11) return 28;
-  return 32;
+function rowSize(amount: string): number {
+  if (amount.length > 16) return 16;
+  if (amount.length > 13) return 18;
+  return 20;
 }
 
 /** Branded SVG. Party type yahan naam ki jagah nahi aata. */
 export function promiseCardSvg(input: PromiseCardInput): string {
   const name = input.partyName.trim() || "Naam nahi mila";
-  const greet = name === "Naam nahi mila" ? "Assalam o Alaikum" : `Assalam o Alaikum ${name} sb`;
   const date = input.promiseDate.trim() || "—";
   const promise = input.promiseAmount.trim() || "—";
   const outstanding = input.totalOutstanding.trim() || "—";
   const received = input.totalReceived.trim() || "—";
   const w = PROMISE_CARD_WIDTH;
   const h = PROMISE_CARD_HEIGHT;
+  const row = rowSize(outstanding.length > received.length ? outstanding : received);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Al Rana Traders payment reminder for ${esc(name)}">
-  <rect width="${w}" height="${h}" fill="#f4f1e8"/>
-  <rect width="${w}" height="300" fill="#174d2b"/>
-  <circle cx="820" cy="40" r="120" fill="#1f6b3a"/>
-  <circle cx="70" cy="260" r="90" fill="#145c32"/>
-  <rect y="300" width="${w}" height="10" fill="#d9a62e"/>
-  <text x="56" y="78" fill="#f3e6c0" font-family="Arial, Helvetica, sans-serif" font-size="22" letter-spacing="4" font-weight="700">AL RANA TRADERS</text>
-  <text x="56" y="148" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="700">Payment Reminder</text>
-  <text x="56" y="196" fill="#d6ebda" font-family="Arial, Helvetica, sans-serif" font-size="22">Quality inputs · Stronger yields</text>
-  <text x="56" y="248" fill="#f3e6c0" font-family="Arial, Helvetica, sans-serif" font-size="20">${esc(greet)}</text>
-  <rect x="40" y="340" width="820" height="900" rx="28" fill="#ffffff"/>
-  <text x="72" y="420" fill="#68736b" font-family="Arial, Helvetica, sans-serif" font-size="16" letter-spacing="2">PARTY</text>
-  <text x="72" y="478" fill="#123c22" font-family="Arial, Helvetica, sans-serif" font-size="${nameSize(name)}" font-weight="700">${esc(name)}</text>
-  <text x="72" y="560" fill="#68736b" font-family="Arial, Helvetica, sans-serif" font-size="16" letter-spacing="2">PROMISE DATE</text>
-  <text x="72" y="608" fill="#17221a" font-family="Arial, Helvetica, sans-serif" font-size="32" font-weight="700">${esc(date)}</text>
-  <rect x="72" y="650" width="756" height="210" rx="22" fill="#eaf5ec"/>
-  <text x="100" y="704" fill="#1f6b3a" font-family="Arial, Helvetica, sans-serif" font-size="16" letter-spacing="2">THIS PROMISE</text>
-  <text x="100" y="790" fill="#174d2b" font-family="Arial, Helvetica, sans-serif" font-size="${heroSize(promise)}" font-weight="700">${esc(promise)}</text>
-  <rect x="72" y="890" width="360" height="150" rx="18" fill="#f7f8f5"/>
-  <text x="96" y="930" fill="#68736b" font-family="Arial, Helvetica, sans-serif" font-size="14" letter-spacing="1">TOTAL OUTSTANDING</text>
-  <text x="96" y="954" fill="#1f6b3a" font-family="Arial, Helvetica, sans-serif" font-size="13">still to collect</text>
-  <text x="96" y="1004" fill="#17221a" font-family="Arial, Helvetica, sans-serif" font-size="${sideSize(outstanding)}" font-weight="700">${esc(outstanding)}</text>
-  <rect x="468" y="890" width="360" height="150" rx="18" fill="#fff8e8"/>
-  <text x="492" y="930" fill="#68736b" font-family="Arial, Helvetica, sans-serif" font-size="14" letter-spacing="1">TOTAL PAYMENT</text>
-  <text x="492" y="954" fill="#b88722" font-family="Arial, Helvetica, sans-serif" font-size="13">already received</text>
-  <text x="492" y="1004" fill="#174d2b" font-family="Arial, Helvetica, sans-serif" font-size="${sideSize(received)}" font-weight="700">${esc(received)}</text>
-  <text x="72" y="1105" fill="#17221a" font-family="Arial, Helvetica, sans-serif" font-size="24">Meherbani karke apna wada poora karein.</text>
-  <text x="72" y="1148" fill="#17221a" font-family="Arial, Helvetica, sans-serif" font-size="24">Shukriya.</text>
-  <text x="72" y="1196" fill="#1f6b3a" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700">— Al Rana Traders</text>
+  <rect width="${w}" height="${h}" fill="#eef0f2"/>
+  <rect x="36" y="36" width="828" height="1028" fill="#ffffff"/>
+  <rect x="36" y="36" width="828" height="5" fill="#08261c"/>
+  <rect x="36" y="41" width="828" height="124" fill="#0f3d2c"/>
+  <text x="80" y="92" fill="#d4bc8a" font-family="${FONT}" font-size="14" letter-spacing="3.6" font-weight="600">AL RANA TRADERS</text>
+  <text x="80" y="140" fill="#ffffff" font-family="${FONT}" font-size="34" font-weight="700">Payment Reminder</text>
+  <text x="80" y="220" fill="#8e99a4" font-family="${FONT}" font-size="13" letter-spacing="1.8" font-weight="600">TO</text>
+  <text x="80" y="274" fill="#1b2430" font-family="${FONT}" font-size="${nameSize(name)}" font-weight="700">${esc(name)}</text>
+  <line x1="80" y1="316" x2="820" y2="316" stroke="#e6e8eb" stroke-width="1"/>
+  <text x="80" y="364" fill="#8e99a4" font-family="${FONT}" font-size="13" letter-spacing="1.6" font-weight="600">PROMISE DATE</text>
+  <text x="80" y="406" fill="#1b2430" font-family="${FONT}" font-size="22" font-weight="700">${esc(date)}</text>
+  <text x="470" y="364" fill="#8e99a4" font-family="${FONT}" font-size="13" letter-spacing="1.6" font-weight="600">REFERENCE</text>
+  <text x="470" y="406" fill="#1b2430" font-family="${FONT}" font-size="22" font-weight="700">Promise to Pay</text>
+  <line x1="80" y1="448" x2="820" y2="448" stroke="#e6e8eb" stroke-width="1"/>
+  <text x="80" y="500" fill="#8e99a4" font-family="${FONT}" font-size="13" letter-spacing="1.6" font-weight="600">PROMISED AMOUNT</text>
+  <text x="80" y="576" fill="#14633c" font-family="${FONT}" font-size="${heroSize(promise)}" font-weight="700">${esc(promise)}</text>
+  <rect x="80" y="612" width="740" height="160" fill="#f4f6f7" stroke="#e4e7ea" stroke-width="1"/>
+  <text x="108" y="658" fill="#6b7380" font-family="${FONT}" font-size="18" font-weight="400">Total outstanding</text>
+  <text x="792" y="658" fill="#1b2430" font-family="${FONT}" font-size="${row}" font-weight="700" text-anchor="end">${esc(outstanding)}</text>
+  <line x1="108" y1="692" x2="792" y2="692" stroke="#e4e7ea" stroke-width="1"/>
+  <text x="108" y="738" fill="#6b7380" font-family="${FONT}" font-size="18" font-weight="400">Total payment received</text>
+  <text x="792" y="738" fill="#1b2430" font-family="${FONT}" font-size="${row}" font-weight="700" text-anchor="end">${esc(received)}</text>
+  <text x="80" y="836" fill="#1b2430" font-family="${FONT}" font-size="20" font-weight="400">Please settle the promised amount by the date above.</text>
+  <text x="80" y="874" fill="#1b2430" font-family="${FONT}" font-size="20" font-weight="400">Thank you for your continued business.</text>
+  <line x1="80" y1="928" x2="820" y2="928" stroke="#e6e8eb" stroke-width="1"/>
+  <text x="80" y="972" fill="#9aa3ad" font-family="${FONT}" font-size="16" font-weight="500">Al Rana Traders · Accounts</text>
+  <text x="80" y="1006" fill="#b4bcc4" font-family="${FONT}" font-size="15" font-weight="400">This is an official payment reminder.</text>
 </svg>`;
 }
 
