@@ -1,3 +1,10 @@
+## Pending — 28 October 2026: Data Health duplicate band (724)
+
+Branch `cursor/data-health-dedupe-62d3`. Migration **724 file only**. Testing aur Live dono par **nahi** chali. **723 mat use karo** — wo `723_fuel_ops_payroll_help` hai. 724 sirf findings ki zindagi: roz ki scan purani khuli naqal `superseded_by_duplicate` se band karti hai, taazi qataar khuli rehti hai. Stock, batch, ledger, journal ki koi raqam nahi badalti. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `724_data_health_dedupe.sql`. Rollback: `724_data_health_dedupe.rollback.sql`.
+- Tasdeeq: khuli qatarein = alag fingerprints. `resolution_note = superseded_by_duplicate` wali purani naqlein resolved, `resolved_by` khali.
+
 ## Pending — 28 October 2026: Tel / ops cards + payroll desk (723)
 
 Branch `cursor/fuel-ops-payroll-desk-72d0`. Migration **723 file only**. Testing aur Live dono par **nahi** chali. **722 mat use karo** — wo `722_load_tx_id_required_help` hai. 723 sirf feature + `feature_help`. Koi table, koi column, koi naya tankhwah formula nahi. Safhe: `/admin/finance/ops` aur fuel page ke upar wahi desk. Payroll `/admin/hr/payroll` par Cards / Log / Harkatein. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).

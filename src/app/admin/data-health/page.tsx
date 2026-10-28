@@ -57,6 +57,7 @@ export default async function DataHealthPage() {
       .from("data_health_findings")
       .select("id, title, department, status, resolution_note, resolved_at")
       .not("status", "in", "(open,sent_to_assistant)")
+      .or("resolution_note.is.null,resolution_note.neq.superseded_by_duplicate")
       .order("resolved_at", { ascending: false })
       .limit(20),
   ]);
@@ -98,6 +99,8 @@ export default async function DataHealthPage() {
               Ye safha roz khud check karta hai: dobara payment, gum shuda purchase qatar, stock ka farq,
               manfi cash/bank balance waghera. <strong>Koi bhi cheez khud theek nahi hoti</strong> -- har masle
               par faisla (AgriBridge Assistant ya Claude ko bhejna, chhoड़ dena, ya theek ho gaya mark karna) ek insaan karta hai.
+              Ek masla roz dobara khuli qataar nahi banta. Purani khuli naqal band ho jati hai, note{" "}
+              <span className="font-mono">superseded_by_duplicate</span>. Sirf taazi qataar khuli rehti hai. Ye note stock ya ledger theek hone ka saboot nahi.
             </p>
             {byDept.size > 0 && (
               <p className="flex flex-wrap gap-2 pt-1">
