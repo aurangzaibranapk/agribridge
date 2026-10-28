@@ -1,12 +1,14 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { cleanPerson } from "../../../../src/lib/mobile/display-name";
 import { approvalJourney, approvalTimeline, compactRupee, hazarFigure, karachiClock, milkTimeline, monthBuckets, orderTimeline, pctChange, romanWeekday } from "../../../../src/lib/mobile/glass-metrics";
 import { karachiDate, karachiDaySeries, liveGet, liveGetScoped, loadFarmerNames, loadMilkList, loadMilkWindow, loadMonthPurchases, loadMonthSales, loadOwnAttendance, loadPhoneNotes, loadSalesMonths, milkLitres, pricedMilkTotal, rupees, saleMonthKey, shiftLabel, type AdminHome, type HealthRow, type KhataView, type MilkRow, type OrderRow, type PhoneNote, type ReadResult } from "../../../../src/lib/mobile/live-read";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { liveAuth, type LiveBag } from "../bits";
-import { BarChart, BarTrack, BrandHeader, Donut, GlassCard, GlassScreen, Kpi, KpiGrid, LineChart, Pill, Rise, TankRow, TankTemp, Timeline, WeatherCard, glass, useFace, useWeather } from "../glass";
+import { ActionGrid, BarChart, BarTrack, BrandHeader, Donut, GlassCard, GlassScreen, Kpi, KpiGrid, LineChart, Pill, Rise, TankRow, TankTemp, Timeline, WeatherCard, glass, useFace, useWeather } from "../glass";
+import { farmerPortrait } from "../farmer-portraits";
+import type { AdminDigitalOverview, DigitalMunshiData } from "../../../../src/lib/mobile/digital-munshi";
 
 type Refresh = { refreshing?: boolean; onRefresh?: () => void; onProfile?: () => void; onTab?: (key: string) => void };
 
@@ -154,7 +156,7 @@ function useOrderExtra(live: LiveBag | undefined, orderId: string | null) {
   return extra;
 }
 
-export function FarmerGlass({ live, khata, milk, names, focus = "home", footer, ...bar }: Refresh & { live?: LiveBag; khata: KhataView | null; milk: ReadResult<MilkRow> | null; names: Map<string, string>; focus?: "home" | "track"; footer?: ReactNode }) {
+export function FarmerGlass({ live, khata, milk, names, munshi, focus = "home", footer, ...bar }: Refresh & { live?: LiveBag; khata: KhataView | null; milk: ReadResult<MilkRow> | null; names: Map<string, string>; munshi?: DigitalMunshiData; focus?: "home" | "track"; footer?: ReactNode }) {
   const face = useFace(live, "Kisan / Customer");
   const weather = useWeather(face.place);
   if (!khata || !milk) return <ActivityIndicator color={glass.up} style={{ marginTop: 24 }} />;
@@ -203,15 +205,41 @@ export function FarmerGlass({ live, khata, milk, names, focus = "home", footer, 
   if (focus === "track") {
     return (
       <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-        <BrandHeader role="Kisan / Customer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+        <BrandHeader role="Digital Munshi · Kisan / Customer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
         {track}
       </GlassScreen>
     );
   }
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-      <BrandHeader role="Kisan / Customer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+      <BrandHeader role="Digital Munshi · Kisan / Customer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
+      <ActionGrid title="Meri Services" actions={[
+        { label: "Farms", key: "farm", onPress: () => bar.onTab?.("farm") },
+        { label: "Dairy", key: "doodh", onPress: () => bar.onTab?.("doodh") },
+        { label: "Orders", key: "karyana", onPress: () => bar.onTab?.("karyana") },
+        { label: "Wallet", key: "khata", onPress: () => bar.onTab?.("khata") },
+        { label: "Vet", key: "vet", onPress: () => bar.onTab?.("vet") },
+        { label: "Profile", key: "more", onPress: bar.onProfile },
+      ]} />
+      <GlassCard title="Digital Munshi" sub="Website ka linked asal record" index={2}>
+        {munshi?.notes.length ? <Text style={{ color: glass.muted, marginBottom: 8 }}>{munshi.notes[0]}</Text> : null}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+          {[
+            ["Farms", munshi ? String(munshi.farms.length) : "—", "farm"],
+            ["Faslein", munshi ? String(munshi.crops.length) : "—", "farm"],
+            ["Janwar", munshi ? String(munshi.animals.filter((row) => !["sold", "dead"].includes(String(row.status || "").toLowerCase())).length) : "—", "doodh"],
+            ["Vet record", munshi ? String(munshi.health.length) : "—", "vet"],
+            ["Machinery", munshi ? String(munshi.machinery.length) : "—", "machinery"],
+            ["Demands", munshi ? String(munshi.demands.length) : "—", "produce"],
+          ].map(([label, value, key]) => (
+            <Pressable key={label} onPress={() => bar.onTab?.(key)} style={{ width: "31.5%", minHeight: 72, borderRadius: 14, backgroundColor: "#EFF7EF", marginBottom: 8, padding: 9, justifyContent: "center" }}>
+              <Text style={{ color: glass.text, fontSize: 20, fontWeight: "900", textAlign: "center" }}>{value}</Text>
+              <Text style={{ color: glass.muted, fontSize: 11, fontWeight: "700", textAlign: "center", marginTop: 3 }}>{label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </GlassCard>
       <KpiGrid>
         <Kpi index={2} label="Wallet balance" value={walletParts(khata.owed, Boolean(khata.note && khata.owed == null), khata.note || "Khata baqaya").value} sub={walletParts(khata.owed, Boolean(khata.note && khata.owed == null), khata.note || "Khata baqaya").sub} color="#C8A058" series={payLine} pct={pctChange(weekPay, prevPay)} />
         <Kpi index={3} label="Aaj ka doodh" value={milk.ok ? litreText(milkLitres(todayRows)) : "—"} sub={milk.ok ? "" : milk.message} color="#5B8CFF" series={series} pct={pctChange(milkLitres(todayRows), yesterday ? milkLitres(yesterdayRows) : null)} />
@@ -259,7 +287,7 @@ function fatOn(rows: MilkRow[], day: string): number | null {
   return avg(fatNums(rows.filter((row) => row.entry_date === day)));
 }
 
-export function McaGlass({ live, farmers, ...bar }: Refresh & { live?: LiveBag; farmers: { id?: string; full_name?: string | null }[] }) {
+export function McaGlass({ live, farmers, onFarmerPress, ...bar }: Refresh & { live?: LiveBag; farmers: { id?: string; full_name?: string | null; farmer_code?: string | null }[]; onFarmerPress?: (id: string) => void }) {
   const face = useFace(live, "MCA");
   const weather = useWeather(face.place);
   const auth = liveAuth(live);
@@ -289,8 +317,33 @@ export function McaGlass({ live, farmers, ...bar }: Refresh & { live?: LiveBag; 
   const yFat = avg(yFats);
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
-      <BrandHeader role="MCA" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+      <BrandHeader role="DCA / Milk Collection" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
+      <ActionGrid title="Aaj ka route" actions={[
+        { label: "Start Shift", key: "start", onPress: () => bar.onTab?.("start") },
+        { label: "Opening Meter Photo", key: "meter", onPress: () => bar.onTab?.("meter") },
+        { label: "Petrol Entry", key: "petrol", onPress: () => bar.onTab?.("petrol") },
+      ]} />
+      <GlassCard title="Farmer List" aside={<Pressable onPress={() => bar.onTab?.("fuel")}><Text style={{ color: "#147A3D", fontWeight: "800" }}>View All ›</Text></Pressable>} index={3}>
+        {farmers.length === 0 ? <Text style={{ color: glass.muted }}>Koi linked milk farmer nahi mila.</Text> : null}
+        {farmers.slice(0, 10).map((farmer, index) => (
+          <Pressable
+            key={farmer.id || String(index)}
+            onPress={() => farmer.id && onFarmerPress?.(farmer.id)}
+            style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: index < Math.min(farmers.length, 10) - 1 ? 1 : 0, borderBottomColor: "#E4ECE5" }}
+          >
+            <Image source={farmerPortrait(index)} style={{ width: 54, height: 54, borderRadius: 15, marginRight: 10 }} />
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <Text style={{ color: glass.text, fontWeight: "900", fontSize: 15 }}>{cleanPerson(farmer.full_name) || "Kisan"}</Text>
+              <Text style={{ color: glass.muted, marginTop: 2 }}>{farmer.farmer_code || "Milk farmer"}</Text>
+            </View>
+            <View style={{ backgroundColor: "#DFF5E5", borderRadius: 13, paddingHorizontal: 12, paddingVertical: 9 }}>
+              <Text style={{ color: "#087C37", fontWeight: "900", fontSize: 12 }}>▣ Gate</Text>
+              <Text style={{ color: "#087C37", fontWeight: "900", fontSize: 12 }}>Milk Entry</Text>
+            </View>
+          </Pressable>
+        ))}
+      </GlassCard>
       <KpiGrid>
         <Kpi index={2} label="Aaj ki collection" value={milk?.ok ? litreText(milkLitres(todayRows)) : "—"} color="#3DDC97" series={series} pct={pctChange(milkLitres(todayRows), milkLitres(rows.filter((row) => row.entry_date === yesterday)))} />
         <Kpi index={3} label="Kisan count" value={String(farmers.length)} color="#F5B942" series={flatSeries(farmers.length)} pct={null} badge="count" />
@@ -318,7 +371,7 @@ export function McaGlass({ live, farmers, ...bar }: Refresh & { live?: LiveBag; 
   );
 }
 
-export function McoGlass({ live, rows, error, names, ...bar }: Refresh & { live?: LiveBag; rows: MilkRow[] | null; error: string; names: Map<string, string> }) {
+export function McoGlass({ live, rows, error, names, onFieldReceive, onDropoff, ...bar }: Refresh & { live?: LiveBag; rows: MilkRow[] | null; error: string; names: Map<string, string>; onFieldReceive?: () => void; onDropoff?: () => void }) {
   const face = useFace(live, "MCO / Chiller");
   const notes = usePhoneNotes(live);
   const days = karachiDaySeries(7);
@@ -343,6 +396,20 @@ export function McoGlass({ live, rows, error, names, ...bar }: Refresh & { live?
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="MCO / Chiller" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+      <View style={{ marginBottom: 12 }}>
+        <Text style={{ color: glass.text, fontSize: 25, fontWeight: "900" }}>Milk Receiving</Text>
+        <Text style={{ color: glass.muted, marginTop: 2, marginBottom: 10 }}>MCC · Quality Check & Record</Text>
+        <Pressable onPress={onFieldReceive} style={{ minHeight: 135, borderRadius: 20, padding: 18, backgroundColor: "#E6F2FF", borderWidth: 1, borderColor: "#CFE4FA", justifyContent: "center", marginBottom: 12 }}>
+          <Text style={{ color: "#1469D5", fontSize: 30, fontWeight: "900" }}>▰</Text>
+          <Text style={{ color: glass.text, fontSize: 20, fontWeight: "900", marginTop: 8 }}>Field Collection Receive  ›</Text>
+          <Text style={{ color: glass.muted, fontSize: 15, marginTop: 4 }}>DCA ki saved entry</Text>
+        </Pressable>
+        <Pressable onPress={onDropoff} style={{ minHeight: 135, borderRadius: 20, padding: 18, backgroundColor: "#FFF2D6", borderWidth: 1, borderColor: "#F4DDAE", justifyContent: "center" }}>
+          <Text style={{ color: "#E49A00", fontSize: 30, fontWeight: "900" }}>▦</Text>
+          <Text style={{ color: glass.text, fontSize: 20, fontWeight: "900", marginTop: 8 }}>Drop-off Entry  ›</Text>
+          <Text style={{ color: glass.muted, fontSize: 15, marginTop: 4 }}>MCC par seedha doodh</Text>
+        </Pressable>
+      </View>
       <KpiGrid>
         <Kpi index={2} label="Subah ka doodh" value={rows ? litreText(milkLitres(subah)) : "—"} color="#5B8CFF" series={subahSeries} pct={pctChange(subahSeries[subahSeries.length - 1] ?? null, subahSeries[subahSeries.length - 2] ?? null)} />
         <Kpi index={3} label="Shaam ka doodh" value={rows ? litreText(milkLitres(shaam)) : "—"} color="#C4B5FD" series={shaamSeries} pct={pctChange(shaamSeries[shaamSeries.length - 1] ?? null, shaamSeries[shaamSeries.length - 2] ?? null)} />
@@ -382,7 +449,7 @@ export function McoGlass({ live, rows, error, names, ...bar }: Refresh & { live?
 
 const DONUT_COLORS = ["#3DDC97", "#C4B5FD", "#F5B942", "#5B8CFF", "#FF6B6B"];
 
-export function AdminGlass({ live, home, milk, orders: _orders, focus = "home", footer, onVerify, ...bar }: Refresh & { live?: LiveBag; home: AdminHome | null; milk: MilkRow[]; orders: OrderRow[]; focus?: "home" | "track"; footer?: ReactNode; onVerify?: (row: MilkRow) => void }) {
+export function AdminGlass({ live, home, milk, orders: _orders, digital, focus = "home", footer, onVerify, ...bar }: Refresh & { live?: LiveBag; home: AdminHome | null; milk: MilkRow[]; orders: OrderRow[]; digital?: AdminDigitalOverview | null; focus?: "home" | "track"; footer?: ReactNode; onVerify?: (row: MilkRow) => void }) {
   const face = useFace(live, "Admin");
   const [farmers, setFarmers] = useState<number | null>(null);
   const [monthSales, setMonthSales] = useState<{ total: number | null; note: string | null } | null>(null);
@@ -470,6 +537,28 @@ export function AdminGlass({ live, home, milk, orders: _orders, focus = "home", 
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Admin" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+      <ActionGrid actions={[
+        { label: "Reports", key: "reports", onPress: () => bar.onTab?.("reports") },
+        { label: "Approvals", key: "approvals", onPress: () => bar.onTab?.("approvals") },
+        { label: "Branches", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Shops", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Alerts", key: "approvals", onPress: () => bar.onTab?.("approvals") },
+        { label: "Profile", key: "more", onPress: bar.onProfile },
+      ]} />
+      <GlassCard title="Digital Munshi · tamam kisan" sub="Farms, crops, dairy, vet aur machinery ka operational view" index={2}>
+        {digital?.notes.length ? <Text style={{ color: glass.muted, marginBottom: 8 }}>{digital.notes[0]}</Text> : null}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+          {[
+            ["Kisan", digital?.farmers], ["Farms", digital?.farms], ["Faslein", digital?.crops],
+            ["Janwar", digital?.animals], ["Vet due", digital?.vetOpen], ["Machinery", digital?.machineryOpen], ["Demands", digital?.demandsOpen],
+          ].map(([label, value]) => (
+            <View key={String(label)} style={{ width: "31.5%", minHeight: 70, borderRadius: 14, backgroundColor: "#EFF7EF", marginBottom: 8, padding: 9, justifyContent: "center" }}>
+              <Text style={{ color: glass.text, fontSize: 20, fontWeight: "900", textAlign: "center" }}>{typeof value === "number" ? value : "—"}</Text>
+              <Text style={{ color: glass.muted, fontSize: 11, fontWeight: "700", textAlign: "center", marginTop: 3 }}>{label}</Text>
+            </View>
+          ))}
+        </View>
+      </GlassCard>
       <KpiGrid>
         <Kpi index={2} label="Total sales" value={home.sales.state === "ok" ? rupees(home.sales.total) : "—"} sub={home.sales.state === "error" ? "Asal bills nahi" : `${home.sales.bills} bill`} color="#C4B5FD" series={days} pct={pctChange(days[days.length - 1] ?? null, days[days.length - 2] ?? null)} />
         <Kpi index={3} label="Milk collection" value={milkToday == null ? "—" : litreText(milkToday)} color="#3DDC97" series={milkSeries.some((value) => value > 0) ? milkSeries : milkToday == null ? [] : [milkToday, milkToday]} pct={milkSeries.some((value) => value > 0) ? pctChange(milkSeries[milkSeries.length - 1], milkSeries[milkSeries.length - 2]) : null} />
@@ -649,6 +738,14 @@ export function DealerGlass({ live, khata, orders, ...bar }: Refresh & { live?: 
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Dealer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+      <ActionGrid actions={[
+        { label: "Orders", key: "orders", onPress: () => bar.onTab?.("orders") },
+        { label: "Khata", key: "khata", onPress: () => bar.onTab?.("khata") },
+        { label: "Stock", key: "home", onPress: () => bar.onTab?.("home") },
+        { label: "Reports", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Recovery", key: "khata", onPress: () => bar.onTab?.("khata") },
+        { label: "Profile", key: "more", onPress: bar.onProfile },
+      ]} />
       <KpiGrid>
         <Kpi index={2} label="Is mahine orders" value={orders.ok ? (dated ? String(monthCount) : String(list.length)) : "—"} sub={dated ? "Is mahine" : "Aakhri fehrist"} color="#3DDC97" series={countSeries.some((value) => value > 0) ? countSeries : flatSeries(orders.ok ? list.length : null)} pct={dated ? pctChange(monthCount, prevCount) : null} />
         <Kpi index={3} label="HQ khata balance" value={hq.value} sub={hq.sub} color="#FF6B6B" series={flatSeries(khata.owed == null ? null : Math.abs(khata.owed))} pct={null} />
@@ -759,6 +856,14 @@ export function StaffGlass({ live, attendance, salary, advances, tasks, tasksNot
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Staff" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+      <ActionGrid actions={[
+        { label: "Hazri", key: "visits", onPress: () => bar.onTab?.("visits") },
+        { label: "Tasks", key: "orders", onPress: () => bar.onTab?.("orders") },
+        { label: "POS", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Recovery", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Khata", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Profile", key: "more", onPress: bar.onProfile },
+      ]} />
       <Rise index={2}>
         <View style={{ backgroundColor: "#146B3A", borderRadius: 18, padding: 14, marginBottom: 12, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "rgba(61,220,151,0.35)" }}>
           <View style={{ flex: 1, paddingRight: 10 }}>
@@ -855,6 +960,14 @@ export function VetGlass({ live, health, ...bar }: Refresh & { live?: LiveBag; h
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Vet" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
       <WeatherCard weather={weather} />
+      <ActionGrid actions={[
+        { label: "Visits", key: "visits", onPress: () => bar.onTab?.("visits") },
+        { label: "Janwar", key: "stock", onPress: () => bar.onTab?.("stock") },
+        { label: "Kisan", key: "more", onPress: () => bar.onTab?.("more") },
+        { label: "Treatment", key: "visits", onPress: () => bar.onTab?.("visits") },
+        { label: "Vaccine", key: "stock", onPress: () => bar.onTab?.("stock") },
+        { label: "Profile", key: "more", onPress: bar.onProfile },
+      ]} />
       <KpiGrid>
         <Kpi index={2} label="Aaj ke visits" value={health ? String(todayVisits.length) : "—"} color="#5B8CFF" badge="count" series={health ? visitSeries : []} pct={null} />
         <Kpi index={3} label="Pending cases" value={health ? String(pending.length) : "—"} color="#F5B942" badge="count" series={health ? pendingSeries : []} pct={null} />

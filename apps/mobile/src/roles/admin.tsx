@@ -7,6 +7,7 @@ import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { Empty, Kpi, SaleChart, Section, ShareBar, liveAuth, type LiveBag } from "../bits";
 import { AdminGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
+import { loadAdminDigitalOverview, type AdminDigitalOverview } from "../../../../src/lib/mobile/digital-munshi";
 
 type Panel = "home" | "parties" | "stock" | "milk" | "purchases" | "attendance";
 
@@ -20,18 +21,21 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
   const [panel, setPanel] = useState<Panel>("home");
   const [note, setNote] = useState("");
   const [verifyBusy, setVerifyBusy] = useState("");
+  const [digital, setDigital] = useState<AdminDigitalOverview | null>(null);
 
   const load = useCallback(async () => {
     if (!auth) { setError("Live Supabase is build mein set nahi. Login ke baad hisaab yahin aata hai."); return; }
     setError("");
-    const [nextHome, nextMilk, nextOrders] = await Promise.all([
+    const [nextHome, nextMilk, nextOrders, nextDigital] = await Promise.all([
       loadAdminHome(auth, fetch),
       loadMilkList(auth, fetch, 120),
       loadOrders(auth, fetch),
+      loadAdminDigitalOverview(auth, fetch),
     ]);
     setHome(nextHome);
     setMilk(nextMilk.ok ? nextMilk.rows : []);
     setOrders(nextOrders.ok ? nextOrders.rows : []);
+    setDigital(nextDigital);
     if (!nextMilk.ok) setNote(nextMilk.message);
   }, [auth?.token, auth?.url, auth?.testAccount, auth?.flavor]);
 
@@ -68,6 +72,7 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
         home={home}
         milk={milk}
         orders={orders}
+        digital={digital}
         onProfile={onProfile}
         onTab={onTab}
         refreshing={refreshing}

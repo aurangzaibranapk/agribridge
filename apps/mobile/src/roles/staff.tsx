@@ -5,7 +5,7 @@ import { Empty, Section, liveAuth, type LiveBag } from "../bits";
 import { StaffGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
 
-export function RoleScreen({ tab, live, readOnly = false, onProfile }: { tab: string; live?: LiveBag; readOnly?: boolean; onProfile?: () => void }) {
+export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { tab: string; live?: LiveBag; readOnly?: boolean; onProfile?: () => void; onTab?: (key: string) => void }) {
   const auth = liveAuth(live);
   const [attendance, setAttendance] = useState<ReadResult<AttendanceRow> | null>(null);
   const [salary, setSalary] = useState<ReadResult<SalaryRow> | null>(null);
@@ -61,6 +61,7 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile }: { tab: st
       <StaffGlass
         live={live}
         onProfile={onProfile}
+        onTab={onTab}
         attendance={attendance}
         salary={salary}
         advances={advances}

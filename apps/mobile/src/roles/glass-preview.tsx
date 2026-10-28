@@ -29,8 +29,8 @@ const home: AdminHome = {
 
 function Frame({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <View style={{ width: 390, marginRight: 16, marginBottom: 16, height: 844, overflow: "hidden", borderRadius: 28, borderWidth: 1, borderColor: "rgba(255,255,255,0.16)" }}>
-      <Text style={{ color: "#C8A058", fontSize: 11, fontWeight: "700", paddingHorizontal: 12, paddingTop: 8 }}>{title}</Text>
+    <View style={{ width: 390, marginRight: 16, marginBottom: 16, height: 844, overflow: "hidden", borderRadius: 28, borderWidth: 1, borderColor: "#DDE7DF", backgroundColor: "#F7F8F3" }}>
+      <Text style={{ color: "#0B5D35", fontSize: 11, fontWeight: "700", paddingHorizontal: 12, paddingTop: 8 }}>{title}</Text>
       <View style={{ flex: 1 }}>{children}</View>
     </View>
   );
@@ -39,8 +39,8 @@ function Frame({ title, children }: { title: string; children: ReactNode }) {
 /** Web-only empty layout. Numbers stay blank. Open with ?glass=1 */
 export function GlassPreview() {
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: "#05080c" }} contentContainerStyle={{ padding: 16 }}>
-      <Text style={{ color: "#F4F7F4", fontSize: 16, fontWeight: "800", marginBottom: 8 }}>Glass layout · khali data</Text>
+    <ScrollView style={{ flex: 1, backgroundColor: "#EEF4EC" }} contentContainerStyle={{ padding: 16 }}>
+      <Text style={{ color: "#10271D", fontSize: 16, fontWeight: "800", marginBottom: 8 }}>Approved card layout · khali data</Text>
       <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
         <Frame title="Kisan / Customer"><FarmerGlass khata={khata} milk={milk} names={new Map()} /></Frame>
         <Frame title="MCA"><McaGlass farmers={[]} /></Frame>

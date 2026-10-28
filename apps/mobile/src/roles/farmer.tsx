@@ -3,15 +3,33 @@ import { ActivityIndicator, RefreshControl, ScrollView, Text, TextInput, View } 
 import { settingsOrError } from "../../../../src/lib/mobile/pricing";
 import { priceFromSettings } from "../../../../src/lib/mobile/pricing";
 import type { MilkSettings } from "../../../../src/lib/dairy/rules";
-import { karachiDaySeries, liveGet, liveGetScoped, liveInsert, loadCatalog, loadHealth, loadKhata, loadMilkList, loadMilkSettings, loadMyFarmerId, loadProfileNames, loadRoleOrders, loadVaccines, pricedMilkTotal, rupees, salesByDay, shiftLabel, testOrdersFor, type CatalogRow, type HealthRow, type KhataView, type MilkRow, type OrderRow, type PartyRow, type ReadResult, type VaccineRow } from "../../../../src/lib/mobile/live-read";
+import { karachiDate, karachiDaySeries, liveGet, liveGetScoped, liveInsert, loadCatalog, loadHealth, loadKhata, loadMilkList, loadMilkSettings, loadMyFarmerId, loadProfileNames, loadRoleOrders, loadVaccines, pricedMilkTotal, rupees, salesByDay, shiftLabel, testOrdersFor, type CatalogRow, type HealthRow, type KhataView, type MilkRow, type OrderRow, type PartyRow, type ReadResult, type VaccineRow } from "../../../../src/lib/mobile/live-read";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { Empty, SaleChart, Section, liveAuth, type LiveBag } from "../bits";
 import { FarmerGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
+import { loadDigitalMunshi, type DigitalMunshiData } from "../../../../src/lib/mobile/digital-munshi";
 
 function num(value: number | string | null | undefined): number {
   const n = typeof value === "number" ? value : Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+
+function total(values: (number | string | null | undefined)[]): number {
+  return Math.round(values.reduce<number>((sum, value) => sum + num(value), 0) * 100) / 100;
+}
+
+function formatNum(value: number): string {
+  return Number.isInteger(value) ? value.toLocaleString("en-PK") : value.toFixed(2).replace(/\.00$/, "");
+}
+
+function activeAnimals(data: DigitalMunshiData): number {
+  return data.animals.filter((row) => !["sold", "dead"].includes(String(row.status || "").toLowerCase())).length;
+}
+
+function todayDairyLitres(data: DigitalMunshiData): number {
+  const today = karachiDate();
+  return total(data.yields.filter((row) => row.yield_date === today).map((row) => row.liters));
 }
 
 function litresOf(row: MilkRow): number {
@@ -50,6 +68,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
   const [health, setHealth] = useState<ReadResult<HealthRow> | null>(null);
   const [vaccines, setVaccines] = useState<ReadResult<VaccineRow> | null>(null);
   const [settings, setSettings] = useState<MilkSettings | null>(null);
+  const [munshi, setMunshi] = useState<DigitalMunshiData | null>(null);
   const [names, setNames] = useState<Map<string, string>>(new Map());
   const [refreshing, setRefreshing] = useState(false);
   const [amount, setAmount] = useState("");
@@ -59,7 +78,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
   const load = useCallback(async () => {
     if (!auth) return;
     const farmerId = auth.testAccount ? await loadMyFarmerId(auth, fetch) : undefined;
-    const [nextKhata, nextMilk, nextOrders, nextShop, nextHealth, nextVaccines, nextSettings] = await Promise.all([
+    const [nextKhata, nextMilk, nextOrders, nextShop, nextHealth, nextVaccines, nextSettings, nextMunshi] = await Promise.all([
       loadKhata(auth, fetch),
       loadMilkList(auth, fetch, 80, auth.testAccount ? farmerId ?? null : undefined),
       loadRoleOrders(auth, "customer", fetch),
@@ -67,6 +86,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
       loadHealth(auth, fetch),
       loadVaccines(auth, fetch),
       loadMilkSettings(auth, fetch),
+      loadDigitalMunshi(auth, fetch),
     ]);
     setKhata(nextKhata);
     setMilk(nextMilk);
@@ -74,6 +94,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
     setShop(nextShop);
     setHealth(nextHealth);
     setVaccines(nextVaccines);
+    setMunshi(nextMunshi);
     const resolved = nextSettings.ok ? settingsOrError(nextSettings.rows[0] ?? null) : null;
     setSettings(resolved && !("error" in resolved) ? resolved : null);
     if (nextMilk.ok) {
@@ -83,7 +104,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
 
   useEffect(() => { void load(); }, [load]);
   if (!auth) return <ScrollView style={{ padding: 16 }}><Section title="Kisan / Customer"><Empty title="Login chahiye" body="Wallet, khata, orders aur doodh isi account se aate hain." /></Section></ScrollView>;
-  if (!khata || !milk || !orders || !shop || !health || !vaccines) return <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />;
+  if (!khata || !milk || !orders || !shop || !health || !vaccines || !munshi) return <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />;
 
   const milkRows = milk.ok ? milk.rows : [];
   const week = karachiWeek();
@@ -152,6 +173,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
         khata={khata}
         milk={milk}
         names={names}
+        munshi={munshi}
         refreshing={refreshing}
         onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
       />
@@ -159,9 +181,48 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
   }
 
   return (
-    <ScrollView style={{ padding: 16, backgroundColor: "#07140F" }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
+    <ScrollView style={{ padding: 16, backgroundColor: "#F7F8F3" }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
+      {tab === "farm" ? (
+        <View>
+          <Section title="Digital Munshi · Mere Farms" sub={`${munshi.farms.length} farms · ${formatNum(total(munshi.farms.map((row) => row.area_acres)))} acres`}>
+            {munshi.notes.length ? <Text style={{ color: colors.muted, marginBottom: 8 }}>{munshi.notes[0]}</Text> : null}
+            {munshi.farms.length === 0 ? <Empty title="Farm record nahi mila" body="Website par farm add hoga to yahan naam, acres aur verification dikhegi." /> : null}
+            {munshi.farms.map((farm) => (
+              <View key={farm.id || farm.name || "farm"} style={{ backgroundColor: "#F3F8F2", borderRadius: 12, padding: 12, marginBottom: 8 }}>
+                <Text style={{ color: colors.text, fontWeight: "800" }}>{farm.name || "Farm"} · {formatNum(num(farm.area_acres))} acres</Text>
+                <Text style={{ color: colors.muted, marginTop: 3 }}>{farm.village || "Village nahi likha"} · {farm.is_verified ? "Verified" : "Verification pending"}</Text>
+              </View>
+            ))}
+          </Section>
+          <Section title="Faslein aur kharcha" sub={`${munshi.crops.length} crop records · ${rupees(total(munshi.expenses.map((row) => row.amount)))}`}>
+            {munshi.crops.length === 0 ? <Empty title="Fasal record nahi" body="Website Digital Munshi mein fasal add hogi to yahan schedule aur acres aayenge." /> : null}
+            {munshi.crops.slice(0, 12).map((crop) => (
+              <View key={crop.id || `${crop.crop_name}-${crop.sowing_date}`} style={{ borderBottomWidth: 1, borderBottomColor: colors.line, paddingVertical: 8 }}>
+                <Text style={{ color: colors.text, fontWeight: "800" }}>{crop.crop_name || "Fasal"} · {formatNum(num(crop.area_sown_acres))} acres</Text>
+                <Text style={{ color: colors.muted, marginTop: 2 }}>Kasht {crop.sowing_date || "—"} · Kataai {crop.expected_harvest_date || "—"}</Text>
+              </View>
+            ))}
+            <ServiceLink label="Machinery bookings" detail={`${munshi.machinery.length} booking records`} onPress={() => onTab?.("machinery")} />
+            <ServiceLink label="Paidawar / Produce" detail={`${munshi.produce.length} sale listings`} onPress={() => onTab?.("produce")} />
+          </Section>
+          <Section title="Mera Khata" sub="Asal receivable/payable record">
+            <ServiceLink label="Wallet / Khata" detail={khata.note || (khata.owed == null ? "Record nahi mila" : rupees(Math.abs(khata.owed)))} onPress={() => onTab?.("khata")} />
+          </Section>
+        </View>
+      ) : null}
       {tab === "doodh" ? (
         <View>
+          <Section title="Dairy Management" sub={`${activeAnimals(munshi)} active animals · aaj ${formatNum(todayDairyLitres(munshi))} L`}>
+            {munshi.animals.length === 0 ? <Empty title="Janwar record nahi" body="Website Dairy Management mein janwar add hoga to tag, breed aur status yahan aayega." /> : null}
+            {munshi.animals.slice(0, 12).map((animal) => (
+              <Text key={animal.id || animal.tag_no || animal.name || "animal"} style={{ color: colors.text, marginBottom: 7 }}>#{animal.tag_no || "—"} · {animal.name || animal.species || "Janwar"} · {animal.breed || "breed —"} · {animal.status || "status —"}</Text>
+            ))}
+          </Section>
+          <Section title="Vet services & reminders" sub={`${munshi.reminders.filter((row) => !row.seen_at).length} reminders · ${munshi.health.length} health records`}>
+            {munshi.reminders.length === 0 ? <Text style={{ color: colors.muted, marginBottom: 8 }}>Koi active dairy reminder nahi.</Text> : null}
+            {munshi.reminders.slice(0, 8).map((row) => <Text key={row.id || `${row.task}-${row.due_date}`} style={{ color: colors.text, marginBottom: 6 }}>{row.due_date || "—"} · {row.task || "Dairy reminder"}</Text>)}
+            <ServiceLink label="Doctor / treatment history" detail={`${munshi.health.length} visits, vaccine aur treatment records`} onPress={() => onTab?.("vet")} />
+          </Section>
           <MilkList title="Mera doodh" sub="Kis ne uthaya, litre, fat, SNF, LR, rate, raqam" result={milk} rows={milkRows} names={names} settings={settings} />
           <Section title="Mera doodh — chart" sub="Aakhri 7 din, litre">
             {chart.every((point) => point.amount === 0) ? <Empty title="Chart khali hai" body="Jab kai din ki collection aa jayegi, yahan unka chart banega." /> : <SaleChart points={chart} />}
@@ -199,10 +260,32 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
           </Section>
         </View>
       ) : null}
+      {tab === "machinery" ? (
+        <Section title="Machinery bookings" sub="Digital Munshi ka asal record">
+          {munshi.machinery.length === 0 ? <Empty title="Koi machinery booking nahi" body="Website se booking hogi to number, crop, acres aur status yahan aayega." /> : null}
+          {munshi.machinery.map((row) => <Text key={row.id || row.booking_number || row.booking_date} style={{ color: colors.text, marginBottom: 7 }}>{row.booking_number || "Booking"} · {row.crop_type || "crop —"} · {formatNum(num(row.harvest_area))} acres · {row.status || "status —"}</Text>)}
+        </Section>
+      ) : null}
+      {tab === "produce" ? (
+        <View>
+          <Section title="Paidawar sale" sub="Marketplace listings">
+            {munshi.produce.length === 0 ? <Empty title="Koi paidawar listing nahi" body="Website par paidawar sale ke liye lagayenge to yahan nazar aayegi." /> : null}
+            {munshi.produce.map((row) => <Text key={row.id || row.crop_name} style={{ color: colors.text, marginBottom: 7 }}>{row.crop_name || "Fasal"} · {formatNum(num(row.quantity_available))} {row.unit || ""} · {row.status || "status —"}</Text>)}
+          </Section>
+          <Section title="Inputs demand" sub="Seed, fertilizer, pesticide aur wanda">
+            {munshi.demands.length === 0 ? <Empty title="Koi demand nahi" body="Digital Munshi se bheji demand yahan status ke sath aayegi." /> : null}
+            {munshi.demands.map((row) => <Text key={row.id || `${row.product_name}-${row.created_at}`} style={{ color: colors.text, marginBottom: 7 }}>{row.product_name || "Product"} · {formatNum(num(row.quantity))} {row.unit || ""} · {row.status || "status —"}</Text>)}
+          </Section>
+        </View>
+      ) : null}
       {tab === "more" ? (
         <View>
-          <Text style={{ color: "#F4F7F4", fontWeight: "800", marginBottom: 8 }} onPress={() => onTab?.("vet")}>Vet doctor</Text>
-          <Text style={{ color: "#F4F7F4", fontWeight: "800" }} onPress={() => onTab?.("karyana")}>Karyana / Orders</Text>
+          <Section title="Profile & Services" sub="Isi account ka tamam record">
+            <ServiceLink label="Wallet / Khata" detail="Receivable aur payable" onPress={() => onTab?.("khata")} />
+            <ServiceLink label="Vet doctor" detail="Treatment aur vaccine" onPress={() => onTab?.("vet")} />
+            <ServiceLink label="Karyana / Orders" detail="Market aur order history" onPress={() => onTab?.("karyana")} />
+            <ServiceLink label="Farm services" detail="Crops, dairy, livestock aur machinery" onPress={() => onTab?.("farm")} />
+          </Section>
         </View>
       ) : null}
       {tab === "karyana" ? (
@@ -218,6 +301,14 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
       ) : null}
       <View style={{ height: 24 }} />
     </ScrollView>
+  );
+}
+
+function ServiceLink({ label, detail, onPress }: { label: string; detail: string; onPress?: () => void }) {
+  return (
+    <Text onPress={onPress} style={{ color: colors.text, backgroundColor: "#F3F8F2", borderWidth: 1, borderColor: colors.line, borderRadius: 12, padding: 12, marginBottom: 8, fontWeight: "800" }}>
+      {label}{"\n"}<Text style={{ color: colors.muted, fontWeight: "400" }}>{detail}{onPress ? "  →" : ""}</Text>
+    </Text>
   );
 }
 

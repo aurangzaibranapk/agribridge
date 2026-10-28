@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, TextInp
 import { fatRangeError, lrRangeError, type MilkSettings } from "../../../../src/lib/dairy/rules";
 import { fatActorError } from "../../../../src/lib/mobile/outbox";
 import { priceFromSettings, resolveThresholds, settingsOrError, milkAlerts, toMilkNotice } from "../../../../src/lib/mobile/pricing";
-import { karachiDate, karachiDaySeries, livePatch, loadMilkList, loadMilkSettings, milkByShift, milkInRange, milkLitres, pricedMilkTotal, rupees, salesByDay, shiftLabel, type MilkRow, type PartyRow } from "../../../../src/lib/mobile/live-read";
+import { karachiDate, karachiDaySeries, liveInsert, livePatch, loadMilkList, loadMilkSettings, milkByShift, milkInRange, milkLitres, pricedMilkTotal, rupees, salesByDay, shiftLabel, type MilkRow, type PartyRow } from "../../../../src/lib/mobile/live-read";
 import { liveGetScoped } from "../../../../src/lib/mobile/live-read";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { Empty, SaleChart, Section, liveAuth, type LiveBag } from "../bits";
@@ -34,6 +34,8 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
   const [lr, setLr] = useState("");
   const [pick, setPick] = useState("");
   const [farmerId, setFarmerId] = useState("");
+  const [receiveMode, setReceiveMode] = useState<"field" | "dropoff">("field");
+  const [dropLitres, setDropLitres] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
@@ -133,8 +135,61 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
     await load();
   }
 
+  async function saveDropoff() {
+    if (!auth || !auth.userId || readOnly) return;
+    const litres = Number(dropLitres);
+    const fatValue = Number(fat);
+    const lrValue = Number(lr);
+    if (!farmerId) { setNote("Kisan chunein."); return; }
+    if (!(litres > 0)) { setNote("Litre sahi likhein."); return; }
+    const fatError = fatRangeError(fatValue, false);
+    if (fatError) { setNote(fatError); return; }
+    const lrError = lrRangeError(lrValue, false);
+    if (lrError) { setNote(lrError); return; }
+    if (!settings) { setNote(settingsNote || "Doodh ka rate settings mein nahi. Andaza nahi lagate."); return; }
+    const calc = priceFromSettings(litres, fatValue, lrValue, settings);
+    setBusy("dropoff");
+    const saved = await liveInsert<MilkRow>(auth, "milk_entries", {
+      farmer_id: farmerId,
+      entry_date: karachiDate(),
+      shift: new Date().getHours() < 15 ? "morning" : "evening",
+      quantity_liters: litres,
+      fat_percentage: fatValue,
+      lr: lrValue,
+      snf_percentage: calc.snf,
+      ts_value: calc.ts,
+      rate_per_liter: settings.standardRate,
+      total_amount: calc.amount,
+      status: "priced",
+      entry_channel: "app",
+      collection_source: "mco_dropoff",
+      created_by: auth.userId,
+      client_uuid: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${auth.userId}`,
+      notes: "MCC drop-off",
+      is_test: auth.testAccount === true,
+    }, fetch);
+    setBusy("");
+    if (!saved.ok) { setNote(saved.message); return; }
+    setDropLitres("");
+    setFat("");
+    setLr("");
+    setNote(`Drop-off save ho gaya. SNF ${calc.snf} · ${rupees(calc.amount)}. Farmer confirmation queue system se chalegi.`);
+    await load();
+  }
+
   if (tab === "home") {
-    return <McoGlass live={live} rows={rows} error={error} names={names} onProfile={onProfile} onTab={onTab} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />;
+    return <McoGlass
+      live={live}
+      rows={rows}
+      error={error}
+      names={names}
+      onProfile={onProfile}
+      onTab={onTab}
+      onFieldReceive={() => { setReceiveMode("field"); onTab?.("fat"); }}
+      onDropoff={() => { setReceiveMode("dropoff"); onTab?.("fat"); }}
+      refreshing={refreshing}
+      onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
+    />;
   }
 
   return (
@@ -156,6 +211,30 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
       ) : null}
       {tab === "fat" || tab === "home" ? (
         <Section title="Check entries" sub="Fat + LR. Rate settings se. Apni asal entry par fat nahi.">
+          <View style={{ flexDirection: "row", marginBottom: 10 }}>
+            <Pressable onPress={() => setReceiveMode("field")} style={[modeButton, receiveMode === "field" ? modeButtonOn : null]}>
+              <Text style={{ color: receiveMode === "field" ? "#fff" : colors.text, fontWeight: "800", textAlign: "center" }}>Field Collection</Text>
+            </Pressable>
+            <View style={{ width: 8 }} />
+            <Pressable onPress={() => setReceiveMode("dropoff")} style={[modeButton, receiveMode === "dropoff" ? modeButtonOn : null]}>
+              <Text style={{ color: receiveMode === "dropoff" ? "#fff" : colors.text, fontWeight: "800", textAlign: "center" }}>Drop-off</Text>
+            </Pressable>
+          </View>
+          {receiveMode === "dropoff" ? (
+            <View>
+              <Text style={{ color: colors.muted, marginBottom: 6 }}>MCC par seedha aya doodh: kisan, litre, fat aur LR.</Text>
+              {[...names.entries()].map(([id, name]) => (
+                <Pressable key={id} onPress={() => setFarmerId(id)}>
+                  <Text style={{ color: id === farmerId ? colors.greenDark : colors.text, fontWeight: id === farmerId ? "800" : "500", marginBottom: 4 }}>{id === farmerId ? "● " : "○ "}{name}</Text>
+                </Pressable>
+              ))}
+              <TextInput value={dropLitres} onChangeText={setDropLitres} placeholder="Litre" keyboardType="decimal-pad" style={input} />
+              <TextInput value={fat} onChangeText={setFat} placeholder="Fat" keyboardType="decimal-pad" style={input} />
+              <TextInput value={lr} onChangeText={setLr} placeholder="LR" keyboardType="decimal-pad" style={input} />
+              {!readOnly ? <Btn label={busy === "dropoff" ? "Save ho raha hai" : "Drop-off save karein"} onPress={() => { if (!busy) void saveDropoff(); }} /> : null}
+            </View>
+          ) : (
+          <View>
           {auth.testAccount ? <Text style={{ color: colors.muted, marginBottom: 6 }}>TEST account apni TEST entry par fat laga sakta hai. Asal MCA apni uthai hui entry par nahi.</Text> : null}
           {settingsNote ? <Text style={{ color: colors.danger, marginBottom: 6 }}>{settingsNote}</Text> : null}
           {pending.length === 0 ? <Empty title="Check ke liye koi entry nahi" body="Jis doodh par fat baaki hai, wo yahan aayega." /> : null}
@@ -173,6 +252,8 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
               <Btn label={busy ? "Save ho raha hai" : "Fat lagayein"} onPress={() => { if (!busy) void saveFat(); }} />
             </View>
           ) : null}
+          </View>
+          )}
         </Section>
       ) : null}
       {tab === "totals" ? (
@@ -253,3 +334,5 @@ function Alerts({ rows, names, thresholds, settings }: { rows: MilkRow[]; names:
 }
 
 const input = { borderWidth: 1, borderColor: "#E2E8E0", borderRadius: 12, padding: 10, marginTop: 8, backgroundColor: "#fff" };
+const modeButton = { flex: 1, borderRadius: 12, paddingVertical: 11, backgroundColor: "#EDF3EC", borderWidth: 1, borderColor: "#D9E5D8" };
+const modeButtonOn = { backgroundColor: colors.green, borderColor: colors.green };
