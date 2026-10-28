@@ -16,6 +16,7 @@
     "test:login-place": "npx --yes tsx tests/login-place.ts",
     "test:admin-badges": "npx --yes tsx scripts/test-admin-badges.ts && node tests/admin-badges-sql.mjs",
     "test:pending-decide": "npx --yes tsx scripts/test-pending-decide.ts",
+    "test:notification-read": "npx --yes tsx scripts/test-notification-read.ts",
     "test:pending-escalation": "npx --yes tsx scripts/test-pending-escalation.ts && node tests/pending-escalation-sql.mjs && node tests/approval-guards.cjs",
     "test:stock-badge": "npx --yes tsx scripts/test-stock-badge.ts",
     "test:product-edit-diff": "npx --yes tsx scripts/test-product-edit-diff.ts",
