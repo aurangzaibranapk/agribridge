@@ -6,11 +6,13 @@ import { adjustPayrollLine, createPayrollRun, payPayrollRun, payrollTransition, 
 import { ADJUSTABLE_FIELDS } from "@/lib/payroll/auto-draft";
 import { BTN, CARD, Header, INPUT, Kpi, Msg, PAGE, Pill, Submit, TD, TH, rs, pkr } from "@/components/payroll/ui";
 import { MONTHS_RU, chargeableAbsentDays, payrollApprovalLines } from "@/lib/payroll/compute";
+import { payrollDeskView } from "@/lib/payroll/desk";
+import { PayrollCards, PayrollSwitch, PayrollTx } from "./payroll-views";
 
 const init: PayrollState = {};
 const STEPS = [["draft", "1. Draft"], ["submitted", "2. Manzoori ke liye bheja"], ["approved", "3. Manzoor (Journal)"], ["paid", "4. Ada (Cash/Bank)"]] as const;
 
-export default function PayrollClient({ me, year, month, branch, branches, accounts, run, lines, warnings = [], adjustments = [] }: any) {
+export default function PayrollClient({ me, year, month, branch, branches, accounts, run, lines, warnings = [], adjustments = [], view: viewRaw, advances = null, advancesRead = true }: any) {
   const [aState, aAction] = useFormState(adjustPayrollLine, init);
   const [cState, cAction] = useFormState(createPayrollRun, init);
   const [tState, tAction] = useFormState(payrollTransition, init);
@@ -23,10 +25,13 @@ export default function PayrollClient({ me, year, month, branch, branches, accou
   const missingTotal = lines.reduce((s: number, l: any) => s + (+l.missing_days || 0), 0);
   const notFinal = lines.filter((l: any) => !l.attendance_finalized || l.open_items > 0);
   const canApprove = me.approver && run && run.created_by !== me.id && run.submitted_by !== me.id && !lines.some((l: any) => l.profile_id === me.id) && !adjustments.some((a: any) => a.adjusted_by === me.id);
+  const view = payrollDeskView(viewRaw);
 
   return (
     <div className={PAGE}>
       <Header crumb="Admin › HR › Payroll" title={`Payroll — ${label}`}>
+        <PayrollSwitch year={year} month={month} branch={branch} view={view} />
+        <Link href="/admin/finance/ops" className={BTN}>Tel aur ops</Link>
         <Link href="/admin/hr/salary-structure" className={BTN}>Salary Structure</Link>
         {status === "submitted" && (
           <form action={tAction} className="flex gap-2">
@@ -74,8 +79,28 @@ export default function PayrollClient({ me, year, month, branch, branches, accou
         <Kpi label="Kul kattauti" value={rs(gross - totals.payable)} />
         <Kpi label="Kul ada karna" value={rs(totals.payable)} tone="green" />
       </div>
-      <div className={`${CARD} overflow-auto`}>
-        <h3 className="mb-2 font-semibold">Review</h3>
+      {view === "cards" && <PayrollCards lines={lines} status={status} />}
+      {view === "tx" && (
+        <PayrollTx
+          year={year}
+          month={month}
+          runStatus={run ? status : null}
+          payable={run ? totals.payable : null}
+          runRead
+          advances={advancesRead ? advances : null}
+          adjustments={adjustments.map((a: any) => ({
+            id: a.id,
+            staff: a.staff,
+            fieldLabel: (ADJUSTABLE_FIELDS as any)[a.field] ?? a.field,
+            oldValue: Number(a.old_value),
+            newValue: Number(a.new_value),
+            reason: a.reason,
+            at: a.adjusted_at ?? null,
+          }))}
+        />
+      )}
+      {view === "people" && <div className={`${CARD} overflow-auto`}>
+        <h3 className="mb-2 font-semibold">Log</h3>
         <table className="w-full min-w-[1280px] text-sm">
           <thead><tr>{["Staff", "Basic", "Hazir", "Absent", "Bina record (absent)", "Kul ghair-hazir", "Half day", "Chhutti (paid)", "Ghair-hazri kattauti", "Advance qist", "Net", ""].map((h, i) => <th key={h + i} className={`${TH} ${i > 0 && i < 11 ? "text-right" : ""}`}>{h}</th>)}</tr></thead>
           <tbody>
@@ -120,7 +145,10 @@ export default function PayrollClient({ me, year, month, branch, branches, accou
         {status === "draft" && lines.length > 0 && (
           <form action={tAction} className="mt-3 text-right"><input type="hidden" name="run_id" value={run.id} /><Submit label="Manzoori ke liye bhejein" name="action" value="submit" /></form>
         )}
-      </div>
+      </div>}
+      {view !== "people" && status === "draft" && lines.length > 0 && (
+        <form action={tAction} className="text-right"><input type="hidden" name="run_id" value={run.id} /><Submit label="Manzoori ke liye bhejein" name="action" value="submit" /></form>
+      )}
       {run && (
         <div className="grid gap-5 lg:grid-cols-2">
           <div className={CARD}>

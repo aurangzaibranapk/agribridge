@@ -68,6 +68,7 @@ export const DEPARTMENTS: Department[] = [
     suggestedPages: [
       ...ALWAYS,
       "/admin/finance",
+      "/admin/finance/ops",
       "/admin/finance/queue",
       "/admin/finance/banks",
       "/admin/finance/payment-mapping",
@@ -182,6 +183,7 @@ export const DEPARTMENTS: Department[] = [
     suggestedPages: [
       ...ALWAYS,
       "/admin/hr",
+      "/admin/hr/payroll",
       "/admin/hr-dashboard",
       "/admin/hr/whatsapp",
       "/admin/hr/attendance-log",

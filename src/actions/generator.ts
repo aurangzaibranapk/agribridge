@@ -94,6 +94,8 @@ export async function logGeneratorEntry(_prev: ActionState, formData: FormData):
   if (error) return { error: error.message };
 
   revalidatePath("/admin/milk-collection/generator");
+  revalidatePath("/admin/finance/ops");
+  revalidatePath("/admin/milk-collection/fuel");
   return { success: true };
 }
 
@@ -117,5 +119,7 @@ export async function approveGeneratorEntry(_prev: ActionState, formData: FormDa
   }).eq("id", logId).eq("approval_status", "pending");
   if (error) return { error: error.message };
   revalidatePath("/admin/milk-collection/generator");
+  revalidatePath("/admin/finance/ops");
+  revalidatePath("/admin/milk-collection/fuel");
   return { success: true };
 }

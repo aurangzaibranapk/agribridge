@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
+import { OpsBoard } from "@/app/admin/finance/ops/ops-board";
+import { loadOpsDesk } from "@/lib/finance/ops-load";
 import { FuelClient } from "./fuel-client";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
@@ -72,9 +74,15 @@ export default async function FuelTrackerPage() {
     branch_name: Array.isArray(v.branches) ? v.branches[0]?.name : v.branches?.name,
   }));
 
+  const desk = await loadOpsDesk();
+
   return (
     <div>
       <PageHeader title={t("mc_fuel_title", lang)} description="Motorcycle mileage, fuel cost per litre of milk collected" />
+      <div className="mb-6">
+        <OpsBoard model={desk} />
+      </div>
+      <div id="fuel-entry">
       <FuelClient
         vehicles={vehiclesTyped}
         logs={logs}
@@ -91,6 +99,7 @@ export default async function FuelTrackerPage() {
         }
         summary={summary}
       />
+      </div>
     </div>
   );
 }

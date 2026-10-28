@@ -137,6 +137,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/load-bill", label: "Load & Bill", icon: Smartphone },
       { href: "/admin/settlements", label: "Khaton ka Adjustment", icon: Scale },
       { href: "/admin/finance", label: "Cash Book", icon: Landmark },
+      { href: "/admin/finance/ops", label: "Tel aur Ops Cards", icon: Bike },
       { href: "/admin/finance/banks", label: "Bank", icon: Landmark },
       { href: "/admin/khata", label: "Khata", icon: Wallet },
       { href: "/admin/staff-khata", label: "Staff Khata", icon: WalletCards },
