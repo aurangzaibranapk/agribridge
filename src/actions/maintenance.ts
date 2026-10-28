@@ -6,6 +6,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
 import { notifyRoles } from "@/lib/notifications";
 import { MAINT_COMMENT_MIN, MAINT_COMMENT_MAX, RESETS_OIL_COUNTER } from "@/lib/maintenance-rules";
+import { requireAction } from "@/lib/access/guard";
+import { selfApprovalError } from "@/lib/dairy/rules";
 
 export interface ActionState {
   error?: string;
@@ -15,6 +17,8 @@ export interface ActionState {
 // Records a service and moves the vehicle's "last serviced at" marker
 // forward, so the due-for-service reminder resets from this point.
 export async function logMaintenance(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const gate = await requireAction("milk-collection.maintenance", "create");
+  if ("error" in gate) return { error: gate.error };
   const supabase = createClient();
   const vehicleId = String(formData.get("vehicle_id") ?? "");
   const serviceDate = String(formData.get("service_date") ?? aajKaKhana());
@@ -137,11 +141,13 @@ export async function branchVerifyMaintenance(_prev: ActionState, formData: Form
   const service = createServiceClient();
   const { data: log } = await service
     .from("maintenance_logs")
-    .select("id, status, cost, branch_id, vehicles(vehicle_name)")
+    .select("id, status, cost, branch_id, created_by, vehicles(vehicle_name)")
     .eq("id", id)
     .maybeSingle();
   if (!log) return { error: "Entry nahi mili." };
   if (log.status !== "pending") return { error: "Is par pehla faisla ho chuka hai." };
+  const branchSod = selfApprovalError(who.userId, log.created_by, null, who.role);
+  if (branchSod) return { error: branchSod };
 
   const isAdmin = ["owner", "super_admin", "admin"].includes(who.role);
   if (!isAdmin && who.branchId && log.branch_id && who.branchId !== log.branch_id) {
@@ -200,7 +206,7 @@ export async function approveMaintenance(_prev: ActionState, formData: FormData)
   const service = createServiceClient();
   const { data: log } = await service
     .from("maintenance_logs")
-    .select("id, status, cost, vehicle_id, km_at_service, maintenance_type, vehicles(vehicle_name, last_service_km)")
+    .select("id, status, cost, vehicle_id, km_at_service, maintenance_type, created_by, branch_verified_by, vehicles(vehicle_name, last_service_km)")
     .eq("id", id)
     .maybeSingle();
   if (!log) return { error: "Entry nahi mili." };
@@ -208,6 +214,8 @@ export async function approveMaintenance(_prev: ActionState, formData: FormData)
     return { error: "Pehle branch manager ko verify karna hai — ye qadam chhora nahi ja sakta." };
   }
   if (log.status !== "branch_verified") return { error: "Is par faisla pehle hi ho chuka hai." };
+  const approveSod = selfApprovalError(who.userId, log.created_by, log.branch_verified_by, who.role);
+  if (approveSod) return { error: approveSod };
 
   const { error } = await service
     .from("maintenance_logs")
@@ -254,6 +262,10 @@ export async function rejectMaintenance(_prev: ActionState, formData: FormData):
   if (reason.length < MAINT_COMMENT_MIN) return { error: "Rad karne ki wajah likhein." };
 
   const service = createServiceClient();
+  const { data: existing } = await service.from("maintenance_logs").select("created_by, branch_verified_by").eq("id", id).maybeSingle();
+  if (!existing) return { error: "Entry nahi mili." };
+  const rejectSod = selfApprovalError(who.userId, existing.created_by, existing.branch_verified_by, who.role);
+  if (rejectSod) return { error: rejectSod };
   const { error } = await service
     .from("maintenance_logs")
     .update({

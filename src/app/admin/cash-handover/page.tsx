@@ -3,7 +3,7 @@ import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { SendCashForm, ReceiveCard } from "./handover-client";
-import { cashInTransit, recentHandovers, TRANSIT_ALERT_DAYS } from "@/lib/ledger/handover";
+import { cashInTransit, FINANCE_DESK_RECEIVE_ROLES, recentHandovers, TRANSIT_ALERT_DAYS } from "@/lib/ledger/handover";
 import { AlertTriangle, CheckCircle2, Send, HandCoins, Clock } from "lucide-react";
 import Link from "next/link";
 
@@ -58,13 +58,25 @@ export default async function CashHandoverPage() {
   }));
   const branches = (branchRows ?? []).map((b) => ({ id: b.id, name: b.name }));
 
-  // Mere naam bheja hua cash jo maine abhi wusool nahi kiya.
-  const { data: mineRows } = await supabase
-    .from("cash_handovers")
-    .select("id")
-    .eq("to_profile_id", user!.id)
-    .eq("status", "sent");
-  const mineIds = new Set((mineRows ?? []).map((r) => r.id));
+  // Mere naam, ya Finance desk ke naam (shared Finance Team) — Manager /
+  // Finance / Admin wasoli kar sakte hain. Bhejne wala apni hi slip par
+  // wasoli nahi dekhta.
+  const onFinanceDesk = (FINANCE_DESK_RECEIVE_ROLES as readonly string[]).includes(me.role);
+  const { data: financeProfiles } = onFinanceDesk
+    ? await supabase.from("profiles").select("id").eq("role", "finance").eq("is_active", true)
+    : { data: [] as { id: string }[] };
+  const financeIds = (financeProfiles ?? []).map((p) => p.id);
+  const [{ data: namedRows }, { data: deskRows }] = await Promise.all([
+    supabase.from("cash_handovers").select("id, from_profile_id").eq("to_profile_id", user!.id).eq("status", "sent"),
+    financeIds.length
+      ? supabase.from("cash_handovers").select("id, from_profile_id").in("to_profile_id", financeIds).eq("status", "sent")
+      : Promise.resolve({ data: [] as { id: string; from_profile_id: string | null }[] }),
+  ]);
+  const mineIds = new Set(
+    [...(namedRows ?? []), ...(deskRows ?? [])]
+      .filter((r) => r.from_profile_id !== user!.id)
+      .map((r) => r.id),
+  );
   const awaitingMe = transit.filter((t) => mineIds.has(t.id));
 
   const transitTotal = transit.reduce((s, t) => s + t.amount, 0);

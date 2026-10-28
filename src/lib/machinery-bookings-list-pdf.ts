@@ -1,3 +1,4 @@
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 
 /**
@@ -100,8 +101,9 @@ export async function generateMachineryBookingsListPdf(rows: MachineryBookingRow
     page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
     pageNo += 1;
 
-    page.drawText("Al Rana Traders - AgriBridge", { x: MARGIN, y: PAGE_HEIGHT - 42, size: 15, font: bold, color: navy });
-    page.drawText("Machinery Bookings", { x: MARGIN, y: PAGE_HEIGHT - 58, size: 10, font, color: gray });
+    page.drawText(BRAND_NAME, { x: MARGIN, y: PAGE_HEIGHT - 36, size: 15, font: bold, color: navy });
+    page.drawText(BRAND_TAGLINE, { x: MARGIN, y: PAGE_HEIGHT - 50, size: 9, font, color: gray });
+    page.drawText("Machinery Bookings", { x: MARGIN, y: PAGE_HEIGHT - 64, size: 10, font, color: gray });
     page.drawText(`Bana: ${printedOn}`, { x: PAGE_WIDTH - MARGIN - 200, y: PAGE_HEIGHT - 42, size: 9, font, color: gray });
     page.drawText(`Safha ${pageNo}`, { x: PAGE_WIDTH - MARGIN - 200, y: PAGE_HEIGHT - 56, size: 9, font, color: gray });
 

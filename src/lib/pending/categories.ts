@@ -1,4 +1,6 @@
 import type { TranslationKey } from "@/lib/i18n/translations";
+import { isSelfApproveRole } from "@/lib/approval/guards";
+import type { EscalationLevel, PendingTimelineEvent } from "@/lib/pending/escalation";
 
 /**
  * Admin pending badges -- saaf (pure) hisaab. Database se 582 ka
@@ -42,6 +44,17 @@ export interface PendingItem {
   code_own?: boolean;
   is_new: boolean;
   link: string | null;
+  /** 693: product tabdeeli/merge ka pehle-vs-baad (sirf product_edits / product_merge). */
+  product_extra?: import("./product-diff").ProductPendingExtra;
+  /** Approve band (masalan product ko khud mein merge). */
+  block_approve?: boolean;
+  /** 698: Manager, phir SLA ke baad Admin aur Owner ek sath. */
+  escalation_level?: EscalationLevel;
+  escalation_since?: string | null;
+  sla_hours?: number;
+  overdue?: boolean;
+  timeline?: PendingTimelineEvent[];
+  can_delay_note?: boolean;
 }
 
 /** 582 ki registry jaisi hi fehrist (test dono ko milata hai). */
@@ -91,9 +104,16 @@ export const INLINE_DECISIONS: Readonly<Record<string, { approve: boolean; rejec
   product_merge: { approve: true, reject: true, rejectNeedsReason: false },
 };
 
-/** Approve ka button: sirf inline wali category, aur kabhi apni entry par nahi. */
-export function approveState(item: Pick<PendingItem, "category" | "is_own"> & { code_own?: boolean }): "enabled" | "own" | "code" | "page" {
+/**
+ * Approve ka button: inline category.
+ * Admin/Owner apni entry bhi. Manager aur baqi staff apni entry nahi.
+ */
+export function approveState(
+  item: Pick<PendingItem, "category" | "is_own"> & { code_own?: boolean },
+  role?: string | null,
+): "enabled" | "own" | "code" | "page" {
   if (!INLINE_DECISIONS[item.category]) return "page";
+  if (isSelfApproveRole(role)) return "enabled";
   if (item.is_own) return "own";
   return item.code_own ? "code" : "enabled";
 }
@@ -157,6 +177,72 @@ function clean(route: string): string {
   return route.split(/[?#]/, 1)[0];
 }
 
+/**
+ * Menu ki qataar ka raasta. Sirf /admin/ ke andar, koi ".." nahi.
+ * Badge se "Mere Kaam" ki filtered fehrist isi se khulti hai.
+ */
+export function parsePendingRoute(raw: string | undefined | null): string | null {
+  if (!raw) return null;
+  let h = raw;
+  try {
+    h = decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+  h = clean(h);
+  if (!h.startsWith("/admin/") || h.includes("\\") || h.includes("..")) return null;
+  return h;
+}
+
+/** Jis item par laal ginti hai, click seedha us ki pending fehrist kholta hai. */
+export function pendingQueueHref(href: string): string {
+  return `/admin/my-work/pending?route=${encodeURIComponent(clean(href))}`;
+}
+
+/**
+ * Is menu-item par kaun si pending categories aati hain.
+ *
+ * Bilkul wahi raasta pehle. Us ke neeche ka raasta (maslan
+ * /admin/finance/recovery/promises jab item /admin/finance/recovery ho)
+ * sirf tab, jab isi group ka koi lamba item us ka behtar ghar na ho.
+ * `siblingHrefs` null ho to sirf exact — taake /admin/hr, leave ko
+ * na kha jaye jab group ki fehrist na di gayi ho.
+ */
+export function claimForHref(counts: PendingCount[], href: string, siblingHrefs: string[] | null = null): PendingCount[] {
+  const h = clean(href);
+  const siblings = siblingHrefs ? siblingHrefs.map(clean) : null;
+  return live(counts).filter((c) => {
+    const r = clean(c.route);
+    if (r === h) return true;
+    if (!siblings || !r.startsWith(h + "/")) return false;
+    const better = siblings.some((o) => o !== h && o.length > h.length && (r === o || r.startsWith(o + "/")));
+    return !better;
+  });
+}
+
+/** Mere Kaam ki sarkhi: jis menu mein ye raasta khulta hai. Menu na ho to purana group. */
+export function inboxGroup(route: string, fallback: string, groups: { key: string; hrefs: string[] }[]): string {
+  if (!groups.length) return fallback;
+  const home = menuHome(route, groups);
+  if (home) return home;
+  return groups.some((g) => g.key === fallback) ? "other" : fallback;
+}
+
+function menuHome(route: string, groups: { key: string; hrefs: string[] }[]): string | null {
+  const r = clean(route);
+  let best: { key: string; len: number } | null = null;
+  for (const g of groups) {
+    const siblings = g.hrefs.map(clean);
+    for (const h of siblings) {
+      const exact = r === h;
+      const prefix = r.startsWith(h + "/") && !siblings.some((o) => o !== h && o.length > h.length && (r === o || r.startsWith(o + "/")));
+      if (!exact && !prefix) continue;
+      if (!best || h.length > best.len) best = { key: g.key, len: h.length };
+    }
+  }
+  return best?.key ?? null;
+}
+
 /** Laal ginti -- sirf parhi ja saki, aur info (data-health) ke baghair. */
 export function live(counts: PendingCount[]): PendingCount[] {
   return counts.filter((c) => c.readable && !c.is_info && num(c.pending) > 0);
@@ -198,20 +284,48 @@ function sum(list: PendingCount[], now: number): Badge {
   };
 }
 
-/** Menu item par: jin categories ka raasta bilkul yahi hai. */
-export function badgeForHref(counts: PendingCount[], href: string, now: number = Date.now()): Badge | null {
-  const h = clean(href);
-  const list = live(counts).filter((c) => clean(c.route) === h);
+/**
+ * Menu item par laal ginti. `siblingHrefs` group ke tamam item hain,
+ * taake lamba raasta chhote wale par dobara na gine.
+ */
+export function badgeForHref(counts: PendingCount[], href: string, now: number = Date.now(), siblingHrefs?: string[]): Badge | null {
+  const list = claimForHref(counts, href, siblingHrefs ?? null);
   if (!list.length) return null;
   return sum(list, now);
 }
 
-/** Group heading par: us group ki categories + jin ka raasta is group ke kisi item ka hai. */
+/**
+ * Group heading = sirf bachon ki ginti ka jor. group_key akela parent
+ * par nahi jama hota — jis ka raasta is menu mein nahi, wo yahan nahi.
+ * Ek category ek group mein ek dafa.
+ */
 export function badgeForGroup(counts: PendingCount[], groupKey: string, hrefs: string[], now: number = Date.now()): Badge | null {
-  const hs = new Set(hrefs.map(clean));
-  const list = live(counts).filter((c) => c.group_key === groupKey || hs.has(clean(c.route)));
+  void groupKey;
+  const seen = new Set<string>();
+  const list: PendingCount[] = [];
+  for (const href of hrefs) {
+    for (const c of claimForHref(counts, href, hrefs)) {
+      if (seen.has(c.category)) continue;
+      seen.add(c.category);
+      list.push(c);
+    }
+  }
   if (!list.length) return null;
   return sum(list, now);
+}
+
+/** Parent ki ginti, alag alag bachon ke raaston ka jor — har department ke liye. */
+export function parentEqualsChildren(counts: PendingCount[], hrefs: string[], now: number = Date.now()): boolean {
+  const parent = badgeForGroup(counts, "", hrefs, now)?.pending ?? 0;
+  const seen = new Set<string>();
+  let childSum = 0;
+  for (const href of hrefs) {
+    const h = clean(href);
+    if (seen.has(h)) continue;
+    seen.add(h);
+    childSum += badgeForHref(counts, href, now, hrefs)?.pending ?? 0;
+  }
+  return parent === childSum;
 }
 
 /** Safha khulte hi kaun si categories "dekh li" (Naya hat jata hai, Pending rehta hai). */

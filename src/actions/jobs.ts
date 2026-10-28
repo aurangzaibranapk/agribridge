@@ -3,6 +3,11 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
+import { applyInputError, bloodGroupOrNull, readApplyFields } from "@/lib/jobs/apply-input";
+import { hireStaffPatch, type HireApplication } from "@/lib/hr/id-card-profile";
+import { dispatchNotice, redactSecrets, type CandidateDispatch } from "@/lib/jobs/candidate-message";
+import { interviewDay, isDuplicateInterviewSchedule } from "@/lib/jobs/status-guard";
+import { t } from "@/lib/i18n/translations";
 import {
   sendApplicationReceivedEmail,
   sendEligibilityEmail,
@@ -16,6 +21,40 @@ import {
 export interface ActionState {
   error?: string;
   success?: boolean;
+  /** Email na gayi ho to safha ye note dikhata hai. Status phir bhi save hota hai. */
+  notice?: string;
+}
+
+async function actorId(): Promise<string | null> {
+  try {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function saveCandidateMessage(
+  applicationId: string,
+  mail: CandidateDispatch,
+  triggeredBy: string | null,
+  secrets?: Array<string | null | undefined>,
+) {
+  const service = createServiceClient();
+  const { error } = await service.from("job_application_messages").insert({
+    application_id: applicationId,
+    channel: mail.channel,
+    to_address: mail.to,
+    subject: mail.subject,
+    body: redactSecrets(mail.body, secrets ?? []),
+    link_url: mail.linkUrl,
+    attachment_name: mail.attachmentName,
+    status: mail.status,
+    error: mail.error,
+    triggered_by: triggeredBy,
+  });
+  if (error) console.error("job_application_messages:", error.message);
 }
 
 async function logActivity(applicationId: string, eventType: string, description: string) {
@@ -87,6 +126,22 @@ export async function deleteVacancy(_prev: ActionState, formData: FormData): Pro
   return { success: true };
 }
 
+const OPTIONAL_APPLICATION_COLUMNS = ["gender", "blood_group", "emergency_contact_name", "emergency_contact_phone", "photo_url"] as const;
+
+/** Migration se pehle wale database par naye khane na hon to darkhwast phir bhi save ho. */
+async function insertApplication(serviceClient: ReturnType<typeof createServiceClient>, payload: Record<string, unknown>) {
+  const body = { ...payload };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const result = await (serviceClient as any).from("job_applications").insert(body).select("id").single();
+    if (!result.error) return { data: result.data as { id: string }, error: null as string | null };
+    const message = String(result.error.message ?? "").toLowerCase();
+    const missing = OPTIONAL_APPLICATION_COLUMNS.filter((key) => message.includes(key) && key in body);
+    if (!missing.length) return { data: null, error: String(result.error.message ?? "") };
+    for (const key of missing) delete body[key];
+  }
+  return { data: null, error: "Application save nahi hui." };
+}
+
 async function uploadJobDoc(serviceClient: ReturnType<typeof createServiceClient>, applicantEmail: string, fieldName: string, file: File): Promise<string | null> {
   const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
   const path = `${applicantEmail.replace(/[^a-zA-Z0-9]/g, "_")}/${fieldName}-${Date.now()}-${safeName}`;
@@ -98,11 +153,10 @@ async function uploadJobDoc(serviceClient: ReturnType<typeof createServiceClient
 
 export async function applyToVacancy(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const serviceClient = createServiceClient();
-  const vacancyId = String(formData.get("vacancy_id") ?? "");
-  const fullName = String(formData.get("full_name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
-
-  if (!vacancyId || !fullName || !email) return { error: "Naam, email, aur vacancy zaroori hain." };
+  const fields = readApplyFields(formData);
+  const invalid = applyInputError(fields);
+  if (invalid) return { error: invalid };
+  const { vacancyId, fullName, email, gender, lang, bloodGroup, emergencyName, emergencyPhone } = fields;
 
   const { data: vacancy } = await serviceClient.from("job_vacancies").select("title").eq("id", vacancyId).single();
 
@@ -117,9 +171,14 @@ export async function applyToVacancy(_prev: ActionState, formData: FormData): Pr
     address: (formData.get("address") as string) || null,
     cnic: (formData.get("cnic") as string) || null,
     expected_salary: formData.get("expected_salary") ? Number(formData.get("expected_salary")) : null,
+    gender,
+    blood_group: bloodGroupOrNull(bloodGroup),
+    emergency_contact_name: emergencyName || null,
+    emergency_contact_phone: emergencyPhone || null,
   };
 
   const fileFields: Array<[string, string]> = [
+    ["photo", "photo_url"],
     ["cnic_front_image", "cnic_image_url"],
     ["cnic_back_image", "cnic_back_image_url"],
     ["certificate", "certificate_url"],
@@ -135,11 +194,13 @@ export async function applyToVacancy(_prev: ActionState, formData: FormData): Pr
     }
   }
 
-  const { data: application, error } = await (serviceClient as any).from("job_applications").insert(payload).select("id").single();
-  if (error) return { error: error.message };
+  const inserted = await insertApplication(serviceClient, payload);
+  if (inserted.error) return { error: t("sp_apply_failed", lang) };
+  const application = inserted.data;
 
   if (application) {
-    await sendApplicationReceivedEmail(email, fullName, vacancy?.title ?? "Position", application.id);
+    const mail = await sendApplicationReceivedEmail(email, fullName, vacancy?.title ?? "Position", application.id);
+    await saveCandidateMessage(application.id, mail, null);
     await logActivity(application.id, "application_received", "Application receive hui.");
   }
 
@@ -151,8 +212,17 @@ export async function markUnderReview(_prev: ActionState, formData: FormData): P
   const applicationId = String(formData.get("application_id") ?? "");
   if (!applicationId) return { error: "Missing application id." };
 
-  const { error } = await supabase.from("job_applications").update({ status: "under_review" }).eq("id", applicationId);
+  const { data: changed, error } = await supabase
+    .from("job_applications")
+    .update({ status: "under_review" })
+    .eq("id", applicationId)
+    .neq("status", "under_review")
+    .select("id");
   if (error) return { error: error.message };
+  if (!changed?.length) {
+    revalidatePath("/admin/job-applications");
+    return { success: true };
+  }
 
   await logActivity(applicationId, "under_review", "Application review mein daali gayi.");
 
@@ -166,26 +236,36 @@ export async function markEligibility(_prev: ActionState, formData: FormData): P
   const isEligible = formData.get("is_eligible") === "true";
   if (!applicationId) return { error: "Missing application id." };
 
-  const { error } = await supabase
+  const target = isEligible ? "eligible" : "not_eligible";
+  const { data: changed, error } = await supabase
     .from("job_applications")
-    .update({ is_eligible: isEligible, status: isEligible ? "eligible" : "not_eligible" })
-    .eq("id", applicationId);
+    .update({ is_eligible: isEligible, status: target })
+    .eq("id", applicationId)
+    .neq("status", target)
+    .select("id");
   if (error) return { error: error.message };
+  if (!changed?.length) {
+    revalidatePath("/admin/job-applications");
+    return { success: true };
+  }
 
   const { data: application } = await supabase
     .from("job_applications")
     .select("full_name, email, job_vacancies(title)")
     .eq("id", applicationId)
     .single();
+  let notice: string | undefined;
   if (application) {
     const jobTitle = Array.isArray(application.job_vacancies) ? (application.job_vacancies[0] as any)?.title : (application.job_vacancies as any)?.title;
-    await sendEligibilityEmail(application.email, application.full_name, jobTitle ?? "Position", isEligible);
+    const mail = await sendEligibilityEmail(application.email, application.full_name, jobTitle ?? "Position", isEligible);
+    await saveCandidateMessage(applicationId, mail, await actorId());
+    notice = dispatchNotice(mail);
   }
 
   await logActivity(applicationId, isEligible ? "shortlisted" : "rejected", isEligible ? "Shortlist kiya gaya." : "Screening ke baad reject kiya gaya.");
 
   revalidatePath("/admin/job-applications");
-  return { success: true };
+  return notice ? { success: true, notice } : { success: true };
 }
 
 export async function scheduleInterview(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -196,27 +276,39 @@ export async function scheduleInterview(_prev: ActionState, formData: FormData):
   const interviewLocation = (formData.get("interview_location") as string) || null;
   if (!applicationId || !interviewDate) return { error: "Application aur date zaroori hain." };
 
-  const { data: existing } = await supabase.from("job_applications").select("interview_date, status").eq("id", applicationId).single();
+  const { data: existing } = await supabase.from("job_applications").select("interview_date, status").eq("id", applicationId).maybeSingle();
+  if (isDuplicateInterviewSchedule(existing, interviewDate)) {
+    revalidatePath("/admin/job-applications");
+    return { success: true };
+  }
   const isReschedule = existing?.status === "interview_scheduled" && existing?.interview_date;
+  const day = interviewDay(interviewDate);
 
-  const { error } = await supabase
+  let update = supabase
     .from("job_applications")
     .update({ interview_date: interviewDate, status: "interview_scheduled", interview_mode: interviewMode, interview_location: interviewLocation })
     .eq("id", applicationId);
+  if (day) update = update.or(`status.neq.interview_scheduled,interview_date.is.null,interview_date.neq.${day}`);
+  const { data: changed, error } = await update.select("id");
   if (error) return { error: error.message };
+  if (!changed?.length) {
+    revalidatePath("/admin/job-applications");
+    return { success: true };
+  }
 
   const { data: application } = await supabase
     .from("job_applications")
     .select("full_name, email, job_vacancies(title)")
     .eq("id", applicationId)
     .single();
+  let notice: string | undefined;
   if (application) {
     const jobTitle = Array.isArray(application.job_vacancies) ? (application.job_vacancies[0] as any)?.title : (application.job_vacancies as any)?.title;
-    if (isReschedule) {
-      await sendInterviewRescheduledEmail(application.email, application.full_name, jobTitle ?? "Position", interviewDate);
-    } else {
-      await sendInterviewInvitationEmail(application.email, application.full_name, jobTitle ?? "Position", interviewDate);
-    }
+    const mail = isReschedule
+      ? await sendInterviewRescheduledEmail(application.email, application.full_name, jobTitle ?? "Position", interviewDate, interviewLocation)
+      : await sendInterviewInvitationEmail(application.email, application.full_name, jobTitle ?? "Position", interviewDate, interviewLocation);
+    await saveCandidateMessage(applicationId, mail, await actorId());
+    notice = dispatchNotice(mail);
   }
 
   await logActivity(
@@ -226,7 +318,7 @@ export async function scheduleInterview(_prev: ActionState, formData: FormData):
   );
 
   revalidatePath("/admin/job-applications");
-  return { success: true };
+  return notice ? { success: true, notice } : { success: true };
 }
 
 export async function saveInterviewScore(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -270,22 +362,36 @@ export async function saveInterviewScore(_prev: ActionState, formData: FormData)
   );
   if (error) return { error: error.message };
 
-  await supabase.from("job_applications").update({ status: "scored" }).eq("id", applicationId);
+  const { data: flipped, error: statusError } = await supabase
+    .from("job_applications")
+    .update({ status: "scored" })
+    .eq("id", applicationId)
+    .neq("status", "scored")
+    .select("id");
+  if (statusError) return { error: statusError.message };
+
+  if (!flipped?.length) {
+    revalidatePath("/admin/job-applications");
+    return { success: true };
+  }
 
   const { data: application } = await supabase
     .from("job_applications")
     .select("full_name, email, job_vacancies(title)")
     .eq("id", applicationId)
     .single();
+  let notice: string | undefined;
   if (application) {
     const jobTitle = Array.isArray(application.job_vacancies) ? (application.job_vacancies[0] as any)?.title : (application.job_vacancies as any)?.title;
-    await sendInterviewResultEmail(application.email, application.full_name, jobTitle ?? "Position", recommendation === "hire");
+    const mail = await sendInterviewResultEmail(application.email, application.full_name, jobTitle ?? "Position", recommendation === "hire");
+    await saveCandidateMessage(applicationId, mail, user?.id ?? null);
+    notice = dispatchNotice(mail);
   }
 
   await logActivity(applicationId, "interview_completed", `Interview complete hua - score: ${totalScore}, decision: ${recommendation}`);
 
   revalidatePath("/admin/job-applications");
-  return { success: true };
+  return notice ? { success: true, notice } : { success: true };
 }
 
 export async function sendJobOffer(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -297,6 +403,12 @@ export async function sendJobOffer(_prev: ActionState, formData: FormData): Prom
   const offerMessage = (formData.get("offer_message") as string) || null;
   const expiryDate = (formData.get("expiry_date") as string) || null;
   if (!applicationId || !designation) return { error: "Application aur designation zaroori hain." };
+
+  const { data: current } = await supabase.from("job_applications").select("status").eq("id", applicationId).maybeSingle();
+  if (current?.status === "offered") {
+    revalidatePath("/admin/job-applications");
+    return { success: true };
+  }
 
   const { data: offer, error } = await supabase
     .from("job_offers")
@@ -324,12 +436,14 @@ export async function sendJobOffer(_prev: ActionState, formData: FormData): Prom
         branchName = branch?.name ?? null;
       }
       if (application) {
-        await sendJobOfferEmail(application.email, application.full_name, offer.offer_token, designation, {
+        const mail = await sendJobOfferEmail(application.email, application.full_name, offer.offer_token, designation, {
           proposedSalary,
           branchName,
           offerMessage,
           expiryDate,
         });
+        await saveCandidateMessage(applicationId, mail, await actorId());
+        emailWarning = dispatchNotice(mail);
       }
     } catch (emailErr) {
       console.error("Offer email failed (offer record was still saved):", emailErr);
@@ -369,21 +483,24 @@ export async function resendJobOfferEmail(_prev: ActionState, formData: FormData
     branchName = branch?.name ?? null;
   }
 
+  let notice: string | undefined;
   try {
-    await sendJobOfferEmail(application.email, application.full_name, offer.offer_token, offer.designation, {
+    const mail = await sendJobOfferEmail(application.email, application.full_name, offer.offer_token, offer.designation, {
       proposedSalary: offer.proposed_salary,
       branchName,
       offerMessage: offer.offer_message,
       expiryDate: offer.expiry_date,
     });
+    await saveCandidateMessage(applicationId, mail, await actorId());
+    notice = dispatchNotice(mail);
   } catch (emailErr) {
     console.error("Resend offer email failed:", emailErr);
-     return { error: `Email masla: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}` };
+    return { error: `Email masla: ${emailErr instanceof Error ? emailErr.message : String(emailErr)}` };
   }
 
   await logActivity(applicationId, "offer_resent", "Offer email dobara bheji gayi.");
 
-  return { success: true };
+  return notice ? { success: true, notice } : { success: true };
 }
 
 export async function respondToOffer(token: string, accept: boolean): Promise<{ error?: string }> {
@@ -396,18 +513,108 @@ export async function respondToOffer(token: string, accept: boolean): Promise<{ 
     .single();
   if (!offer) return { error: "Offer not found." };
 
-  if (!accept) {
-    await serviceClient.from("job_offers").update({ status: "rejected", responded_at: new Date().toISOString() }).eq("id", offer.id);
-    await serviceClient.from("job_applications").update({ status: "rejected" }).eq("id", offer.application_id);
-    await logActivity(offer.application_id, "offer_declined", "Candidate ne offer decline kar di.");
-    return {};
-  }
+  const next = accept ? "accepted" : "rejected";
+  const { data: changed } = await serviceClient
+    .from("job_applications")
+    .update({ status: next })
+    .eq("id", offer.application_id)
+    .neq("status", next)
+    .select("id");
+  if (!changed?.length) return {};
 
-  await serviceClient.from("job_offers").update({ status: "accepted", responded_at: new Date().toISOString() }).eq("id", offer.id);
-  await serviceClient.from("job_applications").update({ status: "accepted" }).eq("id", offer.application_id);
-  await logActivity(offer.application_id, "offer_accepted", "Candidate ne offer accept kar li.");
+  await serviceClient.from("job_offers").update({ status: accept ? "accepted" : "rejected", responded_at: new Date().toISOString() }).eq("id", offer.id);
+  await logActivity(offer.application_id, accept ? "offer_accepted" : "offer_declined", accept ? "Candidate ne offer accept kar li." : "Candidate ne offer decline kar di.");
 
   return {};
+}
+
+type HireRow = HireApplication & {
+  full_name: string;
+  email: string;
+  vacancy_id: string | null;
+  status: string;
+  created_profile_id: string | null;
+  gender: string | null;
+};
+
+async function loadHireApplication(
+  serviceClient: ReturnType<typeof createServiceClient>,
+  applicationId: string,
+): Promise<{ application: HireRow | null; error: string | null }> {
+  const base = "id, full_name, email, vacancy_id, status, created_profile_id, phone, cnic, address";
+  const extra = "gender, blood_group, emergency_contact_name, emergency_contact_phone, photo_url";
+  let result = await (serviceClient as any).from("job_applications").select(`${base}, ${extra}`).eq("id", applicationId).single();
+  if (result.error && /column|blood_group|emergency_contact|photo_url|gender/i.test(String(result.error.message ?? ""))) {
+    result = await (serviceClient as any).from("job_applications").select(`${base}, gender`).eq("id", applicationId).single();
+    if (result.error && /gender/i.test(String(result.error.message ?? ""))) {
+      result = await serviceClient.from("job_applications").select(base).eq("id", applicationId).single();
+    }
+  }
+  if (result.error || !result.data) return { application: null, error: result.error?.message ?? "Application not found." };
+  return {
+    application: {
+      gender: null,
+      blood_group: null,
+      emergency_contact_name: null,
+      emergency_contact_phone: null,
+      photo_url: null,
+      ...result.data,
+    },
+    error: null,
+  };
+}
+
+async function copyHireOntoStaff(
+  serviceClient: ReturnType<typeof createServiceClient>,
+  profileId: string,
+  application: HireApplication,
+  latestOffer: { designation: string | null; proposed_salary: number | null } | null,
+  acceptedOffer: { id: string } | null,
+) {
+  const wide = await serviceClient
+    .from("staff_details")
+    .select("phone, cnic, address, gender, blood_group, emergency_contact_name, emergency_contact_phone, photo_url, application_id, offer_id, designation, basic_salary")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  const narrow = wide.error && /application_id|offer_id/i.test(wide.error.message)
+    ? await serviceClient
+      .from("staff_details")
+      .select("phone, cnic, address, gender, blood_group, emergency_contact_name, emergency_contact_phone, photo_url, designation, basic_salary")
+      .eq("profile_id", profileId)
+      .maybeSingle()
+    : null;
+  if ((narrow ?? wide).error) {
+    console.error("staff_details hire read:", (narrow ?? wide).error?.message);
+    return;
+  }
+  const existing = (narrow?.data ?? wide.data) as Record<string, unknown> | null;
+  const patch = hireStaffPatch(existing, application, {
+    id: acceptedOffer?.id ?? null,
+    status: acceptedOffer ? "accepted" : null,
+    designation: latestOffer?.designation ?? null,
+    proposed_salary: latestOffer?.proposed_salary ?? null,
+  });
+  const dropLinks = (row: Record<string, unknown>) => {
+    const rest = { ...row };
+    delete rest.application_id;
+    delete rest.offer_id;
+    return rest;
+  };
+  if (!existing) {
+    let res = await serviceClient.from("staff_details").insert({ profile_id: profileId, ...patch });
+    if (res.error && /application_id|offer_id/i.test(res.error.message)) {
+      res = await serviceClient.from("staff_details").insert({ profile_id: profileId, ...dropLinks(patch) });
+    }
+    if (res.error) console.error("staff_details hire copy:", res.error.message);
+    return;
+  }
+  if (!Object.keys(patch).length) return;
+  let res = await serviceClient.from("staff_details").update(patch).eq("profile_id", profileId);
+  if (res.error && /application_id|offer_id/i.test(res.error.message)) {
+    const rest = dropLinks(patch);
+    if (Object.keys(rest).length) res = await serviceClient.from("staff_details").update(rest).eq("profile_id", profileId);
+  }
+  if (res.error) console.error("staff_details hire copy:", res.error.message);
 }
 
 export async function createOfficialLogin(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -419,20 +626,20 @@ export async function createOfficialLogin(_prev: ActionState, formData: FormData
   if (!officialEmail) return { error: "Official email zaroori hai." };
   if (!password || password.length < 6) return { error: "Password kam az kam 6 characters ka hona chahiye." };
 
-  const { data: application } = await serviceClient
-    .from("job_applications")
-    .select("full_name, email, vacancy_id")
-    .eq("id", applicationId)
-    .single();
-  if (!application) return { error: "Application not found." };
+  const loaded = await loadHireApplication(serviceClient, applicationId);
+  if (loaded.error || !loaded.application) return { error: loaded.error ?? "Application not found." };
+  const application = loaded.application;
+  if (application.status === "joined" || application.created_profile_id) {
+    return { success: true };
+  }
 
-  const { data: latestOffer } = await serviceClient
+  const { data: offers } = await serviceClient
     .from("job_offers")
-    .select("designation, branch_id, proposed_salary")
+    .select("id, designation, branch_id, proposed_salary, status")
     .eq("application_id", applicationId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
+    .order("created_at", { ascending: false });
+  const latestOffer = offers?.[0] ?? null;
+  const acceptedOffer = (offers ?? []).find((offer) => offer.status === "accepted") ?? null;
 
   const { data: authUser, error: createError } = await serviceClient.auth.admin.createUser({
     email: officialEmail,
@@ -457,11 +664,7 @@ export async function createOfficialLogin(_prev: ActionState, formData: FormData
     is_active: true,
   });
 
-  await serviceClient.from("staff_details").insert({
-    profile_id: authUser.user.id,
-    designation: latestOffer?.designation ?? null,
-    basic_salary: latestOffer?.proposed_salary ?? null,
-  });
+  await copyHireOntoStaff(serviceClient, authUser.user.id, application, latestOffer, acceptedOffer);
 
   await serviceClient.from("job_applications").update({ status: "joined", created_profile_id: authUser.user.id }).eq("id", applicationId);
 
@@ -475,12 +678,18 @@ export async function createOfficialLogin(_prev: ActionState, formData: FormData
     }
   }
 
-  await sendOfficialLoginEmail(officialEmail, application.full_name, officialEmail, password);
-  await sendOfficialLoginEmail(application.email, application.full_name, officialEmail, password);
+  const who = await actorId();
+  const loginToOfficial = await sendOfficialLoginEmail(officialEmail, application.full_name, officialEmail, password);
+  const loginToPersonal = await sendOfficialLoginEmail(application.email, application.full_name, officialEmail, password);
+  await saveCandidateMessage(applicationId, { ...loginToOfficial, body: redactSecrets(loginToOfficial.body, [password]) }, who);
+  if (application.email.trim().toLowerCase() !== officialEmail) {
+    await saveCandidateMessage(applicationId, { ...loginToPersonal, body: redactSecrets(loginToPersonal.body, [password]) }, who);
+  }
 
   await logActivity(applicationId, "joined", `Official login ban gaya: ${officialEmail}`);
 
   revalidatePath("/admin/job-applications");
   revalidatePath("/admin/job-vacancies");
-  return { success: true };
+  const notice = dispatchNotice(loginToOfficial) ?? (application.email.trim().toLowerCase() !== officialEmail ? dispatchNotice(loginToPersonal) : undefined);
+  return notice ? { success: true, notice } : { success: true };
 }

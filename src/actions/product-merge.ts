@@ -3,6 +3,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getApprovalContext } from "@/actions/product-permissions";
+import { isSelfMerge } from "@/lib/pending/product-diff";
+
+const SELF_MERGE_MSG = "Product ko khud mein merge nahi kiya ja sakta -- ye request Reject kar dein.";
 
 export interface ActionState {
   error?: string;
@@ -75,6 +78,7 @@ export async function requestProductMerge(_prev: ActionState, formData: FormData
   const sourceProductId = String(formData.get("source_product_id") ?? "");
   const targetProductId = String(formData.get("target_product_id") ?? "");
   if (!sourceProductId || !targetProductId) return { error: "Product saaf nahi." };
+  if (isSelfMerge(sourceProductId, targetProductId)) return { error: SELF_MERGE_MSG };
 
   const { data: stock } = await service
     .from("inventory")
@@ -210,6 +214,7 @@ export async function approveProductMerge(_prev: ActionState, formData: FormData
     .maybeSingle();
   if (!request) return { error: "Request nahi mili." };
   if (request.status !== "pending") return { error: "Ye request pehle hi nipat chuki hai." };
+  if (isSelfMerge(request.source_product_id, request.target_product_id)) return { error: SELF_MERGE_MSG };
 
   const { error: mergeErr } = await executeMerge(service, request.source_product_id, request.target_product_id, userId, requestId);
   if (mergeErr) return { error: mergeErr };
@@ -325,10 +330,24 @@ export async function rejectProductMerge(_prev: ActionState, formData: FormData)
   if (!requestId) return { error: "Request nahi mili." };
   const notes = (formData.get("review_notes") as string) || null;
 
+  // Faisla isi pending row par: status + wajah. Nayi product_merge_requests
+  // row nahi banti — decide bhi yahi action bulata hai. Self-merge
+  // (source = target, jaise Mint 1 Le) bhi isi update se Reject hoti hai.
+  // Approve is case mein yahan nahi aata; approveProductMerge use rokta hai.
+  const { data: request, error: loadErr } = await service
+    .from("product_merge_requests")
+    .select("id, status")
+    .eq("id", requestId)
+    .maybeSingle();
+  if (loadErr) return { error: loadErr.message };
+  if (!request) return { error: "Request nahi mili." };
+  if (request.status !== "pending") return { error: "Ye request pehle hi nipat chuki hai." };
+
   const { error } = await service
     .from("product_merge_requests")
     .update({ status: "rejected", review_notes: notes, reviewed_by: userId, reviewed_at: new Date().toISOString() })
-    .eq("id", requestId);
+    .eq("id", requestId)
+    .eq("status", "pending");
   if (error) return { error: error.message };
 
   revalidatePath("/admin/products/duplicates");

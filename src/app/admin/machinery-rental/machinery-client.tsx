@@ -423,7 +423,7 @@ function NewMachineModal({ vendors, onClose }: { vendors: Vendor[]; onClose: () 
         </div>
         {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
         <form action={formAction} className="space-y-2">
-          {/* Machine kis ki hai. ART ki apni ho to vendor hota hi
+          {/* Machine kis ki hai. AgriBridge ki apni ho to vendor hota hi
               nahi -- aur us par commission bhi nahi banta, poori
               aamdani hamari hoti hai. Pehle ye mumkin hi nahi tha:
               har machine kisi vendor ki hoti thi, aur apni machine

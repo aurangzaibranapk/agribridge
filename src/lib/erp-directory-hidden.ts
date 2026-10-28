@@ -122,6 +122,7 @@ export const ERP_HIDDEN_ROUTES: string[] = [
   "/admin/reports/sales/slow-stock",
   "/admin/reports/stock-reconcile",
   "/admin/search",
+  "/admin/kisan-scan",
   "/admin/shop-360/branch",
   "/admin/shop-360/match",
   "/admin/shop-360/org",

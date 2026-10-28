@@ -29,9 +29,10 @@ const FLOAT_ROLES = ["owner", "super_admin", "admin", "finance", "manager"];
  * customer se paisa le leta, aur load jata hi nahi.
  *
  * Is liye button "Load karein" nahi, **"Load ho gaya — darj karein"**
- * hai, aur us ke sath provider ki apni TID ka khana hai. Wohi saboot
- * hai. Jis qatar par TID na ho wo "nakaam" nahi kehlati -- wo
- * "saboot baqi" hoti hai, aur safha us ko alag rang mein dikhata hai.
+ * hai, aur us ke sath provider ki transaction ID (Trex / Tx ID) lazmi
+ * hai. Nayi LD- / BP- entry bina ID ke save nahi hoti, is liye My Work
+ * par naya "Load proof missing" nahi banta. Purani "saboot baqi"
+ * qatarein isi safhe par TID laga kar band hoti hain.
  *
  * -------------------------------------------------------------------
  * DOOSRI BAAT: aamdani sirf service charge hai.
@@ -215,7 +216,7 @@ export default async function LoadBillPage({
     <DeskWorkspace className="desk-load">
       <PageHeader
         title="Staff Sales Desk"
-        description={`Al Rana Traders  |  ${branch?.name ?? "Branch not assigned"}  ·  Mobile Load · Bill Payment · Udhaar · Recovery · Bank Transfer`}
+        description={`AgriBridge  |  ${branch?.name ?? "Branch not assigned"}  ·  Mobile Load · Bill Payment · Udhaar · Recovery · Bank Transfer`}
         actions={
           <div className="flex flex-wrap gap-2">
             <Link

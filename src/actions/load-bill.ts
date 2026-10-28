@@ -11,6 +11,7 @@ import { cashBookLikhein, type CashBookQatar } from "@/lib/ledger/cash-book";
 import { recordError } from "@/lib/errors/record";
 import { notifyUser } from "@/lib/notifications";
 import { requireAction } from "@/lib/access/guard";
+import { providerTidForEntry } from "@/lib/load-bill/provider-tid";
 
 export interface LoadState {
   error?: string;
@@ -148,9 +149,11 @@ async function commissionGuess(providerId: string, kind: string, principal: numb
  * Load ya bill darj karna.
  *
  * Dhyan rahe: ye function load BHEJTA nahi. Load provider ki apni app se
- * jata hai; yahan sirf us ka indraj hota hai. Isi liye `provider_tid`
- * (provider ki apni reference) hi wo cheez hai jo qatar ko `saboot_baqi`
- * se `darj` banati hai.
+ * jata hai; yahan sirf us ka indraj hota hai. Is liye provider ki
+ * transaction ID (Trex / Tx ID) isi waqt lazmi hai. Khali ID se pehle
+ * qatar `saboot_baqi` ban jati thi aur My Work par "Load proof missing"
+ * aa jati thi (LD- load, BP- bill). Nayi entry hamesha `darj` hoti hai.
+ * Purani qataron par TID baad mein `attachProviderTid` se lagti hai.
  */
 export async function createLoadTransaction(_prev: LoadState, formData: FormData): Promise<LoadState> {
   const permission = await requireAction("load-bill", "create");
@@ -188,7 +191,6 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
   const partyType = rawPartyType === "farmer" ? "farmer" as const : rawPartyType === "customer" ? "customer" as const : null;
   const partyId = String(formData.get("party_id") ?? "").trim() || null;
   const customerName = String(formData.get("customer_name") ?? "").trim() || null;
-  const providerTid = String(formData.get("provider_tid") ?? "").trim() || null;
   const billCategory = String(formData.get("bill_category") ?? "").trim() || null;
   // Bill ka paisa abhi provider tak pahuncha ya nahi. Load par hamesha
   // pahunch chuka hota hai.
@@ -206,6 +208,9 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
   if (serviceCharge !== null && serviceCharge < 0) {
     return { error: "Service charge manfi nahi ho sakta. Extra nahi liya to khana khali chhorein ya 0 likhein." };
   }
+  const tidCheck = providerTidForEntry(formData.get("provider_tid"), kind === "bill" ? "bill" : "load");
+  if ("error" in tidCheck) return { error: tidCheck.error };
+  const providerTid = tidCheck.tid;
 
   const service = createServiceClient();
   const { data: shop } = await service.from("shops").select("id, branch_id, is_active").eq("id", shopId).maybeSingle();
@@ -299,9 +304,8 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
       farmer_id: partyType === "farmer" ? partyId : null,
       customer_name: customerName,
       provider_tid: providerTid,
-      // Saboot laga hua ho to seedha darj; warna qatar khud kehti hai ke
-      // us par saboot baqi hai.
-      status: providerTid ? "darj" : "saboot_baqi",
+      // Tx ID isi waqt lag chuki hai, is liye naya "saboot baqi" nahi.
+      status: "darj",
       float_settled: settled,
       branch_id: branchId,
       shop_id: shopId,
@@ -389,9 +393,7 @@ export async function createLoadTransaction(_prev: LoadState, formData: FormData
   return {
     success: true,
     txnNumber: number,
-    notice: providerTid
-      ? `${number} darj ho gaya.`
-      : `${number} darj ho gaya — magar provider ki TID abhi nahi lagi. Jab tak wo na lage, is qatar par "saboot baqi" likha rahega.`,
+    notice: `${number} darj ho gaya.`,
   };
 }
 
@@ -428,7 +430,6 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
   let serviceCharge = paisa(formData.get("service_charge"));
   // 0 = fee nahi li. Constraint sirf NULL ya >0 allow karti hai.
   if (serviceCharge === 0) serviceCharge = null;
-  const providerTid = String(formData.get("provider_tid") ?? "").trim() || null;
   const customerName = String(formData.get("customer_name") ?? "").trim() || null;
   const customerPhone = String(formData.get("customer_phone") ?? "").trim() || null;
   const rawPartyType = String(formData.get("party_type") ?? "").trim();
@@ -446,6 +447,9 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
   if (serviceCharge !== null && serviceCharge < 0) {
     return { error: "Service charge manfi nahi ho sakta; extra nahi liya to khana khali chhorein ya 0 likhein." };
   }
+  const tidCheck = providerTidForEntry(formData.get("provider_tid"), "bank");
+  if ("error" in tidCheck) return { error: tidCheck.error };
+  const providerTid = tidCheck.tid;
 
   const receivingMethod = receivedIn === "cash" ? "cash" : "bank";
   const receivingAccountId = receivedIn.startsWith("acct:") ? receivedIn.slice(5) : null;
@@ -513,7 +517,7 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
       principal,
       service_charge: serviceCharge,
       provider_tid: providerTid,
-      status: providerTid ? "darj" : "saboot_baqi",
+      status: "darj",
       branch_id: branchId,
       shop_id: shopId,
       created_by: user.id,
@@ -560,7 +564,7 @@ export async function createBankTransfer(_prev: LoadState, formData: FormData): 
   return {
     success: true,
     txnNumber: number,
-    notice: providerTid ? `${number} darj ho gaya.` : `${number} darj ho gaya — transaction ID/proof abhi baqi hai.`,
+    notice: `${number} darj ho gaya.`,
   };
 }
 

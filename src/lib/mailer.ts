@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 
 /**
  * Har mehkame ki apni email — ek hi jagah se.
@@ -52,49 +53,49 @@ type DeptConfig = {
 const DEPTS: Record<MailDept, DeptConfig> = {
   jobs: {
     address: "job@alranatraders.pk",
-    label: "Al Rana Traders — Jobs",
+    label: `${BRAND_NAME} — Jobs`,
     footer: "Recruitment",
     userEnv: "JOB_SMTP_USER",
     passEnv: "JOB_SMTP_PASS",
   },
   hr: {
     address: "hr@alranatraders.pk",
-    label: "Al Rana Traders — HR",
+    label: `${BRAND_NAME} — HR`,
     footer: "Human Resources Department",
     userEnv: "HR_SMTP_USER",
     passEnv: "HR_SMTP_PASS",
   },
   machinery: {
     address: "machinery@alranatraders.pk",
-    label: "Al Rana Traders — Machinery",
+    label: `${BRAND_NAME} — Machinery`,
     footer: "Machinery & Rental",
     userEnv: "MACHINERY_SMTP_USER",
     passEnv: "MACHINERY_SMTP_PASS",
   },
   grain: {
     address: "grain@alranatraders.pk",
-    label: "Al Rana Traders — Grain",
+    label: `${BRAND_NAME} — Grain`,
     footer: "Grain Procurement",
     userEnv: "GRAIN_SMTP_USER",
     passEnv: "GRAIN_SMTP_PASS",
   },
   accounts: {
     address: "accounts@alranatraders.pk",
-    label: "Al Rana Traders — Accounts",
+    label: `${BRAND_NAME} — Accounts`,
     footer: "Accounts & Finance",
     userEnv: "ACCOUNTS_SMTP_USER",
     passEnv: "ACCOUNTS_SMTP_PASS",
   },
   rent: {
     address: "rent@alranatraders.pk",
-    label: "Al Rana Traders — Rent",
+    label: `${BRAND_NAME} — Rent`,
     footer: "Property & Rent",
     userEnv: "RENT_SMTP_USER",
     passEnv: "RENT_SMTP_PASS",
   },
   sales: {
     address: "sales@alranatraders.pk",
-    label: "Al Rana Traders — Sales",
+    label: `${BRAND_NAME} — Sales`,
     footer: "Sales & Store",
     userEnv: "SALES_SMTP_USER",
     passEnv: "SALES_SMTP_PASS",
@@ -167,7 +168,8 @@ export function mailWrapper(bodyHtml: string, dept: MailDept): string {
   <div style="font-family: Arial, Helvetica, sans-serif; background:#f4f6f4; padding:32px 16px;">
     <div style="max-width:520px; margin:0 auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
       <div style="background:#1a1f36; padding:24px; text-align:center;">
-        <p style="margin:0; color:#ffffff; font-size:20px; font-weight:700;">Al Rana Traders</p>
+        <p style="margin:0; color:#ffffff; font-size:20px; font-weight:700;">${BRAND_NAME}</p>
+        <p style="margin:4px 0 0; color:#c5d5c8; font-size:12px;">${BRAND_TAGLINE}</p>
         <p style="margin:4px 0 0; color:#94a3b8; font-size:12px;">${sender.footer}</p>
       </div>
       <div style="padding:28px 24px; color:#1f2937; font-size:14px; line-height:1.6;">
@@ -178,7 +180,7 @@ export function mailWrapper(bodyHtml: string, dept: MailDept): string {
           alranatraders.pk &nbsp;|&nbsp; ${sender.address}
         </p>
         <p style="margin:0; font-size:11px; color:#9ca3af;">
-          &copy; ${new Date().getFullYear()} Al Rana Traders. All rights reserved.
+          &copy; ${new Date().getFullYear()} ${BRAND_NAME}. All rights reserved.
         </p>
       </div>
     </div>

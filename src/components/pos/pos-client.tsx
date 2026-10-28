@@ -1,5 +1,10 @@
 "use client";
+import { StockBadge } from "@/components/ui/stock-badge";
+import { AnimatedSearch } from "@/components/ui/animated-search";
+import { animSearchEnabled } from "@/lib/ui/animated-search";
 import { ExpiryBadge } from "@/components/stock/expiry-badge";
+import { GodamHint, GodamStrip } from "@/components/pos/godam-strip";
+import { formatGodamQty, shopQtyToneClass, type GodamLine } from "@/lib/pos/godam-on-card";
 import { canAddToCart, isOutOfStock, sortInStockFirst, POS_DEMAND_HREF } from "@/lib/pos/stock-availability";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -18,7 +23,6 @@ import {
   Trash2,
   RotateCcw,
   ArrowLeft,
-  ChevronRight,
   Search,
   Camera,
   Plus,
@@ -30,6 +34,8 @@ import {
   Lock,
 } from "lucide-react";
 import { ReceiptModal } from "@/components/pos/receipt-modal";
+import { ReceiptPrint } from "@/components/glass/receipt-print";
+import type { ReceiptData } from "@/lib/glass/glass";
 import { OfflineReceiptModal, type OfflineReceiptData } from "@/components/pos/offline-receipt-modal";
 import { BarcodeCameraModal } from "@/components/pos/barcode-camera-modal";
 import { PosReturn } from "@/components/pos/pos-return";
@@ -48,6 +54,7 @@ interface PosProduct {
   category_name?: string | null;
   mrp_price?: number | null;
   purchase_price?: number | null;
+  min_stock_threshold?: number | null;
 }
 
 interface InventoryItem {
@@ -57,6 +64,7 @@ interface InventoryItem {
   selling_price: number;
   wholesale_price: number | null;
   warehouse_stock?: number | null;
+  warehouse_lines?: GodamLine[] | null;
   batch_number?: string | null;
   batch_count?: number;
   expiry_date?: string | null;
@@ -104,9 +112,7 @@ interface PaymentLine {
 }
 
 function stockTone(qty: number): string {
-  if (qty <= 5) return "bg-red-500";
-  if (qty <= 20) return "bg-amber-500";
-  return "bg-emerald-500";
+  return shopQtyToneClass(qty);
 }
 
 function shortDate(d: string | null | undefined): string | null {
@@ -209,6 +215,7 @@ export function PosClient({
   const checkoutKey = useRef(createCheckoutKey(() => crypto.randomUUID())).current;
   const [overdueDialog, setOverdueDialog] = useState<{ info: CreditBlockInfo | null; text: string; resolve: (c: OverdueChoice) => void } | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [saleAnim, setSaleAnim] = useState<ReceiptData | null>(null);
   const [completedSaleId, setCompletedSaleId] = useState<string | null>(null);
   const [offlineReceipt, setOfflineReceipt] = useState<OfflineReceiptData | null>(null);
   const [barcodeError, setBarcodeError] = useState<string | null>(null);
@@ -335,6 +342,7 @@ export function PosClient({
 
   const [discount, setDiscount] = useState("");
   const [discountReason, setDiscountReason] = useState("");
+  const [managerCode, setManagerCode] = useState("");
   // Khata kis ka hai aur maal kaun le kar ja raha hai alag ho sakte hain
   // (malik, 15 September: "khata Aurangzaib ka hai, lay ke jaane wala
   // Mohsin hai") -- sirf record ke liye, `sales.notes` mein.
@@ -591,6 +599,7 @@ export function PosClient({
       paymentLines: paymentLines.filter((l) => (parseFloat(l.amount) || 0) > 0).map((l) => ({ method: l.method, amount: parseFloat(l.amount) || 0, reference: l.reference || "", receipt_url: l.receiptUrl || "" })),
       discount: chhoot,
       discountReason: discountReason.trim(),
+      managerCode: managerCode.trim() || null,
       counterId,
       receivedBy: receivedBy.trim(),
     };
@@ -690,6 +699,7 @@ export function PosClient({
           : item
       )
     );
+    setSaleAnim({ kind: "pos", no: String(data).slice(0, 8).toUpperCase(), date: new Date().toLocaleString("en-PK"), amount: Math.max(0, (Number(total) || 0) - (Number(discount) || 0)), lines: [["Items", String(cart.length)]] });
     setCompletedSaleId(data);
     resetSale();
     setSubmitting(false);
@@ -714,7 +724,7 @@ export function PosClient({
   return (
     <>
     {overdueDialog && <OverdueCreditDialog info={overdueDialog.info} fallbackText={overdueDialog.text} onChoose={overdueDialog.resolve} />}
-    <div className={`grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:overflow-hidden ${selectedLine && selectedItem ? "lg:grid-cols-[minmax(0,1fr)_21rem_22rem]" : "lg:grid-cols-[minmax(0,1fr)_23rem]"}`}>
+    <div className={`grid grid-cols-1 gap-4 p-4 lg:h-[calc(100vh-7rem)] lg:overflow-hidden ${selectedLine && selectedItem ? "lg:grid-cols-[minmax(0,1fr)_21rem_24rem]" : "lg:grid-cols-[minmax(0,1fr)_26rem]"}`}>
       {offlinePending > 0 && <div className="fixed bottom-4 left-4 z-30 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white shadow-lg">{offlinePending} offline bill sync ka intezar kar raha hai</div>}
       <section className="flex flex-col print:hidden lg:min-h-0">
         <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2 lg:flex-nowrap">
@@ -723,10 +733,14 @@ export function PosClient({
               Naam aur search box barabar jagah lete hain (malik: "half
               pay name half pay search bar"). */}
           <form onSubmit={handleSearchSubmit} className="flex min-w-0 flex-1 items-center gap-2">
+{animSearchEnabled() ? (
+            <AnimatedSearch ref={barcodeRef} defaultOpen value={search} onValueChange={setSearch} placeholder={t("pos_search_products", lang)} lang={lang} className="min-w-0 flex-1" />
+) : (
             <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
               <Input ref={barcodeRef} value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("pos_search_products", lang)} className="h-11 pl-9" />
             </div>
+)}
             <button type="button" onClick={() => setShowCameraModal(true)} aria-label="Camera" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"><Camera className="h-4 w-4" /></button>
           </form>
           {groups.length > 0 && (
@@ -759,11 +773,13 @@ export function PosClient({
               const oos = isOutOfStock(item);
               return (
                 <div key={item.id} className="relative">
-                <button onClick={() => addToCart(item)} aria-disabled={oos && !canAddToCart(item)} title={oos ? "Out of stock / Stock khatam" : undefined} className={`w-full ${oos ? "opacity-50 grayscale " : ""}overflow-hidden rounded-card border bg-white text-left shadow-card transition hover:shadow-md dark:bg-surface-900 ${inCart ? "border-brand-500 ring-1 ring-brand-200 dark:ring-brand-900/50" : "border-surface-200 hover:border-brand-400 dark:border-surface-800"}`}>
+                <button onClick={() => addToCart(item)} aria-disabled={oos && !canAddToCart(item)} title={oos ? "Out of stock / Stock khatam" : undefined} className={`w-full overflow-hidden rounded-card border bg-white text-left shadow-card transition hover:shadow-md dark:bg-surface-900 ${inCart ? "border-brand-500 ring-1 ring-brand-200 dark:ring-brand-900/50" : "border-surface-200 hover:border-brand-400 dark:border-surface-800"}`}>
                   <div className="relative aspect-square bg-surface-50 dark:bg-surface-800">
-                    {p?.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-2" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center text-surface-300 dark:text-surface-600"><Package className="h-8 w-8" strokeWidth={1.25} /></div>}
-                    <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-surface-700 shadow-sm dark:bg-surface-900/90 dark:text-surface-200"><span className={`h-1.5 w-1.5 rounded-full ${stockTone(item.stock_quantity)}`} />{item.stock_quantity}</span><ExpiryBadge date={item.expiry_date} className="absolute left-1.5 top-1.5 shadow-sm" />
-                    {oos && <span data-testid="pos-oos-badge" className="absolute bottom-1.5 left-1.5 rounded-md bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-sm">Out of stock / Stock khatam</span>}
+                    <div className={oos ? "h-full opacity-60 grayscale" : "h-full"}>
+                      {p?.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-2" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center text-surface-300 dark:text-surface-600"><Package className="h-8 w-8" strokeWidth={1.25} /></div>}
+                    </div>
+                    <ExpiryBadge date={item.expiry_date} className="absolute left-1.5 top-1.5 shadow-sm" />
+                    <StockBadge floating qty={item.stock_quantity} min={p?.min_stock_threshold} testId={oos ? "pos-oos-badge" : "pos-stock-badge"} />
                     {inCart && cartLine && (
                       <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-brand-600 px-1.5 py-0.5 text-[11px] font-bold text-white shadow-sm">
                         {wholesaleOn && upc > 1
@@ -771,6 +787,7 @@ export function PosClient({
                           : `${cartLine.quantity} btl`}
                       </span>
                     )}
+                    <GodamStrip shopQty={item.stock_quantity} godamQty={item.warehouse_stock} lines={item.warehouse_lines} lang={lang} />
                   </div>
                   <div className="min-h-[3.25rem] border-t border-surface-100 px-2.5 py-2 dark:border-surface-800">
                     <p className="line-clamp-2 text-[13px] font-medium leading-tight text-surface-900 dark:text-surface-100">{p?.name ?? <span className="text-amber-700">{t("pos_no_name", lang)}</span>}{p?.pack_size ? <span className="text-surface-400"> {p.pack_size}</span> : null}</p>
@@ -785,6 +802,7 @@ export function PosClient({
                     ) : (
                       <p className="mt-0.5 flex items-baseline justify-between gap-2"><span className="font-display text-sm font-semibold text-brand-700 tabular-nums dark:text-brand-300">Rs {item.selling_price.toLocaleString()}</span>{p?.mrp_price != null && p.mrp_price > 0 && <span className="shrink-0 text-[11px] text-surface-400 tabular-nums">{t("pos_mrp", lang)} {Number(p.mrp_price).toLocaleString()}</span>}</p>
                     )}
+                    <GodamHint shopQty={item.stock_quantity} godamQty={item.warehouse_stock} minStock={p?.min_stock_threshold} lang={lang} className={oos ? "pr-16" : ""} />
                   </div>
                 </button>
                 {oos && <Link href={`${POS_DEMAND_HREF}?product=${item.product_id}`} className="absolute bottom-2 right-2 rounded-md border border-brand-500 bg-white px-2 py-0.5 text-[11px] font-semibold text-brand-700 shadow-sm hover:bg-brand-50 dark:bg-surface-900">Demand</Link>}
@@ -806,23 +824,85 @@ export function PosClient({
         </>
       )}
 
-      <Card className="flex flex-col gap-4 print:hidden lg:h-full lg:min-h-0 lg:overflow-y-auto">
-        <div className="flex items-center gap-2"><ShoppingCart className="h-5 w-5 text-brand-600" /><h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_cart", lang)}</h2></div>
-        <div className="max-h-64 space-y-2 overflow-y-auto">
-          {cart.length === 0 && <div className="py-6 text-center"><p className="text-sm text-surface-500">{t("pos_cart_empty", lang)}</p><p className="mt-1 text-xs text-surface-400">{t("pos_cart_empty_hint", lang)}</p></div>}
-          {cart.map((line) => {
-            const item = inventory.find((i) => i.product_id === line.product_id);
-            const active = line.product_id === selectedId;
-            return (
-              <button key={line.product_id} type="button" onClick={() => setSelectedId(line.product_id)} className={`flex w-full items-center gap-2 rounded-lg border p-2 text-left transition ${active ? "border-l-4 border-brand-500 bg-brand-50/70 dark:bg-brand-950/30" : "border-surface-100 hover:bg-surface-50 dark:border-surface-800 dark:hover:bg-surface-800/60"}`}>
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-surface-100 dark:bg-surface-800">{item?.products?.image_url ? <img src={item.products.image_url} alt="" className="h-full w-full object-contain" loading="lazy" /> : <Package className="h-4 w-4 text-surface-400" strokeWidth={1.5} />}</span>
-                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-surface-800 dark:text-surface-200">{line.name}<ExpiryBadge date={item?.expiry_date} className="ml-1 align-middle" /></span><span className="block text-xs text-surface-400">{line.quantity} × Rs {line.unit_price.toLocaleString()}{wholesaleOn && item?.wholesale_price == null && <span className="ml-1 text-amber-700">{t("pf_pos_no_wholesale_rate", lang)}</span>}{regularKhataOn && !(item?.products?.mrp_price != null && item.products.mrp_price > 0) && <span className="ml-1 text-amber-700">(MRP darj nahi, retail lagi)</span>}</span></span>
-                <span className="shrink-0 text-right"><span className="block text-sm font-semibold tabular-nums text-surface-900 dark:text-surface-100">Rs {(line.quantity * line.unit_price).toLocaleString()}</span><span className="mt-0.5 flex items-center justify-end gap-0.5 text-[10px] text-brand-600 dark:text-brand-400">{t("pos_details", lang)} <ChevronRight className="h-3 w-3" /></span></span>
-              </button>
-            );
-          })}
+      <Card className="flex flex-col gap-3 print:hidden lg:h-full lg:min-h-0 lg:overflow-hidden">
+        <div className="flex shrink-0 items-center gap-2">
+          <ShoppingCart className="h-5 w-5 text-brand-600" />
+          <h2 className="font-display text-base font-semibold text-surface-900 dark:text-surface-100">{t("at_cart", lang)}</h2>
+          {cart.length > 0 && (
+            <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
+              {cart.length === 1 ? t("pos_cart_count_one", lang) : t("pos_cart_count", lang).replace("{n}", String(cart.length))}
+            </span>
+          )}
+        </div>
+        {/*
+          Selected products cart ke upar, apni height ke andar scroll
+          (Boss, 28 Oct — approved mockup). Lambi list payment ko
+          neeche dhakel kar nazar se bahar nahi le jati. Customer,
+          payment, totals, aur Checkout is scroll ke bahar hain.
+          Naam par click rate/tafseel kholta hai; qty aur remove yahin.
+        */}
+        <div className="flex min-h-[6.5rem] shrink-0 flex-col gap-1.5 lg:min-h-0 lg:max-h-64 lg:flex-1 lg:overflow-hidden">
+          <p className="shrink-0 text-xs font-medium text-surface-500 dark:text-surface-400">{t("pos_selected_products", lang)}</p>
+          <div
+            data-testid="pos-cart-lines"
+            className="min-h-[6.5rem] max-h-64 overflow-y-auto overscroll-y-contain rounded-xl border border-surface-200 [scrollbar-color:rgb(168_162_158)_transparent] [scrollbar-width:thin] dark:border-surface-700 lg:min-h-0 lg:max-h-none lg:flex-1"
+          >
+            {cart.length === 0 ? (
+              <div className="flex h-full min-h-[6.5rem] flex-col items-center justify-center px-3 py-6 text-center">
+                <p className="text-sm text-surface-500">{t("pos_cart_empty", lang)}</p>
+                <p className="mt-1 text-xs text-surface-400">{t("pos_cart_empty_hint", lang)}</p>
+              </div>
+            ) : (
+              <ul className="space-y-2 p-2">
+                {cart.map((line) => {
+                  const item = inventory.find((i) => i.product_id === line.product_id);
+                  const active = line.product_id === selectedId;
+                  const lineTotal = line.quantity * line.unit_price;
+                  const rateWarning = wholesaleOn && item?.wholesale_price == null
+                    ? t("pf_pos_no_wholesale_rate", lang)
+                    : regularKhataOn && !(item?.products?.mrp_price != null && item.products.mrp_price > 0)
+                      ? "(MRP darj nahi, retail lagi)"
+                      : null;
+                  return (
+                    <li key={line.product_id} className={`rounded-lg border ${active ? "border-brand-500 bg-brand-50/80 dark:border-brand-700 dark:bg-brand-950/30" : "border-surface-200 bg-white dark:border-surface-700 dark:bg-surface-900"}`}>
+                      <div className="flex items-center gap-1.5 px-2 py-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedId(line.product_id)}
+                          title={t("pos_details", lang)}
+                          className="min-w-0 flex-1 truncate text-left text-[13px] font-medium text-surface-800 hover:text-brand-700 dark:text-surface-100 dark:hover:text-brand-300"
+                        >
+                          {line.name}
+                        </button>
+                        <ExpiryBadge date={item?.expiry_date} className="shrink-0" />
+                        <div className="flex shrink-0 items-center gap-0.5">
+                          <button type="button" onClick={() => updateQuantity(line.product_id, line.quantity - 1)} className="flex h-6 w-6 items-center justify-center rounded-md border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800" aria-label="-">
+                            <Minus className="h-3 w-3" />
+                          </button>
+                          <span className="w-5 text-center text-sm font-medium tabular-nums text-surface-900 dark:text-surface-100">{line.quantity}</span>
+                          <button type="button" onClick={() => updateQuantity(line.product_id, line.quantity + 1)} className="flex h-6 w-6 items-center justify-center rounded-md border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800" aria-label="+">
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <span className="shrink-0 whitespace-nowrap text-[11px] tabular-nums text-surface-500">
+                          Rs {line.unit_price.toLocaleString()}
+                          <span className="px-0.5 text-surface-300">|</span>
+                          <span className="font-semibold text-surface-900 dark:text-surface-100">Rs {lineTotal.toLocaleString()}</span>
+                        </span>
+                        <button type="button" onClick={() => removeLine(line.product_id)} className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-surface-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400" aria-label={t("pos_remove_item", lang)}>
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {rateWarning && <p className="-mt-1 px-2 pb-1.5 text-[10px] leading-tight text-amber-700">{rateWarning}</p>}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         </div>
 
+        <div className="flex shrink-0 flex-col gap-4 lg:min-h-0 lg:overflow-y-auto">
         <div className="border-t border-surface-100 pt-3 dark:border-surface-800">
           <Label>{t("pos_customer", lang)} {khataTotal > 0 && <span className="text-red-500">*</span>}</Label>
           <div className="mb-2 grid grid-cols-3 gap-1.5">
@@ -895,6 +975,7 @@ export function PosClient({
             <div className="rounded-lg bg-surface-50 p-2 dark:bg-surface-800/50">
               <div className="flex items-center justify-between gap-2"><label htmlFor="pos-discount" className="text-surface-500">Discount</label><input id="pos-discount" inputMode="decimal" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0" className="h-8 w-24 rounded-md border border-surface-200 bg-white px-2 text-right text-sm tabular-nums dark:border-surface-700 dark:bg-surface-900" /></div>
               {chhoot > 0 && <input value={discountReason} onChange={(e) => setDiscountReason(e.target.value)} placeholder="Wajah — jaise: purana gahak" className="mt-1.5 h-8 w-full rounded-md border border-surface-200 bg-white px-2 text-xs dark:border-surface-700 dark:bg-surface-900" />}
+              {chhoot > 0 && <input value={managerCode} onChange={(e) => setManagerCode(e.target.value)} placeholder="Manager code — 5% ya Rs 500 se upar, ya bina ijazat" className="mt-1.5 h-8 w-full rounded-md border border-surface-200 bg-white px-2 text-xs dark:border-surface-700 dark:bg-surface-900" />}
               {chhoot > 0 && discountReason.trim().length < 3 && <p className="mt-1 text-[11px] text-amber-600">Wajah likhein — jo raqam bina wajah ke di jaye, us ka hisaab kabhi nahi milta.</p>}
             </div>
           )}
@@ -911,8 +992,10 @@ export function PosClient({
         {overpayment > 0 && <div className="flex items-center justify-between text-sm font-semibold text-emerald-700"><span>Customer Jama / Advance</span><span className="tabular-nums">Rs {overpayment.toLocaleString()}</span></div>}
         {message && <div className={`rounded-lg px-3 py-2 text-sm ${message.type === "success" ? "bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-300" : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"}`}>{message.text}</div>}
         <div className="flex gap-2"><button type="button" onClick={resetSale} disabled={submitting || cart.length === 0} className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-500 hover:bg-surface-50 disabled:opacity-40 dark:border-surface-700 dark:text-surface-400 dark:hover:bg-surface-800">{t("pos_clear_cart", lang)}</button><Button data-guide="pos-checkout" className="flex-1 py-3 text-base" onClick={handleCheckout} disabled={submitting || cart.length === 0}>{submitting ? "Processing..." : "Checkout"}</Button></div>
+        </div>
       </Card>
-      {completedSaleId && <ReceiptModal saleId={completedSaleId} onClose={closeReceiptAndRefreshProducts} lang={lang} />}
+      {saleAnim && <ReceiptPrint receipt={saleAnim} autoCloseMs={2600} onClose={() => setSaleAnim(null)} />}
+      {completedSaleId && !saleAnim && <ReceiptModal saleId={completedSaleId} onClose={closeReceiptAndRefreshProducts} lang={lang} />}
       {offlineReceipt && <OfflineReceiptModal receipt={offlineReceipt} onClose={closeReceiptAndRefreshProducts} />}
       {showCameraModal && <BarcodeCameraModal onDetected={handleCameraDetected} onClose={() => setShowCameraModal(false)} lang={lang} />}
     </div>
@@ -937,7 +1020,7 @@ function ItemDetails({ line, item, lang, perms, onQty, onRate, onRemove, onClose
         {perms.canSeeCost && <Field label={t("pos_cost_rate", lang)} value={p?.purchase_price != null && p.purchase_price > 0 ? `Rs ${Number(p.purchase_price).toLocaleString()}` : nishaan} />}
         {perms.canSeeCost && <Field label={t("pos_wholesale_rate", lang)} value={item.wholesale_price != null ? `Rs ${item.wholesale_price.toLocaleString()}` : nishaan} />}
         <Field label={t("pos_shop_stock", lang)} value={<span className="inline-flex items-center gap-1.5"><span className={`h-1.5 w-1.5 rounded-full ${stockTone(item.stock_quantity)}`} />{item.stock_quantity}</span>} />
-        <Field label={t("pos_wh_stock", lang)} value={item.warehouse_stock == null ? nishaan : item.warehouse_stock} />
+        <Field label={t("pos_wh_stock", lang)} value={item.warehouse_stock == null ? nishaan : <span>{formatGodamQty(item.warehouse_stock)}{item.warehouse_lines && item.warehouse_lines.length > 0 ? <span className="mt-0.5 block text-[10px] font-normal leading-snug">{item.warehouse_lines.map((line) => `${line.name} ${formatGodamQty(line.qty)}`).join(" · ")}</span> : null}</span>} />
         <Field label={t("pos_barcode", lang)} value={barcode ? <span className="font-mono text-xs">{barcode}</span> : <span className="text-xs text-surface-400">{t("pos_no_barcode", lang)}</span>} />
         <Field label={t("pos_batch", lang)} value={item.batch_number ? item.batch_number : (item.batch_count ?? 0) > 1 ? t("pos_batch_many", lang).replace("{n}", String(item.batch_count)) : nishaan} />
         <Field label={t("pos_expiry", lang)} value={expiry ? <span className="inline-flex items-center gap-1.5">{expiry}<ExpiryBadge date={item.expiry_date} /></span> : nishaan} />

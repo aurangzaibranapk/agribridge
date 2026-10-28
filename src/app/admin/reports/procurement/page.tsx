@@ -6,6 +6,7 @@ import { isDateRangeKey, getDateRange, type DateRangeKey } from "@/lib/utils/das
 import { Wheat, Wallet, Users, TrendingUp } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { grainRatePresentation } from "@/lib/grain/rate-unit";
 
 export const dynamic = "force-dynamic";
 
@@ -148,7 +149,7 @@ export default async function ProcurementReportPage({
                     <td className="py-2 pr-3 capitalize text-surface-600">{e.grain_type}</td>
                     <td className="py-2 pr-3 text-surface-600">{e.quality_grade ?? "-"}</td>
                     <td className="py-2 pr-3 text-right text-surface-700">{Number(e.weight_kg).toLocaleString()} kg</td>
-                    <td className="py-2 pr-3 text-right text-surface-600">Rs. {Number(e.rate_per_kg).toFixed(1)}</td>
+                    <td className="py-2 pr-3 text-right text-surface-600">Rs. {grainRatePresentation(Number(e.rate_per_kg), "per_maund").perMaund.toFixed(1)} / mand</td>
                     <td className="py-2 pr-3 text-right font-medium text-surface-900">Rs. {Number(e.total_amount).toLocaleString()}</td>
                   </tr>
                 ))}

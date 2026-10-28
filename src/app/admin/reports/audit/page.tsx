@@ -6,6 +6,7 @@ import { ReportLossForm } from "./report-loss-form";
 import { VerifyLossActions } from "./verify-loss-actions";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { batchIsSellable, todayPkt } from "@/lib/inventory/batch-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -79,8 +80,10 @@ export default async function AuditCenterPage() {
   const pendingLosses = losses.filter((l) => l.status === "pending");
   const totalApprovedLossValue = losses.filter((l) => l.status === "approved").reduce((s, l) => s + l.loss_value, 0);
 
-  const today = new Date();
-  const in30Days = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const todayPktDay = todayPkt();
+  const in30 = new Date(`${todayPktDay}T12:00:00+05:00`);
+  in30.setDate(in30.getDate() + 30);
+  const in30Days = todayPkt(in30);
   const { data: expiringBatches } = await supabase
     .from("stock_batches")
     .select("id, batch_number, expiry_date, remaining_quantity, unit_cost, warehouse_id, product_id, products(name), warehouses(name, shop_id, shops(name))")
@@ -93,7 +96,7 @@ export default async function AuditCenterPage() {
     const product = Array.isArray(b.products) ? b.products[0] : b.products;
     const warehouse = Array.isArray(b.warehouses) ? b.warehouses[0] : b.warehouses;
     const shop = warehouse ? (Array.isArray(warehouse.shops) ? warehouse.shops[0] : warehouse.shops) : null;
-    const isExpired = new Date(b.expiry_date) < today;
+    const isExpired = !batchIsSellable(b.expiry_date, todayPktDay);
     return {
       id: b.id,
       product_name: product?.name ?? "-",
@@ -110,7 +113,7 @@ export default async function AuditCenterPage() {
   const totalExpiredValue = expiredNow.reduce((s, r) => s + r.value, 0);
   const totalExpiringValue = expiringWarning.reduce((s, r) => s + r.value, 0);
 
-  const ninetyDaysAgo = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
+  const ninetyDaysAgo = new Date(new Date(`${todayPktDay}T12:00:00+05:00`).getTime() - 90 * 24 * 60 * 60 * 1000).toISOString();
   const { data: allInventory } = await supabase
     .from("inventory")
     .select("id, quantity_on_hand, product_id, warehouse_id, products(name, purchase_price), warehouses(name, shop_id, shops(name))")
@@ -280,6 +283,7 @@ export default async function AuditCenterPage() {
 
       <h3 className="mb-2 mt-6 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
         <Clock className="h-4 w-4 text-orange-500" />{t("ra_expiry_tracking", lang)}</h3>
+      <p className="mb-2 text-xs text-amber-800">Expire batch par stock bacha ho to us ki bikri band hai. Ye fehrist PKT tareekh se hai. Maal likhna / mitana yahan se nahi hota.</p>
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
           <thead>

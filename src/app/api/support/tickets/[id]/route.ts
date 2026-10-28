@@ -4,6 +4,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { notifyUser } from "@/lib/notifications";
 import { dispatchSupportTicket, postSupportAgentComment, configuredSupportAgents } from "@/lib/support/agent-dispatch";
 import { handbackTarget, resolvedRecipients, validateMemberChoice, type Department, type DeptMember } from "@/lib/support/departments";
+import { canForwardComplaint } from "@/lib/support/complaint-intake";
+import { enqueueCallerStageSms } from "@/lib/sms/stage-sms";
 
 async function loadDepartments(supportDb: any, orgId: string): Promise<{ depts: Department[]; members: DeptMember[] }> {
   const { data: depts } = await supportDb.from("support_departments").select("id,name,is_default_intake,return_to_department_id,notify_scope,is_active").eq("organization_id", orgId);
@@ -55,6 +57,89 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const agentKey = String(body.agentKey ?? "").trim().toLowerCase();
   const workflowAction = String(body.workflowAction ?? "").trim().toLowerCase();
   const isAssignee = ticket.assigned_to === user.id;
+  const departmentId = String(body.departmentId ?? "").trim();
+  const intake = String(ticket.intake_source ?? "");
+  if (intake === "staff" || intake === "call_center") {
+    const userDb = createClient() as any;
+    const grantRow = String(me.role) === "manager"
+      ? await supportDb.from("cc_assign_grants").select("active").eq("profile_id", user.id).maybeSingle()
+      : { data: null };
+    const canForward = canForwardComplaint({ role: String(me.role), managerGrant: Boolean(grantRow.data?.active) });
+    const stage = String(body.stage ?? "").trim().toLowerCase();
+    if (stage || (body.noteOnly && note)) {
+      const moved = await userDb.rpc("fn_complaint_set_stage", {
+        p_ticket: ticket.id,
+        p_stage: stage || null,
+        p_note: note || null,
+      });
+      if (moved.error) {
+        const missing = /fn_complaint_set_stage|schema cache|does not exist|Could not find/i.test(moved.error.message);
+        return NextResponse.json({
+          error: missing ? "Complaint stages migration 627 ke baad chalte hain." : moved.error.message,
+        }, { status: missing ? 503 : 400 });
+      }
+      if (moved.data?.changed && ticket.reporter_id && ticket.reporter_id !== user.id) {
+        await notifyUser(ticket.reporter_id, "Shikayat ka stage", `${ticket.title}: ${stage}`, "/admin/my-work");
+      }
+      if (moved.data?.changed && intake === "call_center" && stage) {
+        try { await enqueueCallerStageSms(supportDb, ticket, stage); } catch { /* SMS queue rehti hai */ }
+      }
+      return NextResponse.json({ success: true, message: moved.data?.changed ? "Stage update ho gaya." : "Note lag gaya." });
+    }
+    const routed = String(body.departmentKey ?? body.routed ?? "").trim();
+    const wantAssignee = assigneeId || (body.assignToMe ? user.id : "");
+    if (wantAssignee || agentKey || departmentId || routed) {
+      if (!canForward) {
+        return NextResponse.json({ error: "Sirf Admin assign karta hai." }, { status: 403 });
+      }
+      const forwarded = await userDb.rpc("fn_complaint_forward", {
+        p_ticket: ticket.id,
+        p_assignee: wantAssignee || null,
+        p_routed: routed || null,
+        p_agent_key: agentKey || null,
+        p_support_department: departmentId || null,
+      });
+      if (forwarded.error) {
+        const missing = /fn_complaint_forward|schema cache|does not exist|Could not find/i.test(forwarded.error.message);
+        return NextResponse.json({
+          error: missing ? "Complaint assign migration 626 ke baad chalta hai." : forwarded.error.message,
+        }, { status: missing ? 503 : 400 });
+      }
+      if (agentKey) {
+        const callbackUrl = new URL(`/api/support/tickets/${ticket.id}/agent-update`, req.url).toString();
+        const dispatched = await dispatchSupportTicket(agentKey, {
+          id: ticket.id, ticketNo: ticket.ticket_no, createdAt: ticket.created_at,
+          title: ticket.title, description: ticket.description, priority: ticket.priority,
+          pageUrl: ticket.page_url, deviceInfo: ticket.device_info, screenshotUrl: null,
+        }, callbackUrl);
+        if (!dispatched.ok) return NextResponse.json({ error: dispatched.error }, { status: 502 });
+        await supportDb.from("support_tickets").update({
+          external_task_id: dispatched.externalTaskId ?? null,
+          assignment_status: dispatched.assignmentStatus ?? "analysis_requested",
+          ...(dispatched.ticketStatus ? { status: dispatched.ticketStatus } : {}),
+        }).eq("id", ticket.id);
+        if (dispatched.message) {
+          await supportDb.from("support_ticket_comments").insert({ ticket_id: ticket.id, author_id: user.id, body: dispatched.message.slice(0, 6000) });
+        }
+
+      }
+      if (ticket.reporter_id && ticket.reporter_id !== user.id) {
+        const label = forwarded.data?.label ? String(forwarded.data.label) : "Complaint aage bhej di.";
+        await notifyUser(ticket.reporter_id, "Shikayat aage bheji gayi", `${ticket.title}: ${label}`, "/admin/my-work");
+      }
+      return NextResponse.json({ success: true, message: forwarded.data?.assignee ? `${forwarded.data.assignee} ko complaint mil gayi.` : "Complaint aage bhej di." });
+    }
+    if (status === "resolved" && ticket.reporter_id === user.id) {
+      return NextResponse.json({ error: "Jis ne shikayat banayi, wo khud band nahi kar sakta." }, { status: 403 });
+    }
+    if (!status) return NextResponse.json({ error: "Kuch badalne ko nahi." }, { status: 400 });
+    const updated = await userDb.rpc("fn_complaint_set_status", { p_ticket: ticket.id, p_status: status, p_note: note });
+    if (updated.error) return NextResponse.json({ error: updated.error.message }, { status: 400 });
+    if (ticket.reporter_id && ticket.reporter_id !== user.id) {
+      await notifyUser(ticket.reporter_id, "Shikayat ka stage", `${ticket.title}: ${status}`, "/admin/my-work");
+    }
+    return NextResponse.json({ success: true, message: "Status update ho gaya." });
+  }
   if (!canManage && !(ticket.reporter_id === user.id && status === "reopened") && !(isAssignee && workflowAction === "resolve_handback")) return NextResponse.json({ error: "Ijazat nahi hai." }, { status: 403 });
 
   // 539: Resolve karke wapas bhejna (Admin ya reporter ki team) -- status resolved_pending_verify.
@@ -86,7 +171,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   // 539: Department badalna (aur chaho to usi department ka member).
-  const departmentId = String(body.departmentId ?? "").trim();
   if (canManage && departmentId) {
     const { depts, members } = await loadDepartments(supportDb, me.organization_id);
     const dept = depts.find((d) => d.id === departmentId && d.is_active);

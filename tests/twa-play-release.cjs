@@ -69,8 +69,10 @@ ok("teeno zubaanon ka matan mukammal, khata rakhne ki baat saaf", () => {
   const s = read("src/lib/account-deletion-content.ts");
   for (const l of ["en:", "rm:", "ur:"]) assert(s.includes(`  ${l} {`), `${l} nahi`);
   assert(/Financial records/.test(s) && /Maali record/.test(s) && /مالی ریکارڈ/.test(s), "khata rakhne ki baat");
-  assert(/DELETION_FALLBACK_PHONE = "\+92 333 1116727"/.test(s), "wahi number jo footer mein");
-  assert(read("src/components/site/public-footer.tsx").includes('FALLBACK_PHONE = "+92 333 1116727"'), "footer ka number badla -- yahan bhi badlein");
+  // Footer ka number SHOP_PHONE_E164 (website-setting.ts) se aata hai -- wahi yahan bhi ho.
+  const shop = read("src/lib/cms/website-setting.ts").match(/SHOP_PHONE_E164 = "([^"]+)"/)[1];
+  assert(s.includes(`DELETION_FALLBACK_PHONE = "${shop}"`), "wahi number jo footer mein");
+  assert(read("src/components/site/public-footer.tsx").includes("FALLBACK_PHONE = SHOP_PHONE_E164"), "footer ka number badla -- yahan bhi badlein");
   assert(/DELETION_FALLBACK_EMAIL = "info@alranatraders\.pk"/.test(s));
 });
 
@@ -81,7 +83,7 @@ ok("whatsappDigits / deletionOrder ki mantiq", () => {
   const whatsappDigits = new Function(`${fn}; return whatsappDigits;`)();
   assert.strictEqual(whatsappDigits("+92 333 1116727"), "923331116727");
   assert.strictEqual(whatsappDigits("0333-1116727"), "923331116727");
-  assert.strictEqual(whatsappDigits(""), "923331116727");
+  assert.strictEqual(whatsappDigits(""), "923126513294"); // khali -> SHOP_PHONE_E164 (footer)
 });
 
 console.log(`\n${passed} passed`);

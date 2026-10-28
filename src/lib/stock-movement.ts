@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
 import { ACC } from "@/lib/ledger/rules";
-import { stockOutPlan } from "@/lib/inventory/stock-math";
+import { expiredConsumeAllowed } from "@/lib/inventory/atomic-batch";
 
 /**
  * Stock ki harkat ka ek hi markazi tareeqa — FEFO se batches nikalna
@@ -53,50 +54,23 @@ async function deductStock(
   movementType: MovementType,
   referenceType: string,
   referenceId: string,
-  userId: string | null
+  userId: string | null,
+  allowExpired = false
 ): Promise<{ cost: number; error: string | null }> {
-  const supabase = createClient();
-  const { data: batches } = await supabase
-    .from("stock_batches")
-    .select("id, remaining_quantity, unit_cost")
-    .eq("warehouse_id", warehouseId)
-    .eq("product_id", productId)
-    .gt("remaining_quantity", 0)
-    .order("expiry_date", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: true });
-  const { data: inv } = await supabase
-    .from("inventory")
-    .select("id, quantity_on_hand")
-    .eq("warehouse_id", warehouseId)
-    .eq("product_id", productId)
-    .maybeSingle();
-  const plan = stockOutPlan(
-    qty,
-    Number(inv?.quantity_on_hand ?? 0),
-    (batches ?? []).map((batch) => ({ remaining: Number(batch.remaining_quantity), unitCost: Number(batch.unit_cost ?? 0) }))
-  );
-  if (!plan.ok) return { cost: 0, error: plan.error };
-  if (!inv) return { cost: 0, error: "Stock record nahi mila." };
-
-  let remaining = qty;
-  for (const batch of batches ?? []) {
-    if (remaining <= 0) break;
-    const take = Math.min(remaining, Number(batch.remaining_quantity));
-    const { error: batchError } = await supabase.from("stock_batches").update({ remaining_quantity: Number(batch.remaining_quantity) - take }).eq("id", batch.id);
-    if (batchError) return { cost: 0, error: batchError.message };
-    remaining -= take;
-  }
-
-  const { error: movementError } = await supabase.from("stock_movements").insert({
-    inventory_id: inv.id,
-    movement_type: movementType,
-    quantity: qty,
-    reference_type: referenceType,
-    reference_id: referenceId,
-    created_by: userId,
+  const service = createServiceClient();
+  const expired = allowExpired && expiredConsumeAllowed(movementType);
+  const { data, error } = await (service as any).rpc("fn_record_stock_out", {
+    p_warehouse: warehouseId,
+    p_product: productId,
+    p_qty: qty,
+    p_movement: movementType,
+    p_reference_type: referenceType,
+    p_reference_id: referenceId,
+    p_actor: userId,
+    p_allow_expired: expired,
   });
-  if (movementError) return { cost: 0, error: movementError.message };
-  return { cost: plan.cost, error: null };
+  if (error) return { cost: 0, error: error.message };
+  return { cost: Number(data?.cost ?? 0), error: null };
 }
 
 async function addStock(
@@ -172,7 +146,17 @@ export async function moveStock(opts: StockMoveOptions): Promise<{ error: string
 
   let cost = 0;
   if (fromWarehouseId) {
-    const moved = await deductStock(fromWarehouseId, productId, qty, opts.outType ?? "transfer_out", referenceType, referenceId, userId);
+    const outType = opts.outType ?? "transfer_out";
+    const moved = await deductStock(
+      fromWarehouseId,
+      productId,
+      qty,
+      outType,
+      referenceType,
+      referenceId,
+      userId,
+      expiredConsumeAllowed(outType)
+    );
     if (moved.error) return { error: moved.error, cost: 0 };
     cost = moved.cost;
     // Jab maal company se bahar jaye (jaise agri dispatch), tab ledger mein

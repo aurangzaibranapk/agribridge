@@ -26,6 +26,10 @@ import { enqueue, allActions } from "@/lib/offline/queue";
 import { registerSender, syncQueue } from "@/lib/offline/sync";
 import { createClient } from "@/lib/supabase/client";
 import { defaultAgainstAccount, partyAccountProblem } from "@/lib/finance/recovery-party-accounts";
+import { focusPageIndex } from "@/lib/recovery/promise-parties";
+import { GlassStyles } from "@/components/glass/glass-styles";
+import { PaymentLiveSummary } from "@/components/glass/payment-live-summary";
+import { queueReceipt, ReceiptHost } from "@/components/glass/receipt-print";
 
 export type RecoveryParty = {
   type: string;
@@ -145,6 +149,7 @@ export function RecoveryClient({
   financeAccounts,
   ledgerAccounts,
   paymentDestinations,
+  initialFocusKey = null,
 }: {
   parties: RecoveryParty[];
   templates: ReminderTemplate[];
@@ -161,8 +166,10 @@ export function RecoveryClient({
   financeAccounts: FinanceAccountOption[];
   ledgerAccounts: LedgerAccountOption[];
   paymentDestinations: PaymentDestinationOption[];
+  initialFocusKey?: string | null;
 }) {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const opened = focusPageIndex(parties, initialFocusKey, PAGE_SIZE);
+  const [selected, setSelected] = useState<Set<string>>(() => (opened.key ? new Set([opened.key]) : new Set()));
   const [offlinePending, setOfflinePending] = useState(0);
 
   useEffect(() => {
@@ -195,7 +202,7 @@ export function RecoveryClient({
   const [draftType, setDraftType] = useState<"all" | string>("all");
   const [draftDueFrom, setDraftDueFrom] = useState("");
   const [draftDueTo, setDraftDueTo] = useState("");
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(opened.page);
   const [mode, setMode] = useState<"schedule" | "promise" | "money" | null>(null);
   const [moneyDirection, setMoneyDirection] = useState<"receive" | "pay">("receive");
   const [busy, setBusy] = useState(false);
@@ -207,7 +214,7 @@ export function RecoveryClient({
   const [moneyError, setMoneyError] = useState("");
   const [moneyProgress, setMoneyProgress] = useState("");
   const [channel, setChannel] = useState<(typeof CHANNELS)[number]["key"]>("whatsapp");
-  const [previewKey, setPreviewKey] = useState<string | null>(null);
+  const [previewKey, setPreviewKey] = useState<string | null>(opened.key);
   const [summaryView, setSummaryView] = useState<"receivable" | "due_today" | "overdue" | "collected">("receivable");
   const recordsRef = useRef<HTMLDivElement>(null);
   const collectedRef = useRef<HTMLDivElement>(null);
@@ -375,6 +382,7 @@ export function RecoveryClient({
 
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <ReceiptHost />
       {offlinePending > 0 && <div className="fixed bottom-4 left-4 z-30 rounded-lg bg-amber-600 px-3 py-2 text-xs font-semibold text-white shadow-lg">{offlinePending} recovery request sync ka intezar kar rahi hai</div>}
       <div className="flex min-h-0 flex-col gap-4">
         {/* ---- Stat cards ---- */}
@@ -721,7 +729,7 @@ export function RecoveryClient({
             <div className="mb-3 flex items-center gap-2 border-b border-surface-200 pb-3 dark:border-surface-700">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-bold text-white">AR</span>
               <div>
-                <p className="text-sm font-semibold text-surface-900 dark:text-white">AL RANA TRADERS</p>
+                <p className="text-sm font-semibold text-surface-900 dark:text-white">AgriBridge</p>
                 <p className="text-[11px] text-surface-500">Quality Inputs | Stronger Yields</p>
               </div>
             </div>
@@ -837,6 +845,10 @@ export function RecoveryClient({
                 pendingMoneyActionId.current = null;
                 setNotice(`${moneyDirection === "receive" ? "Payment receive" : "Payment send"} ho gayi. Entry: ${json.entryNumber ?? json.movementNumber ?? "saved"}`);
                 setMode(null);
+                queueReceipt({ kind: "payment", no: String(json.entryNumber ?? json.movementNumber ?? "—"), date: String(f.get("paymentDate") ?? ""),
+                  from: moneyDirection === "pay" ? financeAccounts.find((a) => a.id === f.get("financeAccountId"))?.name : String(f.get("partyName") ?? ""),
+                  to: moneyDirection === "pay" ? String(f.get("partyName") ?? "") : financeAccounts.find((a) => a.id === f.get("financeAccountId"))?.name,
+                  amount: Number(f.get("amount") ?? 0), lines: [["Mad", String(f.get("againstAccountCode") ?? "")], ["Purpose", String(f.get("purpose") ?? "")]] });
                 window.location.reload();
               } catch (error) {
                 const message = error instanceof DOMException && error.name === "AbortError"
@@ -848,7 +860,7 @@ export function RecoveryClient({
                 setMoneyProgress("");
               }
             }}
-            className="max-h-[92vh] w-full max-w-2xl space-y-3 overflow-y-auto rounded-card bg-white p-5 shadow-xl dark:bg-surface-900"
+            className="gl-panel gl-bg max-h-[92vh] w-full max-w-3xl space-y-3 overflow-y-auto rounded-card bg-white/80 p-5 shadow-xl dark:bg-surface-900/80"
           >
             <div className="flex items-center justify-between">
               <div><h2 className="text-lg font-semibold">{moneyDirection === "receive" ? "Payment Receive Karein" : "Payment Send Karein"}</h2><p className="text-xs text-surface-500">Receive = Credit · Pay = Debit · Balance har entry ke baad</p></div>
@@ -856,6 +868,8 @@ export function RecoveryClient({
                 <X className="h-5 w-5 text-surface-400 hover:text-surface-700" />
               </button>
             </div>
+            <GlassStyles />
+            <p className="flex items-center gap-2 text-sm font-bold"><span className="grid h-6 w-6 place-items-center rounded-lg bg-emerald-500/15 text-xs text-emerald-700 dark:text-emerald-300">1</span>Kis ko aur kitna <span className="text-[10.5px] font-medium uppercase text-surface-400">Party · amount · date</span></p>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">Kis party ka khata?<select required value={moneyPartyKey} onChange={(e) => { setMoneyPartyKey(e.target.value); setDestinationId(""); }} className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-800"><option value="">— list se chunein —</option>{moneyParties.map((p) => <option key={`${p.type}:${p.id}`} value={`${p.type}:${p.id}`}>{p.name} — {p.type}{p.phone ? ` (${p.phone})` : ""}</option>)}<option value="other:">Other / list mein nahi</option></select></label>
               {moneyPartyKey === "other:" && <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">Party ka naam<input required name="otherPartyName" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-800" /></label>}
@@ -888,6 +902,7 @@ export function RecoveryClient({
                 />
               </label>
             )}
+            <p className="flex items-center gap-2 pt-1 text-sm font-bold"><span className="grid h-6 w-6 place-items-center rounded-lg bg-emerald-500/15 text-xs text-emerald-700 dark:text-emerald-300">2</span>Kahan se aur kis khate mein <span className="text-[10.5px] font-medium uppercase text-surface-400">Source · ledger</span></p>
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">
                 {moneyDirection === "receive" ? "Paisa kis account mein aaya?" : "Paisa kis account se gaya?"}
@@ -908,6 +923,7 @@ export function RecoveryClient({
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">Kis mad / purpose?<input required name="purpose" placeholder="Bill, khaad, mazdoori, machinery..." className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-800" /></label>
               <label className="block text-sm font-medium text-surface-700 dark:text-surface-300">Bill / reference (ikhtiyari)<input name="billReference" placeholder="Bill no. ya reference" className="mt-1 w-full rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700 dark:bg-surface-800" /></label>
             </div>
+            <p className="flex items-center gap-2 pt-1 text-sm font-bold"><span className="grid h-6 w-6 place-items-center rounded-lg bg-emerald-500/15 text-xs text-emerald-700 dark:text-emerald-300">3</span>Account aur saboot <span className="text-[10.5px] font-medium uppercase text-surface-400">Recipient · proof · notes</span></p>
             {moneyDirection === "pay" && (
               <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/20">
                 <p className="text-sm font-semibold">Paisa kis bank / wallet account mein gaya?</p>
@@ -944,6 +960,7 @@ export function RecoveryClient({
                 className="mt-1 w-full rounded-lg border border-surface-200 bg-white p-2 text-sm dark:border-surface-700 dark:bg-surface-800"
               />
             </label>
+            <PaymentLiveSummary direction={moneyDirection === "receive" ? "receive" : "pay"} accounts={financeAccounts} />
             <div className="flex gap-2 pt-1">
               <button type="button" onClick={() => setMode(null)} className="flex-1 rounded-lg border border-surface-200 p-2 text-sm dark:border-surface-700">
                 Wapas

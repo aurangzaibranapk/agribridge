@@ -1,0 +1,4 @@
+-- 624 rollback
+-- Postgres enum se value nahi nikalta jab tak wo kahin istemal ho.
+-- 'call_center_agent' yahin rehti hai. 625 ka rollback tables hata deta hai.
+-- Koi data delete nahi.

@@ -6,6 +6,7 @@ import { PnlCharts } from "./pnl-charts";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { shopTrialBalance } from "@/lib/ledger/statements";
+import { PnlSection } from "@/components/finance-dash/sections";
 
 export const dynamic = "force-dynamic";
 
@@ -434,6 +435,7 @@ export default async function PnlPage({
     <div>
       <PageHeader title={t("rp_title", lang)} description={t("rp_subtitle", lang)} actions={<Link href="/admin/reports/profit-loss" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-700">Naya P&amp;L Dashboard / New P&amp;L Dashboard</Link>} />
       <DateRangeForm from={from} to={to} branchOptions={(branches ?? []).map((b) => ({ id: b.id, name: b.name }))} />
+      <div className="mt-4"><PnlSection from={params.from} to={params.to} /></div>
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">

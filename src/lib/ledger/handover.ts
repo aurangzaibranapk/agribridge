@@ -20,6 +20,26 @@ import { createServiceClient } from "@/lib/supabase/service";
 export const TRANSIT_ALERT_DAYS = 2;
 export const REASON_MIN = 5;
 
+/**
+ * Finance ke naam (shared "Finance Team" ya koi finance login) bheja
+ * hua cash koi bhi Finance / Manager / Admin / Owner wasool kar sakta
+ * hai — jo bande ne haath mein liya, us ka naam `received_by` par lagta
+ * hai. Bhejne wala kabhi wasool nahi likh sakta, chahe us ka role ye ho.
+ */
+export const FINANCE_DESK_RECEIVE_ROLES = ["finance", "manager", "admin", "owner", "super_admin"] as const;
+
+export function canRecordHandoverReceipt(input: {
+  userId: string;
+  userRole: string;
+  fromProfileId: string | null;
+  toProfileId: string | null;
+  toRole: string | null;
+}): boolean {
+  if (!input.userId || input.fromProfileId === input.userId) return false;
+  if (input.toProfileId && input.toProfileId === input.userId) return true;
+  return input.toRole === "finance" && (FINANCE_DESK_RECEIVE_ROLES as readonly string[]).includes(input.userRole);
+}
+
 function round2(v: number): number {
   return Math.round((v + Number.EPSILON) * 100) / 100;
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { GrainPaymentHistory, type GrainPaymentHistoryRow } from "@/components/grain/grain-payment-history";
+import { grainRatePresentation, normalizeGrainRateUnit } from "@/lib/grain/rate-unit";
 
 const MAND_KG = 40;
 const GRAIN_LABELS: Record<string, string> = { wheat: "Wheat (Gandum)", rice: "Rice (Munji/Chawal)", maize: "Maize (Makai)" };
@@ -18,6 +19,7 @@ export interface SaleBill {
   gross_weight_kg: number | null;
   cut_kg: number | null;
   rate_per_kg: number;
+  rate_unit?: string | null;
   total_amount: number;
   total_cogs: number;
   profit: number;
@@ -37,7 +39,7 @@ const mand = (n: number) => `${(n / MAND_KG).toLocaleString("en-PK", { maximumFr
 export function GrainSaleBillClient({ bill, payments, isAdmin }: { bill: SaleBill; payments: GrainPaymentHistoryRow[]; isAdmin: boolean }) {
   const lang = useLang();
   const balance = bill.total_amount - bill.amount_received;
-  const ratePerMand = bill.rate_per_kg * MAND_KG;
+  const rateView = grainRatePresentation(bill.rate_per_kg, normalizeGrainRateUnit(bill.rate_unit));
   const deal = bill.deal ?? null;
   const dealCut = deal ? Math.round(deal.gross_kg * deal.cut_per_60kg / 60 * 1000) / 1000 : 0;
   const dealNet = deal ? deal.gross_kg - dealCut : 0;
@@ -101,7 +103,8 @@ export function GrainSaleBillClient({ bill, payments, isAdmin }: { bill: SaleBil
             {bill.gross_weight_kg != null && <tr className="border-b border-surface-100"><td className="py-1.5 text-surface-600">Kul wazan (Gross)</td><td className="py-1.5 text-right">{kg(bill.gross_weight_kg)} · {mand(bill.gross_weight_kg)}</td></tr>}
             {bill.cut_kg != null && <tr className="border-b border-surface-100"><td className="py-1.5 text-surface-600">Katoti</td><td className="py-1.5 text-right text-red-600">-{kg(bill.cut_kg)} · {mand(bill.cut_kg)}</td></tr>}
             <tr className="border-b border-surface-100"><td className="py-1.5 font-medium text-surface-800">Saaf wazan (bill ka)</td><td className="py-1.5 text-right font-medium">{kg(bill.quantity_kg)} · {mand(bill.quantity_kg)}</td></tr>
-            <tr className="border-b border-surface-100"><td className="py-1.5 text-surface-600">Rate</td><td className="py-1.5 text-right">{rs(ratePerMand)} / mand · Rs {bill.rate_per_kg.toLocaleString("en-PK", { maximumFractionDigits: 3 })} / kg</td></tr>
+            <tr className="border-b border-surface-100"><td className="py-1.5 text-surface-600">Rate</td><td className="py-1.5 text-right">{rs(rateView.perMaund)} / mand · Rs {rateView.perKg.toLocaleString("en-PK", { maximumFractionDigits: 3 })} / kg ({rateView.label})</td></tr>
+            {rateView.legacy && <tr><td colSpan={2} className="py-1 text-xs text-amber-800">Purani darj: kul raqam record jaisa hai. Rate ko fi mand dikhaya gaya hai. Paisa is bill par tabdeel nahi hua.</td></tr>}
           </tbody>
         </table>
         )}
@@ -118,7 +121,7 @@ export function GrainSaleBillClient({ bill, payments, isAdmin }: { bill: SaleBil
           <div className="mt-4 grid grid-cols-2 gap-3 rounded-lg bg-surface-50 p-3 text-xs text-surface-600 print:hidden">
             <span><b>Lagat (cost):</b> {rs(bill.total_cogs)}</span>
             <span className="text-green-700"><b>Munafa:</b> {rs(bill.profit)}</span>
-            {deal && <span className="col-span-2"><b>System note:</b> stock/ledger mein {kg(bill.quantity_kg)} ({mand(bill.quantity_kg)}) @ Rs {bill.rate_per_kg.toLocaleString("en-PK", { maximumFractionDigits: 3 })}/kg darj hai. Deal ka saaf wazan {kg(dealNet)}; farq {kg(dealNet - bill.quantity_kg)} katoti ka munafa.</span>}
+            {deal && <span className="col-span-2"><b>System note:</b> stock/ledger mein {kg(bill.quantity_kg)} ({mand(bill.quantity_kg)}) @ Rs {rateView.perMaund.toLocaleString("en-PK")} / mand darj hai. Deal ka saaf wazan {kg(dealNet)}; farq {kg(dealNet - bill.quantity_kg)} katoti ka munafa.</span>}
           </div>
         )}
 
@@ -136,7 +139,7 @@ export function GrainSaleBillClient({ bill, payments, isAdmin }: { bill: SaleBil
 
         <div className="mt-12 grid grid-cols-2 gap-10 text-center text-xs text-surface-500">
           <div className="border-t border-surface-300 pt-1">Dastakhat Khareedar</div>
-          <div className="border-t border-surface-300 pt-1">Dastakhat / Mohar Al Rana Traders</div>
+          <div className="border-t border-surface-300 pt-1">Dastakhat / Mohar AgriBridge</div>
         </div>
 
         <p className="mt-8 text-center text-[10px] text-surface-300">{t("gb_computer_bill", lang)}</p>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { t, type Lang, type TranslationKey } from "@/lib/i18n/translations";
 
 const OTHERS: Record<Lang, Lang[]> = { en: ["rm", "ur"], rm: ["en", "ur"], ur: ["en", "rm"] };
@@ -16,6 +17,7 @@ export function L3({ k, lang, className = "" }: { k: TranslationKey; lang: Lang;
 export function PageHead({ title, sub }: { title: React.ReactNode; sub: React.ReactNode }) {
   return (
     <div className="mb-4 fit:mb-0">
+      <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-800 dark:text-emerald-300">{BRAND_NAME} · {BRAND_TAGLINE}</p>
       <h1 className="text-2xl font-extrabold tracking-tight text-surface-900 dark:text-white fit:text-xl">{title}</h1>
       <p className="mt-1 text-[13px] text-surface-500 dark:text-slate-400 fit:mt-0">{sub}</p>
     </div>
@@ -23,10 +25,12 @@ export function PageHead({ title, sub }: { title: React.ReactNode; sub: React.Re
 }
 export function CHero({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
   return (
-    <section className="relative mb-4 overflow-hidden rounded-[20px] bg-gradient-to-r from-blue-700 via-violet-600 to-pink-600 p-6 text-white pf:mb-0 pf:px-5 pf:py-3.5 shadow-[0_14px_34px_rgba(76,29,149,.25)] dark:from-blue-900 dark:via-violet-800 dark:to-pink-800">
-      <span className="pointer-events-none absolute -end-16 -top-16 h-60 w-60 rounded-full bg-white/10" />
-      <div className="relative flex flex-wrap items-center justify-between gap-4">
-        <div>{children}</div>
+    <section className="gl-card relative mb-4 p-6 text-white pf:mb-0 pf:px-5 pf:py-3.5">
+      <div className="relative z-[1] flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/75">{BRAND_NAME} · {BRAND_TAGLINE}</p>
+          {children}
+        </div>
         <div className="flex flex-wrap gap-2">{right}</div>
       </div>
     </section>
@@ -34,7 +38,7 @@ export function CHero({ children, right }: { children: React.ReactNode; right?: 
 }
 export function HBtn({ href, children, primary }: { href: string; children: React.ReactNode; primary?: boolean }) {
   return (
-    <Link href={href} className={primary ? "rounded-xl bg-white px-4 py-2.5 text-[12.5px] font-bold text-indigo-950 shadow hover:bg-indigo-50" : "rounded-xl border border-white/35 bg-white/15 px-4 py-2.5 text-[12.5px] font-bold text-white hover:bg-white/25"}>
+    <Link href={href} className={primary ? "rounded-xl bg-white/95 px-4 py-2.5 text-[12.5px] font-bold text-emerald-950 shadow hover:bg-white" : "rounded-xl border border-white/35 bg-white/15 px-4 py-2.5 text-[12.5px] font-bold text-white backdrop-blur hover:bg-white/25"}>
       {children}
     </Link>
   );
@@ -43,17 +47,17 @@ const BAR: Record<string, string> = { blue: "bg-blue-600", green: "bg-emerald-60
 const ICBG: Record<string, string> = { blue: "bg-blue-100 dark:bg-blue-500/20", green: "bg-emerald-100 dark:bg-emerald-500/20", amber: "bg-amber-100 dark:bg-amber-500/20", pink: "bg-pink-100 dark:bg-pink-500/20", violet: "bg-violet-100 dark:bg-violet-500/20", rose: "bg-rose-100 dark:bg-rose-500/20", slate: "bg-slate-100 dark:bg-slate-500/20" };
 export function CKpi({ tone, icon, label, value, sub }: { tone: string; icon: string; label: React.ReactNode; value: string; sub: string }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-surface-200 bg-white p-4 shadow-sm dark:border-[#1e3160] dark:bg-[#101f42] fit:py-2.5">
-      <span className={`absolute inset-y-0 start-0 w-1 ${BAR[tone] ?? BAR.blue}`} />
+    <div className="gl-panel relative overflow-hidden p-4 fit:py-2.5">
+      <span className={`absolute inset-y-3 start-2 w-1 rounded-full ${BAR[tone] ?? BAR.blue}`} />
       <span className={`float-end grid h-9 w-9 place-items-center rounded-xl text-lg ${ICBG[tone] ?? ICBG.blue}`}>{icon}</span>
-      <div className="text-[11.5px] font-semibold text-surface-500 dark:text-slate-400">{label}</div>
-      <div className="mt-1.5 text-[22px] font-extrabold text-surface-900 dark:text-white fit:mt-0.5 fit:text-xl"><span dir="ltr" className="ltr-iso">{value}</span></div>
-      <div className="mt-0.5 truncate text-[11px] text-surface-500 dark:text-slate-400" title={sub}>{sub}</div>
+      <div className="ps-2 text-[11.5px] font-semibold text-surface-500 dark:text-slate-400">{label}</div>
+      <div className="mt-1.5 ps-2 text-[22px] font-extrabold text-surface-900 dark:text-white fit:mt-0.5 fit:text-xl"><span dir="ltr" className="ltr-iso">{value}</span></div>
+      <div className="mt-0.5 truncate ps-2 text-[11px] text-surface-500 dark:text-slate-400" title={sub}>{sub}</div>
     </div>
   );
 }
 export function Panel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <div className={`rounded-2xl border border-surface-200 bg-white p-4 shadow-sm sm:p-5 dark:border-[#1e3160] dark:bg-[#101f42] ${className}`}>{children}</div>;
+  return <div className={`gl-panel p-4 sm:p-5 ${className}`}>{children}</div>;
 }
 export function PanelHead({ title, right }: { title: React.ReactNode; right?: React.ReactNode }) {
   return <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><b className="text-[14px] text-surface-900 dark:text-white">{title}</b>{right}</div>;
@@ -75,10 +79,10 @@ export const STATUS_TONE: Record<string, string> = {
   returned: "violet", partially_returned: "violet", none: "blue", active: "green", suspended: "rose",
 };
 export function Lock({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-xl border border-dashed border-surface-200 bg-surface-50 px-3 py-2.5 text-[11.5px] text-surface-500 dark:border-[#1e3160] dark:bg-[#0d1a3a] dark:text-slate-400">🔐 {children}</div>;
+  return <div className="gl-sec px-3 py-2.5 text-[11.5px] text-surface-500 dark:text-slate-400">🔐 {children}</div>;
 }
 export function Code({ children }: { children: React.ReactNode }) {
-  return <span className="rounded-md bg-indigo-50 px-1.5 py-0.5 font-mono text-[11px] text-indigo-900 dark:bg-[#1a2c58] dark:text-indigo-100">{children}</span>;
+  return <span className="rounded-md border border-emerald-900/10 bg-emerald-50/80 px-1.5 py-0.5 font-mono text-[11px] text-emerald-950 backdrop-blur dark:border-white/10 dark:bg-white/10 dark:text-emerald-100">{children}</span>;
 }
 export function Steps({ labels, done }: { labels: string[]; done: number }) {
   return (
@@ -107,17 +111,17 @@ export function BuyPayChart({ data, height = 150 }: { data: { month: string; buy
   );
 }
 export function Row({ children }: { children: React.ReactNode }) {
-  return <div className="flex items-center justify-between gap-3 border-b border-dashed border-surface-200 py-2.5 text-[13px] last:border-0 dark:border-[#1e3160]">{children}</div>;
+  return <div className="flex items-center justify-between gap-3 border-b border-dashed border-black/10 py-2.5 text-[13px] last:border-0 dark:border-white/10">{children}</div>;
 }
 export function Sub({ children }: { children: React.ReactNode }) {
   return <div className="text-[10.5px] text-surface-500 dark:text-slate-400">{children}</div>;
 }
 export function Notice({ tone, children }: { tone: "ok" | "err"; children: React.ReactNode }) {
-  return <div role={tone === "err" ? "alert" : "status"} className={`mb-4 rounded-xl px-4 py-2.5 text-sm font-semibold ${tone === "ok" ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200" : "bg-rose-50 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200"}`}>{children}</div>;
+  return <div role={tone === "err" ? "alert" : "status"} className={`gl-sec mb-4 px-4 py-2.5 text-sm font-semibold ${tone === "ok" ? "text-emerald-800 dark:text-emerald-200" : "text-rose-800 dark:text-rose-200"}`}>{children}</div>;
 }
-export const inputCls = "w-full rounded-xl border border-surface-200 bg-surface-50 px-3 py-2 text-[13px] font-semibold text-surface-900 dark:border-[#1e3160] dark:bg-[#0d1a3a] dark:text-white";
-export const btnPrimary = "rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-[12.5px] font-bold text-white shadow hover:opacity-95 disabled:opacity-50";
-export const btnGhost = "rounded-xl border border-surface-200 bg-white px-3.5 py-2 text-[12px] font-bold text-surface-800 hover:bg-surface-50 dark:border-[#1e3160] dark:bg-[#101f42] dark:text-slate-100";
+export const inputCls = "w-full rounded-xl border border-white/70 bg-white/55 px-3 py-2 text-[13px] font-semibold text-surface-900 shadow-[inset_0_1px_0_rgba(255,255,255,.8)] backdrop-blur dark:border-white/10 dark:bg-white/5 dark:text-white dark:shadow-none";
+export const btnPrimary = "rounded-xl bg-gradient-to-r from-emerald-700 to-[#16356e] px-4 py-2 text-[12.5px] font-bold text-white shadow hover:opacity-95 disabled:opacity-50";
+export const btnGhost = "gl-act px-3.5 py-2 text-[12px] font-bold text-surface-800 dark:text-slate-100";
 export function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return <label className="mb-3 block"><span className="mb-1 block text-[11px] font-semibold text-surface-500 dark:text-slate-400">{label}</span>{children}</label>;
 }

@@ -15,7 +15,7 @@ import { EcosystemFlow } from "@/components/site/ecosystem-flow";
 import { WebsiteCta } from "@/components/site/website-cta";
 
 export const metadata: Metadata = {
-  title: "AgriBridge ERP | Al Rana Traders",
+  title: "AgriBridge ERP | AgriBridge",
   description:
     "Kharid se bikri tak, stock se ledger tak — ek hi nizam. Agriculture ke karobar ke liye bana hua ERP.",
 };

@@ -1,13 +1,27 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requireAction } from "@/lib/access/guard";
+import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 
 export interface ActionState {
   error?: string;
   success?: boolean;
 }
 
+/** Feature ijazat ke sath role ki rok. Khali feature rows purana raasta khol deti hain. */
+async function creditAdmin(): Promise<{ error: string } | { ok: true }> {
+  const guard = await requireAction("credit", "approve");
+  if ("error" in guard) return { error: guard.error };
+  if (!UNRESTRICTED_ROLES.includes(guard.caller.role)) {
+    return { error: "Ye kaam sirf Admin ya Owner kar sakta hai." };
+  }
+  return { ok: true };
+}
+
 export async function setBranchCreditLimit(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const who = await creditAdmin();
+  if ("error" in who) return { error: who.error };
   const supabase = createClient();
   const branchId = String(formData.get("branch_id") ?? "");
   const creditLimit = Number(formData.get("credit_limit") ?? 0);
@@ -26,6 +40,8 @@ export async function setBranchCreditLimit(_prev: ActionState, formData: FormDat
 }
 
 export async function recordAdvancePayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const who = await creditAdmin();
+  if ("error" in who) return { error: who.error };
   const supabase = createClient();
   const branchId = String(formData.get("branch_id") ?? "");
   const amount = Number(formData.get("amount") ?? 0);
@@ -60,6 +76,8 @@ export async function recordAdvancePayment(_prev: ActionState, formData: FormDat
 }
 
 export async function recordFundAdjustment(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const who = await creditAdmin();
+  if ("error" in who) return { error: who.error };
   const supabase = createClient();
   const branchId = String(formData.get("branch_id") ?? "");
   const amount = Number(formData.get("amount") ?? 0);

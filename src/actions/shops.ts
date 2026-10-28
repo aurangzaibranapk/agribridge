@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { profileKaKhanaBadlein } from "@/lib/profile-write";
+import { commitLoginPlace, readPlaceForm } from "@/lib/access/commit-login-place";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
@@ -65,6 +65,9 @@ export async function createShop(_prev: ActionState, formData: FormData): Promis
   const { data: branch } = await supabase.from("branches").select("organization_id").eq("id", branchId).single();
   if (!branch) return { error: "Branch nahi mili." };
 
+  // HQ godam ka link yahan nahi likha jata. Database trigger (676)
+  // nayi dukan ko HQ se jodta hai. Admin baad mein /admin/shops/godam
+  // par badal sakta hai.
   const { data: created, error } = await supabase
     .from("shops")
     .insert({
@@ -317,27 +320,12 @@ export async function deleteShop(_prev: ActionState, formData: FormData): Promis
 }
 
 export async function assignUserShop(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const { supabase, ok } = await gate(CAN_MANAGE);
-  if (!ok) return { error: "Ye kaam sirf Owner ya Admin kar sakta hai." };
-
-  const userId = String(formData.get("user_id") ?? "");
-  const shopId = (formData.get("shop_id") as string) || null;
-  if (!userId) return { error: "Missing user id." };
-
-  // Service client se, aur tasdeeq ke sath -- wajah `lib/profile-write.ts`
-  // mein likhi hai: `profiles` par badalne ka koi RLS qanoon hai hi nahi,
-  // is liye user wale client se ye update chup chaap 0 qatarein badalta
-  // tha aur safha "ho gaya" keh deta tha.
-  const res = await profileKaKhanaBadlein(userId, { shop_id: shopId });
-  if (res.error) return { error: res.error };
-
-  await logAudit({
-    actionType: "update",
-    module: "user_shop",
-    recordId: userId,
-    description: shopId ? `Dukan lagai: ${shopId}` : "Dukan hata di (poori shaakh)",
+  const form = readPlaceForm(formData);
+  const result = await commitLoginPlace({
+    userId: form.userId,
+    policy: "shop",
+    branchId: null,
+    shopId: form.shopId,
   });
-
-  revalidatePath("/admin/users");
-  return { success: true };
+  return { error: result.error, success: result.success };
 }

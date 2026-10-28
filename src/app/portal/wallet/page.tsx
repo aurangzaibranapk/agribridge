@@ -14,6 +14,10 @@ import {
 } from "@/lib/portal/khata";
 import { Badge, Card, CardHead, HeroPill, SourceCard, longDate, shortDate } from "@/components/portal/khata/khata-parts";
 import { StatementTable } from "@/components/portal/khata/statement-table";
+import { loadKisanWalletV2 } from "@/lib/portal/kisan-wallet-load";
+import { KisanWalletV2 } from "@/components/portal/kisan-wallet/kisan-wallet-v2";
+import { KisanWalletGlass } from "@/components/portal/kisan-wallet/kisan-wallet-glass";
+import { kisanWalletV2Enabled, showWalletV2, wt } from "@/lib/portal/kisan-wallet";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +40,16 @@ export default async function FarmerWalletPage({ searchParams }: { searchParams:
   const gate = await checkFarmerVerification(farmer.id);
   if (!gate.allowed) {
     return <VerificationGateMessage reason={gate.reason!} />;
+  }
+
+  // Kisan Wallet v2 (flag KISAN_WALLET_V2) -- band ho to neeche purana safha bilkul waisa hi.
+  const v2Flag = kisanWalletV2Enabled();
+  if (showWalletV2(process.env, searchParams?.look)) {
+    const v2 = await loadKisanWalletV2(farmer.id);
+    // Glassy debit card (20 Oct 2026); purana v2 card ?look=card par maujood.
+    const look = Array.isArray(searchParams?.look) ? searchParams.look[0] : searchParams?.look;
+    if (v2 && look === "card") return <KisanWalletV2 lang={lang} data={v2.data} qr={v2.qr} links={v2.links} />;
+    if (v2) return <KisanWalletGlass lang={lang} data={v2.data} qr={v2.qr} links={v2.links} />;
   }
 
   const range = parseRange(searchParams ?? {});
@@ -84,6 +98,11 @@ export default async function FarmerWalletPage({ searchParams }: { searchParams:
 
   return (
     <div className="pf-fit mx-auto w-full max-w-[1760px] space-y-5 px-4 py-6 sm:px-6 fit:gap-2.5 fit:space-y-0 fit:py-3">
+      {v2Flag && (
+        <div className="flex justify-end print:hidden">
+          <Link href="/portal/wallet" className="rounded-full bg-emerald-700 px-3 py-1 text-xs font-semibold text-white dark:bg-indigo-600">{wt("newLook", lang)}</Link>
+        </div>
+      )}
       <div className="space-y-5 fit:grid fit:grid-cols-[1.15fr_2fr] fit:gap-2.5 fit:space-y-0">
       {/* Hero */}
       <section className={`relative overflow-hidden rounded-3xl bg-gradient-to-r ${heroTone} p-6 text-white shadow-lg fit:rounded-2xl fit:px-4 fit:py-3`}>

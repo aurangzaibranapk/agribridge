@@ -40,7 +40,8 @@ const CHANNELS: MilkChannel[] = ["website", "offline", "whatsapp", "app"];
 const MAX_ITEMS = 200;
 
 export async function POST(request: Request) {
-  const auth = await requireStaff();
+  // JSON body wahi hai. App cookie ke bajaye Bearer token bhejti hai.
+  const auth = await requireStaff(request);
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
   let body: { source?: string; entry_channel?: string; items?: Item[] };

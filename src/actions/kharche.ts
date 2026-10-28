@@ -7,9 +7,11 @@ import { requireAction } from "@/lib/access/guard";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { nextExpenseNumber } from "@/lib/expense-number";
 import { postJournal } from "@/lib/ledger/post";
+import { supplierBillLines } from "@/lib/party-links/core";
 import { glForFinanceAccount, expenseAccountFor, ACC } from "@/lib/ledger/rules";
 import { cashBookLikhein } from "@/lib/ledger/cash-book";
 import { qismDhoondein, qismKaNaamSaaf, APNI_QISM } from "@/lib/kharche";
+import { kharchaApproveGate } from "@/lib/finance/money-guards";
 
 /** Migration 347 ke baad ki qatar -- jab tak types dobara na banein. */
 interface KharchaQatar {
@@ -54,11 +56,18 @@ export interface ActionState {
  */
 
 /**
- * Manzoor kaun kar sakta hai -- 8 September ke baad "manager" is mein
- * nahi (wo ab sirf apni branch ki TASDEEQ karta hai, `kharchaVerify` se).
- * Legacy fallback isi liye sirf finance/admin_assistant tak.
+ * Final manzoori sirf Owner, Super Admin, Admin.
+ * Manager tasdeeq karta hai. Finance / admin_assistant ab approve nahi.
  */
-const MANZOORI_WALE = ["admin_assistant", "finance"];
+const MANZOORI_WALE = ["owner", "super_admin", "admin"];
+
+async function revertKharchaClaim(service: ReturnType<typeof createServiceClient>, id: string) {
+  await service
+    .from("company_expense_requests")
+    .update({ status: "verified" })
+    .eq("id", id)
+    .eq("status", "approving");
+}
 
 /**
  * Is bande par mazdoori ka kya haal hai -- ledger se.
@@ -147,8 +156,8 @@ export async function kharchaDarj(_prev: ActionState, formData: FormData): Promi
   const expenseDate = String(formData.get("expense_date") ?? "").trim();
   if (!expenseDate) return { error: "Tareekh likhein." };
 
-  const accountId = String(formData.get("paid_from_account_id") ?? "").trim();
-  if (!accountId) {
+  const accountId = qism.udhaarPar ? "" : String(formData.get("paid_from_account_id") ?? "").trim();
+  if (!accountId && !qism.udhaarPar) {
     // Khali chhorne dena yahan sab se mehngi khamoshi hoti: kitab
     // barabar rehti aur Finance ke safhe par khate ka adad hilta hi
     // nahi -- aur wohi adad malik parhte hain.
@@ -218,7 +227,7 @@ export async function kharchaDarj(_prev: ActionState, formData: FormData): Promi
    * (kharche-client.tsx) -- ye yahan dobara check hai taake koi seedha
    * request bana kar us rok ko na toR sake.
    */
-  if (!UNRESTRICTED_ROLES.includes(who.role)) {
+  if (!qism.udhaarPar && !UNRESTRICTED_ROLES.includes(who.role)) {
     const { data: account } = await service.from("finance_accounts").select("account_type").eq("id", accountId).maybeSingle();
     if (account?.account_type !== "cash") {
       return { error: "Aap sirf cash hand (nagad) se kharcha/bill darj kar sakte hain — bank, wallet ya card sirf admin/owner istemal kar sakte hain." };
@@ -251,7 +260,7 @@ export async function kharchaDarj(_prev: ActionState, formData: FormData): Promi
       party_type: partyType,
       party_id: partyId,
       party_name: partyName,
-      paid_from_account_id: accountId,
+      paid_from_account_id: accountId || null,
       // `supplier_id` purane safhe ke liye bhara ja raha hai -- wahan ki
       // report abhi usi khane se supplier ka naam nikalti hai.
       supplier_id: partyType === "supplier" ? partyId : null,
@@ -348,13 +357,8 @@ export async function kharchaManzoor(_prev: ActionState, formData: FormData): Pr
   const who = await main();
   if ("error" in who) return { error: who.error };
 
-  const guard = await requireAction("kharche", "approve");
-  if ("error" in guard) {
-    // Purane raaste wale ke liye ohde ki fehrist bhi dekhi jati hai --
-    // warna nayi feature key aane se pehle wale manager ruk jate.
-    if (!MANZOORI_WALE.includes(who.role) && !["owner", "super_admin", "admin"].includes(who.role)) {
-      return { error: "Final manzoori sirf Admin Assistant, Finance ya Owner/Admin de sakta hai (Manager sirf tasdeeq karta hai)." };
-    }
+  if (!MANZOORI_WALE.includes(who.role)) {
+    return { error: "Final manzoori sirf Owner, Super Admin ya Admin de sakta hai." };
   }
 
   const id = String(formData.get("id") ?? "");
@@ -371,21 +375,50 @@ export async function kharchaManzoor(_prev: ActionState, formData: FormData): Pr
     .maybeSingle()) as { data: KharchaQatar | null };
 
   if (!kharcha) return { error: "Ye kharcha nahi mila." };
-  if (kharcha.status === "approved") {
-    // Do dafa manzoori se do dafa qatarein banti hain -- aur wo ghalti
-    // mahine baad, khate ka milan karte waqt nikalti hai.
-    return { error: "Ye pehle hi manzoor ho chuka hai. Dobara manzoori se dohri qatarein ban jayengi." };
-  }
-  if (kharcha.status === "rejected") return { error: "Ye radd ho chuka hai. Nayi qatar banayein." };
+  const approveGate = kharchaApproveGate(
+    {
+      status: kharcha.status,
+      requested_by: kharcha.requested_by,
+      verified_by: (kharcha as KharchaQatar & { verified_by?: string | null }).verified_by ?? null,
+    },
+    who.userId,
+    who.role
+  );
+  if (!approveGate.ok) return { error: approveGate.error };
+
+  const { data: claimed, error: claimError } = await service
+    .from("company_expense_requests")
+    .update({ status: "approving" })
+    .eq("id", id)
+    .eq("status", "verified")
+    .select("id")
+    .maybeSingle();
+  if (claimError) return { error: claimError.message };
+  if (!claimed) return { error: "Ye qatar ab verified nahi rahi — koi aur le chuka hai ya pehle manzoor ho chuki." };
 
   const qism = qismDhoondein(String(kharcha.kind ?? ""));
-  if (!qism) return { error: "Is qatar ki qism pehchani nahi ja saki." };
+  if (!qism) {
+    await revertKharchaClaim(service, id);
+    return { error: "Is qatar ki qism pehchani nahi ja saki." };
+  }
 
   const amount = Number(kharcha.amount ?? 0);
-  if (amount <= 0) return { error: "Raqam sifar ya manfi hai — ye qatar post nahi ho sakti." };
+  if (amount <= 0) {
+    await revertKharchaClaim(service, id);
+    return { error: "Raqam sifar ya manfi hai — ye qatar post nahi ho sakti." };
+  }
+
+  if (qism.udhaarPar) {
+    const billed = await supplierBillManzoor(kharcha, qism, id, who);
+    if (billed.error) await revertKharchaClaim(service, id);
+    return billed;
+  }
 
   const accountId = kharcha.paid_from_account_id as string | null;
-  if (!accountId) return { error: "Is qatar par khata darj nahi hai. Pehle wo theek karwayein." };
+  if (!accountId) {
+    await revertKharchaClaim(service, id);
+    return { error: "Is qatar par khata darj nahi hai. Pehle wo theek karwayein." };
+  }
 
   const cashGl = await glForFinanceAccount(accountId);
   const saamnaGl = qism.saamneWalaKhata ?? expenseAccountFor(kharcha.category);
@@ -416,6 +449,7 @@ export async function kharchaManzoor(_prev: ActionState, formData: FormData): Pr
    * dhoondi ja sakni chahiye.
    */
   if (qism.bandaKahanSe && kharcha.party_type !== qism.bandaKahanSe) {
+    await revertKharchaClaim(service, id);
     return {
       error: `Is qatar ki qism "${qism.label}" hai magar banda ${String(kharcha.party_type ?? "darj nahi")} ki fehrist ka hai. Ghalat khate mein baithne se behtar hai ke pehle ye theek ho.`,
     };
@@ -492,17 +526,21 @@ export async function kharchaManzoor(_prev: ActionState, formData: FormData): Pr
   });
 
   if ("error" in posted) {
+    await revertKharchaClaim(service, id);
     return { error: `Kitab mein qatar nahi bani, is liye manzoori bhi nahi di gayi: ${posted.error}` };
   }
 
-  const { error: halatError } = await service
+  const { data: approvedRow, error: halatError } = await service
     .from("company_expense_requests")
     .update({ status: "approved", approved_by: who.userId, approved_at: new Date().toISOString() })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("status", "approving")
+    .select("id")
+    .maybeSingle();
 
-  if (halatError) {
+  if (halatError || !approvedRow) {
     return {
-      error: `Kitab mein qatar to ban gayi magar halat "manzoor" nahi ho saki: ${halatError.message}. Kisi ko batayein — dobara manzoori se dohri qatar ban jayegi.`,
+      error: `Kitab mein qatar to ban gayi magar halat "manzoor" nahi ho saki: ${halatError?.message ?? "claim nahi mili"}. Kisi ko batayein — dobara manzoori se dohri qatar ban jayegi.`,
     };
   }
 
@@ -549,11 +587,8 @@ export async function kharchaRadd(_prev: ActionState, formData: FormData): Promi
   const who = await main();
   if ("error" in who) return { error: who.error };
 
-  const guard = await requireAction("kharche", "reject");
-  if ("error" in guard) {
-    if (!MANZOORI_WALE.includes(who.role) && !["owner", "super_admin", "admin"].includes(who.role)) {
-      return { error: "Radd karna sirf Manager, Admin Assistant, Finance ya Admin ka kaam hai." };
-    }
+  if (!MANZOORI_WALE.includes(who.role)) {
+    return { error: "Radd karna sirf Owner, Super Admin ya Admin ka kaam hai." };
   }
 
   const id = String(formData.get("id") ?? "");
@@ -572,16 +607,6 @@ export async function kharchaRadd(_prev: ActionState, formData: FormData): Promi
     return { error: "Ye manzoor ho kar kitab mein ja chuka hai. Radd nahi hota — ulti qatar banayein." };
   }
 
-  // Apni branch ki hadd -- 'all' scope (Finance/Owner/Admin) ke liye
-  // rok nahi. `requireAction("kharche","reject")` manager ko 'reject'
-  // deta hai (364), is liye upar wala legacy-fallback kabhi nahi chalta
-  // aur ye check bina is ke kabhi lagti hi nahi thi.
-  if (!("error" in guard) && !guard.caller.unrestricted && guard.caller.scope !== "all") {
-    if (!guard.caller.branchId || kharcha.branch_id !== guard.caller.branchId) {
-      return { error: "Ye kharcha aapki branch ka nahi hai — sirf apni branch ki request radd kar sakte hain." };
-    }
-  }
-
   const { error } = await service
     .from("company_expense_requests")
     .update({ status: "rejected", rejection_reason: wajah })
@@ -598,4 +623,59 @@ export async function kharchaRadd(_prev: ActionState, formData: FormData): Promi
 
   revalidatePath("/admin/kharche");
   return { success: true, message: "Radd kar diya." };
+}
+
+/**
+ * 622: Supplier bill (udhaar par kharcha) ki manzoori.
+ * Dr kharcha (diesel -> 6010) / Cr 2000, dono supplier ke naam. Cash Book
+ * mein KUCH nahi -- paisa abhi gaya hi nahi. Adaigi baad mein "Payment Send
+ * Karein" (2000) ya "Supplier ko adaigi" se.
+ */
+async function supplierBillManzoor(kharcha: any, qism: { label: string; asar: string; bandaKahanSe: string | null }, id: string, who: { userId: string; branchId: string | null }): Promise<ActionState> {
+  if (kharcha.requested_by && kharcha.requested_by === who.userId) {
+    return { error: "Apni banayi hui request khud manzoor nahi kar sakte — doosra authorized banda kare." };
+  }
+  if (kharcha.party_type !== "supplier" || !kharcha.party_id) {
+    return { error: "Supplier bill ke liye banda supplier ki fehrist se hona chahiye." };
+  }
+  const amount = Number(kharcha.amount ?? 0);
+  const tafseel = `${kharcha.expense_number} — ${qism.label}: ${kharcha.description}`;
+  let lines;
+  try {
+    lines = supplierBillLines({ amount, expenseAccount: expenseAccountFor(kharcha.category), supplierId: String(kharcha.party_id), memo: tafseel });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Qatarein nahi ban sakin." };
+  }
+  const posted = await postJournal({
+    description: tafseel, sourceModule: "kharche", sourceId: id,
+    branchId: (kharcha.branch_id as string | null) ?? who.branchId,
+    entryDate: (kharcha.expense_date as string | null) ?? undefined,
+    createdBy: who.userId,
+    claims: [{ table: "company_expense_requests", rowId: id }],
+    lines,
+  });
+  if ("error" in posted) return { error: `Kitab mein qatar nahi bani, is liye manzoori bhi nahi di gayi: ${posted.error}` };
+
+  const service = createServiceClient();
+  const { data: approvedRow, error: halatError } = await service.from("company_expense_requests")
+    .update({ status: "approved", approved_by: who.userId, approved_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "approving")
+    .select("id")
+    .maybeSingle();
+  if (halatError || !approvedRow) {
+    return { error: `Kitab mein qatar to ban gayi magar halat "manzoor" nahi ho saki: ${halatError?.message ?? "claim nahi mili"}. Kisi ko batayein — dobara manzoori se dohri qatar ban jayegi.` };
+  }
+  // Supplier ka stored payable (2000) foran theek -- recovery function ka wohi tareeqa.
+  const { data: gl } = await service.from("journal_lines").select("debit, credit")
+    .eq("party_type", "supplier").eq("party_id", kharcha.party_id).eq("account_code", "2000");
+  const payable = Math.round(((gl ?? []) as any[]).reduce((a, l) => a + Number(l.credit ?? 0) - Number(l.debit ?? 0), 0) * 100) / 100;
+  await (service.from("suppliers") as any).update({ current_payable: payable }).eq("id", kharcha.party_id);
+
+  await logAudit({ actionType: "approve", module: "kharche", recordId: id, recordLabel: kharcha.expense_number,
+    description: `${qism.label} — Rs ${amount.toLocaleString()} manzoor (udhaar). ${qism.asar}` });
+  revalidatePath("/admin/kharche");
+  revalidatePath("/admin/finance");
+  revalidatePath(`/admin/suppliers/${kharcha.party_id}/statement`);
+  return { success: true, message: `${kharcha.expense_number} manzoor. ${qism.asar}` };
 }

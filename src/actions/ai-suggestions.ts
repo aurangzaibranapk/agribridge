@@ -1,8 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createServiceClient } from "@/lib/supabase/service";
 import { notifyRoles } from "@/lib/notifications";
+import { nextYearNumber } from "@/lib/counters";
 
 export interface ActionState {
   error?: string;
@@ -12,19 +12,7 @@ export interface ActionState {
 const HQ_ROLES = ["super_admin", "admin", "owner"];
 
 async function generateOrderNumber(): Promise<string> {
-  const serviceClient = createServiceClient();
-  const year = new Date().getFullYear() % 100;
-
-  const { data: existing } = await serviceClient.from("agri_order_counters").select("last_number").eq("year", year).single();
-  const nextNumber = (existing?.last_number ?? 0) + 1;
-
-  if (existing) {
-    await serviceClient.from("agri_order_counters").update({ last_number: nextNumber }).eq("year", year);
-  } else {
-    await serviceClient.from("agri_order_counters").insert({ year, last_number: nextNumber });
-  }
-
-  return `AGR-${year}-${String(nextNumber).padStart(5, "0")}`;
+  return nextYearNumber("agri_order_counters", "AGR-");
 }
 
 export async function approveAiSuggestion(_prev: ActionState, formData: FormData): Promise<ActionState> {

@@ -94,7 +94,19 @@ export default async function ShiftSlipPage({ params, searchParams }: { params: 
         </div>}
         {shift.closing_note && <p className="mt-3 text-xs">Closing note: {shift.closing_note}</p>}
         <p className="mt-4 rounded border border-surface-300 p-2 text-xs font-semibold">Cash handover: {handoverStatus}</p>
+        {shift.cash_handover_id && (
+          <p className="mt-2 text-center print:hidden">
+            <a href={`/admin/cash-handover/slip/${shift.cash_handover_id}?print=1`} target="_top" className="text-xs font-semibold text-brand-700 underline">
+              Cash Handover Slip kholen
+            </a>
+          </p>
+        )}
         <p className="mt-2 text-[11px] text-surface-500">Ye shift closing slip hai. Cash ki office receiving alag se tasdeeq hogi.</p>
+        {counted > 0 && (
+          <p className="mt-2 text-center text-xs print:hidden">
+            <a href={`/admin/cash-custody/shift/${shift.id}/slip?copy=both&print=1`} className="font-semibold text-brand-700 underline">Staff copy + jama copy</a>
+          </p>
+        )}
         <div className="mt-10 grid grid-cols-2 gap-6 text-xs">
           <div className="border-t border-surface-500 pt-2">Staff dastakhat</div>
           <div className="border-t border-surface-500 pt-2">Office receiving: naam, dastakhat, waqt</div>

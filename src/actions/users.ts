@@ -8,6 +8,8 @@ import type { UserRole } from "@/lib/utils/roles";
 import { DEPARTMENTS } from "@/lib/departments";
 import { logAudit } from "@/lib/audit";
 import { profileGaps } from "@/lib/access/profile-gaps";
+import { ownerAccountChangeBlocked } from "@/lib/hr/owner-guard";
+import { roleChangeBlocked } from "@/lib/hr/role-rank";
 
 const MASTER_ROLES = ["owner", "super_admin", "admin"];
 
@@ -23,6 +25,11 @@ async function requireMaster(targetId?: string) {
   }
   if (targetId && targetId === user.id) {
     return { error: "Apna account khud band, suspend ya delete nahi kiya ja sakta." };
+  }
+  if (targetId) {
+    const { data: target } = await supabase.from("profiles").select("role").eq("id", targetId).maybeSingle();
+    const blocked = ownerAccountChangeBlocked(target?.role);
+    if (blocked) return { error: blocked };
   }
   return { supabase, user, role: String(me.role) };
 }
@@ -55,9 +62,8 @@ export async function updateUserRole(userId: string, role: UserRole): Promise<{ 
   if (!target) return { error: "Ye banda maujood nahi." };
   if (target.role === role) return {};
 
-  if ((role === "owner" || role === "super_admin" || target.role === "owner") && actingProfile.role !== "owner") {
-    return { error: "Owner ya Super Admin ka darja sirf Owner de ya badal sakta hai." };
-  }
+  const rankBlock = roleChangeBlocked(String(actingProfile.role), String(target.role), role);
+  if (rankBlock) return { error: rankBlock };
 
   const purana = IKHTIYAR_DARJA[target.role] ?? 1;
   const naya = IKHTIYAR_DARJA[role] ?? 1;

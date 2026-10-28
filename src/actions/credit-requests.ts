@@ -3,6 +3,18 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { postFarmerLedger } from "@/lib/farmer-ledger";
 import { postFarmerCreditGiven, failed } from "@/lib/ledger/rules";
+import { requireAction } from "@/lib/access/guard";
+import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
+import { makerIsNotChecker, marginAllowed } from "@/lib/money/review-guards";
+
+async function creditAdmin() {
+  const guard = await requireAction("credit", "approve");
+  if ("error" in guard) return guard;
+  if (!UNRESTRICTED_ROLES.includes(guard.caller.role)) {
+    return { error: "Credit request sirf Admin ya Owner approve kare." };
+  }
+  return guard;
+}
 
 export interface ActionState {
   error?: string;
@@ -67,19 +79,30 @@ export async function createCreditRequest(_prev: ActionState, formData: FormData
 // ADMIN: approve a request, optionally adjusting the margin % and
 // adding comments/conditions - recalculates total_amount if margin changed.
 export async function adminApproveCreditRequest(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const who = await creditAdmin();
+  if ("error" in who) return { error: who.error };
   const supabase = createClient();
   const requestId = String(formData.get("request_id") ?? "");
   const marginPercentage = Number(formData.get("margin_percentage") ?? 5);
   const adminComments = (formData.get("admin_comments") as string) || null;
 
   if (!requestId) return { error: "Missing request id." };
+  if (!marginAllowed(marginPercentage)) return { error: "Margin 0 se 25 tak hona chahiye." };
 
-  const { data: request } = await supabase.from("credit_requests").select("base_amount").eq("id", requestId).single();
+  const { data: request } = await supabase
+    .from("credit_requests")
+    .select("base_amount, status, created_by")
+    .eq("id", requestId)
+    .single();
   if (!request) return { error: "Request not found." };
+  if (request.status !== "pending") return { error: "Sirf pending request approve hoti hai." };
+  if (!makerIsNotChecker(request.created_by, who.caller.userId, who.caller.role)) {
+    return { error: "Apni credit request khud approve nahi kar sakte." };
+  }
 
   const totalAmount = Number(request.base_amount) * (1 + marginPercentage / 100);
 
-  const { error } = await supabase
+  const { data: claimed, error } = await supabase
     .from("credit_requests")
     .update({
       status: "admin_approved",
@@ -88,26 +111,43 @@ export async function adminApproveCreditRequest(_prev: ActionState, formData: Fo
       admin_comments: adminComments,
       responded_at: new Date().toISOString(),
     })
-    .eq("id", requestId);
+    .eq("id", requestId)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
 
   if (error) return { error: error.message };
+  if (!claimed) return { error: "Request pehle hi faisla ho chuki hai." };
 
   revalidatePath("/admin/credit-requests");
   return { success: true };
 }
 
 export async function adminRejectCreditRequest(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const who = await creditAdmin();
+  if ("error" in who) return { error: who.error };
   const supabase = createClient();
   const requestId = String(formData.get("request_id") ?? "");
   const adminComments = (formData.get("admin_comments") as string) || null;
   if (!requestId) return { error: "Missing request id." };
 
-  const { error } = await supabase
+  const { data: request } = await supabase.from("credit_requests").select("status, created_by").eq("id", requestId).maybeSingle();
+  if (!request) return { error: "Request not found." };
+  if (request.status !== "pending") return { error: "Sirf pending request radd hoti hai." };
+  if (!makerIsNotChecker(request.created_by, who.caller.userId, who.caller.role)) {
+    return { error: "Apni credit request khud radd nahi kar sakte." };
+  }
+
+  const { data: claimed, error } = await supabase
     .from("credit_requests")
     .update({ status: "admin_rejected", admin_comments: adminComments, responded_at: new Date().toISOString() })
-    .eq("id", requestId);
+    .eq("id", requestId)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
 
   if (error) return { error: error.message };
+  if (!claimed) return { error: "Request pehle hi faisla ho chuki hai." };
 
   revalidatePath("/admin/credit-requests");
   return { success: true };
@@ -133,6 +173,16 @@ export async function farmerAcceptCreditRequest(_prev: ActionState, formData: Fo
     data: { user },
   } = await supabase.auth.getUser();
 
+  const { data: claimed, error: claimError } = await supabase
+    .from("credit_requests")
+    .update({ status: "farmer_accepted", responded_at: new Date().toISOString() })
+    .eq("id", requestId)
+    .eq("status", "admin_approved")
+    .select("id")
+    .maybeSingle();
+  if (claimError) return { error: claimError.message };
+  if (!claimed) return { error: "Request pehle hi qubool ho chuki hai." };
+
   const ledger = await postFarmerLedger({
     farmerId: request.farmer_id,
     sourceType: request.category,
@@ -142,7 +192,10 @@ export async function farmerAcceptCreditRequest(_prev: ActionState, formData: Fo
     notes: "Credit request accepted",
     createdBy: user?.id ?? null,
   });
-  if (ledger.error) return { error: ledger.error };
+  if (ledger.error) {
+    await supabase.from("credit_requests").update({ status: "admin_approved" }).eq("id", requestId).eq("status", "farmer_accepted");
+    return { error: ledger.error };
+  }
 
   const posted = await postFarmerCreditGiven({
     farmerId: request.farmer_id,
@@ -154,14 +207,10 @@ export async function farmerAcceptCreditRequest(_prev: ActionState, formData: Fo
       claims: ledger.id ? [{ table: "farmer_credit_ledger", rowId: ledger.id }] : [],
     },
   });
-  if (failed(posted)) return { error: `Request manzoor hui magar ledger mein nahi gayi: ${posted.error}` };
-
-  const { error: statusError } = await supabase
-    .from("credit_requests")
-    .update({ status: "farmer_accepted", responded_at: new Date().toISOString() })
-    .eq("id", requestId);
-
-  if (statusError) return { error: statusError.message };
+  if (failed(posted)) {
+    await supabase.from("credit_requests").update({ status: "admin_approved" }).eq("id", requestId).eq("status", "farmer_accepted");
+    return { error: `Request manzoor hui magar ledger mein nahi gayi: ${posted.error}` };
+  }
 
   revalidatePath("/portal/services/fertilizer");
   return { success: true };
@@ -172,10 +221,14 @@ export async function farmerRejectCreditRequest(_prev: ActionState, formData: Fo
   const requestId = String(formData.get("request_id") ?? "");
   if (!requestId) return { error: "Missing request id." };
 
-  const { error } = await supabase
+  const { data: claimed, error } = await supabase
     .from("credit_requests")
     .update({ status: "farmer_rejected", responded_at: new Date().toISOString() })
-    .eq("id", requestId);
+    .eq("id", requestId)
+    .eq("status", "admin_approved")
+    .select("id")
+    .maybeSingle();
+  if (!error && !claimed) return { error: "Sirf manzoor-shuda request radd hoti hai." };
 
   if (error) return { error: error.message };
 

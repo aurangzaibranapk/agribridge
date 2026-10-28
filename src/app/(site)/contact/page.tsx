@@ -4,10 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { ContactForm } from "@/app/(site)/contact/contact-form";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { SHOP_PHONE_E164, unwrapWebsiteSetting } from "@/lib/cms/website-setting";
 
 export const metadata: Metadata = {
   title: "Contact & Partnership",
-  description: "Contact Al Rana Traders and AgriBridge for agriculture products, farmer services, machinery, dairy, grain, marketplace and partnership enquiries in Pakistan.",
+  description: "Contact AgriBridge and AgriBridge for agriculture products, farmer services, machinery, dairy, grain, marketplace and partnership enquiries in Pakistan.",
   alternates: { canonical: "/contact" },
 };
 
@@ -15,7 +16,8 @@ export const dynamic = "force-dynamic";
 
 async function getSetting(supabase: any, key: string, fallback: string) {
   const { data } = await supabase.from("website_settings").select("value").eq("key", key).single();
-  return data?.value ? String(data.value).replace(/^"|"$/g, "") : fallback;
+  const raw = unwrapWebsiteSetting(data?.value);
+  return raw.length > 0 ? raw : fallback;
 }
 
 export default async function ContactPage() {
@@ -23,7 +25,7 @@ export default async function ContactPage() {
   const supabase = createClient();
   const [email, phone, address, hours, mapsUrl] = await Promise.all([
     getSetting(supabase, "contact_email", "info@alranatraders.pk"),
-    getSetting(supabase, "contact_phone", ""),
+    getSetting(supabase, "contact_phone", SHOP_PHONE_E164),
     getSetting(supabase, "contact_address", "Pakistan"),
     getSetting(supabase, "business_hours", "Monday – Saturday: 7AM – 7PM"),
     getSetting(supabase, "google_maps_embed_url", ""),

@@ -8,6 +8,7 @@ import { staffOutstandingByShop, staffShopOutstanding, type StaffShopOutstanding
 import { notifyRole, notifyRoles, notifyBranchManagers, notifyPositionHolders, notifyUser } from "@/lib/notifications";
 import { ACC, failed, glForFinanceAccount } from "@/lib/ledger/rules";
 import { postJournal, type JournalLine, type SourceClaim } from "@/lib/ledger/post";
+import { nextYearNumber } from "@/lib/counters";
 
 export interface ActionState {
   error?: string;
@@ -21,16 +22,7 @@ function round2(v: number): number {
 }
 
 async function nextDepositNumber(): Promise<string> {
-  const service = createServiceClient();
-  const year = new Date().getFullYear() % 100;
-  const { data: existing } = await service.from("pos_deposit_counters").select("last_number").eq("year", year).maybeSingle();
-  const next = (existing?.last_number ?? 0) + 1;
-  if (existing) {
-    await service.from("pos_deposit_counters").update({ last_number: next }).eq("year", year);
-  } else {
-    await service.from("pos_deposit_counters").insert({ year, last_number: next });
-  }
-  return `DEP-${year}-${String(next).padStart(5, "0")}`;
+  return nextYearNumber("pos_deposit_counters", "DEP-");
 }
 
 /** Staff ke apne shops ki Outstanding fehrist -- dashboard card ke liye. */
@@ -101,6 +93,7 @@ export async function submitCollectionDeposit(_prev: ActionState, formData: Form
     .insert({
       deposit_number: depositNumber,
       staff_id: user.id,
+      submitted_by: user.id,
       shop_id: shopId,
       branch_id: outstanding.branchId,
       bank_account_id: bankAccountId,
@@ -177,7 +170,7 @@ export async function verifyCollectionDeposit(_prev: ActionState, formData: Form
   const service = createServiceClient();
   const { data: deposit } = await service
     .from("pos_collection_deposits")
-    .select("id, deposit_number, staff_id, shop_id, branch_id, amount, status")
+    .select("id, deposit_number, staff_id, submitted_by, shop_id, branch_id, amount, status")
     .eq("id", depositId)
     .maybeSingle();
   if (!deposit) return { error: "Deposit nahi mila." };
@@ -193,7 +186,7 @@ export async function verifyCollectionDeposit(_prev: ActionState, formData: Form
       return { error: "Ye deposit aapki branch ki nahi hai." };
     }
   }
-  if (deposit.staff_id === user.id) {
+  if (deposit.staff_id === user.id || deposit.submitted_by === user.id) {
     return { error: "Apni jama karayi hui deposit khud tasdeeq nahi kar sakte." };
   }
 

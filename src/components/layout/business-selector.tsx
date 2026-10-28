@@ -5,7 +5,7 @@ import { setBusinessContext, type BusinessContext } from "@/actions/business-con
 
 const OPTIONS: { value: BusinessContext; label: string; icon: any }[] = [
   { value: "master", label: "Master View", icon: Building2 },
-  { value: "karyana", label: "Al Rana Traders (Karyana)", icon: Store },
+  { value: "karyana", label: "AgriBridge (Karyana)", icon: Store },
   { value: "agri_inputs", label: "Agri Inputs", icon: Sprout },
   { value: "grain_procurement", label: "Grain Procurement", icon: Wheat },
   { value: "dairy", label: "Dairy", icon: Milk },

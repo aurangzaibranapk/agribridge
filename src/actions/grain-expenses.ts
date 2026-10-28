@@ -45,7 +45,7 @@ export async function createGrainExpense(_prev: ActionState, formData: FormData)
   });
   if (error) return { error: error.message };
 
-  const { data: grainExpRow } = await supabase
+  const { data: grainExpRow, error: cashErr } = await supabase
     .from("finance_transactions")
     .insert({
       account_id: accountId,
@@ -58,11 +58,12 @@ export async function createGrainExpense(_prev: ActionState, formData: FormData)
     })
     .select("id")
     .single();
+  if (cashErr || !grainExpRow?.id) return { error: cashErr?.message ?? "Cash Book ki qatar nahi bani, kharcha adhoora reh gaya." };
 
   // Bardana, mazdoori, chungi -- ye grain ki lagat ka hissa hain, aam
   // daftari kharcha nahi. Inhen 6090 mein daal dein to grain ka asal
   // nafa maloom hi nahi hota.
-  if (grainExpRow?.id) {
+  {
     const posted = await postCashOut({
       accountId,
       amount,
@@ -74,7 +75,18 @@ export async function createGrainExpense(_prev: ActionState, formData: FormData)
         claims: [{ table: "finance_transactions", rowId: grainExpRow.id }],
       },
     });
-    if (failed(posted)) return { error: `Kharcha darj hua magar ledger mein nahi gaya: ${posted.error}` };
+    if (failed(posted)) {
+      await supabase.from("finance_transactions").insert({
+        account_id: accountId,
+        transaction_type: "income",
+        category: "Grain Operations",
+        amount,
+        transaction_date: expenseDate,
+        notes: `Reversal — ledger nahi gaya: ${description}`,
+        created_by: user?.id ?? null,
+      });
+      return { error: `Ledger mein nahi gaya, is liye Cash Book ki qatar ulti kar di: ${posted.error}` };
+    }
   }
   // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
   // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur

@@ -9,6 +9,7 @@ import { Field, L3, Lock, Notice, PageHead, Panel, PanelHead, Pill, Row, btnGhos
 import { NoCustomer } from "@/components/portal/customer/gate";
 import { requestChangeAction } from "../actions";
 import { EmptyState } from "@/components/portal/empty-state";
+import { UserIdAccountSection } from "@/components/account/user-id-section";
 
 export const dynamic = "force-dynamic";
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
@@ -17,7 +18,7 @@ function Box({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="mb-3">
       <span className="mb-1 block text-[11px] font-semibold text-surface-500 dark:text-slate-400">{label}</span>
-      <div className="rounded-xl border border-surface-200 bg-surface-50 px-3 py-2 text-[13px] font-semibold text-surface-900 dark:border-[#1e3160] dark:bg-[#0d1a3a] dark:text-white">{value || "—"}</div>
+      <div className="gl-sec px-3 py-2 text-[13px] font-semibold text-surface-900 dark:text-white">{value || "—"}</div>
     </div>
   );
 }
@@ -44,6 +45,8 @@ export default async function CustomerProfilePage({ searchParams }: { searchPara
       {ok && <Notice tone="ok">✔ {L("pc_ok_sent")}</Notice>}
       {e && <Notice tone="err">{t(e as TranslationKey, lang)}</Notice>}
       <div className="pf-grow pf-grid grid gap-3.5 lg:grid-cols-[1.4fr_1fr] fit:grid-cols-[1.5fr_1fr_1fr] fit:gap-2.5">
+        <div className="space-y-3.5">
+        <UserIdAccountSection />
         <Panel className="pf-scroll pf-navy fit:p-3.5">
           <PanelHead title={<L3 k="pc_personal" lang={lang} />} right={<Pill tone={complete ? "green" : "amber"}>{complete ? L("pc_verified") : L("pc_incomplete")}</Pill>} />
           <div className="grid gap-x-3 sm:grid-cols-2">
@@ -53,7 +56,7 @@ export default async function CustomerProfilePage({ searchParams }: { searchPara
             <Box label={L("pc_f_branch")} value={c.branch} /><Box label={L("pc_f_address")} value={c.address} />
             <Box label={L("pc_f_email")} value={c.email} /><Box label={L("pc_f_contact")} value={c.contact_person} />
           </div>
-          <form id="pc-change" action={requestChangeAction} className="mt-2 rounded-xl border border-surface-200 p-3 dark:border-[#1e3160]">
+          <form id="pc-change" action={requestChangeAction} className="gl-sec mt-2 p-3">
             <b className="mb-2 block text-[13px] text-surface-900 dark:text-white">✏ {L("pc_req_change")}</b>
             <div className="grid gap-x-3 sm:grid-cols-2">
               <Field label={L("pc_change_field")}>
@@ -68,6 +71,7 @@ export default async function CustomerProfilePage({ searchParams }: { searchPara
           </form>
           <div className="mt-3"><Lock>{L("pc_profile_lock")}</Lock></div>
         </Panel>
+        </div>
         <div className="space-y-3.5 fit:contents">
           <div className="pf-scroll space-y-3.5 fit:space-y-2.5">
           <Panel className="fit:p-3.5">

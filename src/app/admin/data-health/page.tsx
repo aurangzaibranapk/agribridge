@@ -3,8 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { requireAction } from "@/lib/access/guard";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
-import { ScanButton, ResolveForm } from "./data-health-client";
-import { CheckCircle2, ShieldAlert } from "lucide-react";
+import Link from "next/link";
+import { ScanButton, ResolveForm, BulkAssistantButton } from "./data-health-client";
+import { assistantPill } from "@/lib/data-health/assistant-ticket";
+import { CheckCircle2, ShieldAlert, Bot } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -45,19 +47,32 @@ export default async function DataHealthPage() {
   const [{ data: open }, { data: closed }] = await Promise.all([
     service
       .from("data_health_findings")
-      .select("id, finding_type, department, severity, title, description, related_label, amount, detected_at")
-      .eq("status", "open")
+      .select(
+        "id, finding_type, department, severity, title, description, related_label, amount, detected_at, status, support_ticket_id, ticket:support_tickets!data_health_findings_support_ticket_id_fkey(ticket_no, status, assignment_status, created_at)",
+      )
+      .in("status", ["open", "sent_to_assistant"])
       .order("detected_at", { ascending: false })
       .limit(60),
     service
       .from("data_health_findings")
       .select("id, title, department, status, resolution_note, resolved_at")
-      .neq("status", "open")
+      .not("status", "in", "(open,sent_to_assistant)")
       .order("resolved_at", { ascending: false })
       .limit(20),
   ]);
 
-  const rows = open ?? [];
+  // 694 live par na lagi ho to purani query -- safha na toote.
+  let openRows: any[] | null = open as any[] | null;
+  if (!openRows) {
+    const { data: legacy } = await service
+      .from("data_health_findings")
+      .select("id, finding_type, department, severity, title, description, related_label, amount, detected_at, status")
+      .eq("status", "open")
+      .order("detected_at", { ascending: false })
+      .limit(60);
+    openRows = legacy as any[] | null;
+  }
+  const rows = (openRows ?? []) as any[];
   const grouped = SEVERITY_ORDER.map((s) => ({
     severity: s,
     label: SEVERITY_LABEL[s],
@@ -82,7 +97,7 @@ export default async function DataHealthPage() {
             <p>
               Ye safha roz khud check karta hai: dobara payment, gum shuda purchase qatar, stock ka farq,
               manfi cash/bank balance waghera. <strong>Koi bhi cheez khud theek nahi hoti</strong> -- har masle
-              par faisla (Claude ko bhejna, chhoड़ dena, ya theek ho gaya mark karna) ek insaan karta hai.
+              par faisla (AgriBridge Assistant ya Claude ko bhejna, chhoड़ dena, ya theek ho gaya mark karna) ek insaan karta hai.
             </p>
             {byDept.size > 0 && (
               <p className="flex flex-wrap gap-2 pt-1">
@@ -107,15 +122,20 @@ export default async function DataHealthPage() {
       ) : (
         grouped.map((group) => (
           <div key={group.severity}>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">
-              {group.label} ({group.rows.length})
-            </h2>
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-surface-400">
+                {group.label} ({group.rows.length})
+              </h2>
+              {canEdit && <BulkAssistantButton findingIds={group.rows.filter((r) => r.status === "open").map((r) => r.id)} />}
+            </div>
             <div className="space-y-2">
               {group.rows.map((f) => (
                 <Card
                   key={f.id}
                   className={`p-4 ${
-                    f.severity === "high"
+                    f.status === "sent_to_assistant"
+                      ? "border-l-4 border-l-blue-500 bg-blue-50/60 dark:bg-blue-950/20"
+                      : f.severity === "high"
                       ? "border-l-4 border-l-red-500"
                       : f.severity === "medium"
                         ? "border-l-4 border-l-amber-500"
@@ -137,7 +157,11 @@ export default async function DataHealthPage() {
                           Rs {Number(f.amount).toLocaleString()}
                         </p>
                       )}
-                      {canEdit && <ResolveForm findingId={f.id} />}
+                      {f.status === "sent_to_assistant" ? (
+                        <AssistantRowState f={f} canEdit={canEdit} />
+                      ) : (
+                        canEdit && <ResolveForm findingId={f.id} />
+                      )}
                     </div>
                   </div>
                 </Card>
@@ -169,7 +193,7 @@ export default async function DataHealthPage() {
                           : "bg-surface-100 text-surface-600 dark:bg-surface-800 dark:text-surface-400"
                     }`}
                   >
-                    {f.status === "resolved" ? "theek ho gaya" : f.status === "sent_to_claude" ? "Claude ko gaya" : "chhoड़ diya"}
+                    {f.status === "resolved" ? "theek ho gaya" : f.status === "sent_to_claude" ? "Claude ko gaya" : f.status === "sent_to_assistant" ? "Assistant ko gaya" : "chhoड़ diya"}
                   </span>
                 </div>
               </li>
@@ -177,6 +201,37 @@ export default async function DataHealthPage() {
           </ul>
         </Card>
       )}
+    </div>
+  );
+}
+
+function AssistantRowState({ f, canEdit }: { f: any; canEdit: boolean }) {
+  const t = Array.isArray(f.ticket) ? f.ticket[0] : f.ticket;
+  const pill = assistantPill(t?.status, t?.assignment_status);
+  const time = t?.created_at
+    ? new Date(t.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Karachi" })
+    : null;
+  const tone =
+    pill.kind === "working"
+      ? "bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400"
+      : pill.kind === "done"
+        ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+        : "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400";
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <span data-testid="assistant-pill" className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>
+        <Bot className="h-3.5 w-3.5" />
+        {pill.text}
+        {t?.ticket_no != null && ` · Ticket #${t.ticket_no}`}
+        {pill.kind === "sent" && time && ` · ${time}`}
+      </span>
+      <Link
+        href="/admin/my-work/support-dashboard"
+        className="rounded-lg border border-surface-300 px-3 py-1.5 text-xs text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300"
+      >
+        Ticket dekhein
+      </Link>
+      {canEdit && pill.kind !== "working" && <ResolveForm findingId={f.id} showResolveOnly />}
     </div>
   );
 }

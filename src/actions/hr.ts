@@ -6,11 +6,14 @@ import { failed, postSalaryPaid } from "@/lib/ledger/rules";
 import { createClient } from "@/lib/supabase/server";
 import { postStaffLedger } from "@/lib/ledger/rules";
 import { createServiceClient } from "@/lib/supabase/service";
+import { reverseCashBookById } from "@/lib/finance/cash-book";
 import { notifyRoles, notifyUser } from "@/lib/notifications";
 import { TENANT_PLAN_LIMITS, tenantPlan } from "@/lib/tenant/plan-limits";
 import { DEPARTMENTS } from "@/lib/departments";
 import { logAudit } from "@/lib/audit";
 import { hrMailAuditText, hrMailNotice, sendJoiningEmail, todayPk } from "@/lib/hr-emails";
+import { salaryPaymentAmounts } from "@/lib/hr/salary-amount";
+import { staffTempPassword } from "@/lib/hr/temp-password";
 
 export interface ActionState {
   error?: string;
@@ -134,7 +137,15 @@ export async function recordSalaryPayment(_prev: ActionState, formData: FormData
     };
   }
 
-  const netSalary = basicSalary + bonus + overtime - deductions - advanceDeduction;
+  const amounts = salaryPaymentAmounts({
+    basic: basicSalary,
+    bonus,
+    overtime,
+    deductions,
+    advance: advanceDeduction,
+  });
+  if ("error" in amounts) return { error: amounts.error };
+  const netSalary = amounts.net;
 
   const { error } = await supabase.from("salary_payments").upsert(
     {
@@ -209,7 +220,7 @@ export async function markSalaryPaid(_prev: ActionState, formData: FormData): Pr
   // Kuch fail ho to claim wapas -- warna tankhwah "paid" dikhti jab ke
   // paisa nikla hi nahi. Cash book ki qatar pehle hatti hai, phir claim.
   const undo = async (txnId: string | null) => {
-    if (txnId) await supabase.from("finance_transactions").delete().eq("id", txnId);
+    if (txnId) await reverseCashBookById(txnId, "Tankhwah cash book ulti");
     await supabase.rpc("fn_salary_payment_unclaim", { p_payment: paymentId });
   };
 
@@ -276,7 +287,7 @@ export async function selfCheckIn(_prev: ActionState, formData: FormData): Promi
   } = await supabase.auth.getUser();
   if (!user) return { error: "You must be signed in." };
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = aajKaKhana();
   const now = new Date().toISOString();
   const clientActionId = typeof formData.get("client_action_id") === "string" ? String(formData.get("client_action_id")) : "";
   if (clientActionId) {
@@ -343,7 +354,7 @@ export async function selfCheckOut(_prev: ActionState, formData: FormData): Prom
   } = await supabase.auth.getUser();
   if (!user) return { error: "You must be signed in." };
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = aajKaKhana();
   const now = new Date().toISOString();
   const clientActionId = typeof formData.get("client_action_id") === "string" ? String(formData.get("client_action_id")) : "";
   if (clientActionId) {
@@ -464,7 +475,7 @@ export async function inviteStaffMember(_prev: ActionState, formData: FormData):
     return { error: `Aapke ${tenantPlan(org.subscription_plan)} plan mein ${staffLimit} active staff ki limit hai.` };
   }
 
-  const randomPassword = Math.random().toString(36).slice(-6) + Math.random().toString(36).slice(-6).toUpperCase() + "!1";
+  const randomPassword = staffTempPassword();
 
   const { data: authUser, error: createError } = await serviceClient.auth.admin.createUser({
     email,
@@ -538,6 +549,8 @@ export async function bulkDeactivateStaff(_prev: ActionState, formData: FormData
   const ids = idsRaw.split(",").filter(Boolean);
   if (ids.length === 0) return { error: "Koi Staff select nahi hui." };
   if (ids.includes(user.id)) return { error: "Apna account khud band nahi kiya ja sakta." };
+  const { data: owners } = await supabase.from("profiles").select("id").in("id", ids).eq("role", "owner");
+  if ((owners ?? []).length > 0) return { error: "Owner account band nahi ho sakta." };
 
   // Tasdeeq ke sath -- dekhein `lib/profile-write.ts`. Yahan ginti bhi
   // ahem hai: aadhe bande band ho jayen aur safha "ho gaya" kahe, to wo

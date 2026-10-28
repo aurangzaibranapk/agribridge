@@ -9,6 +9,8 @@ import { sendCheck, DRAFT_KINDS, type DraftKind } from "./model";
 type Rpc = (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
 export interface SendDeps {
   rpc: Rpc;
+  /** 619: mark_sent sirf service_role se (server). Na ho to rpc. */
+  markRpc?: Rpc;
   sendText: (phone: string, text: string) => Promise<string | null | void>;
   sendTemplate: (phone: string, metaName: string, lang: string, params: string[]) => Promise<string | null | void>;
 }
@@ -36,10 +38,10 @@ export async function bhejo(deps: SendDeps, i: SendInput): Promise<SendResult> {
       ? await deps.sendTemplate(phone, t.meta_name!, t.language_code ?? "ur", t.params ?? [])
       : await deps.sendText(phone, i.text.trim())) || null;
   } catch (e) {
-    await deps.rpc("fn_wa_inbox_mark_sent", { p_message: t.message_id, p_ok: false, p_wa_message_id: null, p_error: e instanceof Error ? e.message : String(e) });
+    await (deps.markRpc ?? deps.rpc)("fn_wa_inbox_mark_sent", { p_message: t.message_id, p_ok: false, p_wa_message_id: null, p_error: e instanceof Error ? e.message : String(e) });
     return { ok: false, error: "send_failed" };
   }
-  await deps.rpc("fn_wa_inbox_mark_sent", { p_message: t.message_id, p_ok: true, p_wa_message_id: wamid, p_error: null });
+  await (deps.markRpc ?? deps.rpc)("fn_wa_inbox_mark_sent", { p_message: t.message_id, p_ok: true, p_wa_message_id: wamid, p_error: null });
   return { ok: true, messageId: t.message_id };
 }
 

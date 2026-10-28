@@ -3,7 +3,7 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
-import { CountingSheet } from "./counting-sheet";
+import { ApproveDifferenceForm, CountingSheet } from "./counting-sheet";
 import {
   expectedCash,
   recentClosings,
@@ -12,6 +12,7 @@ import {
   DIFFERENCE_ALERT_THRESHOLD,
 } from "@/lib/ledger/cash-close";
 import { AlertTriangle, CalendarX2, CheckCircle2, HelpCircle } from "lucide-react";
+import { isMoneyWriter } from "@/lib/finance/money-guards";
 
 export const dynamic = "force-dynamic";
 
@@ -234,6 +235,12 @@ export default async function CashClosePage() {
                           </td>
                           <td className="max-w-[200px] truncate px-4 py-2 text-xs text-surface-500">
                             {c.reason ?? ""}
+                            {c.difference !== 0 && !c.journalEntryId && c.approvalStatus !== "approved" && (
+                              <span className="mt-1 block text-amber-700">Farq manzoori ka intezar</span>
+                            )}
+                            {c.difference !== 0 && !c.journalEntryId && isMoneyWriter(me.role) && c.countedBy !== user?.id && (
+                              <ApproveDifferenceForm id={c.id} />
+                            )}
                           </td>
                         </tr>
                       );

@@ -44,12 +44,29 @@ export function resolvePeriod(sp: Record<string, string | undefined>, asOf: stri
   return { key: key === "custom" ? "month" : key, from: monthStart(asOf), to: asOf };
 }
 
+export type CostBasis = "home" | "centre" | null;
+export type CostBasisLabel = CostBasis | "mixed";
 export interface PnlRow {
   period: string; period_end: string; income: Record<string, number>; income_total: number; expense: Partial<Record<ExpenseCat, number>>;
-  expense_total: number; profit: number; litres: number; cost_per_litre: number | null; feed_per_animal: number | null; animals: number;
+  expense_total: number; profit: number; litres: number; litres_home: number; litres_centre: number; cost_basis: CostBasis;
+  cost_per_litre: number | null; feed_per_animal: number | null; animals: number;
 }
 const n = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const nn = (v: unknown) => (v === null || v === undefined ? null : Number.isFinite(Number(v)) ? Number(v) : null);
+const pick = (v: unknown): number | null => (v == null || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
+/** Ghar ka yield (`litres`) agar > 0, warna centre. Dono jama nahi — dohra count nahi. */
+export function costBasisOf(r: { litres?: number; litres_home?: number; litres_centre?: number; centre_litres?: number; income?: Record<string, number> | number; cost_basis?: string | null }): { home: number; centre: number; basis: CostBasis; litres: number } {
+  const home = pick(r.litres) ?? pick(r.litres_home) ?? 0;
+  const centre = pick(r.litres_centre) ?? pick(r.centre_litres) ?? pick(typeof r.income === "object" ? r.income?.centre_litres : undefined) ?? 0;
+  if (home > 0) return { home, centre, basis: "home", litres: home };
+  if (centre > 0) return { home, centre, basis: "centre", litres: centre };
+  return { home, centre, basis: null, litres: 0 };
+}
+function asBasis(v: unknown, derived: CostBasis): CostBasis {
+  if (derived == null) return null;
+  if ((v === "home" || v === "centre") && v === derived) return v;
+  return derived;
+}
 export function parsePnl(raw: unknown): PnlRow[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((r: Record<string, unknown>) => {
@@ -57,11 +74,15 @@ export function parsePnl(raw: unknown): PnlRow[] {
     for (const [k, v] of Object.entries((r.income as Record<string, unknown>) ?? {})) inc[k] = n(v);
     const exp: Partial<Record<ExpenseCat, number>> = {};
     for (const [k, v] of Object.entries((r.expense as Record<string, unknown>) ?? {})) if ((EXPENSE_CATS as readonly string[]).includes(k)) exp[k as ExpenseCat] = n(v);
-    return {
+    const litres = n(r.litres);
+    const derived = costBasisOf({ litres, litres_home: r.litres_home as number | undefined, litres_centre: r.litres_centre as number | undefined, income: inc, cost_basis: null });
+    const row: PnlRow = {
       period: String(r.period).slice(0, 10), period_end: String(r.period_end ?? r.period).slice(0, 10), income: inc, income_total: n(r.income_total),
-      expense: exp, expense_total: n(r.expense_total), profit: n(r.profit), litres: n(r.litres), cost_per_litre: nn(r.cost_per_litre),
+      expense: exp, expense_total: n(r.expense_total), profit: n(r.profit), litres, litres_home: derived.home, litres_centre: derived.centre,
+      cost_basis: asBasis(r.cost_basis, derived.basis), cost_per_litre: nn(r.cost_per_litre),
       feed_per_animal: nn(r.feed_per_animal), animals: n(r.animals),
     };
+    return row;
   });
 }
 /** Kai period jor kar ek total (cost/L aur feed/animal dobara hisaab). */
@@ -75,9 +96,19 @@ export function sumPnl(rows: PnlRow[]) {
   }
   const animals = rows.length ? rows[rows.length - 1].animals : 0;
   const feed = FEED_CATS.reduce((s, c) => s + (expense[c] ?? 0), 0);
+  let home = 0, centre = 0;
+  const used = new Set<Exclude<CostBasis, null>>();
+  for (const r of rows) {
+    const b = costBasisOf(r);
+    home += b.home; centre += b.centre;
+    if (b.basis) used.add(b.basis);
+  }
+  const cost_basis: CostBasisLabel = used.size === 0 ? null : used.size === 1 ? [...used][0] : "mixed";
+  const costRows = rows.map((r) => ({ ...r, expense: r.expense_total }));
   return {
     income, expense, income_total: r2(it), expense_total: r2(et), profit: r2(it - et), litres: r2(lit),
-    cost_per_litre: costPerLitre(rows.map((r) => ({ litres: r.litres, expense: r.expense_total }))), feed_per_animal: animals > 0 ? r2(feed / animals) : null, animals,
+    litres_home: r2(home), litres_centre: r2(centre), cost_basis, cost_litres: r2(costRows.reduce((a, r) => a + costBasisOf(r).litres, 0)),
+    cost_per_litre: costPerLitre(costRows), feed_per_animal: animals > 0 ? r2(feed / animals) : null, animals,
     centre_litres: income.centre_litres ?? 0,
   };
 }
@@ -145,35 +176,46 @@ export function validateIncome(fd: FD, asOf: string): { ok: true; value: IncomeI
 }
 
 // --- Admin export (CSV, Google Sheets mein seedha khulti hai) ---
-export interface AdminRow { farmer_id: string; farmer_code: string | null; full_name: string | null; village: string | null; customer_name: string | null; animals: number; milking: number; litres: number; centre_litres: number; expense: number; income: number; profit: number; cost_per_litre: number | null }
+export interface AdminRow { farmer_id: string; farmer_code: string | null; full_name: string | null; village: string | null; customer_name: string | null; animals: number; milking: number; litres: number; centre_litres: number; litres_home: number; litres_centre: number; cost_basis: CostBasis; expense: number; income: number; profit: number; cost_per_litre: number | null }
 export function parseAdminRows(raw: unknown): AdminRow[] {
   if (!Array.isArray(raw)) return [];
-  return raw.map((r: Record<string, unknown>) => ({
-    farmer_id: String(r.farmer_id), farmer_code: (r.farmer_code as string) ?? null, full_name: (r.full_name as string) ?? null, village: (r.village as string) ?? null,
-    customer_name: (r.customer_name as string) ?? null, animals: n(r.animals), milking: n(r.milking), litres: n(r.litres), centre_litres: n(r.centre_litres),
-    expense: n(r.expense), income: n(r.income), profit: n(r.profit), cost_per_litre: nn(r.cost_per_litre),
-  }));
+  return raw.map((r: Record<string, unknown>) => {
+    const litres = n(r.litres);
+    const centre_litres = n(r.centre_litres);
+    const b = costBasisOf({ litres, centre_litres, litres_home: r.litres_home as number | undefined, litres_centre: r.litres_centre as number | undefined });
+    return {
+      farmer_id: String(r.farmer_id), farmer_code: (r.farmer_code as string) ?? null, full_name: (r.full_name as string) ?? null, village: (r.village as string) ?? null,
+      customer_name: (r.customer_name as string) ?? null, animals: n(r.animals), milking: n(r.milking), litres, centre_litres,
+      litres_home: b.home, litres_centre: b.centre, cost_basis: asBasis(r.cost_basis, b.basis),
+      expense: n(r.expense), income: n(r.income), profit: n(r.profit), cost_per_litre: nn(r.cost_per_litre),
+    };
+  });
 }
-/** Doodh-record wali entries (litres > 0, finite) -- lagat/L sirf inhi par. */
-export function withMilk<T extends { litres: number }>(rows: T[]): T[] {
-  return rows.filter((r) => Number.isFinite(r.litres) && r.litres > 0);
+type MilkRow = { litres: number; expense: number; litres_home?: number; litres_centre?: number; centre_litres?: number; income?: Record<string, number> | number; cost_basis?: string | null };
+/** Jis period/kisan ka litre-basis > 0 (ghar, warna centre). */
+export function withMilk<T extends MilkRow>(rows: T[]): T[] {
+  return rows.filter((r) => costBasisOf(r).litres > 0);
 }
-/** Kul lagat/L = (doodh-record walon ka kharcha) / (un ka doodh). Koi record nahi to null (0 se taqseem nahi). */
-export function costPerLitre(rows: { litres: number; expense: number }[]): number | null {
-  const m = withMilk(rows);
+/** Kul lagat/L = (basis wale kharche) / (un ka basis litre). Koi litre nahi to null. */
+export function costPerLitre(rows: MilkRow[]): number | null {
+  const m = withMilk(rows).map((r) => ({ litres: costBasisOf(r).litres, expense: Number.isFinite(r.expense) ? r.expense : 0 }));
   const lit = m.reduce((a, r) => a + r.litres, 0);
-  return lit > 0 ? r2(m.reduce((a, r) => a + (Number.isFinite(r.expense) ? r.expense : 0), 0) / lit) : null;
+  return lit > 0 ? r2(m.reduce((a, r) => a + r.expense, 0) / lit) : null;
 }
-/** Kisanon ki lagat/L ka seedha average -- be-record (0 litre) kisan shamil nahi. */
-export function avgCostPerLitre(rows: { litres: number; expense: number }[]): number | null {
-  const m = withMilk(rows);
-  return m.length ? r2(m.reduce((a, r) => a + (Number.isFinite(r.expense) ? r.expense : 0) / r.litres, 0) / m.length) : null;
+/** Kisanon ki lagat/L ka seedha average -- jis ka basis litre nahi, wo shamil nahi. */
+export function avgCostPerLitre(rows: MilkRow[]): number | null {
+  const m = withMilk(rows).map((r) => ({ litres: costBasisOf(r).litres, expense: Number.isFinite(r.expense) ? r.expense : 0 }));
+  return m.length ? r2(m.reduce((a, r) => a + r.expense / r.litres, 0) / m.length) : null;
 }
-export function grandTotal(rows: AdminRow[]) {
+/** Admin totals; per-row litres split/basis are optional (derived via costBasisOf when absent). */
+export type GrandRow = Omit<AdminRow, "litres_home" | "litres_centre" | "cost_basis"> & Partial<Pick<AdminRow, "litres_home" | "litres_centre" | "cost_basis">>;
+export function grandTotal(rows: GrandRow[]) {
   const t = rows.reduce((a, r) => ({ animals: a.animals + r.animals, milking: a.milking + r.milking, litres: a.litres + r.litres, centre_litres: a.centre_litres + r.centre_litres,
     expense: a.expense + r.expense, income: a.income + r.income, profit: a.profit + r.profit }), { animals: 0, milking: 0, litres: 0, centre_litres: 0, expense: 0, income: 0, profit: 0 });
-  return { ...t, litres: r2(t.litres), expense: r2(t.expense), income: r2(t.income), profit: r2(t.profit), // lagat/L sirf un kisanon par jinke doodh ka record hai (warna be-record kharcha average bigaarta hai)
-    cost_per_litre: costPerLitre(rows), avg_cost_per_litre: avgCostPerLitre(rows), milk_farmers: withMilk(rows).length, losses: rows.filter((r) => r.profit < 0).length };
+  const bases = new Set(rows.map((r) => costBasisOf(r).basis).filter((b): b is "home" | "centre" => b != null));
+  const cost_basis: CostBasisLabel = bases.size === 0 ? null : bases.size === 1 ? [...bases][0] : "mixed";
+  return { ...t, litres: r2(t.litres), centre_litres: r2(t.centre_litres), expense: r2(t.expense), income: r2(t.income), profit: r2(t.profit),
+    cost_per_litre: costPerLitre(rows), avg_cost_per_litre: avgCostPerLitre(rows), cost_basis, milk_farmers: withMilk(rows).length, losses: rows.filter((r) => r.profit < 0).length };
 }
 export function adminFilter(rows: AdminRow[], f: string, q: string): AdminRow[] {
   let out = rows;
@@ -191,11 +233,11 @@ export function csvCell(v: unknown): string {
   return /[",\n\r]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
 }
 export function adminCsv(rows: AdminRow[], from: string, to: string): string {
-  const head = ["Farmer code", "Name", "Village", "Customer", "Animals", "Milking", "Milk home (L)", "Milk centre (L)", "Expense (Rs)", "Income (Rs)", "Profit/Loss (Rs)", "Cost per litre (Rs)"];
+  const head = ["Farmer code", "Name", "Village", "Customer", "Animals", "Milking", "Milk home (L)", "Milk centre (L)", "Expense (Rs)", "Income (Rs)", "Profit/Loss (Rs)", "Cost per litre (Rs)", "Cost basis"];
   const lines = [`Dairy Hisaab ${from} to ${to}`, head.map(csvCell).join(",")];
-  for (const r of rows) lines.push([r.farmer_code, r.full_name, r.village, r.customer_name, r.animals, r.milking, r.litres, r.centre_litres, r.expense, r.income, r.profit, r.cost_per_litre ?? ""].map(csvCell).join(","));
+  for (const r of rows) lines.push([r.farmer_code, r.full_name, r.village, r.customer_name, r.animals, r.milking, r.litres, r.centre_litres, r.expense, r.income, r.profit, r.cost_per_litre ?? "", r.cost_basis ?? ""].map(csvCell).join(","));
   const g = grandTotal(rows);
-  lines.push(["GRAND TOTAL", "", "", "", g.animals, g.milking, g.litres, g.centre_litres, g.expense, g.income, g.profit, g.cost_per_litre ?? ""].map(csvCell).join(","));
+  lines.push(["GRAND TOTAL", "", "", "", g.animals, g.milking, g.litres, g.centre_litres, g.expense, g.income, g.profit, g.cost_per_litre ?? "", g.cost_basis ?? ""].map(csvCell).join(","));
   return "\uFEFF" + lines.join("\r\n") + "\r\n";
 }
 

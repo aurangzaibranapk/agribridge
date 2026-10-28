@@ -1,3 +1,403 @@
+## Pending — 28 October 2026: load Tx ID lazmi, Help matn (722)
+
+Branch `cursor/load-tx-id-required-4aa4`. Migration **722 file only**. Testing aur Live dono par **nahi** chali. **721 mat use karo** — wo `721_cash_needs_you_help` hai (Cash Needs-you, PR #234). 722 sirf `feature_help` ka load-bill matn. Koi column nahi. Asal rok code mein hai (`createLoadTransaction` / `createBankTransfer`): Tx ID khali ho to save reject, status `darj`. Purani "Load proof missing" qatarein nahi band hoti. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `722_load_tx_id_required_help.sql` — Help se "Save as Pending Proof" hata kar Tx ID lazmi likhta hai.
+- Rollback: `722_load_tx_id_required_help.rollback.sql`. Code ki rok is rollback se nahi hat-ti.
+
+## Pending — 28 October 2026: POS default dukaan Karyana (code only)
+
+Branch `cursor/pos-default-karyana-8f1d`. **Koi migration nahi.** Testing/Live DB par kuch nahi chalana. Sirf naya build.
+
+- `/admin/pos` Owner/Admin ke liye pehle **Kisaan Karyana Mahabali** (code 03). 157 NB default nahi.
+- Staff jiski `profile.shop_id` lagi ho, usi dukaan. Dukan par pada khula shift (SHIFT-26-00026) ab default nahi cheenta.
+- `?counter=` switcher apni marzi ka counter rakhta hai.
+
+## Pending — 27 October 2026: Cash Needs-you queue (721)
+
+Branch `cursor/cash-needs-you-queue-9b60`. Migration **721 not applied** on Testing or Live. File only. 717 cash custody chain pehle se Live par hai — ye us ka UI hai. **720 mat use karo** — wo `720_id_card_application_fields` hai, PR #233, Live par lag chuki. 721 sirf menu ka naam aur feature_help. Koi table, koi RPC, koi raqam nahi badalti. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- Safha `/admin/cash-custody`: Aaj aapki zarurat. Ask why in-app. Approve maujooda `verifyCollectionDeposit`.
+- `721_cash_needs_you_help.sql`. Rollback: `721_cash_needs_you_help.rollback.sql`.
+- Fuel / payroll is mein nahi.
+
+## Done on Live — 27 October 2026: staff ID card hire fields (720)
+
+Branch `cursor/id-card-fill-print-e442`. PR #233. Migration **720 Live par lag chuki** (aaj raat). Dobara mat chalana. Number 721 cash custody ka hai, 720 nahi.
+
+- `720_id_card_application_fields.sql` — `job_applications` par blood group, emergency naam/number, aur ID photo. Joined staff ke **khali** `staff_details` khane (phone, CNIC, address, gender, blood, emergency, photo, application/offer link) application se bharte hain. Jo HR ne pehle likha hai wo nahi mitta.
+- Blood aur emergency pehle application par the hi nahi, is liye purane staff (jaise M Usama Saleem) par ye do khali reh sakte hain. Phone aur CNIC application par the, copy unhein staff record par laati hai.
+- Rollback: `720_id_card_application_fields.rollback.sql` — naye columns hataata hai. Copy ho chuki phone/CNIC wapas khali nahi karta.
+- Code us se pehle bhi card par application se phone/CNIC dikhata hai. Blood tabhi save hota hai jab ye migration chal chuki ho.
+
+## Pending — 27 October 2026: reel website pages (719)
+
+Branch `cursor/reel-website-features-3d67`. Migration **719 not applied** on Testing or Live. File only. 717 cash custody hai, 718 batch ginti. Ye un ke baad. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `719_sales_analytics_help.sql` — sirf feature + feature_help + dashboard link. Koi table, koi rate, koi qatarein nahi badalti.
+- Public safhe code se hain: `/faslon-ke-tips`, `/mahabali-doodh-gandum-rate`. Admin: `/admin/reports/sales/analytics`.
+- Rollback: `719_sales_analytics_help.rollback.sql`.
+
+## Pending — 27 October 2026: batch remaining = ginti (718) — NOT applied
+
+Branch `cursor/batch-ginti-align-8978`. Migration **718 file only**. Testing aur Live dono par **nahi** chali. Live (`ktskwawkslaznkjjacni`) par sirf read-only scan hua. Apply tab, jab backup verify ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live.
+
+- `718_batch_ginti_align.sql` — product + godam (3b wala join) par `inventory.quantity_on_hand` ko `sum(stock_batches.remaining_quantity)` ke barabar karta hai, `stock_movements` adjustment se. Batch remaining aur ledger (1200/1210/1220) nahi cherta.
+- Snapshot: `backup_718_inventory_ginti`. Rollback: `718_batch_ginti_align.rollback.sql` (ek transaction, `psql -1`).
+- 27 Oct read-only: raw 3b farq 91. Un mein 90 scale `numeric(14,3)` par seedha barabar ho sakte hain (ginti +2032 / −59). Ek jora ginti 0 aur batch 0.000232 hai — ginti column itna barik adad rakh nahi sakta, raw 3b us par reh sakti hai.
+
+## Pending — 27 October 2026: POS cash custody chain (717)
+
+Branch `cursor/pos-cash-custody-slips-1947`. Migration **717 not applied** on Testing or Live. File only. Number 716 customer khata / 2030 (PR #225) ka hai — ye alag hai. Testing project MCP list mein nahi tha, is liye yahan nahi chali. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- Har dukan, shift band: staff copy + jama copy. Har hop (bheja, wasoli, bank jama, verify) zimmedar + waqt. Dashboard `/admin/cash-custody`. 1 din bina verify: Admin, Super Admin, Owner ko in-app alert.
+- Custody se bank jama sirf wasoli ke baad (`with_holder`). Verify 1000 se bank karti hai; 1030 par atki cash is darwaze se nahi nikalti.
+- Wasoli qanoon PR #223 ka hai, jo main par merge ho chuka. Is migration ne `receiveCash` nahi chhera.
+- Yasir / 2030 customer ledger is mein nahi — wo 716 hai.
+- Cron: pg_cron `agribridge_cash_custody_overdue` har ghante :15, warna `GET /api/cron/cash-custody-overdue` with `CRON_SECRET`. SMS/WhatsApp nahi.
+- Rollback: `supabase/migrations/717_pos_cash_custody_chain.rollback.sql`.
+
+## Phone glass 631 — 27 October 2026 — app only
+
+versionCode 631. Header: AgriBridge aur version upar, tagline aur role gold line, phir Assalam o Alaikum. Wasela Eco Mahabali nahi. Kisan wallet tab sirf tracking card. Purana gold wallet list hata. Dealer bars chauri. Khali approval sab green check nahi. Jhoota MISAAL number nahi. Live SQL nahi. Live package `pk.alranatraders.agribridge`, production channel. TEST package alag.
+
+## Pending — 27 October 2026: POS close Cash Handover Slip (code only)
+
+Branch `cursor/pos-close-cash-handover-slip-fc03`. **Koi migration nahi.** Testing/Live DB par kuch nahi chalana. Sirf naya build.
+
+- POS Shift Band par counted cash > 0 ho to Daily Cash Slip upar se form ko nahi dhakti.
+- Cash bhejte hi Cash Handover Slip isi screen par khulti hai (`?embed=1&print=1`).
+- Sales staff ke paas list (`/admin/cash-handover`) ki view ijazat nahi — slip ka raasta ab khulta hai. List phir bhi band.
+- Wasoli: Finance role ke naam bheja cash Manager / Finance / Admin / Owner darj kar sakte hain. Bhejne wala khud nahi. Koi migration nahi.
+
+## Phone live APK — 27 October 2026 — app only, Live SQL nahi
+
+Live sideload versionCode 630. Package `pk.alranatraders.agribridge`. Tag `v0.6.1-beta-test1`. Supabase `ktskwawkslaznkjjacni`. `APP_CHANNEL=production`: Masla, Role dekho, aur Role badlo band. TEST APK `pk.alranatraders.agribridge.test` alag rehti hai. Play TWA versionCode 1 tha, installed sideload 605 tha, is liye 630 usi package par upgrade hai. 698 pehle se Live par hai. 700 se 711 tak testing data aur test function patches hain — Live par nahi chalani. `app_phone_notes` Live par na ho to phone dash dikhata hai, crash nahi. Koi nayi Live SQL is build ke liye zaroori nahi. Backup maange baghair Live database par kuch nahi chala.
+
+## Phone glass homes — 27 October 2026 — app only
+
+versionCode 630. Approved glass chrome: ek gold line par product, tagline, role, phir Assalam o Alaikum. Jhoota MISAAL number nahi — khali card par dash, asal TEST record par asal adad. Litre grouping, order date 18 Oct jaisa, rupee en-IN grouping, task Jari jab record kehta hai, vet pending row par janwar aur dawai. Tank °C aur staff shift sirf jab note ya schedule ho. Dealer hazar axis aur unit note se. Koi migration nahi. Live database par kuch nahi. Live workflow 605 par hai.
+
+versionCode 629. Header ab do gold lines: product naam, phir tagline aur role, phir Assalam o Alaikum. Tank card par temperature line, number ho to °C, na ho to dash. Count badge sirf jab pichli ginti alag ho. Vet row par naam, gaon, waqt, Urgent, Day n/m jab record par hon. Staff duty par schedule ka shift window jab hr_work_schedules parhe. Dealer bar hazar mein, stock unit note se. Kisan wallet tab se purana gold wallet hata. Koi naya number nahi. Koi migration nahi. Live database par kuch nahi. Live workflow 605 par hai.
+
+versionCode 628. Owner ne final glass home mockups manzoor kiye. Header do line: tagline aur role, phir Assalam o Alaikum. Mausam card bara, sirf Kisan, Customer, MCA, Vet. Goal card home se hata. Tracking card home par nahi: Kisan wallet, Admin approvals, Customer orders. Customer home par Order status. Login card par User ID nahi, andar scroll nahi. Brand AgriBridge, tagline Kisan ka Wasela. Koi migration nahi. Live database par kuch nahi. Live workflow 605 par hai.
+
+## Phone version line — 26 October 2026 — app only
+
+versionCode 627. Home footer `AgriBridge · v0.6.1 Beta · …` web par Metro ke cache hue manifest se 625 par atka tha. Web ab source ka phone code dikhata hai. Android APK apna embedded versionCode dikhata hai. Live workflow 605 par hai. Koi migration nahi. Live database par kuch nahi.
+
+## Phone dealer and vet — 26 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 626. Dealer test list ab sirf Agri Dealer / Kisan Dukan hai, is mahine ki ginti Karachi mahine se, badge order count se. `711_app_phone_dealer_vet.sql` testing par: is_test dealer orders ko is mahine ~38 aur pichle mahine ~34 par rakhti hai, kam hon to TEST-711 qatarein. Vet ki test visits jin ka next due khali hai, 7 din aage, taake Pending cases dikhein. Live par mat chalana. Rollback created_at wapas aur TEST-711 hataata hai.
+
+## Phone polish — 26 October 2026 — app only
+
+versionCode 625. Badge tab chhupti hai jab farq 0 ho, 90% ya us se bara ho, ya 300% se aage ho. Customer home se "Doosre orders" list hata di. Mockup mein sirf mahine ka chart aur ek order ki timeline hai. Koi nayi migration nahi. Live database par kuch nahi.
+
+## Phone milk today — 26 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 624. App code nahi badla. Test milk_entries ~22 October par atki thin, phone ka aaj 26 October hai, is liye Kisan / MCA / MCO / Admin ki aaj ki doodh cards 0 L thin. `710_app_phone_milk_today.sql` sirf testing: is_test subah, shaam, test kisan, aur route collection_date ko Asia/Karachi ke aaj par sarkati hai. Litre, rate, fat, status wahi rehte hain. Dobara chalane par sirf naya farq. Rollback notes se utne din wapas kaat ta hai. Live par mat chalana. Boss testing par chalayen, phir wahi 624 APK se dobara dekhein.
+
+## Phone sales fix, no replica role — 26 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 624. Role home par greeting ke upar chhoti AgriBridge / Kisan ka Wasela line nahi. Login par brand stack waisi hai. Vet par "7 din ke visits" chart pehle hi hata hua hai. `709_app_phone_sales_fix.sql` dubara likhi gayi: `session_replication_role` nahi. `post_pos_source` aur `fn_staff_sales_reward_on_sale` TEST-709 receipt par seedha laut te hain. Payment row nahi banti. Journal ho to migration rukti hai, delete nahi. Testing par Boss chalayen. Live par mat chalana. Rollback function wapas purani body par laata hai. Pichli 709 Testing par 42501 se poori roll back ho chuki hai.
+
+## Phone sales fix — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 623. 708 ne is_test bills ko din 1–12 par rakh diya tha, is liye 22 October ki Total sales Rs 0 / 0 bill thi aur ring ~6% reh gayi. App ki Total sales card aaj ki hai; query nahi badli. Badge 0% aur 300% se upar chhup jati hai. Admin par alag TEST label nahi. Vet par 7 din ka chart nahi, aaj ki ~3 visits. Customer tracking beech ka step (dispatched, ~50%). `709_app_phone_sales_fix.sql` testing par Boss chalayen: zyada se zyada 17 counted bills aaj par, is mahine ~2.6 lakh (TEST-709 receipts, ledger trigger band), pichle mahine alag, Farmer order dispatched, aaj ke 3 ilaj. Live par mat chalana. Rollback file saath hai. 708 Boss testing par laga chuke hain.
+
+## Phone role home fix — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 622. Header ek compact line: centre aur role, Assalam o Alaikum, gol photo. AgriBridge aur Kisan ka Wasela chhote. Mausam card chhota. Sifar ya khali pichli value par badge nahi. 300% se aage 300%+. Staff ki doosri line alag row, kat-ti nahi. Admin revenue 6 mahine. Donut 4 qismen jab notes hon. Dealer bar par 1.6L / Rs, stock par product naam. Vet par visit ka naam aur 7 din ki line. `708_app_phone_role_fix.sql` testing par Boss chalayen: demo naam, MCA fat/status (6 pending rehti hain), centre, (TEST) hatao, aaj ke ilaj, bills 6 mahine. Live par mat chalana. Rollback file saath hai. 707 Boss testing par laga chuke hain.
+
+## Phone glass home and TEST seed — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 621. Starry glass, compact header, greeting drops the word TEST, weather keeps the asked place (Chak 157 NB) plus a condition icon. Every number card has an icon, a line, and a change badge. Admin par chhoti TEST nishani aur "Is mahina munafa". Customer aur dealer charts 6 mahine. Khata ka minus Credit dikhta hai. `707_app_phone_home.sql` testing par: tanks, maund, dealer stock, staff advance/tasks, goal numbers sirf jahan null, centre names, vet next_due aaj, 8 janwar, orders 6 mahine. Live par mat chalana. Rollback file saath hai.
+
+## Phone KPI grid and weather — 22 October 2026
+
+versionCode 620. KPI card ki chaudai flex item par 48% hai, is liye 2x2 grid rehti hai. Mausam Open-Meteo se: apna gaon, warna TEST kisan ka asal gaon (district "TEST" shehar nahi). Pakistan wali geocode. Aakhri kamiyab reading cache. Live APK nahi badli. 705 aur 706 file only.
+
+## Phone tagline lockup — 22 October 2026
+
+versionCode 619. English aur Roman: AgriBridge, seedha neeche Kisan ka Wasela. Urdu: ایگری بریج, seedha neeche کسان کا وسیلہ. English gloss nahi. Default app mein hai, 706 baad mein roman/urdu badal sakti hai. Live par 706 nahi. Live APK nahi badli.
+
+## Phone identity — 22 October 2026 — NO NEW SQL
+
+versionCode 618. Phone par sirf AgriBridge aur tagline. Login aur header koi company naam ya logo nahi likhte, chahe settings mein ho. Website wala naam sirf domain `alranatraders.pk` aur package id mein hai. 705 aur 706 ab bhi file only, live par nahi. Live APK nahi badli.
+
+## Phone brand label — 22 October 2026 — FILE ONLY
+
+versionCode 617. Phone par sirf AgriBridge aur tagline. Website wala naam app ki seed aur screen par nahi. `app_brands` khali rehti hai jab tak koi doosri brand settings mein na ho. Package id aur domain nahi badle. 705 aur 706 ab bhi file only, live par nahi.
+
+## Phone tagline — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 616. AgriBridge ke neeche tagline: Roman `Kisan ka Wasela`, Urdu `کسان کا وسیلہ`, English `The farmer's bridge`. `website_settings` key `app_tagline`. Migration **706 not applied** by this agent. Owner testing par: `supabase/migrations/706_app_tagline.sql`. Live par 706 nahi. Key na ho to tagline nahi, koi likha hua jumla nahi. 705 ab bhi file only.
+
+## Phone sub-brand — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 615. AgriBridge umbrella code mein hai. Chhota brand naam aur logo `website_settings` key `app_brands` se. Migration **705 not applied** by this agent. Owner testing par: `supabase/migrations/705_app_sub_brand.sql`. Live par 705 nahi. Key na ho to sirf AgriBridge, koi banaya hua naam nahi. Logo tab jab https URL ho.
+
+## Phone brand — 22 October 2026 — NO NEW SQL
+
+versionCode 614. Home brand AgriBridge hai. Neeche chhota `by Al Rana Traders`. Wasela Eco Mahabali home brand nahi. Baqi approved cards waise hi. Live APK nahi badli. 704 ab bhi file only.
+
+## Phone goal card — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 613. Goal card on Kisan (mahine ke litre), MCA aur MCO (aaj ki collection), Staff (mahine ki hazri), Admin home (mahine ki sale). Ring 0 se count karti hai jab target number ho. Target na ho to dash, sifar nahi. Migration **704 not applied** by this agent. Owner testing par: `supabase/migrations/704_app_goal_targets.sql`. Live par 704 nahi. Row insert hoti hai, chaaron numbers NULL rehte hain jab tak owner khud set na kare. Koi sample target nahi. Live APK nahi badli.
+
+## Phone ring meter — 22 October 2026 — NO NEW SQL
+
+versionCode 612. Kisan home: mahine ka target ring (target record nahi, beech mein dash, litres asal). MCO home: chiller ring (tank level track nahi, beech mein dash) aur purane tank bars. Koi nayi migration nahi. Live APK nahi badli.
+
+## Phone homes read TEST data — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 611, tag `v0.6.1-beta-testdb`. Home cards TEST qatarein parhti hain: bills, stock, cash, tankhwah, activity, admin ki TEST manzooriyan. Kisan sirf apna doodh. Migration **703 not applied** by this agent. Owner testing par: `supabase/migrations/703_app_test_read_policies.sql`. Live par 703 nahi. Seed ka mass `is_test = true` is file mein nahi. Live APK nahi badli.
+
+## Phone homes — 22 October 2026 — NO NEW SQL
+
+versionCode 610, tag `v0.6.1-beta-testdb`. Wasela Eco Mahabali dark glass homes for 8 roles. Live tracking card: Customer order (Orders tab), Kisan doodh (Wallet tab), Admin manzoori (Approve tab). Numbers database se. Koi nayi migration nahi. Live APK nahi badli.
+
+## Phone Phase C — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 609, tag `v0.6.1-beta-testdb`. Customer draft karyana, Staff check-in (`source = app`), Vet ilaj, Dealer orders/HQ khata, Profile (optional User ID, settings, PIN note, notifications). Migration **702 not applied** by this agent. Owner testing par: `supabase/migrations/702_app_test_phase_c.sql`. Live par 702 nahi. Live APK tag replace nahi hoti. Tankhwah aur advance jaan kar khali hain.
+
+## Phone Phase B — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 608, tag `v0.6.1-beta-testdb`. MCO check (fat/LR, rate settings se), subah/shaam, din/hafta/mahina, kisan alerts aur trend. Admin Manzoor priced TEST doodh par. Migration **701 not applied** by this agent. Owner testing par: `supabase/migrations/701_app_test_mco_admin.sql`. Live par 701 nahi. Live APK tag replace nahi hoti.
+
+## Phone Phase A — 22 October 2026 — FILE ONLY, NOT APPLIED
+
+versionCode 607, tag `v0.6.1-beta-testdb`. Kisan screens (wallet, doodh, khata, vet, karyana) aur MCA pickup. Migration **700 not applied** by this agent. Owner testing par khud lagaye: `supabase/migrations/700_app_test_milk_write.sql`, phir `scripts/seed-app-test-account.sql` dobara. Live database par 700 nahi. Live APK tag `v0.6.1-beta-test1` replace nahi hoti.
+
+## Phone TEST flavor — 22 October 2026 — NO SQL FROM THIS COMMIT
+
+Owner ka faisla: mobile testing testing project `hwaiuwxqldxsoukkfefn` par. Alag APK `AgriBridge TEST`, package `pk.alranatraders.agribridge.test`, tag `v0.6.1-beta-testdb`, versionCode 606. Live APK tag `v0.6.1-beta-test1` is commit se replace nahi hoti. Is commit ne testing ya live par koi SQL nahi chalayi. 699 aur seed owner testing par khud laga rahe hain. Live database par 699 tab tak nahi jab tak owner alag se na kahein.
+
+## Pending — 22 October 2026: App test account (699)
+
+Branch `cursor/mobile-phase1-4b80`. Is agent ne migration apply nahi ki. Auth user `app-test@alranatraders.pk` owner ne testing par bana liya hai. 699 aur seed owner testing par alag se laga rahe hain. Live par 699 nahi.
+
+- `supabase/migrations/699_app_test_account.sql` — `profiles.is_test_account`, `is_test` columns, `app_test_accounts` / `app_test_links`, sirf SELECT policies. Koi likhai policy nahi.
+- `scripts/seed-app-test-account.sql` — tab chale jab Auth mein `app-test@alranatraders.pk` ban chuka ho. Password SQL mein nahi.
+- Seed aaj ka TEST doodh daalti hai (subah 12.5 L, shaam 8 L, `pending_fat`, notes `TEST milk`). Mobile admin `is_test = false` se chhupata hai. Portal ka doodh total in litres ko tab tak jod sakta hai jab tak report `is_test = false` na lagaye. Tankhwah aur advance jaan kar nahi daale, taake qist na bane. `pos_sales` aur cash/bank ko test account nahi parhta.
+- Rollback: `699_app_test_account.rollback.sql` (TEST rows pehle delete).
+
+## Applied — 22 October 2026 ~00:10 PKT: Mobile phase 1 (698) on Live
+
+Branch `cursor/mobile-phase1-4b80`, commit `caa6b91d`. Migration **698 applied** on Live `ktskwawkslaznkjjacni` on 2026-10-22 at ~00:10 PKT. Testing par is dafe ka alag record nahi. Portal build abhi is PR ke sath deploy nahi hui.
+
+Phase 2 screens (admin, farmer, customer, staff) bhi isi live database ko user JWT aur maujooda RLS se parhti hain. Nayi migration ya naya portal route in screens ke liye zaroori nahi. Likhai nahi hoti.
+
+Email login is APK se live Supabase password grant par chal sakta hai, portal route ke baghair. Mobile, CNIC, sync, feedback, milk, attendance, aur support chat ke liye is PR ka portal build chahiye: `POST /api/mobile/v1/session`, `POST /api/mobile/v1/sync`, `POST /api/mobile/v1/feedback`, `GET /api/mobile/v1/support`, aur bearer auth wale `/api/farmer-ai` aur `/api/bridge-ai`. Ye build abhi upload nahi hui. Command tab bhejni hai jab Boss system par hon.
+
+Backups `backups` schema mein hain, suffix `_20261022_mig698`: `staff_details`, `milk_rate_settings`, `attendance_records`, `support_tickets`, `support_ticket_attachments`, `milk_route_collections`, `storage_buckets`, aur constraints.
+
+Rollback: `698_mobile_phase1.rollback.sql`. Us se pehle `attendance_records` ki woh qatarein delete karni hain jin ka `source = 'app'` hai, warna purana check nahi baithta.
+
+- staff_details.field_app_role: null, mca, ya mco
+- milk_rate_settings: fat/lr/snf alert columns, nullable, koi sample default nahi
+- attendance source check: live ki saat qismein rehti hain (web, pwa, whatsapp, biometric, correction, offline, leave) aur `app` izafa. Rollback wahi live array wapas rakhta hai.
+- support_tickets intake: `mobile_app`
+- support evidence mime: voice types
+- milk_route_collections.client_uuid
+- mobile_sync_inbox (service role likhta hai; authenticated sirf apni row padhta hai)
+- Rollback: `698_mobile_phase1.rollback.sql` (nayi qadron wali rows hon to purana check wapas nahi lagega)
+
+WhatsApp number code mein nahi. Live par link tabhi dikhe jab `SUPPORT_WHATSAPP_E164` ya `website_settings.support_whatsapp` ya `contact_phone` set ho.
+
+## Pending — 27 October 2026: self-merge Reject (715)
+
+Branch `cursor/reject-self-product-merge-ae81`. Migration **715 not applied** on Testing or Live. File only. Number 714 PR #220 (`714_dairy_cost_per_litre_basis`) ke paas hai. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `product_merge_requests_not_self` ab `status = 'rejected' OR source <> target`, ab bhi NOT VALID. Koi row update/delete nahi.
+- Pending self-merge (Sprite Mint 1 Le, source = target) Reject isi row par status `rejected` + wajah likhega. Nayi merge request nahi.
+- Approve of self-merge app aur check dono rokte hain.
+- Rollback: `715_product_merge_reject_self.rollback.sql` — purana check wapas, Reject phir ruk jayega.
+
+## Done on Live — 27 October 2026: dairy cost/litre basis (714) + customer portal glass
+
+Branch `cursor/dairy-cost-portal-glass-c2d9`. Migration **714 applied on Live** (`ktskwawkslaznkjjacni`) 27 Oct 2026 after backup at `/workspace/backups/2026-10-27-live-220/` (box). Testing not applied (not reachable from MCP).
+
+- `714_dairy_cost_per_litre_basis.sql` — `fn_dairy_pnl_for` and `fn_admin_dairy_totals`. Cost/L = expense ÷ home yields when home > 0, otherwise centre litres. Does not add the two. New fields: `litres_home`, `litres_centre`, `cost_basis` (`home` | `centre` | null). `litres` stays home yield.
+- Rollback: `714_dairy_cost_per_litre_basis.rollback.sql` (back to 577/578: home yields only).
+- Customer portal glass is UI only (`/portal/c/*`, `/admin/customer-portal`). No schema.
+
+## Done on Live — 26 October 2026: Pending approval escalation (713, was 698)
+
+Branch `cursor/pending-approval-escalation-e154` (PR #216). File renamed 698 → **713** because live already has `698_mobile_phase1`.
+- Live `ktskwawkslaznkjjacni`: applied 26 Oct 2026 14:51 PKT, recorded as `20261026095127 713_pending_escalation`. Backup: box `/workspace/backups/2026-10-26-live-214-215-216/`.
+- Testing `hwaiuwxqldxsoukkfefn`: applied earlier, recorded as version `698216` (same SQL). Do not re-apply.
+
+- `pending_escalation_settings` / `_state` / `_events`. `fn_pending_escalate` har 15 minute (pg_cron, warna `/api/cron/pending-escalation`). Sirf in-app notification. SMS/WhatsApp nahi.
+- Manager SLA (default 24h, category settings) ke baad item **Admin aur Owner dono** ke paas. Koi bhi ek faisla kar sakta hai.
+- `fn_may_decide_entry` / `fn_actor_may_decide`: Admin, Owner, Super Admin apni entry bhi. Manager aur baqi staff apni entry nahi. Fuel, generator, maintenance checks aur POS review isi guard par.
+- Timeline: `Khud approve (Admin)` / `Khud approve (Owner)`. Season import SELECT staff policy (pending warning).
+- Rollback: `supabase/migrations/713_pending_escalation.rollback.sql`.
+
+## Done on Live — 26 October 2026: application gender + candidate message log (PR #214)
+
+Applied on Live 26 Oct 2026 ~14:51 PKT as `job_application_gender` + `job_application_messages` (grants included). Usama Saleem duplicate Shortlist row deleted after read check (1 row). Older note below:
+
+Branch `cursor/careers-gender-messages-552c`. **Not applied on Live** (`ktskwawkslaznkjjacni`). Testing project `hwaiuwxqldxsoukkfefn` was not in this session's Supabase project list (permission denied on a direct lookup), so these two files are **unapplied everywhere**:
+
+- `supabase/migrations/20261022100000_job_application_gender.sql` — nullable `job_applications.gender`, check `male/female/other`. No backfill.
+- `supabase/migrations/20261022100100_job_application_messages.sql` — `job_application_messages` for email/SMS/WhatsApp. RLS: hr, admin, owner, super_admin, manager.
+
+Do not run them on Live until there is a verified backup and a separate approval. The duplicate Shortlist cleanup for M Usama Saleem is also **not run**. Read-only SQL and the separate DELETE are in `supabase/manual/job_application_shortlist_duplicate_20261022_read.sql` and `..._delete.sql`.
+
+## Done on Live — 27 October 2026: Admin dealer / buyer invite (712, PR #217)
+
+Live `ktskwawkslaznkjjacni`: applied 27 Oct 2026 07:01 PKT, recorded as `20261027020151 712_party_invite`. Backup: box `/workspace/backups/2026-10-27-live-217/`. Testing `hwaiuwxqldxsoukkfefn`: applied 26 Oct (backup `/workspace/backups/2026-10-26-testing-712/`). Do not re-apply.
+
+- `party_invite_accounts` + `party_invite_sends` (poora paigham, channel, recipient, wajah). RLS: sirf Owner/Admin apni organization. Likhai service role se.
+- `fn_party_invite_phone_taken` — service_role.
+- Feature `hr.party-invite` → `/admin/hr/users`. HR role ko ijazat nahi.
+- Rollback: `712_party_invite.rollback.sql`.
+
+## Done on Live — 22 October 2026: Careers i18n columns (public apply modal)
+
+Branch `cursor/careers-apply-modal-i18n-552c` (PR #213). Live `ktskwawkslaznkjjacni` only. Testing was not touched.
+
+- Backup before the change: `backups.job_vacancies_20261022_brand` — 2 rows, 10 columns, same as `public.job_vacancies` at that moment. Schema `backups` is revoked from public, anon, and authenticated.
+- Migration `supabase/migrations/20261022082729_job_vacancy_public_i18n.sql` applied on Live. Nullable columns only. No other table.
+- Manual `supabase/manual/job_vacancy_i18n_live_rows.sql` then wrote the two MCO rows only. Base `title` / `description` unchanged. `brand`, `brand_en`, `brand_ur` are null.
+- Checked after write: Mahanbali and 157NB have English, Roman, and Urdu titles. Row count stayed 2.
+- Columns: `title_en`, `title_ur`, `title_roman`, `description_en`, `description_ur`, `description_roman`, plus optional `brand`, `brand_en`, `brand_ur`, `brand_roman`. Empty brand means no public tag. RLS unchanged.
+- Merged to `main` as `f22757b12a9ca6a88d20ae08fbad2428a8dc8237` (PR #213, normal merge). CI on that commit: AgriBridge Build Check and Build AgriBridge cPanel Package both succeeded.
+- cPanel package from that commit: `agribridge-cpanel-release.tar.gz` (191,787,268 bytes). SHA256 `f3761bfb8d9f12a614dc313cf1f50d8e6e92721d19608e951abf5611006d3326`. `.next` BUILD_ID `Jqfn_IvJI8XREv-mwPfs5`. Actions run 39755713629. The archive includes `.next`, `public`, `package.json`, `package-lock.json`, `next.config.js`, `server.js`, and `node_modules`.
+## Pending — 21 October 2026: Bharti offer → structure → barhotri → salary slip (691)
+
+Branch `feat/salary-offer-slip`. Migration **691 not applied** on Testing or Live. Files only. 689 reserved, 690 left free. Backup pehle (lines file ke upar likhi hain), phir Testing, phir Live. App 691 ke baghair bhi chalta hai (purani payslip, purani offer), magar naye hissay 691 ke baad hi kaam karte hain.
+
+- job_offers: basic, house_rent, travel, mobile, bonus, incentive_pct/rule, probation_months, joining_date, accepted_total/at, superseded_by; status + countered, withdrawn.
+- job_offer_events (naya, sirf izafa) — mol-tol ki tareekh. HR/Admin/Owner hi dekhte.
+- staff_details: offer_id, application_id, father_name, bank_name, department, next_increment_due (apni khud nahi badalti).
+- staff_salary_structures: source_offer_id, change_reason, prev_structure_id, increment_amount/pct. fn_salary_structure_from_offer = sirf DRAFT; manzoori doosra admin.
+- v_upcoming_increments view; feature hr.increments (/admin/hr/increments).
+- payroll_lines: slip_no, verify_code (unique), paid_at, pay_method, pay_ref. fn_salary_slip (staff sirf apni, bank masked), fn_verify_salary_slip (anon, mehdood), fn_payroll_line_set_payment (Admin/Owner).
+- Rollback: `691_salary_offer_increments_slip.rollback.sql`.
+
+## Pending — 20 October 2026: HR remaining guards (680–685)
+
+Branch `cursor/hr-remaining-fixes-7fa4` (PR #186). PR #182 is already on main. Migrations **680–685 not applied**. Files only. Backup ke baad pehle Testing, phir Live. 662 ke unique index se **pehle** ye read-only ginti (0 honi chahiye; koi update nahi):
+
+```sql
+select pay_journal_id, count(*) as kitne
+  from public.payroll_runs
+ where pay_journal_id is not null
+ group by pay_journal_id
+having count(*) > 1;
+```
+
+- 680 ek mahina / ek banda ek dafa (salary_payments + payroll). HR pay role ada kar sakti hai. Apni line aur bhejne wala ada nahi karta.
+- 681 salary insert paid/self/sifar nahi. Banane wala khud ada nahi karta.
+- 682 apna salary structure khud nahi.
+- 683 apna staff khata khud nahi (dihari basic/30).
+- 684 advance darkhwast dene wala khud ada nahi karta.
+- 685 qist: apni entry khud manzoor, schedule, kattauti, ya wapas nahi.
+
+## Pending — 20 October 2026: department review fixes (660–674, 677)
+
+Branch `cursor/dept-review-fixes-660-c70c`. Migrations **not applied** on Testing or Live. Do not run them until a fresh backup is confirmed in chat. Files only. Apply 660 through 674 and 677 together. 675 and 676 belong to another PR (`675_shop_godams.sql`). 664 and 677 must apply together: 664's sold>bought guard is replaced by 677; do not leave 664 applied on its own.
+
+- 660 CMS write = owner/super_admin/admin; shop phone `+923126513294`
+- 661 owner account cannot be suspended or deleted
+- 662 payroll pay claim (one payment)
+- 663 atomic batch deduct, row lock, check NOT VALID
+- 664 grain sale file (function replaced by 677; apply with 677)
+- 665 grain rate unit: existing sales labeled `per_kg`, new default `per_maund` (no money change)
+- 666 completed transfer cannot be cancelled
+- 667 stock loss once + maker cannot approve own loss
+- 668 expired batch cannot be sold
+- 669 statement party must be in the caller's branch
+- 670 does **not** replace `create_pos_sale_base_504`. Compare `pg_get_functiondef` with migration 525 first. See `docs/670-POS-FUNCTION-CHECK.md`
+- 671 FIFO shortfall log; consume revoked from authenticated; scope check
+- 672 stock adjust / count lock / year counters. Same `fn_next_year_counter(text, int)` as 632: sales tables stay allowed, and grain_sale, stock_loss, agri_dispatch are added. Authenticated execute stays revoked (service_role only), matching 632. Apply 672 after 632. If 632 runs later it replaces this combined function with the sales-only body.
+- 673 transfer accept, reject, cancel in one function
+- 674 stock-loss shop scope; release and undo are service_role only
+- 677 grain sale on locked warehouse on-hand; `fn_post_grain_sale` one transaction. 664 and 677 must apply together.
+
+Data fixes that change rows are only in `docs/NEEDS-OWNER-APPROVAL-660.md` and stay unrun. Address stays the placeholder. **Before merge:** owner must approve the phantom wheat batch `OPENING-OWN-20261016` (24,500 kg) diagnostic and fix. This run did not execute it.
+
+## Pending — 20 October 2026: Dairy review migrations 650–659
+
+Not applied. Files only, on branch `cursor/dairy-review-fixes-fa47`. Do not run them on testing or live until the owner says so, and do not run them on live until a fresh backup size is confirmed in chat.
+
+Order when the owner approves: testing first, counts checked, then live (backup already verified), then the web build. The milk, fuel, billing, and receipt screens call `fn_apply_milk_fat`, `fn_record_milk_payment`, `fn_next_milk_collection_number`, `fn_dairy_month_pnl`, and `fn_correct_milk_receipt`. Deploying the build before the migrations will make those screens fail. 658 replaces the old payment function, so 652 and 658 must both be applied before the new payment screen is used.
+
+- 650 quality bounds, collection number, variance, indexes
+- 651 atomic FAT + khata + wallet + GL 5010/1150
+- 652 atomic milk payment and priced/verified balance
+- 653 maker-checker (nobody approves their own entry)
+- 654 counter and dispatch RLS
+- 655 monthly bill function
+- 656 private rates and private meter bucket (drops both public rate policy names)
+- 657 drops live policy `public_read_milk_rates` again
+- 658 payment, qist, khata, wallet, and cash GL 1150/1000 in one transaction; qist reverse is service-role only; farmer credit lock
+- 659 owner correction of someone else's company receipt
+
+No data cleanup was run. Rewriting old public meter URLs into paths is proposed SQL in `docs/DAIRY-REVIEW-FIXES-2026-10-20.md`, marked needs owner approval. SNF constant stays 0.805 until the owner confirms the Wasela contract.
+
+## Pending — Finance fixes (migrations 640, 641, 642, 643) — NOT applied
+
+Files only. Do not run on Testing (`hwaiuwxqldxsoukkfefn`) or Live (`ktskwawkslaznkjjacni`) until a fresh backup is verified in chat. These run after 631–633 below. Order: backup size confirmed → 631 then 632 then 633, then these four migrations on Testing → counts → then Live → then the new build. 640 locks finance writes to owner/super_admin/admin and blocks direct journal inserts. Customer balance trigger allows security-definer RPCs (POS udhaar) and a transaction-local trusted flag. 641 adds maker-checker columns, GL 2016/1180/2018, and unique indexes. Before the indexes, `fn_finance_race_duplicate_counts()` is read-only — if a group is not zero the index is skipped (notice only). Do not delete duplicate rows. 642 is the drift function. 643 blocks finance_transactions delete, sets the POS-return balance flag, adds owner on purchase_returns, and counts `approving` in pending badges. Cron: `Authorization: Bearer CRON_SECRET` on `/api/cron/customer-balance-drift`. No customer or dealer balances are rewritten by these files.
+
+## Pending — 20 October 2026: sales/parties money guards (631–633) NOT applied
+
+Migrations `631_pos_server_price_and_refund.sql`, `632_orders_shift_counters.sql`, and `633_party_money_guards.sql` are files only. They were **not** applied to Testing (`hwaiuwxqldxsoukkfefn`) or Live (`ktskwawkslaznkjjacni`).
+
+Do not apply until Boss is on the system and a verified backup size is in chat. Order stays: backup verified → pre-migration counts → 631 then 632 then 633 on Testing → verification → same on Live → then the new web build. Code calls `fn_approve_party_settlement`, `fn_record_bridge_advance`, `fn_pay_shop_bill`, `fn_record_investor_investment`, and `fn_next_year_counter`. Shipping the build before these migrations makes those buttons fail closed.
+
+Data repairs (open shift SHIFT-26-00020, Malik Traders / Zahid balances, duplicate customers, journals TXN-26-000008/9/21/25) are **not** in these migrations. Proposed SQL is in `docs/data-fixes/2026-10-20-needs-owner-approval/` and still needs owner approval. Do not run it with the migration.
+
+624–630 are already on main from the Call Center and procurement PRs. They are still not applied; their own notes are below. These money-guard files start at 631. Deploy steps: `docs/DEPLOY-184.md` (backup of the 11-arg wrapper, then 631→632→633 with this app at low rush, then smoke, rollback 633→631).
+
+## Pending — 20 October 2026: Call Center Agent (624 + 625 + 626 + 627 + 628)
+
+- Branch `cursor/call-center-agent-6663`. Migrations in order: `624_call_center_role.sql`, `625_call_center.sql`, `626_complaint_support_bridge.sql`, `627_complaint_stages_grants.sql`, `628_sms_retry.sql`.
+- **Not applied** to Live or Testing. Backup must be verified in chat before either database. Do not run these files from the agent environment.
+- 626 links CMP complaints into the Support Dashboard and lets staff file a complaint that lands unassigned for Admin. 627 adds the stage bar, private images, the Manager assign toggle (off until Owner/Admin grants it), and the AI webhook mark. 628 adds SMS retry columns (`attempts`, `next_attempt_at`) and `fn_cc_take_sms` for the Veevo drain. Web build comes after 628, otherwise the retry columns are missing and the drain falls back to a one-shot update.
+- Veevo env (no secrets in the repo): `SMS_PROVIDER=veevo`, `VEEVO_API_KEY`, optional `VEEVO_SENDER` (approved mask; empty uses the account default). Optional: `VEEVO_API_URL` (default `https://api.veevotech.com/v3/sendsms`), `VEEVO_HEADER` (only if Veevo assigned a shared-short-code header). The adapter POSTs JSON `apikey` and the same value as `hash`. Empty provider keeps `cc_sms_outbox` queued. Cron drain: `CRON_SECRET` on `GET /api/cron/sms-outbox`. Voice OTP (`sendernum` VT-vOTP) and `/v3/sendcall` are not wired.
+- Account side before the first real SMS: VT OneID (oneid.veevotech.com) API key, approved sender ID / mask in `VEEVO_SENDER`, wallet balance, and an IP allow-list if the Veevo account has one. Unverified accounts stay on testing limits.
+- Order when the owner is on the system: Testing first, smoke the four screens with a real caller, then Live only after a fresh backup size is confirmed. Web build comes after the migration, not before. `npm run test:call-center` is the local check (PGlite + rules); it does not talk to either Supabase project.
+- New role `call_center_agent` is view-only (khata, rates, milk, complaints create). SMS queue only. No WhatsApp. Maker cannot close their own complaint. Mukammal is Owner, super admin, or Admin only, and only from Check. The assignee does not close. The assign toggle is Manager-only. The AI button is Owner/Admin only.
+
+## Pending — 20 October 2026: procurement guards (NOT applied)
+
+Migrations `629_procurement_unique_guards.sql` and `630_procurement_atomic_rpc.sql` are written and tested on PGlite only. They are **not** applied to Testing or Live. PO-1792495620885 (Doctor Masala, Rs 7,500) was posted by hand: supplier_payment `93d80980-fcb9-4e53-ba32-6966772d5a3d`, journal `7d0685b9-4239-4f96-b596-86d94ffd454e` (TXN-26-001302), cash book `ef176676`. `held_payment.posted` was later set true on that row. The approve button looks for an existing supplier payment or journal for the purchase and only marks the flag — it does not post a second time. Numbered 629/630 because 624–628 belong to the SMS retry migration.
+
+Read-only — approved purchases whose held payment is still not marked posted (no writes):
+
+```sql
+select p.purchase_number,
+       p.status,
+       p.reviewed_at,
+       s.name as supplier,
+       (p.held_payment->>'amount')::numeric as held_amount,
+       p.held_payment->>'payment_date' as payment_date,
+       p.held_payment->>'payment_method' as payment_method,
+       sp.id as supplier_payment_id,
+       sp.amount as payment_amount,
+       je.id as journal_id,
+       je.entry_number
+from public.purchases p
+left join public.suppliers s on s.id = p.supplier_id
+left join public.supplier_payments sp on sp.purchase_id = p.id
+left join public.journal_entries je
+  on je.source_module = 'supplier_payment'
+ and je.source_id = sp.id
+ and je.is_reversal = false
+where p.review_status = 'approved'
+  and p.held_payment is not null
+  and coalesce(p.held_payment->>'posted', 'false') <> 'true'
+order by p.reviewed_at;
+```
+
+Before apply, run the read-only query at the top of 629 (`select * from public.fn_procurement_index_blockers();` or the raw SELECT in that file). On 20 Oct the Live read showed no `block:` groups. One shared bill (`jx0098807`, 2 purchases) and several old double stock movements are `info:` only — the new partial indexes do not use those rows as keys.
+
+Apply 629, let it commit, then 630. Then deploy the web build. Owner/Admin self-approve (13 Oct) is unchanged.
+
 ## 11 October 2026 — POS receipt print fix (web deployment pending)
 
 Receipt modals now render through a body portal so dashboard scroll containers cannot clip long receipts or reserve blank space above them. Receipt print styles explicitly retain the last table column (line total), which generic report print CSS hides as an Actions column. Online and offline receipts share this isolation. Print page size follows the selected printer paper; use the 80 mm roll setting. No database migration. Physical printer validation remains required after deploying the new build.

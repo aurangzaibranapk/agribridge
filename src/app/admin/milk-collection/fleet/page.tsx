@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { FleetDashboard } from "./fleet-dashboard";
+import { signMeterPhoto } from "@/lib/dairy/meter-photo";
 
 export const dynamic = "force-dynamic";
 
@@ -13,5 +14,12 @@ export default async function FleetDashboardPage() {
     supabase.from("maintenance_logs").select("id, service_date, description, cost, km_at_service, vehicles(vehicle_name)").order("service_date", { ascending: false }).limit(50),
   ]);
   const mapRelation = (value: any) => Array.isArray(value) ? value[0] : value;
-  return <div><PageHeader title="Fleet & Route Operations" description="Motorcycle route, petrol, milk collection, generator aur maintenance ka unified record" /><FleetDashboard vehicles={vehicles ?? []} routes={(routes ?? []).map((r: any) => ({ ...r, vehicle_name: mapRelation(r.vehicles)?.vehicle_name }))} generators={(generators ?? []).map((g: any) => ({ ...g, branch_name: mapRelation(g.branches)?.name }))} maintenance={(maintenance ?? []).map((m: any) => ({ ...m, vehicle_name: mapRelation(m.vehicles)?.vehicle_name }))} /></div>;
+  const signedRoutes = await Promise.all((routes ?? []).map(async (r: any) => ({
+    ...r,
+    vehicle_name: mapRelation(r.vehicles)?.vehicle_name,
+    opening_meter_photo_url: await signMeterPhoto(r.opening_meter_photo_url),
+    closing_meter_photo_url: await signMeterPhoto(r.closing_meter_photo_url),
+    fuel_receipt_url: await signMeterPhoto(r.fuel_receipt_url),
+  })));
+  return <div><PageHeader title="Fleet & Route Operations" description="Motorcycle route, petrol, milk collection, generator aur maintenance ka unified record" /><FleetDashboard vehicles={vehicles ?? []} routes={signedRoutes} generators={(generators ?? []).map((g: any) => ({ ...g, branch_name: mapRelation(g.branches)?.name }))} maintenance={(maintenance ?? []).map((m: any) => ({ ...m, vehicle_name: mapRelation(m.vehicles)?.vehicle_name }))} /></div>;
 }

@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
-import { recordCashClose, type ActionState } from "@/actions/cash-close";
+import { approveCashCloseDifference, recordCashClose, type ActionState } from "@/actions/cash-close";
 import { DENOMINATIONS } from "@/lib/ledger/cash-close";
 import { AlertTriangle, CheckCircle2, Calculator } from "lucide-react";
 import { t } from "@/lib/i18n/translations";
@@ -12,6 +12,19 @@ const initialState: ActionState = {};
 
 function rs(v: number): string {
   return `Rs ${Math.round(v).toLocaleString()}`;
+}
+
+export function ApproveDifferenceForm({ id }: { id: string }) {
+  const [state, action] = useFormState(approveCashCloseDifference, initialState);
+  return (
+    <form action={action} className="mt-1">
+      <input type="hidden" name="id" value={id} />
+      <button type="submit" className="rounded bg-brand-600 px-2 py-1 text-xs font-medium text-white">
+        Farq kitab mein likhein
+      </button>
+      {state.error && <span className="mt-1 block text-xs text-red-700">{state.error}</span>}
+    </form>
+  );
 }
 
 function SubmitButton({ blocked, label }: { blocked: boolean; label: string }) {

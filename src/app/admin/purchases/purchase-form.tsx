@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { expectedFrom } from "@/lib/supply-chain/compute";
 import { aajKaKhana } from "@/lib/utils/format";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
@@ -14,6 +15,8 @@ const initialState: ActionState = {};
 interface Supplier {
   id: string;
   name: string;
+  /** Supplier aam tor par kitne din mein maal deta hai (692; na ho to pichle GRN ka andaza). */
+  lead_days?: number | null;
 }
 interface Product {
   id: string;
@@ -167,6 +170,12 @@ export function PurchaseForm({
   const [supplierId, setSupplierId] = useState("");
   const [branchId, setBranchId] = useState("");
   const [purchaseDate, setPurchaseDate] = useState(aajKaKhana());
+  const [expectedDate, setExpectedDate] = useState("");
+  const [expectedTouched, setExpectedTouched] = useState(false);
+  const supplierLead = suppliers.find((s) => s.id === supplierId)?.lead_days ?? null;
+  useEffect(() => {
+    if (!expectedTouched) setExpectedDate(expectedFrom(purchaseDate, supplierLead));
+  }, [purchaseDate, supplierLead, expectedTouched]);
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([{ ...emptyLine }]);
   const [terms, setTerms] = useState<"paid" | "partial" | "credit">("credit");
@@ -362,6 +371,7 @@ export function PurchaseForm({
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="supplier_id" value={supplierId} />
         <input type="hidden" name="purchase_date" value={purchaseDate} />
+        <input type="hidden" name="expected_date" value={expectedDate} />
         <input type="hidden" name="notes" value={notes} />
         <input type="hidden" name="items_json" value={itemsJson} />
 
@@ -379,6 +389,22 @@ export function PurchaseForm({
             <Label>{t("pu_purchase_date", lang)}</Label>
             <Input type="date" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} />
           </div>
+        </div>
+
+        <div>
+          <Label>Maal kab tak aayega (expected delivery)</Label>
+          <Input
+            type="date"
+            value={expectedDate}
+            min={purchaseDate}
+            onChange={(e) => { setExpectedTouched(true); setExpectedDate(e.target.value); }}
+            data-testid="po-expected-date"
+          />
+          <p className="mt-1 text-xs text-surface-500">
+            {supplierLead != null
+              ? `Supplier aam tor par ${supplierLead} din leta hai -- tareekh khud lag gayi, badal sakte hain.`
+              : "Is supplier ke din abhi maloom nahi -- tareekh khud likh dein (Supply Chain dashboard ka waqt par % isi se banta hai)."}
+          </p>
         </div>
 
         {isAdminLevel ? (

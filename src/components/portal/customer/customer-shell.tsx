@@ -13,6 +13,8 @@ import { SkipLink } from "../skip-link";
 import { portalShellClass } from "../urdu-font";
 import { CUSTOMER_NAV_GROUPS } from "@/lib/portal/nav";
 import { EmptyState } from "../empty-state";
+import { GlassStyles } from "@/components/glass/glass-styles";
+import { brandName, brandTagline } from "@/lib/brand";
 
 /**
  * Customer Portal ka dhancha (Phase 5) -- sirf un logins ke liye jo kisan nahi
@@ -35,14 +37,18 @@ export async function CustomerShell({ userId, children }: { userId: string; chil
   const name = c?.name ?? prof?.full_name ?? "";
   return (
     <LangProvider lang={lang}>
-      <div dir={lang === "ur" ? "rtl" : "ltr"} lang={lang === "ur" ? "ur" : lang === "en" ? "en" : "ur-Latn"} className={`${portalShellClass(lang)} pf-shell flex min-h-screen bg-[#f4f6fb] dark:bg-[#0a1530]`}>
+      <div dir={lang === "ur" ? "rtl" : "ltr"} lang={lang === "ur" ? "ur" : lang === "en" ? "en" : "ur-Latn"} className={`${portalShellClass(lang)} gl-bg pf-shell flex min-h-screen bg-[#e7f3ec] dark:bg-[#071018]`}>
+        <GlassStyles />
         <SkipLink lang={lang} />
         <CustomerSidebar lang={lang} />
         <div className="pf-col min-w-0 flex-1">
-          <header className="print:hidden flex items-center justify-between gap-2 border-b border-surface-200 bg-white px-4 py-2 sm:px-6 sm:py-3 dark:border-[#1e3160] dark:bg-[#0b1a3a]">
+          <header className="print:hidden flex items-center justify-between gap-2 border-b border-white/50 bg-white/55 px-4 py-2 backdrop-blur-xl sm:px-6 sm:py-3 dark:border-white/10 dark:bg-[#101c33]/70">
             <div className="flex min-w-0 items-center gap-2">
               <CustomerMobileNav lang={lang} />
-              <p className="font-display text-sm font-medium text-surface-900 dark:text-white sm:hidden">{t("pc_portal", lang)}</p>
+              <div className="min-w-0 leading-tight">
+                <p className="font-display text-sm font-semibold text-surface-900 dark:text-white">{brandName(lang)}</p>
+                <p className="truncate text-[10px] text-emerald-800 dark:text-emerald-300">{brandTagline(lang)}</p>
+              </div>
               <PortalBreadcrumb lang={lang} groups={CUSTOMER_NAV_GROUPS} />
             </div>
             <div className="ms-auto flex items-center gap-3">
@@ -51,7 +57,7 @@ export async function CustomerShell({ userId, children }: { userId: string; chil
                 <p className="text-sm font-semibold text-surface-900 dark:text-white">{name}</p>
                 <p className="text-xs text-surface-500 dark:text-slate-400">{c ? <><span dir="ltr" className="ltr-iso">{c.code}</span>{c.branch ? ` · ${c.branch}` : ""}</> : ""}</p>
               </div>
-              <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-sm font-bold text-white" aria-hidden>
+              <div className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-br from-emerald-500 to-[#16356e] text-sm font-bold text-white" aria-hidden>
                 {name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "C"}
               </div>
             </div>

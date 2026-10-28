@@ -14,11 +14,17 @@ export async function saveIdCardDetails(_prev: ActionState, formData: FormData):
   const profileId = String(formData.get("profile_id") ?? "");
   if (!profileId) return { error: "Missing profile id." };
 
+  const text = (key: string) => {
+    const value = String(formData.get(key) ?? "").trim();
+    return value || null;
+  };
   const updates: Record<string, unknown> = {
-    blood_group: (formData.get("blood_group") as string) || null,
-    emergency_contact_name: (formData.get("emergency_contact_name") as string) || null,
-    emergency_contact_phone: (formData.get("emergency_contact_phone") as string) || null,
-    employee_code: (formData.get("employee_code") as string) || null,
+    phone: text("phone"),
+    cnic: text("cnic"),
+    blood_group: text("blood_group"),
+    emergency_contact_name: text("emergency_contact_name"),
+    emergency_contact_phone: text("emergency_contact_phone"),
+    employee_code: text("employee_code"),
   };
 
   const photo = formData.get("photo");

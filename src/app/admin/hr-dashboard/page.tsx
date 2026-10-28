@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import {
@@ -6,6 +7,16 @@ import {
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { HrMeetingsTodayWidget } from "@/components/hr-meetings/today-widget";
+import { HrKpiDashboardView } from "@/components/hr-kpi/hr-kpi-dashboard";
+import { buildDashboard, parseHrFilters } from "@/lib/hr-kpi/core";
+import { loadHrRaw, loadSalaryRaw } from "@/lib/hr-kpi/load";
+import { buildSalary, parseSalFilters } from "@/lib/hr-kpi/salary";
+import { HrSalaryTab } from "@/components/hr-kpi/hr-salary-tab";
+import { updateSalaryDueDay } from "@/actions/hr-kpi";
+import { aajKaKhana } from "@/lib/utils/format";
+
+/** HR KPI dashboard sirf in roles ko (service-client se parhta hai). */
+const HR_KPI_ROLES = ["hr", "admin", "owner", "super_admin"];
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +33,7 @@ const STAGES = [
   { key: "rejected", label: "Rejected", icon: ThumbsDown, color: "text-red-600" },
 ];
 
-export default async function HrDashboardPage() {
+export default async function HrDashboardPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
   const lang = getLanguageFromCookies("rm");
   const supabase = createClient();
   const { data: applications } = await supabase.from("job_applications").select("status");
@@ -33,8 +44,61 @@ export default async function HrDashboardPage() {
   });
   const total = applications?.length ?? 0;
 
+  // NAYA: HR KPI dashboard (reference tasveer ke mutabiq). Role check pehle.
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: me } = user ? await supabase.from("profiles").select("role, is_active").eq("id", user.id).maybeSingle() : { data: null };
+  const canKpi = !!me?.is_active && HR_KPI_ROLES.includes(String(me.role));
+  let kpiView: ReactNode = null;
+  if (canKpi) {
+    const [{ data: deptRows }, { data: branchRows }] = await Promise.all([
+      supabase.from("departments").select("key, label").eq("is_active", true).order("sort_order"),
+      supabase.from("branches").select("id, name").order("name"),
+    ]);
+    const depts = (deptRows ?? []) as { key: string; label: string }[];
+    const branches = (branchRows ?? []) as { id: string; name: string }[];
+    const today = aajKaKhana();
+    const filters = parseHrFilters(searchParams, today, depts.map((x) => x.key), branches.map((x) => x.id));
+    const tab = (Array.isArray(searchParams?.tab) ? searchParams?.tab[0] : searchParams?.tab) === "tankhwah" ? "tankhwah" : "overview";
+    const tabCls = (on: boolean) => `rounded-lg px-4 py-2 text-sm font-semibold ${on ? "bg-[#0b2545] text-white" : "bg-surface-100 text-surface-700 dark:bg-surface-800 dark:text-surface-200"}`;
+    const flash = typeof searchParams?.err === "string" ? searchParams.err : typeof searchParams?.ok === "string" ? searchParams.ok : null;
+    try {
+      let body: ReactNode;
+      if (tab === "tankhwah") {
+        const sf = parseSalFilters(searchParams);
+        const sal = buildSalary(await loadSalaryRaw(today), sf);
+        body = (
+          <div className="mx-auto w-full max-w-[1600px] space-y-3">
+            {flash && <p className="rounded-lg bg-surface-100 px-3 py-2 text-sm dark:bg-surface-800">{flash}</p>}
+            <form action={updateSalaryDueDay} className="flex flex-wrap items-center gap-2 text-xs">
+              <label htmlFor="salary_due_day" className="font-semibold">Tankhwah ki due date (agle mahine ki tareekh):</label>
+              <input id="salary_due_day" type="number" name="salary_due_day" min={1} max={28} defaultValue={sal.dueDay} className="w-16 rounded border border-surface-200 px-2 py-1 dark:border-surface-700 dark:bg-surface-900" />
+              <button className="rounded bg-brand-700 px-3 py-1 font-semibold text-white">Save</button>
+            </form>
+            <HrSalaryTab s={sal} f={sf} basePath="/admin/hr-dashboard" keep={{ tab: "tankhwah" }} />
+          </div>
+        );
+      } else {
+        const raw = await loadHrRaw(filters, today);
+        body = <HrKpiDashboardView d={buildDashboard(raw, filters)} departments={depts} branches={branches} />;
+      }
+      kpiView = (
+        <div className="mb-6 space-y-3">
+          <nav className="mx-auto flex w-full max-w-[1600px] gap-2" aria-label="HR dashboard tabs">
+            <a href="/admin/hr-dashboard" className={tabCls(tab === "overview")}>Overview</a>
+            <a href="/admin/hr-dashboard?tab=tankhwah" className={tabCls(tab === "tankhwah")}>Tankhwah</a>
+          </nav>
+          {body}
+        </div>
+      );
+    } catch (e) {
+      console.error("hr-kpi dashboard", e);
+      kpiView = <p className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">HR KPI dashboard abhi load nahi ho saka. Neeche ka purana hissa chal raha hai.</p>;
+    }
+  }
+
   return (
     <div>
+      {kpiView}
       <PageHeader title={t("at_hr_dashboard", lang)} description="Recruitment pipeline overview" />
 
       <HrMeetingsTodayWidget lang={lang} />

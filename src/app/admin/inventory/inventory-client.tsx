@@ -1,4 +1,6 @@
 "use client";
+import { AnimatedSearch } from "@/components/ui/animated-search";
+import { animSearchEnabled } from "@/lib/ui/animated-search";
 import { ExpiryBadge } from "@/components/stock/expiry-badge";
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -278,6 +280,9 @@ export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRo
       <div className="mb-3 flex flex-wrap items-end gap-3 print:hidden">
         <div className="min-w-[240px] flex-1">
           <Label htmlFor="inventory-product-search">Product search</Label>
+{animSearchEnabled() ? (
+          <AnimatedSearch defaultOpen value={productSearch} onValueChange={setProductSearch} placeholder="Naam ya pack size likhein..." inputProps={{ id: "inventory-product-search", type: "search" }} />
+) : (
           <Input
             id="inventory-product-search"
             type="search"
@@ -285,6 +290,7 @@ export function InventoryClient({ rows, warehouses, shops }: { rows: InventoryRo
             value={productSearch}
             onChange={(e) => setProductSearch(e.target.value)}
           />
+)}
         </div>
         <Link href="/admin/products/duplicates" className="rounded-lg border border-surface-300 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200">
           Duplicate products review / remove

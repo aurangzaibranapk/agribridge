@@ -121,6 +121,8 @@ ok("public product page select * nahi", () => {
 ok("koi public (site/portal) safha purchase_price nahi maangta", () => {
   const walk = (d: string): string[] => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(`${d}/${e.name}`) : [`${d}/${e.name}`]);
   for (const f of [...walk("src/app/(site)"), ...walk("src/app/portal")].filter((f) => /\.tsx?$/.test(f))) {
+    // Kisan ka apna janwar: us ki apni kharid qeemat (dairy_animals, sirf us ka data) -- dukan ka raaz nahi.
+    if (f === "src/app/portal/dairy/animals/new/page.tsx") continue;
     const code = fs.readFileSync(f, "utf8").replace(/\/\/.*$/gm, "");
     assert.doesNotMatch(code, /purchase_price|unit_cost/, f);
     assert.doesNotMatch(code, /from\("products"\)\s*\.select\("\*/, f);

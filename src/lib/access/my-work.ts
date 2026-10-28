@@ -101,6 +101,7 @@ export const QUICK_BY_ROLE: Record<string, string[]> = {
   milk_collection: ["milk-collection.collect", "milk-collection.verify", "milk-collection.routes", "milk-collection.cost-per-liter"],
   machinery: ["machinery-rental", "machinery-rental.dashboard", "machinery-rental.calendar"],
   admin_assistant: ["submissions", "messages", "contact-messages", "notifications"],
+  call_center_agent: ["call-center", "call-center/complaints"],
 };
 
 /**
@@ -171,7 +172,7 @@ async function infoBadges(lang: Lang): Promise<Map<string, CardBadge>> {
   const today = aajKaKhana();
   const [sales, products] = await Promise.all([
     count("pos_sales", (q) => q.gte("created_at", today)),
-    count("products", (q) => q.eq("status", "active")),
+    count("products", (q) => q.eq("is_deleted", false).eq("is_available", true)),
   ]);
 
   // Ye adad "kaam baqi hai" nahi kehte, sirf halat batate hain -- is liye

@@ -8,6 +8,7 @@ import { custGate, customerContext, loadAnimalCount, loadBills, loadKhata, loadO
 import { shortDate } from "@/components/portal/khata/khata-parts";
 import { BuyPayChart, CHero, CKpi, Code, HBtn, L3, Panel, PanelHead, Pill, Row, STATUS_TONE, Sub } from "@/components/portal/customer/cust-parts";
 import { CustGate, NoCustomer } from "@/components/portal/customer/gate";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,7 @@ export default async function CustomerDashboard() {
   return (
     <div className="pf-fit mx-auto w-full max-w-[1760px] px-4 py-6 sm:px-6 fit:gap-2.5 fit:py-3">
       <div className="mb-4 fit:mb-0">
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-800 dark:text-emerald-300">{BRAND_NAME} · {BRAND_TAGLINE}</p>
         <h1 className="text-2xl fit:text-xl font-extrabold tracking-tight text-surface-900 dark:text-white">{L("pc_hello")}{first ? `, ${first}` : ""} 👋</h1>
         <p className="mt-1 text-[13px] text-surface-500 dark:text-slate-400"><L3 k="pc_dash_sub" lang={lang} /></p>
       </div>
@@ -92,19 +94,19 @@ export default async function CustomerDashboard() {
         </Panel>
         <Panel className="pf-panel pf-navy fit:p-3.5">
           <PanelHead title={<L3 k="pc_due_soon" lang={lang} />} />
-          <div className="h-2 overflow-hidden rounded-full bg-surface-200 dark:bg-[#1e3160]"><i className="block h-full rounded-full bg-gradient-to-r from-amber-500 to-rose-500" style={{ width: `${pct ?? 0}%` }} /></div>
+          <div className="h-2 overflow-hidden rounded-full bg-black/10 dark:bg-white/10"><i className="block h-full rounded-full bg-gradient-to-r from-amber-400 to-emerald-500" style={{ width: `${pct ?? 0}%` }} /></div>
           <p className="mt-2 text-[11px] text-surface-500 dark:text-slate-400">{pct === null ? "—" : `${pct}% ${L("pc_limit_used")} · ${rs(Math.max(0, owed))} / ${rs(cu.limit).replace("Rs ", "")}`}</p>
           {nextP && <p className="mt-2 text-[11px] text-surface-500 dark:text-slate-400">⏰ {L("pc_k_next_promise")} {shortDate(nextP.date, lang, year)}</p>}
         </Panel>
         {animals > 0 ? (
-          <Link href="/portal/dairy" className="rounded-2xl border border-surface-200 bg-gradient-to-br from-cyan-50 to-violet-100 p-5 shadow-sm dark:border-[#1e3160] dark:from-cyan-950 dark:to-violet-950">
+          <Link href="/portal/dairy" className="gl-panel block p-5">
             <b className="text-[14px] text-slate-900 dark:text-white">🐄 <L3 k="pc_dairy" lang={lang} /></b>
             <p className="mt-2 text-[13px] text-slate-700 dark:text-slate-200">{animals} {L("pc_dairy_sub")}</p>
           </Link>
         ) : (
           <Panel className="pf-panel pf-navy fit:p-3.5">
             <PanelHead title={<L3 k="pc_k_returns" lang={lang} />} />
-            <Link href="/portal/c/orders" className="text-[12px] font-semibold text-blue-700 dark:text-blue-300">{L("pc_view_all")} →</Link>
+            <Link href="/portal/c/orders" className="text-[12px] font-semibold text-emerald-800 dark:text-emerald-300">{L("pc_view_all")} →</Link>
           </Panel>
         )}
       </div>

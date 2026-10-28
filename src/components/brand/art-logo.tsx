@@ -1,7 +1,8 @@
 import { useId } from "react";
+import { BRAND_NAME } from "@/lib/brand";
 
 /**
- * ART ka nishan -- ek hi jagah.
+ * AgriBridge ka nishan -- ek hi jagah.
  *
  * Ye pehle sirf website ke header ke andar likha hua tha. Us ki wajah
  * se kisan ki parchi par koi nishan tha hi nahi, aur agar wahan naqal
@@ -23,7 +24,7 @@ export function ArtLogo({ className = "", width = 38 }: { className?: string; wi
       viewBox="0 0 220 260"
       className={`shrink-0 ${className}`}
       role="img"
-      aria-label="Al Rana Traders"
+      aria-label={BRAND_NAME}
     >
       <defs>
         <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">

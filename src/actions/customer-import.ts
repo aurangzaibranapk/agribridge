@@ -7,6 +7,7 @@ import { postJournal } from "@/lib/ledger/post";
 import { ACC } from "@/lib/ledger/rules";
 import { logAudit } from "@/lib/audit";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
+import { customerBalanceFromLedger } from "@/lib/finance/money-guards";
 
 /**
  * Purane khata-app (jaise DigiKhata) se customers ek sath laane ka
@@ -201,12 +202,19 @@ export async function submitImportDraft(_prev: ActionState, formData: FormData):
       return { error: `Ledger mein nahi ja saka, is liye import nahi hua: ${posted.error}` };
     }
 
-    const { data: cust } = await service.from("customers").select("current_balance").eq("id", customerId).maybeSingle();
-    const abTak = cust?.current_balance == null ? 0 : Number(cust.current_balance);
-    await service
-      .from("customers")
-      .update({ current_balance: Math.round((abTak + amount) * 100) / 100 })
-      .eq("id", customerId);
+    const { data: lines, error: lineErr } = await service
+      .from("journal_lines")
+      .select("debit, credit")
+      .eq("account_code", ACC.customerDue)
+      .eq("party_type", "customer")
+      .eq("party_id", customerId);
+    if (lineErr) return { error: `Ledger parha nahi ja saka, balance nahi likha: ${lineErr.message}` };
+    const fromLedger = customerBalanceFromLedger(lines ?? []);
+    if (fromLedger == null) {
+      return { error: "Ledger mein is customer ka indraj nahi bana — current_balance par sifar nahi likha." };
+    }
+    const { error: balErr } = await service.from("customers").update({ current_balance: fromLedger }).eq("id", customerId);
+    if (balErr) return { error: `Ledger theek hai magar balance update nahi hua: ${balErr.message}` };
   }
 
   await service

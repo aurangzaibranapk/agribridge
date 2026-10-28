@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { lockedFuelRate } from "@/lib/dairy/rules";
 
 export interface FleetActionState { error?: string; success?: boolean; id?: string }
 
@@ -14,7 +15,7 @@ async function uploadImage(file: FormDataEntryValue | null, folder: string) {
   const path = `${folder}/${Date.now()}-${safeName}`;
   const { error } = await service.storage.from("meter-readings").upload(path, file, { upsert: false });
   if (error) return null;
-  return service.storage.from("meter-readings").getPublicUrl(path).data.publicUrl;
+  return path;
 }
 
 export async function startMotorcycleRoute(_prev: FleetActionState, formData: FormData): Promise<FleetActionState> {
@@ -44,9 +45,13 @@ export async function addRouteFuel(_prev: FleetActionState, formData: FormData):
   const fuelLogs = supabase.from("fuel_logs" as any);
   const routeId = String(formData.get("route_id") ?? "");
   const liters = Number(formData.get("fuel_liters") ?? 0);
-  const rate = Number(formData.get("petrol_rate") ?? 0);
+  const submitted = Number(formData.get("petrol_rate") ?? 0);
   const receipt = await uploadImage(formData.get("fuel_receipt"), "fuel/receipts");
-  if (!routeId || liters <= 0 || rate <= 0) return { error: "Petrol litres aur rate zaroori hain." };
+  if (!routeId || liters <= 0) return { error: "Petrol litres zaroori hain." };
+  const { data: settings } = await supabase.from("fuel_rate_settings").select("petrol_rate, margin").limit(1).maybeSingle();
+  const locked = lockedFuelRate(settings?.petrol_rate, settings?.margin, submitted > 0 ? submitted : null);
+  if ("error" in locked) return { error: locked.error };
+  const rate = locked.rate;
   const { error } = await fuelLogs.update({
     fuel_liters_purchased: liters, petrol_rate: rate, fuel_cost: liters * rate,
     fuel_receipt_url: receipt,

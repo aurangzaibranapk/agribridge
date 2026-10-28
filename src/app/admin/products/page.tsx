@@ -10,6 +10,7 @@ import { DeleteButton } from "@/app/admin/products/delete-button";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { canDo } from "@/lib/access/guard";
+import { StockBadge } from "@/components/ui/stock-badge";
 import { ProductSearchBox } from "@/app/admin/products/product-search-box";
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 20;
@@ -17,6 +18,7 @@ type ProductRow = {
   id: string; name: string; pack_size: string | null; purchase_price: number; selling_price: number; wholesale_price: number | null; trade_rate_pending: boolean;
   is_available: boolean; is_verified: boolean; image_url: string | null; categories: { name: string } | null; brands: { name: string } | null;
   units_per_pack: number | null;
+  min_stock_threshold?: number | null;
 };
 export default async function ProductsPage({ searchParams }: { searchParams: { page?: string; q?: string; cat?: string; filter?: string } }) {
   const lang = getLanguageFromCookies("rm");
@@ -69,7 +71,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
 
   let query = supabase
     .from("products")
-    .select("id, name, pack_size, purchase_price, selling_price, wholesale_price, units_per_pack, trade_rate_pending, is_available, is_verified, image_url, categories(name), brands(name)", { count: "exact" })
+    .select("id, name, pack_size, purchase_price, selling_price, wholesale_price, units_per_pack, trade_rate_pending, min_stock_threshold, is_available, is_verified, image_url, categories(name), brands(name)", { count: "exact" })
     .eq("is_deleted", false);
   if (q) query = query.ilike("name", `%${q}%`);
   if (filterParam === "no-category") query = (query as any).is("category_id", null);
@@ -78,6 +80,13 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
     query.order("name").range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1),
     supabase.from("categories").select("id, name").order("name"),
   ]);
+  // Stock ka nishan: is safhe ke products ka kul stock (sab godam/dukaan).
+  const stockMap = new Map<string, number>();
+  const ids = (products ?? []).map((p: any) => p.id);
+  if (ids.length) {
+    const { data: inv } = await supabase.from("inventory").select("product_id, quantity_on_hand").in("product_id", ids);
+    (inv ?? []).forEach((r: any) => stockMap.set(r.product_id, (stockMap.get(r.product_id) ?? 0) + Number(r.quantity_on_hand ?? 0)));
+  }
   const cols: Column<ProductRow>[] = [
     {
       header: "Product",
@@ -135,6 +144,10 @@ export default async function ProductsPage({ searchParams }: { searchParams: { p
           </span>
         ),
       className: "text-right",
+    },
+    {
+      header: "Stock",
+      accessor: (p) => <StockBadge qty={stockMap.get(p.id) ?? 0} min={p.min_stock_threshold} testId="product-stock-badge" />,
     },
     {
       header: "Status",

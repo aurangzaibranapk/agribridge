@@ -161,7 +161,7 @@ export function MachineryListClient({ rows, farmers }: { rows: Row[]; farmers: F
       .slice(0, 30)
       .map((r) => `${r.bookingNumber} ${r.farmerName} — ${r.area} acre — baqi Rs ${r.outstanding.toLocaleString()}`)
       .join("\n");
-    const text = `Al Rana Traders — Machinery\n${t(CARDS.find((c) => c.id === filter)?.label ?? "mc_all", lang)}: ${
+    const text = `AgriBridge — Machinery\n${t(CARDS.find((c) => c.id === filter)?.label ?? "mc_all", lang)}: ${
       shown.length
     }\nBaqi kul: Rs ${totals.outstanding.toLocaleString()}\n\n${lines}${shown.length > 30 ? "\n..." : ""}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
@@ -392,7 +392,7 @@ export function MachineryListClient({ rows, farmers }: { rows: Row[]; farmers: F
 }
 
 /**
- * Vendor ka khata -- ART ke paas kis ka kitna para hai.
+ * Vendor ka khata -- AgriBridge ke paas kis ka kitna para hai.
  *
  * Bill bante hi kisan ka poora paisa hamara nahi ho jata: commission
  * hamara, baqi vendor ka. Jab tak wo diya na jaye, wo raqam hamare

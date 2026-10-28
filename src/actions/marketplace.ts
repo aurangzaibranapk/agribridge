@@ -28,7 +28,7 @@ export async function placeMarketplaceOrder(_prev: ActionState, formData: FormDa
   if (!productId) return { error: "Please select a product." };
   if (!quantity || quantity <= 0) return { error: "Quantity must be greater than zero." };
 
-  // Find the cheapest seller (dealer stock or Al Rana's own inventory)
+  // Find the cheapest seller (dealer stock or AgriBridge's own inventory)
   // with enough quantity available - see fn_find_marketplace_offer.
   const { data: offers, error: offerError } = await supabase.rpc("fn_find_marketplace_offer", {
     p_product_id: productId,

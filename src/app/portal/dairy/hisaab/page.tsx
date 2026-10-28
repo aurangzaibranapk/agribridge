@@ -2,7 +2,7 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { todayPk } from "@/lib/portal/dairy-load";
 import { addDays } from "@/lib/portal/dairy";
-import { categoryShares, changePct, resolvePeriod, rs, sumPnl, PERIODS } from "@/lib/portal/dairy-pl";
+import { categoryShares, changePct, costBasisOf, resolvePeriod, rs, sumPnl, PERIODS, type CostBasisLabel, type PnlRow } from "@/lib/portal/dairy-pl";
 import { loadPnl, loadSixMonths } from "@/lib/portal/dairy-pl-load";
 import { Card, CardHead } from "@/components/portal/khata/khata-parts";
 import { ErrorNote, Footer, Hero, HeroBtn, Kpi, fmtL } from "@/components/portal/dairy/dairy-parts";
@@ -31,7 +31,12 @@ export default async function Hisaab({ searchParams }: { searchParams: Record<st
   const S = sumPnl(cur.rows), P = sumPnl(prev.rows);
   const cats = categoryShares(S.expense);
   const ch = changePct(S.profit, P.profit);
-  const homeL = Math.max(0, S.litres - (S.income.centre_litres ?? 0));
+  const basisKey = (b: CostBasisLabel) => (b === "home" ? "dy2_basis_home" : b === "centre" ? "dy2_basis_centre" : b === "mixed" ? "dy2_basis_mixed" : "dy2_basis_none") as TranslationKey;
+  const rowCost = (r: PnlRow) => {
+    if (r.cost_per_litre != null) return r.cost_per_litre;
+    const b = costBasisOf(r);
+    return b.litres > 0 ? Math.round((r.expense_total / b.litres) * 100) / 100 : null;
+  };
   const src = [
     { icon: "🥛", k: "dy2_src_centre", detail: `${fmtL(S.income.centre_litres ?? 0)} · ${L("dy2_paid")} ${rs(S.income.centre_paid ?? 0)}`, v: S.income.centre_milk ?? 0, ro: true },
     { icon: "🏠", k: "dy2_src_home", detail: "", v: S.income.home_milk ?? 0 },
@@ -64,9 +69,9 @@ export default async function Hisaab({ searchParams }: { searchParams: Record<st
         <Kpi tone="green" label={L("dy2_k_income")} value={rs(S.income_total)} sub={L("dy2_k_income_sub")} />
         <Kpi tone="rose" label={L("dy2_k_expense")} value={rs(S.expense_total)} sub={`${cats.length} ${L("dy2_k_cats")}`} />
         <Kpi tone="violet" label={L(S.profit >= 0 ? "dy2_k_profit" : "dy2_k_loss")} value={`${S.profit < 0 ? "-" : ""}${rs(Math.abs(S.profit))}`} sub={ch === null ? L("dy2_vs_prev") : `${ch >= 0 ? "▲" : "▼"} ${Math.abs(ch)}% ${L("dy2_vs_prev")}`} />
-        <Kpi tone="sky" label={L("dy2_k_cpl")} value={S.cost_per_litre === null ? "—" : `Rs ${S.cost_per_litre.toFixed(1)}`} sub={`${L("dy2_k_expense")} ÷ ${fmtL(S.litres)}`} />
+        <Kpi tone="sky" label={L("dy2_k_cpl")} value={S.cost_per_litre === null ? "—" : `Rs ${S.cost_per_litre.toFixed(1)}`} sub={S.cost_per_litre === null ? L("dy2_basis_none") : `${fmtL(S.cost_litres)} · ${L(basisKey(S.cost_basis))}`} />
         <Kpi tone="amber" label={L("dy2_k_feed")} value={S.feed_per_animal === null ? "—" : rs(S.feed_per_animal)} sub={`${S.animals} 🐄`} />
-        <Kpi tone="teal" label={L("dy2_k_milk")} value={fmtL(S.litres)} sub={`${L("dy2_home")} ${fmtL(homeL)} · ${L("dy2_centre")} ${fmtL(S.income.centre_litres ?? 0)}`} />
+        <Kpi tone="teal" label={L("dy2_k_milk")} value={fmtL(S.cost_basis === "centre" ? S.litres_centre : S.litres_home)} sub={`${L("dy2_home")} ${fmtL(S.litres_home)} · ${L("dy2_centre")} ${fmtL(S.litres_centre)}`} />
       </div>
 
       <div className="pf-grow pf-grid grid gap-4 lg:grid-cols-2 fit:grid-cols-[1.35fr_1fr_1.15fr] fit:grid-rows-2 fit:gap-2.5">
@@ -86,7 +91,7 @@ export default async function Hisaab({ searchParams }: { searchParams: Record<st
             <tbody>
               {[...six].reverse().map((r) => (
                 <tr key={r.period} className="border-b border-surface-100 text-end text-surface-700 dark:border-surface-800 dark:text-slate-200">
-                  <td className="py-2.5 text-start">{monthName(r.period, lang, true)}</td><td>{rs(r.income_total)}</td><td>{rs(r.expense_total)}</td><td><Money v={r.profit} /></td><td>{r.cost_per_litre === null ? "—" : r.cost_per_litre.toFixed(1)}</td>
+                  <td className="py-2.5 text-start">{monthName(r.period, lang, true)}</td><td>{rs(r.income_total)}</td><td>{rs(r.expense_total)}</td><td><Money v={r.profit} /></td><td>{rowCost(r) === null ? "—" : rowCost(r)!.toFixed(1)}{r.cost_basis ? <span className="block text-[10px] font-normal text-surface-500">{L(basisKey(r.cost_basis))}</span> : null}</td>
                 </tr>
               ))}
             </tbody>

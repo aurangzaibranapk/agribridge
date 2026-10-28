@@ -1,4 +1,6 @@
 "use client";
+import { AnimatedSearch } from "@/components/ui/animated-search";
+import { animSearchEnabled } from "@/lib/ui/animated-search";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -42,12 +44,16 @@ export function ProductSearchBox({
 
   return (
     <form onSubmit={apply} className="flex w-full max-w-xl items-center gap-2">
+{animSearchEnabled() ? (
+      <AnimatedSearch value={value} onValueChange={setValue} placeholder={placeholder} className="min-w-0 flex-1" />
+) : (
       <input
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
         className="h-10 min-w-0 flex-1 rounded-lg border border-surface-200 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:border-surface-700 dark:bg-surface-900"
       />
+)}
       <button
         type="submit"
         className="h-10 shrink-0 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
