@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
+import { requireAction } from "@/lib/access/guard";
+import { sendWhatsAppMessage, sendWhatsAppTemplate } from "@/lib/whatsapp-client";
 
 /**
  * Recovery dashboard se teen kaam: promise darj karna, reminder schedule
@@ -16,12 +18,12 @@ export async function POST(req: NextRequest) {
     data: { user },
   } = await auth.auth.getUser();
   if (!user) return NextResponse.json({ error: "Login required." }, { status: 401 });
-  const { data: isStaff } = await (auth as any).rpc("fn_is_any_staff");
-  if (!isStaff) return NextResponse.json({ error: "Staff permission required." }, { status: 403 });
-
   const service = createServiceClient() as any;
   const body = await req.json();
   const action = String(body.action || "");
+  const requiredAction = action === "receive_payment" ? "receive" : action === "send" || action === "schedule" ? "send" : "edit";
+  const guard = await requireAction("finance.recovery", requiredAction);
+  if ("error" in guard) return NextResponse.json({ error: guard.error }, { status: 403 });
   const parties = Array.isArray(body.parties) ? body.parties.slice(0, 100) : [];
   if (!parties.length) return NextResponse.json({ error: "Koi account select nahi hua." }, { status: 400 });
 
@@ -63,18 +65,37 @@ export async function POST(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
     if (action === "send" && channel === "whatsapp") {
-      // Malik (16 September): WhatsApp ka paid (template) raasta filhal
-      // band -- sirf free-form paighaam chalta rehta hai. Recovery
-      // reminder template se jata hai (24-ghante ki window se bahar bhi
-      // pahunchna hota hai), is liye ye abhi nahi bheja jata.
-      await service
-        .from("payment_reminders")
-        .update({ delivery_status: "failed", failure_reason: "WhatsApp (paid) reminders filhal band hain — kharcha bachane ke liye." })
-        .in(
-          "id",
-          inserted.map((r: any) => r.id)
-        );
-      return NextResponse.json({ success: true, count: parties.length, sent: 0 });
+      const template = process.env.WHATSAPP_RECOVERY_TEMPLATE;
+      const lang = process.env.WHATSAPP_RECOVERY_TEMPLATE_LANG || "en";
+      let sent = 0;
+      let statementsSent = 0;
+      for (let index = 0; index < parties.length; index++) {
+        const p = parties[index] as any;
+        const reminderId = inserted[index]?.id;
+        const phone = String(p.phone || "");
+        const amount = Number(p.outstanding || 0);
+        const dueDate = String(p.dueDate || body.dueDate || "as soon as possible");
+        const message = `Assalam-o-Alaikum ${p.name} Sahib,\nKisan Wasela ke record ke mutabiq aap ka Rs. ${Math.round(amount).toLocaleString("en-PK")} balance pending hai.\nDue Date: ${dueDate}\nMeherbani farma kar payment jama karwa dein. Agar payment ho chuki hai to receipt share kar dein.\nShukriya — Kisan Wasela`;
+        try {
+          if (!phone) throw new Error("WhatsApp number missing.");
+          if (template) await sendWhatsAppTemplate(phone, template, lang, [String(p.name), Math.round(amount).toLocaleString("en-PK"), dueDate, "Kisan Wasela"]);
+          else await sendWhatsAppMessage(phone, message);
+          sent++;
+          if (reminderId) await service.from("payment_reminders").update({ delivery_status: "sent", sent_at: new Date().toISOString(), failure_reason: null }).eq("id", reminderId);
+          if (body.attachStatement && (p.type === "customer" || p.type === "farmer")) {
+            const statementRes = await fetch(`${req.nextUrl.origin}/api/customer-statements/${p.id}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", cookie: req.headers.get("cookie") || "" },
+              body: JSON.stringify({ channel: "whatsapp", partyType: p.type }),
+            });
+            if (statementRes.ok) statementsSent++;
+          }
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : String(error);
+          if (reminderId) await service.from("payment_reminders").update({ delivery_status: "failed", failure_reason: reason.slice(0, 500) }).eq("id", reminderId);
+        }
+      }
+      return NextResponse.json({ success: true, count: parties.length, sent, statementsSent });
     }
     return NextResponse.json({ success: true, count: rows.length });
   }
