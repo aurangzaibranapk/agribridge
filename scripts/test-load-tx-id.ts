@@ -60,6 +60,7 @@ test("entry forms require Tx ID; later attach stays for old rows", () => {
   }
   assert.doesNotMatch(client, /Abhi na ho to baad mein bhi lag sakti hai/);
   assert.doesNotMatch(client, /Pending Proof/);
+  assert.match(client, /Bina is ke transfer save nahi hota/);
   assert.match(client, /t\.status === "saboot_baqi" && <form action=\{tidAction\}/);
   assert.match(client, /bt\.status === "saboot_baqi" && <form action=\{bankTidAction\}/);
 });

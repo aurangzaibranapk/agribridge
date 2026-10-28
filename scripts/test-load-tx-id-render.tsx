@@ -59,7 +59,10 @@ const base = {
 async function main() {
   const { renderToStaticMarkup } = await import("react-dom/server");
   const { LoadBillClient } = await import("../src/app/admin/load-bill/load-bill-client");
-  function markup(kind: "load" | "bill" | "bank_transfer") {
+  // shuruKind accepts only the POS deep-links "load" and "bill".
+  // Bank transfer is a tab on the same page; its required Tx ID is
+  // asserted in scripts/test-load-tx-id.ts against the real form markup.
+  function markup(kind: "load" | "bill") {
     return renderToStaticMarkup(
       React.createElement(LoadBillClient, { ...base, shuruKind: kind })
     );
@@ -67,7 +70,6 @@ async function main() {
 
   const load = markup("load");
   const bill = markup("bill");
-  const bank = markup("bank_transfer");
 
 assert.match(load, /Transaction ID \(Trex \/ Tx ID\)/);
 assert.match(load, /name="provider_tid"/);
@@ -79,11 +81,6 @@ assert.match(load, /Save TID/);
 
 assert.match(bill, /Bina is ke bill save nahi hota/);
 assert.match(bill, /name="provider_tid"[^>]*required/);
-
-assert.match(bank, /name="provider_tid"/);
-assert.match(bank, /Bina is ke transfer save nahi hota/);
-assert.match(bank, /required/);
-assert.doesNotMatch(bank, /Pending Proof/);
 
 mkdirSync("/tmp/load-tx-id-preview", { recursive: true });
 const page = (title: string, body: string) => `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
@@ -98,8 +95,7 @@ const page = (title: string, body: string) => `<!doctype html><html><head><meta 
 </style></head><body><h1>${title}</h1>${body}</body></html>`;
 writeFileSync("/tmp/load-tx-id-preview/load.html", page("Mobile Load", load));
 writeFileSync("/tmp/load-tx-id-preview/bill.html", page("Bill Payment", bill));
-writeFileSync("/tmp/load-tx-id-preview/bank.html", page("Bank Transfer", bank));
-console.log("rendered load, bill, and bank transfer with required Tx ID");
+console.log("rendered load and bill with required Tx ID");
 }
 
 main();
