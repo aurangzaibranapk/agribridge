@@ -8,7 +8,10 @@ import { logAudit } from "@/lib/audit";
 import { staffShopOutstanding } from "@/lib/pos/collection-outstanding";
 import { nextYearNumber } from "@/lib/counters";
 import { canSeeCustodyPacket } from "@/lib/cash-custody/chain";
+import { canApproveCustodyJama, canAskCustodyWhy, CUSTODY_ASK_PREFIX } from "@/lib/cash-custody/needs";
 import { loadCustodyViewer, type CustodyHopRow, type CustodyPacketRow } from "@/lib/cash-custody/load";
+import { verifyCollectionDeposit } from "@/actions/pos-collection";
+import { notifyUser } from "@/lib/notifications";
 
 export interface CustodyActionState {
   error?: string;
@@ -259,4 +262,92 @@ export async function ensureCustodyPacket(formData: FormData): Promise<void> {
     id = opened as string;
   }
   redirect(`/admin/cash-custody/packet/${id}/slip?copy=both&print=1`);
+}
+
+/**
+ * Ask why — pending delay-note jaisa: kam az kam 3 harf, in-app, SMS nahi.
+ * Holder ko sawal. Audit par timeline ke liye likha jata hai.
+ */
+export async function askCustodyWhy(_prev: CustodyActionState, formData: FormData): Promise<CustodyActionState> {
+  const viewer = await loadCustodyViewer();
+  if (!viewer) return { error: "Login karein." };
+  if (!canAskCustodyWhy(viewer.role)) return { error: "Wajah Admin, Owner ya Finance poochte hain." };
+  const packetId = String(formData.get("packet_id") ?? "");
+  const note = String(formData.get("note") ?? "").replace(/\s+/g, " ").trim();
+  if (!packetId) return { error: "Packet nahi mili." };
+  if (note.length < 3) return { error: "Wajah kam az kam 3 harf." };
+  if (note.length > 500) return { error: "Wajah 500 harf se chhoti rakhein." };
+
+  const bundle = await packetBundle(packetId);
+  if (!bundle) return { error: "Custody packet nahi mili." };
+  if (!allowed(viewer, bundle.packet, bundle.hops)) return { error: "Ye cash aap ki nazar mein nahi." };
+  const packet = bundle.packet;
+  if (packet.status === "verified" || packet.verified_at) return { error: "Ye cash pehle hi verify ho chuki hai." };
+  const target = packet.current_holder_id ?? packet.origin_profile_id;
+  if (target === viewer.userId) return { error: "Apne aap se wajah nahi poochh sakte." };
+
+  const service = createServiceClient() as any;
+  const [{ data: shop }, { data: holder }] = await Promise.all([
+    packet.shop_id ? service.from("shops").select("name").eq("id", packet.shop_id).maybeSingle() : Promise.resolve({ data: null }),
+    service.from("profiles").select("full_name").eq("id", target).maybeSingle(),
+  ]);
+  const place = (shop?.name as string | undefined) ?? "Shop";
+  const who = viewer.name || "Admin";
+  await notifyUser(
+    target,
+    "Cash kyun atki hai?",
+    `${who} ne poocha: ${note}\n${place} · Rs ${Number(packet.amount).toLocaleString()}`,
+    `/admin/cash-custody/packet/${packetId}`
+  );
+  await logAudit({
+    actionType: "update",
+    module: "cash-custody",
+    recordId: packetId,
+    recordLabel: packet.staff_copy_number,
+    description: `${CUSTODY_ASK_PREFIX}${note}`,
+  });
+  revalidatePath("/admin/cash-custody");
+  revalidatePath(`/admin/cash-custody/packet/${packetId}`);
+  return { success: true, message: `${holder?.full_name ?? "Zimmedar"} ko sawal chala gaya. SMS nahi gaya.` };
+}
+
+/**
+ * Approve — maujooda Finance deposit verify. Naya ledger qanoon nahi.
+ * Apni jama yahan se bhi nahi.
+ */
+export async function approveCustodyJama(_prev: CustodyActionState, formData: FormData): Promise<CustodyActionState> {
+  const viewer = await loadCustodyViewer();
+  if (!viewer) return { error: "Login karein." };
+  if (!canApproveCustodyJama(viewer.role)) return { error: "Jama ki tasdeeq Admin, Owner ya Finance karti hai." };
+  const packetId = String(formData.get("packet_id") ?? "");
+  if (!packetId) return { error: "Packet nahi mili." };
+
+  const bundle = await packetBundle(packetId);
+  if (!bundle) return { error: "Custody packet nahi mili." };
+  if (!allowed(viewer, bundle.packet, bundle.hops)) return { error: "Ye cash aap ki nazar mein nahi." };
+  const packet = bundle.packet;
+  if (packet.status !== "deposit_pending" || !packet.deposit_id) {
+    return { error: "Jama copy abhi verify ke liye nahi aayi." };
+  }
+
+  const service = createServiceClient() as any;
+  const { data: deposit } = await service
+    .from("pos_collection_deposits")
+    .select("staff_id, submitted_by")
+    .eq("id", packet.deposit_id)
+    .maybeSingle();
+  const makers = [packet.origin_profile_id, packet.current_holder_id, deposit?.staff_id, deposit?.submitted_by].filter(Boolean);
+  if (makers.includes(viewer.userId)) {
+    return { error: "Apni jama karayi hui deposit khud tasdeeq nahi kar sakte." };
+  }
+
+  const fd = new FormData();
+  fd.set("deposit_id", packet.deposit_id);
+  fd.set("decision", "approve");
+  const result = await verifyCollectionDeposit({}, fd);
+  revalidatePath("/admin/cash-custody");
+  revalidatePath(`/admin/cash-custody/packet/${packetId}`);
+  revalidatePath("/admin/finance/pos-deposits");
+  if (result.error) return { error: result.error };
+  return { success: true, message: result.message ?? "Jama verify ho gayi." };
 }

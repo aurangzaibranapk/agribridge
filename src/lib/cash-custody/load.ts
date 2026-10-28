@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { canOpenCustodyDesk, canSeeCustodyPacket, isCustodyOverdue } from "@/lib/cash-custody/chain";
+import { CUSTODY_ASK_PREFIX, pktDayStart } from "@/lib/cash-custody/needs";
 
 export interface CustodyViewer {
   userId: string;
@@ -192,4 +193,116 @@ export async function packetIdForShift(shiftId: string): Promise<string | null> 
   const { data, error } = await service.from("cash_custody_packets").select("id").eq("shift_id", shiftId).maybeSingle();
   if (error || !data?.id) return null;
   return data.id as string;
+}
+
+export interface NamedHop extends CustodyHopRow {
+  packet_id: string;
+  holderName: string | null;
+  fromName: string | null;
+  toName: string | null;
+}
+
+export interface CustodyAsk {
+  note: string;
+  actorName: string | null;
+  at: string;
+}
+
+export interface DepositMakers {
+  staffId: string | null;
+  submittedBy: string | null;
+}
+
+/** Queue cards ke liye hops — ek query, phir packet par baant. */
+export async function loadHopsForPackets(packetIds: string[]): Promise<Map<string, NamedHop[]>> {
+  const map = new Map<string, NamedHop[]>();
+  if (packetIds.length === 0) return map;
+  const service = createServiceClient() as any;
+  const { data, error } = await service
+    .from("cash_custody_hops")
+    .select("*")
+    .in("packet_id", packetIds)
+    .order("seq", { ascending: true });
+  if (error || !data) return map;
+  const hops = data as NamedHop[];
+  const names = await namesFor(
+    hops.flatMap((h) => [h.holder_id, h.from_profile_id, h.to_profile_id].filter((id): id is string => !!id))
+  );
+  for (const h of hops) {
+    const row: NamedHop = {
+      ...h,
+      holderName: h.holder_id ? names.get(h.holder_id) ?? null : null,
+      fromName: h.from_profile_id ? names.get(h.from_profile_id) ?? null : null,
+      toName: h.to_profile_id ? names.get(h.to_profile_id) ?? null : null,
+    };
+    const list = map.get(h.packet_id) ?? [];
+    list.push(row);
+    map.set(h.packet_id, list);
+  }
+  return map;
+}
+
+/** Aaj (Pakistan) bank jama ya us ki tasdeeq. null = parha nahi gaya. */
+export async function loadAajJama(viewer: CustodyViewer, now = new Date()): Promise<number | null> {
+  if (viewer.role === "manager" && !viewer.branchId) return 0;
+  const service = createServiceClient() as any;
+  const { data: hops, error } = await service
+    .from("cash_custody_hops")
+    .select("packet_id")
+    .in("kind", ["deposit_submitted", "deposit_verified"])
+    .gte("started_at", pktDayStart(now))
+    .limit(500);
+  if (error) return null;
+  const ids = Array.from(new Set((hops ?? []).map((h: { packet_id?: string }) => h.packet_id).filter(Boolean))) as string[];
+  if (ids.length === 0) return 0;
+  let query = service.from("cash_custody_packets").select("id, amount").in("id", ids);
+  if (viewer.role === "manager") query = query.eq("branch_id", viewer.branchId);
+  const { data: packets, error: packetError } = await query;
+  if (packetError) return null;
+  let sum = 0;
+  for (const row of packets ?? []) {
+    const n = Number(row.amount);
+    if (Number.isFinite(n)) sum += n;
+  }
+  return sum;
+}
+
+/** Ask why audit se — naya table nahi. Har packet ki aakhri pooch. */
+export async function loadCustodyAsks(packetIds: string[]): Promise<Map<string, CustodyAsk>> {
+  const map = new Map<string, CustodyAsk>();
+  if (packetIds.length === 0) return map;
+  const service = createServiceClient() as any;
+  const { data, error } = await service
+    .from("audit_logs")
+    .select("record_id, description, actor_name, created_at")
+    .eq("module", "cash-custody")
+    .in("record_id", packetIds)
+    .like("description", `${CUSTODY_ASK_PREFIX}%`)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error || !data) return map;
+  for (const row of data as { record_id: string | null; description: string | null; actor_name: string | null; created_at: string }[]) {
+    const id = row.record_id;
+    if (!id || map.has(id)) continue;
+    const desc = row.description ?? "";
+    map.set(id, {
+      note: desc.startsWith(CUSTODY_ASK_PREFIX) ? desc.slice(CUSTODY_ASK_PREFIX.length) : desc,
+      actorName: row.actor_name,
+      at: row.created_at,
+    });
+  }
+  return map;
+}
+
+/** Jama verify ka maker — staff ya jis ne slip darj ki. */
+export async function loadDepositMakers(depositIds: string[]): Promise<Map<string, DepositMakers>> {
+  const map = new Map<string, DepositMakers>();
+  if (depositIds.length === 0) return map;
+  const service = createServiceClient() as any;
+  const { data, error } = await service.from("pos_collection_deposits").select("id, staff_id, submitted_by").in("id", depositIds);
+  if (error || !data) return map;
+  for (const row of data as { id: string; staff_id: string | null; submitted_by: string | null }[]) {
+    map.set(row.id, { staffId: row.staff_id, submittedBy: row.submitted_by });
+  }
+  return map;
 }
