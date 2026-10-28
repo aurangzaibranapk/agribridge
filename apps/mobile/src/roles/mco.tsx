@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { fatRangeError, lrRangeError, type MilkSettings } from "../../../../src/lib/dairy/rules";
 import { fatActorError } from "../../../../src/lib/mobile/outbox";
 import { priceFromSettings, resolveThresholds, settingsOrError, milkAlerts, toMilkNotice } from "../../../../src/lib/mobile/pricing";
@@ -9,6 +9,7 @@ import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { Empty, SaleChart, Section, liveAuth, type LiveBag } from "../bits";
 import { McoGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
+import { farmerPortrait } from "../farmer-portraits";
 
 function num(value: number | string | null | undefined): number {
   const n = typeof value === "number" ? value : Number(value);
@@ -32,6 +33,7 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
   const [busy, setBusy] = useState("");
   const [fat, setFat] = useState("");
   const [lr, setLr] = useState("");
+  const [checkedLitres, setCheckedLitres] = useState("");
   const [pick, setPick] = useState("");
   const [farmerId, setFarmerId] = useState("");
   const [receiveMode, setReceiveMode] = useState<"field" | "dropoff">("field");
@@ -51,7 +53,9 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
     } else {
       setRows(milk.rows);
       setError("");
-      setPick((current) => current || milk.rows.find((row) => row.status === "pending_fat")?.id || "");
+      const firstPending = milk.rows.find((row) => row.status === "pending_fat");
+      setPick((current) => current || firstPending?.id || "");
+      setCheckedLitres((current) => current || (firstPending?.quantity_liters == null ? "" : String(firstPending.quantity_liters)));
     }
     const resolved = rate.ok ? settingsOrError(rate.rows[0] ?? null) : { error: rate.message };
     if ("error" in resolved) {
@@ -111,12 +115,14 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
     const lrError = lrRangeError(lrValue, false);
     if (lrError) { setNote(lrError); return; }
     if (!settings) { setNote(settingsNote || "Doodh ka rate settings mein nahi. Andaza nahi lagate."); return; }
-    const litres = num(chosen.quantity_liters);
+    const litres = Number(checkedLitres || chosen.quantity_liters);
+    if (!(litres > 0)) { setNote("Chiller litre sahi likhein."); return; }
     const calc = priceFromSettings(litres, fatValue, lrValue, settings);
     setBusy(chosen.id);
     const saved = await livePatch<MilkRow>(auth, "milk_entries", chosen.id, {
       fat_percentage: fatValue,
       lr: lrValue,
+      quantity_liters: litres,
       snf_percentage: calc.snf,
       ts_value: calc.ts,
       rate_per_liter: settings.standardRate,
@@ -131,6 +137,7 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
     }
     setFat("");
     setLr("");
+    setCheckedLitres("");
     setNote(`Fat lag gaya. SNF ${calc.snf} · ${rupees(calc.amount)}. Kisan ki list mein ye raqam dikhega.`);
     await load();
   }
@@ -205,7 +212,7 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
           </View>
           <Section title={tab === "drop" ? "Shift ki entries" : "Aaj ka chiller"} sub={`${today} · ${milkLitres(todayRows)} L · ${amountText(todayRows)}`}>
             {todayRows.length === 0 ? <Empty title="Aaj koi entry nahi" body="MCA jab pickup save karega, subah aur shaam yahan alag dikhengi." /> : null}
-            {todayRows.map((row) => <MilkLine key={row.id} row={row} name={names.get(row.farmer_id || "") || "Kisan"} />)}
+            {todayRows.map((row, index) => <MilkLine key={row.id} row={row} name={names.get(row.farmer_id || "") || "Kisan"} index={index} />)}
           </Section>
         </View>
       ) : null}
@@ -223,10 +230,8 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
           {receiveMode === "dropoff" ? (
             <View>
               <Text style={{ color: colors.muted, marginBottom: 6 }}>MCC par seedha aya doodh: kisan, litre, fat aur LR.</Text>
-              {[...names.entries()].map(([id, name]) => (
-                <Pressable key={id} onPress={() => setFarmerId(id)}>
-                  <Text style={{ color: id === farmerId ? colors.greenDark : colors.text, fontWeight: id === farmerId ? "800" : "500", marginBottom: 4 }}>{id === farmerId ? "● " : "○ "}{name}</Text>
-                </Pressable>
+              {[...names.entries()].map(([id, name], index) => (
+                <FarmerChoice key={id} id={id} name={name} index={index} selected={id === farmerId} onPress={() => setFarmerId(id)} />
               ))}
               <TextInput value={dropLitres} onChangeText={setDropLitres} placeholder="Litre" keyboardType="decimal-pad" style={input} />
               <TextInput value={fat} onChangeText={setFat} placeholder="Fat" keyboardType="decimal-pad" style={input} />
@@ -238,15 +243,26 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
           {auth.testAccount ? <Text style={{ color: colors.muted, marginBottom: 6 }}>TEST account apni TEST entry par fat laga sakta hai. Asal MCA apni uthai hui entry par nahi.</Text> : null}
           {settingsNote ? <Text style={{ color: colors.danger, marginBottom: 6 }}>{settingsNote}</Text> : null}
           {pending.length === 0 ? <Empty title="Check ke liye koi entry nahi" body="Jis doodh par fat baaki hai, wo yahan aayega." /> : null}
-          {pending.map((row) => (
-            <Pressable key={row.id} onPress={() => row.id && setPick(row.id)}>
-              <Text style={{ color: row.id === chosen?.id ? colors.greenDark : colors.text, fontWeight: row.id === chosen?.id ? "800" : "500", marginBottom: 4 }}>
-                {row.id === chosen?.id ? "● " : "○ "}{names.get(row.farmer_id || "") || "Kisan"} · {shiftLabel(row.shift)} · {row.quantity_liters} L · LR {row.lr ?? "—"}
-              </Text>
-            </Pressable>
+          {pending.map((row, index) => (
+            <FarmerChoice
+              key={row.id}
+              id={row.farmer_id || row.id || String(index)}
+              name={names.get(row.farmer_id || "") || "Kisan"}
+              index={index}
+              selected={row.id === chosen?.id}
+              detail={`${shiftLabel(row.shift)} · ${row.quantity_liters} L · LR ${row.lr ?? "—"}`}
+              action="Quality Check"
+              onPress={() => {
+                if (!row.id) return;
+                setPick(row.id);
+                setCheckedLitres(row.quantity_liters == null ? "" : String(row.quantity_liters));
+                setLr(row.lr == null ? "" : String(row.lr));
+              }}
+            />
           ))}
           {chosen && chosen.status === "pending_fat" && !readOnly ? (
             <View>
+              <TextInput value={checkedLitres} onChangeText={setCheckedLitres} placeholder="Chiller par verify litre" keyboardType="decimal-pad" style={input} />
               <TextInput value={fat} onChangeText={setFat} placeholder="Fat" keyboardType="decimal-pad" style={input} />
               <TextInput value={lr} onChangeText={setLr} placeholder={chosen.lr == null ? "LR" : `LR ${chosen.lr}`} keyboardType="decimal-pad" style={input} />
               <Btn label={busy ? "Save ho raha hai" : "Fat lagayein"} onPress={() => { if (!busy) void saveFat(); }} />
@@ -272,8 +288,8 @@ export function RoleScreen({ tab, readOnly = false, live, onProfile, onTab }: { 
             <Alerts rows={rows} names={names} thresholds={thresholds} settings={settings} />
           </Section>
           <Section title="Kisan trend" sub="Aakhri 7 din, litre">
-            {[...names.entries()].map(([id, name]) => (
-              <Text key={id} onPress={() => setFarmerId(id)} style={{ color: id === farmerId ? colors.greenDark : colors.text, fontWeight: id === farmerId ? "800" : "500", marginBottom: 4 }}>{id === farmerId ? "● " : "○ "}{name}</Text>
+            {[...names.entries()].map(([id, name], index) => (
+              <FarmerChoice key={id} id={id} name={name} index={index} selected={id === farmerId} action="Trend dekhein" onPress={() => setFarmerId(id)} />
             ))}
             {trend.every((point) => point.amount === 0) ? <Empty title="Trend khali hai" body="Is kisan ki entry in 7 din mein nahi." /> : <SaleChart points={trend} />}
           </Section>
@@ -294,10 +310,42 @@ function ShiftCard({ title, litres, money }: { title: string; litres: number; mo
   );
 }
 
-function MilkLine({ row, name }: { row: MilkRow; name: string }) {
+function portraitSlot(id: string, fallback: number): number {
+  if (!id) return fallback;
+  let hash = 0;
+  for (let index = 0; index < id.length; index += 1) hash = ((hash * 31) + id.charCodeAt(index)) | 0;
+  return Math.abs(hash);
+}
+
+function FarmerChoice({ id, name, index, selected, detail, action = "Select", onPress }: { id: string; name: string; index: number; selected: boolean; detail?: string; action?: string; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{ flexDirection: "row", alignItems: "center", padding: 10, marginBottom: 8, borderRadius: 16, borderWidth: selected ? 2 : 1, borderColor: selected ? colors.green : "#DDE7DD", backgroundColor: selected ? "#F0FAF2" : "#fff" }}
+    >
+      <Image source={farmerPortrait(portraitSlot(id, index))} style={{ width: 54, height: 54, borderRadius: 15, marginRight: 10 }} />
+      <View style={{ flex: 1, paddingRight: 8 }}>
+        <Text style={{ color: colors.text, fontSize: 15, fontWeight: "900" }}>{name}</Text>
+        <Text style={{ color: colors.muted, marginTop: 3 }}>{detail || "Milk farmer"}</Text>
+      </View>
+      <View style={{ backgroundColor: selected ? colors.green : "#E4F4E7", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8 }}>
+        <Text style={{ color: selected ? "#fff" : colors.greenDark, fontSize: 11, fontWeight: "900" }}>{selected ? "✓ Selected" : action}</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function MilkLine({ row, name, index }: { row: MilkRow; name: string; index: number }) {
   const money = row.total_amount == null || row.total_amount === "" ? "raqam —" : rupees(num(row.total_amount));
   return (
-    <Text style={{ color: colors.text, marginBottom: 6 }}>{name} · {shiftLabel(row.shift)} · {row.quantity_liters} L · Fat {row.fat_percentage ?? "—"} · {money}</Text>
+    <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#E6ECE5" }}>
+      <Image source={farmerPortrait(portraitSlot(row.farmer_id || row.id || "", index))} style={{ width: 48, height: 48, borderRadius: 14, marginRight: 10 }} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: colors.text, fontWeight: "900" }}>{name}</Text>
+        <Text style={{ color: colors.muted, marginTop: 2 }}>{shiftLabel(row.shift)} · {row.quantity_liters} L · Fat {row.fat_percentage ?? "—"}</Text>
+      </View>
+      <Text style={{ color: colors.greenDark, fontWeight: "800" }}>{money}</Text>
+    </View>
   );
 }
 

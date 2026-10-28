@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { lrRangeError } from "../../../../src/lib/dairy/rules";
-import { karachiDate, liveGetScoped, liveInsert, loadMilkList, rupees, shiftLabel, type MilkRow, type PartyRow } from "../../../../src/lib/mobile/live-read";
+import { karachiDate, liveGetScoped, liveInsert, loadMilkList, shiftLabel, type MilkRow, type PartyRow } from "../../../../src/lib/mobile/live-read";
 import { liveAuth, type LiveBag } from "../bits";
 import { McaGlass } from "./glass-homes";
 import { Btn, Card, Field } from "../kit";
@@ -37,6 +37,12 @@ function parseNum(value: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function karachiHour(now = new Date()): number {
+  const hour = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", hour: "2-digit", hourCycle: "h23" }).format(now);
+  const value = Number(hour);
+  return Number.isFinite(value) ? value : now.getHours();
+}
+
 export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly = false, live, onProfile, onTab }: { tab: string; data: any; queueCount: number; onEnqueue: (item: any) => void; onSync: () => void; readOnly?: boolean; live?: LiveBag; onProfile?: () => void; onTab?: (key: string) => void }) {
   const auth = liveAuth(live);
   const [liters, setLiters] = useState("");
@@ -52,6 +58,7 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
   const [note, setNote] = useState("");
   const [saved, setSaved] = useState<MilkRow | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pickupOpen, setPickupOpen] = useState(false);
 
   const loadFarmers = useCallback(async () => {
     if (!auth) return;
@@ -147,20 +154,59 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
     setNote("Doodh save ho gaya. Entry MCC par Fat aur LR verification ke liye pending hai.");
   }
 
+  function openPickup(id: string) {
+    if (readOnly) return;
+    setFarmerId(id);
+    setShift(karachiHour() < 12 ? "morning" : "evening");
+    setLiters("");
+    setLr("");
+    setSaved(null);
+    setNote("");
+    setPickupOpen(true);
+  }
+
   const box = { borderWidth: 1, borderColor: "#E2E8E0", borderRadius: 12, padding: 10, marginTop: 8, backgroundColor: "#fff" };
   const showPickup = tab === "route";
-  if (tab === "home") return (
-    <McaGlass
-      live={live}
-      farmers={farmers}
-      onProfile={onProfile}
-      onTab={onTab}
-      onFarmerPress={(id) => {
-        if (!readOnly) setFarmerId(id);
-        onTab?.("route");
-      }}
-    />
+  const selectedFarmer = farmers.find((farmer) => farmer.id === farmerId);
+  const selectedIndex = Math.max(0, farmers.findIndex((farmer) => farmer.id === farmerId));
+  const pickupModal = (
+    <Modal visible={pickupOpen} transparent animationType="slide" onRequestClose={() => { if (!busy) setPickupOpen(false); }}>
+      <View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(8,25,14,0.45)" }}>
+        <View style={{ maxHeight: "88%", backgroundColor: "#F7FAF6", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 18 }}>
+          <ScrollView keyboardShouldPersistTaps="handled">
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
+              <Image source={farmerPortrait(selectedIndex)} style={{ width: 64, height: 64, borderRadius: 18, marginRight: 12 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontSize: 20, fontWeight: "900" }}>{selectedFarmer?.full_name || "Kisan"}</Text>
+                <Text style={{ color: colors.muted, marginTop: 3 }}>{selectedFarmer?.farmer_code || "Milk farmer"}</Text>
+              </View>
+              <Pressable disabled={busy} onPress={() => setPickupOpen(false)} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "#E6EEE5", alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: colors.text, fontSize: 20, fontWeight: "900" }}>×</Text>
+              </Pressable>
+            </View>
+            <Text style={{ color: colors.text, fontSize: 18, fontWeight: "900" }}>Doodh uthana</Text>
+            <Text style={{ color: colors.muted, marginTop: 4 }}>12 baje se pehle Subah, 12 ke baad Shaam auto hai. Zaroorat par badal sakte hain.</Text>
+            <View style={{ flexDirection: "row", marginTop: 12 }}>
+              <Pressable onPress={() => setShift("morning")} style={{ flex: 1, padding: 12, borderRadius: 12, backgroundColor: shift === "morning" ? colors.green : "#E7F0E4" }}>
+                <Text style={{ textAlign: "center", color: shift === "morning" ? "#fff" : colors.text, fontWeight: "900" }}>Subah</Text>
+              </Pressable>
+              <View style={{ width: 8 }} />
+              <Pressable onPress={() => setShift("evening")} style={{ flex: 1, padding: 12, borderRadius: 12, backgroundColor: shift === "evening" ? colors.green : "#E7F0E4" }}>
+                <Text style={{ textAlign: "center", color: shift === "evening" ? "#fff" : colors.text, fontWeight: "900" }}>Shaam</Text>
+              </Pressable>
+            </View>
+            <TextInput value={liters} onChangeText={setLiters} placeholder="Uthaya hua doodh · Litre" keyboardType="decimal-pad" style={box} />
+            <TextInput value={lr} onChangeText={setLr} placeholder="LR agar maujood ho — optional" keyboardType="decimal-pad" style={box} />
+            <Text style={{ color: colors.muted, marginTop: 8 }}>LR khali chhor dein to MCO chiller par LR aur Fat darj karke entry complete karega.</Text>
+            {note ? <Text style={{ color: note.startsWith("Doodh save") ? colors.greenDark : colors.danger, marginTop: 10, fontWeight: "700" }}>{note}</Text> : null}
+            <Btn label={busy ? "Save ho raha hai" : "MCO ko bhejein"} onPress={() => { if (!busy) void savePickup(); }} />
+            {saved ? <Text style={{ color: colors.text, marginTop: 8 }}>Saved · {shiftLabel(saved.shift)} · {saved.quantity_liters} L · LR {saved.lr ?? "MCO par pending"}</Text> : null}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
   );
+  if (tab === "home") return <>{pickupModal}<McaGlass live={live} farmers={farmers} onProfile={onProfile} onTab={onTab} onFarmerPress={openPickup} /></>;
 
   return (
     <ScrollView style={{ padding: 16 }}>
@@ -181,7 +227,7 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
             return (
               <Pressable
                 key={farmer.id || String(index)}
-                onPress={() => { if (!readOnly && farmer.id) setFarmerId(farmer.id); }}
+                onPress={() => { if (farmer.id) openPickup(farmer.id); }}
                 style={{ marginTop: 8, flexDirection: "row", alignItems: "center", padding: 8, borderRadius: 14, borderWidth: selected ? 2 : 1, borderColor: selected ? colors.green : colors.line, backgroundColor: selected ? "#ECF8EF" : "#fff" }}
               >
                 <Image source={farmerPortrait(index)} style={{ width: 52, height: 52, borderRadius: 14, marginRight: 10 }} />
@@ -194,19 +240,7 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
             );
           })}
           {!auth ? <Text style={{ color: colors.muted, marginTop: 8 }}>Login ke baghair kisan ki fehrist nahi khulti.</Text> : null}
-          <View style={{ flexDirection: "row", marginTop: 10 }}>
-            <Text onPress={() => { if (!readOnly) setShift("morning"); }} style={{ flex: 1, textAlign: "center", padding: 10, borderRadius: 10, overflow: "hidden", backgroundColor: shift === "morning" ? colors.green : "#E7F0E4", color: shift === "morning" ? "#fff" : colors.text, fontWeight: "700" }}>Subah</Text>
-            <View style={{ width: 8 }} />
-            <Text onPress={() => { if (!readOnly) setShift("evening"); }} style={{ flex: 1, textAlign: "center", padding: 10, borderRadius: 10, overflow: "hidden", backgroundColor: shift === "evening" ? colors.green : "#E7F0E4", color: shift === "evening" ? "#fff" : colors.text, fontWeight: "700" }}>Shaam</Text>
-          </View>
-          <TextInput value={liters} onChangeText={setLiters} editable={!readOnly} placeholder="Litre" keyboardType="decimal-pad" style={box} />
-          <TextInput value={lr} onChangeText={setLr} editable={!readOnly} placeholder="LR (agar gate par ho) — optional" keyboardType="decimal-pad" style={box} />
-          {readOnly ? <Text style={{ color: colors.muted, marginTop: 8 }}>Sirf dekhna · save band</Text> : <Btn label={busy ? "Save ho raha hai" : "Doodh save karein"} onPress={() => { if (!busy) void savePickup(); }} />}
-          {saved ? (
-            <Text style={{ color: colors.text, marginTop: 8 }}>
-              Save: {saved.entry_date || karachiDate()} · {shiftLabel(saved.shift)} · {saved.quantity_liters} L · Fat {saved.fat_percentage ?? "—"} · SNF {saved.snf_percentage ?? "—"} · LR {saved.lr ?? "—"} · {saved.total_amount == null ? "raqam —" : rupees(Number(saved.total_amount))}
-            </Text>
-          ) : null}
+          <Text style={{ color: colors.muted, marginTop: 10 }}>Farmer card dabayen; litre aur optional LR popup mein darj honge.</Text>
         </Card>
       ) : null}
       {!readOnly && tab === "start" ? (
@@ -256,6 +290,7 @@ export function RoleScreen({ tab, data, queueCount, onEnqueue, onSync, readOnly 
         </Card>
       ) : null}
       <View style={{ height: 24 }} />
+      {pickupModal}
     </ScrollView>
   );
 }

@@ -425,21 +425,27 @@ export function McoGlass({ live, rows, error, names, onFieldReceive, onDropoff, 
       <GlassCard title="MCA receipts" index={7}>
         {error ? <Text style={{ color: glass.muted }}>{error}</Text> : null}
         {pending.slice(0, 4).map((row, index) => (
-          <View key={row.id ?? String(index)} style={{ marginBottom: 8 }}>
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Text style={{ color: glass.text, flex: 1, fontWeight: "700" }}>{row.route_name || row.chiller_name || "Centre"}</Text>
-              <Pill label="Pending" tone="orange" />
+          <View key={row.id ?? String(index)} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#E4ECE5" }}>
+            <Image source={farmerPortrait(index)} style={{ width: 52, height: 52, borderRadius: 15, marginRight: 10 }} />
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Text style={{ color: glass.text, flex: 1, fontWeight: "900" }}>{cleanPerson(row.farmer_id ? names.get(row.farmer_id) : "") || "Kisan"}</Text>
+                <Pill label="Pending" tone="orange" />
+              </View>
+              <Text style={{ color: glass.muted, marginTop: 3 }}>{litres(row)} L · {row.route_name || row.chiller_name || "Centre"}</Text>
             </View>
-            <Text style={{ color: glass.muted }}>{cleanPerson(row.farmer_id ? names.get(row.farmer_id) : "") || "Kisan"} · {litres(row)} L · {row.route_name || row.chiller_name || "Centre"}</Text>
           </View>
         ))}
         {list.filter((row) => row.entry_date === today && row.status !== "pending_fat").slice(0, 3).map((row, index) => (
-          <View key={`done-${row.id ?? index}`} style={{ marginBottom: 8 }}>
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Text style={{ color: glass.text, flex: 1, fontWeight: "700" }}>{row.route_name || row.chiller_name || "Centre"}</Text>
-              <Pill label={row.status === "rejected" ? "Reject" : "Checked"} tone={row.status === "rejected" ? "red" : "green"} />
+          <View key={`done-${row.id ?? index}`} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#E4ECE5" }}>
+            <Image source={farmerPortrait(index + pending.length)} style={{ width: 52, height: 52, borderRadius: 15, marginRight: 10 }} />
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Text style={{ color: glass.text, flex: 1, fontWeight: "900" }}>{cleanPerson(row.farmer_id ? names.get(row.farmer_id) : "") || "Kisan"}</Text>
+                <Pill label={row.status === "rejected" ? "Reject" : "Checked"} tone={row.status === "rejected" ? "red" : "green"} />
+              </View>
+              <Text style={{ color: glass.muted, marginTop: 3 }}>{litres(row)} L · Fat {row.fat_percentage ?? "—"} · {row.route_name || row.chiller_name || "Centre"}</Text>
             </View>
-            <Text style={{ color: glass.muted }}>{cleanPerson(row.farmer_id ? names.get(row.farmer_id) : "") || "Kisan"} · {litres(row)} L · Fat {row.fat_percentage ?? "—"}</Text>
           </View>
         ))}
       </GlassCard>
