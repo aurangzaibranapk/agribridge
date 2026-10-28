@@ -1,0 +1,18 @@
+{
+  "cli": { "version": ">= 13.0.0" },
+  "build": {
+    "debug": {
+      "android": { "buildType": "apk", "gradleCommand": ":app:assembleDebug" },
+      "env": { "APP_CHANNEL": "debug" }
+    },
+    "internal": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "env": { "APP_CHANNEL": "internal" }
+    },
+    "production": {
+      "android": { "buildType": "app-bundle" },
+      "env": { "APP_CHANNEL": "production" }
+    }
+  }
+}

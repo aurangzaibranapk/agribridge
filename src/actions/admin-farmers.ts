@@ -10,6 +10,24 @@ export interface ActionState {
   success?: boolean;
 }
 
+async function callerBranchScope(
+  supabase: ReturnType<typeof createClient>,
+): Promise<{ branch_id?: string; organization_id?: string }> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return {};
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("branch_id, organization_id")
+    .eq("id", user.id)
+    .maybeSingle();
+  const scope: { branch_id?: string; organization_id?: string } = {};
+  if (me?.branch_id) scope.branch_id = me.branch_id;
+  if (me?.organization_id) scope.organization_id = me.organization_id;
+  return scope;
+}
+
 export async function adminAddFarmer(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const fullName = String(formData.get("full_name") ?? "").trim();
@@ -29,9 +47,16 @@ export async function adminAddFarmer(_prev: ActionState, formData: FormData): Pr
   // Code database khud bharta hai (migration 121). Pehle yahan count(*)
   // + 1 tha -- wo us din tootta jis din ek kisan bhi hataya jaye: ginti
   // ek kam ho jati aur agla code kisi purane se takra jata.
+  // Staff (non-admin) ke liye RLS "farmer_branch_insert" sirf apni branch
+  // ki qatar manta hai. DB default (migration 536) bhi yehi bharta hai, magar
+  // ab hum khud bhi staff ki apni branch/org bhejte hain taake form kabhi
+  // khali/ghalat branch ki wajah se "row-level security" par na ruke
+  // (support ticket #1, Anwar Ul Hassan).
+  const callerScope = await callerBranchScope(supabase);
   const { data: newFarmer, error } = await supabase
     .from("farmers")
     .insert({
+      ...callerScope,
       full_name: fullName,
       phone_number: phoneNumber,
       village,

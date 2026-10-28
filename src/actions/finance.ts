@@ -126,15 +126,14 @@ export async function setOpeningBalance(_prev: ActionState, formData: FormData):
   if (Number(account.opening_balance) > 0) {
     return { error: `${account.name} ka shuruati balance pehle se darj hai (Rs ${Number(account.opening_balance).toLocaleString()}).` };
   }
-  const { data: pehleSe } = await supabase
+  const { data: pehleSe, error: pehleErr } = await supabase
     .from("finance_transactions")
     .select("id")
     .eq("account_id", accountId)
     .eq("category", "Shuruati balance")
+    .eq("transaction_type", "income")
     .maybeSingle();
-  if (pehleSe) {
-    return { error: `${account.name} ka shuruati balance pehle hi darj ho chuka hai. Badalna ho to purani entry ledger se reverse karein.` };
-  }
+  if (pehleErr) return { error: `Shuruati balance ki purani qatar nahi dekhi ja saki: ${pehleErr.message}` };
 
   const {
     data: { user },
@@ -142,20 +141,37 @@ export async function setOpeningBalance(_prev: ActionState, formData: FormData):
 
   const description = `Shuruati balance — ${account.name} (${asOf} tak)`;
 
-  const { data: row, error } = await supabase
-    .from("finance_transactions")
-    .insert({
-      account_id: accountId,
-      transaction_type: "income",
-      category: "Shuruati balance",
-      amount,
-      transaction_date: asOf,
-      notes: description,
-      created_by: user?.id ?? null,
-    })
-    .select("id")
-    .single();
-  if (error) return { error: error.message };
+  let rowId = pehleSe?.id ?? null;
+  if (rowId) {
+    const { data: claimed, error: claimRead } = await supabase
+      .from("journal_entry_sources")
+      .select("entry_id")
+      .eq("source_table", "finance_transactions")
+      .eq("source_row_id", rowId)
+      .maybeSingle();
+    if (claimRead) {
+      return { error: `Shuruati balance ki kitab nahi dekhi ja saki — naya khata na banayein: ${claimRead.message}` };
+    }
+    if (claimed?.entry_id) {
+      return { error: `${account.name} ka shuruati balance pehle hi darj ho chuka hai. Badalna ho to purani entry ledger se reverse karein.` };
+    }
+  } else {
+    const { data: row, error } = await supabase
+      .from("finance_transactions")
+      .insert({
+        account_id: accountId,
+        transaction_type: "income",
+        category: "Shuruati balance",
+        amount,
+        transaction_date: asOf,
+        notes: description,
+        created_by: user?.id ?? null,
+      })
+      .select("id")
+      .single();
+    if (error) return { error: error.message };
+    rowId = row.id;
+  }
 
   // Doosra rukh: ye aamdani nahi hai. Paisa kamaya nahi gaya, wo pehle
   // se malik ka tha -- is liye "Malik ka sarmaya" (3200), koi income
@@ -169,26 +185,14 @@ export async function setOpeningBalance(_prev: ActionState, formData: FormData):
     ctx: {
       createdBy: user?.id ?? null,
       entryDate: asOf,
-      claims: [{ table: "finance_transactions", rowId: row.id }],
+      claims: [{ table: "finance_transactions", rowId }],
     },
   });
 
   if (failed(posted)) {
-    // Ledger mein na gaya to Cash Book ki qatar bhi nahi rehni chahiye --
-    // warna dono kitabein usi din alag ho jatin jis din ye feature ban
-    // raha tha.
-    // Mitate NAHI (finance review #9) -- ulti qatar daalte hain, taake
-    // Cash Book barabar ho jaye aur dono qataren saboot ke taur par rahein.
-    await supabase.from("finance_transactions").insert({
-      account_id: accountId,
-      transaction_type: "expense",
-      category: "Shuruati balance",
-      amount,
-      transaction_date: asOf,
-      notes: `Reversal — ${description} (ledger mein nahi gaya)`,
-      created_by: user?.id ?? null,
-    });
-    return { error: `Ledger mein nahi ja saka, is liye shuruati balance darj nahi kiya: ${posted.error}` };
+    return {
+      error: `Ledger mein nahi ja saka. Cash Book ki qatar (${rowId}) mehfooz hai — naya khata na banayein, isi khate par shuruati balance dobara darj karein: ${posted.error}`,
+    };
   }
 
   revalidatePath("/admin/finance");
@@ -259,7 +263,19 @@ export async function recordFinanceTransaction(_prev: ActionState, formData: For
       ? await postCashIn({ accountId, amount, category, description, ctx })
       : await postCashOut({ accountId, amount, category, description, ctx });
 
-  if (failed(posted)) return { error: `Entry to ban gayi magar ledger mein nahi ja saki: ${posted.error}` };
+  if (failed(posted)) {
+    const undo = type === "income" ? "expense" : "income";
+    await supabase.from("finance_transactions").insert({
+      account_id: accountId,
+      transaction_type: undo,
+      category,
+      amount,
+      transaction_date: transactionDate,
+      notes: `Reversal — ledger nahi gaya: ${posted.error}`,
+      created_by: user?.id ?? null,
+    });
+    return { error: `Ledger mein nahi gayi, is liye Cash Book ki qatar bhi ulti kar di: ${posted.error}` };
+  }
 
   revalidatePath("/admin/finance");
   revalidatePath("/admin/money-trail");
@@ -276,94 +292,16 @@ export async function transferBetweenAccounts(_prev: ActionState, formData: Form
   const amount = Number(formData.get("amount") ?? 0);
   const transactionDate = String(formData.get("transaction_date") ?? aajKaKhana());
   const notes = (formData.get("notes") as string) || null;
-  const clientActionId = String(formData.get("client_action_id") ?? "").trim() || null;
 
   if (!fromAccountId || !toAccountId) return { error: "Both accounts are required." };
   if (fromAccountId === toAccountId) return { error: "Source and destination must be different." };
   if (!amount || amount <= 0) return { error: "Amount must be greater than zero." };
 
-  // Finance review #8: pehle sirf "nikla" qadam -- paisa 1020 (Cash in
-  // Transit) mein nazar aata rahe jab tak doosra Admin wusooli darj na
-  // kare (receiveTransfer). Migration 522 na lagi ho to purana raasta.
-  const pending = await startPendingTransfer({
+  // Sirf "nikla" qadam. Doosra Owner/Admin wusooli darj kare.
+  // Purana raasta (ek banda dono taraf) band hai.
+  return startPendingTransfer({
     supabase, fromAccountId, toAccountId, amount, transactionDate, notes, userId: gate.userId,
   });
-  if (pending !== "legacy") return pending;
-
-  if (clientActionId) {
-    const { data, error } = await (supabase as any).rpc("fn_post_finance_atomic", {
-      p_mode: "transfer", p_account_id: fromAccountId, p_to_account_id: toAccountId,
-      p_amount: amount, p_transaction_date: transactionDate, p_notes: notes,
-      p_client_action_id: clientActionId,
-    });
-    if (error) return { error: error.message };
-    if (data?.success) { revalidatePath("/admin/finance"); return { success: true }; }
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const transferId = crypto.randomUUID();
-
-  const { data: outRow, error: outError } = await supabase
-    .from("finance_transactions")
-    .insert({
-      account_id: fromAccountId,
-      transaction_type: "transfer_out",
-      category: "Transfer",
-      amount,
-      transaction_date: transactionDate,
-      notes,
-      related_transfer_id: transferId,
-      created_by: user?.id ?? null,
-    })
-    .select("id")
-    .single();
-  if (outError) return { error: outError.message };
-
-  const { data: inRow, error: inError } = await supabase
-    .from("finance_transactions")
-    .insert({
-      account_id: toAccountId,
-      transaction_type: "transfer_in",
-      category: "Transfer",
-      amount,
-      transaction_date: transactionDate,
-      notes,
-      related_transfer_id: transferId,
-      created_by: user?.id ?? null,
-    })
-    .select("id")
-    .single();
-  if (inError) return { error: inError.message };
-
-  // Transfer ke DO qadam hain, is liye DO entries -- ek nikalne ki, ek
-  // pahunchne ki, aur beech mein "Cash in Transit". Ek hi entry banayein
-  // to wo raqam kabhi nazar nahi aayegi jo nikli to thi magar pahunchi
-  // nahi.
-  const label = notes?.trim() || `Transfer — Rs ${amount.toLocaleString()}`;
-  const base = { createdBy: user?.id ?? null, entryDate: transactionDate };
-
-  const out = await postTransferOut({
-    fromAccountId,
-    amount,
-    description: `${label} (nikla)`,
-    ctx: { ...base, claims: [{ table: "finance_transactions", rowId: outRow.id }] },
-  });
-  if (failed(out)) return { error: `Transfer hua magar ledger mein nahi gaya: ${out.error}` };
-
-  const inn = await postTransferIn({
-    toAccountId,
-    amount,
-    description: `${label} (pahuncha)`,
-    ctx: { ...base, claims: [{ table: "finance_transactions", rowId: inRow.id }] },
-  });
-  if (failed(inn)) return { error: `Transfer hua magar ledger mein adhoora raha: ${inn.error}` };
-
-  revalidatePath("/admin/finance");
-  revalidatePath("/admin/money-trail");
-  return { success: true };
 }
 
 type Supa = ReturnType<typeof createClient>;
@@ -376,10 +314,12 @@ async function startPendingTransfer(args: {
   transactionDate: string;
   notes: string | null;
   userId: string;
-}): Promise<ActionState | "legacy"> {
+}): Promise<ActionState> {
   const loose = args.supabase as unknown as { from: (t: string) => any };
   const probe = await loose.from("finance_transactions").select("transfer_to_account_id").limit(1);
-  if (probe.error) return "legacy";
+  if (probe.error) {
+    return { error: "Purana transfer raasta band hai: ek banda dono taraf khud nahi likh sakta. Doosra Owner/Admin wusooli darj kare. Is ke liye transfer ka column (migration 522) laga hona chahiye." };
+  }
 
   const transferId = crypto.randomUUID();
   const { data: outRow, error } = await loose
@@ -415,7 +355,7 @@ async function startPendingTransfer(args: {
 
 /**
  * Transfer ki wusooli -- doosri taraf paisa pahunch gaya.
- * Sirf Admin darje ka banda, aur (Owner ke ilawa) wo nahi jis ne bheja.
+ * Sirf Admin darje ka banda, aur wo nahi jis ne bheja — Owner bhi apni nahi.
  */
 export async function receiveTransfer(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const gate = await requireMoneyAdmin("Transfer ki wusooli darj karna");
@@ -437,8 +377,8 @@ export async function receiveTransfer(_prev: ActionState, formData: FormData): P
   if ((rows ?? []).some((r: { transaction_type: string }) => r.transaction_type === "transfer_in")) {
     return { error: "Ye transfer pehle hi wusool ho chuka hai." };
   }
-  if (out.created_by === gate.userId && gate.role !== "owner") {
-    return { error: "Jis ne transfer bheja wo khud wusooli darj nahi kar sakta. Doosre Admin se karwayein." };
+  if (out.created_by === gate.userId) {
+    return { error: "Jis ne transfer bheja wo khud wusooli darj nahi kar sakta. Doosra Owner/Admin kare." };
   }
   if (receivedDate < String(out.transaction_date)) return { error: "Wusooli ki tareekh bhejne se pehle ki nahi ho sakti." };
 

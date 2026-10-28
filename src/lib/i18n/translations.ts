@@ -8,6 +8,9 @@ import { portalPolishDict } from "./dict/portal-polish";
 import { portalCustomerDict } from "./dict/portal-customer";
 import { portalOneScreen2Dict } from "./dict/portal-onescreen2";
 import { broadcastDict } from "./dict/broadcast";
+import { partyLinksDict } from "./dict/party-links";
+import { callCenterDict } from "./dict/call-center";
+import { cashNeedsDict } from "./dict/cash-needs";
 import { posDict } from "./dict/pos";
 import { machineryDict } from "./dict/machinery";
 import { myWorkDict } from "./dict/my-work";
@@ -66,6 +69,7 @@ import { salesPeriodDict } from "./dict/sales-period";
 import { staffPerformanceDict } from "./dict/staff-performance";
 import { intelligenceDict } from "./dict/intelligence";
 import { business360OwnerDict } from "./dict/business-360-owner";
+import { applyBrand, type BrandLang } from "@/lib/brand";
 
 /**
  * Teen zabanein, ek hi safha.
@@ -183,6 +187,9 @@ const dict = {
   ...portalCustomerDict,
   ...portalOneScreen2Dict,
   ...broadcastDict,
+  ...partyLinksDict,
+  ...callCenterDict,
+  ...cashNeedsDict,
 };
 
 export type TranslationKey = keyof typeof dict;
@@ -190,8 +197,8 @@ export type TranslationKey = keyof typeof dict;
 export function t(key: TranslationKey, lang: Lang): string {
   const entry = dict[key] as { en: string; rm?: string; ur: string } | undefined;
   if (!entry) return String(key);
-  if (lang === "rm") return entry.rm ?? entry.ur;
-  return entry[lang] ?? entry.en;
+  const raw = lang === "rm" ? (entry.rm ?? entry.ur) : (entry[lang] ?? entry.en);
+  return applyBrand(raw, lang as BrandLang);
 }
 
 /** Har zaban ka apna naam -- apni hi zaban mein. */

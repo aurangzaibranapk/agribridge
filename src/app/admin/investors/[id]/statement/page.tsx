@@ -33,13 +33,30 @@ export default async function InvestorStatementPage({
     .lte("investment_date", endDate)
     .order("investment_date", { ascending: true });
 
-  const { data: rawReturns } = await supabase
+  const returnsQuery = await (supabase as any)
     .from("investor_returns")
-    .select("id, return_date, amount, notes")
+    .select("id, return_date, amount, notes, status")
     .eq("investor_id", investorId)
     .gte("return_date", startDate)
     .lte("return_date", endDate)
     .order("return_date", { ascending: true });
+  const rawReturns = returnsQuery.error
+    ? (
+        await supabase
+          .from("investor_returns")
+          .select("id, return_date, amount, notes")
+          .eq("investor_id", investorId)
+          .gte("return_date", startDate)
+          .lte("return_date", endDate)
+          .order("return_date", { ascending: true })
+      ).data?.map((r) => ({ ...r, status: "approved" as string })) ?? []
+    : ((returnsQuery.data ?? []) as { id: string; return_date: string; amount: number; notes: string | null; status?: string | null }[]);
+
+  const { data: accountRows } = await supabase
+    .from("finance_accounts")
+    .select("id, name")
+    .eq("is_active", true)
+    .order("name");
 
   // Investment increases what's outstanding with the company (credit,
   // company owes it back eventually); a Return/Profit payout reduces
@@ -52,7 +69,7 @@ export default async function InvestorStatementPage({
       debit: 0,
       credit: Number(i.amount),
     })),
-    ...(rawReturns ?? []).map((r) => ({
+    ...(rawReturns ?? []).filter((r) => (r.status ?? "approved") === "approved").map((r) => ({
       date: (r.return_date as string).slice(0, 10),
       description: `Profit/Return Diya Gaya${r.notes ? ` - ${r.notes}` : ""}`,
       debit: Number(r.amount),
@@ -83,6 +100,15 @@ export default async function InvestorStatementPage({
         totalInvested={totalInvested}
         totalReturned={totalReturned}
         closingBalance={runningBalance}
+        accounts={(accountRows ?? []).map((a) => ({ id: a.id, name: a.name }))}
+        pendingReturns={(rawReturns ?? [])
+          .filter((r) => r.status === "pending")
+          .map((r) => ({
+            id: r.id,
+            date: String(r.return_date).slice(0, 10),
+            amount: Number(r.amount),
+            notes: r.notes,
+          }))}
       />
     </div>
   );

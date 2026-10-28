@@ -15,6 +15,11 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { ComplaintQueue, type QueueTicket } from "@/components/support/complaint-queue";
+import { ManagerGrantList } from "@/components/support/manager-grants";
+import { canAssignComplaints, canForwardComplaint } from "@/lib/support/complaint-intake";
+import { aiAgentConnected } from "@/lib/support/ai-agent-webhook";
+import { configuredSupportAgents } from "@/lib/support/agent-dispatch";
 
 export const dynamic = "force-dynamic";
 
@@ -239,6 +244,79 @@ export default async function DevelopmentSupportDashboard() {
   });
   const maxDaily = Math.max(1, ...days.flatMap((day) => [day.reported, day.resolved]));
 
+  let complaintNotice: string | null = null;
+  let queue: QueueTicket[] = [];
+  const complaintQuery = await db
+    .from("support_tickets")
+    .select("id,ticket_no,title,description,status,created_at,intake_source,suggested_department,routed_label,reporter_id,reporter:profiles!support_tickets_reporter_id_fkey(full_name),assignee:profiles!support_tickets_assigned_to_fkey(full_name)")
+    .eq("organization_id", profile.organization_id)
+    .in("intake_source", ["staff", "call_center", "mobile_app"])
+    .order("created_at", { ascending: false })
+    .limit(80);
+  if (complaintQuery.error) {
+    complaintNotice = "Complaint queue tab yahan aayegi jab migration 626 backup ke baad chal jaye.";
+  } else {
+    const rows = complaintQuery.data ?? [];
+    const cids = rows.map((row: { id: string }) => row.id);
+    const eventsQuery = cids.length
+      ? await db.from("support_ticket_events").select("ticket_id,event_type,from_value,to_value,note,created_at,actor:profiles(full_name)").in("ticket_id", cids).order("created_at", { ascending: true }).limit(400)
+      : { data: [], error: null };
+    const events = (eventsQuery.error ? [] : eventsQuery.data) ?? [];
+    const stageQuery = cids.length
+      ? await db.from("support_tickets").select("id,complaint_stage,stage_percent,manager_forward_label,assigned_to,assigned_agent,reporter_id").in("id", cids)
+      : { data: [], error: null };
+    const stageById = new Map((stageQuery.error ? [] : (stageQuery.data ?? [])).map((row: { id: string }) => [row.id, row]));
+    const attQuery = cids.length
+      ? await db.from("support_ticket_attachments").select("id,ticket_id,storage_path").in("ticket_id", cids)
+      : { data: [], error: null };
+    const attRows = attQuery.error ? [] : (attQuery.data ?? []);
+    queue = await Promise.all(rows.map(async (row: any) => {
+      const extra = stageById.get(row.id) as { complaint_stage?: string; stage_percent?: number; manager_forward_label?: string; assigned_to?: string; assigned_agent?: string } | undefined;
+      const images = [];
+      for (const file of attRows.filter((item: { ticket_id: string }) => item.ticket_id === row.id)) {
+        const signed = await service.storage.from("support-evidence").createSignedUrl(file.storage_path, 3600);
+        if (signed.data?.signedUrl) images.push({ src: signed.data.signedUrl, alt: row.title });
+      }
+      return {
+        id: row.id,
+        ticketNo: row.ticket_no,
+        title: row.title,
+        description: row.description,
+        status: row.status,
+        intake: row.intake_source,
+        suggested: row.suggested_department,
+        routed: row.routed_label,
+        assignee: row.assignee?.full_name ?? (extra?.assigned_agent === "ai_webhook" ? "AI agent" : null),
+        assigneeId: extra?.assigned_to ?? null,
+        assignedAgent: extra?.assigned_agent ?? null,
+        reporter: row.reporter?.full_name ?? "Staff",
+        reporterId: row.reporter_id,
+        createdAt: new Date(row.created_at).toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
+        stage: extra?.complaint_stage ?? null,
+        percent: extra?.stage_percent ?? null,
+        managerForward: extra?.manager_forward_label ?? null,
+        images,
+        history: events.filter((event: any) => event.ticket_id === row.id).map((event: any) => ({
+          at: new Date(event.created_at).toLocaleString("en-PK", { timeZone: "Asia/Karachi" }),
+          event: event.event_type,
+          from: event.from_value,
+          to: event.to_value,
+          note: event.note,
+          actor: event.actor?.full_name ?? "System",
+        })),
+      };
+    }));
+  }
+  const { data: queuePeople } = await service.from("profiles").select("id,full_name,role").eq("organization_id", profile.organization_id).eq("is_active", true).order("full_name");
+  let grantNotice: string | null = null;
+  const grantQuery = await db.from("cc_assign_grants").select("profile_id,active").eq("organization_id", profile.organization_id);
+  if (grantQuery.error) grantNotice = "Manager ijazat tab yahan aayegi jab migration 627 backup ke baad chal jaye.";
+  const grantOn = new Set((grantQuery.error ? [] : (grantQuery.data ?? [])).filter((row: { active?: boolean }) => row.active !== false).map((row: { profile_id: string }) => row.profile_id));
+  const managers = ((queuePeople ?? []) as { id: string; full_name: string; role: string }[])
+    .filter((person) => person.role === "manager")
+    .map((person) => ({ id: person.id, full_name: person.full_name, granted: grantOn.has(person.id) }));
+  const viewerGrant = grantOn.has(profile.id);
+
   const ticketById = new Map(tickets.map((ticket) => [ticket.id, ticket]));
   const recentUpdates = comments.slice(0, 15).map((comment) => ({
     ...comment,
@@ -393,6 +471,21 @@ export default async function DevelopmentSupportDashboard() {
             </div>
           </article>
         </section>
+
+        {canAssignComplaints(String(profile.role)) && (
+          <ManagerGrantList managers={managers} notice={grantNotice} />
+        )}
+        <ComplaintQueue
+          tickets={queue}
+          people={(queuePeople ?? []) as { id: string; full_name: string; role: string }[]}
+          agents={configuredSupportAgents().map((agent) => ({ key: agent.key, label: agent.label }))}
+          canAssign={canForwardComplaint({ role: String(profile.role), managerGrant: viewerGrant })}
+          canSendAi={canAssignComplaints(String(profile.role))}
+          aiConnected={aiAgentConnected({ AI_AGENT_WEBHOOK_URL: process.env.AI_AGENT_WEBHOOK_URL })}
+          viewerId={profile.id}
+          viewerRole={String(profile.role)}
+          notice={complaintNotice}
+        />
 
         <section className="mt-4 rounded-xl border border-surface-200 bg-white shadow-sm">
           <div className="border-b border-surface-100 px-4 py-3">

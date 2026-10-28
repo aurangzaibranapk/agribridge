@@ -1,4 +1,6 @@
 ﻿"use client";
+import { AnimatedSearch } from "@/components/ui/animated-search";
+import { animSearchEnabled } from "@/lib/ui/animated-search";
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -123,6 +125,9 @@ export function KhataClient({
               Payable: <span className="font-semibold text-amber-600">Rs {totalPayable.toLocaleString()}</span>
             </p>
           </div>
+{animSearchEnabled() ? (
+          <div className="w-64"><AnimatedSearch value={search} onValueChange={setSearch} placeholder={t("sh_search_customer", lang)} lang={lang} /></div>
+) : (
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
             <Input
@@ -132,6 +137,7 @@ export function KhataClient({
               className="pl-9"
             />
           </div>
+)}
         </div>
 
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">

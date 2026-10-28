@@ -35,6 +35,11 @@ import { StaffMotivationCard } from "@/components/guided/staff-motivation-card";
 import { RenderOwnerDashboard } from "@/components/dashboard/render/render-owner-dashboard";
 import { LookToggle } from "@/components/dashboard/render/render-islands";
 import { resolveDashLook, DASH_LOOK_COOKIE } from "@/lib/render-dashboard/look";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { loadInsights, type InsightsData } from "@/lib/command-center-insights";
+import { parseInsightFilters } from "@/lib/command-center-insights-core";
+import { aajKaKhana } from "@/lib/utils/format";
+import { InsightsFilters, InsightsKpis, InsightsTrendAndFeed, InsightsGrid } from "@/components/dashboard/insights/insights-section";
 
 export const dynamic = "force-dynamic";
 
@@ -112,6 +117,13 @@ export default async function CommandCenterPage({ searchParams }: { searchParams
     loadBranchPerformance(),
     loadTopShops(),
   ]);
+  // NAYA (dashboard upgrade): filters, KPI, trend, feed, charts. Kuch bhi
+  // ghalat ho to sirf naye hisse chhup jate hain -- mojooda dashboard chalta rahe.
+  const insightFilters = parseInsightFilters(searchParams, aajKaKhana(), salesShops.map((x) => x.id));
+  const insights: InsightsData | null = await loadInsights(insightFilters, salesShops).catch((e) => {
+    console.error("command-center insights", e);
+    return null;
+  });
   const lines = conclude(depts, lang);
   const totals = deptTotals(depts);
 
@@ -121,6 +133,16 @@ export default async function CommandCenterPage({ searchParams }: { searchParams
   const liveTables = ["pos_sales", "company_expense_requests", "labour_work_entries", "party_settlements", "whatsapp_submissions", "journal_entries", "finance_transactions"];
   if (look === "new") {
     return (
+      <>
+      {insights && (
+        <div className="mx-auto mb-3 w-full max-w-[1800px] space-y-3">
+          <div className="flex justify-end"><ThemeToggle /></div>
+          <InsightsFilters d={insights} />
+          <InsightsKpis d={insights} />
+          <InsightsTrendAndFeed d={insights} />
+          <InsightsGrid d={insights} />
+        </div>
+      )}
       <RenderOwnerDashboard
         lang={lang}
         money={money}
@@ -138,6 +160,7 @@ export default async function CommandCenterPage({ searchParams }: { searchParams
         shopSelect={<SalesShopSelect shops={salesShops} current={salesShop} label={t("sps_shop_pick", lang)} allLabel={t("sps_all_shops", lang)} />}
         dailySales={<DailySalesBreakdown supabase={supabase} scope={{ meriDukan: null, shopId: salesShop, branchId: "" }} tableRange={periodRange("7d")} lang={lang} compact reportHref={salesShop ? `/admin/reports/sales?salesShop=${salesShop}` : "/admin/reports/sales"} />}
       />
+      </>
     );
   }
 
@@ -167,6 +190,7 @@ export default async function CommandCenterPage({ searchParams }: { searchParams
           <p className="mt-0.5 text-sm text-surface-500">Today&apos;s money, department performance aur zaroori actions — ek nazar mein. Neeche scroll karke poora dashboard dekhein.</p>
         </div>
         <div className="flex items-center gap-2 pt-1">
+          <ThemeToggle />
           <LookToggle current="old" labels={{ old: lang === "en" ? "Classic" : lang === "ur" ? "پرانا انداز" : "Purana look", new: lang === "en" ? "New look" : lang === "ur" ? "نیا انداز" : "Naya look" }} />
           <Link
             href="/admin/my-home"
@@ -191,6 +215,8 @@ export default async function CommandCenterPage({ searchParams }: { searchParams
       </div>
 
       <StaffMotivationCard name={me.full_name} score={scoreRow?.score ?? null} role={me.role} language="ur" />
+
+      {insights && <InsightsFilters d={insights} />}
 
       {/* Aaj / Kal / Parson + 7 din (compact) -- wahi component jo sales report par hai */}
       <div className="rounded-card border border-surface-200 bg-white p-4 shadow-card dark:border-surface-800 dark:bg-surface-900">
@@ -224,6 +250,14 @@ export default async function CommandCenterPage({ searchParams }: { searchParams
           );
         })}
       </div>
+
+      {insights && (
+        <>
+          <InsightsKpis d={insights} />
+          <InsightsTrendAndFeed d={insights} />
+          <InsightsGrid d={insights} />
+        </>
+      )}
 
       <div className="grid gap-3 2xl:min-h-0 2xl:grid-cols-[minmax(0,1fr)_21rem]">
         <div className="grid content-start gap-3 xl:grid-cols-2">

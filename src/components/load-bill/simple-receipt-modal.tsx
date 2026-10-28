@@ -77,7 +77,7 @@ export function SimpleReceiptModal({
       `${totalLabel}: ${totalValue}`,
     ];
     if (footerNote) lines.push("", footerNote);
-    lines.push("", "Al Rana Traders", "📞 0312-6513294");
+    lines.push("", "AgriBridge", "📞 0312-6513294");
     return lines.filter(Boolean).join("\n");
   }
 

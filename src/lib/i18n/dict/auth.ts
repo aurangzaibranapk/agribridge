@@ -13,8 +13,8 @@
  *    cookie bhi nahi hoti; us ke liye default Urdu hai, kyunke ye
  *    darwaza sab se pehle kisan ke liye hai.
  *
- * 2. "Al Rana Traders", "ART" aur "AgriBridge" ke Urdu naam wohi hain
- *    jo glossary.ts mein darj hain (الرانا ٹریڈرز، اے آر ٹی، ایگری بریج). Login ka safha wo pehli jagah hai jahan banda ye naam
+ * 2. "{brand}", "{brand}" aur "AgriBridge" ke Urdu naam wohi hain
+ *    jo glossary.ts mein darj hain ({brand}، {brand}، ایگری بریج). Login ka safha wo pehli jagah hai jahan banda ye naam
  *    parhta hai -- yahan koi doosri hijje us ke liye doosra karobar
  *    bana degi.
  *
@@ -25,8 +25,8 @@
  */
 export const authDict = {
   // ---- Login ka safha ----
-  au_brand: { en: "ART AgriBridge", rm: "ART AgriBridge", ur: "اے آر ٹی ایگری بریج" },
-  au_company: { en: "Al Rana Traders", rm: "Al Rana Traders", ur: "الرانا ٹریڈرز" },
+  au_brand: { en: "{tagline}", rm: "{tagline}", ur: "{tagline}" },
+  au_company: { en: "{brand}", rm: "{brand}", ur: "{brand}" },
   au_sign_in_title: { en: "Sign in to your account", rm: "Apne account mein sign in karein", ur: "اپنے اکاؤنٹ میں سائن اِن کریں" },
   au_close: { en: "Close", rm: "Band karein", ur: "بند کریں" },
   au_close_back_site: { en: "Close — go back to the website", rm: "Band karein — website par wapas jayein", ur: "بند کریں — ویب سائٹ پر واپس جائیں" },
@@ -190,5 +190,5 @@ export const authDict = {
   },
   au_forgot_password_page: { en: "Forgot Password Page", rm: "Forgot Password ka safha", ur: "Forgot Password کا صفحہ" },
   au_loading: { en: "Loading...", rm: "Load ho raha hai...", ur: "لوڈ ہو رہا ہے..." },
-  au_ar: { en: "AR", rm: "AR", ur: "AR" },
+  au_ar: { en: "{brand}", rm: "{brand}", ur: "{brand}" },
 };

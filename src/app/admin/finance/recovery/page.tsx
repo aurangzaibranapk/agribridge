@@ -7,6 +7,7 @@ import { AlertTriangle } from "lucide-react";
 import { CreditPositionStrip } from "@/components/recovery/credit-position-strip";
 import { PromiseForm } from "@/components/recovery/promise-form";
 import { loadCreditPosition } from "@/lib/recovery/credit-block";
+import { recoveryFocusKey } from "@/lib/recovery/promise-parties";
 import { RecoveryClient, type CollectedPayment, type FinanceAccountOption, type LedgerAccountOption, type MoneyPartyOption, type PaymentDestinationOption, type RecoveryParty, type ReminderTemplate } from "./recovery-client";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ function addDays(dateStr: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export default async function RecoveryPage({ searchParams }: { searchParams: Promise<{ q?: string; customer?: string; promise?: string }> }) {
+export default async function RecoveryPage({ searchParams }: { searchParams: Promise<{ q?: string; customer?: string; promise?: string; focus?: string }> }) {
   const sp = await searchParams;
   const supabase = createClient();
   const {
@@ -31,6 +32,8 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
   const today = new Date().toISOString().slice(0, 10);
   // 538: ?customer=<id> -- us gahak ke teen adad aur waade ka form upar.
   const focusId = sp.customer && /^[0-9a-f-]{36}$/i.test(sp.customer) ? sp.customer : null;
+  // Wade safhe ka Recovery link isi party ko list mein chun kar laata hai.
+  const focusKey = recoveryFocusKey({ focus: sp.focus, customer: focusId });
   const [focusPosition, focusCustomer] = focusId
     ? await Promise.all([loadCreditPosition(focusId), loose.from("customers").select("id,name").eq("id", focusId).maybeSingle().then((r: any) => r.data)])
     : [null, null];
@@ -219,6 +222,7 @@ export default async function RecoveryPage({ searchParams }: { searchParams: Pro
         </Card>
       )}
       <RecoveryClient
+        initialFocusKey={focusKey}
         parties={parties}
         templates={reminderTemplates}
         totalReceivable={totalReceivable}

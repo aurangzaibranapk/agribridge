@@ -1,0 +1,55 @@
+/* Finance dashboards (Cash Flow, P&L, Inventory). Mockup ki CSS, `.fdash` ke andar band. */
+.fdash{font-family:Inter,"Segoe UI",Arial,sans-serif;color:#1c2a1f;font-size:13px;margin-bottom:16px}
+.fdash *{box-sizing:border-box}
+.dark .fdash{color:#e3eee6}
+.fdash .card{background:#fff;border:1px solid #dfe9e0;border-radius:14px;padding:14px;position:relative}
+.dark .fdash .card{background:#142019;border-color:#22352a}
+.fdash h2{margin:0 0 10px;font-size:14px;font-weight:700;padding-right:70px}
+.fdash .mut{color:#6b7c70;font-size:11px}
+.fdash .top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.fdash .btn{display:inline-block;border:1px solid #bcd9c3;background:#fff;border-radius:9px;padding:6px 10px;font-size:12px;font-weight:600;color:#166534;text-decoration:none}
+.dark .fdash .btn{background:#1b2a21;border-color:#2c4636;color:#86efac}
+.fdash .btn.on{background:#15803d;color:#fff;border-color:#15803d}
+.fdash .band{background:linear-gradient(90deg,#14532d,#15803d);color:#fff;border-radius:14px;padding:10px 14px;margin:12px 0;font-weight:700;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.fdash .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.fdash .kl{font-size:11px;color:#6b7c70}
+.fdash .kv{font-size:24px;font-weight:800;margin:4px 0;font-variant-numeric:tabular-nums}
+.fdash .ks{font-size:11px;color:#16a34a}
+.fdash .neg{color:#dc2626}
+.fdash .grid{display:grid;grid-template-columns:3fr 2fr;gap:12px;margin-top:12px}
+.fdash .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.fdash .new,.fdash .old{position:absolute;top:10px;right:10px;font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px}
+.fdash .new{background:#dcfce7;color:#166534}
+.fdash .old{background:#e5e7eb;color:#4b5563}
+.dark .fdash .old{background:#273229;color:#9ca3af}
+.dark .fdash .new{background:#14532d;color:#bbf7d0}
+.fdash table{width:100%;border-collapse:collapse;font-size:12px}
+.fdash td,.fdash th{padding:6px 4px;border-bottom:1px solid #eef3ee;text-align:left}
+.dark .fdash td,.dark .fdash th{border-color:#22352a}
+.fdash th{color:#6b7c70;font-weight:600;font-size:11px}
+.fdash td.r,.fdash th.r{text-align:right;font-variant-numeric:tabular-nums}
+.fdash .bar{height:8px;background:#e7efe8;border-radius:9px;overflow:hidden}
+.dark .fdash .bar{background:#22352a}
+.fdash .bar i{display:block;height:100%}
+.fdash .gl{stroke:#e5ece6;stroke-dasharray:3 3}
+.dark .fdash .gl{stroke:#26392d}
+.fdash .ax{font-size:10px;fill:#6b7c70}
+.fdash .ax.b{font-weight:700;fill:currentColor}
+.fdash .dn{display:flex;gap:14px;align-items:center}
+.fdash .dc{font-size:15px;font-weight:800;fill:currentColor}
+.fdash .ds{font-size:9px;fill:#6b7c70}
+.fdash .lg{display:flex;align-items:center;gap:6px;font-size:11px;margin:4px 0}
+.fdash .lg i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.fdash .lg b{margin-left:auto;padding-left:10px}
+.fdash .warn{background:#fef3c7;border:1px solid #f59e0b;color:#78350f;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:12px}
+.dark .fdash .warn{background:#3a2a06;color:#fde68a;border-color:#a16207}
+.fdash .info{background:#ecfdf5;border:1px solid #86efac;color:#14532d;border-radius:12px;padding:10px 12px;margin-top:12px;font-size:12px}
+.dark .fdash .info{background:#0f2a1a;color:#bbf7d0;border-color:#166534}
+.fdash .leg2{display:flex;gap:12px;font-size:11px;flex-wrap:wrap}
+.fdash .leg2 i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px}
+.fdash .pill{font-size:10px;padding:2px 7px;border-radius:9px;background:#fee2e2;color:#991b1b;font-weight:700}
+.fdash .pill.y{background:#fef3c7;color:#92400e}
+.fdash .warn .btn{display:inline-block;margin-top:6px;margin-left:6px}
+.fdash .sw{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px}
+@media(max-width:600px){.fdash td.nw{max-width:95px}.fdash .g4{grid-template-columns:1fr 1fr}.fdash .grid,.fdash .g2{grid-template-columns:1fr}.fdash .kv{font-size:18px}.fdash .dn{flex-direction:column}.fdash .hide-m{display:none}}
+.fdash td.nw{white-space:nowrap;max-width:170px;overflow:hidden;text-overflow:ellipsis}

@@ -7,6 +7,7 @@ import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { accountLedger } from "@/lib/ledger/reports";
 import { ArrowLeft, Download } from "lucide-react";
+import { ST, fmtAmt, fmtBal } from "@/lib/ui/statement-table";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,7 @@ export default async function AccountLedgerPage({
   const sourceModules = selectedGroup.modules.length > 0 ? selectedGroup.modules : null;
 
   const led = code ? await accountLedger(code, from, to, null, sourceModules) : null;
+  const pos: "Dr" | "Cr" = led?.normalSide === "credit" ? "Cr" : "Dr";
 
   return (
     <div className="space-y-4">
@@ -217,35 +219,36 @@ export default async function AccountLedgerPage({
                 )}
               </p>
             </div>
-            <table className="w-full text-sm">
-              <thead className="border-b border-surface-200 bg-surface-50 text-left text-xs uppercase tracking-wide text-surface-500 dark:border-surface-800 dark:bg-surface-800/50">
+            <div className={ST.wrap}>
+            <table className={ST.table}>
+              <thead className={ST.thead}>
                 <tr>
-                  <th className="px-4 py-2">{t("led_date", lang)}</th>
-                  <th className="px-4 py-2">{t("led_entry", lang)}</th>
-                  <th className="px-4 py-2">{t("led_what", lang)}</th>
-                  <th className="px-4 py-2 text-right">{t("led_debit", lang)}</th>
-                  <th className="px-4 py-2 text-right">{t("led_credit", lang)}</th>
-                  <th className="px-4 py-2 text-right">{t("led_balance", lang)}</th>
+                  <th className={ST.th}>{t("led_date", lang)}</th>
+                  <th className={ST.th}>{t("led_entry", lang)}</th>
+                  <th className={ST.th}>{t("led_what", lang)}</th>
+                  <th className={ST.thAmt}>{t("led_debit", lang)}</th>
+                  <th className={ST.thAmt}>{t("led_credit", lang)}</th>
+                  <th className={ST.thAmt}>{t("led_balance", lang)}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
+              <tbody>
                 <tr className="bg-surface-50/60 dark:bg-surface-800/30">
-                  <td className="px-4 py-1.5 text-surface-500" colSpan={5}>
+                  <td className={`${ST.td} text-surface-500`} colSpan={5}>
                     {t("led_opening_row", lang)}
                   </td>
-                  <td className="px-4 py-1.5 text-right font-medium tabular-nums">{money(led.opening)}</td>
+                  <td className={ST.tdBal}>{fmtBal(led.opening, pos)}</td>
                 </tr>
                 {led.lines.map((l, i) => (
-                  <tr key={`${l.entryId}-${i}`}>
-                    <td className="px-4 py-1.5 whitespace-nowrap text-surface-600 dark:text-surface-300">{l.entryDate}</td>
-                    <td className="px-4 py-1.5 font-mono text-xs text-surface-500">{l.entryNumber}</td>
-                    <td className="px-4 py-1.5 text-surface-900 dark:text-white">
+                  <tr key={`${l.entryId}-${i}`} className={ST.tr}>
+                    <td className={`${ST.td} whitespace-nowrap text-surface-600 dark:text-surface-300`}>{l.entryDate}</td>
+                    <td className={`${ST.td} font-mono text-xs text-surface-500`}>{l.entryNumber}</td>
+                    <td className={`${ST.td} text-surface-900 dark:text-white`}>
                       {l.description}
                       {l.memo && <span className="block text-xs text-surface-400">{l.memo}</span>}
                     </td>
-                    <td className="px-4 py-1.5 text-right tabular-nums">{l.debit ? money(l.debit) : ""}</td>
-                    <td className="px-4 py-1.5 text-right tabular-nums">{l.credit ? money(l.credit) : ""}</td>
-                    <td className="px-4 py-1.5 text-right font-medium tabular-nums">{money(l.balance)}</td>
+                    <td className={ST.tdAmt}>{fmtAmt(l.debit)}</td>
+                    <td className={ST.tdAmt}>{fmtAmt(l.credit)}</td>
+                    <td className={ST.tdBal}>{fmtBal(l.balance, pos)}</td>
                   </tr>
                 ))}
                 {led.lines.length === 0 && (
@@ -256,17 +259,18 @@ export default async function AccountLedgerPage({
                   </tr>
                 )}
               </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-surface-300 font-semibold dark:border-surface-600">
-                  <td className="px-4 py-2" colSpan={3}>
+              <tfoot className={ST.tfoot}>
+                <tr>
+                  <td className={ST.td} colSpan={3}>
                     {t("led_closing", lang)}
                   </td>
-                  <td className="px-4 py-2 text-right tabular-nums">{money(led.totalDebit)}</td>
-                  <td className="px-4 py-2 text-right tabular-nums">{money(led.totalCredit)}</td>
-                  <td className="px-4 py-2 text-right tabular-nums">{money(led.closing)}</td>
+                  <td className={ST.tdAmt}>{fmtAmt(led.totalDebit)}</td>
+                  <td className={ST.tdAmt}>{fmtAmt(led.totalCredit)}</td>
+                  <td className={ST.tdBal}>{fmtBal(led.closing, pos)}</td>
                 </tr>
               </tfoot>
             </table>
+            </div>
           </Card>
 
           <Card className="text-xs text-surface-500 dark:text-surface-400">{t("led_note", lang)}</Card>

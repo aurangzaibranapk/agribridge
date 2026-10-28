@@ -1,6 +1,7 @@
 "use client";
 import { ReceiptPrintPortal } from "./receipt-print-portal";
 import { normalizePkPhone, receiptFigures } from "@/lib/pos/checkout-guards";
+import { logReceiptPrint } from "@/actions/pos";
 import { useEffect, useState } from "react";
 import { t, type Lang } from "@/lib/i18n/translations";
 import { createClient } from "@/lib/supabase/client";
@@ -17,6 +18,8 @@ interface ReceiptItem {
 
 interface ReceiptData {
   sale_id: string;
+  receipt_no?: string | null;
+  print_count?: number | null;
   created_at: string;
   payment_mode: string;
   total_amount: number;
@@ -147,6 +150,7 @@ export function ReceiptModal({
   }
 
   function handlePrint() {
+    if (receipt?.sale_id) void logReceiptPrint(receipt.sale_id);
     // Modal print khatam hone tak khula rahe -- pehle onClose foran chal
     // jata tha aur kuch browsers khaali safha print karte the.
     const done = () => {
@@ -280,6 +284,7 @@ export function ReceiptModal({
             <div className="receipt-rule my-3 border-t-2 border-dashed border-surface-400 dark:border-surface-700" />
 
             <div className="space-y-1 text-xs">
+              {receipt.receipt_no && <ReceiptRow label={t("pos_receipt_number", lang)} value={receipt.receipt_no} />}
               <ReceiptRow label={t("pos_cashier", lang)} value={receipt.cashier_name} />
               {receipt.customer_name && <ReceiptRow label={t("pos_customer", lang)} value={receipt.customer_name} />}
               <ReceiptRow label={t("pos_payment_mode", lang)} value={receipt.payment_mode} capitalize />

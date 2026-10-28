@@ -1,4 +1,5 @@
 import type { createClient } from "@/lib/supabase/server";
+import { consumeSellableFifo } from "@/lib/inventory/atomic-batch";
 
 export interface FifoConsumeResult {
   success: boolean;
@@ -25,50 +26,20 @@ export async function consumeFifoStock(
   warehouseId: string,
   quantityNeeded: number
 ): Promise<FifoConsumeResult> {
-  const { data: batches, error } = await supabase
-    .from("stock_batches")
-    .select("id, batch_number, unit_cost, remaining_quantity, created_at")
-    .eq("product_id", productId)
-    .eq("warehouse_id", warehouseId)
-    .gt("remaining_quantity", 0)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    return { success: false, totalCost: 0, consumedQty: 0, shortfall: quantityNeeded, batchesUsed: [], error: error.message };
+  const consumed = await consumeSellableFifo(supabase, {
+    warehouseId,
+    productId,
+    qty: quantityNeeded,
+    allowExpired: false,
+  });
+  if (consumed.error) {
+    return { success: false, totalCost: 0, consumedQty: 0, shortfall: quantityNeeded, batchesUsed: [], error: consumed.error };
   }
-  const availableQty = (batches ?? []).reduce((sum, batch) => sum + Number(batch.remaining_quantity), 0);
-  if (availableQty < quantityNeeded) {
-    return { success: false, totalCost: 0, consumedQty: 0, shortfall: quantityNeeded - availableQty, batchesUsed: [], error: "Batch stock kam hai. Kuch nahi katta." };
-  }
-
-  let remaining = quantityNeeded;
-  let totalCost = 0;
-  const batchesUsed: FifoConsumeResult["batchesUsed"] = [];
-
-  for (const batch of batches ?? []) {
-    if (remaining <= 0) break;
-    const available = Number(batch.remaining_quantity);
-    const unitCost = Number(batch.unit_cost ?? 0);
-    const take = Math.min(available, remaining);
-
-    const { error: updateError } = await supabase
-      .from("stock_batches")
-      .update({ remaining_quantity: available - take })
-      .eq("id", batch.id);
-    if (updateError) {
-      return { success: false, totalCost, consumedQty: quantityNeeded - remaining, shortfall: remaining, batchesUsed, error: updateError.message };
-    }
-
-    totalCost += take * unitCost;
-    batchesUsed.push({ batchId: batch.id, batchNumber: batch.batch_number, qty: take, unitCost });
-    remaining -= take;
-  }
-
   return {
-    success: remaining <= 0,
-    totalCost,
-    consumedQty: quantityNeeded - remaining,
-    shortfall: Math.max(0, remaining),
-    batchesUsed,
+    success: true,
+    totalCost: consumed.cost,
+    consumedQty: quantityNeeded,
+    shortfall: 0,
+    batchesUsed: consumed.taken.map((row) => ({ batchId: row.batchId, batchNumber: null, qty: row.qty, unitCost: row.unitCost })),
   };
 }

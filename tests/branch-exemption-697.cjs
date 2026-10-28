@@ -1,0 +1,15 @@
+const fs = require("fs");
+const assert = require("assert");
+const m = fs.readFileSync("supabase/migrations/697_branch_credit_exemptions.sql", "utf8").replace(/--.*$/gm, "");
+assert(!/\b(drop\s+table|drop\s+column|delete\s+from|truncate|alter\s+table\s+public\.(receivable_recovery_settings|branch_credit_accounts|branch_credit_transactions)\b)/i.test(m), "697 additive");
+for (const c of ["branch_id", "reason", "valid_from", "valid_until", "approved_by", "created_at"]) assert(m.includes(c), c);
+assert(/enable row level security/.test(m) && /revoke all on public\.branch_credit_exemptions from anon/.test(m), "RLS");
+const cb = fs.readFileSync("src/lib/recovery/credit-block.ts", "utf8");
+const fn = cb.slice(cb.indexOf("export async function checkOverdueBranchCreditBlock"));
+const ex = fn.indexOf("branch_credit_exemptions"), log = fn.indexOf('":exemption"'), ov = fn.indexOf("input.overrideReason");
+assert(ex > 0 && log > ex && ov > log, "exemption checked + logged before manual override");
+const ao = fs.readFileSync("src/actions/agri-orders.ts", "utf8");
+for (const c of ["agri_order_create", "branch_agri_order_create", "agri_order_finance_verify", "agri_order_admin_approve_all"]) assert(ao.includes(`context: "${c}"`), c);
+const act = fs.readFileSync("src/actions/branch-credit-exemptions.ts", "utf8");
+assert(act.includes("UNRESTRICTED_ROLES") && act.includes("validateGrant"), "admin-only grant");
+console.log("branch-exemption-697 OK");

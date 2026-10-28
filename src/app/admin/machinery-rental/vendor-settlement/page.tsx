@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * paas jama hai, jo abhi kisan ke paas hai, aur jo mil chuka.
  *
  * "Ab dena banta hai" wo raqam hai jo waqai abhi di ja sakti hai:
- * hamare paas jama, mainus ART ka diesel. Kisan ke paas wali raqam
+ * hamare paas jama, mainus AgriBridge ka diesel. Kisan ke paas wali raqam
  * us mein nahi -- wo hamare paas aayi hi nahi.
  */
 export default async function VendorSettlementPage() {

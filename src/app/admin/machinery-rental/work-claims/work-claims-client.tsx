@@ -330,7 +330,7 @@ function FuelClaimCard({
             <form action={action} className="mt-3 space-y-2">
               <input type="hidden" name="fuel_id" value={claim.fuelId} />
               <input type="hidden" name="decision" value="accept" />
-              {/* Khata sirf ART wale diesel par, aur sirf FINAL approve
+              {/* Khata sirf AgriBridge wale diesel par, aur sirf FINAL approve
                   step par -- Manager ke iqrar mein khate ka sawal hi
                   nahi hota, wo ilm Finance ke paas hota hai. */}
               {stage === "approve" && claim.paidBy === "company" ? (
@@ -349,7 +349,7 @@ function FuelClaimCard({
                   <p className="text-xs text-surface-500">{t("wc_fuel_accept_hint", lang)}</p>
                 </>
               ) : stage === "verify" ? (
-                <p className="text-xs text-surface-500">Sirf iqrar — Finance/Owner khata select kar ke (agar ART ka ho) final manzoori karega.</p>
+                <p className="text-xs text-surface-500">Sirf iqrar — Finance/Owner khata select kar ke (agar AgriBridge ka ho) final manzoori karega.</p>
               ) : (
                 <p className="text-xs text-surface-500">{t("mc_diesel_not_ours", lang)}</p>
               )}

@@ -259,7 +259,7 @@ export const financeDict = {
   },
   fc_supplier_pay: { en: "Supplier bills & payments", rm: "Supplier ke bill aur dena", ur: "سپلائر کے بل اور دینا" },
   fc_customer_recover: { en: "Customer khata & recovery", rm: "Gahak ka khata aur wasooli", ur: "گاہک کا کھاتہ اور وصولی" },
-  fc_cash_custody: { en: "Who is holding cash", rm: "Kis ke paas cash", ur: "کس کے پاس کیش" },
+  fc_cash_custody: { en: "Cash custody", rm: "Cash custody", ur: "کیش کسٹڈی" },
   fc_handover: { en: "Cash handover", rm: "Cash haath badalna", ur: "کیش ہاتھ بدلنا" },
   fc_handover_hint: {
     en: "funds issued and received between branch and staff",

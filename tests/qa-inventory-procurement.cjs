@@ -21,7 +21,10 @@ assert.equal(transferHasEnoughStock(10,0),false);
 const wf=fs.readFileSync('src/actions/stock-transfer-workflow.ts','utf8');
 assert.ok(!/from\("stock_movements"\)/.test(wf),'workflow must not insert stock_movements; trigger owns stock move');
 assert.ok(!/movement_type:\s*"transfer_(in|out)"/.test(wf),'no transfer_in/out movement in app code');
-assert.ok(/status: "completed"/.test(wf),'completion still flips status so the trigger moves stock');
+assert.ok(/rpc\("fn_complete_internal_transfer"/.test(wf),'workflow completion goes through 673 atomic RPC');
+const m673=fs.readFileSync('supabase/migrations/673_transfer_accept_atomic.sql','utf8');
+assert.ok(/set status = 'completed'/.test(m673),'673 RPC still flips status so the trigger moves stock');
+assert.ok(/if r\.status = 'completed' then/.test(m673),'673: completed transfer dobara accept nahi');
 const inv=fs.readFileSync('src/actions/inventory.ts','utf8');
 assert.ok(!/movement_type:\s*"transfer_(in|out)"/.test(inv),'inventory.ts approve path delegates to trigger');
 
@@ -35,6 +38,10 @@ assert.equal(b.findDuplicateBillNo([{supplier_bill_no:'INV-0011',status:'pending
 assert.equal(b.isDuplicateBillNoError({code:'23505',message:'duplicate key value violates unique constraint "ux_bill_reads_supplier_bill_no_applied"'}),true);
 assert.equal(b.isDuplicateBillNoError({code:'23505',message:'other_index'}),false);
 assert.equal(b.isDuplicateBillNoError(null),false);
+assert.equal(b.isDuplicateBillNoError({code:'23505',message:'duplicate key value violates unique constraint "ux_purchases_bill_no_key"'}),true,'629 index error is a duplicate bill');
 const pur=fs.readFileSync('src/actions/purchases.ts','utf8');
-assert.ok(pur.includes('findDuplicateBillNo('),'createPurchase pre-checks duplicate bill number');
+assert.ok(pur.includes('duplicateBillSources')&&pur.includes('duplicateBillError'),'createPurchase pre-checks duplicate bill number');
+assert.ok(/bill_no_key: supplierBillWorkspace \? billNoKey\(/.test(pur),'createPurchase writes bill_no_key slot');
+assert.ok(pur.includes('isDuplicateBillNoError(purchaseError)'),'race: unique index error shown as duplicate bill');
+assert.ok(/create unique index if not exists ux_purchases_bill_no_key/.test(fs.readFileSync('supabase/migrations/629_procurement_unique_guards.sql','utf8')),'629 unique bill_no_key index');
 console.log('qa-inventory-procurement: ok');

@@ -10,7 +10,7 @@ const OTHERS: Record<Lang, Lang[]> = { en: ["rm", "ur"], rm: ["en", "ur"], ur: [
 export type NavTone = "farmer" | "customer";
 const ACTIVE: Record<NavTone, string> = {
   farmer: "bg-gradient-to-r from-green-600 to-green-700 text-white shadow rtl:bg-gradient-to-l",
-  customer: "bg-gradient-to-r from-blue-600 to-violet-600 text-white shadow-[0_6px_18px_rgba(37,99,235,.35)] rtl:bg-gradient-to-l",
+  customer: "bg-gradient-to-r from-emerald-700 to-[#16356e] text-white shadow-[0_8px_22px_rgba(12,60,40,.35)] rtl:bg-gradient-to-l",
 };
 const IDLE: Record<NavTone, string> = { farmer: "text-emerald-50/80 hover:bg-white/10 hover:text-white", customer: "text-indigo-50/80 hover:bg-white/10 hover:text-white" };
 const SUB: Record<NavTone, string> = { farmer: "text-emerald-100/55", customer: "text-indigo-200/55" };

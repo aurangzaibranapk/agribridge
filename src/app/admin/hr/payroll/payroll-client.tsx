@@ -1,14 +1,17 @@
 "use client";
 import Link from "next/link";
+import { SO_BTN, SO_BTN2 } from "@/components/payroll/salary-ui";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
-import { createPayrollRun, payPayrollRun, payrollTransition, type PayrollState } from "@/actions/payroll";
+import { adjustPayrollLine, createPayrollRun, payPayrollRun, payrollTransition, type PayrollState } from "@/actions/payroll";
+import { ADJUSTABLE_FIELDS } from "@/lib/payroll/auto-draft";
 import { BTN, CARD, Header, INPUT, Kpi, Msg, PAGE, Pill, Submit, TD, TH, rs, pkr } from "@/components/payroll/ui";
 import { MONTHS_RU, chargeableAbsentDays, payrollApprovalLines } from "@/lib/payroll/compute";
 
 const init: PayrollState = {};
 const STEPS = [["draft", "1. Draft"], ["submitted", "2. Manzoori ke liye bheja"], ["approved", "3. Manzoor (Journal)"], ["paid", "4. Ada (Cash/Bank)"]] as const;
 
-export default function PayrollClient({ me, year, month, branch, branches, accounts, run, lines }: any) {
+export default function PayrollClient({ me, year, month, branch, branches, accounts, run, lines, warnings = [], adjustments = [] }: any) {
+  const [aState, aAction] = useFormState(adjustPayrollLine, init);
   const [cState, cAction] = useFormState(createPayrollRun, init);
   const [tState, tAction] = useFormState(payrollTransition, init);
   const [pState, pAction] = useFormState(payPayrollRun, init);
@@ -19,7 +22,7 @@ export default function PayrollClient({ me, year, month, branch, branches, accou
   const gross = lines.reduce((s: number, l: any) => s + +l.gross, 0);
   const missingTotal = lines.reduce((s: number, l: any) => s + (+l.missing_days || 0), 0);
   const notFinal = lines.filter((l: any) => !l.attendance_finalized || l.open_items > 0);
-  const canApprove = me.approver && run && run.created_by !== me.id && run.submitted_by !== me.id && !lines.some((l: any) => l.profile_id === me.id);
+  const canApprove = me.approver && run && run.created_by !== me.id && run.submitted_by !== me.id && !lines.some((l: any) => l.profile_id === me.id) && !adjustments.some((a: any) => a.adjusted_by === me.id);
 
   return (
     <div className={PAGE}>
@@ -53,7 +56,13 @@ export default function PayrollClient({ me, year, month, branch, branches, accou
           <span className="font-semibold">{missingTotal} din bina hazri record</span> — ye ghair-hazir gine gaye hain aur basic ÷ 30 ke hisaab se tankhwah se kat rahe hain. Ghalat ho to pehle hazri theek karein, phir "Hisaab chalayein".
         </div>
       )}
-      <Msg state={cState} /><Msg state={tState} /><Msg state={pState} />
+      <Msg state={cState} /><Msg state={tState} /><Msg state={pState} /><Msg state={aState} />
+      {run?.auto_created && <div className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-200">Ye draft system ne mahine ke aakhir mein khud banaya. Dekh kar zarurat ho to line badlein, phir manzoori ke liye bhejein.</div>}
+      {warnings.length > 0 && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+          <div className="font-semibold">⚠ Tankhwah darj nahi ({warnings.length})</div>
+          <ul className="mt-1 list-disc pl-5">{warnings.map((w: any) => <li key={w.id}>{w.name}: tankhwah darj nahi -- <Link className="underline" href="/admin/hr/salary-structure">salary structure banayein</Link>, phir "Hisaab chalayein".</li>)}</ul>
+        </div>)}
       <div className="grid gap-2 md:grid-cols-4">
         {STEPS.map(([k, t], i) => (
           <div key={k} className={`rounded-xl border px-3 py-2.5 text-center text-sm font-semibold ${i === idx ? "border-emerald-600 bg-emerald-50 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-400/10 dark:text-emerald-300" : i < idx ? "border-slate-200 text-emerald-700 dark:border-white/10 dark:text-emerald-300" : "border-slate-200 text-slate-400 dark:border-white/10"}`}>{t}{i < idx ? " ✓" : ""}</div>
@@ -67,7 +76,7 @@ export default function PayrollClient({ me, year, month, branch, branches, accou
       </div>
       <div className={`${CARD} overflow-auto`}>
         <h3 className="mb-2 font-semibold">Review</h3>
-        <table className="w-full min-w-[1120px] text-sm">
+        <table className="w-full min-w-[1280px] text-sm">
           <thead><tr>{["Staff", "Basic", "Hazir", "Absent", "Bina record (absent)", "Kul ghair-hazir", "Half day", "Chhutti (paid)", "Ghair-hazri kattauti", "Advance qist", "Net", ""].map((h, i) => <th key={h + i} className={`${TH} ${i > 0 && i < 11 ? "text-right" : ""}`}>{h}</th>)}</tr></thead>
           <tbody>
             {lines.map((l: any) => (
@@ -83,12 +92,31 @@ export default function PayrollClient({ me, year, month, branch, branches, accou
                 <td className={`${TD} text-right tabular-nums text-red-600 dark:text-red-400`}>{+l.absent_deduction ? `− ${pkr(l.absent_deduction)}` : "—"}</td>
                 <td className={`${TD} text-right tabular-nums text-red-600 dark:text-red-400`}>{+l.advance_deduction ? `− ${pkr(l.advance_deduction)}` : "—"}</td>
                 <td className={`${TD} text-right font-bold tabular-nums`}>{rs(l.net)}</td>
-                <td className={TD}>{(status === "approved" || status === "paid") && <Link className="text-xs font-semibold text-emerald-700 hover:underline dark:text-emerald-300" href={`/admin/hr/payslip/${l.id}`}>Payslip</Link>}</td>
+                <td className={`${TD} sticky right-0 bg-white dark:bg-[#111c33]`}>{status === "draft" && (
+                  <details className="text-xs"><summary className="cursor-pointer whitespace-nowrap text-emerald-700 dark:text-emerald-300">✎ Badlein</summary>
+                    <form action={aAction} className="mt-1 grid w-56 gap-1">
+                      <input type="hidden" name="line_id" value={l.id} />
+                      <select name="field" className={INPUT}>{Object.entries(ADJUSTABLE_FIELDS).map(([k, t]) => <option key={k} value={k}>{t}</option>)}</select>
+                      <input name="value" type="number" min="0" step="1" required placeholder="Nayi raqam" className={INPUT} />
+                      <input name="reason" required placeholder="Wajah (zaroori)" className={INPUT} />
+                      <Submit label="Save" />
+                    </form>
+                  </details>)}
+                  {(status === "approved" || status === "paid") && (
+                  <div className="flex gap-1.5 whitespace-nowrap">
+                    <Link className={SO_BTN} href={`/admin/hr/payslip/${l.id}`}>🧾 Salary Slip</Link>
+                    <a className={SO_BTN2} href={`/api/hr/payslip/${l.id}/pdf`}>⬇ PDF</a>
+                  </div>)}</td>
               </tr>))}
             {lines.length === 0 && <tr><td className={TD} colSpan={12}><span className="text-slate-500">Abhi hisaab nahi chala. Sirf manzoor shuda salary structure wale staff run mein aate hain.</span></td></tr>}
           </tbody>
         </table>
         <div className="mt-2 text-xs text-slate-500">Hisaab: basic ÷ 30 × (absent + unpaid chhutti + bina record din + half day × ½) · Jis din hazri darj nahi wo ghair-hazir · Overtime nahi · 31 din ka mahina bhi 30 par ginta hai</div>
+        {adjustments.length > 0 && (
+          <div className="mt-3 text-xs">
+            <div className="font-semibold">Badlao ka record</div>
+            <ul className="mt-1 space-y-0.5">{adjustments.map((a: any) => <li key={a.id}>{a.staff}: {(ADJUSTABLE_FIELDS as any)[a.field] ?? a.field} {pkr(a.old_value)} → {pkr(a.new_value)} — "{a.reason}" ({a.by})</li>)}</ul>
+          </div>)}
         {status === "draft" && lines.length > 0 && (
           <form action={tAction} className="mt-3 text-right"><input type="hidden" name="run_id" value={run.id} /><Submit label="Manzoori ke liye bhejein" name="action" value="submit" /></form>
         )}

@@ -44,7 +44,7 @@ export default async function KhataStatementPrintPage({ searchParams }: { search
       <div className="pf-panel pf-grow rounded-2xl border border-surface-200 bg-white p-6 shadow-sm dark:border-surface-800 dark:bg-surface-900 print:rounded-none print:border-0 print:shadow-none fit:p-4">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-surface-200 pb-4 dark:border-surface-800">
           <div>
-            <p className="text-lg font-bold text-surface-900 dark:text-white">Al Rana Traders · AgriBridge</p>
+            <p className="text-lg font-bold text-surface-900 dark:text-white">AgriBridge</p>
             <p className="text-sm text-surface-500 dark:text-slate-400">{L("pk_print_title")}</p>
           </div>
           <div className="text-end text-sm">

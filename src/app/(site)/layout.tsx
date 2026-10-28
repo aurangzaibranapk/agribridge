@@ -1,6 +1,8 @@
 import { SiteHeader } from "@/components/site/header";
 import { SiteFooter } from "@/components/site/footer";
 import { ChatbotWidget } from "@/components/site/chatbot-widget";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -8,11 +10,11 @@ const structuredData = {
     {
       "@type": "Organization",
       "@id": "https://alranatraders.pk/#organization",
-      name: "Al Rana Traders",
-      alternateName: "AgriBridge",
+      name: BRAND_NAME,
+      alternateName: BRAND_TAGLINE,
       url: "https://alranatraders.pk",
       description:
-        "AgriBridge by Al Rana Traders is a digital agriculture platform connecting farmers with agriculture inputs, machinery, dairy, grain markets, farm products and digital guidance in Pakistan.",
+        `${BRAND_NAME} — ${BRAND_TAGLINE}. A digital agriculture platform connecting farmers with agriculture inputs, machinery, dairy, grain markets, farm products and digital guidance in Pakistan.`,
       areaServed: {
         "@type": "Country",
         name: "Pakistan",
@@ -22,8 +24,8 @@ const structuredData = {
       "@type": "WebSite",
       "@id": "https://alranatraders.pk/#website",
       url: "https://alranatraders.pk",
-      name: "AgriBridge",
-      alternateName: "Al Rana Traders AgriBridge",
+      name: BRAND_NAME,
+      alternateName: BRAND_TAGLINE,
       publisher: {
         "@id": "https://alranatraders.pk/#organization",
       },
@@ -41,6 +43,7 @@ const structuredData = {
 };
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
+  const lang = getLanguageFromCookies("en");
   return (
     <div className="flex min-h-screen flex-col">
       <script
@@ -50,7 +53,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       <SiteHeader />
       <main className="flex-1">{children}</main>
       <SiteFooter />
-      <ChatbotWidget />
+      <ChatbotWidget lang={lang} />
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { logAudit } from "@/lib/audit";
-import { postJournal } from "@/lib/ledger/post";
+import { canApprove, linkedSettlementLimit } from "@/lib/party-links/core";
 
 export interface ActionState {
   error?: string;
@@ -209,69 +209,21 @@ export async function settlementManzoor(_prev: ActionState, formData: FormData):
     data: any;
   };
   if (!s) return { error: "Ye adjustment nahi mila." };
-  if (s.status === "approved") return { error: "Ye pehle hi manzoor ho chuka hai." };
-  if (s.status === "rejected") return { error: "Ye radd ho chuka hai." };
-
-  const amount = Number(s.amount ?? 0);
-  const [lena, dena] = await Promise.all([
-    khatePaBaqi(String(s.party_type), String(s.party_id), String(s.lena_khata)),
-    khatePaBaqi(String(s.party_type), String(s.party_id), String(s.dena_khata)),
-  ]);
-  const hadd = Math.min(lena, dena);
-  if (amount > hadd) {
-    return {
-      error: `Ab ye raqam adjust nahi ho sakti: is waqt lena Rs ${lena.toLocaleString()} aur dena Rs ${dena.toLocaleString()} hai, is liye hadd Rs ${hadd.toLocaleString()} hai. Beech mein koi aur qatar aa gayi hai — nayi darkhwast banayein.`,
-    };
+  if (s.status !== "pending") return { error: "Ye pehle hi faisla ho chuka hai." };
+  if (!canApprove(s.created_by, who.userId)) {
+    return { error: "Apni banayi hui darkhwast khud manzoor nahi kar sakte — doosra Finance/Admin kare." };
   }
 
-  const tafseel = `${s.settlement_number} — Khaton ka adjustment: ${s.wajah}`;
-
-  // Dena (liability) DEBIT, Lena (asset) CREDIT -- dono kam.
-  const posted = await postJournal({
-    description: tafseel,
-    sourceModule: "settlement",
-    sourceId: id,
-    branchId: s.branch_id ?? who.branchId,
-    createdBy: who.userId,
-    claims: [{ table: "party_settlements", rowId: id }],
-    lines: [
-      {
-        account: String(s.dena_khata),
-        debit: amount,
-        partyType: String(s.party_type),
-        partyId: String(s.party_id),
-        memo: `${tafseel} — dena kam`,
-      },
-      {
-        account: String(s.lena_khata),
-        credit: amount,
-        partyType: String(s.party_type),
-        partyId: String(s.party_id),
-        memo: `${tafseel} — lena kam`,
-      },
-    ],
+  // Claim, hadd, jurnal aur balance ek hi transaction (633). Service
+  // role se mat bulao: auth.uid() khali ho jata hai aur function rok deta hai.
+  const supabase = createClient();
+  const { data, error } = await (supabase as any).rpc("fn_approve_party_settlement", {
+    p_id: id,
+    p_note: raye,
   });
+  if (error) return { error: error.message };
 
-  if ("error" in posted) {
-    return { error: `Kitab mein qatar nahi bani, is liye manzoori bhi nahi di gayi: ${posted.error}` };
-  }
-
-  const { error: halatError } = await loose()
-    .from("party_settlements")
-    .update({
-      status: "approved",
-      approved_by: who.userId,
-      approved_at: new Date().toISOString(),
-      journal_entry_id: (posted as { id?: string }).id ?? null,
-    })
-    .eq("id", id);
-
-  if (halatError) {
-    return {
-      error: `Kitab mein qatar ban gayi magar halat "manzoor" nahi ho saki: ${halatError.message}. Kisi ko batayein — dobara manzoori se dohri qatar ban jayegi.`,
-    };
-  }
-
+  const amount = Number((data as { amount?: number } | null)?.amount ?? s.amount ?? 0);
   await logAudit({
     actionType: "approve",
     module: "settlements",
@@ -305,11 +257,15 @@ export async function settlementRadd(_prev: ActionState, formData: FormData): Pr
   if (!s) return { error: "Ye adjustment nahi mila." };
   if (s.status === "approved") return { error: "Ye manzoor ho kar kitab mein ja chuka hai — ulti qatar banayein." };
 
-  const { error } = await loose()
+  const { data: rejected, error } = await loose()
     .from("party_settlements")
     .update({ status: "rejected", rejection_reason: wajah })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
   if (error) return { error: error.message };
+  if (!rejected) return { error: "Ye pehle hi faisla ho chuka hai." };
 
   await logAudit({
     actionType: "reject",
@@ -322,3 +278,54 @@ export async function settlementRadd(_prev: ActionState, formData: FormData): Pr
   revalidatePath("/admin/settlements");
   return { success: true, message: "Radd kar diya." };
 }
+
+/**
+ * 622: Do LINKED party ka adjustment — customer (1100) ka lena aur
+ * supplier (2000) ka dena, jab dono ek hi banda hon (party_links).
+ * Dr 2000 supplier / Cr 1100 customer. Wajah lazmi, aur banane wala khud
+ * manzoor nahi kar sakta (DB constraint bhi yehi rokta hai).
+ */
+export async function linkedSettlementMaangein(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const who = await main();
+  if ("error" in who) return { error: who.error };
+  if (!MAANG_SAKTE.includes(who.role) && !SAB_KUCH.includes(who.role)) {
+    return { error: "Ye darkhwast Manager, Finance ya Admin de sakta hai." };
+  }
+  const linkId = String(formData.get("party_link_id") ?? "").trim();
+  const amount = Number(formData.get("amount") ?? 0);
+  const wajah = String(formData.get("wajah") ?? "").trim();
+  if (!linkId) return { error: "Linked party chunein." };
+  if (!Number.isFinite(amount) || amount <= 0) return { error: "Raqam sahi likhein." };
+  if (!wajah) return { error: "Wajah likhein — chhe mahine baad yehi batati hai ke ye raqam kahan gayi." };
+
+  const { data: link } = (await loose().from("party_links").select("id, customer_id, supplier_id, is_active").eq("id", linkId).maybeSingle()) as { data: any };
+  if (!link?.is_active) return { error: "Ye link fa'aal nahi hai." };
+
+  const [lena, dena] = await Promise.all([
+    khatePaBaqi("customer", link.customer_id, "1100"),
+    khatePaBaqi("supplier", link.supplier_id, "2000"),
+  ]);
+  const hadd = linkedSettlementLimit(lena, dena);
+  if (hadd <= 0) {
+    return { error: `Adjust karne ke liye dono taraf raqam honi chahiye. Customer se lena Rs ${lena.toLocaleString()}, supplier ko dena Rs ${dena.toLocaleString()}.` };
+  }
+  if (amount > hadd) {
+    return { error: `Rs ${amount.toLocaleString()} zyada hai. Hadd Rs ${hadd.toLocaleString()} hai — us se zyada se ek khata ULTA ho jayega.` };
+  }
+
+  const number = await nextNumber();
+  const { data: row, error } = await loose().from("party_settlements").insert({
+    settlement_number: number,
+    party_type: "customer", party_id: link.customer_id, lena_khata: "1100",
+    dena_party_type: "supplier", dena_party_id: link.supplier_id, dena_khata: "2000",
+    party_link_id: link.id,
+    amount, wajah, branch_id: who.branchId, created_by: who.userId, status: "pending",
+  }).select("id").single();
+  if (error) return { error: error.message };
+
+  await logAudit({ actionType: "create", module: "settlements", recordId: row?.id, recordLabel: number,
+    description: `Linked adjustment maanga: Rs ${amount.toLocaleString()} — supplier 2000 ke against customer 1100. Wajah: ${wajah}` });
+  revalidatePath("/admin/settlements");
+  return { success: true, message: `${number} darj — kisi DOOSRE Finance/Admin ki manzoori ka intezar.` };
+}
+

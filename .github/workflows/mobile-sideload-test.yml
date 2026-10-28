@@ -1,0 +1,163 @@
+name: Mobile TEST database APKs
+
+# AgriBridge TEST installs beside the live app and talks only to the testing Supabase project.
+# Do not upload these APKs to v0.6.1-beta-test1.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/mobile-approved-card-design-633
+
+permissions:
+  contents: write
+
+concurrency:
+  group: agribridge-sideload-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sideload:
+    name: TEST arm64 and armeabi-v7a release APKs
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      APP_CHANNEL: internal
+      EXPO_PUBLIC_APP_FLAVOR: test
+      EXPO_PUBLIC_PORTAL_URL: ""
+      EXPO_PUBLIC_SUPABASE_URL: https://hwaiuwxqldxsoukkfefn.supabase.co
+      # Public testing anon key.
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3YWl1d3hxbGR4c291a2tmZWZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MjU1NjMsImV4cCI6MjEwMzUwMTU2M30.UwchGHJHRCdKHwpJRr-fdNTreeVNLlfbpo7nBqQv9l4"
+      AGRIBRIDGE_VERSION_CODE: "633"
+      CI: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools platforms;android-35 build-tools;35.0.0 ndk;26.1.10909125
+      - name: Require the testing Supabase project
+        run: |
+          test "$EXPO_PUBLIC_APP_FLAVOR" = "test" || { echo "::error::TEST apk flavor is not test"; exit 1; }
+          test -n "$EXPO_PUBLIC_SUPABASE_URL" || { echo "::error::testing Supabase URL is missing"; exit 1; }
+          test -n "$EXPO_PUBLIC_SUPABASE_ANON_KEY" || { echo "::error::testing anon key is missing"; exit 1; }
+          case "$EXPO_PUBLIC_SUPABASE_URL" in
+            https://hwaiuwxqldxsoukkfefn.supabase.co) ;;
+            *) echo "::error::EXPO_PUBLIC_SUPABASE_URL is not the testing project"; exit 1 ;;
+          esac
+          case "$EXPO_PUBLIC_SUPABASE_URL" in
+            *ktskwawkslaznkjjacni*) echo "::error::live Supabase project is refused for the TEST apk"; exit 1 ;;
+          esac
+          echo "Testing Supabase public URL is set. Anon key length ${#EXPO_PUBLIC_SUPABASE_ANON_KEY}."
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: npm ci
+      - name: Prebuild
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --no-install
+      - name: Assemble sideload release APKs
+        working-directory: apps/mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon \
+            -PagribridgeSideload=true \
+            -PreactNativeArchitectures=armeabi-v7a,arm64-v8a \
+            -Pandroid.enableProguardInReleaseBuilds=true \
+            -Pandroid.enableShrinkResourcesInReleaseBuilds=true \
+            -Pexpo.useLegacyPackaging=true \
+            -PhermesEnabled=true \
+            -Pandroid.minSdkVersion=24
+      - name: Verify and name the APKs
+        working-directory: apps/mobile
+        run: |
+          set -euo pipefail
+          chmod +x scripts/verify-sideload-apk.sh
+          mkdir -p sideload-out
+          copy() {
+            local abi="$1"
+            local src
+            src=$(find android/app/build/outputs/apk/release -name "*${abi}*release*.apk" ! -name '*unsigned*' | head -1)
+            if [[ -z "$src" ]]; then
+              echo "missing $abi apk"
+              find android/app/build/outputs/apk -type f
+              exit 1
+            fi
+            local suffix=""
+            if [[ "$abi" == "armeabi-v7a" ]]; then
+              suffix="-v7a"
+            fi
+            local dest="sideload-out/AgriBridge-TEST-${AGRIBRIDGE_VERSION_CODE}${suffix}.apk"
+            cp "$src" "$dest"
+            scripts/verify-sideload-apk.sh "$dest" "$abi" "$AGRIBRIDGE_VERSION_CODE" "pk.alranatraders.agribridge.test" | tee "sideload-out/${abi}.verify.txt"
+          }
+          copy arm64-v8a
+          copy armeabi-v7a
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AgriBridge-TEST-${{ env.AGRIBRIDGE_VERSION_CODE }}.apk
+          path: apps/mobile/sideload-out/AgriBridge-TEST-${{ env.AGRIBRIDGE_VERSION_CODE }}.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AgriBridge-TEST-${{ env.AGRIBRIDGE_VERSION_CODE }}-v7a.apk
+          path: apps/mobile/sideload-out/AgriBridge-TEST-${{ env.AGRIBRIDGE_VERSION_CODE }}-v7a.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agribridge-test-sideload-verify
+          path: apps/mobile/sideload-out/*.verify.txt
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish prerelease v0.6.1-beta-testdb
+        working-directory: apps/mobile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag=v0.6.1-beta-testdb
+          if [[ "$tag" == "v0.6.1-beta-test1" ]]; then
+            echo "::error::TEST apk must not replace the live sideload tag"
+            exit 1
+          fi
+          notes=$(cat <<'EOF'
+          AgriBridge TEST sideload builds. Not the live app and not a Play Store upload.
+          App name AgriBridge TEST. Package pk.alranatraders.agribridge.test.
+          versionName v0.6.1 Beta, versionCode 633, APP_CHANNEL=internal.
+          Home footer reads the installed Android versionCode. Expo web reads the same phone code from source, not a Metro-cached manifest.
+          Dealer month orders use the Karachi month and a dealer-only test list. Owner applies 711_app_phone_dealer_vet.sql on testing so that card is near 38 and vet pending cases have a next date. Not on live.
+          Role homes open on one line: centre, role, Assalam o Alaikum, and the round photo. The small AgriBridge and Kisan ka Wasela stack stays on login, not above the greeting. Weather card is short. A zero change, a change of 90% or more, or a change above 300%, hides the badge. Customer home has the month chart and one order timeline, not a second order list.
+          Admin home no longer shows a stray TEST label. Vet home lists today's visits and does not add a 7-day visit chart. Customer tracking prefers a mid-step order. Owner applies the rewritten 709_app_phone_sales_fix.sql on testing. It does not set session_replication_role. TEST-709 receipts skip the ledger and staff-reward functions. Not on live.
+          Role switch uses a demo name from phone notes (708, testing only). MCA fat and status mix, MCO pending near 6, centre names, vet visits, dealer product bars, admin monthly revenue and four categories. Not on live.
+          Phone notes (707, testing only) fill tanks, grain maund, dealer stock, staff advance, and tasks. Goal numbers fill only where still null. Not on live.
+          English and Roman: AgriBridge with Kisan ka Wasela directly under it. Urdu: the Urdu name with the Urdu tagline under it. The English gloss is not shown. Default is in the app. 706 can replace the two lines later. Not on live. Dark glass, TEST database numbers.
+          Goal card: Kisan, MCA, MCO, Staff, Admin. Owner applies 704_app_goal_targets.sql on testing before targets show. Numbers stay empty until the owner sets them. Not on live.
+          Owner applies 703_app_test_read_policies.sql on testing before home cards (bills, stock, cash, salary, activity). Not on live.
+          Phase C: Kisan / Customer aik hi role mein draft karyana, wallet, orders aur farming data; Staff check-in, Vet ilaj, Dealer orders and HQ khata, Profile.
+          Owner applies 702_app_test_phase_c.sql on testing before check-in and Order bhejein.
+          Phase B remains: MCO check and Admin Manzoor. Owner applies 701_app_test_mco_admin.sql on testing before fat save.
+          Owner applies 700_app_test_milk_write.sql on testing before pickup save.
+          Supabase host is the testing project only. Portal /api/mobile/v1 is not called.
+          Login: app-test@alranatraders.pk after the owner applies migration 699 and the seed on testing.
+          arm64-v8a is the APK for almost every phone since 2019.
+          armeabi-v7a is the separate APK for older 32-bit phones.
+          Signed with the Android debug keystore. R8 and Hermes are on.
+          minSdk 24 (Android 7), so Android 8 and newer can install.
+          The live APKs stay on tag v0.6.1-beta-test1.
+          EOF
+          )
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --prerelease --title "$tag" --notes "$notes"
+          else
+            gh release create "$tag" --prerelease --title "$tag" --notes "$notes" --target "${{ github.sha }}"
+          fi
+          gh release upload "$tag" \
+            "sideload-out/AgriBridge-TEST-${AGRIBRIDGE_VERSION_CODE}.apk" \
+            "sideload-out/AgriBridge-TEST-${AGRIBRIDGE_VERSION_CODE}-v7a.apk" \
+            --clobber

@@ -13,6 +13,7 @@ import { sendWhatsAppMessage } from "@/lib/whatsapp-client";
 import { pickDefaultRate } from "@/lib/machinery/rate-card";
 import { reverseJournal } from "@/lib/ledger/post";
 import { cashBookLikhein } from "@/lib/ledger/cash-book";
+import { reverseCashBookById } from "@/lib/finance/cash-book";
 import {
   postMachineryAdvance,
   postMachineryBill,
@@ -231,7 +232,7 @@ async function notifyFarmerBookingCreated(
     // nahi hota; koi number likh dena us ko tay shuda bana deta hai aur
     // baad mein asal rate par jhagRa khaRa hota hai.
     `Rate kaam se pehle aap ko alag se bheja jayega, aur aap ke confirm karne ke baad hi bill us par banega.`,
-    `Al Rana Traders`,
+    `AgriBridge`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -1186,7 +1187,7 @@ async function notifyVendorOfBooking(
   }
 
   const message = [
-    `Al Rana Traders — Machinery Booking ${b.booking_number}`,
+    `AgriBridge — Machinery Booking ${b.booking_number}`,
     ``,
     `Kisan: ${farmer?.full_name ?? "-"}${farmer?.phone_number ? ` (${farmer.phone_number})` : ""}`,
     `Kaam: ${b.crop_type ?? "kattai"} — ${Number(b.harvest_area ?? 0)} acre`,
@@ -1402,7 +1403,7 @@ async function saveDieselExpense(args: {
 }): Promise<string | null> {
   const litrePart = args.litres && args.litres > 0 ? ` — ${args.litres} litre` : "";
 
-  // ART ka diesel kis khane mein jaye.
+  // AgriBridge ka diesel kis khane mein jaye.
   //
   // Ab tak wo seedha kharcha (6010 Fuel) ban jata tha. Magar wo
   // kharcha hai hi nahi: wo VENDOR ke liye diya gaya paisa hai, aur
@@ -1410,7 +1411,7 @@ async function saveDieselExpense(args: {
   // machinery ka munafa jhooti tarah kam kar ke dikhata hai.
   //
   // Vendor maloom ho to ye supplier advance (1120) hai -- us ke naam
-  // par khari hui wapas aane wali raqam. Vendor maloom na ho (ART ki
+  // par khari hui wapas aane wali raqam. Vendor maloom na ho (AgriBridge ki
   // apni machine) to wo waqai hamara apna kharcha hai.
   const recoverable = Boolean(args.vendorId);
   const againstAccount = recoverable ? ACC.supplierAdvance : ACC.fuel;
@@ -1450,7 +1451,7 @@ async function saveDieselExpense(args: {
     },
   });
   if (failed(posted)) {
-    await createServiceClient().from("finance_transactions").delete().eq("id", expense.id);
+    await reverseCashBookById(expense.id, "Diesel ledger nahi gaya");
     return `Ledger mein nahi gaya, is liye diesel darj nahi kiya: ${posted.error}`;
   }
 
@@ -1472,7 +1473,7 @@ async function saveDieselExpense(args: {
  * dobara bhar deta tha.
  *
  * Kisan ya vendor ka diesel bhi likha jata hai (kaam ka record us ke
- * baghair adhoora hai) magar hamare khate se paisa sirf ART wale par
+ * baghair adhoora hai) magar hamare khate se paisa sirf AgriBridge wale par
  * nikalta hai.
  */
 export async function recordFuelEntry(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -1500,9 +1501,9 @@ export async function recordFuelEntry(_prev: ActionState, formData: FormData): P
 
   if (!litres || litres <= 0) return { error: "Kitne litre diesel dala, wo likhein." };
   if (!ratePerLitre || ratePerLitre <= 0) return { error: "Us din diesel ka rate kya tha, wo likhein." };
-  if (!paidBy) return { error: "Diesel kis ne dala — kisan, vendor ya ART — wo select karein." };
+  if (!paidBy) return { error: "Diesel kis ne dala — kisan, vendor ya AgriBridge — wo select karein." };
   if (paidBy === "company" && !accountId) {
-    return { error: "ART ka diesel hai to khata bhi select karein ke kis khate se nikla." };
+    return { error: "AgriBridge ka diesel hai to khata bhi select karein ke kis khate se nikla." };
   }
 
   const amount = Math.round(litres * ratePerLitre * 100) / 100;
@@ -1514,7 +1515,7 @@ export async function recordFuelEntry(_prev: ActionState, formData: FormData): P
     .maybeSingle();
   if (!booking) return { error: "Booking nahi mili." };
 
-  // ART ka diesel: wapas aayega ya nahi -- ye sawal CHUP CHAAP tay nahi
+  // AgriBridge ka diesel: wapas aayega ya nahi -- ye sawal CHUP CHAAP tay nahi
   // hota.
   //
   // Pehle yahan sirf itna likha tha: vendor maloom hai to wapas aayega,
@@ -1525,7 +1526,7 @@ export async function recordFuelEntry(_prev: ActionState, formData: FormData): P
   // ka nishan lag gaya. Machine agle sekind bheji gayi, vendor aa gaya,
   // magar us raqam ko koi dobara nahi dekhta.
   //
-  // Malik ka usool saaf hai: "ART jo diesel dega wo wapas milega hi
+  // Malik ka usool saaf hai: "AgriBridge jo diesel dega wo wapas milega hi
   // milega -- usay udhaar samjhein." To jab tak ye maloom na ho ke wo
   // udhaar KIS PAR hai, raqam darj hi nahi honi chahiye. Khali jagah
   // ko "hamara kharcha" maan lena wohi purani ghalti hai: jis cheez ka
@@ -1533,8 +1534,8 @@ export async function recordFuelEntry(_prev: ActionState, formData: FormData): P
   if (paidBy === "company" && !booking.vendor_id) {
     return {
       error: !booking.machine_id
-        ? "Pehle machine tay karein. Us ke baghair ye maloom nahi hota ke ART ka ye diesel kis vendor se wapas lena hai — aur bina us ke ye raqam ghalti se hamara apna kharcha ban jati hai."
-        : "Is booking par vendor darj nahi hai. ART ka diesel kis se wapas lena hai, ye tay kiye baghair darj nahi hota.",
+        ? "Pehle machine tay karein. Us ke baghair ye maloom nahi hota ke AgriBridge ka ye diesel kis vendor se wapas lena hai — aur bina us ke ye raqam ghalti se hamara apna kharcha ban jati hai."
+        : "Is booking par vendor darj nahi hai. AgriBridge ka diesel kis se wapas lena hai, ye tay kiye baghair darj nahi hota.",
     };
   }
 
@@ -1585,7 +1586,7 @@ export async function recordFuelEntry(_prev: ActionState, formData: FormData): P
     bookingId,
     eventType: "fuel_added",
     note: `Rs ${amount.toLocaleString()}${litres ? ` — ${litres} litre` : ""} — ${
-      paidBy === "company" ? "ART ne" : paidBy === "vendor" ? "vendor ne" : "kisan ne"
+      paidBy === "company" ? "AgriBridge ne" : paidBy === "vendor" ? "vendor ne" : "kisan ne"
     }`,
     actorId,
   });
@@ -1890,7 +1891,7 @@ export async function recordWorkCompletion(_prev: ActionState, formData: FormDat
   // khara rehta tha -- jabke us waqt diesel ka jawab kisi ke paas hota
   // hi nahi. Ab do saaf sawal, wahin jahan kaam darj hota hai:
   //
-  //   hum khud diesel dalwa kar aaye the?   -> ART ka diesel
+  //   hum khud diesel dalwa kar aaye the?   -> AgriBridge ka diesel
   //   kisan ne diesel dala?                 -> kisan ka diesel
   //
   // Yahan diesel ka apna hisaab DOBARA NAHI LIKHA JA RAHA. Har jawab
@@ -2088,7 +2089,7 @@ async function sendFarmerBillReceipt(
     pichlaBaqi > 0 ? `Pichla baqi: Rs ${pichlaBaqi.toLocaleString()}` : null,
     pichlaBaqi > 0 ? `KUL DENA: Rs ${(p.balance + pichlaBaqi).toLocaleString()}` : null,
     ``,
-    `Shukriya. Al Rana Traders`,
+    `Shukriya. AgriBridge`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -3397,7 +3398,7 @@ export async function verifyWorkClaim(_prev: ActionState, formData: FormData): P
  * Vendor ka bheja hua diesel: dekho, phir maano.
  *
  * Khata yahan poochha jata hai, dawe ke waqt nahi -- vendor ko ye pata
- * hi nahi hota ke ART ne kis khate se paisa nikala. Ledger bhi yahin
+ * hi nahi hota ke AgriBridge ne kis khate se paisa nikala. Ledger bhi yahin
  * banta hai, is tasdeeq ke sath.
  */
 /**
@@ -3813,7 +3814,7 @@ export async function verifyFuelClaim(_prev: ActionState, formData: FormData): P
   return { success: true, notice: "Manager tasdeeq ho gayi — ab Finance/Owner ki final manzoori ka intezar hai." };
 }
 
-/** Finance/Owner ka qadam: FINAL manzoori — sirf ab ART ka diesel ledger mein jata hai. */
+/** Finance/Owner ka qadam: FINAL manzoori — sirf ab AgriBridge ka diesel ledger mein jata hai. */
 export async function approveFuelClaim(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const guard = await requireAction("machinery-rental.work-claims", "approve");
   if ("error" in guard) return { error: guard.error };
@@ -3874,7 +3875,7 @@ export async function approveFuelClaim(_prev: ActionState, formData: FormData): 
 
   const accountId = str(formData, "finance_account_id");
   if (log.paid_by === "company" && !accountId) {
-    return { error: "ART ka diesel hai to khata select karein ke kis khate se nikla." };
+    return { error: "AgriBridge ka diesel hai to khata select karein ke kis khate se nikla." };
   }
 
   const { error } = await supabase
@@ -3915,7 +3916,7 @@ export async function approveFuelClaim(_prev: ActionState, formData: FormData): 
     bookingId: log.booking_id,
     eventType: "fuel_claim_verified",
     note: `Vendor ka diesel FINAL manzoor — Rs ${Number(log.amount).toLocaleString()} (${
-      log.paid_by === "company" ? "ART" : log.paid_by === "vendor" ? "vendor" : "kisan"
+      log.paid_by === "company" ? "AgriBridge" : log.paid_by === "vendor" ? "vendor" : "kisan"
     })`,
     actorId,
   });
@@ -3924,7 +3925,7 @@ export async function approveFuelClaim(_prev: ActionState, formData: FormData): 
     module: "machinery-rental.work-claims",
     recordId: fuelId,
     description: `Fuel dawa FINAL manzoor — Rs ${Number(log.amount).toLocaleString()} (${
-      log.paid_by === "company" ? "ART" : log.paid_by === "vendor" ? "vendor" : "kisan"
+      log.paid_by === "company" ? "AgriBridge" : log.paid_by === "vendor" ? "vendor" : "kisan"
     })`,
   });
 
@@ -4130,7 +4131,7 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
   const payableSettled = Math.min(amount, remaining);
   const advance = Math.round((amount - payableSettled) * 100) / 100;
 
-  // ART ne is booking par vendor ke liye jo diesel diya, wo isi
+  // AgriBridge ne is booking par vendor ke liye jo diesel diya, wo isi
   // adaigi mein wapas aata hai (170).
   //
   // Vendor ke naam par jo raqam khari hai wo poori kam hoti hai,
@@ -4233,7 +4234,7 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
     accountId,
     description:
       dieselRecovered > 0
-        ? `Machinery ${booking.booking_number} — vendor ko us ka hissa (ART ka diesel Rs ${dieselRecovered.toLocaleString()} wapas)`
+        ? `Machinery ${booking.booking_number} — vendor ko us ka hissa (AgriBridge ka diesel Rs ${dieselRecovered.toLocaleString()} wapas)`
         : `Machinery ${booking.booking_number} — vendor ko us ka hissa`,
     ctx: {
       createdBy: user?.id ?? null,
@@ -4241,7 +4242,7 @@ export async function recordVendorPayout(_prev: ActionState, formData: FormData)
     },
   });
   if (failed(posted)) {
-    if (txn) await createServiceClient().from("finance_transactions").delete().eq("id", txn.id);
+    if (txn) await reverseCashBookById(txn.id, "Payout ledger nahi gaya");
     await bookingWapas();
     return { error: `Ledger mein nahi gaya, is liye payout darj nahi kiya: ${posted.error}` };
   }

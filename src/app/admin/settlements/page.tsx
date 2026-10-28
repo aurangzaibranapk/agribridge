@@ -1,9 +1,13 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { SettlementsClient } from "./settlements-client";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
+import { loadLinkedParties } from "@/lib/party-links/load";
+import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { LinkedSettlementForm } from "./linked-settlement-form";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +75,9 @@ export default async function SettlementsPage() {
     number: r.settlement_number as string,
     party_type: r.party_type as string,
     party_id: r.party_id as string,
-    party_naam: naamMap.get(r.party_id as string) ?? "(naam nahi mila)",
+    party_naam: r.dena_party_id
+      ? `${naamMap.get(r.party_id as string) ?? "(naam nahi mila)"} ↔ ${naamMap.get(r.dena_party_id as string) ?? "(supplier)"}`
+      : naamMap.get(r.party_id as string) ?? "(naam nahi mila)",
     lena_khata: r.lena_khata as string,
     lena_naam: khataNaam.get(r.lena_khata as string) ?? (r.lena_khata as string),
     dena_khata: r.dena_khata as string,
@@ -89,6 +95,10 @@ export default async function SettlementsPage() {
         title="Khaton ka Adjustment"
         description="Ek hi bande se lena bhi ho aur us ko dena bhi — dono ko manzoori ke sath kaatna"
       />
+      {maangSakta ? (
+        <div className="mb-2 text-right text-sm"><Link href="/admin/party-links" className="font-medium text-[#0f2747] hover:underline dark:text-white">Party Links (Customer + Supplier) →</Link></div>
+      ) : null}
+      {maangSakta ? <LinkedSettlementForm lang={getLanguageFromCookies("rm")} links={await loadLinkedParties({ db: service })} /> : null}
       <SettlementsClient
         rows={rows}
         khate={{

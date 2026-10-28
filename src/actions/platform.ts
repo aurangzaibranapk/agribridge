@@ -18,7 +18,7 @@ function slugify(text: string) {
 
 // Onboards a brand-new client organization: creates the tenant row, a
 // default "Main Branch", and invites their first user as super_admin
-// (scoped to only their new organization - not Al Rana Traders' data).
+// (scoped to only their new organization - not AgriBridge' data).
 // Restricted to super_admin only (checked below) since anyone who could
 // call this could otherwise create unlimited free tenants.
 export async function onboardNewOrganization(_prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -151,7 +151,7 @@ export async function deleteOrganization(_prev: ActionState, formData: FormData)
 
   if (!orgId) return { error: "Missing organization id." };
   if (orgSlug === "al-rana-traders") {
-    return { error: "Cannot delete the main Al Rana Traders organization." };
+    return { error: "Cannot delete the main AgriBridge organization." };
   }
 
   const { error } = await supabase.from("organizations").delete().eq("id", orgId);

@@ -1,6 +1,5 @@
 "use client";
-import { useState } from "react";
-import { useFormStatus } from "react-dom";
+import { useState, useTransition } from "react";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { markUnderReview, markEligibility, scheduleInterview, saveInterviewScore, createOfficialLogin, type ActionState } from "@/actions/jobs";
 import { suspendStaff, reactivateStaff, deleteStaff, type ActionState as StaffActionState } from "@/actions/users";
@@ -8,12 +7,22 @@ import { OfferButton } from "./offer-modal";
 import { ResendOfferButton } from "./resend-offer-button";
 import { DocumentViewer } from "./document-viewer";
 import { ScoreChart } from "./score-chart";
-import { ApplicationTimeline } from "./timeline";
+import { ApplicationTimeline, type TimelineMessage } from "./timeline";
+import { ActionFeedback, PendingSubmit } from "./action-bits";
 import { X, Award, KeyRound, CheckCircle2, Ban, Trash2, RotateCcw } from "lucide-react";
+import { staffGenderOrNull } from "@/lib/jobs/apply-input";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
 const initialState: ActionState = {};
+
+function genderText(value: string | null, lang: ReturnType<typeof useLang>) {
+  const gender = staffGenderOrNull(value);
+  if (gender === "male") return t("sp_gender_male", lang);
+  if (gender === "female") return t("sp_gender_female", lang);
+  if (gender === "other") return t("sp_gender_other", lang);
+  return "—";
+}
 const staffInitialState: StaffActionState = {};
 
 const DEFAULT_QUESTIONS = [
@@ -56,6 +65,7 @@ interface Application {
   qualification: string | null;
   experience: string | null;
   message: string | null;
+  gender: string | null;
   status: string;
   is_eligible: boolean | null;
   interview_date: string | null;
@@ -64,9 +74,14 @@ interface Application {
   certificate_url: string | null;
   experience_certificate_url: string | null;
   cv_url: string | null;
+  blood_group?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_phone?: string | null;
+  photo_url?: string | null;
   interview_score: InterviewScore | null;
   created_profile_id: string | null;
   timeline: TimelineEvent[];
+  messages?: TimelineMessage[];
 }
 interface Branch {
   id: string;
@@ -157,9 +172,12 @@ function DetailModal({ application, branches, onClose }: { application: Applicat
         </div>
 
         <div className="space-y-1 text-sm text-surface-600 dark:text-surface-300">
+          <p><strong>{t("hj_gender_label", lang)}</strong> {genderText(application.gender, lang)}</p>
           <p><strong>{t("hj_email_label", lang)}</strong> {application.email}</p>
           <p><strong>{t("hj_phone_label", lang)}</strong> {application.phone ?? "-"}</p>
           <p><strong>{t("hj_cnic_label", lang)}</strong> {application.cnic ?? "-"}</p>
+          <p><strong>{t("ic_blood_label", lang)}</strong> {application.blood_group ?? t("ic_not_on_file", lang)}</p>
+          <p><strong>{t("ic_emergency_label", lang)}</strong> {application.emergency_contact_name ?? t("ic_not_on_file", lang)} {application.emergency_contact_phone ? `(${application.emergency_contact_phone})` : ""}</p>
           <p><strong>{t("hj_address_label", lang)}</strong> {application.address ?? "-"}</p>
           <p><strong>{t("hj_expected_salary", lang)}</strong> {application.expected_salary ? `Rs ${application.expected_salary.toLocaleString()}` : "-"}</p>
           <p><strong>{t("hj_qualification", lang)}</strong> {application.qualification ?? "-"}</p>
@@ -191,7 +209,7 @@ function DetailModal({ application, branches, onClose }: { application: Applicat
 
         {application.timeline && application.timeline.length > 0 && (
           <div className="mt-4 border-t border-surface-100 pt-3 dark:border-surface-800">
-            <ApplicationTimeline events={application.timeline} />
+            <ApplicationTimeline events={application.timeline} messages={application.messages ?? []} />
           </div>
         )}
       </div>
@@ -204,10 +222,10 @@ function UnderReviewForm({ applicationId }: { applicationId: string }) {
   const [state, formAction] = useFormState(markUnderReview, initialState);
   return (
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
-      {state.error && <p className="mb-2 text-xs text-red-600">{state.error}</p>}
+      <ActionFeedback success={state.success} error={state.error} notice={state.notice} />
       <form action={formAction}>
         <input type="hidden" name="application_id" value={applicationId} />
-        <button type="submit" className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("at_put_in_review", lang)}</button>
+        <PendingSubmit label={t("at_put_in_review", lang)} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700" />
       </form>
     </div>
   );
@@ -215,21 +233,23 @@ function UnderReviewForm({ applicationId }: { applicationId: string }) {
 
 function EligibilityForm({ applicationId }: { applicationId: string }) {
   const [state, formAction] = useFormState(markEligibility, initialState);
+  const [pending, startTransition] = useTransition();
   const lang = useLang();
+  const run = (formData: FormData) => startTransition(() => { formAction(formData); });
   return (
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("hj_eligibility", lang)}</p>
-      {state.error && <p className="mb-2 text-xs text-red-600">{state.error}</p>}
+      <ActionFeedback success={state.success} error={state.error} notice={state.notice} />
       <div className="flex gap-2">
-        <form action={formAction} className="flex-1">
+        <form action={run} className="flex-1">
           <input type="hidden" name="application_id" value={applicationId} />
           <input type="hidden" name="is_eligible" value="true" />
-          <button type="submit" className="w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700">{t("at_shortlist", lang)}</button>
+          <PendingSubmit locked={pending} label={t("at_shortlist", lang)} className="w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700" />
         </form>
-        <form action={formAction} className="flex-1">
+        <form action={run} className="flex-1">
           <input type="hidden" name="application_id" value={applicationId} />
           <input type="hidden" name="is_eligible" value="false" />
-          <button type="submit" className="w-full rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700">{t("c_reject", lang)}</button>
+          <PendingSubmit locked={pending} label={t("c_reject", lang)} className="w-full rounded-lg bg-red-600 py-2 text-sm font-medium text-white hover:bg-red-700" />
         </form>
       </div>
     </div>
@@ -243,7 +263,7 @@ function InterviewScheduleForm({ applicationId }: { applicationId: string }) {
   return (
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-surface-400">{t("hj_schedule_interview", lang)}</p>
-      {state.error && <p className="mb-2 text-xs text-red-600">{state.error}</p>}
+      <ActionFeedback success={state.success} error={state.error} notice={state.notice} />
       <form action={formAction} className="space-y-2">
         <input type="hidden" name="application_id" value={applicationId} />
         <div className="flex gap-2">
@@ -259,7 +279,7 @@ function InterviewScheduleForm({ applicationId }: { applicationId: string }) {
           placeholder={mode === "online" ? "Meeting Link (Zoom/Google Meet)" : mode === "call" ? "Phone Number" : "Poora Address"}
           className="w-full rounded-lg border border-surface-200 p-2 text-sm"
         />
-        <button type="submit" className="w-full rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">{t("hj_schedule", lang)}</button>
+        <PendingSubmit label={t("hj_schedule", lang)} className="w-full rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700" />
       </form>
     </div>
   );
@@ -272,7 +292,7 @@ function InterviewScoreForm({ applicationId }: { applicationId: string }) {
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
       <p className="mb-2 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-surface-400">
         <Award className="h-3.5 w-3.5" />{t("at_interview_scoring", lang)}</p>
-      {state.error && <p className="mb-2 text-xs text-red-600">{state.error}</p>}
+      <ActionFeedback success={state.success} error={state.error} notice={state.notice} />
       {state.success && <p className="mb-2 text-xs text-brand-700">{t("hj_score_saved", lang)}</p>}
       <form action={formAction} className="space-y-2">
         <input type="hidden" name="application_id" value={applicationId} />
@@ -308,7 +328,7 @@ function InterviewScoreForm({ applicationId }: { applicationId: string }) {
           <option value="hire">{t("hj_hire", lang)}</option>
           <option value="reject">{t("c_reject", lang)}</option>
         </select>
-        <button type="submit" className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700">{t("hj_save_score", lang)}</button>
+        <PendingSubmit label={t("hj_save_score", lang)} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700" />
       </form>
     </div>
   );
@@ -321,23 +341,14 @@ function CreateLoginForm({ applicationId }: { applicationId: string }) {
     <div className="mt-3 border-t border-surface-100 pt-3 dark:border-surface-800">
       <p className="mb-2 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-surface-400">
         <KeyRound className="h-3.5 w-3.5" />{t("at_official_login", lang)}</p>
-      {state.error && <p className="mb-2 text-xs text-red-600">{state.error}</p>}
+      <ActionFeedback success={state.success} error={state.error} notice={state.notice} />
       {state.success && <p className="mb-2 flex items-center gap-1 text-xs text-brand-700"><CheckCircle2 className="h-3 w-3" />{t("hj_login_created", lang)}</p>}
       <form action={formAction} className="space-y-2">
         <input type="hidden" name="application_id" value={applicationId} />
         <input name="official_email" type="email" required placeholder={t("hj_official_email", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
         <input name="password" type="text" required minLength={6} placeholder={t("hj_password_min", lang)} className="w-full rounded-lg border border-surface-200 p-2 text-sm" />
-        <SubmitButton />
+        <PendingSubmit label={t("hj_create_login", lang)} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700" />
       </form>
     </div>
-  );
-}
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button type="submit" disabled={pending} className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">
-      {pending ? "Banaya Ja Raha Hai..." : "Login Banayein"}
-    </button>
   );
 }

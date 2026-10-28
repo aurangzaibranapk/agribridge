@@ -1,4 +1,6 @@
 "use client";
+import { AnimatedSearch } from "@/components/ui/animated-search";
+import { animSearchEnabled } from "@/lib/ui/animated-search";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Badge, Input } from "@/components/ui/form";
@@ -163,14 +165,18 @@ export function CrmClient({
     return (
       <div>
         <form onSubmit={(event) => { event.preventDefault(); setCustomerSearch(customerSearchDraft); }} className="mb-3 flex max-w-lg items-center gap-2">
-          <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+          {animSearchEnabled() ? (
+<AnimatedSearch value={customerSearchDraft} onValueChange={setCustomerSearchDraft} placeholder="Naam, mobile ya CNIC se dhoondein" lang={lang} className="min-w-0 flex-1" />
+) : (
+<div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
           <Input
             value={customerSearchDraft}
             onChange={(e) => setCustomerSearchDraft(e.target.value)}
             placeholder="Naam, mobile ya CNIC se dhoondein"
             className="pl-9"
           />
-          </div><button type="submit" className="h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Apply</button>
+          </div>
+)}<button type="submit" className="h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Apply</button>
         </form>
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">
@@ -236,14 +242,18 @@ export function CrmClient({
 
       {activeTab === "customers" && (
         <form onSubmit={(event) => { event.preventDefault(); setCustomerSearch(customerSearchDraft); }} className="mb-3 flex max-w-lg items-center gap-2">
-          <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+          {animSearchEnabled() ? (
+<AnimatedSearch value={customerSearchDraft} onValueChange={setCustomerSearchDraft} placeholder="Naam, mobile ya CNIC se dhoondein" lang={lang} className="min-w-0 flex-1" />
+) : (
+<div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
           <Input
             value={customerSearchDraft}
             onChange={(e) => setCustomerSearchDraft(e.target.value)}
             placeholder="Naam, mobile ya CNIC se dhoondein"
             className="pl-9"
           />
-          </div><button type="submit" className="h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Apply</button>
+          </div>
+)}<button type="submit" className="h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Apply</button>
         </form>
       )}
 
@@ -321,7 +331,11 @@ export function CrmClient({
       {activeTab === "farmers" && (
         <>
           <form onSubmit={(event) => { event.preventDefault(); setFarmerSearch(farmerSearchDraft); }} className="mb-3 flex max-w-lg items-center gap-2">
-            <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" /><Input value={farmerSearchDraft} onChange={(e) => setFarmerSearchDraft(e.target.value)} placeholder="Naam, mobile, code ya gaon se dhoondein" className="pl-9" /></div>
+            {animSearchEnabled() ? (
+<AnimatedSearch value={farmerSearchDraft} onValueChange={setFarmerSearchDraft} placeholder="Naam, mobile, code ya gaon se dhoondein" lang={lang} className="min-w-0 flex-1" />
+) : (
+<div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" /><Input value={farmerSearchDraft} onChange={(e) => setFarmerSearchDraft(e.target.value)} placeholder="Naam, mobile, code ya gaon se dhoondein" className="pl-9" /></div>
+)}
             <button type="submit" className="h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Apply</button>
           </form>
           <div className="mb-2 text-xs text-surface-500">Farmers: {farmers.length} · Is list mein balance zero honay par bhi tamam registered farmers shamil hain.</div>
@@ -344,14 +358,18 @@ export function CrmClient({
       {activeTab === "suppliers" && (
         <>
         <form onSubmit={(event) => { event.preventDefault(); setSupplierSearch(supplierSearchDraft); }} className="mb-3 flex max-w-lg items-center gap-2">
-          <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
+          {animSearchEnabled() ? (
+<AnimatedSearch value={supplierSearchDraft} onValueChange={setSupplierSearchDraft} placeholder="Naam, phone ya contact se dhoondein" lang={lang} className="min-w-0 flex-1" />
+) : (
+<div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-400" />
           <Input
             value={supplierSearchDraft}
             onChange={(e) => setSupplierSearchDraft(e.target.value)}
             placeholder="Naam, phone ya contact se dhoondein"
             className="pl-9"
           />
-          </div><button type="submit" className="h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Apply</button>
+          </div>
+)}<button type="submit" className="h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700">Apply</button>
         </form>
         <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
           <table className="w-full text-sm">

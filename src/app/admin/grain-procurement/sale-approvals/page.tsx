@@ -5,6 +5,7 @@ import { requireGrainApprover } from "@/lib/grain/approval-guard";
 import { stockOutPlan } from "@/lib/inventory/stock-math";
 import { GRAIN_SALE_DELIVERY_LABELS } from "@/lib/grain/sale-draft-payload";
 import type { GrainPendingPayload } from "@/lib/grain/pending-payload";
+import { grainRatePresentation } from "@/lib/grain/rate-unit";
 import { SaleDraftBadge } from "@/app/admin/grain-procurement/sell/sell-grain-client";
 import { GrainSaleDraftActions } from "./sale-draft-actions";
 
@@ -96,6 +97,7 @@ export default async function GrainSaleApprovalsPage() {
         const info = stockInfo[r.id];
         const qty = Number(r.quantity_kg ?? 0);
         const rate = Number(r.rate_per_kg ?? 0);
+        const rateView = grainRatePresentation(rate, "per_maund");
         const extra = Number(r.bardana_cost ?? 0) + Number(r.mazdoori_cost ?? 0);
         const history = Array.isArray(r.edit_history) ? r.edit_history : [];
         return (
@@ -120,7 +122,7 @@ export default async function GrainSaleApprovalsPage() {
               <div className="rounded-xl border border-surface-200 p-3 text-sm dark:border-surface-700">
                 <h3 className="mb-2 font-semibold">Wazan aur rate</h3>
                 <Line k="Wazan" v={`${kg(qty)} (${(qty / 40).toLocaleString(undefined, { maximumFractionDigits: 3 })} mand)`} />
-                <Line k="Rate" v={`${rs(rate)} fi kg (${rs(rate * 40)} fi mand)`} />
+                <Line k="Rate" v={`${rs(rateView.perMaund)} fi mand (${rs(rateView.perKg)} fi kg)`} />
                 <Line k="Kul raqam (buyer se leni)" v={rs(r.total_amount)} strong />
                 <Line k="Delivery" v={GRAIN_SALE_DELIVERY_LABELS[p.delivery_term ?? ""] ?? p.delivery_term ?? "—"} />
                 <Line k="Wasooli" v="Bikri par koi wasooli nahi -- Approve ke baad alag se" />

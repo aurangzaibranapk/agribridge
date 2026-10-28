@@ -1,3 +1,4 @@
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 export interface MachinerySlipData {
@@ -44,9 +45,9 @@ export async function generateMachineryBookingSlipPdf(data: MachinerySlipData): 
   drawArtMark(page, 40, 452, 34, { gold, darkGreen, leafGreen });
 
   let y = 480;
-  page.drawText("Al Rana Traders", { x: 84, y, size: 18, font: boldFont, color: navy });
+  page.drawText(BRAND_NAME, { x: 84, y, size: 18, font: boldFont, color: navy });
   y -= 15;
-  page.drawText("ART AGRIBRIDGE", { x: 84, y, size: 8, font: boldFont, color: gold });
+  page.drawText(BRAND_TAGLINE, { x: 84, y, size: 8, font: boldFont, color: gold });
   y -= 14;
   page.drawText("Machinery Rental - Booking Slip", { x: 84, y, size: 10, font, color: gray });
 
@@ -100,7 +101,7 @@ export async function generateMachineryBookingSlipPdf(data: MachinerySlipData): 
 }
 
 /**
- * ART ka hexagon nishan, PDF par.
+ * AgriBridge ka hexagon nishan, PDF par.
  *
  * pdf-lib ke paas SVG parhne ka koi raasta nahi -- wo sirf apni khud ki
  * shakleain khinchti hai. Is liye wohi chhe konon wali shakl aur us ke

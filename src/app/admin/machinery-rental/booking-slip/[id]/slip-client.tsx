@@ -59,7 +59,7 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
   const kulDena = Math.round((pichlaKul + slip.balance) * 100) / 100;
 
   const shareText = [
-    `Al Rana Traders — ${slip.isFinal ? "Machinery Bill" : "Machinery Booking Slip"} ${slip.billNumber ?? slip.bookingNumber}`,
+    `AgriBridge — ${slip.isFinal ? "Machinery Bill" : "Machinery Booking Slip"} ${slip.billNumber ?? slip.bookingNumber}`,
     slip.farmerName,
     `${slip.vendorName} — ${slip.machineLabel}`,
     `${slip.area} acre × Rs ${slip.rate.toLocaleString()} = Rs ${slip.gross.toLocaleString()}`,

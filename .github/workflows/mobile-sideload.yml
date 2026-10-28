@@ -1,0 +1,147 @@
+name: Mobile sideload APKs
+
+# Live sideload stays on tag v0.6.1-beta-test1.
+# A push to this branch publishes AgriBridge-<versionCode>.apk. Dispatch can publish the same build.
+# Testing-database APKs are mobile-sideload-test.yml on tag v0.6.1-beta-testdb. Do not upload those here.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/mobile-approved-card-design-633
+
+permissions:
+  contents: write
+
+concurrency:
+  group: agribridge-sideload-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sideload:
+    name: arm64 and armeabi-v7a release APKs
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      APP_CHANNEL: production
+      EXPO_PUBLIC_PORTAL_URL: https://alranatraders.pk
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      AGRIBRIDGE_VERSION_CODE: "633"
+      CI: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools platforms;android-35 build-tools;35.0.0 ndk;26.1.10909125
+      - name: Require live Supabase public keys
+        run: |
+          test -n "$EXPO_PUBLIC_SUPABASE_URL" || { echo "::error::GitHub secret NEXT_PUBLIC_SUPABASE_URL is missing"; exit 1; }
+          test -n "$EXPO_PUBLIC_SUPABASE_ANON_KEY" || { echo "::error::GitHub secret NEXT_PUBLIC_SUPABASE_ANON_KEY is missing"; exit 1; }
+          case "$EXPO_PUBLIC_SUPABASE_URL" in
+            https://ktskwawkslaznkjjacni.supabase.co) ;;
+            *) echo "::error::EXPO_PUBLIC_SUPABASE_URL does not point to the live AgriBridge Supabase project"; exit 1 ;;
+          esac
+          case "$EXPO_PUBLIC_SUPABASE_URL" in
+            *hwaiuwxqldxsoukkfefn*) echo "::error::testing Supabase project is refused"; exit 1 ;;
+          esac
+          echo "Live Supabase public URL is set. Anon key length ${#EXPO_PUBLIC_SUPABASE_ANON_KEY}."
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: npm ci
+      - name: Prebuild
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --no-install
+      - name: Assemble sideload release APKs
+        working-directory: apps/mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon \
+            -PagribridgeSideload=true \
+            -PreactNativeArchitectures=armeabi-v7a,arm64-v8a \
+            -Pandroid.enableProguardInReleaseBuilds=true \
+            -Pandroid.enableShrinkResourcesInReleaseBuilds=true \
+            -Pexpo.useLegacyPackaging=true \
+            -PhermesEnabled=true \
+            -Pandroid.minSdkVersion=24
+      - name: Verify and name the APKs
+        working-directory: apps/mobile
+        run: |
+          set -euo pipefail
+          chmod +x scripts/verify-sideload-apk.sh
+          mkdir -p sideload-out
+          copy() {
+            local abi="$1"
+            local src
+            src=$(find android/app/build/outputs/apk/release -name "*${abi}*release*.apk" ! -name '*unsigned*' | head -1)
+            if [[ -z "$src" ]]; then
+              echo "missing $abi apk"
+              find android/app/build/outputs/apk -type f
+              exit 1
+            fi
+            local suffix=""
+            if [[ "$abi" == "armeabi-v7a" ]]; then
+              suffix="-v7a"
+            fi
+            local dest="sideload-out/AgriBridge-${AGRIBRIDGE_VERSION_CODE}${suffix}.apk"
+            cp "$src" "$dest"
+            scripts/verify-sideload-apk.sh "$dest" "$abi" "$AGRIBRIDGE_VERSION_CODE" | tee "sideload-out/${abi}.verify.txt"
+          }
+          copy arm64-v8a
+          copy armeabi-v7a
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AgriBridge-${{ env.AGRIBRIDGE_VERSION_CODE }}.apk
+          path: apps/mobile/sideload-out/AgriBridge-${{ env.AGRIBRIDGE_VERSION_CODE }}.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AgriBridge-${{ env.AGRIBRIDGE_VERSION_CODE }}-v7a.apk
+          path: apps/mobile/sideload-out/AgriBridge-${{ env.AGRIBRIDGE_VERSION_CODE }}-v7a.apk
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agribridge-mobile-sideload-verify
+          path: apps/mobile/sideload-out/*.verify.txt
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish prerelease v0.6.1-beta-test1
+        working-directory: apps/mobile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag=v0.6.1-beta-test1
+          notes=$(cat <<'EOF'
+          Sideload test builds for phones. Not a Play Store upload.
+          versionName v0.6.1 Beta, versionCode 633, APP_CHANNEL=production.
+          Live package pk.alranatraders.agribridge. Live Supabase project only. Not the TEST apk.
+          Masla batayein, Role dekho, and Role badlo stay off on this production channel.
+          The saved Supabase session refreshes on foreground and once after JWT expired. A dead refresh returns to login in Urdu. Raw HTTP/JSON stays on debug builds only.
+          Kisan and Customer are one mobile account/home; farming, orders and khata use the same login. Admin and staff keep their own homes.
+          Email login uses the live Supabase project when /api/mobile/v1/session is not on the portal yet.
+          Mobile, CNIC, sync, milk, and feedback still need this PR's portal build on alranatraders.pk.
+          arm64-v8a is the APK for almost every phone since 2019.
+          armeabi-v7a is the separate APK for older 32-bit phones.
+          Signed with the Android debug keystore. R8 and Hermes are on.
+          minSdk 24 (Android 7), so Android 8 and newer can install.
+          EOF
+          )
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --prerelease --title "$tag" --notes "$notes"
+          else
+            gh release create "$tag" --prerelease --title "$tag" --notes "$notes" --target "${{ github.sha }}"
+          fi
+          gh release upload "$tag" \
+            "sideload-out/AgriBridge-${AGRIBRIDGE_VERSION_CODE}.apk" \
+            "sideload-out/AgriBridge-${AGRIBRIDGE_VERSION_CODE}-v7a.apk" \
+            --clobber

@@ -8,6 +8,8 @@ import { longDate } from "@/components/portal/khata/khata-parts";
 import { StatementTable } from "@/components/portal/khata/statement-table";
 import { PrintButton } from "@/components/portal/khata/print-button";
 import { CustGate, NoCustomer } from "@/components/portal/customer/gate";
+import { btnPrimary } from "@/components/portal/customer/cust-parts";
+import { brandName, brandTagline } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -30,11 +32,11 @@ export default async function CustomerStatementPrint({ searchParams }: { searchP
     <div className="pf-fit mx-auto w-full max-w-[1760px] px-4 py-6 sm:px-6 print:max-w-none print:p-0 fit:gap-2.5 fit:py-3">
       <div className="mb-4 flex items-center justify-between print:hidden fit:mb-0">
         <Link href={`/portal/c/khata${qs({})}`} className="text-sm text-surface-500 dark:text-slate-400">← {L("pc_nav_khata")}</Link>
-        <PrintButton label={L("pc_btn_pdf")} className="rounded-xl bg-gradient-to-r from-blue-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white" />
+        <PrintButton label={L("pc_btn_pdf")} className={`${btnPrimary} px-4 py-2 text-sm`} />
       </div>
-      <div className="pf-panel pf-navy pf-grow rounded-2xl border border-surface-200 bg-white p-6 shadow-sm dark:border-[#1e3160] dark:bg-[#101f42] print:rounded-none print:border-0 print:shadow-none fit:p-4">
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-surface-200 pb-4 dark:border-[#1e3160]">
-          <div><p className="text-lg font-bold text-surface-900 dark:text-white">Al Rana Traders · AgriBridge</p><p className="text-sm text-surface-500 dark:text-slate-400">{L("pc_khata_title")}</p></div>
+      <div className="gl-panel pf-panel pf-navy pf-grow p-6 print:rounded-none print:border-0 print:bg-white print:shadow-none fit:p-4">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-black/10 pb-4 dark:border-white/10 print:border-surface-200">
+          <div><p className="text-lg font-bold text-surface-900 dark:text-white">{brandName(lang)}</p><p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">{brandTagline(lang)}</p><p className="text-sm text-surface-500 dark:text-slate-400">{L("pc_khata_title")}</p></div>
           <div className="text-end text-sm">
             <p className="font-semibold text-surface-900 dark:text-white">{c?.name ?? ""}</p>
             <p className="text-surface-500 dark:text-slate-400">{L("pc_f_code")}: {c?.code ?? "—"}</p>

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { SupplierStatementClient } from "./statement-client";
+import { glToStatementRows, type GlLine } from "@/lib/party-links/core";
 export const dynamic = "force-dynamic";
 export default async function SupplierStatementPage({
   params,
@@ -35,10 +36,20 @@ export default async function SupplierStatementPage({
     .gte("payment_date", startDate)
     .lte("payment_date", endDate)
     .order("payment_date", { ascending: true });
+  // 622: 2000/1120 ledger qatarein jo purchases/supplier_payments mein nahi
+  // (Recovery "Payment Send Karein", Kharche supplier bill, settlements).
+  const { data: rawGl } = await (supabase as any).rpc("fn_party_gl_lines", {
+    p_party_type: "supplier", p_party_id: supplierId, p_accounts: ["2000", "1120"],
+  });
+  const glRows = glToStatementRows(((rawGl ?? []) as GlLine[]).filter((l) => {
+    const d = String(l.entry_date).slice(0, 10);
+    return d >= startDate && d <= endDate;
+  }));
   type Entry = { date: string; description: string; debit: number; credit: number; slipUrl?: string | null };
   const entries: Entry[] = [
     ...(rawPurchases ?? []).map((p) => ({ date: p.purchase_date, description: `Purchase ${p.purchase_number}`, debit: Number(p.total_amount), credit: 0 })),
     ...(rawPayments ?? []).map((p) => ({ date: p.payment_date, description: `Payment${p.notes ? ` - ${p.notes}` : ""}`, debit: 0, credit: Number(p.amount), slipUrl: p.slip_url })),
+    ...glRows.map((r) => ({ date: r.date, description: `Ledger: ${r.description}`, debit: r.debit, credit: r.credit })),
   ].sort((a, b) => a.date.localeCompare(b.date));
   let runningBalance = 0;
   let totalDebit = 0;
@@ -51,7 +62,7 @@ export default async function SupplierStatementPage({
   });
   return (
     <div>
-      <PageHeader title={`${supplier?.name ?? "Supplier"} - Statement`} description="Purchases aur Payments ki poori history" />
+      <PageHeader title={`${supplier?.name ?? "Supplier"} - Statement`} description="Purchases, Payments aur ledger (2000/1120) ki poori history" />
       <SupplierStatementClient
         supplierId={supplierId}
         supplierName={supplier?.name ?? "Supplier"}

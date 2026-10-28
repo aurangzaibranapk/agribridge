@@ -50,7 +50,7 @@ export default async function CustomerOrders({ searchParams }: { searchParams: R
         <Panel className="pf-panel pf-navy fit:p-3.5">
           <PanelHead title={<L3 k="pc_bills_orders" lang={lang} />} right={
             <div className="flex gap-1.5">{(["all", "bills", "orders"] as const).map((k) => (
-              <Link key={k} href={`/portal/c/orders?f=${k}`} className={`rounded-full px-3 py-1 text-[11px] font-semibold ${f === k ? "bg-indigo-100 text-indigo-900 dark:bg-[#1a2c58] dark:text-white" : "bg-surface-100 text-surface-600 dark:bg-[#0d1a3a] dark:text-slate-300"}`}>{L(`pc_f_${k}` as TranslationKey)}</Link>
+              <Link key={k} href={`/portal/c/orders?f=${k}`} className={`rounded-full px-3 py-1 text-[11px] font-semibold ${f === k ? "bg-gradient-to-r from-emerald-700 to-[#16356e] text-white" : "gl-act text-surface-600 dark:text-slate-200"}`}>{L(`pc_f_${k}` as TranslationKey)}</Link>
             ))}</div>} />
           <div className="pf-body overflow-x-auto">
             <table className="w-full min-w-[620px] text-[12.5px]">

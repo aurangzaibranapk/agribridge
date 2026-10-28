@@ -11,28 +11,28 @@ const MODELS = [
     icon: Package,
     title: "Product Investment",
     subtitle: "Fertilizer · Pesticide · Livestock Feed",
-    description: "Place your stock with Al Rana Traders. We sell it through our dealer network — recovery is our responsibility, profit is shared.",
+    description: "Place your stock with AgriBridge. We sell it through our dealer network — recovery is our responsibility, profit is shared.",
     points: ["No cash required", "Recovery tracked to the batch", "Written agreement provided"],
   },
   {
     icon: Building2,
     title: "Corporation Deal",
     subtitle: "Pull / Adda business model",
-    description: "Your company supplies product, Al Rana sells it through its farmer and dealer network. Payment returns, commission is ours.",
+    description: "Your company supplies product, AgriBridge sells it through its farmer and dealer network. Payment returns, commission is ours.",
     points: ["Farmer network across Punjab", "Fast, nationwide distribution", "Transparent settlement"],
   },
   {
     icon: Sprout,
     title: "Dairy & Livestock",
     subtitle: "Farm investment model",
-    description: "Invest in verified dairy farms. Al Rana identifies the farm, drafts the agreement, and shares milk & meat profit.",
+    description: "Invest in verified dairy farms. AgriBridge identifies the farm, drafts the agreement, and shares milk & meat profit.",
     points: ["Verified dairy farmers only", "Milk & meat profit share", "Written agreement"],
   },
   {
     icon: TrendingUp,
     title: "Franchise Model",
     subtitle: "15km radius opportunity",
-    description: "Open an Al Rana Traders franchise in your area — full setup, training, and product supply on a shared-profit model.",
+    description: "Open an AgriBridge franchise in your area — full setup, training, and product supply on a shared-profit model.",
     points: ["15km exclusive radius", "Full setup & training", "Shared profit model"],
   },
 ];
@@ -113,7 +113,7 @@ export default function InvestPage() {
         <div className="flex gap-3 rounded-card border border-amber-200 bg-amber-50 p-5 dark:border-amber-900/40 dark:bg-amber-900/20">
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
           <p className="text-sm text-amber-800 dark:text-amber-300">
-            <strong>{t("sh_fraud_label", lang)}</strong> Al Rana Traders never accepts cash for a partnership or investment — every deal happens through products or livestock, with a written agreement. If someone asks for cash using our name, it&apos;s fraud. Report it to{" "}
+            <strong>{t("sh_fraud_label", lang)}</strong> AgriBridge never accepts cash for a partnership or investment — every deal happens through products or livestock, with a written agreement. If someone asks for cash using our name, it&apos;s fraud. Report it to{" "}
             <a href="mailto:info@alranatraders.pk" className="underline">info@alranatraders.pk</a>.
           </p>
         </div>

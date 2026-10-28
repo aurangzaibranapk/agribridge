@@ -4,6 +4,7 @@ import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { sendJobOffer, type ActionState } from "@/actions/jobs";
 import { X } from "lucide-react";
+import { ActionFeedback } from "./action-bits";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -37,7 +38,7 @@ function OfferModal({ applicationId, branches, onClose }: { applicationId: strin
           <h3 className="font-display text-base font-semibold text-surface-900">{t("ja_send_offer", lang)}</h3>
           <button onClick={onClose} className="text-surface-400 hover:text-surface-700"><X className="h-5 w-5" /></button>
         </div>
-        {state.error && <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</p>}
+        <ActionFeedback success={state.success} error={state.error} notice={state.notice} />
         {state.success && <p className="mb-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-700">{t("ja_offer_sent", lang)}</p>}
         <form action={formAction} className="space-y-2">
           <input type="hidden" name="application_id" value={applicationId} />

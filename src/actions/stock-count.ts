@@ -1,5 +1,5 @@
 "use server";
-import { isSelfApproval, stockCountPostCheck, extraItemCountLine, partialCountPosterCheck } from "@/lib/approval/guards";
+import { isSelfApproval, mayDecideEntry, stockCountPostCheck, extraItemCountLine, partialCountPosterCheck } from "@/lib/approval/guards";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -545,7 +545,7 @@ export async function forceCloseCount(_prev: ActionState, formData: FormData): P
   if (!count) return { error: "Ginti nahi mili." };
   if (count.status !== "counting") return { error: "Ye ginti pehle hi band ho chuki hai." };
   // Self guard: jis ne ginti shuru ki wo khud force-close nahi kar sakta.
-  if (isSelfApproval(count.started_by, user.id)) {
+  if (isSelfApproval(count.started_by, user.id) && !mayDecideEntry(me?.role, user.id, [count.started_by])) {
     return { error: "Ye ginti aap ne shuru ki hai — force-close doosra Admin/Owner karega." };
   }
 
@@ -608,7 +608,7 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
     .eq("id", countId)
     .maybeSingle();
   if (!count) return { error: "Ginti nahi mili." };
-  const postCheck = stockCountPostCheck(count, user.id);
+  const postCheck = stockCountPostCheck(count, user.id, guard.caller.role);
   if (!postCheck.ok && count.status !== "verified") return { error: postCheck.error };
   if (!postCheck.ok) {
     await logAudit({
@@ -632,7 +632,7 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
   const rows = lines ?? [];
   const unfilled = rows.filter((r) => r.counted_qty === null);
 
-  const partialChk = partialCountPosterCheck(unfilled.length, (count as { verified_by?: string | null }).verified_by, user.id);
+  const partialChk = partialCountPosterCheck(unfilled.length, (count as { verified_by?: string | null }).verified_by, user.id, guard.caller.role);
   if (!partialChk.ok) return { error: partialChk.error };
   if (unfilled.length > 0) {
     if (!isAdminOrOwner) {
@@ -701,6 +701,13 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
   overValue = round2(overValue);
   const netValue = round2(overValue - shortValue);
 
+  const { data: claim, error: claimError } = await (service as any).rpc("fn_claim_stock_count_post", {
+    p_count: countId,
+    p_actor: user.id,
+  });
+  if (claimError) return { error: claimError.message };
+  if (claim === "already") return { success: true, message: "Ginti pehle hi post ho chuki hai." };
+
   let entryId: string | null = null;
   if (shortValue !== 0 || overValue !== 0) {
     const journalLines: Array<{ account: string; debit?: number; credit?: number; memo?: string }> = [];
@@ -721,7 +728,10 @@ export async function postCount(_prev: ActionState, formData: FormData): Promise
       createdBy: user.id,
       lines: journalLines,
     });
-    if ("error" in posted) return { error: `Nuqsan ledger mein darj nahi ho saka: ${posted.error}` };
+    if ("error" in posted) {
+      await (service as any).rpc("fn_release_stock_count_post", { p_count: countId, p_actor: user.id });
+      return { error: `Nuqsan ledger mein darj nahi ho saka: ${posted.error}` };
+    }
     entryId = posted.id;
   }
 

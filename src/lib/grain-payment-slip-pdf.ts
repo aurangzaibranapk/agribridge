@@ -1,3 +1,4 @@
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 export interface SlipData {
@@ -23,8 +24,10 @@ export async function generateGrainPaymentSlipPdf(data: SlipData): Promise<Buffe
   const brand = rgb(0.1, 0.5, 0.3);
 
   let y = 460;
-  page.drawText("Al Rana Traders - AgriBridge", { x: 40, y, size: 18, font: boldFont, color: navy });
-  y -= 20;
+  page.drawText(BRAND_NAME, { x: 40, y, size: 18, font: boldFont, color: navy });
+  y -= 16;
+  page.drawText(BRAND_TAGLINE, { x: 40, y, size: 10, font: boldFont, color: brand });
+  y -= 16;
   page.drawText("Grain Procurement - Payment Slip", { x: 40, y, size: 11, font, color: gray });
 
   page.drawText(data.slipNumber, { x: 400, y: 460, size: 11, font: boldFont, color: black });

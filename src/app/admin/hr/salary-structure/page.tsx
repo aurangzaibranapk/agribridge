@@ -1,10 +1,11 @@
 import { payrollViewer } from "@/lib/payroll/access";
 import SalaryStructureClient from "./salary-structure-client";
+import { acceptedOfferForStaff } from "@/lib/payroll/offer-for-staff";
 
 export const dynamic = "force-dynamic";
 
 /** 551: Tankhwah ka dhancha -- components + har staff ka structure aur history. */
-export default async function SalaryStructurePage({ searchParams }: { searchParams: { staff?: string } }) {
+export default async function SalaryStructurePage({ searchParams }: { searchParams: { staff?: string; from_offer?: string } }) {
   const v = await payrollViewer();
   if (!v?.writer) return <div className="p-8 text-center text-slate-500">Ijazat nahi -- sirf HR, Finance, Admin ya Owner.</div>;
   const sb = v.sb;
@@ -20,6 +21,8 @@ export default async function SalaryStructurePage({ searchParams }: { searchPara
     id: s.profile_id, name: s.profiles?.full_name ?? "—", designation: s.designation ?? s.profiles?.role ?? "", hireDate: s.hire_date, probationStart: s.probation_start_date,
   })).sort((a: any, b: any) => a.name.localeCompare(b.name));
   const selected = searchParams.staff ?? people[0]?.id ?? null;
+  // 691: "Bharti ke waqt tay hua" -- qubool offer (agar ho)
+  const bharti = selected ? await acceptedOfferForStaff(sb, selected) : null;
   return (
     <SalaryStructureClient
       me={{ id: v.id, approver: v.approver }}
@@ -28,6 +31,8 @@ export default async function SalaryStructurePage({ searchParams }: { searchPara
       selected={selected}
       structures={(structures ?? []).filter((s: any) => s.profile_id === selected).map((s: any) => ({ ...s, creator: pm.get(s.created_by), approver: pm.get(s.approved_by) }))}
       settings={settings ?? { advance_min_service_months: 6, advance_cap_pct: null }}
+      bharti={bharti}
+      prefillFromOffer={searchParams.from_offer === "1"}
     />
   );
 }

@@ -3,7 +3,7 @@
  */
 export const portalKhataDict = {
   pk_title: { en: "My Khata", rm: "Mera Khata", ur: "میرا کھاتہ" },
-  pk_hero_eyebrow: { en: "My Khata · full account with Al Rana Traders", rm: "Mera Khata · Al Rana Traders ke saath poora hisaab", ur: "میرا کھاتہ · الرانا ٹریڈرز کے ساتھ پورا حساب" },
+  pk_hero_eyebrow: { en: "My Khata · full account with {brand}", rm: "Mera Khata · {brand} ke saath poora hisaab", ur: "میرا کھاتہ · {brand} کے ساتھ پورا حساب" },
   pk_you_owe: { en: "You owe (total balance)", rm: "Aap ne dena hai (kul baqaya)", ur: "آپ نے دینا ہے (کل بقایا)" },
   pk_we_owe: { en: "Shop owes you", rm: "Dukaan ne aap ko dena hai", ur: "دکان نے آپ کو دینا ہے" },
   pk_settled: { en: "All settled", rm: "Hisaab barabar", ur: "حساب برابر" },
@@ -128,6 +128,6 @@ export const portalKhataDict = {
   pk_print_period: { en: "Period", rm: "Muddat", ur: "مدت" },
   pk_print_member: { en: "Member", rm: "Member", ur: "ممبر" },
   pk_print_generated: { en: "Generated", rm: "Banaya gaya", ur: "بنایا گیا" },
-  pk_print_footer: { en: "Computer-generated statement from AgriBridge. For any difference, contact Al Rana Traders.", rm: "AgriBridge ka computer statement. Kisi farq ke liye Al Rana Traders se rabta karein.", ur: "ایگری بریج کا کمپیوٹر اسٹیٹمنٹ۔ کسی فرق کے لیے الرانا ٹریڈرز سے رابطہ کریں۔" },
+  pk_print_footer: { en: "Computer-generated statement from AgriBridge. For any difference, contact {brand}.", rm: "AgriBridge ka computer statement. Kisi farq ke liye {brand} se rabta karein.", ur: "ایگری بریج کا کمپیوٹر اسٹیٹمنٹ۔ کسی فرق کے لیے {brand} سے رابطہ کریں۔" },
   pk_back: { en: "Back to khata", rm: "Khate par wapas", ur: "کھاتے پر واپس" },
 } as const;

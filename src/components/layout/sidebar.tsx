@@ -10,8 +10,9 @@ import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { usePending, PENDING_PAGE } from "@/components/pending/pending-context";
 import { RedBadge, NayaPill, PendingMeta, ZeroMark } from "@/components/pending/pending-ui";
-import { badgeForGroup, badgeForHref } from "@/lib/pending/categories";
-import { adminTint } from "@/lib/ui/admin-tint";
+import { badgeForGroup, badgeForHref, pendingQueueHref } from "@/lib/pending/categories";
+import { BrandMark } from "@/components/brand/brand-mark";
+import { brandName, brandTagline, isHiddenBrand } from "@/lib/brand";
 export type { NavItem } from "@/components/layout/nav-items";
 
 /**
@@ -28,9 +29,10 @@ export interface SidebarGroup {
 
 /** Khula safha neela (laal sirf "baqi kaam" ke liye). */
 const ACTIVE_CLS = "bg-gradient-to-r from-[#1e3a8a] to-[#2563eb] text-white shadow-[0_10px_24px_-10px_rgba(37,99,235,.7)]";
-const TINT = adminTint();
-const IDLE_CLS = "text-surface-700 " + TINT.hover + " hover:text-surface-900 dark:text-surface-300 dark:hover:bg-white/5 dark:hover:text-white";
-const PENDING_CLS = "border-l-red-500 bg-red-500/[0.07] text-surface-900 hover:bg-red-500/[0.11] dark:border-l-red-400 dark:bg-red-500/[0.12] dark:text-white";
+/** Pine #10241c — light aur dark dono. Headings 700, items 600. */
+const PINE = "border-white/10 bg-[#10241c] shadow-[inset_0_1px_0_rgba(255,255,255,0.16)] dark:border-white/10 dark:bg-[#10241c]";
+const IDLE_CLS = "text-[#e7eef8] hover:bg-white/10 hover:text-white";
+const PENDING_CLS = "border-l-red-500 bg-red-500/[0.12] text-white hover:bg-red-500/[0.18]";
 
 export function Sidebar({
   subtitle,
@@ -87,12 +89,15 @@ export function Sidebar({
 
   // Sidebar HAMESHA poori chaurai -- koi collapse / icon-only nahi (malik, 19 Oct).
   return (
-    <aside data-sidebar="admin" className={cn("hidden h-screen min-h-0 w-72 shrink-0 overflow-hidden border-r backdrop-blur-xl lg:flex lg:flex-col", TINT.aside)}>
-      <Link href={homeHref} className={cn("flex h-16 items-center gap-2 border-b px-5 dark:border-white/10", TINT.divider)}>
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-600 to-blue-600 text-sm font-bold text-white">{t("au_ar", lang)}</div>
+    <aside data-sidebar="admin" className={cn("hidden h-screen min-h-0 w-72 shrink-0 overflow-hidden border-r backdrop-blur-xl lg:flex lg:flex-col", PINE)}>
+      <Link href={homeHref} className="flex min-h-16 items-center gap-2 border-b border-white/10 px-5 py-2">
+        <BrandMark className="h-8 w-8 rounded-lg" />
         <div className="min-w-0 flex-1">
-          <p className="font-display text-sm font-semibold leading-tight text-surface-900 dark:text-white">{t("au_company", lang)}</p>
-          <p className="truncate text-xs text-surface-500 dark:text-surface-400">{subtitle}</p>
+          <p className="font-display text-sm font-bold leading-tight text-white">{brandName(lang)}</p>
+          <p className="truncate text-[11px] leading-tight text-emerald-100/80">{brandTagline(lang)}</p>
+          {subtitle && !isHiddenBrand(subtitle) && subtitle !== brandName(lang) && (
+            <p className="truncate text-[10px] text-[#d3deee]">{subtitle}</p>
+          )}
         </div>
         {pend.enabled && (
           <span className="flex items-center gap-1">
@@ -106,12 +111,12 @@ export function Sidebar({
           <Link
             href={DASHBOARD_ITEM.href}
             className={cn(
-              "group flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+              "group flex items-center justify-between rounded-xl px-3 py-2 text-sm font-semibold transition-colors",
               isActive(DASHBOARD_ITEM.href) ? ACTIVE_CLS : IDLE_CLS
             )}
           >
             <span className="flex items-center gap-2.5">
-              <DASHBOARD_ITEM.icon className={cn("h-4 w-4", isActive(DASHBOARD_ITEM.href) ? "text-white" : "text-surface-400 group-hover:text-surface-600 dark:group-hover:text-surface-200")} />
+              <DASHBOARD_ITEM.icon className={cn("h-4 w-4", isActive(DASHBOARD_ITEM.href) ? "text-white" : "text-[#d3deee] group-hover:text-white")} />
               {DASHBOARD_ITEM.label}
             </span>
           </Link>
@@ -121,7 +126,7 @@ export function Sidebar({
             href={PENDING_PAGE}
             data-pending-item={pend.totals.pending > 0 ? "pending" : "zero"}
             className={cn(
-              "group flex items-center justify-between gap-2 rounded-xl border-l-[3px] px-3 py-2 text-sm font-medium transition-colors",
+              "group flex items-center justify-between gap-2 rounded-xl border-l-[3px] px-3 py-2 text-sm font-semibold transition-colors",
               isActive(PENDING_PAGE) ? ACTIVE_CLS + " border-l-red-400" : pend.totals.pending > 0 ? PENDING_CLS : "border-l-transparent " + IDLE_CLS
             )}
           >
@@ -130,22 +135,23 @@ export function Sidebar({
                 <Inbox className="h-4 w-4 shrink-0" />
                 {t("apb_menu", lang)}
               </span>
-              {pend.totals.pending > 0 && <PendingMeta days={pend.totals.oldestDays} pendingWith={null} lang={lang} onDark={isActive(PENDING_PAGE)} />}
+              {pend.totals.pending > 0 && <PendingMeta days={pend.totals.oldestDays} pendingWith={null} lang={lang} onDark />}
             </span>
             <span className="flex items-center gap-1">
               <NayaPill n={pend.totals.naya} lang={lang} />
-              {pend.totals.pending > 0 ? <RedBadge n={pend.totals.pending} /> : <ZeroMark />}
+              {pend.totals.pending > 0 ? <RedBadge n={pend.totals.pending} /> : <ZeroMark className="text-[#d3deee]" />}
             </span>
           </Link>
         )}
-        <div className={cn("my-2 border-t dark:border-white/10", TINT.divider)} />
+        <div className="my-2 border-t border-white/10" />
         {visibleGroups.map((group) => {
           const isOpen = openGroups.has(group.label);
           const groupActive = group.items.some((item) => isActive(item.href));
-          const gb = pend.enabled ? badgeForGroup(pend.counts, group.key, group.items.map((i) => i.href)) : null;
+          const hrefs = group.items.map((i) => i.href);
+          const gb = pend.enabled ? badgeForGroup(pend.counts, group.key, hrefs) : null;
           return (
             <div key={group.key}>
-              <div className={cn("flex w-full items-center rounded-lg text-xs font-semibold uppercase tracking-wide transition-colors", groupActive ? "text-blue-700 dark:text-blue-300" : "text-surface-500 hover:text-surface-800 dark:text-surface-400 dark:hover:text-surface-200")}>
+              <div className={cn("flex w-full items-center rounded-lg text-xs font-bold uppercase tracking-wide transition-colors", groupActive ? "text-[#dbeafe]" : "text-[#f5f8fc] hover:text-white")}>
                 {isUnrestricted ? <Link href={group.key === "master" ? "/admin/command-center" : group.key === "reports" ? "/admin/reports" : `/admin/department-dashboard/${group.key}`} className="min-w-0 flex-1 truncate px-3 py-2">{group.label}</Link> : <button type="button" onClick={() => toggleGroup(group.label)} className="min-w-0 flex-1 truncate px-3 py-2 text-left uppercase">{group.label}</button>}
                 {pend.enabled && (
                   <span data-group-badge={gb ? gb.pending : 0} className="flex items-center gap-1 normal-case tracking-normal">
@@ -155,7 +161,7 @@ export function Sidebar({
                         <RedBadge n={gb.pending} />
                       </>
                     ) : (
-                      <ZeroMark />
+                      <ZeroMark className="text-[#d3deee]" />
                     )}
                   </span>
                 )}
@@ -172,28 +178,30 @@ export function Sidebar({
                     const section = item.section ?? null;
                     const showSection = !!section && section !== prevSection;
                     const Icon = iconByName(item.icon);
-                    const b = pend.enabled ? badgeForHref(pend.counts, item.href) : null;
+                    const b = pend.enabled ? badgeForHref(pend.counts, item.href, Date.now(), hrefs) : null;
+                    const dest = b ? pendingQueueHref(item.href) : item.href;
                     return (
                       <div key={item.href}>
                         {showSection && (
-                          <p className="px-3 pb-0.5 pl-6 pt-2 text-[10px] font-semibold uppercase tracking-wider text-surface-400 dark:text-surface-500">
+                          <p className="px-3 pb-0.5 pl-6 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[#d3deee]">
                             {section}
                           </p>
                         )}
                       <Link
-                        href={item.href}
+                        href={dest}
                         data-pending-item={b ? "pending" : undefined}
+                        data-pending-queue={b ? dest : undefined}
                         className={cn(
-                          "group my-0.5 flex items-center justify-between gap-2 rounded-xl border-l-[3px] px-3 py-2 pl-5 text-sm font-medium transition-colors",
+                          "group my-0.5 flex items-center justify-between gap-2 rounded-xl border-l-[3px] px-3 py-2 pl-5 text-sm font-semibold transition-colors",
                           active ? ACTIVE_CLS + (b ? " border-l-red-400" : " border-l-transparent") : b ? PENDING_CLS : "border-l-transparent " + IDLE_CLS
                         )}
                       >
                         <span className="min-w-0">
                           <span className={cn("flex items-center gap-2.5", b && "font-semibold")}>
-                            <Icon className={cn("h-4 w-4 shrink-0", active ? "text-white" : "text-surface-400 group-hover:text-surface-600 dark:group-hover:text-surface-200")} />
+                            <Icon className={cn("h-4 w-4 shrink-0", active ? "text-white" : "text-[#d3deee] group-hover:text-white")} />
                             <span className="truncate">{item.label}</span>
                           </span>
-                          {b && <PendingMeta days={b.oldestDays} pendingWith={b.pendingWith} lang={lang} onDark={active} />}
+                          {b && <PendingMeta days={b.oldestDays} pendingWith={b.pendingWith} lang={lang} onDark />}
                         </span>
                         {b ? (
                           <span className="flex shrink-0 items-center gap-1">
@@ -213,13 +221,6 @@ export function Sidebar({
           );
         })}
       </nav>
-      {pend.enabled && (
-        <div data-pending-legend className={cn("mx-3 mb-3 flex flex-wrap gap-x-3 gap-y-1 rounded-xl px-3 py-2 text-[10.5px] text-surface-500 dark:bg-white/5 dark:text-surface-400", TINT.legend)}>
-          <span className="flex items-center gap-1"><NayaPill lang={lang} /> {t("apb_legend_new", lang)}</span>
-          <span className="flex items-center gap-1"><RedBadge n={5} /> {t("apb_legend_pending", lang)}</span>
-          <span className="flex items-center gap-1"><ZeroMark /> {t("apb_legend_zero", lang)}</span>
-        </div>
-      )}
     </aside>
   );
 }

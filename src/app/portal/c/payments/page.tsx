@@ -96,7 +96,7 @@ export default async function CustomerPayments({ searchParams }: { searchParams:
             </tbody>
           </table>
           {canAsk && (
-            <form action={requestPromiseAction} className="mt-4 rounded-xl border border-surface-200 p-3 dark:border-[#1e3160]">
+            <form action={requestPromiseAction} className="gl-sec mt-4 p-3">
               <b className="mb-2 block text-[13px] text-surface-900 dark:text-white">+ {L("pc_new_promise")}</b>
               <div className="grid gap-x-3 sm:grid-cols-2">
                 <Field label={L("pc_f_amount")}><input name="amount" required inputMode="decimal" className={inputCls} /></Field>

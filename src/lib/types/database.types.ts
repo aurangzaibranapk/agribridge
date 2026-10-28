@@ -17661,6 +17661,7 @@ export type Database = {
           profit: number
           quantity_kg: number
           rate_per_kg: number
+          rate_unit: string | null
           sale_date: string
           sale_number: string
           total_amount: number
@@ -17683,6 +17684,7 @@ export type Database = {
           profit?: number
           quantity_kg: number
           rate_per_kg: number
+          rate_unit?: string | null
           sale_date?: string
           sale_number: string
           total_amount: number
@@ -17705,6 +17707,7 @@ export type Database = {
           profit?: number
           quantity_kg?: number
           rate_per_kg?: number
+          rate_unit?: string | null
           sale_date?: string
           sale_number?: string
           total_amount?: number
@@ -19180,6 +19183,66 @@ export type Database = {
           },
         ]
       }
+      job_application_messages: {
+        Row: {
+          application_id: string
+          attachment_name: string | null
+          body: string | null
+          channel: string
+          created_at: string
+          error: string | null
+          id: string
+          link_url: string | null
+          status: string
+          subject: string | null
+          to_address: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          application_id: string
+          attachment_name?: string | null
+          body?: string | null
+          channel: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          link_url?: string | null
+          status: string
+          subject?: string | null
+          to_address?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          application_id?: string
+          attachment_name?: string | null
+          body?: string | null
+          channel?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          link_url?: string | null
+          status?: string
+          subject?: string | null
+          to_address?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_application_messages_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_application_messages_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_applications: {
         Row: {
           address: string | null
@@ -19195,6 +19258,11 @@ export type Database = {
           experience: string | null
           experience_certificate_url: string | null
           full_name: string
+          gender: string | null
+          blood_group: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          photo_url: string | null
           id: string
           interview_date: string | null
           interview_location: string | null
@@ -19220,6 +19288,11 @@ export type Database = {
           experience?: string | null
           experience_certificate_url?: string | null
           full_name: string
+          gender?: string | null
+          blood_group?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          photo_url?: string | null
           id?: string
           interview_date?: string | null
           interview_location?: string | null
@@ -19245,6 +19318,11 @@ export type Database = {
           experience?: string | null
           experience_certificate_url?: string | null
           full_name?: string
+          gender?: string | null
+          blood_group?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          photo_url?: string | null
           id?: string
           interview_date?: string | null
           interview_location?: string | null
@@ -19347,8 +19425,15 @@ export type Database = {
       job_vacancies: {
         Row: {
           branch_id: string | null
+          brand: string | null
+          brand_en: string | null
+          brand_roman: string | null
+          brand_ur: string | null
           created_at: string
           description: string | null
+          description_en: string | null
+          description_roman: string | null
+          description_ur: string | null
           designation: string | null
           id: string
           is_open: boolean
@@ -19356,11 +19441,21 @@ export type Database = {
           seats_filled: number | null
           seats_total: number | null
           title: string
+          title_en: string | null
+          title_roman: string | null
+          title_ur: string | null
         }
         Insert: {
           branch_id?: string | null
+          brand?: string | null
+          brand_en?: string | null
+          brand_roman?: string | null
+          brand_ur?: string | null
           created_at?: string
           description?: string | null
+          description_en?: string | null
+          description_roman?: string | null
+          description_ur?: string | null
           designation?: string | null
           id?: string
           is_open?: boolean
@@ -19368,11 +19463,21 @@ export type Database = {
           seats_filled?: number | null
           seats_total?: number | null
           title: string
+          title_en?: string | null
+          title_roman?: string | null
+          title_ur?: string | null
         }
         Update: {
           branch_id?: string | null
+          brand?: string | null
+          brand_en?: string | null
+          brand_roman?: string | null
+          brand_ur?: string | null
           created_at?: string
           description?: string | null
+          description_en?: string | null
+          description_roman?: string | null
+          description_ur?: string | null
           designation?: string | null
           id?: string
           is_open?: boolean
@@ -19380,6 +19485,9 @@ export type Database = {
           seats_filled?: number | null
           seats_total?: number | null
           title?: string
+          title_en?: string | null
+          title_roman?: string | null
+          title_ur?: string | null
         }
         Relationships: [
           {
@@ -24492,16 +24600,21 @@ export type Database = {
           collection_source: string
           created_at: string
           created_by: string | null
+          duplicate_clear_note: string | null
+          duplicate_cleared_at: string | null
+          duplicate_cleared_by: string | null
           entry_channel: string
           entry_date: string
           farmer_id: string
           fat_at: string | null
+          fat_override: boolean
           fat_by_profile_id: string | null
           fat_percentage: number | null
           flags: Json
           id: string
           lr: number | null
           lr_image_path: string | null
+          lr_override: boolean
           mca_profile_id: string | null
           notes: string | null
           possible_duplicate_of: string | null
@@ -24529,16 +24642,21 @@ export type Database = {
           collection_source?: string
           created_at?: string
           created_by?: string | null
+          duplicate_clear_note?: string | null
+          duplicate_cleared_at?: string | null
+          duplicate_cleared_by?: string | null
           entry_channel?: string
           entry_date?: string
           farmer_id: string
           fat_at?: string | null
+          fat_override?: boolean
           fat_by_profile_id?: string | null
           fat_percentage?: number | null
           flags?: Json
           id?: string
           lr?: number | null
           lr_image_path?: string | null
+          lr_override?: boolean
           mca_profile_id?: string | null
           notes?: string | null
           possible_duplicate_of?: string | null
@@ -24566,16 +24684,21 @@ export type Database = {
           collection_source?: string
           created_at?: string
           created_by?: string | null
+          duplicate_clear_note?: string | null
+          duplicate_cleared_at?: string | null
+          duplicate_cleared_by?: string | null
           entry_channel?: string
           entry_date?: string
           farmer_id?: string
           fat_at?: string | null
+          fat_override?: boolean
           fat_by_profile_id?: string | null
           fat_percentage?: number | null
           flags?: Json
           id?: string
           lr?: number | null
           lr_image_path?: string | null
+          lr_override?: boolean
           mca_profile_id?: string | null
           notes?: string | null
           possible_duplicate_of?: string | null
@@ -24788,6 +24911,7 @@ export type Database = {
       milk_payments: {
         Row: {
           amount: number
+          client_action_id: string | null
           created_at: string
           created_by: string | null
           farmer_id: string
@@ -24798,6 +24922,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          client_action_id?: string | null
           created_at?: string
           created_by?: string | null
           farmer_id: string
@@ -24808,6 +24933,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          client_action_id?: string | null
           created_at?: string
           created_by?: string | null
           farmer_id?: string
@@ -24977,6 +25103,7 @@ export type Database = {
           shift: string
           shortage_liters: number | null
           shortage_percentage: number | null
+          variance_kind: string | null
         }
         Insert: {
           branch_id?: string | null
@@ -24992,6 +25119,7 @@ export type Database = {
           route_name: string
           shift?: string
           shortage_liters?: number | null
+          variance_kind?: string | null
           shortage_percentage?: number | null
         }
         Update: {
@@ -25009,6 +25137,7 @@ export type Database = {
           shift?: string
           shortage_liters?: number | null
           shortage_percentage?: number | null
+          variance_kind?: string | null
         }
         Relationships: [
           {
@@ -26545,6 +26674,7 @@ export type Database = {
           staff_note: string | null
           status: string
           submitted_at: string
+          submitted_by: string | null
           verified_at: string | null
           verified_by: string | null
         }
@@ -26567,6 +26697,7 @@ export type Database = {
           staff_note?: string | null
           status?: string
           submitted_at?: string
+          submitted_by?: string | null
           verified_at?: string | null
           verified_by?: string | null
         }
@@ -26589,6 +26720,7 @@ export type Database = {
           staff_note?: string | null
           status?: string
           submitted_at?: string
+          submitted_by?: string | null
           verified_at?: string | null
           verified_by?: string | null
         }
@@ -34392,6 +34524,7 @@ export type Database = {
       staff_details: {
         Row: {
           address: string | null
+          application_id: string | null
           bank_account: string | null
           basic_salary: number | null
           blood_group: string | null
@@ -34409,11 +34542,13 @@ export type Database = {
           employment_type: string
           exit_date: string | null
           exit_reason: string | null
+          gender: string | null
           hire_date: string | null
           id: string
           is_active: boolean
           milk_chiller_name: string | null
           milk_route_name: string | null
+          offer_id: string | null
           phone: string | null
           photo_url: string | null
           position_key: string | null
@@ -34426,6 +34561,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          application_id?: string | null
           bank_account?: string | null
           basic_salary?: number | null
           blood_group?: string | null
@@ -34443,11 +34579,13 @@ export type Database = {
           employment_type?: string
           exit_date?: string | null
           exit_reason?: string | null
+          gender?: string | null
           hire_date?: string | null
           id?: string
           is_active?: boolean
           milk_chiller_name?: string | null
           milk_route_name?: string | null
+          offer_id?: string | null
           phone?: string | null
           photo_url?: string | null
           position_key?: string | null
@@ -34460,6 +34598,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          application_id?: string | null
           bank_account?: string | null
           basic_salary?: number | null
           blood_group?: string | null
@@ -34477,11 +34616,13 @@ export type Database = {
           employment_type?: string
           exit_date?: string | null
           exit_reason?: string | null
+          gender?: string | null
           hire_date?: string | null
           id?: string
           is_active?: boolean
           milk_chiller_name?: string | null
           milk_route_name?: string | null
+          offer_id?: string | null
           phone?: string | null
           photo_url?: string | null
           position_key?: string | null
@@ -45745,6 +45886,7 @@ export type Database = {
         Returns: {
           animals: number
           centre_litres: number
+          cost_basis: string
           cost_per_litre: number
           customer_name: string
           expense: number
@@ -45753,6 +45895,8 @@ export type Database = {
           full_name: string
           income: number
           litres: number
+          litres_centre: number
+          litres_home: number
           milking: number
           profit: number
           village: string
@@ -47416,6 +47560,7 @@ export type Database = {
         | "agronomist"
         | "machinery"
         | "machinery_vendor"
+        | "call_center_agent"
       wallet_owner_type:
         | "farmer"
         | "dealer"
@@ -47690,6 +47835,7 @@ export const Constants = {
         "agronomist",
         "machinery",
         "machinery_vendor",
+        "call_center_agent",
       ],
       wallet_owner_type: [
         "farmer",

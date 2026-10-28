@@ -43,7 +43,7 @@ export function UrduAgreementTemplate({ data }: { data: AgreementData }) {
       <div className="mb-5 rounded border-r-4 border-blue-700 bg-gray-50 p-4">
         <p className="mb-1 font-bold">مابین:</p>
         <p>
-          <strong>Al Rana Traders</strong> ("<strong>کمپنی</strong>") اور جس کا نمائندہ <strong>{data.companyRepName ?? "-"}</strong> ({data.companyRepTitle ?? "-"}) ہے۔
+          <strong>AgriBridge</strong> ("<strong>کمپنی</strong>") اور جس کا نمائندہ <strong>{data.companyRepName ?? "-"}</strong> ({data.companyRepTitle ?? "-"}) ہے۔
         </p>
       </div>
 
@@ -105,7 +105,7 @@ export function UrduAgreementTemplate({ data }: { data: AgreementData }) {
       <div className="mt-8 border-t-2 border-dashed border-gray-300 pt-5">
         <div className="mb-8 flex flex-wrap justify-between gap-6">
           <div className="w-[45%]">
-            <p className="mb-1 font-bold">دستخطِ: Al Rana Traders (کمپنی)</p>
+            <p className="mb-1 font-bold">دستخطِ: AgriBridge (کمپنی)</p>
             <p>نام: {data.companyRepName ?? "-"}</p>
             <p>عنوان: {data.companyRepTitle ?? "-"}</p>
             <div className="relative mt-2 h-24 rounded border border-gray-300 bg-gray-50">

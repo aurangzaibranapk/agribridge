@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
 import { mapCreditPosition, type CreditBlockInfo, type CreditPosition } from "./credit-position";
+import { activeExemption, type BranchExemption } from "./exemption";
 import { DEFAULT_RECOVERY_SETTINGS, blockMessage, computeBranchAging, isCreditBlocked, recoveryPolicyActive, pkDate, type BranchCreditTxn, type RecoverySettings } from "./aging";
 
 export async function getRecoverySettings(): Promise<RecoverySettings> {
@@ -141,6 +142,29 @@ export async function checkOverdueBranchCreditBlock(input: {
   if (!isCreditBlocked(aging, settings)) return null;
   const overdue = aging.bucket30plus || aging.balance;
   const msg = blockMessage(name, overdue, aging.oldestDays ?? 0, settings.due_days);
+
+  // Owner/Admin ki di hui waqti chhoot (697): chalti ho to rok nahi, har istemal darj.
+  const { data: exRows, error: exErr } = await service
+    .from("branch_credit_exemptions")
+    .select("id, branch_id, reason, valid_from, valid_until, approved_by, revoked_at")
+    .eq("branch_id", input.branchId)
+    .is("revoked_at", null);
+  const ex = exErr ? null : activeExemption((exRows ?? []) as BranchExemption[]);
+  if (ex) {
+    const { error: exLogErr } = await service.from("credit_block_overrides").insert({
+      customer_id: null,
+      branch_id: input.branchId,
+      context: input.context + ":exemption",
+      amount: Number(input.orderAmount),
+      overdue_amount: overdue,
+      oldest_days: aging.oldestDays,
+      reason: `Chhoot ${ex.id} (${ex.valid_until} tak): ${ex.reason}`,
+      overridden_by: ex.approved_by,
+      overridden_role: "exemption",
+    });
+    if (exLogErr) return "Chhoot darj nahi ho saki, is liye udhaar rok diya gaya: " + exLogErr.message;
+    return null;
+  }
 
   const reason = (input.overrideReason ?? "").trim();
   if (!reason) return msg;

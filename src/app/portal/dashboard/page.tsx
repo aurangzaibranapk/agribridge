@@ -270,7 +270,7 @@ export default async function FarmerDashboardPage() {
                       {a.amount ? ` · ${rs(a.amount)}` : ""}
                     </p>
                     {a.kind === "khata_udhaar" ? (
-                      <p className="truncate text-xs text-surface-500 dark:text-slate-400">Al Rana Traders{Number(a.detail) > 1 ? ` · ${a.detail} bill` : ""}</p>
+                      <p className="truncate text-xs text-surface-500 dark:text-slate-400">AgriBridge{Number(a.detail) > 1 ? ` · ${a.detail} bill` : ""}</p>
                     ) : a.detail ? (
                       <p className="truncate text-xs text-surface-500 dark:text-slate-400">{a.detail}</p>
                     ) : null}

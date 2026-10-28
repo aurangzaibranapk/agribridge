@@ -20,6 +20,9 @@ assert.equal(g.isSelfApproval(null, "u1"), false);
 assert.equal(g.stockCountPostCheck({ status: "counting", started_by: "a" }, "b").ok, false);
 assert.equal(g.stockCountPostCheck({ status: "posted", started_by: "a" }, "b").ok, false);
 assert.equal(g.stockCountPostCheck({ status: "verified", started_by: "a" }, "a").ok, false);
+assert.equal(g.stockCountPostCheck({ status: "verified", started_by: "a" }, "a", "manager").ok, false);
+assert.equal(g.stockCountPostCheck({ status: "verified", started_by: "a" }, "a", "admin").ok, true);
+assert.equal(g.stockCountPostCheck({ status: "verified", started_by: "a" }, "a", "owner").ok, true);
 assert.equal(g.stockCountPostCheck({ status: "verified", started_by: "a" }, "b").ok, true);
 
 // extra item: no immediate stock, diff carried to post
@@ -66,11 +69,15 @@ console.log("Approval guard tests passed.");
 assert.equal(g.purchaseApproveCheck({ review_status: "submitted" }, "warehouse", "b").ok, false);
 assert.equal(g.purchaseApproveCheck({ review_status: "submitted" }, "admin", "b").ok, true);
 assert.equal(g.purchaseApproveCheck({ review_status: "verified", verified_by: "m" }, "warehouse", "m").ok, false);
+assert.equal(g.purchaseApproveCheck({ review_status: "verified", verified_by: "m" }, "warehouse", "m", "admin").ok, true);
+assert.equal(g.purchaseApproveCheck({ review_status: "verified", verified_by: "m" }, "warehouse", "m", "manager").ok, false);
 assert.equal(g.purchaseApproveCheck({ review_status: "verified", verified_by: "m" }, "warehouse", "a").ok, true);
 assert.equal(g.purchaseApproveCheck({ review_status: "approved" }, "admin", "a").ok, false);
 assert.equal(g.purchaseApproveCheck({ review_status: "sent_back" }, "admin", "a").ok, false);
 // partial count poster
 assert.equal(g.partialCountPosterCheck(3, "x", "x").ok, false);
+assert.equal(g.partialCountPosterCheck(3, "x", "x", "admin").ok, true);
+assert.equal(g.partialCountPosterCheck(3, "x", "x", "manager").ok, false);
 assert.equal(g.partialCountPosterCheck(3, "x", "y").ok, true);
 assert.equal(g.partialCountPosterCheck(0, "x", "x").ok, true);
 // agri return finalize
@@ -78,13 +85,21 @@ assert.equal(g.canFinalizeAgriReturn("warehouse"), false);
 assert.equal(g.canFinalizeAgriReturn("manager"), false);
 assert.equal(g.canFinalizeAgriReturn("admin"), true);
 // pos return review
-assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "admin", "m").ok, false);
-assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "admin", "c").ok, false);
+assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "admin", "m").ok, true, "admin apni code wali entry bhi");
+assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "admin", "c").ok, true, "admin apni entry");
+assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "owner", "c").ok, true);
 assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "manager", "z").ok, false);
 assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m", admin_review_status: "approved" }, "admin", "z").ok, false);
 assert.equal(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "owner", "z").ok, true);
-assert.match(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "super_admin", "m").error, /manager code/);
-assert.match(g.posReturnReviewCheck({ created_by: "c", authorized_by: "m" }, "admin", "c").error, /khud ki/);
+assert.equal(g.mayDecideEntry("manager", "m", ["m"]), false);
+assert.equal(g.mayDecideEntry("sales_staff", "s", ["s"]), false);
+assert.equal(g.mayDecideEntry("manager", "m", ["other"]), true);
+assert.equal(g.mayDecideEntry("admin", "a", ["a"]), true);
+assert.equal(g.mayDecideEntry("owner", "o", ["o"]), true);
+assert.equal(g.mayDecideEntry("super_admin", "a", ["a"]), true);
+assert.equal(g.selfDecisionLabel("admin", "approve"), "Khud approve (Admin)");
+assert.equal(g.selfDecisionLabel("super_admin", "approve"), "Khud approve (Admin)");
+assert.equal(g.selfDecisionLabel("owner", "approve"), "Khud approve (Owner)");
 // wiring
 assert.match(read("src/actions/purchases.ts"), /purchaseApproveCheck\(/);
 assert.match(read("src/actions/stock-count.ts"), /partialCountPosterCheck\(/);

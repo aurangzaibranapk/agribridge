@@ -55,6 +55,7 @@ export const DEPARTMENTS: Department[] = [
       "/admin/products",
       "/admin/inventory",
       "/admin/reports/sales",
+      "/admin/reports/sales/analytics",
       ...REPORTS_BASIC,
     ],
   },
@@ -108,6 +109,7 @@ export const DEPARTMENTS: Department[] = [
       "/admin/brands",
       "/admin/companies",
       "/admin/reports/inventory",
+      "/admin/reports/supply-chain",
       ...REPORTS_BASIC,
     ],
   },
@@ -240,7 +242,16 @@ export const DEPARTMENTS: Department[] = [
       ...REPORTS_BASIC,
       "/admin/reports/sales",
       "/admin/reports/inventory",
+      "/admin/reports/supply-chain",
     ],
+  },
+  {
+    key: "call_center",
+    label: "Call Center",
+    role: "call_center_agent",
+    dashboard: "/admin/call-center",
+    summary: "Caller ka khata dekhein aur shikayat darj karein. Likhai nahi.",
+    suggestedPages: ["/admin/call-center", "/admin/call-center/complaints"],
   },
 ];
 
@@ -263,6 +274,7 @@ export function departmentByKey(key: string): Department | null {
  * banta hai ke system us ka kaam samajhta hi nahi.
  */
 export function homePageForRole(role: string): string {
+  if (role === "call_center_agent") return "/admin/call-center";
   if (UNRESTRICTED_ROLES.includes(role)) return "/admin/command-center";
 
   // Staff ka ghar ab "Mera Kaam" hai -- department cards ka safha (131).

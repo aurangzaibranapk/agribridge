@@ -1,0 +1,33 @@
+{
+  "name": "agribridge-mobile",
+  "version": "0.6.1",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "export:android": "expo export --platform android --output-dir dist",
+    "prebuild:android": "expo prebuild --platform android --no-install"
+  },
+  "dependencies": {
+    "expo": "~52.0.47",
+    "expo-asset": "~11.0.5",
+    "expo-av": "~15.0.2",
+    "expo-constants": "~17.0.8",
+    "expo-crypto": "~14.0.2",
+    "expo-file-system": "~18.0.12",
+    "expo-image-picker": "~16.0.6",
+    "expo-local-authentication": "~15.0.2",
+    "expo-location": "~18.0.10",
+    "expo-secure-store": "~14.0.1",
+    "expo-status-bar": "~2.0.1",
+    "react": "18.3.1",
+    "react-native": "0.76.9",
+    "react-native-svg": "^15.8.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@types/react": "~18.3.12",
+    "typescript": "~5.5.4"
+  }
+}

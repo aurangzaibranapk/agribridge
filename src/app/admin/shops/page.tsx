@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { ShopsListClient } from "./shops-list-client";
@@ -91,6 +92,11 @@ export default async function ShopsPage() {
       <PageHeader
         title={t("at_shops", lang)}
         description="Har Branch ke andar business-type ke hisab se Shops manage karein (Karyana, Agri Inputs, Dairy, wagera)"
+        actions={
+          <Link href="/admin/shops/godam" className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
+            {t("dgod_open", lang)}
+          </Link>
+        }
       />
       <ShopsListClient shops={shops} branches={branches ?? []} />
     </div>

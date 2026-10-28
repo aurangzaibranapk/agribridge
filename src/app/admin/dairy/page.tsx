@@ -46,7 +46,7 @@ export default async function AdminDairy({ searchParams }: { searchParams: Recor
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <Kpi tone="sky" label={L("ad_k_farmers")} value={String(rows.length)} sub={L("ad_k_farmers_sub")} />
         <Kpi tone="green" label={L("ad_k_animals")} value={String(g.animals)} sub={`${g.milking} ${L("ad_milking")}`} />
-        <Kpi tone="teal" label={L("dy2_k_milk")} value={fmtL(g.litres)} sub={L("ad_home_record")} />
+        <Kpi tone="teal" label={L("dy2_k_milk")} value={fmtL(g.litres)} sub={`${L("ad_home_record")} · ${L("dy2_centre")} ${fmtL(g.centre_litres)}`} />
         <Kpi tone="rose" label={L("dy2_expense")} value={rs(g.expense)} sub={L("ad_all")} />
         <Kpi tone="amber" label={L("dy2_income")} value={rs(g.income)} sub={L("dy2_k_income_sub")} />
         <Kpi tone="violet" label={L("dy2_k_profit")} value={`${g.profit < 0 ? "-" : ""}${rs(Math.abs(g.profit))}`} sub={`${g.losses} ${L("ad_losses")}`} />
@@ -73,15 +73,15 @@ export default async function AdminDairy({ searchParams }: { searchParams: Recor
                 <tr key={r.farmer_id} className="border-b border-surface-100 text-surface-700 dark:border-surface-800 dark:text-slate-200">
                   <td className="py-2.5"><span className="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 font-mono text-[11px] text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">{code(r)}</span></td>
                   <td className="font-semibold text-surface-900 dark:text-white">{r.full_name}{r.customer_name ? ` (${r.customer_name})` : ""}</td>
-                  <td>{r.village ?? "—"}</td><td className="text-end">{r.animals}</td><td className="text-end">{Math.round(r.litres).toLocaleString("en-IN")}</td>
+                  <td>{r.village ?? "—"}</td><td className="text-end">{r.animals}</td><td className="text-end">{Math.round(r.litres).toLocaleString("en-IN")}{r.centre_litres > 0 ? <div className="text-[10px] font-normal text-surface-500 dark:text-slate-400">{L("dy2_centre")} {Math.round(r.centre_litres).toLocaleString("en-IN")}</div> : null}</td>
                   <td className="text-end">{rs(r.expense)}</td><td className="text-end">{rs(r.income)}</td><td className="text-end"><Money v={r.profit} /></td>
-                  <td className="text-end">{r.cost_per_litre === null ? "—" : `Rs ${Math.round(r.cost_per_litre)}`}</td>
+                  <td className="text-end">{r.cost_per_litre === null ? "—" : `Rs ${Math.round(r.cost_per_litre)}`}{r.cost_basis ? <div className="text-[10px] font-normal text-surface-500 dark:text-slate-400">{L(r.cost_basis === "centre" ? "dy2_basis_centre" : "dy2_basis_home")}</div> : null}</td>
                   <td className="text-end"><Link href={`/admin/dairy/${r.farmer_id}${qs({})}`} className="rounded-lg border border-surface-200 px-2.5 py-1 text-xs font-semibold dark:border-surface-700">{L("ad_open")} →</Link></td>
                 </tr>
               ))}
               <tr className="bg-surface-50 font-bold text-surface-900 dark:bg-surface-800/60 dark:text-white">
                 <td className="py-2.5" colSpan={3}>{L("ad_grand")}</td><td className="text-end">{g.animals}</td><td className="text-end">{Math.round(g.litres).toLocaleString("en-IN")}</td>
-                <td className="text-end">{rs(g.expense)}</td><td className="text-end">{rs(g.income)}</td><td className="text-end"><Money v={g.profit} /></td><td className="text-end">{g.cost_per_litre === null ? "—" : `Rs ${Math.round(g.cost_per_litre)}`}<div className="text-[10px] font-normal text-surface-500 dark:text-slate-400">{g.milk_farmers} {L("ad_cpl_basis")}{g.avg_cost_per_litre === null ? "" : ` · ${L("ad_cpl_avg")} Rs ${Math.round(g.avg_cost_per_litre)}`}</div></td><td />
+                <td className="text-end">{rs(g.expense)}</td><td className="text-end">{rs(g.income)}</td><td className="text-end"><Money v={g.profit} /></td><td className="text-end">{g.cost_per_litre === null ? "—" : `Rs ${Math.round(g.cost_per_litre)}`}<div className="text-[10px] font-normal text-surface-500 dark:text-slate-400">{g.milk_farmers} {L("ad_cpl_basis")}{g.cost_basis ? ` · ${L(g.cost_basis === "centre" ? "dy2_basis_centre" : g.cost_basis === "home" ? "dy2_basis_home" : "dy2_basis_mixed")}` : ""}{g.avg_cost_per_litre === null ? "" : ` · ${L("ad_cpl_avg")} Rs ${Math.round(g.avg_cost_per_litre)}`}</div></td><td />
               </tr>
             </tbody>
           </ResponsiveTable>

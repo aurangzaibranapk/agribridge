@@ -8,9 +8,11 @@ import { postJournal } from "@/lib/ledger/post";
 import { grainPayableJournalLines } from "@/lib/grain/payable-journal";
 import { createBatch } from "@/lib/inventory/batch-ledger";
 import { createServiceClient } from "@/lib/supabase/service";
+import { reverseCashBookById } from "@/lib/finance/cash-book";
 import { notifyRoles } from "@/lib/notifications";
 import { sendDeptMail, mailWrapper } from "@/lib/mailer";
 import { requireGrainApprover } from "@/lib/grain/approval-guard";
+import { makerCheckerBlock } from "@/lib/hr/owner-guard";
 import { grainPayloadFromForm, formDataFromGrainPayload, GRAIN_PENDING_EDITABLE, type GrainPendingPayload } from "@/lib/grain/pending-payload";
 
 export interface ActionState {
@@ -444,7 +446,7 @@ async function postGrainEntry(formData: FormData, opts: GrainPostOptions): Promi
       entry_id: entry.id,
       created_by: user?.id ?? null,
     });
-    const { data: opExpRow } = await supabase
+    const { data: opExpRow, error: opErr } = await serviceClient
       .from("finance_transactions")
       .insert({
         account_id: exp.account_id,
@@ -457,20 +459,24 @@ async function postGrainEntry(formData: FormData, opts: GrainPostOptions): Promi
       })
       .select("id")
       .single();
-
-    if (opExpRow?.id) {
-      await postCashOut({
-        accountId: exp.account_id,
-        amount: Number(exp.amount),
-        description: `${exp.description || exp.category} (Grain Operations)`,
-        againstAccount: ACC.grainPurchase,
-        ctx: {
-          createdBy: user?.id ?? null,
-          entryDate,
-          backdateReason: backdateReason("Grain entry ka kharcha"),
-          claims: [{ table: "finance_transactions", rowId: opExpRow.id }],
-        },
-      });
+    if (opErr || !opExpRow?.id) {
+      return { error: `Cash Book mein grain kharcha nahi gaya: ${opErr?.message ?? "jawab nahi"}`, entryId: entry.id };
+    }
+    const opPosted = await postCashOut({
+      accountId: exp.account_id,
+      amount: Number(exp.amount),
+      description: `${exp.description || exp.category} (Grain Operations)`,
+      againstAccount: ACC.grainPurchase,
+      ctx: {
+        createdBy: user?.id ?? null,
+        entryDate,
+        backdateReason: backdateReason("Grain entry ka kharcha"),
+        claims: [{ table: "finance_transactions", rowId: opExpRow.id }],
+      },
+    });
+    if (failed(opPosted)) {
+      await reverseCashBookById(opExpRow.id, "Grain operations ledger nahi gaya");
+      return { error: `Grain kharcha kitab mein nahi gaya: ${opPosted.error}`, entryId: entry.id };
     }
     // Balance yahan se NAHI hilaya jata. finance_transactions mein qatar
     // daalte hi trigger khud hila deta hai (023, aur 127 se ab mitane aur
@@ -733,15 +739,20 @@ export async function editGrainPayment(_prev: ActionState, formData: FormData): 
     })
     .eq("id", paymentId);
 
-  await supabase.from("finance_transactions").insert({
-    account_id: newAccountId,
-    transaction_type: "expense",
-    category: "Grain Procurement Payment (Edited)",
-    amount: newAmount - Number(payment.amount),
-    transaction_date: aajKaKhana(),
-    notes: `Payment edit hui: purana Rs ${payment.amount} -> naya Rs ${newAmount}`,
-    created_by: user?.id ?? null,
-  });
+  const farq = Math.round((newAmount - Number(payment.amount)) * 100) / 100;
+  if (farq !== 0) {
+    const serviceClient = createServiceClient();
+    const { error: cashErr } = await serviceClient.from("finance_transactions").insert({
+      account_id: newAccountId,
+      transaction_type: farq > 0 ? "expense" : "income",
+      category: "Grain Procurement Payment (Edited)",
+      amount: Math.abs(farq),
+      transaction_date: aajKaKhana(),
+      notes: `Payment edit hui: purana Rs ${payment.amount} -> naya Rs ${newAmount}`,
+      created_by: user?.id ?? null,
+    });
+    if (cashErr) return { error: `Payment update ho gayi magar Cash Book mein farq nahi gaya: ${cashErr.message}` };
+  }
 
   revalidatePath("/admin/grain-procurement");
   revalidatePath("/admin/finance");
@@ -1006,10 +1017,6 @@ export async function approveGrainPendingEntry(_prev: ActionState, formData: For
   const pendingId = String(formData.get("pending_id") ?? "").trim();
   if (!pendingId) return { error: "Pending entry nahi mili." };
   const service = createServiceClient() as any;
-  // Grain approver guard pehle hi role ko Owner / Super Admin / Admin tak
-  // mehdood karta hai. In unrestricted roles ko apni banayi entry bhi
-  // approve karne dein; self-approval ki rok aam staff ke liye hai, jo is
-  // action tak aa hi nahi sakta.
   const now = new Date().toISOString();
   const staleBefore = new Date(Date.now() - GRAIN_APPROVAL_STALE_MS).toISOString();
 
@@ -1022,6 +1029,10 @@ export async function approveGrainPendingEntry(_prev: ActionState, formData: For
     .select("id, payload, receipt_photo_url, created_by")
     .maybeSingle();
   if (claimError) return { error: claimError.message };
+  if (claimed && makerCheckerBlock(guard.userId, claimed.created_by, guard.role)) {
+    await service.from("grain_pending_entries").update({ status: "pending", approval_claimed_at: null, approval_claimed_by: null }).eq("id", pendingId);
+    return { error: "Apni entry khud manzoor nahi kar sakte." };
+  }
 
   if (!claimed) {
     const { data: current } = await service.from("grain_pending_entries").select("status, approved_entry_id").eq("id", pendingId).maybeSingle();
@@ -1081,6 +1092,8 @@ export async function rejectGrainPendingEntry(_prev: ActionState, formData: Form
   if (!pendingId) return { error: "Pending entry nahi mili." };
   if (reason.length < 3) return { error: "Reject ki wajah likhein." };
   const service = createServiceClient() as any;
+  const { data: pendingRow } = await service.from("grain_pending_entries").select("created_by").eq("id", pendingId).maybeSingle();
+  if (makerCheckerBlock(guard.userId, pendingRow?.created_by, guard.role)) return { error: "Apni entry khud manzoor nahi kar sakte." };
   const { data, error } = await service
     .from("grain_pending_entries")
     .update({ status: "rejected", reject_reason: reason, reviewed_by: guard.userId, reviewed_at: new Date().toISOString() })

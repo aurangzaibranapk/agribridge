@@ -1,10 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { BINA_QISM } from "@/lib/pos/constants";
+import { pickPosCounter, sortPosCounters } from "@/lib/pos/default-counter";
 import { redirect } from "next/navigation";
 import { PosClient } from "@/components/pos/pos-client";
 import { CounterShiftPicker } from "@/components/pos/counter-shift-picker";
 import { ShiftBar } from "@/components/pos/shift-bar";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { chunkIds, linkedGodamStock } from "@/lib/pos/godam-on-card";
 import { loadPosPermissions } from "@/lib/pos/permissions";
 import { t } from "@/lib/i18n/translations";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
@@ -69,11 +71,11 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     const { data: myCounterRows } = unrestricted
       ? await supabase
           .from("pos_counters")
-          .select("id, name, branch_id, shop_id, is_active, branches(name), shops(name)")
+          .select("id, name, branch_id, shop_id, is_active, branches(name), shops(name, code)")
           .eq("is_active", true)
       : await supabase
           .from("pos_counter_staff")
-          .select("counter_id, pos_counters!inner(id, name, branch_id, shop_id, is_active, branches(name), shops(name))")
+          .select("counter_id, pos_counters!inner(id, name, branch_id, shop_id, is_active, branches(name), shops(name, code))")
           .eq("profile_id", user.id)
           .eq("is_active", true)
           .eq("pos_counters.is_active", true);
@@ -81,14 +83,18 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     const myCounters = ((myCounterRows ?? []) as any[])
       .map((r) => (unrestricted ? r : Array.isArray(r.pos_counters) ? r.pos_counters[0] : r.pos_counters))
       .filter(Boolean)
-      .map((c: any) => ({
-        id: c.id as string,
-        name: c.name as string,
-        branchId: c.branch_id as string,
-        shopId: c.shop_id as string,
-        branchName: (Array.isArray(c.branches) ? c.branches[0]?.name : c.branches?.name) ?? "—",
-        shopName: (Array.isArray(c.shops) ? c.shops[0]?.name : c.shops?.name) ?? "—",
-      }));
+      .map((c: any) => {
+        const shop = Array.isArray(c.shops) ? c.shops[0] : c.shops;
+        return {
+          id: c.id as string,
+          name: c.name as string,
+          branchId: c.branch_id as string,
+          shopId: c.shop_id as string,
+          branchName: (Array.isArray(c.branches) ? c.branches[0]?.name : c.branches?.name) ?? "—",
+          shopName: (shop?.name as string | undefined) ?? "—",
+          shopCode: (shop?.code as string | null | undefined) ?? null,
+        };
+      });
 
     if (myCounters.length > 0) {
       // Ek staff ab apne kai counters par ek sath khula shift rakh
@@ -99,8 +105,13 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         .from("pos_shifts")
         .select("id, shift_number, counter_id, opened_at, opening_cash")
         .eq("staff_id", user.id)
-        .eq("status", "open");
-      const openShifts = openShiftRows ?? [];
+        .eq("status", "open")
+        .order("opened_at", { ascending: false });
+      // Naya khula shift pehle. Purana query bina order ke tha, is liye
+      // jo row pehle aa jati wahi POS ban jati thi.
+      const openShifts = [...(openShiftRows ?? [])].sort((a, b) =>
+        String(b.opened_at).localeCompare(String(a.opened_at)),
+      );
 
       // Pichli band hui shift ka cash abhi Manager/Finance ko bheja
       // nahi gaya -- malik ka kaam #3 (8 September). "Cash bheja gaya
@@ -190,15 +201,24 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         }
       }
 
-      // ?counter=<id> se banda khud chunta hai kaunsa counter dekhna
-      // hai (switcher se aya link) -- warna jo pehla khula shift mile.
+      // ?counter= switcher ki marzi hai. Warna staff ki assigned dukaan,
+      // aur Owner/Admin ke liye Kisaan Karyana Mahabali. Doosri dukaan
+      // ka khula shift (jaise Dukan par pada SHIFT) default nahi cheenta.
       const requestedCounterId =
         sp.counter && myCounters.some((c) => c.id === sp.counter) ? sp.counter : null;
-      const targetCounterId = requestedCounterId ?? openShifts[0]?.counter_id ?? null;
+      const pick = pickPosCounter({
+        counters: myCounters,
+        openShiftCounterIds: openShifts.map((s) => s.counter_id),
+        requestedCounterId,
+        assignedShopId: (profile?.shop_id as string | null) ?? null,
+        unrestricted,
+      });
+      const sortedCounters = sortPosCounters(myCounters, pick.preferredShopId);
+      const targetCounterId = pick.counterId;
       const openShift = targetCounterId ? openShifts.find((s) => s.counter_id === targetCounterId) : undefined;
-      const active = openShift ? myCounters.find((c) => c.id === openShift.counter_id) : undefined;
+      const active = openShift ? sortedCounters.find((c) => c.id === openShift.counter_id) : undefined;
 
-      otherCounters = myCounters
+      otherCounters = sortedCounters
         .filter((c) => c.id !== active?.id)
         .map((c) => ({
           id: c.id,
@@ -209,14 +229,29 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
 
       if (!active) {
         // Requested counter par abhi shift khula nahi -- seedha usi
-        // counter ka "Shift Open" form (switcher se poori fehrist
-        // dobara dikhane ki zaroorat nahi). Koi counter request nahi
-        // hua aur koi shift kahin khula bhi nahi to poori fehrist.
+        // counter ka "Shift Open" form. Default dukaan (Karyana, ya
+        // staff ki shop) bhi usi form par khulti hai, poori fehrist
+        // "Doosri shop" par rehti hai.
         const pickerCounters = requestedCounterId
-          ? myCounters.filter((c) => c.id === requestedCounterId)
-          : myCounters;
-        const backHref = openShifts[0] ? `/admin/pos?counter=${openShifts[0].counter_id}` : "/admin/my-work";
-        return <CounterShiftPicker counters={pickerCounters} pendingHandover={pendingHandover} backHref={backHref} canSendCash={canSendCash} />;
+          ? sortedCounters.filter((c) => c.id === requestedCounterId)
+          : sortedCounters;
+        const initialCounterId =
+          !requestedCounterId &&
+          pick.counterId &&
+          (pick.reason === "karyana-default" || pick.reason === "assigned-shop")
+            ? pick.counterId
+            : null;
+        const elsewhere = openShifts.find((s) => s.counter_id !== pick.counterId);
+        const backHref = elsewhere ? `/admin/pos?counter=${elsewhere.counter_id}` : "/admin/my-work";
+        return (
+          <CounterShiftPicker
+            counters={pickerCounters}
+            pendingHandover={pendingHandover}
+            backHref={backHref}
+            canSendCash={canSendCash}
+            initialCounterId={initialCounterId}
+          />
+        );
       }
 
       const { data: counterRow } = await supabase.from("pos_counters").select("warehouse_id").eq("id", active.id).maybeSingle();
@@ -240,6 +275,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
       branch = { id: profile.branch_id, name: branchRow?.name ?? "Branch" };
 
       if (profile.shop_id) {
+        shopId = profile.shop_id;
         const { data: shopRow } = await supabase.from("shops").select("name").eq("id", profile.shop_id).maybeSingle();
         shopName = shopRow?.name ?? null;
       }
@@ -288,7 +324,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     const [{ data: inv }, { data: cust }] = await Promise.all([
       supabase
         .from("dealer_inventory")
-        .select("id, product_id, stock_quantity, selling_price, products(name, pack_size, barcode, internal_barcode, image_url, unit_code, category_id, mrp_price, purchase_price, expiry_date)")
+        .select("id, product_id, stock_quantity, selling_price, products(name, pack_size, barcode, internal_barcode, image_url, unit_code, category_id, mrp_price, purchase_price, expiry_date, min_stock_threshold)")
         .eq("dealer_id", dealer.id)
         .gt("stock_quantity", 0),
       supabase
@@ -305,7 +341,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     const { data: invRows } = warehouseId
       ? await supabase
           .from("inventory")
-          .select("product_id, quantity_on_hand, batch_id, products(name, pack_size, units_per_pack, barcode, internal_barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending, mrp_price, purchase_price, expiry_date)")
+          .select("product_id, quantity_on_hand, batch_id, products(name, pack_size, units_per_pack, barcode, internal_barcode, image_url, unit_code, category_id, selling_price, wholesale_price, sale_rate_pending, mrp_price, purchase_price, expiry_date, min_stock_threshold)")
           .eq("warehouse_id", warehouseId)
           // Khatam (0) stock bhi laate hain taake counter par grey nazar aaye
           // aur staff demand bana sake (10 October). Cart mein jane se rok
@@ -531,37 +567,62 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
   }
 
   // ---- Godam mein aur kitna para hai ----
-  // Dukan par khatam ho raha ho to agla sawal yehi hota hai. Jawab na
-  // mil sake to NULL rehta hai aur safha "—" likhta hai -- sifar likh
-  // dena "godam khali hai" ka jhoot hai.
-  const godamStock = new Map<string, number>();
-  let godamMaloom = false;
-  if (!dealer && branch && inventory.length) {
-    const { data: otherWh, error: whErr } = await supabase
-      .from("warehouses")
-      .select("id")
-      .eq("branch_id", branch.id);
-    const otherIds = (otherWh ?? []).map((w) => w.id).filter((id) => id !== warehouseId);
-    if (!whErr) {
-      if (otherIds.length === 0) {
-        godamMaloom = true; // dekh liya: koi doosra godam hai hi nahi
-      } else {
-        const { data: rows, error: invErr } = await supabase
-          .from("inventory")
-          .select("product_id, quantity_on_hand")
-          .in("warehouse_id", otherIds)
-          .in("product_id", inventory.map((i: any) => i.product_id));
-        if (!invErr) {
-          godamMaloom = true;
-          for (const r of rows ?? []) {
-            godamStock.set(r.product_id, (godamStock.get(r.product_id) ?? 0) + Number(r.quantity_on_hand ?? 0));
-          }
+  // Sirf us dukan se jude godam (shop_godams). Branch ka saara central
+  // godam, doosri dukan ka shelf, aur juda na hua godam yahan nahi aata.
+  // Link na ho, ya sawal fail ho, to NULL rehta hai aur card "—" likhta
+  // hai. Sifar sirf tab jab link ho aur maal na ho. Stock ka sawal
+  // fn_shop_linked_godam_stock se hai — client warehouse id nahi bhejta.
+  // Ek tukra bhi fail ho to poora godam "—" , aadha sifar nahi.
+  let godamByProduct: ReturnType<typeof linkedGodamStock> = null;
+  if (!dealer && shopId && inventory.length) {
+    const productIds = inventory.map((i: any) => i.product_id as string);
+    const { data: links, error: linkErr } = await (supabase as any)
+      .from("shop_godams")
+      .select("warehouse_id")
+      .eq("shop_id", shopId);
+    const linkedWarehouseIds = linkErr
+      ? []
+      : ((links ?? []) as { warehouse_id: string }[]).map((l) => l.warehouse_id);
+    if (!linkErr && linkedWarehouseIds.length > 0) {
+      const rows: {
+        product_id: string;
+        warehouse_id: string;
+        warehouse_name: string | null;
+        quantity_on_hand: number | string | null;
+      }[] = [];
+      let stockOk = true;
+      for (const ids of chunkIds(productIds, 400)) {
+        const { data, error } = await (supabase as any).rpc("fn_shop_linked_godam_stock", {
+          p_shop_id: shopId,
+          p_product_ids: ids,
+        });
+        if (error) {
+          stockOk = false;
+          break;
+        }
+        for (const r of (data ?? []) as any[]) {
+          rows.push({
+            product_id: r.product_id,
+            warehouse_id: r.warehouse_id,
+            warehouse_name: r.warehouse_name ?? null,
+            quantity_on_hand: r.qty,
+          });
         }
       }
+      godamByProduct = linkedGodamStock({
+        shopId,
+        linksOk: true,
+        linkedWarehouseIds,
+        stockOk,
+        productIds,
+        rows: stockOk ? rows : null,
+      });
     }
   }
   for (const it of inventory as any[]) {
-    it.warehouse_stock = godamMaloom ? godamStock.get(it.product_id) ?? 0 : null;
+    const g = godamByProduct?.get(it.product_id);
+    it.warehouse_stock = g ? g.total : null;
+    it.warehouse_lines = g ? g.lines : null;
   }
 
   // Lagat sirf us ke liye jise dekhne ki ijazat hai. Chhupana safhe par

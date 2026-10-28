@@ -3,7 +3,7 @@ const {TwaManifest, TwaGenerator, ConsoleLog} = require('/workspace/mobile-relea
   const m = new TwaManifest({
     packageId: 'pk.alranatraders.agribridge',
     host: 'alranatraders.pk',
-    name: 'AgriBridge — Al Rana Traders',
+    name: "AgriBridge — The farmer's bridge",
     launcherName: 'AgriBridge',
     display: 'standalone',
     orientation: 'portrait',

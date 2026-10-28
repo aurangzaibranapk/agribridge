@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { WalletStatementClient } from "./statement-client";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
+import { kisanWalletV2Enabled } from "@/lib/portal/kisan-wallet";
+import { AdminWalletGlass } from "@/components/glass/admin-wallet-glass";
 
 export const dynamic = "force-dynamic";
 
@@ -48,11 +50,24 @@ export default async function WalletStatementPage({ params }: { params: Promise<
     };
   });
 
+  const glass = kisanWalletV2Enabled() ? (
+    <AdminWalletGlass
+      lang={lang}
+      code={farmer.farmer_code ?? ""}
+      name={farmer.full_name ?? ""}
+      balance={Number(wallet.balance)}
+      recent={transactions.slice(-5).reverse().map((t) => ({ id: t.id, label: t.typeLabel, date: String(t.date ?? "").slice(0, 10), amount: t.amount, credit: t.direction === "credit" }))}
+    />
+  ) : null;
+
   return (
+    <>
+    {glass}
     <WalletStatementClient
       farmer={{ id: farmer.id, name: farmer.full_name ?? "", code: farmer.farmer_code ?? "", phone: farmer.phone_number }}
       currentBalance={Number(wallet.balance)}
       transactions={transactions.reverse()}
     />
+    </>
   );
 }

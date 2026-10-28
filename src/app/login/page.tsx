@@ -1,114 +1,104 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import localFont from "next/font/local";
 import { Suspense } from "react";
-import { LoginForm } from "@/app/login/login-form";
+import { LoginV5 } from "@/app/login/login-v5";
+import { LoginV6 } from "@/app/login/login-v6";
+import { LegacyLoginPage } from "@/app/login/legacy-page";
+import { tx, type V5Lang } from "@/app/login/v5-text";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
-import { LangProvider } from "@/lib/i18n/lang-context";
-import { t } from "@/lib/i18n/translations";
-import { resolveTenantFromRequest } from "@/lib/tenant/resolve-tenant";
+import { brandName, brandTagline } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "Login",
-  robots: {
-    index: false,
-    follow: false,
-    noarchive: true,
-    nocache: true,
-  },
+  robots: { index: false, follow: false, noarchive: true, nocache: true },
 };
 
-export default async function LoginPage() {
-  const lang = getLanguageFromCookies("ur");
-  const tenant = await resolveTenantFromRequest();
-  const brandName = tenant?.brandName || t("au_company", lang);
-  const features = [
-    ["Farmer Management", "One Farmer, One Profile", <FarmerMark key="farmer" />],
-    ["Retail & Inventory", "POS, stock aur purchasing", <CartMark key="cart" />],
-    ["Milk & Grain", "Collection se settlement tak", <CropMark key="crop" />],
-    ["Machinery & Finance", "Booking, khata aur payments", <GearMark key="gear" />],
-  ] as const;
+const v5 = localFont({ src: [{ path: "./fonts/inter-var.woff2", weight: "100 900", style: "normal" }], variable: "--font-v5", display: "swap" });
+const v5display = localFont({ src: [{ path: "./fonts/poppins-600.woff2", weight: "600", style: "normal" }], variable: "--font-v5display", display: "swap" });
+const urdu = localFont({ src: [{ path: "./fonts/noto-nastaliq-urdu.woff2", weight: "400 700", style: "normal" }], variable: "--font-urdu", display: "swap" });
 
-  return (
-    <LangProvider lang={lang}>
-      <main className="min-h-screen bg-[#f8f9f5] dark:bg-[#0B1426] lg:grid lg:h-screen lg:min-h-0 lg:grid-cols-[51%_49%] lg:overflow-hidden">
-        <section className="relative hidden min-h-screen overflow-hidden border-r border-[#dce6d9] bg-[#eef5e8] lg:flex lg:h-screen lg:min-h-0 lg:flex-col lg:justify-between lg:px-12 lg:py-6 xl:px-16 xl:py-7">
-          <div className="pointer-events-none absolute inset-0">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_5%,rgba(191,224,213,0.72),transparent_34%),radial-gradient(circle_at_68%_28%,rgba(255,248,208,0.86),transparent_36%),linear-gradient(180deg,#edf7ee_0%,#f6f6dc_52%,#dce9a7_100%)]" />
-            <div className="absolute inset-x-0 bottom-0 h-[45%] bg-[linear-gradient(180deg,rgba(84,128,48,0.02),rgba(49,105,42,0.16))]" />
-            <svg className="absolute inset-x-0 bottom-0 h-[44%] w-full opacity-80" viewBox="0 0 900 420" preserveAspectRatio="xMidYMax slice" fill="none">
-              <path d="M0 420V335c95-48 188-44 278-12 104 37 176-22 280-10 99 12 181 60 342 4v103H0Z" fill="#a9c86c" fillOpacity=".48" />
-              <path d="M0 420V372c116-52 211-7 318-28 118-24 191-72 326-31 84 26 158 27 256-1v108H0Z" fill="#6f9d4e" fillOpacity=".48" />
-              <g stroke="#4d813c" strokeWidth="5" strokeLinecap="round" opacity=".55">
-                <path d="M84 420V244"/><path d="M84 296c-30-4-50-25-54-58 31 4 50 24 54 58Z"/><path d="M84 335c32-5 50-25 54-59-31 4-50 24-54 59Z"/>
-                <path d="M784 420V224"/><path d="M784 283c-32-5-50-26-54-60 31 4 50 25 54 60Z"/><path d="M784 328c32-5 50-26 54-60-31 4-50 25 54 60Z"/>
-              </g>
-            </svg>
-          </div>
-
-          <div className="relative z-10">
-            <div className="flex items-center gap-4">
-              <BrandMark />
-              <div>
-                <p className="font-display text-xl font-bold text-[#123d2a]">{brandName}</p>
-                <p className="mt-0.5 text-[11px] font-bold uppercase tracking-[0.28em] text-[#4e7656]">{t("au_brand", lang)}</p>
-              </div>
-            </div>
-
-            <div className="mt-8 max-w-[650px] xl:mt-10">
-              <span className="inline-flex rounded-full border border-[#b9d4a8] bg-[#e9f2d5]/90 px-3 py-1.5 text-xs font-semibold text-[#245d39]">Intelligent Agriculture Business Platform</span>
-              <h1 className="mt-4 max-w-[620px] font-display text-4xl font-bold leading-[1.06] tracking-tight text-[#0d442e] xl:text-[3rem]">Pakistan&apos;s Intelligent Agriculture Business Platform</h1>
-              <p className="mt-3 max-w-xl text-base font-medium leading-6 text-[#215f40] xl:text-lg">Farmer, Retail, Milk, Grain, Machinery aur Finance — sab ek jagah.</p>
-
-              <div className="mt-5 grid max-w-[650px] grid-cols-2 gap-3">
-                {features.map(([title, body, icon]) => (
-                  <div key={title} className="flex min-h-[78px] items-center gap-4 rounded-2xl border border-white/80 bg-white/70 px-5 py-3 shadow-[0_12px_30px_-24px_rgba(21,75,43,0.5)] backdrop-blur-md">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center text-[#277344]">{icon}</span>
-                    <div><p className="text-sm font-bold text-[#153f2b]">{title}</p><p className="mt-1 text-xs leading-4 text-[#4d6957]">{body}</p></div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="relative z-10 grid grid-cols-3 divide-x divide-white/20 rounded-2xl border border-[#b8d59c] bg-[#1f5a31]/90 px-4 py-3 text-white shadow-[0_8px_30px_-14px_rgba(26,78,39,0.7)] backdrop-blur-md">
-            <TrustItem icon={<ShieldMark />} title="Secure & Verified" body="Your data is protected" />
-            <TrustItem icon={<BoltMark />} title="Fast Access" body="Quick & easy login" />
-            <TrustItem icon={<HeadsetMark />} title="Farmer Support" body="Always here to help" />
-          </div>
-        </section>
-
-        <section className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#fbfcf8] dark:bg-[#0B1426] px-4 py-5 sm:px-8 lg:h-screen lg:min-h-0 lg:px-10 lg:py-3">
-          <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#f0e6b5]/35 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-[#b8d8c2]/25 blur-3xl" />
-          <div className="relative w-full max-w-[470px]">
-              <div className="mb-5 flex items-center justify-between lg:hidden">
-              <div className="flex items-center gap-3"><BrandMark compact /><div><p className="font-display text-base font-semibold text-[#123321]">{brandName}</p><p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#5c795f]">{t("au_brand", lang)}</p></div></div>
-              <Link href="/" className="rounded-full border border-[#dfe5dc] bg-white px-3 py-2 text-xs font-semibold text-[#385442] shadow-sm">Website</Link>
-            </div>
-            <div className="mb-4 lg:mb-3"><p className="text-sm font-semibold text-[#2f6b45] dark:text-emerald-300">Welcome to {brandName}</p><h2 className="mt-1 font-display text-3xl font-semibold tracking-tight text-[#103b29] dark:text-white">Apna account kholain</h2><p className="mt-1.5 text-sm leading-5 text-[#66766b] dark:text-slate-400">Farmer, customer, staff aur vendor — apna sahi login raasta chunain.</p></div>
-            <div className="rounded-[28px] border border-[#e1e6de] bg-white/95 dark:border-[#22314F] dark:bg-[#111D35] p-5 shadow-[0_24px_70px_-30px_rgba(13,40,24,0.32)] sm:p-6 lg:p-5">
-              <Suspense fallback={null}><LoginForm tenantName={brandName} /></Suspense>
-              <div className="mt-4 border-t border-[#e9ece7] dark:border-[#22314F] pt-3"><div className="flex items-start gap-3 rounded-xl bg-[#f2f7f2] dark:bg-[#0B1426] px-3.5 py-2.5"><span className="mt-0.5 text-[#2f6b45]"><ShieldMark /></span><div><p className="text-xs font-semibold text-[#284a34]">Aapki maloomat mehfooz hai</p><p className="mt-0.5 text-[11px] leading-4 text-[#708076]">OTP, account aur business data secure access ke sath use hota hai.</p></div></div><Link href="/request-demo" className="mt-3 block text-center text-xs font-bold text-[#2f6b45] hover:underline">Apne business ke liye AgriBridge OS hasil karein</Link></div>
-            </div>
-            <div className="mt-3 grid grid-cols-3 divide-x divide-[#cddacb] rounded-2xl border border-[#cfe3b9] bg-white/90 dark:border-[#22314F] dark:bg-[#111D35] dark:text-slate-200 px-2 py-2.5 text-[#164a31] shadow-[0_8px_26px_-15px_rgba(55,109,53,0.7)] ring-1 ring-[#e5f0cf]">
-              <FooterItem href="/" icon={<GlobeMark />} label="Website par wapas" /><FooterItem icon={<LockMark />} label="Safe & Secure" /><FooterItem icon={<HeadsetMark />} label="24/7 Support" />
-            </div>
-          </div>
-        </section>
+/**
+ * Login v5 (malik ki manzoori, 20 Oct): mobile / User ID / email + password.
+ * OTP sirf naye signup, pehli dafa password aur password bhool gaye par.
+ * Login v6 (design1, 20 Oct 2026) ab default; LOGIN_UI=v5 -> v5 screen.
+ * Wapsi ka raasta: server .env mein LOGIN_V5=0 -> purana login (legacy-page.tsx).
+ */
+export default async function LoginPage({ searchParams }: { searchParams?: Record<string, string | string[] | undefined> }) {
+  if (process.env.LOGIN_V5 === "0") return <LegacyLoginPage />;
+  const rawOtp = Array.isArray(searchParams?.otp) ? searchParams?.otp[0] : searchParams?.otp;
+  // Dev-only visual fixture (screenshots). Production build strips it; no grant, no OTP send.
+  const otpPreview = process.env.NODE_ENV !== "production" && rawOtp && ["empty", "typing", "error", "verified"].includes(rawOtp) ? rawOtp : null;
+  const cookieLang = getLanguageFromCookies("rm");
+  const lang: V5Lang = cookieLang === "en" || cookieLang === "ur" ? cookieLang : "rm";
+  const rtl = lang === "ur";
+  const tr = (k: string) => tx(lang, k);
+  if (process.env.LOGIN_UI !== "v5" && !otpPreview) {
+    // Login v6: sliding card (hara panel) ne baayan info panel ki jagah le li.
+    return (
+      <main className={`${v5.variable} ${v5display.variable} ${urdu.variable} flex min-h-screen flex-col items-center justify-start bg-[radial-gradient(circle_at_20%_10%,#c8ecd6,transparent_45%),radial-gradient(circle_at_90%_95%,#cfdcf3,transparent_40%),linear-gradient(135deg,#eef7f1,#e2f2e8)] px-3.5 py-5 font-v5 text-[#0d1b2e] antialiased dark:bg-[#0a1324] dark:text-[#eef3f8] md:justify-center md:px-6 md:py-3`}>
+        <Suspense fallback={null}><LoginV6 initialLang={lang} /></Suspense>
       </main>
-    </LangProvider>
+    );
+  }
+  const trust: [string, string, string][] = [["shield", "t1a", "t1b"], ["users", "t2a", "t2b"], ["chat", "t3a", "t3b"]];
+  return (
+    <main className={`${v5.variable} ${v5display.variable} ${urdu.variable} min-h-screen bg-[#eef4f1] font-v5 text-[#0d1b2e] antialiased dark:bg-[#0a1324] dark:text-[#eef3f8] lg:grid lg:h-screen lg:min-h-0 lg:grid-cols-[47%_53%] lg:overflow-hidden`}>
+      <aside className="relative hidden overflow-hidden bg-[radial-gradient(120%_80%_at_0%_0%,#1d6b47_0%,transparent_55%),radial-gradient(90%_70%_at_100%_100%,#14396b_0%,transparent_60%),linear-gradient(160deg,#0f3d2a,#0c2340)] px-16 py-14 text-white lg:flex lg:flex-col lg:justify-between">
+        <Fields />
+        <div className="relative">
+          <Brand lang={lang} />
+          <div dir={rtl ? "rtl" : "ltr"} className={rtl ? "font-urdu" : ""}>
+            <h2 className={`mt-28 max-w-[560px] ${rtl ? "text-[40px] leading-[1.7]" : "font-v5display text-[46px] font-semibold leading-[1.12] tracking-[-0.02em]"}`}>{tr("tag")}</h2>
+            <p className={`mt-4 max-w-[470px] text-[17px] text-[#c4d8cd] ${rtl ? "leading-[2]" : "leading-relaxed"}`}>{tr("sub")}</p>
+          </div>
+        </div>
+        <ul dir={rtl ? "rtl" : "ltr"} className={`relative grid gap-3.5 ${rtl ? "font-urdu justify-items-start" : ""}`}>
+          {trust.map(([icon, a, b]) => (
+            <li key={a} className="flex w-[400px] items-center gap-3.5 rounded-[14px] border border-white/10 bg-white/[0.06] px-[18px] py-3.5 backdrop-blur-md">
+              <span className="flex h-10 w-10 flex-none items-center justify-center rounded-[11px] bg-[#f3d27a]/[0.14] text-[#f3d27a]"><TrustIcon n={icon} /></span>
+              <div><p className="text-[15px] font-semibold">{tr(a)}</p><p className="text-[13px] text-[#b6cabf]">{tr(b)}</p></div>
+            </li>
+          ))}
+        </ul>
+      </aside>
+      <section className="relative flex min-h-screen flex-col items-center overflow-x-hidden bg-[#eef4f1] px-5 py-7 dark:bg-[#0a1324] lg:min-h-0 lg:justify-center lg:overflow-y-auto lg:py-10">
+        <div aria-hidden="true" className="pointer-events-none absolute -left-16 -top-24 h-[380px] w-[380px] rounded-full bg-[#7fd6a6] opacity-55 blur-[80px] dark:opacity-20" />
+        <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 -right-10 h-[340px] w-[340px] rounded-full bg-[#9db4e6] opacity-55 blur-[80px] dark:opacity-20" />
+        <div className="relative z-10 mb-6 flex w-full max-w-[440px] items-center gap-3 lg:hidden"><Logo id="ablg-m" /><div dir={rtl ? "rtl" : "ltr"}><p className={`text-[19px] font-semibold ${rtl ? "font-urdu" : "font-v5display"}`}>{brandName(lang)}</p><p className={`text-[12px] text-[#5d6b7e] dark:text-[#93a3bd] ${rtl ? "font-urdu" : ""}`}>{brandTagline(lang)}</p></div></div>
+        <div className="relative z-10 w-full max-w-[440px]"><Suspense fallback={null}><LoginV5 initialLang={lang} preview={otpPreview} /></Suspense></div>
+      </section>
+    </main>
   );
 }
-function TrustItem({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) { return <div className="flex min-w-0 items-center gap-3 px-4"><span className="text-[#d7f47a]">{icon}</span><div className="min-w-0"><p className="truncate text-sm font-bold">{title}</p><p className="mt-0.5 truncate text-[11px] text-white/80">{body}</p></div></div>; }
-function FooterItem({ icon, label, href }: { icon: React.ReactNode; label: string; href?: string }) { const content = <><span className="text-[#23643e]">{icon}</span><span className="font-semibold">{label}</span></>; const cls = "flex min-w-0 items-center justify-center gap-2 px-2 text-center text-[11px] sm:text-xs"; return href ? <Link href={href} className={`${cls} hover:text-[#0d3d28]`}>{content}</Link> : <div className={cls}>{content}</div>; }
-function BrandMark({ compact = false }: { compact?: boolean }) { const size = compact ? "h-11 w-11" : "h-14 w-14"; return <div className={`flex ${size} shrink-0 items-center justify-center rounded-2xl border border-[#d4af37]/35 bg-[#123d2a] shadow-lg`}><svg viewBox="0 0 64 64" className="h-9 w-9" fill="none"><path d="M32 5 54 17v25L32 55 10 42V17L32 5Z" stroke="#e5c65b" strokeWidth="2"/><path d="M32 45V20" stroke="#e5c65b" strokeWidth="2" strokeLinecap="round"/><path d="M32 28c-8-1-11-6-11-12 7 1 11 5 11 12ZM32 35c8-1 11-6 11-12-7 1-11 5-11 12Z" fill="#e5c65b"/><path d="M32 45c-8-1-12-5-14-10 8-1 12 3 14 10ZM32 45c8-1 12-5 14-10-8-1-12 3-14 10Z" fill="#6ea36f"/></svg></div>; }
-const STROKE = { className: "h-[19px] w-[19px]", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.9, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
-function ShieldMark(){return <svg {...STROKE}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>}
-function BoltMark(){return <svg {...STROKE}><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg>}
-function HeadsetMark(){return <svg {...STROKE}><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14h3v5H5a1 1 0 0 1-1-1v-4Z"/><path d="M20 14h-3v5h2a1 1 0 0 0 1-1v-4Z"/></svg>}
-function GlobeMark(){return <svg {...STROKE}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 4 6 4 9s-1 6-4 9c-3-3-4-6-4-9s1-6 4-9Z"/></svg>}
-function LockMark(){return <svg {...STROKE}><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>}
-function FarmerMark(){return <svg {...STROKE} className="h-8 w-8"><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>}
-function CartMark(){return <svg {...STROKE} className="h-8 w-8"><path d="M3 4h2l2 11h10l3-7H7"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg>}
-function CropMark(){return <svg {...STROKE} className="h-8 w-8"><path d="M12 22V5M12 10c-4 0-6-2-7-5 4 0 6 2 7 5ZM12 15c4 0 6-2 7-5-4 0-6 2-7 5ZM12 20c-4 0-6-2-7-5 4 0 6 2 7 5Z"/></svg>}
-function GearMark(){return <svg {...STROKE} className="h-8 w-8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9A1.7 1.7 0 0 0 21 10h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>}
+
+function Brand({ lang }: { lang: V5Lang }) {
+  return <div className="flex items-center gap-3.5"><Logo /><div dir={lang === "ur" ? "rtl" : "ltr"}><p className={`text-[22px] font-semibold ${lang === "ur" ? "font-urdu" : "font-v5display tracking-[-0.01em]"}`}>{brandName(lang)}</p><p className={`text-[12.5px] text-[#a9cdb9] ${lang === "ur" ? "font-urdu" : ""}`}>{brandTagline(lang)}</p></div></div>;
+}
+function Logo({ id = "ablg" }: { id?: string }) {
+  return (
+    <svg width="44" height="44" viewBox="0 0 48 48" aria-hidden="true">
+      <defs><linearGradient id={id} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#1f7a4d" /><stop offset="1" stopColor="#0f3d2a" /></linearGradient></defs>
+      <rect width="48" height="48" rx="13" fill={`url(#${id})`} />
+      <path d="M24 36V17" stroke="#f3d27a" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M24 24c-6 0-9-3.5-9.5-8.5 6 .3 9.2 3.6 9.5 8.5zM24 30c6 0 9-3.5 9.5-8.5-6 .3-9.2 3.6-9.5 8.5z" fill="#f3d27a" />
+      <path d="M15 36h18" stroke="#9fd6b0" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+function Fields() {
+  return (
+    <svg className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%] w-full" viewBox="0 0 720 420" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <path d="M0 300C160 240 300 270 420 250S640 190 720 200V420H0Z" fill="#fff" opacity=".05" />
+      <path d="M0 340C140 300 280 330 400 310S620 270 720 280V420H0Z" fill="#fff" opacity=".07" />
+      <g stroke="#fff" strokeOpacity=".08" strokeWidth="1.5" fill="none">
+        {Array.from({ length: 13 }, (_, i) => -100 + i * 70).map((x) => <path key={x} d={`M${x} 420 Q${x + 60} 330 ${x + 160} 300`} />)}
+      </g>
+    </svg>
+  );
+}
+function TrustIcon({ n }: { n: string }) {
+  const d = n === "shield" ? "M12 3l7 3v5c0 4.6-3 8.4-7 10-4-1.6-7-5.4-7-10V6l7-3zM9 12l2 2 4-4"
+    : n === "users" ? "M9 11a3.2 3.2 0 1 0 0-6.4A3.2 3.2 0 0 0 9 11zM3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5M17 11.5a2.5 2.5 0 1 0 0-5M16 14.6c2.8.3 5 2.3 5 5.4"
+    : "M4 20l1.3-3.9A8 8 0 1 1 8 19l-4 1zM9 10h6M9 13h4";
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>;
+}

@@ -10,6 +10,7 @@ import { closeShift, getShiftSummary, shiftCashRecipients, shiftCashCarriers, ty
 import { sendCash, type ActionState as HandoverState } from "@/actions/cash-handover";
 import { bankAccountsForCollectionDeposit, submitCollectionDeposit, type ActionState as DepositState } from "@/actions/pos-collection";
 import { PaymentSlipUpload } from "@/components/ui/payment-slip-upload";
+import { CustodySlipLinks } from "@/components/pos/custody-slip-links";
 import type { ShiftCashSummary } from "@/lib/pos/shift-cash";
 
 const KHALI: ActionState = {};
@@ -86,8 +87,16 @@ export function ShiftCashHandoverForm({
   const [depositState, depositAction] = useFormState(submitCollectionDeposit, DEPOSIT_KHALI);
   const [slipUrl, setSlipUrl] = useState("");
   const [enteredAmount, setEnteredAmount] = useState(countedCash);
+  const [slipOpen, setSlipOpen] = useState(false);
   const remaining = Math.max(0, countedCash - enteredAmount);
   const allIds = shiftIds ?? [shiftId];
+  const handoverSlipId = handoverState.handoverId;
+
+  // Cash bhejne ke baad slip khud khule — chhota link modal ke neeche
+  // chhup jata tha, is liye POS close par slip nazar hi nahi aati thi.
+  useEffect(() => {
+    if (handoverState.success && handoverSlipId) setSlipOpen(true);
+  }, [handoverState.success, handoverSlipId]);
 
   useEffect(() => {
     shiftCashRecipients(branchId).then((r) => {
@@ -107,15 +116,29 @@ export function ShiftCashHandoverForm({
         <p className="flex items-start gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
           <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {handoverState.message}
         </p>
-        {handoverState.handoverId && (
-          <a
-            href={`/admin/cash-handover/slip/${handoverState.handoverId}?print=1`}
-            target="_blank"
-            rel="noopener noreferrer"
+        {handoverSlipId && (
+          <button
+            type="button"
+            onClick={() => setSlipOpen(true)}
             className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-white px-3 py-2 text-xs font-medium text-brand-700 hover:bg-brand-50 dark:border-brand-800 dark:bg-surface-900 dark:text-brand-300"
           >
-            <Receipt className="h-3.5 w-3.5" /> Cash Handover Slip (Digital)
-          </a>
+            <Receipt className="h-3.5 w-3.5" /> Cash Handover Slip kholen
+          </button>
+        )}
+        {slipOpen && handoverSlipId && createPortal(
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-3" role="dialog" aria-modal="true" aria-label="Cash Handover Slip">
+            <div className="flex h-[90vh] w-full max-w-sm flex-col overflow-hidden rounded-xl bg-white shadow-xl">
+              <div className="flex items-center justify-between gap-2 border-b p-3 text-sm font-semibold text-black">
+                <span>Cash Handover Slip</span>
+                <span className="flex items-center gap-2">
+                  <a href={`/admin/cash-handover/slip/${handoverSlipId}?print=1`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-brand-700 hover:underline">Poora safha</a>
+                  <button type="button" onClick={() => setSlipOpen(false)} aria-label="Close Cash Handover Slip"><X className="h-5 w-5" /></button>
+                </span>
+              </div>
+              <iframe title="Cash Handover Slip" src={`/admin/cash-handover/slip/${handoverSlipId}?embed=1&print=1`} className="min-h-0 flex-1 border-0 bg-white" />
+            </div>
+          </div>,
+          document.body,
         )}
       </div>
     );
@@ -168,7 +191,10 @@ export function ShiftCashHandoverForm({
           <form action={handoverAction} className="space-y-2 rounded-xl border border-surface-200 p-3 dark:border-surface-700">
             <input type="hidden" name="from_source" value="my_custody" />
             <input type="hidden" name="amount" value={enteredAmount} />
-            {/* Partial payment: sirf tab sab shifts settle karo jab poora bheja */}
+            {/* Slip header isi shift se banta hai — partial par bhi shift_id
+                record par rahe, magar pos_shifts tab hi settle hon jab poori
+                raqam bheji gayi ho (shift_ids khali = pending rehta hai). */}
+            <input type="hidden" name="shift_id" value={shiftId} />
             <input type="hidden" name="shift_ids" value={enteredAmount >= countedCash ? allIds.join(",") : ""} />
             <div>
               <p className="mb-1 text-xs font-medium text-surface-600 dark:text-surface-400">
@@ -191,6 +217,9 @@ export function ShiftCashHandoverForm({
             </div>
             <p className="text-xs font-medium text-surface-600 dark:text-surface-400">
               Kis ko bhejein?
+            </p>
+            <p className="text-[11px] text-surface-400">
+              Naam wala banda behtar hai. Shared Finance Team par bhejne se Manager ya Finance baad mein wasoli kar sakte hain.
             </p>
             <select
               name="to_profile_id"
@@ -492,9 +521,12 @@ export function ShiftBar({
 
   const router = useRouter();
   const [receiptOpen, setReceiptOpen] = useState(false);
+  // Counted cash > 0 ka matlab handover zaroori hai. Us waqt Daily Cash
+  // Slip upar se mat kholo — wo Cash Handover form aur slip dono dhak leti hai.
+  const cashHandoverDue = !!(state.success && state.countedCash != null && state.countedCash > 0);
   useEffect(() => {
-    if (state.success && state.shiftId) setReceiptOpen(true);
-  }, [state.success, state.shiftId]);
+    if (state.success && state.shiftId && !cashHandoverDue) setReceiptOpen(true);
+  }, [state.success, state.shiftId, cashHandoverDue]);
 
 
   const openedTime = new Date(openedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
@@ -580,8 +612,8 @@ export function ShiftBar({
 
       {pendingHandover && handoverOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-surface-900">
-            <div className="flex items-center justify-between border-b border-surface-100 px-5 py-4 dark:border-surface-800">
+          <div className="flex max-h-[90vh] w-full max-w-sm flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-surface-900">
+            <div className="flex shrink-0 items-center justify-between border-b border-surface-100 px-5 py-4 dark:border-surface-800">
               <p className="text-sm font-semibold text-surface-900 dark:text-white">Purani Shift ka Cash Bhejein</p>
               <button
                 onClick={() => setHandoverOpen(false)}
@@ -591,7 +623,7 @@ export function ShiftBar({
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="px-5 py-5">
+            <div className="min-h-0 overflow-y-auto px-5 py-5">
               {pendingHandover.shifts && pendingHandover.shifts.length > 1 && (
                 <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-800/50 dark:bg-amber-950/20">
                   <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-500">
@@ -626,6 +658,14 @@ export function ShiftBar({
                   Rs {Math.round(pendingHandover.pendingDepositAmount).toLocaleString()} ka deposit submit ho chuka hai — Finance ki tasdeeq ka intezar hai.
                 </p>
               )}
+              <a
+                href={`/admin/cash-custody/shift/${pendingHandover.shiftId}/slip?copy=both&print=1`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-3 flex w-full items-center justify-center rounded-lg border border-surface-200 px-3 py-2 text-xs font-medium text-surface-700"
+              >
+                Do slips — staff copy + jama copy
+              </a>
               <ShiftCashHandoverForm
                 shiftId={pendingHandover.shiftId}
                 shiftIds={pendingHandover.shiftIds}
@@ -649,8 +689,8 @@ export function ShiftBar({
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-surface-900">
-            <div className="flex items-center justify-between border-b border-surface-100 px-5 py-4 dark:border-surface-800">
+          <div className="flex max-h-[90vh] w-full max-w-sm flex-col overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-surface-900">
+            <div className="flex shrink-0 items-center justify-between border-b border-surface-100 px-5 py-4 dark:border-surface-800">
               <div>
                 <p className="text-sm font-semibold text-surface-900 dark:text-white">Shift Band Karein</p>
                 <p className="text-xs text-surface-500">
@@ -667,22 +707,36 @@ export function ShiftBar({
             </div>
 
             {state.success ? (
-              <div className="px-5 py-6">
+              <div className="min-h-0 overflow-y-auto px-5 py-6">
                 <div className="text-center">
                   <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/30">
                     <CheckCircle2 className="h-6 w-6 text-emerald-600" />
                   </div>
                   <p className="text-sm font-medium text-surface-900 dark:text-white">{state.message}</p>
                 </div>
+                {state.custodyPacketId && (state.countedCash ?? 0) > 0 && (
+                  <CustodySlipLinks packetId={state.custodyPacketId} />
+                )}
+                {cashHandoverDue && (
+                  <div className="mt-3">
+                    <p className="mb-2 text-xs text-surface-600 dark:text-surface-400">
+                      Cash bhejein — Cash Handover Slip isi screen par khul jayegi, print ke sath.
+                    </p>
+                    <ShiftCashHandoverForm shiftId={shiftId} branchId={branchId} shopId={shopId ?? null} countedCash={state.countedCash ?? 0} canSendCash={canSendCash} />
+                  </div>
+                )}
                 {state.shiftId && (
-                  <button type="button" onClick={() => setReceiptOpen(true)} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white">
+                  <button
+                    type="button"
+                    onClick={() => setReceiptOpen(true)}
+                    className={`mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold ${
+                      cashHandoverDue
+                        ? "border border-surface-200 bg-white text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:bg-surface-900 dark:text-surface-200"
+                        : "bg-brand-600 text-white"
+                    }`}
+                  >
                     <Printer className="h-4 w-4" /> Daily Cash Slip kholen
                   </button>
-                )}
-                {state.countedCash != null && state.countedCash > 0 && (
-                  <div className="mt-3">
-                    <ShiftCashHandoverForm shiftId={shiftId} branchId={branchId} shopId={shopId ?? null} countedCash={state.countedCash} canSendCash={canSendCash} />
-                  </div>
                 )}
                 {summary && state.countedCash != null && (
                   <ShiftCloseActions
@@ -697,7 +751,7 @@ export function ShiftBar({
                 <p className="mt-3 text-center text-xs text-surface-400">Band karein — safha refresh ho jayega.</p>
               </div>
             ) : (
-              <form action={action} className="space-y-4 px-5 py-5">
+              <form action={action} className="min-h-0 space-y-4 overflow-y-auto px-5 py-5">
                 <input type="hidden" name="shift_id" value={shiftId} />
 
                 {summaryError && !summary && (
