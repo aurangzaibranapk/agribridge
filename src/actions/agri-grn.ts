@@ -1,6 +1,13 @@
 "use server";
 import { grnPayable } from "@/lib/inventory/grn-payable";
+import {
+  planAgriInternalReceipt,
+  receiptJournalLines,
+  type DispatchCostSlice,
+  type InternalReceiptPlan,
+} from "@/lib/inventory/agri-internal-transfer";
 import { grnBatchDedupeKey, grnMovementDedupeKey } from "@/lib/purchases/procurement-guards";
+import { postJournal } from "@/lib/ledger/post";
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
@@ -134,6 +141,81 @@ async function chargeAndComplete(orderId: string, grnId: string, grnNumber: stri
   return null;
 }
 
+const EMPTY_RECEIPT: InternalReceiptPlan = { lines: [], stockValue: 0, cogsReversal: 0, fifoRecovered: 0 };
+
+/** Dispatch ne jin batches se lagat nikali, wahi yahan GRN ko milti hai. */
+async function loadDispatchCostSlices(dispatchId: string): Promise<{ slices: DispatchCostSlice[]; error: string | null }> {
+  const service = createServiceClient();
+  const { data: rows, error } = await (service as any)
+    .from("stock_batch_consumptions")
+    .select("product_id, taken, batch_id")
+    .eq("reference_type", "agri_dispatch")
+    .eq("reference_id", dispatchId);
+  if (error) return { slices: [], error: error.message };
+
+  const list = (rows ?? []) as { product_id: string | null; taken: number | null; batch_id: string | null }[];
+  const batchIds = [...new Set(list.map((row) => row.batch_id).filter((id): id is string => Boolean(id)))];
+  const costByBatch = new Map<string, number>();
+  if (batchIds.length > 0) {
+    const { data: batches, error: batchError } = await service.from("stock_batches").select("id, unit_cost").in("id", batchIds);
+    if (batchError) return { slices: [], error: batchError.message };
+    for (const batch of batches ?? []) costByBatch.set(batch.id, Number(batch.unit_cost ?? 0));
+  }
+
+  const byProduct = new Map<string, { taken: number; cost: number }>();
+  for (const row of list) {
+    if (!row.product_id) continue;
+    const taken = Number(row.taken ?? 0);
+    const cur = byProduct.get(row.product_id) ?? { taken: 0, cost: 0 };
+    cur.taken += taken;
+    cur.cost += taken * (row.batch_id ? (costByBatch.get(row.batch_id) ?? 0) : 0);
+    byProduct.set(row.product_id, cur);
+  }
+  return {
+    slices: [...byProduct.entries()].map(([productId, value]) => ({ productId, taken: value.taken, cost: value.cost })),
+    error: null,
+  };
+}
+
+async function dispatchCreditedStock(dispatchId: string): Promise<{ posted: boolean; error: string | null }> {
+  const service = createServiceClient();
+  const { data, error } = await service
+    .from("journal_entries")
+    .select("id")
+    .eq("source_module", "agri_dispatch")
+    .eq("source_id", dispatchId)
+    .eq("is_reversal", false)
+    .limit(1);
+  if (error) return { posted: false, error: error.message };
+  return { posted: (data ?? []).length > 0, error: null };
+}
+
+/** Journal na ban sake to stock aur GRN dono hata do — warna farq phir barh jata hai. */
+async function rollbackAgriGrn(orderId: string, grnId: string, batchKeys: string[]): Promise<string | null> {
+  const service = createServiceClient();
+  const { error: moveError } = await (service as any)
+    .from("stock_movements")
+    .delete()
+    .eq("reference_type", "agri_grn")
+    .eq("reference_id", orderId);
+  if (moveError) return moveError.message;
+
+  if (batchKeys.length > 0) {
+    const { data: batches, error: findError } = await (service as any).from("stock_batches").select("id").in("dedupe_key", batchKeys);
+    if (findError) return findError.message;
+    const ids = ((batches ?? []) as { id: string }[]).map((batch) => batch.id);
+    if (ids.length > 0) {
+      const { error: clearError } = await service.from("inventory").update({ batch_id: null }).in("batch_id", ids);
+      if (clearError) return clearError.message;
+      const { error: batchError } = await service.from("stock_batches").delete().in("id", ids);
+      if (batchError) return batchError.message;
+    }
+  }
+
+  const { error: grnError } = await service.from("agri_grns").delete().eq("id", grnId);
+  return grnError?.message ?? null;
+}
+
 export async function createGRN(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = createClient();
   const orderId = String(formData.get("order_id") ?? "");
@@ -204,11 +286,9 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
   // ghatana dohri katoti thi. Payable = mila hua maal - discount + kharche, ek dafa.
   const payableAmount = grnPayable(items, discountAdjustment, additionalCharges);
   const hasDiscrepancy = shortageAmount > 0 || damageAmount > 0;
-  // When charges (freight etc.) are entered, spread them across items
-  // proportional to their received value, so stock_batches.unit_cost
-  // reflects the TRUE landed cost per unit - this is what FIFO/COGS
-  // will use later, so it needs to include freight, not just the raw
-  // purchase price, for accurate inventory valuation and profit.
+  // Freight batch ki lagat mein shamil rehti hai. Bunyad ab order ki
+  // transfer price nahi — bhejne wale godam ki FIFO lagat hai. Order
+  // price sirf payable / branch credit par rehti hai.
   const chargeRatio = receivedValue > 0 ? additionalCharges / receivedValue : 0;
 
   const {
@@ -230,7 +310,14 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
   // order_to_warehouse_id: migration 442 — fetched separately until types regenerate.
   const { data: orderWh } = await (supabase as any).from("agri_orders").select("order_to_warehouse_id").eq("id", orderId).single() as { data: { order_to_warehouse_id: string | null } | null; error: unknown };
   const order = orderRaw ? { ...orderRaw, order_to_warehouse_id: orderWh?.order_to_warehouse_id ?? null } : null;
+  let linkedDispatchId = dispatchId;
+  if (order?.order_to_branch_id && !linkedDispatchId) {
+    const { data: existingDispatch } = await supabase.from("agri_dispatches").select("id").eq("order_id", orderId).maybeSingle();
+    linkedDispatchId = existingDispatch?.id ?? null;
+  }
   const stockRows: Record<string, unknown>[] = [];
+  const batchKeys: string[] = [];
+  let receiptPlan: InternalReceiptPlan = EMPTY_RECEIPT;
   if (order?.order_to_branch_id) {
     // Destination warehouse: pehle order mein jo set ki gayi hai (seller
     // ki shop godam), phir branch ki MAIN warehouse.
@@ -251,22 +338,54 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
 
     if (warehouse) {
       const warehouseId = warehouse.id;
+      const receiptInputs = items.flatMap((item, index) => {
+        if (!item.product_id || item.quality_status === "Rejected" || item.received_qty <= 0) return [];
+        const lineKey = item.order_item_id || `${item.product_id}:${index}`;
+        return [{
+          lineKey,
+          productId: item.product_id,
+          receivedQty: item.received_qty,
+          orderUnitPrice: item.unit_price,
+          freightAmount: item.received_qty * item.unit_price * chargeRatio,
+        }];
+      });
+      let slices: DispatchCostSlice[] = [];
+      if (linkedDispatchId && receiptInputs.length > 0) {
+        const loaded = await loadDispatchCostSlices(linkedDispatchId);
+        if (loaded.error) return { error: `Dispatch ki lagat nahi mili: ${loaded.error}` };
+        slices = loaded.slices;
+      }
+      receiptPlan = planAgriInternalReceipt({ slices, lines: receiptInputs });
+      // Order price par batch likhna wahi leak hai: 1200 dispatch par
+      // ghat chuka, shop par transfer price se batch barh jati hai.
+      if (linkedDispatchId && receiptInputs.length > 0 && receiptPlan.fifoRecovered <= 0) {
+        const credited = await dispatchCreditedStock(linkedDispatchId);
+        if (credited.error) return { error: `Dispatch ki kitab nahi dekhi ja saki: ${credited.error}` };
+        if (credited.posted) {
+          return {
+            error: "Dispatch ne 1200 se lagat nikal di hai, magar us ki batch lagat GRN ko nahi mili. Stock order price par nahi likha jayega — warna godam aur 1200 ka farq phir barh jayega.",
+          };
+        }
+      }
+      const costByLine = new Map(receiptPlan.lines.map((line) => [line.lineKey, line]));
       items.forEach((item, index) => {
         if (!item.product_id || item.quality_status === "Rejected" || item.received_qty <= 0) return;
         const lineKey = item.order_item_id || `${item.product_id}:${index}`;
-        const landed = item.unit_price + item.unit_price * chargeRatio;
+        const planned = costByLine.get(lineKey);
+        const batchKey = grnBatchDedupeKey(orderId, lineKey);
+        batchKeys.push(batchKey);
         stockRows.push({
           product_id: item.product_id,
           warehouse_id: warehouseId,
           quantity: item.received_qty,
-          unit_cost: landed,
+          unit_cost: planned?.unitCost ?? 0,
           batch_number: item.batch_no || `GRN-${orderId.slice(0, 8)}-${item.product_id.slice(0, 6)}`,
           expiry_date: item.expiry_date,
           manufacturing_date: item.manufacturing_date,
           reference_id: orderId,
           created_by: user?.id ?? null,
           dedupe_key: grnMovementDedupeKey(orderId, lineKey),
-          batch_dedupe_key: grnBatchDedupeKey(orderId, lineKey),
+          batch_dedupe_key: batchKey,
         });
       });
     }
@@ -278,7 +397,7 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
     p_grn: {
       grn_number: grnNumber,
       order_id: orderId,
-      dispatch_id: dispatchId,
+      dispatch_id: linkedDispatchId,
       receiving_date: receivingDate,
       ordered_value: orderedValue,
       received_value: receivedValue,
@@ -302,6 +421,26 @@ export async function createGRN(_prev: ActionState, formData: FormData): Promise
     return { error: message || "GRN save nahi hui." };
   }
   const grn = { id: created.id as string };
+
+  // Stock batch ban chuki. Ab wahi raqam 1200 mein wapas — warna godam
+  // kitab se aage nikal jata hai. Discrepancy ho to bhi, kyunki maal
+  // pehle hi godam mein aa chuka hai.
+  if (receiptPlan.stockValue > 0) {
+    const posted = await postJournal({
+      description: `${grnNumber}: andaruni muntaqili — stock 1200 mein wapas`,
+      sourceModule: "agri_grn",
+      sourceId: grn.id,
+      branchId: null,
+      createdBy: user?.id ?? null,
+      claims: [{ table: "agri_grns", rowId: grn.id }],
+      lines: receiptJournalLines(receiptPlan.stockValue),
+    });
+    if ("error" in posted) {
+      const undone = await rollbackAgriGrn(orderId, grn.id, batchKeys);
+      const extra = undone ? ` Wapas bhi nahi hua: ${undone}` : "";
+      return { error: `Stock ki kitab (1200) nahi likhi: ${posted.error}.${extra}` };
+    }
+  }
 
   if (hasDiscrepancy) {
     // Two-stage discrepancy workflow: Warehouse explains what happened

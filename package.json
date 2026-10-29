@@ -44,6 +44,7 @@
     "test:business-360": "npx --yes tsx scripts/test-business-360.ts",
     "test:columns": "node tests/legacy-column-names.cjs",
     "test:procurement-guards": "node tests/procurement-guards.cjs && node tests/procurement-guards-sql.mjs",
+    "test:agri-transfer": "npx --yes tsx tests/agri-internal-transfer.ts && node tests/agri-internal-transfer-wiring.cjs",
     "test:sidebar": "node tests/sidebar-new-modules.cjs && node tests/whatsapp-inbox-sidebar-620.cjs",
     "test:sales-period": "npx --yes tsx scripts/test-sales-period.ts && npx --yes tsx scripts/test-sales-daily.ts",
     "test:farmers-rls": "node tests/farmers-staff-insert-rls.cjs",

@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { postJournal } from "@/lib/ledger/post";
-import { ACC } from "@/lib/ledger/rules";
 import { expiredConsumeAllowed } from "@/lib/inventory/atomic-batch";
+import { issueJournalLines } from "@/lib/inventory/agri-internal-transfer";
 
 /**
  * Stock ki harkat ka ek hi markazi tareeqa — FEFO se batches nikalna
@@ -129,7 +129,7 @@ export interface StockMoveOptions {
   userId: string | null;
   outType?: MovementType;
   inType?: MovementType;
-  /** Set karo to stock nikalne par journal entry post hogi (Dr COGS, Cr Stock). */
+  /** Set karo to stock nikalne par Dr 5000 / Cr 1200. Agri GRN is ko wapas karti hai. */
   journalDescription?: string;
   journalSourceModule?: string;
   branchId?: string | null;
@@ -159,21 +159,23 @@ export async function moveStock(opts: StockMoveOptions): Promise<{ error: string
     );
     if (moved.error) return { error: moved.error, cost: 0 };
     cost = moved.cost;
-    // Jab maal company se bahar jaye (jaise agri dispatch), tab ledger mein
-    // stock ka asset kam hota hai: Dr COGS (5000), Cr Stock (1200).
+    // Agri dispatch company se bahar nahi jaata — dukaan ka godam baad
+    // mein GRN par wahi lagat wapas leti hai (Dr 1200 / Cr 5000). Yahan
+    // Cr 1200 is liye hai ke raaste mein batch aur kitab dono se raqam
+    // utar jaye. Asal COGS sirf us hissa par rehta hai jo GRN mein nahi aata.
     if (opts.journalDescription && cost > 0) {
-      const posted = await postJournal({
-        description: opts.journalDescription,
-        sourceModule: opts.journalSourceModule ?? referenceType,
-        sourceId: referenceId,
-        branchId: opts.branchId ?? null,
-        createdBy: userId,
-        lines: [
-          { account: ACC.cogs, debit: cost },
-          { account: ACC.stockGoods, credit: cost },
-        ],
-      });
-      if ("error" in posted) return { error: posted.error, cost };
+      const lines = issueJournalLines(cost);
+      if (lines.length >= 2) {
+        const posted = await postJournal({
+          description: opts.journalDescription,
+          sourceModule: opts.journalSourceModule ?? referenceType,
+          sourceId: referenceId,
+          branchId: opts.branchId ?? null,
+          createdBy: userId,
+          lines,
+        });
+        if ("error" in posted) return { error: posted.error, cost };
+      }
     }
   }
   if (toWarehouseId) {

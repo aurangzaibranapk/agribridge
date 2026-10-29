@@ -146,6 +146,7 @@ const MODULES: { match: (m: string) => boolean; label: string; href: string }[] 
   { match: (m) => m === "cash_handover", label: "Cash Handover", href: "/admin/cash-handover" },
   { match: (m) => m.startsWith("stock_"), label: "Stock Count", href: "/admin/stock-count" },
   { match: (m) => m === "agri_dispatch", label: "Agri Dispatch", href: "/admin/agri-orders" },
+  { match: (m) => m === "agri_grn", label: "Agri GRN", href: "/admin/agri-orders" },
   { match: (m) => m === "farmer_credit", label: "Kisan Udhaar", href: "/admin/farmer-credit" },
   { match: (m) => m.includes("transfer"), label: "Transfer", href: "/admin/finance" },
   { match: (m) => m === "reversal", label: "Reversal", href: "/admin/audit-trail" },
