@@ -57,7 +57,7 @@ assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.pa
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.appFlavor, "test");
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.android.versionCode, 606);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.version, AGRIBRIDGE_OS_VERSION);
-assert.equal(PHONE_VERSION_CODE, 643);
+assert.equal(PHONE_VERSION_CODE, 644);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.versionCode, PHONE_VERSION_CODE);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.versionCode, PHONE_VERSION_CODE);
 assert.equal(shownVersionCode({ platform: "web", embedded: 625, phone: PHONE_VERSION_CODE }), PHONE_VERSION_CODE);
@@ -772,7 +772,7 @@ assert.match(rollback711, /home\.vet\.pending_ids/);
 assert.doesNotMatch(rollback711, /session_replication_role/i);
 assert.doesNotMatch(rollback711, /ktskwawkslaznkjjacni/);
 assert.match(readFileSync("apps/mobile/src/roles/glass-homes.tsx", "utf8"), /saleMonthKey/);
-assert.match(readFileSync("apps/mobile/src/roles/dealer.tsx", "utf8"), /loadRoleOrders/);
+assert.match(readFileSync("apps/mobile/src/roles/dealer.tsx", "utf8"), /loadMyMerchantOrders/);
 assert.doesNotMatch(readFileSync("apps/mobile/src/roles/glass-homes.tsx", "utf8"), /7 din ke visits/);
 assert.match(readFileSync("apps/mobile/src/roles/glass-homes.tsx", "utf8"), /Doosre orders/);
 assert.match(readFileSync("apps/mobile/src/roles/glass-homes.tsx", "utf8"), /Order status/);
@@ -818,6 +818,8 @@ const merchantApproved = readFileSync("apps/mobile/src/roles/merchant-approved.t
 for (const required of ["Payment Responsibility: AgriBridge", "Business Munshi", "Commission flexible hai", "Weekly Milk Payment", "No HR / Attendance", "Subscription fee aur transaction commission alag"]) assert.match(merchantApproved, new RegExp(required.replace(/[()]/g, "\\$&")));
 assert.match(readFileSync("apps/mobile/src/roles/dealer.tsx", "utf8"), /MerchantApproved/);
 assert.match(readFileSync("apps/mobile/src/roles/supplier.tsx", "utf8"), /MerchantApproved/);
+assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /fn_my_merchant_settlements/);
+assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /fn_my_merchant_orders/);
 assert.match(readFileSync("apps/mobile/src/roles/load.ts", "utf8"), /import \* as supplier from "\.\/supplier"/);
 assert.match(appSource, /User ID \(ikhtiyari\)/);
 assert.match(appSource, /onProfile=/);

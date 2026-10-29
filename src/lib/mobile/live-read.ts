@@ -584,6 +584,19 @@ export type PurchaseRow = { purchase_number?: string | null; purchase_date?: str
 export type AttendanceRow = { attendance_date?: string | null; status?: string | null; check_in_at?: string | null; profile_id?: string | null };
 export type ProfileRow = { id?: string; full_name?: string | null };
 export type OrderRow = { id?: string; order_number?: string | null; status?: string | null; grand_total?: number | string | null; created_at?: string | null; requested_by?: string | null; order_to_type?: string | null };
+export type MerchantOrderRow = { id?: string | null; number?: string | null; status?: string | null; amount?: number | string | null; order_date?: string | null; guarantee_status?: string | null };
+export type MerchantSettlementRow = {
+  settlement_number?: string | null;
+  source_type?: string | null;
+  gross_amount?: number | string | null;
+  commission_amount?: number | string | null;
+  net_amount?: number | string | null;
+  due_date?: string | null;
+  status?: string | null;
+  bank_reference?: string | null;
+  paid_at?: string | null;
+  created_at?: string | null;
+};
 export type KhataLine = { entry_date?: string | null; tafseel?: string | null; udhaar?: number | string | null; adaigi?: number | string | null; baqaya?: number | string | null; is_opening?: boolean | null; category?: string | null };
 export type SalaryRow = { net_salary?: number | string | null; status?: string | null; pay_month?: number | null; pay_year?: number | null };
 export type AdvanceRow = { amount?: number | string | null; status?: string | null; created_at?: string | null };
@@ -820,6 +833,20 @@ export function roleOrderPath(role: "customer" | "dealer"): string {
 export async function loadRoleOrders(auth: LiveAuth, role: "customer" | "dealer", fetchImpl: FetchLike): Promise<ReadResult<OrderRow>> {
   if (auth.testAccount) return liveGetScoped<OrderRow>(auth, roleOrderPath(role), fetchImpl);
   return loadOrders(auth, fetchImpl);
+}
+
+/** Dealer/Supplier ki apni server-resolved fehrist. TEST admin role switch se doosron ka paisa nahi khulta. */
+export async function loadMyMerchantOrders(auth: LiveAuth, role: "dealer" | "supplier", fetchImpl: FetchLike): Promise<ReadResult<MerchantOrderRow>> {
+  const result = await liveRpc<MerchantOrderRow[] | null>(auth, "fn_my_merchant_orders", { p_role: role }, fetchImpl);
+  if (!result.ok) return { ok: false, status: result.status, message: result.message, detail: result.detail };
+  return { ok: true, rows: Array.isArray(result.data) ? result.data : [] };
+}
+
+/** Posted commission, guarantee payable aur bank settlement. Khali result ko zero nahi banate. */
+export async function loadMyMerchantSettlements(auth: LiveAuth, role: "dealer" | "supplier", fetchImpl: FetchLike): Promise<ReadResult<MerchantSettlementRow>> {
+  const result = await liveRpc<MerchantSettlementRow[] | null>(auth, "fn_my_merchant_settlements", { p_role: role }, fetchImpl);
+  if (!result.ok) return { ok: false, status: result.status, message: result.message, detail: result.detail };
+  return { ok: true, rows: Array.isArray(result.data) ? result.data : [] };
 }
 
 export type KhataView = {

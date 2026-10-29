@@ -21,4 +21,20 @@ assert.match(readFileSync("src/app/admin/my-work/support-dashboard/page.tsx", "u
 assert.match(readFileSync("apps/mobile/signing/keystore.properties.example", "utf8"), /storePassword=\n/);
 assert.doesNotMatch(readFileSync("apps/mobile/plugins/withPlaySigning.js", "utf8"), /BEGIN [A-Z ]*PRIVATE KEY/);
 
+const merchant = readFileSync("supabase/migrations/20261029075433_merchant_guarantee_commission_settlement.sql", "utf8");
+assert.match(merchant, /create table if not exists public\.merchant_commission_rules/);
+assert.match(merchant, /commission_snapshot_at/);
+assert.match(merchant, /fn_admin_approve_order_guarantee/);
+assert.match(merchant, /fn_apply_milk_qist_payment/);
+assert.match(merchant, /on conflict \(order_id\) do nothing/);
+assert.match(merchant, /milk_payment_id uuid not null unique/);
+assert.doesNotMatch(merchant, /truncate|delete from public\./i);
+
+const merchantRead = readFileSync("supabase/migrations/20261029080741_merchant_mobile_read_api.sql", "utf8");
+const merchantOrders = readFileSync("supabase/migrations/20261029080852_merchant_mobile_orders_api.sql", "utf8");
+assert.match(merchantRead, /fn_my_merchant_settlements/);
+assert.match(merchantOrders, /fn_my_merchant_orders/);
+assert.match(merchantRead, /dealer','supplier/);
+assert.doesNotMatch(merchantRead + merchantOrders, /truncate|delete from public\./i);
+
 console.log("mobile sql proposal ok");
