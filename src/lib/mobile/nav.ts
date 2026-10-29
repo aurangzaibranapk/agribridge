@@ -52,22 +52,24 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
   },
   supplier: {
     title: "Supplier",
-    phase1: false,
+    phase1: true,
     tabs: [
       { key: "home", label: "Home" },
       { key: "orders", label: "Orders" },
-      { key: "ledger", label: "Ledger" },
-      { key: "more", label: "More" },
+      { key: "munshi", label: "Munshi" },
+      { key: "settlements", label: "Settlements" },
+      { key: "profile", label: "Profile" },
     ],
   },
   dealer: {
     title: "Dealer",
-    phase1: false,
+    phase1: true,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "orders", label: "Order" },
-      { key: "khata", label: "Khata" },
-      { key: "more", label: "Profile" },
+      { key: "orders", label: "Orders" },
+      { key: "munshi", label: "Munshi" },
+      { key: "settlements", label: "Settlements" },
+      { key: "profile", label: "Profile" },
     ],
   },
   mca: {

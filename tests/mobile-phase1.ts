@@ -29,6 +29,7 @@ import { PHONE_VERSION_CODE, shownVersionCode } from "../src/lib/mobile/shown-ve
 import { shiftTotals } from "../src/lib/mobile/shifts";
 import { calculateMilkValue } from "../src/lib/utils/milk-formula";
 import { internalHrAllowed, resolveWorkspaces } from "../src/lib/mobile/work-access";
+import { snapshotCommission, weeklyMilkAdjustment } from "../src/lib/mobile/merchant-finance";
 
 assert.equal(PRODUCT_VERSION, AGRIBRIDGE_OS_VERSION);
 assert.equal(buildExpoConfig({ APP_CHANNEL: "debug" }).expo.version, AGRIBRIDGE_OS_VERSION);
@@ -56,7 +57,7 @@ assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.pa
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.appFlavor, "test");
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.android.versionCode, 606);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.version, AGRIBRIDGE_OS_VERSION);
-assert.equal(PHONE_VERSION_CODE, 641);
+assert.equal(PHONE_VERSION_CODE, 642);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.versionCode, PHONE_VERSION_CODE);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.versionCode, PHONE_VERSION_CODE);
 assert.equal(shownVersionCode({ platform: "web", embedded: 625, phone: PHONE_VERSION_CODE }), PHONE_VERSION_CODE);
@@ -100,6 +101,10 @@ assert.equal(ROLE_NAV.farmer.tabs[3].label, "Services");
 assert.deepEqual(ROLE_NAV.customer.tabs, ROLE_NAV.farmer.tabs);
 assert.deepEqual(ROLE_NAV.staff.tabs.map((tab) => tab.key), ["home", "work", "tasks", "hr", "profile"]);
 assert.deepEqual(ROLE_NAV.admin.tabs.map((tab) => tab.key), ["home", "work", "approvals", "hr", "profile"]);
+assert.deepEqual(ROLE_NAV.supplier.tabs.map((tab) => tab.key), ["home", "orders", "munshi", "settlements", "profile"]);
+assert.deepEqual(ROLE_NAV.dealer.tabs.map((tab) => tab.key), ["home", "orders", "munshi", "settlements", "profile"]);
+assert.equal(ROLE_NAV.supplier.phase1, true);
+assert.equal(ROLE_NAV.dealer.phase1, true);
 assert.equal(internalHrAllowed("admin"), true);
 assert.equal(internalHrAllowed("staff"), true);
 assert.equal(internalHrAllowed("mca"), true);
@@ -117,6 +122,11 @@ assert.deepEqual(resolveWorkspaces({ portalRole: "sales_staff", designation: "Ka
 assert.deepEqual(resolveWorkspaces({ portalRole: "finance", department: "Main Branch Finance" }), ["finance"]);
 assert.deepEqual(resolveWorkspaces({ portalRole: "warehouse", featureKeys: ["inventory.adjust"] }), ["warehouse"]);
 assert.deepEqual(resolveWorkspaces({ portalRole: "staff" }), []);
+assert.deepEqual(snapshotCommission(20_000, { kind: "percent", percent: 2 }), { gross: 20_000, commission: 400, merchantNet: 19_600, label: "2%" });
+assert.deepEqual(snapshotCommission(20_000, { kind: "fixed", amount: 750 }), { gross: 20_000, commission: 750, merchantNet: 19_250, label: "Fixed Rs 750" });
+assert.equal(snapshotCommission(20_000, { kind: "percent", percent: 0.5, minimum: 200 }).commission, 200);
+assert.deepEqual(weeklyMilkAdjustment({ milkPayable: 5_000, installmentDue: 5_000, outstanding: 20_000 }), { milkPayable: 5_000, installmentApplied: 5_000, farmerBankTransfer: 0, stillOutstanding: 15_000 });
+assert.deepEqual(weeklyMilkAdjustment({ milkPayable: 7_000, installmentDue: 5_000, outstanding: 20_000 }), { milkPayable: 7_000, installmentApplied: 5_000, farmerBankTransfer: 2_000, stillOutstanding: 15_000 });
 const approvedFarmer = readFileSync("apps/mobile/src/roles/farmer-approved.tsx", "utf8");
 for (const required of ["Digital Munshi", "Meri Faslein", "Dairy", "Vet Doctor", "Khata & Wallet", "Orders"]) assert.match(approvedFarmer, new RegExp(required));
 assert.match(approvedFarmer, /Kisan aur customer ek hi account/);
@@ -804,8 +814,11 @@ assert.match(readFileSync("apps/mobile/src/roles/staff.tsx", "utf8"), /Check-in/
 assert.match(readFileSync("apps/mobile/src/roles/staff.tsx", "utf8"), /Mere kaam/);
 assert.match(readFileSync("apps/mobile/src/roles/staff.tsx", "utf8"), /source: "app"/);
 assert.match(readFileSync("apps/mobile/src/roles/vet-approved.tsx", "utf8"), /Save Treatment/);
-assert.match(readFileSync("apps/mobile/src/roles/dealer.tsx", "utf8"), /HQ khata/);
-assert.match(readFileSync("apps/mobile/src/roles/dealer.tsx", "utf8"), /Dealer \/ Outlet/);
+const merchantApproved = readFileSync("apps/mobile/src/roles/merchant-approved.tsx", "utf8");
+for (const required of ["Payment Responsibility: AgriBridge", "Business Munshi", "Commission flexible hai", "Weekly Milk Payment", "No HR / Attendance", "Subscription fee aur transaction commission alag"]) assert.match(merchantApproved, new RegExp(required.replace(/[()]/g, "\\$&")));
+assert.match(readFileSync("apps/mobile/src/roles/dealer.tsx", "utf8"), /MerchantApproved/);
+assert.match(readFileSync("apps/mobile/src/roles/supplier.tsx", "utf8"), /MerchantApproved/);
+assert.match(readFileSync("apps/mobile/src/roles/load.ts", "utf8"), /import \* as supplier from "\.\/supplier"/);
 assert.match(appSource, /User ID \(ikhtiyari\)/);
 assert.match(appSource, /onProfile=/);
 assert.match(appSource, /signInMobile/);

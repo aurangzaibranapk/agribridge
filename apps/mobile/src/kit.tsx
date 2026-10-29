@@ -66,6 +66,7 @@ const TAB_MARK: Record<string, string> = {
   Wallet: "₨",
   Profile: "◉",
   Munshi: "▤",
+  Settlements: "₨",
   Add: "+",
   Services: "♧",
   Route: "♧",

@@ -6,6 +6,7 @@ import * as later from "./later";
 import * as mca from "./mca";
 import * as mco from "./mco";
 import * as staff from "./staff";
+import * as supplier from "./supplier";
 import * as vet from "./vet";
 
 export interface RoleModule {
@@ -16,6 +17,7 @@ const modules: Record<string, RoleModule> = {
   farmer,
   customer: farmer,
   staff,
+  supplier,
   admin,
   mca,
   mco,

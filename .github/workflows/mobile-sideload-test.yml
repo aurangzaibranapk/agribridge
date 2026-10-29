@@ -27,7 +27,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: https://hwaiuwxqldxsoukkfefn.supabase.co
       # Public testing anon key.
       EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3YWl1d3hxbGR4c291a2tmZWZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MjU1NjMsImV4cCI6MjEwMzUwMTU2M30.UwchGHJHRCdKHwpJRr-fdNTreeVNLlfbpo7nBqQv9l4"
-      AGRIBRIDGE_VERSION_CODE: "641"
+      AGRIBRIDGE_VERSION_CODE: "642"
       CI: "1"
     steps:
       - uses: actions/checkout@v4
@@ -129,7 +129,8 @@ jobs:
           notes=$(cat <<'EOF'
           AgriBridge TEST sideload builds. Not the live app and not a Play Store upload.
           App name AgriBridge TEST. Package pk.alranatraders.agribridge.test.
-          versionName v0.6.1 Beta, versionCode 641, APP_CHANNEL=internal.
+          versionName v0.6.1 Beta, versionCode 642, APP_CHANNEL=internal.
+          Build 642 adds the approved Supplier and Dealer guaranteed-sales workspace: flexible Admin commission rules, order-time commission snapshots, Business Munshi, weekly milk-adjustment explanation, settlement/Khata views and subscription placeholders. No fixed 2 percent rule and no invented money. Supplier and Dealer remain external roles without HR.
           Build 641 adds approved department-based My Work and shared internal HR. Admin, Staff, MCA, MCO and Vet see their assigned work and HR; Kisan/Customer, Supplier and Dealer do not receive HR. LIVE users cannot change their own role. Real TEST records only.
           Build 640 added the approved Vet Team workspace: assigned visits, farmer and animal profiles, treatment entry, vaccination, emergency follow-up and live Admin reporting.
           Home footer reads the installed Android versionCode. Expo web reads the same phone code from source, not a Metro-cached manifest.
