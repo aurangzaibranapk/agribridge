@@ -5,6 +5,7 @@ import type { MunshiReminder } from "../../../../src/lib/mobile/digital-munshi";
 import { Empty, Section, liveAuth, type LiveBag } from "../bits";
 import { colors } from "../kit";
 import { ApprovedVetApp, type VetAnimal, type VetFarmer, type VetHealth, type VetTreatment } from "./vet-approved";
+import { InternalHr } from "./internal-hr";
 
 type ProfileRow = { full_name?: string | null; designation?: string | null };
 
@@ -129,9 +130,11 @@ export function RoleScreen({
 
   if (!auth) return <ScrollView style={{ padding: 16 }}><Section title="Vet"><Empty title="Login chahiye" body="Vet Team ka record login ke baad khulta hai." /></Section></ScrollView>;
   if (!health) return <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />;
+  if (tab === "hr" && auth.userId) return <InternalHr auth={auth} userId={auth.userId} readOnly={readOnly} />;
+  const effectiveTab = tab === "work" ? "visits" : tab === "profile" ? "more" : tab;
 
   return <ApprovedVetApp
-    tab={tab}
+    tab={effectiveTab}
     today={today}
     vetName={vetName}
     place={place}

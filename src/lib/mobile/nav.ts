@@ -41,12 +41,13 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
   },
   staff: {
     title: "Staff",
-    phase1: false,
+    phase1: true,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "visits", label: "Hazri" },
-      { key: "orders", label: "Tasks" },
-      { key: "more", label: "Profile" },
+      { key: "work", label: "My Work" },
+      { key: "tasks", label: "Tasks" },
+      { key: "hr", label: "HR" },
+      { key: "profile", label: "Profile" },
     ],
   },
   supplier: {
@@ -74,10 +75,10 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     phase1: true,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "route", label: "Route" },
-      { key: "collections", label: "Collections" },
-      { key: "sync", label: "Sync" },
-      { key: "more", label: "More" },
+      { key: "work", label: "My Work" },
+      { key: "farmers", label: "Farmers" },
+      { key: "hr", label: "HR" },
+      { key: "profile", label: "Profile" },
     ],
   },
   mco: {
@@ -85,20 +86,21 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     phase1: true,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "receive", label: "Receive" },
-      { key: "quality", label: "Quality" },
-      { key: "chiller", label: "Chiller" },
-      { key: "more", label: "More" },
+      { key: "work", label: "My Work" },
+      { key: "receiving", label: "Receiving" },
+      { key: "hr", label: "HR" },
+      { key: "profile", label: "Profile" },
     ],
   },
   admin: {
     title: "Admin",
-    phase1: false,
+    phase1: true,
     tabs: [
       { key: "home", label: "Home" },
-      { key: "reports", label: "Reports" },
-      { key: "approvals", label: "Approve" },
-      { key: "more", label: "More" },
+      { key: "work", label: "Work" },
+      { key: "approvals", label: "Approvals" },
+      { key: "hr", label: "HR" },
+      { key: "profile", label: "Profile" },
     ],
   },
   vet: {
@@ -106,10 +108,10 @@ export const ROLE_NAV: Record<AppRole, RoleNav> = {
     phase1: true,
     tabs: [
       { key: "home", label: "Home" },
+      { key: "work", label: "My Work" },
       { key: "visits", label: "Visits" },
-      { key: "add", label: "Add" },
-      { key: "reports", label: "Reports" },
-      { key: "more", label: "Profile" },
+      { key: "hr", label: "HR" },
+      { key: "profile", label: "Profile" },
     ],
   },
 };

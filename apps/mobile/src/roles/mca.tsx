@@ -11,6 +11,7 @@ import { Btn, Card, Field } from "../kit";
 import { colors } from "../kit";
 import { farmerPortrait } from "../farmer-portraits";
 import { ApprovedMcaApp, type McaFarmer } from "./mca-approved";
+import { InternalHr } from "./internal-hr";
 
 async function photo() {
   try {
@@ -211,9 +212,11 @@ export function RoleScreen({ tab, data, queue = [], queueCount, onEnqueue, onSyn
     setProof(shot); setNote("Photo / proof lag gayi.");
   }
 
+  if (tab === "hr" && auth?.userId) return <InternalHr auth={auth} userId={auth.userId} readOnly={readOnly} />;
+  const effectiveTab = tab === "work" ? "route" : tab === "farmers" ? "collections" : tab === "profile" ? "more" : tab;
   return (
     <ApprovedMcaApp
-      tab={tab} farmers={farmers} collections={collections} route={route} chiller={chiller}
+      tab={effectiveTab} farmers={farmers} collections={collections} route={route} chiller={chiller}
       farmerNote={farmerNote} note={note} queue={queue} queueCount={queueCount}
       refreshing={refreshing} readOnly={readOnly} pickupOpen={pickupOpen}
       selectedFarmerId={farmerId} liters={liters} lr={lr} shift={shift}

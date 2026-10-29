@@ -14,6 +14,7 @@ export type LiveBag = {
   flavor?: DataFlavor;
   testAccount?: boolean;
   refreshSession?: () => Promise<RefreshSuccess | RefreshFailure>;
+  portalUrl?: string | null;
 };
 
 export function liveAuth(live: LiveBag | undefined): LiveAuth | null {

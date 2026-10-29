@@ -4,6 +4,8 @@ import { karachiDate, liveInsert, loadStaffHome, rupees, type AdvanceRow, type A
 import { Empty, Section, liveAuth, type LiveBag } from "../bits";
 import { StaffGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
+import { StaffWorkspace } from "./staff-workspace";
+import { InternalHr } from "./internal-hr";
 
 export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { tab: string; live?: LiveBag; readOnly?: boolean; onProfile?: () => void; onTab?: (key: string) => void }) {
   const auth = liveAuth(live);
@@ -56,7 +58,10 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
   }
 
   const checkLabel = todayRow ? `Aaj · ${todayRow.status} · check-in ho chuka hai` : note || "Check-in · aaj";
-  if (tab === "home") {
+  if (tab === "work") return <StaffWorkspace auth={auth} userId={live.userId} portalUrl={live.portalUrl} appRole="staff" />;
+  if (tab === "hr" || tab === "visits") return <InternalHr auth={auth} userId={live.userId} readOnly={readOnly} />;
+  const effectiveTab = tab === "tasks" ? "orders" : tab === "profile" ? "more" : tab;
+  if (effectiveTab === "home") {
     return (
       <StaffGlass
         live={live}
@@ -80,7 +85,7 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
   return (
     <ScrollView style={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
       {note ? <Text style={{ color: colors.greenDark, marginBottom: 8 }}>{note}</Text> : null}
-      {tab === "visits" ? (
+      {effectiveTab === "visits" ? (
         <Section title="Meri hazri" sub="Aap ki apni qatarein">
           {todayRow ? <Text style={{ color: colors.text, fontWeight: "700", marginBottom: 6 }}>Aaj · {todayRow.status} · check-in ho chuka hai</Text> : readOnly ? <Text style={{ color: colors.muted }}>Sirf dekhna. Check-in band hai.</Text> : <Btn label={busy ? "Ho raha hai" : "Check-in"} onPress={() => { if (!busy) void checkIn(); }} />}
           {!attendance.ok ? <Empty title="Hazri nahi khuli" body={attendance.message} /> : null}
@@ -88,7 +93,7 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
           {attendance.ok ? attendance.rows.map((row, index) => <Text key={`${row.attendance_date}-${index}`} style={{ color: colors.text, marginBottom: 6 }}>{row.attendance_date} · {row.status}{row.check_in_at ? ` · ${row.check_in_at.slice(11, 16)}` : ""}</Text>) : null}
         </Section>
       ) : null}
-      {tab === "home" || tab === "khata" ? (
+      {effectiveTab === "home" || effectiveTab === "khata" ? (
         <Section title="Tankhwah aur advance">
           {!salary.ok ? <Empty title="Tankhwah nahi khuli" body={salary.message} /> : null}
           {salary.ok && salary.rows.length === 0 ? <Empty title="Koi tankhwah nahi" body="Jab aap ki salary line bane gi, mahina aur raqam yahan aayenge." /> : null}
@@ -98,14 +103,14 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
           {advances.ok ? advances.rows.map((row, index) => <Text key={`${row.created_at}-${index}`} style={{ color: colors.text, marginBottom: 6 }}>Advance · {row.status} · {row.amount == null ? "—" : rupees(Number(row.amount))}</Text>) : null}
         </Section>
       ) : null}
-      {tab === "home" || tab === "orders" ? (
+      {effectiveTab === "home" || effectiveTab === "orders" ? (
         <Section title="Mere kaam" sub="Jo kaam aap ki manzoori ka intezar karta hai">
           {tasksNote ? <Empty title="Tasks nahi khule" body={tasksNote} /> : null}
           {!tasksNote && tasks.length === 0 ? <Empty title="Aap ke naam koi task nahi" body="Jab koi darkhwast aap par ruke gi, us ki ginati yahan aayegi." /> : null}
           {tasks.map((task) => <Text key={task.label} style={{ color: colors.text, marginBottom: 6 }}>{task.label} · {task.count}</Text>)}
         </Section>
       ) : null}
-      {tab === "more" ? <Section title="Aur"><Empty title="Apna kaam" body="Hazri aur Check-in Home par hain. Tankhwah aur tasks bhi wahi hain." /></Section> : null}
+      {effectiveTab === "more" ? <Section title="Profile"><Empty title="Apna account" body="Profile settings upar account button se khulti hain. My Work aur HR apne tabs par hain." /></Section> : null}
       <ScrollPad />
     </ScrollView>
   );

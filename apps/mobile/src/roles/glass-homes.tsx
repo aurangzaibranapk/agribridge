@@ -9,6 +9,7 @@ import { liveAuth, type LiveBag } from "../bits";
 import { ActionGrid, BarChart, BarTrack, BrandHeader, Donut, GlassCard, GlassScreen, Kpi, KpiGrid, LineChart, Pill, Rise, TankRow, TankTemp, Timeline, WeatherCard, glass, useFace, useWeather } from "../glass";
 import { farmerPortrait } from "../farmer-portraits";
 import type { AdminDigitalOverview, DigitalMunshiData } from "../../../../src/lib/mobile/digital-munshi";
+import { resolveWorkspaces, WORK_LABELS } from "../../../../src/lib/mobile/work-access";
 
 type Refresh = { refreshing?: boolean; onRefresh?: () => void; onProfile?: () => void; onTab?: (key: string) => void };
 
@@ -812,6 +813,7 @@ export function StaffGlass({ live, attendance, salary, advances, tasks, tasksNot
   const [monthHazri, setMonthHazri] = useState<ReadResult<{ status?: string | null }> | null>(null);
   const [shiftWindow, setShiftWindow] = useState<string | null>(null);
   const [dutyPlace, setDutyPlace] = useState<string | null>(null);
+  const [workLabel, setWorkLabel] = useState<string | null>(null);
   useEffect(() => {
     if (!auth?.userId) {
       setMonthHazri({ ok: false, status: 0, message: "Login chahiye." });
@@ -826,6 +828,7 @@ export function StaffGlass({ live, attendance, salary, advances, tasks, tasksNot
   }, [auth?.token, auth?.url, auth?.userId, auth?.testAccount]);
   useEffect(() => {
     if (!auth?.userId) return;
+    const staffUserId = auth.userId;
     let gone = false;
     void liveGet<{ shift_start?: string | null; shift_end?: string | null; branch_id?: string | null }>(auth, "hr_work_schedules?select=shift_start,shift_end,branch_id&is_active=eq.true&limit=8", fetch).then((rows) => {
       if (gone || !rows.ok) return;
@@ -834,12 +837,16 @@ export function StaffGlass({ live, attendance, salary, advances, tasks, tasksNot
       const end = clockLabel(row?.shift_end);
       if (start && end) setShiftWindow(`${start} – ${end}`);
     });
-    void liveGet<{ milk_route_name?: string | null; milk_chiller_name?: string | null }>(auth, `staff_details?select=milk_route_name,milk_chiller_name&profile_id=eq.${encodeURIComponent(auth.userId)}&limit=1`, fetch).then((rows) => {
+    void (async () => {
+      let rows = await liveGet<{ milk_route_name?: string | null; milk_chiller_name?: string | null; designation?: string | null; department?: string | null }>(auth, `staff_details?select=milk_route_name,milk_chiller_name,designation,department&profile_id=eq.${encodeURIComponent(staffUserId)}&limit=1`, fetch);
+      if (!rows.ok) rows = await liveGet<{ milk_route_name?: string | null; milk_chiller_name?: string | null; designation?: string | null; department?: string | null }>(auth, `staff_details?select=milk_route_name,milk_chiller_name,designation&profile_id=eq.${encodeURIComponent(staffUserId)}&limit=1`, fetch);
       if (gone || !rows.ok) return;
       const row = rows.rows[0];
       const place = [row?.milk_chiller_name, row?.milk_route_name].map((item) => String(item || "").trim()).filter(Boolean).join(" · ");
       if (place) setDutyPlace(place);
-    });
+      const work = resolveWorkspaces({ appRole: "staff", designation: row?.designation, department: row?.department });
+      setWorkLabel(work.length ? work.map((key) => WORK_LABELS[key]).join(" · ") : null);
+    })();
     return () => { gone = true; };
   }, [auth?.token, auth?.url, auth?.userId]);
   if (!attendance || !salary || !advances) return <ActivityIndicator color={glass.up} style={{ marginTop: 24 }} />;
@@ -865,13 +872,17 @@ export function StaffGlass({ live, attendance, salary, advances, tasks, tasksNot
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Staff" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
+      <Pressable onPress={() => bar.onTab?.("work")} style={{ backgroundColor: "#fff", borderWidth: 1, borderColor: "#DDE7DD", borderRadius: 18, padding: 14, marginBottom: 12, flexDirection: "row", alignItems: "center" }}>
+        <View style={{ width: 42, height: 42, borderRadius: 14, backgroundColor: "#DFF5E7", alignItems: "center", justifyContent: "center", marginRight: 11 }}><Text style={{ color: "#146B3A", fontSize: 20, fontWeight: "900" }}>▣</Text></View>
+        <View style={{ flex: 1 }}><Text style={{ color: glass.text, fontSize: 16, fontWeight: "900" }}>My Work{workLabel ? `: ${workLabel}` : ""}</Text><Text style={{ color: glass.muted, marginTop: 3 }}>{workLabel ? "Assigned workspace" : "Admin se assigned workspace"}</Text></View>
+        <Text style={{ color: "#146B3A", fontSize: 20 }}>›</Text>
+      </Pressable>
       <ActionGrid actions={[
-        { label: "Hazri", key: "visits", onPress: () => bar.onTab?.("visits") },
-        { label: "Tasks", key: "orders", onPress: () => bar.onTab?.("orders") },
-        { label: "POS", key: "more", onPress: () => bar.onTab?.("more") },
-        { label: "Recovery", key: "more", onPress: () => bar.onTab?.("more") },
-        { label: "Khata", key: "more", onPress: () => bar.onTab?.("more") },
-        { label: "Profile", key: "more", onPress: bar.onProfile },
+        { label: "My Work", key: "work", onPress: () => bar.onTab?.("work") },
+        { label: "Tasks", key: "tasks", onPress: () => bar.onTab?.("tasks") },
+        { label: "HR", key: "hr", onPress: () => bar.onTab?.("hr") },
+        { label: "Hazri", key: "hr", onPress: () => bar.onTab?.("hr") },
+        { label: "Profile", key: "profile", onPress: bar.onProfile },
       ]} />
       <Rise index={2}>
         <View style={{ backgroundColor: "#146B3A", borderRadius: 18, padding: 14, marginBottom: 12, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "rgba(61,220,151,0.35)" }}>

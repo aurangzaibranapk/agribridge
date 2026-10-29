@@ -9,6 +9,7 @@ import { AdminGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
 import { loadAdminDigitalOverview, type AdminDigitalOverview } from "../../../../src/lib/mobile/digital-munshi";
 import { AdminWorkspace, type AdminPanel } from "./admin-workspace";
+import { InternalHr } from "./internal-hr";
 
 type Panel = "home" | "parties" | "stock" | "milk" | "purchases" | "attendance";
 
@@ -65,12 +66,14 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
   }
   useEffect(() => { if (tab === "approvals" || tab === "reports" || tab === "home") setPanel("home"); }, [tab]);
 
-  useEffect(() => { if (tab !== "more") setWorkspace("menu"); }, [tab]);
+  useEffect(() => { if (tab !== "work") setWorkspace("menu"); }, [tab]);
 
   if (!home && !error) return <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />;
-  if (tab === "more") {
+  if (tab === "work") {
     return <AdminWorkspace panel={workspace} auth={auth} home={home} milk={milk} digital={digital} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} onOpen={setWorkspace} onProfile={onProfile} />;
   }
+  if (tab === "hr" && auth?.userId) return <InternalHr auth={auth} userId={auth.userId} readOnly={readOnly} />;
+  if (tab === "profile") return <AdminWorkspace panel="settings" auth={auth} home={home} milk={milk} digital={digital} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} onOpen={setWorkspace} onProfile={onProfile} />;
   if (tab === "reports" && home) {
     return <AdminReports home={home} milk={milk} refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />;
   }
@@ -85,7 +88,7 @@ export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { 
         digital={digital}
         onProfile={onProfile}
         onTab={onTab}
-        onModule={(next) => { setWorkspace(next); onTab?.("more"); }}
+        onModule={(next) => { setWorkspace(next); onTab?.("work"); }}
         refreshing={refreshing}
         onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
         onVerify={hero => { if (!verifyBusy) void verifyHero(hero); }}

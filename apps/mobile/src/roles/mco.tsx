@@ -12,6 +12,7 @@ import { Btn, colors } from "../kit";
 import { farmerPortrait } from "../farmer-portraits";
 import type { OutboxItem } from "../../../../src/lib/mobile/queue";
 import { ApprovedMcoApp, type McoDispatch, type McoFarmer } from "./mco-approved";
+import { InternalHr } from "./internal-hr";
 
 function num(value: number | string | null | undefined): number {
   const n = typeof value === "number" ? value : Number(value);
@@ -265,8 +266,10 @@ export function RoleScreen({ tab, queue = [], queueCount = 0, onEnqueue, onSync,
     await load();
   }
 
+  if (tab === "hr" && auth?.userId) return <InternalHr auth={auth} userId={auth.userId} readOnly={readOnly} />;
+  const effectiveTab = tab === "work" ? "receive" : tab === "receiving" ? "quality" : tab === "profile" ? "more" : tab;
   return <ApprovedMcoApp
-    tab={tab} today={today} rows={rows} farmers={farmers} dispatches={dispatches}
+    tab={effectiveTab} today={today} rows={rows} farmers={farmers} dispatches={dispatches}
     route={route} chiller={chiller} note={note} error={error}
     queue={queue} queueCount={queueCount} refreshing={refreshing} readOnly={readOnly}
     receiveMode={receiveMode} search={search} appliedSearch={appliedSearch}
