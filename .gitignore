@@ -8,7 +8,14 @@ build/
 *.log
 src.backup/
 .vercel
-*.zip 
+*.zip
+/.tmp-tsx/
+/build-*-download/
+/deliverables/
+/output/
+/release-check/
+/apps/mobile/dist-*-test/
+/apps/mobile/dist-*-test-final/
 
 *.tsbuildinfo
 

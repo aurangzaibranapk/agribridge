@@ -32,9 +32,14 @@ assert.doesNotMatch(merchant, /truncate|delete from public\./i);
 
 const merchantRead = readFileSync("supabase/migrations/20261029080741_merchant_mobile_read_api.sql", "utf8");
 const merchantOrders = readFileSync("supabase/migrations/20261029080852_merchant_mobile_orders_api.sql", "utf8");
+const merchantProfile = readFileSync("supabase/migrations/20261029103000_merchant_mobile_profile.sql", "utf8");
 assert.match(merchantRead, /fn_my_merchant_settlements/);
 assert.match(merchantOrders, /fn_my_merchant_orders/);
 assert.match(merchantRead, /dealer','supplier/);
 assert.doesNotMatch(merchantRead + merchantOrders, /truncate|delete from public\./i);
+assert.match(merchantProfile, /fn_my_merchant_profile/);
+assert.match(merchantProfile, /auth\.uid\(\)/);
+assert.match(merchantProfile, /dealer','supplier/);
+assert.doesNotMatch(merchantProfile, /truncate|delete from public\./i);
 
 console.log("mobile sql proposal ok");

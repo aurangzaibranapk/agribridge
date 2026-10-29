@@ -597,6 +597,19 @@ export type MerchantSettlementRow = {
   paid_at?: string | null;
   created_at?: string | null;
 };
+
+export type MerchantProfileRow = {
+  business_name?: string | null;
+  contact_person?: string | null;
+  phone_number?: string | null;
+  address?: string | null;
+  bank_name?: string | null;
+  bank_account_title?: string | null;
+  bank_account_number?: string | null;
+  bank_iban?: string | null;
+  verification_status?: string | null;
+  current_payable?: number | string | null;
+};
 export type KhataLine = { entry_date?: string | null; tafseel?: string | null; udhaar?: number | string | null; adaigi?: number | string | null; baqaya?: number | string | null; is_opening?: boolean | null; category?: string | null };
 export type SalaryRow = { net_salary?: number | string | null; status?: string | null; pay_month?: number | null; pay_year?: number | null };
 export type AdvanceRow = { amount?: number | string | null; status?: string | null; created_at?: string | null };
@@ -845,6 +858,12 @@ export async function loadMyMerchantOrders(auth: LiveAuth, role: "dealer" | "sup
 /** Posted commission, guarantee payable aur bank settlement. Khali result ko zero nahi banate. */
 export async function loadMyMerchantSettlements(auth: LiveAuth, role: "dealer" | "supplier", fetchImpl: FetchLike): Promise<ReadResult<MerchantSettlementRow>> {
   const result = await liveRpc<MerchantSettlementRow[] | null>(auth, "fn_my_merchant_settlements", { p_role: role }, fetchImpl);
+  if (!result.ok) return { ok: false, status: result.status, message: result.message, detail: result.detail };
+  return { ok: true, rows: Array.isArray(result.data) ? result.data : [] };
+}
+
+export async function loadMyMerchantProfile(auth: LiveAuth, role: "dealer" | "supplier", fetchImpl: FetchLike): Promise<ReadResult<MerchantProfileRow>> {
+  const result = await liveRpc<MerchantProfileRow[] | null>(auth, "fn_my_merchant_profile", { p_role: role }, fetchImpl);
   if (!result.ok) return { ok: false, status: result.status, message: result.message, detail: result.detail };
   return { ok: true, rows: Array.isArray(result.data) ? result.data : [] };
 }

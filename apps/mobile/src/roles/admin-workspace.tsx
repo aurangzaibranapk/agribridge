@@ -210,10 +210,11 @@ function MilkPanel({ rows }: { rows: MilkRow[] }) {
 type FarmerRow = { id?: string; full_name?: string | null; farmer_code?: string | null; village?: string | null; mobile?: string | null };
 function FarmersPanel({ auth, digital }: { auth: LiveAuth; digital: AdminDigitalOverview | null }) {
   const [query, setQuery] = useState("");
+  const [applied, setApplied] = useState("");
   const read = useRead(() => liveGet<FarmerRow>(auth, `farmers?select=id,full_name,farmer_code,village,mobile&order=full_name.asc&limit=200`, fetch), [auth.token]);
-  const shown = read.rows?.filter((row) => !query.trim() || [row.full_name, row.farmer_code, row.village, row.mobile].some((value) => String(value || "").toLowerCase().includes(query.trim().toLowerCase())));
+  const shown = read.rows?.filter((row) => !applied || [row.full_name, row.farmer_code, row.village, row.mobile].some((value) => String(value || "").toLowerCase().includes(applied.toLowerCase())));
   return <View>
-    <Search value={query} onChange={setQuery} onApply={() => undefined} placeholder="Farmer name, CNIC, mobile, village" />
+    <Search value={query} onChange={setQuery} onApply={() => setApplied(query.trim())} placeholder="Farmer name, code, mobile, village" />
     <KpiGrid items={[["Kisan", valueOf(digital?.farmers)], ["Farms", valueOf(digital?.farms)], ["Faslein", valueOf(digital?.crops)], ["Janwar", valueOf(digital?.animals)]]} />
     <Card title="Farmer / Customer profiles">
       <ResultState state={read}>{shown?.map((row, index) => <DataRow key={row.id || String(index)} title={row.full_name || "Kisan / Customer"} value="Open ›" sub={[row.farmer_code, row.village, row.mobile].filter(Boolean).join(" · ")} />)}</ResultState>

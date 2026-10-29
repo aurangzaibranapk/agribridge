@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import { rupees, type KhataView, type MerchantSettlementRow, type ReadResult } from "../../../../src/lib/mobile/live-read";
+import { rupees, type KhataView, type MerchantProfileRow, type MerchantSettlementRow, type ReadResult } from "../../../../src/lib/mobile/live-read";
 import { merchantRoleLabel } from "../../../../src/lib/mobile/merchant-finance";
 import { colors } from "../kit";
 
@@ -20,9 +20,12 @@ type Props = {
   orders: MerchantOrderView[];
   ordersNote?: string | null;
   settlements: ReadResult<MerchantSettlementRow>;
+  profile: ReadResult<MerchantProfileRow>;
   refreshing?: boolean;
   onRefresh?: () => void;
   onProfile?: () => void;
+  onSupport?: () => void;
+  onTab?: (key: string) => void;
 };
 
 function statusLabel(status: string | null | undefined): string {
@@ -73,15 +76,15 @@ function Page({ children, refreshing, onRefresh }: { children: ReactNode; refres
 }
 
 function Head({ role, title, sub }: { role: "supplier" | "dealer"; title: string; sub: string }) {
-  return <View style={s.head}><View style={s.logo}><Text style={s.logoText}>⌁</Text></View><View style={{ flex: 1 }}><Text style={s.role}>{merchantRoleLabel(role)} Workspace</Text><Text style={s.title}>{title}</Text><Text style={s.sub}>{sub}</Text></View><View style={s.test}><Text style={s.testText}>TEST</Text></View></View>;
+  return <View style={s.head}><View style={s.logo}><Text style={s.logoText}>⌁</Text></View><View style={{ flex: 1 }}><Text style={s.role}>{merchantRoleLabel(role)} Workspace</Text><Text style={s.title}>{title}</Text><Text style={s.sub}>{sub}</Text></View></View>;
 }
 
 function Metric({ label, value, tone = "green", sub }: { label: string; value: string; tone?: "green" | "gold" | "red" | "blue"; sub?: string }) {
   return <View style={[s.metric, tone === "gold" ? s.metricGold : tone === "red" ? s.metricRed : tone === "blue" ? s.metricBlue : null]}><Text style={s.metricLabel}>{label}</Text><Text style={s.metricValue}>{value}</Text>{sub ? <Text style={s.metricSub}>{sub}</Text> : null}</View>;
 }
 
-function Tile({ title, sub, mark }: { title: string; sub: string; mark: string }) {
-  return <View style={s.tile}><View style={s.tileIcon}><Text style={s.tileMark}>{mark}</Text></View><Text style={s.tileTitle}>{title}</Text><Text style={s.tileSub}>{sub}</Text></View>;
+function Tile({ title, sub, mark, onPress }: { title: string; sub: string; mark: string; onPress: () => void }) {
+  return <Pressable onPress={onPress} style={s.tile}><View style={s.tileIcon}><Text style={s.tileMark}>{mark}</Text></View><Text style={s.tileTitle}>{title}</Text><Text style={s.tileSub}>{sub}</Text></Pressable>;
 }
 
 function OrderRows({ rows, note }: { rows: MerchantOrderView[]; note?: string | null }) {
@@ -100,10 +103,11 @@ function Notice({ title, body }: { title: string; body: string }) {
   return <View style={s.notice}><Text style={s.noticeTitle}>{title}</Text><Text style={s.noticeBody}>{body}</Text></View>;
 }
 
-export function MerchantApproved({ role, tab, khata, orders, ordersNote, settlements, refreshing, onRefresh, onProfile }: Props) {
+export function MerchantApproved({ role, tab, khata, orders, ordersNote, settlements, profile, refreshing, onRefresh, onProfile, onSupport, onTab }: Props) {
   const label = merchantRoleLabel(role);
   const finance = settlementTotals(settlements);
   const financeNote = settlements.ok ? (settlements.rows.length ? "Posted records" : "Settlement record nahi mila") : settlements.message;
+  const business = profile.ok ? profile.rows[0] : null;
   if (tab === "home") return <Page refreshing={refreshing} onRefresh={onRefresh}>
     <Head role={role} title="Guaranteed Sales Home" sub="AgriBridge Guarantee · Khata · Weekly Settlement" />
     <View style={s.guarantee}><View style={s.shield}><Text style={s.shieldText}>✓</Text></View><View style={{ flex: 1 }}><Text style={s.guaranteeTitle}>Payment Responsibility: AgriBridge</Text><Text style={s.guaranteeText}>Sirf Admin-approved guaranteed order par. Farmer ka default risk approval terms ke mutabiq AgriBridge manage karega.</Text></View></View>
@@ -115,12 +119,12 @@ export function MerchantApproved({ role, tab, khata, orders, ordersNote, settlem
     </View>
     <Text style={s.sectionTitle}>Business Munshi</Text>
     <View style={s.grid}>
-      <Tile mark="⌕" title="Check Customer" sub="Khata aur approved limit" />
-      <Tile mark="▣" title="Guaranteed Orders" sub="Approval aur delivery" />
-      <Tile mark="₨" title="Installments" sub="Weekly milk adjustment" />
-      <Tile mark="⌂" title="Settlements" sub="Bank proof aur due" />
-      <Tile mark="▤" title="Products & Stock" sub={`${label} business record`} />
-      <Tile mark="◉" title="Profile" sub="Plan aur support" />
+      <Tile mark="⌕" title="Check Customer" sub="Khata aur approved limit" onPress={() => onTab?.("settlements")} />
+      <Tile mark="▣" title="Guaranteed Orders" sub="Approval aur delivery" onPress={() => onTab?.("orders")} />
+      <Tile mark="₨" title="Installments" sub="Weekly milk adjustment" onPress={() => onTab?.("settlements")} />
+      <Tile mark="⌂" title="Settlements" sub="Bank proof aur due" onPress={() => onTab?.("settlements")} />
+      <Tile mark="▤" title="Products & Stock" sub={`${label} business record`} onPress={() => onTab?.("munshi")} />
+      <Tile mark="◉" title="Profile" sub="Plan aur support" onPress={() => onTab?.("profile")} />
     </View>
   </Page>;
 
@@ -157,16 +161,16 @@ export function MerchantApproved({ role, tab, khata, orders, ordersNote, settlem
 
   return <Page refreshing={refreshing} onRefresh={onRefresh}>
     <Head role={role} title="Business Profile & Plan" sub="Subscription · Bank · Support" />
-    <View style={s.card}><Text style={s.cardTitle}>{label} Business</Text><Text style={s.line}>Business name: —</Text><Text style={s.line}>Phone: —</Text><Text style={s.line}>Address / territory: —</Text><Text style={s.line}>Bank account: —</Text></View>
+    <View style={s.card}><Text style={s.cardTitle}>{label} Business</Text><Text style={s.line}>Business name: {business?.business_name || "—"}</Text><Text style={s.line}>Contact person: {business?.contact_person || "—"}</Text><Text style={s.line}>Phone: {business?.phone_number || "—"}</Text><Text style={s.line}>Address / territory: {business?.address || "—"}</Text><Text style={s.line}>Verification: {business?.verification_status || "—"}</Text><Text style={s.line}>Bank: {[business?.bank_name, business?.bank_account_title].filter(Boolean).join(" · ") || "—"}</Text><Text style={s.line}>Account / IBAN: {business?.bank_iban || business?.bank_account_number || "—"}</Text></View>
     <View style={s.card}><Text style={s.cardTitle}>Platform Plan</Text><Text style={s.line}>Free trial end: —</Text><Text style={s.line}>Subscription plan: —</Text><Text style={s.line}>Next fee: —</Text><Text style={s.body}>Subscription fee aur transaction commission alag ledger entries hongi.</Text></View>
     <Notice title="No HR / Attendance" body={`${label} external business role hai. Is app mein salary, hazri aur leave nahi hain.`} />
     <Pressable onPress={onProfile} style={s.button}><Text style={s.buttonText}>Open Profile</Text></Pressable>
-    <Pressable style={s.help}><Text style={s.helpText}>Masla Batayein</Text></Pressable>
+    <Pressable onPress={onSupport} style={s.help}><Text style={s.helpText}>Masla Batayein</Text></Pressable>
   </Page>;
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F4F7F2" }, content: { padding: 14 }, head: { backgroundColor: "#fff", borderWidth: 1, borderColor: colors.line, borderRadius: 20, padding: 14, flexDirection: "row", alignItems: "center", marginBottom: 12 }, logo: { width: 44, height: 44, borderRadius: 15, backgroundColor: "#DFF5E7", alignItems: "center", justifyContent: "center", marginRight: 10 }, logoText: { color: colors.green, fontSize: 25, fontWeight: "900" }, role: { color: colors.green, fontSize: 12, fontWeight: "800" }, title: { color: colors.text, fontSize: 19, fontWeight: "900", marginTop: 1 }, sub: { color: colors.muted, fontSize: 11, marginTop: 3 }, test: { backgroundColor: "#FFF0C7", borderRadius: 10, paddingHorizontal: 9, paddingVertical: 5 }, testText: { color: "#7A5612", fontSize: 11, fontWeight: "900" },
+  screen: { flex: 1, backgroundColor: "#F4F7F2" }, content: { padding: 14 }, head: { backgroundColor: "#fff", borderWidth: 1, borderColor: colors.line, borderRadius: 20, padding: 14, flexDirection: "row", alignItems: "center", marginBottom: 12 }, logo: { width: 44, height: 44, borderRadius: 15, backgroundColor: "#DFF5E7", alignItems: "center", justifyContent: "center", marginRight: 10 }, logoText: { color: colors.green, fontSize: 25, fontWeight: "900" }, role: { color: colors.green, fontSize: 12, fontWeight: "800" }, title: { color: colors.text, fontSize: 19, fontWeight: "900", marginTop: 1 }, sub: { color: colors.muted, fontSize: 11, marginTop: 3 },
   guarantee: { backgroundColor: "#FFF5D8", borderWidth: 1, borderColor: "#E8CD7C", borderRadius: 18, padding: 14, flexDirection: "row", marginBottom: 12 }, shield: { width: 42, height: 42, borderRadius: 14, backgroundColor: "#D8A51D", alignItems: "center", justifyContent: "center", marginRight: 10 }, shieldText: { color: "#fff", fontWeight: "900", fontSize: 20 }, guaranteeTitle: { color: "#4C3608", fontWeight: "900", fontSize: 15 }, guaranteeText: { color: "#6E551C", lineHeight: 18, marginTop: 4, fontSize: 12 },
   grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }, metric: { width: "48.5%", minHeight: 106, borderRadius: 17, padding: 13, backgroundColor: "#E8F7EE", borderWidth: 1, borderColor: "#CBE9D6", marginBottom: 10 }, metricGold: { backgroundColor: "#FFF5D8", borderColor: "#EBDCA8" }, metricRed: { backgroundColor: "#FFF0EF", borderColor: "#F2D0CD" }, metricBlue: { backgroundColor: "#EEF4FF", borderColor: "#D5E0F4" }, metricLabel: { color: colors.muted, fontSize: 11, fontWeight: "700" }, metricValue: { color: colors.text, fontWeight: "900", fontSize: 19, marginTop: 8 }, metricSub: { color: colors.muted, fontSize: 10, lineHeight: 14, marginTop: 5 }, sectionTitle: { color: colors.text, fontWeight: "900", fontSize: 17, marginTop: 4, marginBottom: 10 }, tile: { width: "48.5%", minHeight: 124, backgroundColor: "#fff", borderWidth: 1, borderColor: colors.line, borderRadius: 17, padding: 13, marginBottom: 10 }, tileIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: "#DFF5E7", alignItems: "center", justifyContent: "center", marginBottom: 9 }, tileMark: { color: colors.green, fontWeight: "900", fontSize: 18 }, tileTitle: { color: colors.text, fontWeight: "900", fontSize: 14 }, tileSub: { color: colors.muted, fontSize: 11, lineHeight: 15, marginTop: 4 },
   card: { backgroundColor: "#fff", borderWidth: 1, borderColor: colors.line, borderRadius: 18, padding: 14, marginBottom: 12 }, cardTitle: { color: colors.text, fontSize: 16, fontWeight: "900", marginBottom: 10 }, body: { color: colors.muted, lineHeight: 19 }, line: { color: colors.text, marginBottom: 9, lineHeight: 18 }, orderRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#EEF1ED" }, orderTitle: { color: colors.text, fontWeight: "800" }, orderSub: { color: colors.muted, fontSize: 11, marginTop: 3 }, pill: { backgroundColor: "#E8F7EE", borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 }, pillText: { color: colors.green, fontSize: 10, fontWeight: "800" }, notice: { backgroundColor: "#F5F7F4", borderRadius: 14, padding: 12, marginBottom: 10 }, noticeTitle: { color: colors.text, fontWeight: "900" }, noticeBody: { color: colors.muted, lineHeight: 18, marginTop: 4, fontSize: 12 }, flow: { backgroundColor: "#fff", borderWidth: 1, borderColor: colors.line, borderRadius: 18, padding: 12, flexDirection: "row", alignItems: "center", marginBottom: 12 }, flowText: { color: colors.text, fontSize: 10, fontWeight: "800", flex: 1, textAlign: "center" }, arrow: { color: colors.green, fontSize: 18, marginHorizontal: 3 }, ledgerRow: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#EEF1ED" }, ledgerAmount: { color: colors.green, fontWeight: "900", marginTop: 4 }, button: { backgroundColor: colors.green, borderRadius: 14, paddingVertical: 13, alignItems: "center", marginTop: 4 }, buttonText: { color: "#fff", fontWeight: "900" }, help: { backgroundColor: "#fff", borderWidth: 1, borderColor: colors.green, borderRadius: 14, paddingVertical: 12, alignItems: "center", marginTop: 10 }, helpText: { color: colors.green, fontWeight: "900" },

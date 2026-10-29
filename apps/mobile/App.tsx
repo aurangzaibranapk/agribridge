@@ -616,7 +616,7 @@ export default function App() {
                 </Pressable>
               </View>
             ) : null}
-            {Role ? <Role tab={tab} role={appRole} data={data} queue={queue} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} onProfile={() => setProfileOpen(true)} onTab={(key: string) => { setTab(key); if (appRole) setRoute(`/${appRole}/${key}`); }} readOnly={previewing || (isTest && FLAVOR !== "test")} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, flavor: FLAVOR, testAccount: isTest, refreshSession, portalUrl: PORTAL }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
+            {Role ? <Role tab={tab} role={appRole} data={data} queue={queue} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} onProfile={() => setProfileOpen(true)} onSupport={() => setReportOpen(true)} onTab={(key: string) => { setTab(key); if (appRole) setRoute(`/${appRole}/${key}`); }} readOnly={previewing || (isTest && FLAVOR !== "test")} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, flavor: FLAVOR, testAccount: isTest, refreshSession, portalUrl: PORTAL }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
           </View>
           {nav ? <Tabs tabs={nav.tabs} current={tab} onChange={(key) => { setTab(key); setRoute(`/${appRole}/${key}`); }} /> : null}
           {tab === "more" ? (

@@ -3,6 +3,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, Vie
 import type { DigitalMunshiData, MunshiAnimal, MunshiCrop } from "../../../../src/lib/mobile/digital-munshi";
 import { karachiDate, rupees, shiftLabel, type CatalogRow, type HealthRow, type KhataView, type MilkRow, type OrderRow, type ReadResult, type VaccineRow } from "../../../../src/lib/mobile/live-read";
 import type { MilkSettings } from "../../../../src/lib/dairy/rules";
+import { karachiWeek } from "../../../../src/lib/mobile/statement";
 
 const C = {
   green: "#075B39",
@@ -41,6 +42,9 @@ type Props = {
   orderNote: string;
   orderBusy: boolean;
   onPlaceOrder: () => void;
+  vetBusy: boolean;
+  vetNote: string;
+  onRequestVet: (animalId: string, symptoms: string, priority: "normal" | "emergency") => void;
 };
 
 function n(value: number | string | null | undefined): number {
@@ -170,7 +174,15 @@ function DataLine({ mark, title, sub, value, last }: { mark: string; title: stri
 
 function Munshi({ p }: { p: Props }) {
   const [period, setPeriod] = useState<"today" | "week" | "month">("today");
-  const entries = p.munshi.credit;
+  const today = karachiDate();
+  const week = karachiWeek(new Date(`${today}T12:00:00+05:00`));
+  const entries = p.munshi.credit.filter((row) => {
+    const day = String(row.created_at || "").slice(0, 10);
+    if (!day) return false;
+    if (period === "today") return day === today;
+    if (period === "week") return day >= week.start && day <= week.end;
+    return day.slice(0, 7) === today.slice(0, 7);
+  });
   const signed = entries.map((row) => ({ ...row, value: n(row.amount), kind: String(row.ledger_type || "").toLowerCase() }));
   const incomeRows = signed.filter((row) => row.value > 0 || /credit|receive|income|sale|wasooli/.test(row.kind));
   const expenseRows = signed.filter((row) => row.value < 0 || /debit|expense|purchase|payment|adaigi/.test(row.kind));
@@ -181,9 +193,9 @@ function Munshi({ p }: { p: Props }) {
   return <Page refreshing={p.refreshing} onRefresh={p.onRefresh}>
     <ScreenTitle title="Digital Munshi" sub="Aap ka mukammal roznamcha" onBack={() => p.onTab?.("home")} />
     <View style={styles.segment}>{(["today", "week", "month"] as const).map((key) => <Pressable key={key} onPress={() => setPeriod(key)} style={[styles.segmentBtn, period === key ? styles.segmentOn : null]}><Text style={[styles.segmentText, period === key ? styles.segmentTextOn : null]}>{key === "today" ? "Aaj" : key === "week" ? "Is Hafte" : "Is Mahine"}</Text></Pressable>)}</View>
-    <Card title="Aaj ka Khata">
-      <DataLine mark="↑" title="Aaj ki Aamdani" value={moneyOrDash(income)} />
-      <DataLine mark="↓" title="Aaj ka Kharcha" value={moneyOrDash(expense)} />
+    <Card title={period === "today" ? "Aaj ka Khata" : period === "week" ? "Is Hafte ka Khata" : "Is Mahine ka Khata"}>
+      <DataLine mark="↑" title="Aamdani" value={moneyOrDash(income)} />
+      <DataLine mark="↓" title="Kharcha" value={moneyOrDash(expense)} />
       <DataLine mark="↙" title="Lenay hain (Wasooli)" value={moneyOrDash(receivable)} />
       <DataLine mark="↗" title="Dene hain (Adaigi)" value={moneyOrDash(payable)} />
       <DataLine mark="₨" title="Cash Balance" value={p.khata.owed == null ? "—" : moneyOrDash(p.khata.owed)} last />
@@ -243,17 +255,18 @@ function Vet({ p }: { p: Props }) {
   const [animal, setAnimal] = useState(p.munshi.animals[0]?.id || "");
   const [symptoms, setSymptoms] = useState("");
   const [message, setMessage] = useState("");
+  const [priority, setPriority] = useState<"normal" | "emergency">("normal");
   const healthRows = p.health.ok ? p.health.rows : [];
   const vaccineRows = p.vaccines.ok ? p.vaccines.rows : [];
   return <Page refreshing={p.refreshing} onRefresh={p.onRefresh}>
     <ScreenTitle title="Vet Doctor" sub="Doctor request aur treatment history" onBack={() => p.onTab?.("home")} />
-    <View style={styles.twoCol}><Pressable onPress={() => setMessage("Vet request ke liye janwar aur alamat likhein.")} style={[styles.requestTile, { backgroundColor: C.mint }]}><Text style={styles.requestMark}>▣</Text><Text style={styles.requestTitle}>Vet Visit Request</Text><Text style={styles.requestSub}>Ghar par visit ke liye</Text></Pressable><Pressable onPress={() => setMessage("Emergency mein apni registered vet team ko call karein.")} style={[styles.requestTile, { backgroundColor: C.redBg }]}><Text style={[styles.requestMark, { color: C.red }]}>☎</Text><Text style={styles.requestTitle}>Emergency Call</Text><Text style={styles.requestSub}>Fori madad ke liye</Text></Pressable></View>
+    <View style={styles.twoCol}><Pressable onPress={() => { setPriority("normal"); setMessage("Janwar aur alamat likh kar request bhejein."); }} style={[styles.requestTile, { backgroundColor: priority === "normal" ? C.mint : C.card }]}><Text style={styles.requestMark}>▣</Text><Text style={styles.requestTitle}>Vet Visit Request</Text><Text style={styles.requestSub}>Ghar par visit ke liye</Text></Pressable><Pressable onPress={() => { setPriority("emergency"); setMessage("Emergency request foran Vet Team ko nazar aayegi."); }} style={[styles.requestTile, { backgroundColor: priority === "emergency" ? C.redBg : C.card }]}><Text style={[styles.requestMark, { color: C.red }]}>☎</Text><Text style={styles.requestTitle}>Emergency Call</Text><Text style={styles.requestSub}>Fori madad ke liye</Text></Pressable></View>
     <Card title="Masla ki tafseel">
       <Text style={styles.fieldLabel}>Janwar chunein</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>{p.munshi.animals.length ? p.munshi.animals.map((row) => <Pressable key={row.id || row.tag_no} onPress={() => setAnimal(row.id || "")} style={[styles.animalChip, animal === row.id ? styles.animalChipOn : null]}><Text style={[styles.animalChipText, animal === row.id ? { color: C.green } : null]}>#{row.tag_no || "—"} {row.name || row.species || "Janwar"}</Text></Pressable>) : <Text style={styles.emptyText}>Janwar record nahi mila.</Text>}</ScrollView>
       <TextInput value={symptoms} onChangeText={setSymptoms} placeholder="Alamat likhein: bhook kam, bukhar, khansi…" multiline style={styles.textarea} />
-      <Pressable onPress={() => setMessage(!animal ? "Pehle janwar chunein." : !symptoms.trim() ? "Alamat likhein." : "Request tayyar hai. Submit integration TEST mein verify hogi.")} style={styles.primary}><Text style={styles.primaryText}>Request bhejein</Text></Pressable>
-      {message ? <Text style={styles.info}>{message}</Text> : null}
+      <Pressable disabled={p.vetBusy} onPress={() => !animal ? setMessage("Pehle janwar chunein.") : !symptoms.trim() ? setMessage("Alamat likhein.") : p.onRequestVet(animal, symptoms.trim(), priority)} style={[styles.primary, p.vetBusy ? { opacity: 0.5 } : null]}><Text style={styles.primaryText}>{p.vetBusy ? "Request bhej rahe hain…" : priority === "emergency" ? "Emergency request bhejein" : "Request bhejein"}</Text></Pressable>
+      {p.vetNote || message ? <Text style={styles.info}>{p.vetNote || message}</Text> : null}
     </Card>
     <Card title="Meri Appointments" action="Treatment History">
       {healthRows.length ? healthRows.slice(0, 10).map((row, index) => <DataLine key={row.id || String(index)} mark="+" title={row.diagnosis || row.kind || "Vet visit"} sub={`${row.vet_name || "Doctor"} · ${row.event_date || "—"}`} value={row.next_due || "—"} last={index === Math.min(10, healthRows.length) - 1} />) : <Empty text={p.health.ok ? "Abhi koi appointment ya treatment record nahi." : p.health.message} />}

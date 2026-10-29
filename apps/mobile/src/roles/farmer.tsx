@@ -75,6 +75,8 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
   const [amount, setAmount] = useState("");
   const [orderNote, setOrderNote] = useState("");
   const [orderBusy, setOrderBusy] = useState(false);
+  const [vetBusy, setVetBusy] = useState(false);
+  const [vetNote, setVetNote] = useState("");
 
   const load = useCallback(async () => {
     if (!auth) return;
@@ -164,6 +166,27 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
     await load();
   }
 
+  async function requestVet(animalId: string, symptoms: string, priority: "normal" | "emergency") {
+    const farmerId = munshi?.farmerId;
+    if (!auth || !farmerId || vetBusy) return;
+    setVetBusy(true);
+    setVetNote("");
+    const emergency = priority === "emergency";
+    const saved = await liveInsert<HealthRow>(auth, "dairy_health_events", {
+      farmer_id: farmerId,
+      animal_id: animalId,
+      kind: "vet_visit",
+      event_date: karachiDate(),
+      diagnosis: symptoms.slice(0, 120),
+      notes: `${emergency ? "EMERGENCY" : "Vet visit request"} · Mobile app se darkhwast`,
+      created_by: auth.userId,
+      voided: false,
+    }, fetch);
+    setVetBusy(false);
+    setVetNote(saved.ok ? (emergency ? "Emergency request Vet Team ko bhej di gayi." : "Vet visit request bhej di gayi.") : saved.message);
+    if (saved.ok) await load();
+  }
+
   return (
     <ApprovedFarmerApp
       tab={tab}
@@ -185,6 +208,9 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
       orderNote={orderNote}
       orderBusy={orderBusy}
       onPlaceOrder={() => { if (!orderBusy) void placeOrder(); }}
+      vetBusy={vetBusy}
+      vetNote={vetNote}
+      onRequestVet={(animalId, symptoms, priority) => void requestVet(animalId, symptoms, priority)}
     />
   );
 

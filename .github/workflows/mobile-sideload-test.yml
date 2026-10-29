@@ -27,7 +27,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: https://hwaiuwxqldxsoukkfefn.supabase.co
       # Public testing anon key.
       EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3YWl1d3hxbGR4c291a2tmZWZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MjU1NjMsImV4cCI6MjEwMzUwMTU2M30.UwchGHJHRCdKHwpJRr-fdNTreeVNLlfbpo7nBqQv9l4"
-      AGRIBRIDGE_VERSION_CODE: "644"
+      AGRIBRIDGE_VERSION_CODE: "645"
       CI: "1"
     steps:
       - uses: actions/checkout@v4
@@ -54,6 +54,8 @@ jobs:
             *ktskwawkslaznkjjacni*) echo "::error::live Supabase project is refused for the TEST apk"; exit 1 ;;
           esac
           echo "Testing Supabase public URL is set. Anon key length ${#EXPO_PUBLIC_SUPABASE_ANON_KEY}."
+      - name: Verify mobile source files and approved role coverage
+        run: node scripts/check-mobile-integrity.mjs
       - name: Install mobile dependencies
         working-directory: apps/mobile
         run: npm ci
@@ -129,7 +131,8 @@ jobs:
           notes=$(cat <<'EOF'
           AgriBridge TEST sideload builds. Not the live app and not a Play Store upload.
           App name AgriBridge TEST. Package pk.alranatraders.agribridge.test.
-          versionName v0.6.1 Beta, versionCode 644, APP_CHANNEL=internal.
+          versionName v0.6.1 Beta, versionCode 645, APP_CHANNEL=internal.
+          Build 645 is the full-app integrity pass: required role files and image assets are Git-tracked, temporary exports cannot enter a release, dead approved-screen actions fail CI, Farmer Vet Request posts to the linked dairy record, filters apply to the selected period, and missing Admin/Vet/Merchant button wiring is restored.
           Build 644 connects the Dealer and Supplier workspaces to secure merchant-only order and settlement RPCs. TEST database now has flexible Admin commission rules with order-time snapshots, Admin-approved delivery guarantees, idempotent merchant settlement posting, and the existing Qist system's weekly milk deduction engine. A verified rollback test produced commission Rs 250 on Rs 10,000, one guaranteed settlement, and Rs 300 qist / Rs 700 farmer bank from Rs 1,000 milk. No existing business row was deleted.
           Build 643 adds Supplier to the TEST role switch so both approved external merchant workspaces can be tested from one TEST account.
           Build 642 adds the approved Supplier and Dealer guaranteed-sales workspace: flexible Admin commission rules, order-time commission snapshots, Business Munshi, weekly milk-adjustment explanation, settlement/Khata views and subscription placeholders. No fixed 2 percent rule and no invented money. Supplier and Dealer remain external roles without HR.
