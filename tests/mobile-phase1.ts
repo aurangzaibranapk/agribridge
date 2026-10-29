@@ -57,7 +57,7 @@ assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.pa
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.appFlavor, "test");
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.android.versionCode, 606);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.version, AGRIBRIDGE_OS_VERSION);
-assert.equal(PHONE_VERSION_CODE, 642);
+assert.equal(PHONE_VERSION_CODE, 643);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.versionCode, PHONE_VERSION_CODE);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.versionCode, PHONE_VERSION_CODE);
 assert.equal(shownVersionCode({ platform: "web", embedded: 625, phone: PHONE_VERSION_CODE }), PHONE_VERSION_CODE);
@@ -497,7 +497,7 @@ assert.equal(jwtExpired(403, "JWT expired"), false);
 assert.equal(refreshDue(null, 1_000), true);
 assert.equal(refreshDue(100, 100 * 1000 - 30_000), true);
 assert.equal(refreshDue(1_000, 0), false);
-assert.deepEqual([...SWITCH_ROLES], ["admin", "farmer", "mca", "mco", "vet", "staff", "dealer"]);
+assert.deepEqual([...SWITCH_ROLES], ["admin", "farmer", "mca", "mco", "vet", "staff", "dealer", "supplier"]);
 assert.equal(withScope("milk_entries?select=id", "test"), "milk_entries?select=id&is_test=eq.true");
 assert.equal(withScope("farmers?select=id", "live"), "farmers?select=id&is_test=eq.false");
 assert.equal(columnMissing('{"code":"PGRST204","message":"Could not find the is_test column of farmers in the schema cache"}', "is_test"), true);
