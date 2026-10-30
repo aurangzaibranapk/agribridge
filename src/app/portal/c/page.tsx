@@ -8,7 +8,7 @@ import { custGate, customerContext, loadAnimalCount, loadBills, loadKhata, loadO
 import { shortDate } from "@/components/portal/khata/khata-parts";
 import { BuyPayChart, CHero, CKpi, Code, HBtn, L3, Panel, PanelHead, Pill, Row, STATUS_TONE, Sub } from "@/components/portal/customer/cust-parts";
 import { CustGate, NoCustomer } from "@/components/portal/customer/gate";
-import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import { PUBLIC_BRAND } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +41,7 @@ export default async function CustomerDashboard() {
   return (
     <div className="pf-fit mx-auto w-full max-w-[1760px] px-4 py-6 sm:px-6 fit:gap-2.5 fit:py-3">
       <div className="mb-4 fit:mb-0">
-        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-800 dark:text-emerald-300">{BRAND_NAME} · {BRAND_TAGLINE}</p>
+        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-800 dark:text-emerald-300">{PUBLIC_BRAND}</p>
         <h1 className="text-2xl fit:text-xl font-extrabold tracking-tight text-surface-900 dark:text-white">{L("pc_hello")}{first ? `, ${first}` : ""} 👋</h1>
         <p className="mt-1 text-[13px] text-surface-500 dark:text-slate-400"><L3 k="pc_dash_sub" lang={lang} /></p>
       </div>

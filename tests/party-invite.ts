@@ -83,10 +83,10 @@ const built = buildInviteMessage({
   email: "bilal.traders@gmail.com",
   loginUrl: PREVIEW_LOGIN,
 });
-await ok("AgriBridge + Kisan ka Wasela, OTP, login", () => {
+await ok("Kisan Pakistan, OTP, login", () => {
   assert.equal(brandProblem(built.text), null);
-  assert.match(built.text, /AgriBridge/);
-  assert.match(built.text, /Kisan ka Wasela/);
+  assert.match(built.text, /Kisan Pakistan/);
+  assert.doesNotMatch(built.text, /Kisan ka Wasela|Kisan ka wasila/i);
   assert.match(built.text, /OTP/);
   assert.match(built.text, /https:\/\/agribridge\.pk\/login/);
   assert.match(built.text, /Mahabali/);
@@ -97,8 +97,8 @@ await ok("AgriBridge + Kisan ka Wasela, OTP, login", () => {
 });
 await ok("email html mein bhi brand, ART nahi", () => {
   const html = inviteEmailHtml(built.text);
-  assert.match(html, /AgriBridge/);
-  assert.match(html, /Kisan ka Wasela/);
+  assert.match(html, /Kisan Pakistan/);
+  assert.doesNotMatch(html, /Kisan ka Wasela|Kisan ka wasila/i);
   assert.doesNotMatch(html, /al\s*rana|alranatraders/i);
   assert.doesNotMatch(html, /\bART\b/);
 });
@@ -137,12 +137,14 @@ await ok("email channel baghair email fail, text phir bhi", () => {
   });
   assert.equal(plan.ok, false);
   assert.match(plan.error ?? "", /email zaroori/i);
-  assert.match(plan.text, /AgriBridge/);
+  assert.match(plan.text, /Kisan Pakistan/);
+  assert.doesNotMatch(plan.text, /Kisan ka Wasela|Kisan ka wasila/i);
 });
 await ok("timeline fixture mein poora content aur SMS wajah", () => {
   const [wa, sms] = previewSends();
   assert.equal(wa.status, "sent");
-  assert.match(wa.content, /Kisan ka Wasela/);
+  assert.match(wa.content, /Kisan Pakistan/);
+  assert.doesNotMatch(wa.content, /Kisan ka Wasela|Kisan ka wasila/i);
   assert.equal(wa.content, built.text);
   assert.equal(sms.status, "failed");
   assert.match(sms.error ?? "", /Veevo/);
@@ -169,7 +171,8 @@ await ok("Email SMS par nahi girti", async () => {
     sendEmail: async (_to, subject, html) => {
       calls.push("mail");
       assert.match(subject, /AgriBridge/);
-      assert.match(html, /Kisan ka Wasela/);
+      assert.match(html, /Kisan Pakistan/);
+      assert.doesNotMatch(html, /Kisan ka Wasela|Kisan ka wasila/i);
       return { sent: false, error: "Email nahi ja saki: password darj nahi." };
     },
     sendSms: async () => { calls.push("sms"); return { sent: true, reason: "sent" }; },

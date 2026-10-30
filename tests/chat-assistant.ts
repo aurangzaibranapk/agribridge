@@ -49,12 +49,12 @@ assert.doesNotMatch(romanBug.answer, /I couldn't find|simple English|Please type
 const urduAsk = answerFromFacts("ایگری بریج کیا ہے؟", "en", facts);
 mustFit(urduAsk.answer, "ur");
 assert.match(urduAsk.answer, /ایگری بریج/);
-assert.match(urduAsk.answer, /کسان کا وسیلہ/);
+assert.doesNotMatch(urduAsk.answer, /کسان کا وسیلہ/);
 
 const englishAsk = answerFromFacts("What is AgriBridge?", "ur", facts);
 mustFit(englishAsk.answer, "en");
 assert.match(englishAsk.answer, /AgriBridge/);
-assert.match(englishAsk.answer, /Kisan ka Wasela/);
+assert.doesNotMatch(englishAsk.answer, /Kisan ka Wasela|Kisan ka wasila/i);
 assert.doesNotMatch(englishAsk.answer, /[\u0600-\u06FF]/);
 
 const romanJob = answerFromFacts("MCO ki nokri kaise milegi", "en", facts);
@@ -159,7 +159,7 @@ assert.equal(noLogin.link, "/login");
 const scrubbed = scrubPublicReply("Welcome to Al Rana Traders, the farmer's bridge.", "en");
 assert.equal(scrubbed.includes("Al Rana"), false);
 assert.match(scrubbed, /AgriBridge/);
-assert.match(scrubbed, /Kisan ka Wasela/);
+assert.doesNotMatch(scrubbed, /Kisan ka Wasela|wasila|farmer's bridge/i);
 
 mustFit(t("sp_chat_greeting", "en"), "en");
 mustFit(t("sp_chat_greeting", "rm"), "rm");

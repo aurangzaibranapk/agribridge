@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ChevronRight, Menu, X } from "lucide-react";
-import { BrandMark, BrandWord } from "@/components/brand/brand-mark";
-import { BRAND_TAGLINE } from "@/lib/brand";
+import { BrandMark } from "@/components/brand/brand-mark";
+import { PUBLIC_BRAND } from "@/lib/brand";
 
 /**
  * Website ka header.
@@ -67,8 +67,7 @@ export function PublicHeader() {
         <Link href="/" className="group flex shrink-0 items-center gap-3.5">
           <BrandMark className="h-12 w-12 lg:h-14 lg:w-14" />
           <div className="leading-tight">
-            <BrandWord className="block text-xl font-black tracking-tight text-slate-950 lg:text-[26px]" />
-            <p className="text-[11px] text-slate-500 lg:text-xs">{BRAND_TAGLINE}</p>
+            <span className="block text-xl font-black tracking-tight text-slate-950 lg:text-[26px]">{PUBLIC_BRAND}</span>
           </div>
         </Link>
 

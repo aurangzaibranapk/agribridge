@@ -9,7 +9,7 @@ import { StatementTable } from "@/components/portal/khata/statement-table";
 import { PrintButton } from "@/components/portal/khata/print-button";
 import { CustGate, NoCustomer } from "@/components/portal/customer/gate";
 import { btnPrimary } from "@/components/portal/customer/cust-parts";
-import { brandName, brandTagline } from "@/lib/brand";
+import { brandName } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +36,7 @@ export default async function CustomerStatementPrint({ searchParams }: { searchP
       </div>
       <div className="gl-panel pf-panel pf-navy pf-grow p-6 print:rounded-none print:border-0 print:bg-white print:shadow-none fit:p-4">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-black/10 pb-4 dark:border-white/10 print:border-surface-200">
-          <div><p className="text-lg font-bold text-surface-900 dark:text-white">{brandName(lang)}</p><p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">{brandTagline(lang)}</p><p className="text-sm text-surface-500 dark:text-slate-400">{L("pc_khata_title")}</p></div>
+          <div><p className="text-lg font-bold text-surface-900 dark:text-white">{brandName(lang)}</p><p className="text-sm text-surface-500 dark:text-slate-400">{L("pc_khata_title")}</p></div>
           <div className="text-end text-sm">
             <p className="font-semibold text-surface-900 dark:text-white">{c?.name ?? ""}</p>
             <p className="text-surface-500 dark:text-slate-400">{L("pc_f_code")}: {c?.code ?? "—"}</p>

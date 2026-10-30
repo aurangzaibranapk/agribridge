@@ -14,7 +14,7 @@ import { portalShellClass } from "../urdu-font";
 import { CUSTOMER_NAV_GROUPS } from "@/lib/portal/nav";
 import { EmptyState } from "../empty-state";
 import { GlassStyles } from "@/components/glass/glass-styles";
-import { brandName, brandTagline } from "@/lib/brand";
+import { brandName } from "@/lib/brand";
 
 /**
  * Customer Portal ka dhancha (Phase 5) -- sirf un logins ke liye jo kisan nahi
@@ -47,7 +47,6 @@ export async function CustomerShell({ userId, children }: { userId: string; chil
               <CustomerMobileNav lang={lang} />
               <div className="min-w-0 leading-tight">
                 <p className="font-display text-sm font-semibold text-surface-900 dark:text-white">{brandName(lang)}</p>
-                <p className="truncate text-[10px] text-emerald-800 dark:text-emerald-300">{brandTagline(lang)}</p>
               </div>
               <PortalBreadcrumb lang={lang} groups={CUSTOMER_NAV_GROUPS} />
             </div>

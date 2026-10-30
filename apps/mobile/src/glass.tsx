@@ -142,9 +142,14 @@ export function BrandStack({ title, line, rtl, titleSize, lineSize }: { title: s
   return (
     <View>
       <Text style={{ color: glass.text, fontSize: titleSize, fontWeight: "800", textAlign: align, writingDirection: direction }}>{title}</Text>
-      <Text style={{ color: glass.muted, fontSize: lineSize, marginTop: 2, textAlign: align, writingDirection: direction }}>{line}</Text>
+      {line ? <Text style={{ color: glass.muted, fontSize: lineSize, marginTop: 2, textAlign: align, writingDirection: direction }}>{line}</Text> : null}
     </View>
   );
+}
+
+/** Admin hero ki doosri line. Har role ke Home par yahi. */
+export function AppVersionStrip({ color = "rgba(255,255,255,0.82)" }: { color?: string }) {
+  return <Text style={{ color, fontSize: 13, marginTop: 1 }}>{`AgriBridge · ${AGRIBRIDGE_OS_VERSION}`}</Text>;
 }
 
 export function BrandHeader({ role, name, onProfile }: { role: string; name: string; centre?: string; onProfile?: () => void; live?: LiveBag }) {
@@ -158,10 +163,8 @@ export function BrandHeader({ role, name, onProfile }: { role: string; name: str
       <View style={{ marginBottom: 12, backgroundColor: "rgba(255,255,255,0.92)", borderRadius: 20, padding: 14, borderWidth: 1, borderColor: glass.line, shadowColor: "#17452E", shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <View style={{ flex: 1, paddingRight: 10 }}>
-            <View style={{ flexDirection: "row", alignItems: "baseline" }}>
-              <Text style={{ color: "#0B5D35", fontSize: 21, fontWeight: "900" }} numberOfLines={1}>{mark}</Text>
-              <Text style={{ color: glass.muted, fontSize: 10, marginLeft: 7 }}>{AGRIBRIDGE_OS_VERSION}</Text>
-            </View>
+            <Text style={{ color: "#0B5D35", fontSize: 21, fontWeight: "900" }} numberOfLines={1}>{mark}</Text>
+            <AppVersionStrip color={glass.muted} />
             {line ? <Text style={{ color: "#0B5D35", fontSize: 11, marginTop: 1 }} numberOfLines={1}>{line}</Text> : null}
           </View>
           <Text style={{ color: "#0B5D35", fontSize: 20, marginRight: 12 }}>♧</Text>
@@ -184,6 +187,8 @@ export type WeatherView = {
   wind: string;
   when: string;
   note: string | null;
+  /** Aaj ki barish ka andaza, jaise "10%". Na mile to null. */
+  rain?: string | null;
 };
 
 const WMO: Record<number, string> = {
@@ -244,8 +249,8 @@ async function fetchWeather(place: string): Promise<WeatherView | null> {
   const geo = await geoRes.json() as { results?: { latitude: number; longitude: number; name: string; country_code?: string; country?: string }[] };
   const hit = pickPakistan(geo.results);
   if (!hit) return null;
-  const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${hit.latitude}&longitude=${hit.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&wind_speed_unit=kmh&timezone=Asia%2FKarachi`);
-  const data = await res.json() as { current?: { temperature_2m?: number; relative_humidity_2m?: number; wind_speed_10m?: number; weather_code?: number } };
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${hit.latitude}&longitude=${hit.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=precipitation_probability_max&forecast_days=1&wind_speed_unit=kmh&timezone=Asia%2FKarachi`);
+  const data = await res.json() as { current?: { temperature_2m?: number; relative_humidity_2m?: number; wind_speed_10m?: number; weather_code?: number }; daily?: { precipitation_probability_max?: number[] } };
   const current = data.current;
   if (!current || current.temperature_2m == null) return null;
   const when = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", weekday: "short", day: "numeric", month: "short" }).format(new Date());
@@ -257,6 +262,7 @@ async function fetchWeather(place: string): Promise<WeatherView | null> {
     wind: current.wind_speed_10m == null ? "—" : `${Math.round(current.wind_speed_10m)} km/h`,
     when,
     note: null,
+    rain: data.daily?.precipitation_probability_max?.[0] == null ? null : `${Math.round(data.daily.precipitation_probability_max[0])}%`,
   };
 }
 

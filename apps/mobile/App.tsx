@@ -516,16 +516,16 @@ export default function App() {
                 </Pressable>
               </View>
             ) : null}
-            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} onProfile={() => { if (appRole === "admin") { setTab("more"); setRoute("/admin/more"); return; } setProfileOpen(true); }} onTab={(key: string) => { setTab(key); if (appRole) setRoute(`/${appRole}/${key}`); }} onLogout={() => void logout()} onRoleSwitch={showRoleSwitch(CHANNEL, isTest) ? () => setSwitchOpen(true) : showRolePreview(CHANNEL, role, isTest) ? () => setPreviewOpen(true) : undefined} readOnly={previewing || (isTest && FLAVOR !== "test")} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, flavor: FLAVOR, testAccount: isTest, refreshSession }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
+            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} onProfile={() => { if (appRole === "admin" || appRole === "farmer" || appRole === "customer") { setTab("more"); if (appRole) setRoute(`/${appRole}/more`); return; } setProfileOpen(true); }} onSupport={() => setSupportOpen(true)} onSettings={() => setProfileOpen(true)} onTab={(key: string) => { setTab(key); if (appRole) setRoute(`/${appRole}/${key}`); }} onLogout={() => void logout()} onRoleSwitch={showRoleSwitch(CHANNEL, isTest) ? () => setSwitchOpen(true) : showRolePreview(CHANNEL, role, isTest) ? () => setPreviewOpen(true) : undefined} readOnly={previewing || (isTest && FLAVOR !== "test")} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, flavor: FLAVOR, testAccount: isTest, refreshSession }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
           </View>
-          {nav ? <Tabs kind={appRole === "admin" ? "admin" : "pill"} tabs={nav.tabs} current={tab} onChange={(key) => { setTab(key); setRoute(`/${appRole}/${key}`); }} /> : null}
-          {tab === "more" ? (
+          {nav ? <Tabs kind={appRole === "admin" ? "admin" : appRole === "farmer" || appRole === "customer" ? "farmer" : "pill"} tabs={nav.tabs} current={tab} onChange={(key) => { setTab(key); setRoute(`/${appRole}/${key}`); }} /> : null}
+          {tab === "more" && appRole !== "farmer" && appRole !== "customer" ? (
             <Text style={styles.perf}>Start {startup ?? "—"} ms · queue {queue.length} · {net}</Text>
           ) : null}
         </View>
       )}
 
-      {showTesterReport(CHANNEL) ? (
+      {showTesterReport(CHANNEL) && appRole !== "farmer" && appRole !== "customer" ? (
         <Pressable style={styles.fab} onPress={() => setReportOpen(true)}>
           <Text style={styles.fabText}>Masla batayein</Text>
         </Pressable>

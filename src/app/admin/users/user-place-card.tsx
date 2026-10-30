@@ -8,7 +8,7 @@ import { Loader2, X } from "lucide-react";
 import { assignLoginPlace, type PlaceActionState } from "@/actions/login-place";
 import { GlassStyles } from "@/components/glass/glass-styles";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
-import { brandName, brandTagline } from "@/lib/brand";
+import { brandName } from "@/lib/brand";
 import {
   branchRequired,
   describePlaceChange,
@@ -176,7 +176,6 @@ export function UserPlaceCard({
                 <X className="h-4 w-4" />
               </button>
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-800 dark:text-emerald-300">{brandName(lang)}</p>
-              <p className="text-[11px] text-surface-500 dark:text-surface-400">{brandTagline(lang)}</p>
               <h2 id="user-place-title" className="mt-3 font-display text-xl font-semibold text-surface-900 dark:text-white">
                 {t("us_place_title", lang)}
               </h2>

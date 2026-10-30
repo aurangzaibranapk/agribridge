@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { MONTHS_RU } from "./compute";
 import { amountInWords, maskAccount } from "./salary-offer";
-import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import { BRAND_NAME } from "@/lib/brand";
 
-export const SLIP_COMPANY = { name: BRAND_NAME, tagline: `${BRAND_TAGLINE} · Main Office, Multan` };
+export const SLIP_COMPANY = { name: BRAND_NAME, tagline: "Main Office, Multan" };
 
 export interface SlipRow { label: string; amount: number }
 export interface SlipData {

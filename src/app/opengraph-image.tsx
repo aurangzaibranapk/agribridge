@@ -1,8 +1,8 @@
 import { ImageResponse } from "next/og";
-import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import { PUBLIC_BRAND } from "@/lib/brand";
 
 export const runtime = "edge";
-export const alt = `${BRAND_NAME} — ${BRAND_TAGLINE}`;
+export const alt = PUBLIC_BRAND;
 export const size = {
   width: 1200,
   height: 630,
@@ -83,8 +83,7 @@ export default function OpenGraphImage() {
               }}
             />
             <div style={{ display: "flex", flexDirection: "column" }}>
-              <div style={{ fontSize: 42, fontWeight: 800 }}>{BRAND_NAME}</div>
-              <div style={{ fontSize: 24, opacity: 0.9, fontWeight: 700 }}>{BRAND_TAGLINE}</div>
+              <div style={{ fontSize: 42, fontWeight: 800 }}>{PUBLIC_BRAND}</div>
             </div>
           </div>
 

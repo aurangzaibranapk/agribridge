@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { Printer, ArrowLeft } from "lucide-react";
-import { BRAND_NAME, brandTagline } from "@/lib/brand";
+import { BRAND_NAME } from "@/lib/brand";
 import { useLang } from "@/lib/i18n/lang-context";
 
 interface SlipData {
@@ -114,7 +114,6 @@ export default function SalarySlipPage() {
         {/* Header */}
         <div className="border-b border-gray-200 px-8 py-6 text-center print:border-gray-300">
           <h1 className="text-xl font-bold text-gray-900 print:text-black">{BRAND_NAME}</h1>
-          <p className="text-xs text-gray-500 print:text-gray-600">{brandTagline(lang)}</p>
           {slip.branch_name && (
             <p className="mt-0.5 text-sm text-gray-500 print:text-gray-600">{slip.branch_name}</p>
           )}

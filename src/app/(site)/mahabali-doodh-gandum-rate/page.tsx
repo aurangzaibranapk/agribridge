@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/mahabali-doodh-gandum-rate" },
   openGraph: {
     title: "Mahabali doodh aur gandum rate aaj",
-    description: "AgriBridge — Kisan ka Wasela. Aaj ka doodh aur gandum, jab record mein ho.",
+    description: "Kisan Pakistan. Aaj ka doodh aur gandum, jab record mein ho.",
     url: "/mahabali-doodh-gandum-rate",
   },
 };
@@ -37,7 +37,6 @@ export default async function MahabaliRatePage() {
       {jsonLd && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />}
       <SiteContainer className="max-w-3xl py-10 sm:py-14">
         <p className="text-sm font-semibold text-emerald-800">AgriBridge</p>
-        <p className="text-xs text-surface-500">Kisan ka Wasela</p>
         <h1 className="mt-4 font-display text-3xl font-semibold leading-tight text-[#123629] sm:text-4xl">
           Mahabali doodh &amp; gandum rate aaj
         </h1>
@@ -63,7 +62,7 @@ export default async function MahabaliRatePage() {
         </div>
 
         <p className="mt-6 text-xs leading-5 text-surface-500">
-          Mahabali MCC · doodh collection · AgriBridge — Kisan ka Wasela. WhatsApp {SHOP_PHONE_DISPLAY}. Rate tabhi jab aaj ki collection ya kharid darj ho. Purani tareekh ko aaj nahi likha jata.
+          Mahabali MCC · doodh collection · Kisan Pakistan. WhatsApp {SHOP_PHONE_DISPLAY}. Rate tabhi jab aaj ki collection ya kharid darj ho. Purani tareekh ko aaj nahi likha jata.
         </p>
       </SiteContainer>
     </div>

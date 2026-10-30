@@ -100,7 +100,7 @@ async function main() {
   );
 
   assert.match(ops, /AgriBridge/);
-  assert.match(ops, /Kisan ka Wasela/);
+  assert.doesNotMatch(ops, /Kisan ka Wasela|Kisan ka wasila/i);
   assert.match(ops, /Route ka tel/);
   assert.match(ops, /Ali Raza/);
   assert.match(ops, /name="approval_comment"/);

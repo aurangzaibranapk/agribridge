@@ -132,7 +132,7 @@ export function MachinerySlipClient({ slip }: { slip: Slip }) {
               <ArtLogo width={54} />
               <div>
                 <h1 className="font-display text-2xl font-bold leading-tight tracking-tight">{t("sh_company", lang)}</h1>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#C9A227]">{t("sh_brand", lang)}</p>
+                {t("sh_brand", lang) ? <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#C9A227]">{t("sh_brand", lang)}</p> : null}
               </div>
             </div>
             <div className="shrink-0 text-right">

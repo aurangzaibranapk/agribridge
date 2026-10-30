@@ -269,9 +269,9 @@ export const sitePagesDict = {
   sp_typing: { en: "Typing...", rm: "Likh raha hai...", ur: "لکھ رہا ہے..." },
   sp_open_page: { en: "Open page →", rm: "Safha kholein →", ur: "صفحہ کھولیں ←" },
   sp_chat_greeting: {
-    en: "Assalam o Alaikum. I am {brand}, {tagline}. Ask about products, prices, open jobs, or how to register.",
-    rm: "Assalam o Alaikum. Main {brand} hoon, {tagline}. Products, qeemat, khuli nokri, ya register karne ka tareeqa pooch sakte hain.",
-    ur: "السلام علیکم۔ میں {brand} ہوں، {tagline}۔ مصنوعات، قیمت، کھلی نوکری، یا رجسٹریشن کا طریقہ پوچھیں۔",
+    en: "Assalam o Alaikum. I am {brand}. Ask about products, prices, open jobs, or how to register.",
+    rm: "Assalam o Alaikum. Main {brand} hoon. Products, qeemat, khuli nokri, ya register karne ka tareeqa pooch sakte hain.",
+    ur: "السلام علیکم۔ میں {brand} ہوں۔ مصنوعات، قیمت، کھلی نوکری، یا رجسٹریشن کا طریقہ پوچھیں۔",
   },
   sp_chat_error: {
     en: "Something went wrong. Please try again, or use the Contact page.",

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, MessageCircle, Printer, Volume2, VolumeX, X } from "lucide-react";
 import { encodeQr, qrSvgPath } from "@/lib/qr/qr-encode";
-import { BRAND_NAME, brandName, brandTagline } from "@/lib/brand";
+import { BRAND_NAME, brandName } from "@/lib/brand";
 import { useLang } from "@/lib/i18n/lang-context";
 import { printFrames, QUEUE_KEY, receiptText, receiptWhatsAppUrl, rsFmt, SOUND_KEY, soundOn, type ReceiptData } from "@/lib/glass/glass";
 
@@ -101,7 +101,6 @@ export function ReceiptPrint({ receipt: r, onClose, phone, autoCloseMs }: { rece
         <div className="rp-paper -mt-4 w-[260px] overflow-hidden" style={{ maxHeight: `${Math.max(6, pct) * 5.2}px` }}>
           <div className="rp-print bg-[#fffdf8] px-5 pb-3 pt-6 text-center text-[12px] text-[#0f1f3a] shadow-xl" data-testid="receipt-paper">
             <p className={`text-[15px] font-bold ${lang === "ur" ? "font-urdu" : "tracking-[.18em]"}`}>{brandName(lang)}</p>
-            <p className={`text-[10px] text-[#7a889c] ${lang === "ur" ? "font-urdu leading-snug" : ""}`}>{brandTagline(lang)}</p>
             <p className="text-[10px] uppercase tracking-wide text-[#7a889c]">{head}</p>
             <p className="mt-2 font-semibold text-emerald-700">Kamyab · <span className="gl-ur" style={{ fontFamily: "'Noto Nastaliq Urdu',serif" }}>کامیاب</span></p>
             {(r.from || r.to) && <p className="mt-1 font-semibold">{r.from ?? "—"} se → {r.to ?? "—"}</p>}

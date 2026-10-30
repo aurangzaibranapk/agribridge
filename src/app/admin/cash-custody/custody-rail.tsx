@@ -2,7 +2,7 @@ import Link from "next/link";
 import { BarChart3, Coins, Home, Shield, Wallet } from "lucide-react";
 import { BrandMark } from "@/components/brand/brand-mark";
 import { LanguageSwitch } from "@/components/ui/language-switch";
-import { brandName, brandTagline } from "@/lib/brand";
+import { brandName } from "@/lib/brand";
 import { t, type Lang, type TranslationKey } from "@/lib/i18n/translations";
 
 function Pair({ a, b, lang }: { a: TranslationKey; b: TranslationKey; lang: Lang }) {
@@ -38,7 +38,6 @@ export function CustodyRail({
           <BrandMark className="h-10 w-10 rounded-xl" />
           <span className="min-w-0">
             <span className="block font-display text-sm font-bold leading-tight text-white">{brandName(lang)}</span>
-            <span className="block truncate text-[11px] text-emerald-200/80">{brandTagline(lang)}</span>
           </span>
         </Link>
         <div className="lg:hidden">

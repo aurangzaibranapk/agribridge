@@ -134,7 +134,7 @@ export function buildInviteMessage(input: {
   const text = [
     `Assalam-o-Alaikum ${input.fullName},`,
     "",
-    `AgriBridge (Kisan ka Wasela) par aap ka ${label} account ban gaya hai.`,
+    `Kisan Pakistan par aap ka ${label} account ban gaya hai.`,
     `Branch: ${input.branchName}`,
     "",
     `Login: ${input.loginUrl}`,
@@ -143,20 +143,22 @@ export function buildInviteMessage(input: {
     emailLine,
     "Login kholen, mobile ya email likhein — code aayega.",
     "",
-    "AgriBridge",
-    "Kisan ka Wasela",
+    "Kisan Pakistan",
   ]
     .filter((line): line is string => line !== null)
     .join("\n");
   return { subject: `AgriBridge — ${label} account`, text };
 }
 
-/** UI aur paigham mein sirf AgriBridge + Kisan ka Wasela. */
+/** Paigham mein Kisan Pakistan. Purana slogan nahi. */
 export function brandProblem(text: string): string | null {
   if (/al\s*rana/i.test(text) || /\bART\b/.test(text)) {
-    return "Paigham mein sirf AgriBridge aur Kisan ka Wasela ho sakta hai.";
+    return "Paigham mein sirf Kisan Pakistan ho sakta hai.";
   }
-  if (!text.includes("AgriBridge") || !text.includes("Kisan ka Wasela")) {
+  if (/kisan ka wase[li]a/i.test(text) || text.includes("کسان کا وسیلہ")) {
+    return "Purana slogan paigham mein nahi.";
+  }
+  if (!text.includes("Kisan Pakistan")) {
     return "Brand ka naam paigham mein nahi.";
   }
   return null;
@@ -170,8 +172,7 @@ export function inviteEmailHtml(text: string): string {
     .map((line) => `<p style="margin:0 0 8px;line-height:1.45">${line ? esc(line) : "&nbsp;"}</p>`)
     .join("");
   return `<div style="font-family:Arial,sans-serif;color:#143024;max-width:520px">
-    <p style="font-size:18px;font-weight:700;margin:0">AgriBridge</p>
-    <p style="margin:0 0 16px;color:#1f7a4d">Kisan ka Wasela</p>
+    <p style="font-size:18px;font-weight:700;margin:0 0 16px">Kisan Pakistan</p>
     ${body}
   </div>`;
 }

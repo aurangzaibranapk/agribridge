@@ -9,16 +9,17 @@
 /** English aur Roman ka naam. Email, meta, PDF (bina zaban) yahi Latin lafz. */
 export const BRAND_NAME = "AgriBridge";
 
+/** Logon ko dikhne wala naam. Neeche koi slogan nahi. */
+export const PUBLIC_BRAND = "Kisan Pakistan";
+
 /**
- * Naam aur tagline, zaban ke hisaab se.
- * en/rm: AgriBridge / Kisan ka Wasela
- * ur: ایگری بریج / کسان کا وسیلہ
- * "The farmer's bridge" kahin nahi.
+ * ERP ka andaruni naam AgriBridge rehta hai.
+ * Purana slogan ("Kisan ka Wasela" / کسان کا وسیلہ) kahin nahi likha jata.
  */
 export const BRAND_COPY = {
-  en: { name: "AgriBridge", tagline: "Kisan ka Wasela" },
-  rm: { name: "AgriBridge", tagline: "Kisan ka Wasela" },
-  ur: { name: "ایگری بریج", tagline: "کسان کا وسیلہ" },
+  en: { name: "AgriBridge", tagline: "" },
+  rm: { name: "AgriBridge", tagline: "" },
+  ur: { name: "ایگری بریج", tagline: "" },
 } as const;
 
 export type BrandLang = keyof typeof BRAND_COPY;
@@ -64,12 +65,14 @@ function collapsePair(text: string, name: string): string {
  * Tarjume aur templates. `{brand}` naam hai, `{tagline}` har zaban mein wahi line.
  * Purana trading-naam agar kisi jumle mein reh gaya ho to yahin naam ban jata hai.
  */
+const RETIRED_SLOGAN = /kisan ka wase[li]a|کسان کا وسیلہ/gi;
+
 export function applyBrand(text: string, lang: BrandLang = "en"): string {
   const name = brandName(lang);
-  const tag = brandTagline(lang);
   const filled = text
     .replaceAll("{brand}", name)
-    .replaceAll("{tagline}", tag)
+    .replaceAll("{tagline}", "")
+    .replace(RETIRED_SLOGAN, "")
     .replaceAll("Al Rana Traders", name)
     .replaceAll("AL RANA TRADERS", name)
     .replaceAll("الرانا ٹریڈرز", name)
@@ -79,5 +82,12 @@ export function applyBrand(text: string, lang: BrandLang = "en"): string {
     .replaceAll("الرانا", name)
     .replaceAll("ال رانا", name)
     .replace(/\bART\b(?!-)/g, name);
-  return collapsePair(filled, name);
+  return collapsePair(filled, name)
+    .replace(/\s+[·•]\s*(?=[,.]|$)/g, "")
+    .replace(/[·•]\s*(?=[,.]|$)/g, "")
+    .replace(/,\s*\./g, ".")
+    .replace(/\(\s*\)/g, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s+([,.])/g, "$1")
+    .trim();
 }
