@@ -181,6 +181,101 @@ async function liveInsertOnce<T>(auth: LiveAuth, token: string, table: string, b
 
 const ROW_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const SAFE_QUERY = /^[a-z0-9_.=(),-]+$/i;
+
+/** PATCH with an extra match (status=eq.priced). Khali representation = row match nahi hui. */
+export async function livePatchWhere<T>(auth: LiveAuth, table: string, query: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<ReadResult<T>> {
+  const first = await livePatchWhereOnce<T>(auth, auth.token, table, query, body, fetchImpl);
+  if (first.ok || !jwtExpired(first.status, first.detail)) return first;
+  const next = await refreshOnce(auth);
+  if (next === "dead") return { ok: false, status: 401, message: SESSION_EXPIRED };
+  if (next === "skip") return first;
+  return livePatchWhereOnce<T>(auth, next, table, query, body, fetchImpl);
+}
+
+async function livePatchWhereOnce<T>(auth: LiveAuth, token: string, table: string, query: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<ReadResult<T>> {
+  const base = acceptedSupabaseUrl(auth.url, dataFlavor(auth.flavor));
+  if (!base || !auth.anonKey.trim() || !token.trim()) {
+    return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Live read is build mein set nahi." }) };
+  }
+  if (!/^[a-z_][a-z0-9_]*$/.test(table) || !SAFE_QUERY.test(query) || !query.includes("id=eq.")) {
+    return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Ye fehrist nahi khuli." }) };
+  }
+  try {
+    const res = await fetchImpl(`${base}/rest/v1/${table}?${query}`, {
+      method: "PATCH",
+      headers: {
+        apikey: auth.anonKey,
+        authorization: `Bearer ${token}`,
+        accept: "application/json",
+        "content-type": "application/json",
+        prefer: "return=representation",
+      },
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    if (res.status >= 400) return { ok: false, status: res.status, message: readError(res.status, text, auth.channel), detail: text };
+    const rows = parseArray(text);
+    if (!rows) return { ok: false, status: res.status, message: readError(res.status, text || "JSON nahi", auth.channel) };
+    return { ok: true, rows: rows as T[] };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      message: failureLine({
+        channel: auth.channel,
+        fallback: "Network nahi mila.",
+        detail: err instanceof Error ? err.message : "fetch failed",
+      }),
+    };
+  }
+}
+
+/** PostgREST count. Header na ho to null — sifar nahi. */
+export async function liveCount(auth: LiveAuth, path: string, fetchImpl: FetchLike, scope = scopeFor(auth)): Promise<{ ok: true; count: number } | { ok: false; status: number; message: string; detail?: string }> {
+  const scoped = await liveCountOnce(auth, withScope(path, scope), fetchImpl);
+  if (scoped.ok || scope === "test" || !columnMissing(scoped.detail, "is_test")) return scoped;
+  return liveCountOnce(auth, path, fetchImpl);
+}
+
+async function liveCountOnce(auth: LiveAuth, path: string, fetchImpl: FetchLike): Promise<{ ok: true; count: number } | { ok: false; status: number; message: string; detail?: string }> {
+  const base = acceptedSupabaseUrl(auth.url, dataFlavor(auth.flavor));
+  if (!base || !auth.anonKey.trim() || !auth.token.trim()) {
+    return { ok: false, status: 0, message: failureLine({ channel: auth.channel, fallback: "Live read is build mein set nahi." }) };
+  }
+  try {
+    const res = await fetchImpl(`${base}/rest/v1/${path}`, {
+      method: "GET",
+      headers: {
+        apikey: auth.anonKey,
+        authorization: `Bearer ${auth.token}`,
+        accept: "application/json",
+        prefer: "count=exact",
+        range: "0-0",
+      },
+    });
+    const text = await res.text();
+    const header = res.headers?.get("content-range") ?? res.headers?.get("Content-Range") ?? null;
+    const match = header ? /\/(\d+)\s*$/.exec(header) : null;
+    const count = match ? Number(match[1]) : NaN;
+    // Empty table + Range 0-0 is 416 with */0. That is a real zero, not a missing list.
+    if (res.status === 416 && count === 0) return { ok: true, count: 0 };
+    if (res.status >= 400) return { ok: false, status: res.status, message: readError(res.status, text, auth.channel), detail: text };
+    if (!Number.isFinite(count)) return { ok: false, status: res.status, message: "Ginti nahi mili.", detail: text };
+    return { ok: true, count };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      message: failureLine({
+        channel: auth.channel,
+        fallback: "Network nahi mila.",
+        detail: err instanceof Error ? err.message : "fetch failed",
+      }),
+    };
+  }
+}
+
 export async function livePatch<T>(auth: LiveAuth, table: string, id: string, body: Record<string, unknown>, fetchImpl: FetchLike): Promise<ReadResult<T>> {
   const first = await livePatchOnce<T>(auth, auth.token, table, id, body, fetchImpl);
   if (first.ok || !jwtExpired(first.status, first.detail)) return first;
@@ -315,7 +410,9 @@ export type MilkRow = {
   created_by?: string | null;
   collected_at?: string | null;
   fat_at?: string | null;
+  fat_by_profile_id?: string | null;
   verified_at?: string | null;
+  verified_by_profile_id?: string | null;
 };
 export type MilkSettingsRow = {
   standard_rate?: number | string | null;

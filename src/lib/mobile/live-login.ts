@@ -36,7 +36,7 @@ export type MobileChannel = "debug" | "internal" | "production";
 export type FetchLike = (
   url: string,
   init?: { method?: string; headers?: Record<string, string>; body?: string }
-) => Promise<{ status: number; text: () => Promise<string> }>;
+) => Promise<{ status: number; text: () => Promise<string>; headers?: { get(name: string): string | null } }>;
 
 export type MobileSession = {
   access_token: string;

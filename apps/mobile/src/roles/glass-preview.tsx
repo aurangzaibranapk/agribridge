@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { ScrollView, Text, View } from "react-native";
-import type { AdminHome, HealthRow, KhataView, MilkRow, OrderRow, ReadResult } from "../../../../src/lib/mobile/live-read";
-import { AdminGlass, DealerGlass, FarmerGlass, McaGlass, McoGlass, StaffGlass, VetGlass } from "./glass-homes";
+import type { HealthRow, KhataView, MilkRow, OrderRow, ReadResult } from "../../../../src/lib/mobile/live-read";
+import { milkSteps } from "../../../../src/lib/mobile/admin-desk";
+import { DealerGlass, FarmerGlass, McaGlass, McoGlass, StaffGlass, VetGlass } from "./glass-homes";
+import { AdminDetailView, AdminHomeView, AdminInboxView, AdminProfileView, type HomeCard } from "./admin-ui";
 
 const khata: KhataView = { owed: null, note: "Khata", lines: [], linesNote: null };
 const milk: ReadResult<MilkRow> = { ok: true, rows: [] };
@@ -10,22 +12,16 @@ const attendance: ReadResult<{ attendance_date?: string | null; status?: string 
 const salary: ReadResult<{ net_salary?: number | string | null }> = { ok: true, rows: [] };
 const advances: ReadResult<{ amount?: number | string | null }> = { ok: true, rows: [] };
 const health: HealthRow[] = [];
-const home: AdminHome = {
-  today: "",
-  sales: { state: "error", message: "Sale nahi mili" },
-  days: [],
-  categories: [],
-  categoryScope: "none",
-  cash: { state: "empty" },
-  milk: { state: "error", message: "Collection nahi mili" },
-  alerts: [],
-  alertsNote: null,
-  pending: [],
-  pendingNote: null,
-  activity: [],
-  activityNote: null,
-  banner: null,
-};
+const blankCards: HomeCard[] = [
+  { key: "approvals", title: "Approvals", value: "—", sub: "pending", icon: "clip" },
+  { key: "sales", title: "POS sales", value: "—", sub: "today", icon: "cart" },
+  { key: "cash", title: "Cash alerts", value: "—", sub: "high priority", icon: "bell" },
+  { key: "stock", title: "Stock alerts", value: "—", sub: "low stock", icon: "alert" },
+  { key: "milk", title: "Doodh today", value: "—", sub: "today", icon: "milk" },
+  { key: "farmers", title: "Farmers", value: "—", sub: "registered", icon: "farmer" },
+  { key: "attendance", title: "Staff present", value: "—", sub: "today", icon: "people" },
+  { key: "support", title: "Support", value: "—", sub: "unresolved", icon: "headset" },
+];
 
 function Frame({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -45,12 +41,14 @@ export function GlassPreview() {
         <Frame title="Kisan / Customer"><FarmerGlass khata={khata} milk={milk} names={new Map()} /></Frame>
         <Frame title="MCA"><McaGlass farmers={[]} /></Frame>
         <Frame title="MCO"><McoGlass rows={[]} error="" names={new Map()} /></Frame>
-        <Frame title="Admin"><AdminGlass home={home} milk={[]} orders={[]} /></Frame>
+        <Frame title="Admin"><AdminHomeView fullName="" role="admin" photoUrl={null} cards={blankCards} onOpen={() => undefined} /></Frame>
         <Frame title="Staff"><StaffGlass attendance={attendance} salary={salary} advances={advances} tasks={[]} tasksNote={null} checkLabel="Check-in · aaj" checkBusy={false} readOnly={false} onCheckIn={() => undefined} /></Frame>
         <Frame title="Vet"><VetGlass health={health} error="" /></Frame>
         <Frame title="Dealer"><DealerGlass khata={khata} orders={orders} /></Frame>
         <Frame title="Track kisan"><FarmerGlass focus="track" khata={khata} milk={milk} names={new Map()} /></Frame>
-        <Frame title="Track admin"><AdminGlass focus="track" home={home} milk={[]} orders={[]} /></Frame>
+        <Frame title="Admin approvals"><AdminInboxView items={[]} filter="all" mineOnly={false} note={null} onFilter={() => undefined} onMine={() => undefined} onOpen={() => undefined} /></Frame>
+        <Frame title="Admin approval"><AdminDetailView heading="Doodh approval" partyLabel="Party name" party="—" quantityLabel="Quantity" quantity="—" amountLabel="Amount" amount="—" steps={milkSteps({ status: "priced", collectedAt: null, fatAt: null, verifiedAt: null, requestedBy: null, checkedBy: null, decidedBy: null })} note={null} readOnly={false} busy={false} onBack={() => undefined} onDecide={() => undefined} /></Frame>
+        <Frame title="Admin profile"><AdminProfileView fullName="" role="admin" extraRoles={[]} phone={null} email={null} place={null} org={null} designation={null} photoUrl={null} gaps={["Login ke baghair profile nahi."]} versionExtra="" onOpen={() => undefined} /></Frame>
       </View>
     </ScrollView>
   );
