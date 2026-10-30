@@ -66,7 +66,6 @@ export function RoleScreen({ tab, data, queue = [], queueCount, onEnqueue, onSyn
   const [refreshing, setRefreshing] = useState(false);
   const [editingId, setEditingId] = useState("");
   const [shiftUnlocked, setShiftUnlocked] = useState(false);
-  const [method, setMethod] = useState<"field" | "dropoff">("field");
   const [transport, setTransport] = useState<"mca" | "mco">("mca");
   const [proof, setProof] = useState<{ base64: string; mime: string } | null>(null);
 
@@ -146,7 +145,7 @@ export function RoleScreen({ tab, data, queue = [], queueCount, onEnqueue, onSyn
       client_uuid: uuid(),
       route_name: route || null,
       chiller_name: chiller || null,
-      notes: `App pickup · ${method === "dropoff" ? "drop-off" : "field collection"} · ${transport === "mco" ? "MCO transport" : "MCA transport"}${proof ? " · proof captured" : ""}`,
+      notes: `App pickup · field collection · ${transport === "mco" ? "MCO transport" : "MCA transport"}${proof ? " · proof captured" : ""}`,
       is_test: auth.testAccount === true,
       status: "pending_fat",
     };
@@ -189,7 +188,6 @@ export function RoleScreen({ tab, data, queue = [], queueCount, onEnqueue, onSyn
     setNote("");
     setEditingId("");
     setShiftUnlocked(false);
-    setMethod("field");
     setTransport("mca");
     setProof(null);
     setPickupOpen(true);
@@ -203,7 +201,7 @@ export function RoleScreen({ tab, data, queue = [], queueCount, onEnqueue, onSyn
     setShiftUnlocked(true);
     setLiters(String(row.quantity_liters ?? row.field_collected_volume ?? ""));
     setLr(row.lr == null ? "" : String(row.lr));
-    setMethod("field"); setTransport("mca"); setProof(null); setSaved(null); setNote(""); setPickupOpen(true);
+    setTransport("mca"); setProof(null); setSaved(null); setNote(""); setPickupOpen(true);
   }
 
   async function captureProof() {
@@ -220,7 +218,7 @@ export function RoleScreen({ tab, data, queue = [], queueCount, onEnqueue, onSyn
       farmerNote={farmerNote} note={note} queue={queue} queueCount={queueCount}
       refreshing={refreshing} readOnly={readOnly} pickupOpen={pickupOpen}
       selectedFarmerId={farmerId} liters={liters} lr={lr} shift={shift}
-      shiftUnlocked={shiftUnlocked} method={method} transport={transport}
+      shiftUnlocked={shiftUnlocked} transport={transport}
       proofAttached={Boolean(proof)} busy={busy} editingId={editingId}
       onTab={onTab} onProfile={onProfile}
       onRefresh={() => { setRefreshing(true); void loadFarmers().finally(() => setRefreshing(false)); }}
@@ -228,7 +226,7 @@ export function RoleScreen({ tab, data, queue = [], queueCount, onEnqueue, onSyn
       onClosePickup={() => { if (!busy) setPickupOpen(false); }}
       onLiters={setLiters} onLr={setLr} onShift={setShift}
       onUnlockShift={() => setShiftUnlocked((value) => !value)}
-      onMethod={setMethod} onTransport={setTransport} onProof={() => void captureProof()}
+      onTransport={setTransport} onProof={() => void captureProof()}
       onSave={() => { if (!busy) void savePickup(); }}
     />
   );

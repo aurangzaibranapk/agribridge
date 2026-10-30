@@ -57,7 +57,7 @@ assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.pa
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.appFlavor, "test");
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.android.versionCode, 606);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.version, AGRIBRIDGE_OS_VERSION);
-assert.equal(PHONE_VERSION_CODE, 646);
+assert.equal(PHONE_VERSION_CODE, 647);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.versionCode, PHONE_VERSION_CODE);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.versionCode, PHONE_VERSION_CODE);
 assert.equal(shownVersionCode({ platform: "web", embedded: 625, phone: PHONE_VERSION_CODE }), PHONE_VERSION_CODE);
@@ -286,6 +286,9 @@ assert.deepEqual(ROLE_NAV.mca.tabs.map((tab) => tab.key), ["home", "work", "farm
 const approvedMca = readFileSync("apps/mobile/src/roles/mca-approved.tsx", "utf8");
 for (const required of ["Doodh uthana", "Aaj ki Route", "LR (ikhtiyari)", "Doodh save karein", "Today's Collections", "Sync Now", "MCO Handoff"]) assert.match(approvedMca, new RegExp(required.replace(/[()]/g, "\\$&")));
 assert.match(approvedMca, /12:00 pm se pehle Subah/);
+assert.match(approvedMca, /DCA \/ MCA farmer gate se doodh collect karta hai/);
+assert.doesNotMatch(approvedMca, /Drop-off/);
+assert.doesNotMatch(readFileSync("apps/mobile/src/roles/mca.tsx", "utf8"), /method === "dropoff"/);
 assert.match(readFileSync("apps/mobile/App.tsx", "utf8"), /client_uuid: item\.clientUuid/);
 assert.equal(ROLE_NAV.mco.phase1, true);
 assert.deepEqual(ROLE_NAV.mco.tabs.map((tab) => tab.key), ["home", "work", "receiving", "hr", "profile"]);
