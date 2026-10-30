@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import { PUBLIC_BRAND } from "@/lib/brand";
 import { t, type Lang, type TranslationKey } from "@/lib/i18n/translations";
 
 const OTHERS: Record<Lang, Lang[]> = { en: ["rm", "ur"], rm: ["en", "ur"], ur: ["en", "rm"] };
@@ -17,7 +17,7 @@ export function L3({ k, lang, className = "" }: { k: TranslationKey; lang: Lang;
 export function PageHead({ title, sub }: { title: React.ReactNode; sub: React.ReactNode }) {
   return (
     <div className="mb-4 fit:mb-0">
-      <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-800 dark:text-emerald-300">{BRAND_NAME} · {BRAND_TAGLINE}</p>
+      <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-800 dark:text-emerald-300">{PUBLIC_BRAND}</p>
       <h1 className="text-2xl font-extrabold tracking-tight text-surface-900 dark:text-white fit:text-xl">{title}</h1>
       <p className="mt-1 text-[13px] text-surface-500 dark:text-slate-400 fit:mt-0">{sub}</p>
     </div>
@@ -28,7 +28,7 @@ export function CHero({ children, right }: { children: React.ReactNode; right?: 
     <section className="gl-card relative mb-4 p-6 text-white pf:mb-0 pf:px-5 pf:py-3.5">
       <div className="relative z-[1] flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/75">{BRAND_NAME} · {BRAND_TAGLINE}</p>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/75">{PUBLIC_BRAND}</p>
           {children}
         </div>
         <div className="flex flex-wrap gap-2">{right}</div>

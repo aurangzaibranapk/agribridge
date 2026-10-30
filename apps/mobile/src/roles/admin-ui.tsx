@@ -4,8 +4,7 @@ import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { greetingName } from "../../../../src/lib/mobile/display-name";
 import { agoLabel, approvalHeadline, categoryLabel, roleTitle, rupeeLabel, type ApprovalFilter, type DeskStep, type InboxItem } from "../../../../src/lib/mobile/admin-desk";
 import { AGRIBRIDGE_OS_VERSION } from "../../../../src/lib/app-version";
-import { glass } from "../glass";
-import { VisionCard } from "./vision-card";
+import { AppVersionStrip, glass } from "../glass";
 
 const green = "#0E7A3C";
 const greenDeep = "#0C5C34";
@@ -148,7 +147,7 @@ export function AdminHomeView({
               <Glyph name="sprout" color="#D8F5C8" size={26} />
               <View style={{ marginLeft: 8 }}>
                 <Text style={{ color: "#fff", fontSize: 18, fontWeight: "800" }}>Kisan Pakistan</Text>
-                <Text style={{ color: "rgba(255,255,255,0.82)", fontSize: 13, marginTop: 1 }}>AgriBridge</Text>
+                <AppVersionStrip />
               </View>
             </View>
             <View style={{ width: 42, height: 3, borderRadius: 2, backgroundColor: "#E6C15A", marginTop: 14 }} />
@@ -166,7 +165,6 @@ export function AdminHomeView({
           </View>
         </View>
       </View>
-      <VisionCard role={role} />
       {banner ? <Text style={{ color: "#8A5A00", marginBottom: 8 }}>{banner}</Text> : null}
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
         <Text style={{ flex: 1, color: ink, fontSize: 20, fontWeight: "800" }}>Today overview</Text>
@@ -563,9 +561,8 @@ export function AdminProfileView({
           <View style={{ flex: 1, alignItems: "center" }}>
             <View style={{ flexDirection: "row", alignItems: "center" }}>
               <Glyph name="sprout" color="#D8F5C8" size={18} />
-              <Text style={{ color: "#fff", fontSize: 22, fontWeight: "800", marginLeft: 6 }}>AgriBridge</Text>
+              <Text style={{ color: "#fff", fontSize: 22, fontWeight: "800", marginLeft: 6 }}>Kisan Pakistan</Text>
             </View>
-            <Text style={{ color: "rgba(255,255,255,0.88)", fontSize: 13 }}>Kisan ka wasila</Text>
           </View>
           <View style={{ width: 40, height: 40, alignItems: "center", justifyContent: "center" }}>
             <Glyph name="shield" color="#fff" size={22} />

@@ -6,7 +6,7 @@ import { LanguageToggle } from "../language-toggle";
 import { NavFooter, NavList } from "../nav-list";
 import { NAV_ICONS } from "../nav-icons";
 import { PortalMobileSidebar } from "../mobile-sidebar";
-import { brandName, brandTagline } from "@/lib/brand";
+import { brandName } from "@/lib/brand";
 
 /** Purani fehrist (phase 5) -- ab groups se bani; wahi raaste aur keys. */
 export const CUSTOMER_NAV = CUSTOMER_NAV_GROUPS.flatMap((g) => g.items.map((i) => ({ href: i.href, k: i.k, icon: NAV_ICONS[i.icon] })));
@@ -20,7 +20,6 @@ function Brand({ lang }: { lang: Lang }) {
       <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-emerald-400 to-[#16356e] text-[11px] font-black text-white" aria-hidden>AB</span>
       <div>
         <p className="font-display text-base font-bold text-white">{brandName(lang)}</p>
-        <p className="text-[11px] text-emerald-100/80">{brandTagline(lang)}</p>
         <p className="text-[10px] text-white/45">{t("pc_portal", lang)}</p>
       </div>
     </div>

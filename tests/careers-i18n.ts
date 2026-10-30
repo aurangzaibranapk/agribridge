@@ -151,15 +151,15 @@ assert.equal(t("sp_careers_title", "ur"), "ایگری بریج میں نوکری
 assert.equal(t("sp_careers_company", "en"), "AgriBridge");
 assert.equal(t("sp_careers_company", "rm"), "AgriBridge");
 assert.equal(t("sp_careers_company", "ur"), "ایگری بریج");
-assert.equal(t("sp_careers_tagline", "en"), "Kisan ka Wasela");
-assert.equal(t("sp_careers_tagline", "rm"), "Kisan ka Wasela");
-assert.equal(t("sp_careers_tagline", "ur"), "کسان کا وسیلہ");
+assert.equal(t("sp_careers_tagline", "en"), "");
+assert.equal(t("sp_careers_tagline", "rm"), "");
+assert.equal(t("sp_careers_tagline", "ur"), "");
 assert.equal(t("sp_careers_tagline", "en").includes("farmer's bridge"), false);
 assert.equal(t("sp_careers_title", "en").startsWith("Careers at AgriBridge"), true);
 assert.equal(t("sp_careers_title", "en").includes("Al Rana"), false);
 
 const uiKeys = [
-  "sp_careers_title", "sp_careers_tagline", "sp_careers_company", "sp_careers_lead", "sp_no_vacancy", "sp_apply", "sp_salary", "sp_currency",
+  "sp_careers_title", "sp_careers_company", "sp_careers_lead", "sp_no_vacancy", "sp_apply", "sp_salary", "sp_currency",
   "sp_positions", "sp_per_month", "sp_job_location", "sp_apply_for", "sp_close", "sp_basic_info",
   "sp_full_name", "sp_email", "sp_gender", "sp_gender_male", "sp_gender_female", "sp_gender_other", "sp_phone", "sp_cnic_number", "sp_address", "sp_expected_salary",
   "sp_blood_group", "sp_blood_unknown", "sp_blood_invalid", "sp_emergency_name", "sp_emergency_phone", "sp_emergency_invalid", "sp_id_photo",

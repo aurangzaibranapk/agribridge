@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import { BRAND_NAME, PUBLIC_BRAND } from "@/lib/brand";
 import localFont from "next/font/local";
 import Script from "next/script";
 import "./globals.css";
@@ -64,13 +64,13 @@ const mono = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL("https://alranatraders.pk"),
   title: {
-    default: `${BRAND_NAME} | ${BRAND_TAGLINE}`,
+    default: PUBLIC_BRAND,
     template: `%s | ${BRAND_NAME}`,
   },
-  description: `${BRAND_NAME} — ${BRAND_TAGLINE}. Connects farmers with agriculture inputs, machinery, dairy, grain markets, farm products, Kisan AI and digital agriculture services in Pakistan.`,
+  description: `${PUBLIC_BRAND}. Connects farmers with agriculture inputs, machinery, dairy, grain markets, farm products, Kisan AI and digital agriculture services in Pakistan.`,
   keywords: [
+    PUBLIC_BRAND,
     BRAND_NAME,
-    BRAND_TAGLINE,
     "digital agriculture Pakistan",
     "farmer services Pakistan",
     "agriculture inputs",
@@ -83,13 +83,13 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_PK",
     siteName: BRAND_NAME,
-    title: `${BRAND_NAME} | ${BRAND_TAGLINE}`,
-    description: `${BRAND_NAME} — ${BRAND_TAGLINE}. Connecting farmers, agriculture inputs, machinery, dairy, grain, markets and digital agriculture services across Pakistan.`,
+    title: PUBLIC_BRAND,
+    description: `${PUBLIC_BRAND}. Connecting farmers, agriculture inputs, machinery, dairy, grain, markets and digital agriculture services across Pakistan.`,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${BRAND_NAME} | ${BRAND_TAGLINE}`,
-    description: `${BRAND_NAME} — ${BRAND_TAGLINE}. Digital agriculture services connecting farmers, inputs, machinery, dairy, grain and markets in Pakistan.`,
+    title: PUBLIC_BRAND,
+    description: `${PUBLIC_BRAND}. Digital agriculture services connecting farmers, inputs, machinery, dairy, grain and markets in Pakistan.`,
   },
   robots: { index: true, follow: true },
   manifest: "/manifest.json",

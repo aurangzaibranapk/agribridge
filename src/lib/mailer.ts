@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import { BRAND_NAME } from "@/lib/brand";
 
 /**
  * Har mehkame ki apni email — ek hi jagah se.
@@ -169,7 +169,6 @@ export function mailWrapper(bodyHtml: string, dept: MailDept): string {
     <div style="max-width:520px; margin:0 auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.06);">
       <div style="background:#1a1f36; padding:24px; text-align:center;">
         <p style="margin:0; color:#ffffff; font-size:20px; font-weight:700;">${BRAND_NAME}</p>
-        <p style="margin:4px 0 0; color:#c5d5c8; font-size:12px;">${BRAND_TAGLINE}</p>
         <p style="margin:4px 0 0; color:#94a3b8; font-size:12px;">${sender.footer}</p>
       </div>
       <div style="padding:28px 24px; color:#1f2937; font-size:14px; line-height:1.6;">

@@ -142,9 +142,14 @@ export function BrandStack({ title, line, rtl, titleSize, lineSize }: { title: s
   return (
     <View>
       <Text style={{ color: glass.text, fontSize: titleSize, fontWeight: "800", textAlign: align, writingDirection: direction }}>{title}</Text>
-      <Text style={{ color: glass.muted, fontSize: lineSize, marginTop: 2, textAlign: align, writingDirection: direction }}>{line}</Text>
+      {line ? <Text style={{ color: glass.muted, fontSize: lineSize, marginTop: 2, textAlign: align, writingDirection: direction }}>{line}</Text> : null}
     </View>
   );
+}
+
+/** Admin hero ki doosri line. Har role ke Home par yahi. */
+export function AppVersionStrip({ color = "rgba(255,255,255,0.82)" }: { color?: string }) {
+  return <Text style={{ color, fontSize: 13, marginTop: 1 }}>{`AgriBridge · ${AGRIBRIDGE_OS_VERSION}`}</Text>;
 }
 
 export function BrandHeader({ role, name, onProfile }: { role: string; name: string; centre?: string; onProfile?: () => void; live?: LiveBag }) {
@@ -158,10 +163,8 @@ export function BrandHeader({ role, name, onProfile }: { role: string; name: str
       <View style={{ marginBottom: 12, backgroundColor: "rgba(255,255,255,0.92)", borderRadius: 20, padding: 14, borderWidth: 1, borderColor: glass.line, shadowColor: "#17452E", shadowOpacity: 0.08, shadowRadius: 12, elevation: 3 }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <View style={{ flex: 1, paddingRight: 10 }}>
-            <View style={{ flexDirection: "row", alignItems: "baseline" }}>
-              <Text style={{ color: "#0B5D35", fontSize: 21, fontWeight: "900" }} numberOfLines={1}>{mark}</Text>
-              <Text style={{ color: glass.muted, fontSize: 10, marginLeft: 7 }}>{AGRIBRIDGE_OS_VERSION}</Text>
-            </View>
+            <Text style={{ color: "#0B5D35", fontSize: 21, fontWeight: "900" }} numberOfLines={1}>{mark}</Text>
+            <AppVersionStrip color={glass.muted} />
             {line ? <Text style={{ color: "#0B5D35", fontSize: 11, marginTop: 1 }} numberOfLines={1}>{line}</Text> : null}
           </View>
           <Text style={{ color: "#0B5D35", fontSize: 20, marginRight: 12 }}>♧</Text>

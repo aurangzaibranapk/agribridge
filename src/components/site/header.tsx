@@ -3,7 +3,7 @@ import { Search } from "lucide-react";
 import { MobileSiteNav } from "@/components/site/mobile-site-nav";
 import { HeaderBrand } from "@/components/site/header-brand";
 import { BrandMark } from "@/components/brand/brand-mark";
-import { brandName, brandTagline } from "@/lib/brand";
+import { PUBLIC_BRAND, brandTagline } from "@/lib/brand";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 
 const NAV = [
@@ -27,7 +27,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-emerald-100 bg-white/95 backdrop-blur dark:border-surface-800 dark:bg-surface-950/95">
       <div className="mx-auto flex min-h-[4.5rem] max-w-[1500px] items-center gap-3 px-3 py-1.5 sm:px-4 lg:px-7">
-        <Link href="/" aria-label={`${name}, ${tagline}`} className="flex min-w-0 shrink-0 items-center gap-2.5">
+        <Link href="/" aria-label={tagline ? `${PUBLIC_BRAND}, ${tagline}` : PUBLIC_BRAND} className="flex min-w-0 shrink-0 items-center gap-2.5">
           <BrandMark className="h-10 w-10 sm:h-11 sm:w-11" />
           <HeaderBrand name={name} tagline={tagline} urdu={lang === "ur"} />
         </Link>

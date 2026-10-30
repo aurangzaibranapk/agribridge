@@ -193,7 +193,7 @@ for (const line of [
   "Kisan Pakistan",
   "Approve",
   "Reject",
-  "Kisan ka wasila",
+  "Kisan Pakistan",
   "Role badlo",
   "Switch between available roles",
   "Manage notification preferences",

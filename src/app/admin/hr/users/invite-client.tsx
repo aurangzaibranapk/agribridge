@@ -146,7 +146,7 @@ export function InviteClient({
   return (
     <div className="min-h-full bg-[radial-gradient(circle_at_20%_0%,#1a6b45_0%,transparent_42%),linear-gradient(180deg,#0d2b20_0%,#071610_100%)] px-4 py-6 text-white sm:px-6">
       <header className="mb-5">
-        <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#9dccb0]">AgriBridge · Kisan ka Wasela</p>
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#9dccb0]">Kisan Pakistan</p>
         <h1 className="mt-1 font-display text-2xl font-semibold">Naya dealer / buyer banayein</h1>
         <p className="mt-1 max-w-xl text-sm text-[#b7d4c4]">
           Admin account banata hai, phir WhatsApp, email ya SMS. Bhejne se pehle poora paigham dikhta hai aur timeline mein likhta hai.

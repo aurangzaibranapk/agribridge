@@ -35,7 +35,6 @@ export default function UserPlacePreviewPage() {
     <div className="min-h-screen bg-[#e7f2ea] md:grid md:grid-cols-[220px_1fr]">
       <aside className="hidden flex-col gap-1 bg-[#0f3a2e] p-4 text-sm text-[#d7efe2] md:flex">
         <p className="text-base font-semibold text-white">AgriBridge</p>
-        <p className="mb-4 text-xs text-[#b7d7c4]">Kisan ka Wasela</p>
         <p className="rounded-lg px-2 py-1.5 text-[#b7d7c4]">Dashboard</p>
         <p className="rounded-lg bg-white/15 px-2 py-1.5 font-semibold text-white">Users aur Role</p>
       </aside>

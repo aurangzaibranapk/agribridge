@@ -7,8 +7,6 @@ import { karachiDate, karachiDaySeries, liveGet, liveGetScoped, loadFarmerNames,
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { liveAuth, type LiveBag } from "../bits";
 import { ActionGrid, BarChart, BarTrack, BrandHeader, Donut, GlassCard, GlassScreen, Kpi, KpiGrid, LineChart, Pill, Rise, TankRow, TankTemp, Timeline, WeatherCard, glass, useFace, useWeather } from "../glass";
-import { VisionCard } from "./vision-card";
-
 type Refresh = { refreshing?: boolean; onRefresh?: () => void; onProfile?: () => void; onTab?: (key: string) => void };
 
 function num(value: number | string | null | undefined): number {
@@ -212,7 +210,6 @@ export function FarmerGlass({ live, khata, milk, names, focus = "home", footer, 
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Kisan / Customer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
-      <VisionCard role="farmer" />
       <WeatherCard weather={weather} />
       <ActionGrid title="Meri Services" actions={[
         { label: "Farms", key: "farm", onPress: () => bar.onTab?.("farm") },
@@ -300,7 +297,6 @@ export function McaGlass({ live, farmers, ...bar }: Refresh & { live?: LiveBag; 
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="DCA / Milk Collection" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
-      <VisionCard role="mca" />
       <WeatherCard weather={weather} />
       <ActionGrid actions={[
         { label: "Entry", key: "route", onPress: () => bar.onTab?.("route") },
@@ -362,7 +358,6 @@ export function McoGlass({ live, rows, error, names, ...bar }: Refresh & { live?
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="MCO / Chiller" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
-      <VisionCard role="mco" />
       <ActionGrid actions={[
         { label: "Receive", key: "fat", onPress: () => bar.onTab?.("fat") },
         { label: "Tanks", key: "drop", onPress: () => bar.onTab?.("drop") },
@@ -498,7 +493,6 @@ export function AdminGlass({ live, home, milk, orders: _orders, focus = "home", 
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Admin" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
-      <VisionCard role="admin" />
       <ActionGrid actions={[
         { label: "Reports", key: "reports", onPress: () => bar.onTab?.("reports") },
         { label: "Approvals", key: "approvals", onPress: () => bar.onTab?.("approvals") },
@@ -616,7 +610,6 @@ export function CustomerGlass({ live, khata, orders, focus = "home", ...bar }: R
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Customer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
-      <VisionCard role="customer" />
       <WeatherCard weather={weather} />
       <KpiGrid>
         <Kpi index={2} label="Mere orders" value={orders.ok ? String(list.length) : "—"} color="#5B8CFF" badge="count" series={orders.ok ? orderCountSeries(list, today) : []} pct={null} />
@@ -687,7 +680,6 @@ export function DealerGlass({ live, khata, orders, ...bar }: Refresh & { live?: 
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Dealer" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
-      <VisionCard role="dealer" />
       <ActionGrid actions={[
         { label: "Orders", key: "orders", onPress: () => bar.onTab?.("orders") },
         { label: "Khata", key: "khata", onPress: () => bar.onTab?.("khata") },
@@ -806,7 +798,6 @@ export function StaffGlass({ live, attendance, salary, advances, tasks, tasksNot
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Staff" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
-      <VisionCard role="staff" />
       <ActionGrid actions={[
         { label: "Hazri", key: "visits", onPress: () => bar.onTab?.("visits") },
         { label: "Tasks", key: "orders", onPress: () => bar.onTab?.("orders") },
@@ -910,7 +901,6 @@ export function VetGlass({ live, health, ...bar }: Refresh & { live?: LiveBag; h
   return (
     <GlassScreen refreshing={bar.refreshing} onRefresh={bar.onRefresh}>
       <BrandHeader role="Vet" name={face.name} centre={face.place} onProfile={bar.onProfile} live={live} />
-      <VisionCard role="vet" />
       <WeatherCard weather={weather} />
       <ActionGrid actions={[
         { label: "Visits", key: "visits", onPress: () => bar.onTab?.("visits") },

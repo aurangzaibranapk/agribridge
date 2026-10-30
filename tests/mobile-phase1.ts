@@ -9,7 +9,6 @@ import { normalizeChannel, showProductionSupport, showTesterReport } from "../sr
 import { appRoleFor, canonicalAppRole, supportChatKind } from "../src/lib/mobile/roles";
 import { dueReminders, homeUsesSample, incomeText, khataSides, nameInitials, openOrderStats, overviewDate, periodBounds, prettyPhone, reminderInbox, walletCard } from "../src/lib/mobile/farmer-desk";
 import { ROLE_NAV } from "../src/lib/mobile/nav";
-import { VISION_AHEAD, VISION_SUB, liveChipsFor, visionRoleLabel } from "../src/lib/mobile/vision";
 import { milkAlerts, priceFromSettings, resolveThresholds, settingsOrError, toMilkNotice } from "../src/lib/mobile/pricing";
 import { karachiWeek, weeklyStatement } from "../src/lib/mobile/statement";
 import { mergeById, newerThan, paginate, shouldFlush } from "../src/lib/mobile/sync";
@@ -98,22 +97,6 @@ assert.equal(ROLE_NAV.farmer.tabs[2].label, "Add");
 assert.equal(ROLE_NAV.farmer.tabs[3].label, "Services");
 assert.equal(ROLE_NAV.farmer.tabs[4].label, "Profile");
 assert.deepEqual(ROLE_NAV.customer.tabs, ROLE_NAV.farmer.tabs);
-assert.deepEqual(liveChipsFor("farmer"), ["Digital Munshi", "Dairy doodh", "Orders", "Khata / Wallet", "Vet reminders"]);
-assert.deepEqual(liveChipsFor("customer"), ["Orders", "Khata / Wallet", "Shop", "Dairy doodh"]);
-assert.deepEqual(liveChipsFor("admin"), ["Digital Munshi", "Dairy doodh", "Orders", "Approvals", "Staff / Admin desk"]);
-assert.deepEqual(liveChipsFor("owner"), liveChipsFor("admin"));
-assert.ok(liveChipsFor("staff").includes("Hazri"));
-assert.ok(liveChipsFor("mca").includes("Route pickup"));
-assert.ok(liveChipsFor("mco").includes("Tanks"));
-assert.ok(liveChipsFor("vet").includes("Vet reminders"));
-assert.ok(liveChipsFor("dealer").includes("Stock"));
-assert.ok(liveChipsFor("supplier").includes("Ledger"));
-assert.equal(visionRoleLabel("farmer"), "Kisan");
-assert.equal(visionRoleLabel("customer"), "Customer");
-assert.equal(visionRoleLabel("admin"), "Admin");
-assert.equal(visionRoleLabel("owner"), "Owner");
-assert.equal(VISION_SUB, "Kisan ka wasila · Ek app — kisan, customer, staff, admin · web jaisa live data");
-assert.equal(VISION_AHEAD, "Agay: fasal marketplace — dealer ko zero payment risk");
 assert.equal(homeUsesSample({ milkOk: true, milkCount: 0, ordersOk: true, orderCount: 0, healthOk: true, healthCount: 0, khataOwed: null, khataNote: null }), true);
 assert.equal(homeUsesSample({ milkOk: true, milkCount: 1, ordersOk: true, orderCount: 0, healthOk: true, healthCount: 0, khataOwed: null, khataNote: null }), false);
 assert.equal(homeUsesSample({ milkOk: false, milkCount: 0, ordersOk: true, orderCount: 0, healthOk: true, healthCount: 0, khataOwed: null, khataNote: null }), false);
@@ -162,14 +145,16 @@ assert.equal(currentSubBrand(null), null);
 assert.equal(currentSubBrand("[]"), null);
 const ownerTagline = taglineWithDefault(taglineFrom({ roman: "Kisan ka Wasela", urdu: "کسان کا وسیلہ", english: "The farmer's bridge" }));
 assert.equal(ownerTagline.english, null);
-assert.deepEqual(taglineLines(ownerTagline).map((line) => line.text), ["Kisan ka Wasela", "کسان کا وسیلہ"]);
+assert.equal(ownerTagline.roman, "");
+assert.equal(ownerTagline.urdu, "");
+assert.deepEqual(taglineLines(ownerTagline).map((line) => line.text), ["", ""]);
 assert.equal(taglineLines(ownerTagline)[1].urdu, true);
 assert.equal(taglineFrom({ roman: "  ", urdu: "", english: "The farmer's bridge" }).roman, null);
 assert.equal(taglineFrom({ english: "The farmer's bridge" }).english, null);
-assert.deepEqual(brandLockup("en"), { title: "AgriBridge", line: "Kisan ka Wasela", rtl: false });
-assert.deepEqual(brandLockup("rm"), { title: "AgriBridge", line: "Kisan ka Wasela", rtl: false });
-assert.deepEqual(brandLockup("ur"), { title: "ایگری بریج", line: "کسان کا وسیلہ", rtl: true });
-assert.equal(brandLockup("en", taglineFrom({ roman: "Kisan ka Wasela", urdu: "کسان کا وسیلہ", english: "The farmer's bridge" })).line, "Kisan ka Wasela");
+assert.deepEqual(brandLockup("en"), { title: "Kisan Pakistan", line: "", rtl: false });
+assert.deepEqual(brandLockup("rm"), { title: "Kisan Pakistan", line: "", rtl: false });
+assert.deepEqual(brandLockup("ur"), { title: "Kisan Pakistan", line: "", rtl: true });
+assert.equal(brandLockup("en", taglineFrom({ roman: "Kisan ka Wasela", urdu: "کسان کا وسیلہ", english: "The farmer's bridge" })).line, "");
 assert.doesNotMatch(brandLockup("rm", taglineFrom({ roman: "The farmer's bridge" })).line, /farmer/i);
 assert.equal(taglineFrom('{"roman":"Kisan ka Wasela"}').roman, "Kisan ka Wasela");
 assert.doesNotMatch(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /MISAAL|18,?450|31°C|Rs 4\.8M/);
@@ -507,7 +492,7 @@ assert.match(farmerSource, /loadFacts/);
 const shell = readFileSync("apps/mobile/src/roles/farmer-shell.tsx", "utf8");
 for (const line of [
   "Kisan Pakistan",
-  "Kisan ka wasila · AgriBridge",
+  "Kisan Pakistan",
   "Assalam o Alaikum",
   "Aaj ka overview",
   "Doodh aaj",
@@ -538,12 +523,15 @@ for (const line of [
 ]) {
   assert.ok(shell.includes(line), line);
 }
-assert.match(readFileSync("apps/mobile/src/roles/vision-card.tsx", "utf8"), /Kisan Pakistan vision/);
-assert.match(readFileSync("apps/mobile/src/roles/vision-card.tsx", "utf8"), /Ab chal raha hai/);
-assert.match(readFileSync("apps/mobile/src/roles/vision-card.tsx", "utf8"), /Jald aa raha hai/);
-assert.match(readFileSync("apps/mobile/src/roles/vision-card.tsx", "utf8"), /VISION_AHEAD/);
-assert.match(readFileSync("apps/mobile/src/roles/glass-homes.tsx", "utf8"), /VisionCard role="staff"/);
-assert.match(readFileSync("apps/mobile/src/roles/admin-ui.tsx", "utf8"), /<VisionCard role=\{role\} \/>/);
+assert.doesNotMatch(shell, /Kisan ka wasila|Kisan ka Wasela|کسان کا وسیلہ/);
+assert.doesNotMatch(readFileSync("apps/mobile/src/roles/admin-ui.tsx", "utf8"), /Kisan ka wasila|Kisan ka Wasela|کسان کا وسیلہ/);
+assert.equal(existsSync("apps/mobile/src/roles/vision-card.tsx"), false);
+assert.match(readFileSync("apps/mobile/src/glass.tsx", "utf8"), /AgriBridge · \$\{AGRIBRIDGE_OS_VERSION\}/);
+assert.match(readFileSync("apps/mobile/src/roles/admin-ui.tsx", "utf8"), /AppVersionStrip/);
+assert.match(readFileSync("apps/mobile/src/roles/farmer-shell.tsx", "utf8"), /AppVersionStrip/);
+assert.match(readFileSync("apps/mobile/src/roles/later.tsx", "utf8"), /AppVersionStrip/);
+assert.doesNotMatch(readFileSync("apps/mobile/src/roles/glass-homes.tsx", "utf8"), /VisionCard|Kisan Pakistan vision/);
+assert.doesNotMatch(readFileSync("apps/mobile/src/roles/admin-ui.tsx", "utf8"), /VisionCard|Kisan Pakistan vision|Kisan ka wasila/);
 assert.match(readFileSync("apps/mobile/App.tsx", "utf8"), /appRole !== "farmer"/);
 assert.match(readFileSync("apps/mobile/src/kit.tsx", "utf8"), /kind === "farmer"/);
 const mcaSource = readFileSync("apps/mobile/src/roles/mca.tsx", "utf8");

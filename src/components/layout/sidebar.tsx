@@ -12,7 +12,7 @@ import { usePending, PENDING_PAGE } from "@/components/pending/pending-context";
 import { RedBadge, NayaPill, PendingMeta, ZeroMark } from "@/components/pending/pending-ui";
 import { badgeForGroup, badgeForHref, pendingQueueHref } from "@/lib/pending/categories";
 import { BrandMark } from "@/components/brand/brand-mark";
-import { brandName, brandTagline, isHiddenBrand } from "@/lib/brand";
+import { brandName, isHiddenBrand } from "@/lib/brand";
 export type { NavItem } from "@/components/layout/nav-items";
 
 /**
@@ -94,7 +94,6 @@ export function Sidebar({
         <BrandMark className="h-8 w-8 rounded-lg" />
         <div className="min-w-0 flex-1">
           <p className="font-display text-sm font-bold leading-tight text-white">{brandName(lang)}</p>
-          <p className="truncate text-[11px] leading-tight text-emerald-100/80">{brandTagline(lang)}</p>
           {subtitle && !isHiddenBrand(subtitle) && subtitle !== brandName(lang) && (
             <p className="truncate text-[10px] text-[#d3deee]">{subtitle}</p>
           )}

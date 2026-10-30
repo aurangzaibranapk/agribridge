@@ -46,7 +46,7 @@ export default async function SalesAnalyticsPage() {
     <div>
       <PageHeader
         title="Sales Dashboard — Aaj"
-        description="Kisan ka Wasela · aaj ki bikri, category, orders, aur kam stock. Waqt Pakistan ka hai. Khali din par Rs 0 — sample number nahi."
+        description="Aaj ki bikri, category, orders, aur kam stock. Waqt Pakistan ka hai. Khali din par Rs 0 — sample number nahi."
         actions={
           <Link href="/admin/reports/sales" className="text-sm font-semibold text-emerald-800 hover:underline dark:text-emerald-300">
             Poori sale report

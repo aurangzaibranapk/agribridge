@@ -28,7 +28,7 @@ import { karachiDate, type HealthRow, type KhataView, type MilkRow, type OrderRo
 import { karachiWeek } from "../../../../src/lib/mobile/statement";
 import type { LiveBag } from "../bits";
 import { useFace, useWeather, type WeatherView } from "../glass";
-import { VisionCard } from "./vision-card";
+import { AppVersionStrip } from "../glass";
 
 const PAGE = "#F3F6F2";
 const GREEN = "#0E7A3C";
@@ -231,7 +231,7 @@ function Home({
               <Text style={{ fontSize: 18, marginRight: 8 }}>🌱</Text>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: "#fff", fontSize: 20, fontWeight: "800" }}>Kisan Pakistan</Text>
-                <Text style={{ color: "rgba(255,255,255,0.82)", fontSize: 13, marginTop: 1 }}>Kisan ka wasila · AgriBridge</Text>
+                <AppVersionStrip />
               </View>
             </View>
             <Text style={{ color: "rgba(255,255,255,0.88)", marginTop: 14 }}>Assalam o Alaikum</Text>
@@ -243,7 +243,6 @@ function Home({
           </View>
         </View>
       </View>
-      <VisionCard role="farmer" />
       <WeatherStrip weather={weather} />
       <View style={{ flexDirection: "row", alignItems: "center", marginTop: 16, marginBottom: 10 }}>
         <Text style={styles.h}>Aaj ka overview</Text>
@@ -333,7 +332,7 @@ function Munshi({
     <View style={{ flex: 1, backgroundColor: PAGE }}>
       <View style={styles.banner}>
         <Text style={{ color: "#fff", fontSize: 22, fontWeight: "800" }}>📒 Digital Munshi</Text>
-        <Text style={{ color: "rgba(255,255,255,0.86)", marginTop: 2 }}>{name} ka khata · Kisan ka wasila</Text>
+        <Text style={{ color: "rgba(255,255,255,0.86)", marginTop: 2 }}>{name} ka khata</Text>
       </View>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28 }} refreshControl={refresh}>
         <View style={styles.segment}>
@@ -493,7 +492,7 @@ function Services({
     <View style={{ flex: 1, backgroundColor: PAGE }}>
       <View style={styles.banner}>
         <Text style={{ color: "#fff", fontSize: 22, fontWeight: "800" }}>🧩 Meri Services</Text>
-        <Text style={{ color: "rgba(255,255,255,0.86)", marginTop: 2 }}>Kisan Pakistan — Kisan ka wasila</Text>
+        <Text style={{ color: "rgba(255,255,255,0.86)", marginTop: 2 }}>Kisan Pakistan</Text>
       </View>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
         <Text style={[styles.h, { marginBottom: 10 }]}>Ahem services</Text>

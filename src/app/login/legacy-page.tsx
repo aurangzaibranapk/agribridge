@@ -50,7 +50,7 @@ export async function LegacyLoginPage() {
               <BrandMark />
               <div>
                 <p className="font-display text-xl font-bold text-[#123d2a]">{brandName}</p>
-                <p className="mt-0.5 text-[11px] font-bold uppercase tracking-[0.28em] text-[#4e7656]">{t("au_brand", lang)}</p>
+                {t("au_brand", lang) ? <p className="mt-0.5 text-[11px] font-bold uppercase tracking-[0.28em] text-[#4e7656]">{t("au_brand", lang)}</p> : null}
               </div>
             </div>
 
@@ -82,7 +82,7 @@ export async function LegacyLoginPage() {
           <div className="pointer-events-none absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-[#b8d8c2]/25 blur-3xl" />
           <div className="relative w-full max-w-[470px]">
               <div className="mb-5 flex items-center justify-between lg:hidden">
-              <div className="flex items-center gap-3"><BrandMark compact /><div><p className="font-display text-base font-semibold text-[#123321]">{brandName}</p><p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#5c795f]">{t("au_brand", lang)}</p></div></div>
+              <div className="flex items-center gap-3"><BrandMark compact /><div><p className="font-display text-base font-semibold text-[#123321]">{brandName}</p>{t("au_brand", lang) ? <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#5c795f]">{t("au_brand", lang)}</p> : null}</div></div>
               <Link href="/" className="rounded-full border border-[#dfe5dc] bg-white px-3 py-2 text-xs font-semibold text-[#385442] shadow-sm">Website</Link>
             </div>
             <div className="mb-4 lg:mb-3"><p className="text-sm font-semibold text-[#2f6b45] dark:text-emerald-300">Welcome to {brandName}</p><h2 className="mt-1 font-display text-3xl font-semibold tracking-tight text-[#103b29] dark:text-white">Apna account kholain</h2><p className="mt-1.5 text-sm leading-5 text-[#66766b] dark:text-slate-400">Farmer, customer, staff aur vendor — apna sahi login raasta chunain.</p></div>

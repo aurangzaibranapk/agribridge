@@ -2,8 +2,8 @@ import Link from "next/link";
 import { Mail, MapPin, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { SHOP_PHONE_E164, SHOP_PHONE_WHATSAPP, unwrapWebsiteSetting } from "@/lib/cms/website-setting";
-import { BrandMark, BrandWord } from "@/components/brand/brand-mark";
-import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+import { BrandMark } from "@/components/brand/brand-mark";
+import { PUBLIC_BRAND } from "@/lib/brand";
 
 /**
  * Website ka footer -- malik ka final design (6 September).
@@ -91,8 +91,7 @@ export async function PublicFooter() {
             <Link href="/" className="inline-flex items-center gap-3">
               <BrandMark className="h-11 w-11 rounded-xl" />
               <div>
-                <BrandWord className="block text-xl font-black text-white [&_span]:text-emerald-300" />
-                <p className="text-xs text-emerald-200">{BRAND_TAGLINE}</p>
+                <span className="block text-xl font-black text-white">{PUBLIC_BRAND}</span>
               </div>
             </Link>
 

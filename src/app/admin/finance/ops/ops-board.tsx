@@ -94,7 +94,6 @@ export function OpsBoard({ model }: { model: OpsDeskModel }) {
             <ArtLogo width={28} />
             <div>
               <p className="font-display text-sm font-semibold">{brand.name}</p>
-              <p className="text-[11px] text-emerald-200/80">{brand.tagline}</p>
             </div>
           </div>
           <nav className="flex flex-col gap-1 text-sm">

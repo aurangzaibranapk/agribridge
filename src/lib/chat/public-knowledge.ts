@@ -1,4 +1,4 @@
-import { applyBrand, brandName, brandTagline } from "@/lib/brand";
+import { applyBrand, brandName } from "@/lib/brand";
 import { SHOP_PHONE_DISPLAY, isPlaceholderAddress } from "@/lib/cms/website-setting";
 import type { Lang } from "@/lib/i18n/translations";
 import { t } from "@/lib/i18n/translations";
@@ -64,8 +64,8 @@ Reply in the same language and the same script as the visitor's latest message.
 Do not mix scripts. Do not apologize in another language. Do not translate the visitor's script into a different one.`;
 
 export const BRAND_RULE = `BRAND RULE:
-The only public brand is AgriBridge. English and Roman tagline: Kisan ka Wasela. Urdu name: ایگری بریج. Urdu tagline: کسان کا وسیلہ.
-Never write Al Rana Traders, AL RANA, ART, الرانا, ال رانا, or "The farmer's bridge".`;
+The public brand name is Kisan Pakistan. Do not write a slogan under that name.
+Never write Al Rana Traders, AL RANA, ART, الرانا, ال رانا, "Kisan ka Wasela", "Kisan ka wasila", کسان کا وسیلہ, or "The farmer's bridge".`;
 
 export const PRIVACY_RULE = `PRIVACY RULE:
 Use only the PUBLIC FACTS in this prompt and general agriculture knowledge.
@@ -119,14 +119,19 @@ function say(lang: ChatLang, copy: Record<ChatLang, string>): string {
 }
 
 export function scrubPublicReply(text: string, lang: ChatLang): string {
-  const tag = brandTagline(lang === "ur" ? "ur" : "en");
   const cleaned = applyBrand(text, lang)
-    .replace(/the farmer's bridge/gi, tag)
-    .replace(/kisan ki seerhi/gi, brandTagline("en"))
-    .replace(/wasela kisan ka/gi, brandTagline("en"))
-    .replace(/وسیلہ کسان کا/g, brandTagline("ur"))
-    .replace(/کسان کی سیڑھی/g, brandTagline("ur"));
-  return cleaned.replace(/[ \t]+\n/g, "\n").trim();
+    .replace(/the farmer['’]s bridge/gi, "")
+    .replace(/kisan ki seerhi/gi, "")
+    .replace(/wasela kisan ka/gi, "")
+    .replace(/وسیلہ کسان کا/g, "")
+    .replace(/کسان کی سیڑھی/g, "");
+  return cleaned
+    .replace(/\s+,/g, ",")
+    .replace(/,\s*$/g, "")
+    .replace(/,\s*\./g, ".")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .trim();
 }
 
 const LANGUAGE_REQUEST = /urdu men|urdu mein|roman urdu|bat kro|baat karo|baat kro|in english|speak english|reply in english|اردو میں|بات کرو|انگریزی میں/i;
@@ -451,12 +456,11 @@ function servicesAnswer(question: string, lang: ChatLang): ChatReply {
 
 function brandAnswer(lang: ChatLang): ChatReply {
   const name = brandName(lang);
-  const tag = brandTagline(lang);
   return {
     answer: say(lang, {
-      en: `${name} is the public name, and the tagline is ${tag}. The public site covers agriculture, kisan services, the marketplace, grain, machinery booking, dairy, farm products, and Kisan AI.`,
-      rm: `${name} ka naam yehi hai, aur tagline ${tag} hai. Public site par agriculture, kisan services, marketplace, anaj, machinery booking, dairy, farm products, aur Kisan AI hain.`,
-      ur: `${name} نام ہے، اور ٹیگ لائن ${tag} ہے۔ عوامی سائٹ پر زراعت، کسان خدمات، مارکیٹ، اناج، مشینری، ڈیری، فارم مصنوعات، اور کسان اے آئی ہیں۔`,
+      en: `${name} is on the public site: agriculture, kisan services, the marketplace, grain, machinery booking, dairy, farm products, and Kisan AI.`,
+      rm: `${name} public site par hai: agriculture, kisan services, marketplace, anaj, machinery booking, dairy, farm products, aur Kisan AI.`,
+      ur: `${name} عوامی سائٹ پر ہے: زراعت، کسان خدمات، مارکیٹ، اناج، مشینری، ڈیری، فارم مصنوعات، اور کسان اے آئی۔`,
     }),
     source: "brand",
   };
@@ -660,7 +664,7 @@ export function buildAssistantSystem(input: { lang: ChatLang; facts: PublicFacts
     ? `LOGGED-IN VISITOR (own name only, via RLS): ${scrubPublicReply(input.ownName, "en")}`
     : "LOGGED-IN VISITOR: no personal record was loaded. Do not invent a name, khata balance, salary, or finance figure.";
   return [
-    `You are ${brandName("en")} Assistant on the public website. Tagline: ${brandTagline("en")}.`,
+    `You are ${brandName("en")} Assistant on the public website. Public name: Kisan Pakistan. Do not add a slogan.`,
     LANGUAGE_RULE,
     `The visitor's message language for this turn is: ${langName}.`,
     BRAND_RULE,

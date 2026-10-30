@@ -13,10 +13,11 @@ export type BrandLockup = { title: string; line: string; rtl: boolean };
 
 export type AppMark = { brand: SubBrand | null; tagline: Tagline };
 
-export const DEFAULT_ROMAN_TAGLINE = "Kisan ka Wasela";
-export const DEFAULT_URDU_TAGLINE = "کسان کا وسیلہ";
+export const DEFAULT_ROMAN_TAGLINE = "";
+export const DEFAULT_URDU_TAGLINE = "";
 
 const FORBIDDEN_TAGLINE = /the farmer['’]s bridge/i;
+const RETIRED_SLOGAN = /^(kisan ka wase[li]a|کسان کا وسیلہ)$/i;
 
 type BrandRow = { name?: unknown; logo_url?: unknown; current?: unknown };
 
@@ -31,7 +32,7 @@ function textLine(value: unknown): string | null {
 }
 
 function allowedLine(value: string | null, fallback: string): string {
-  if (!value || FORBIDDEN_TAGLINE.test(value)) return fallback;
+  if (!value || FORBIDDEN_TAGLINE.test(value) || RETIRED_SLOGAN.test(value.trim())) return fallback;
   return value;
 }
 
@@ -68,11 +69,9 @@ export function taglineLines(tagline: Tagline): { text: string; urdu: boolean }[
   ];
 }
 
-/** English aur Roman ek lockup. Urdu doosra. Beech mein koi teesri line nahi. */
-export function brandLockup(lang: AppLang, tagline?: Tagline | null): BrandLockup {
-  const row = taglineWithDefault(tagline);
-  if (lang === "ur") return { title: "ایگری بریج", line: row.urdu || DEFAULT_URDU_TAGLINE, rtl: true };
-  return { title: "AgriBridge", line: row.roman || DEFAULT_ROMAN_TAGLINE, rtl: false };
+/** Phone par sirf Kisan Pakistan. Purana slogan line khali rehti hai. */
+export function brandLockup(lang: AppLang, _tagline?: Tagline | null): BrandLockup {
+  return { title: "Kisan Pakistan", line: "", rtl: lang === "ur" };
 }
 
 function httpsLogo(value: unknown): string | null {

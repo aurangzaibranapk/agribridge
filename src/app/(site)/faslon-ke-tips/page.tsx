@@ -4,7 +4,7 @@ import { SHOP_PHONE_WHATSAPP } from "@/lib/cms/website-setting";
 
 export const metadata: Metadata = {
   title: "Faslon ke tips | AgriBridge",
-  description: "Kisan bhaiyon ke liye muft rehnumai — gandum ki bijai, DAP, doodh, aur bimari ki pehchan. AgriBridge, Kisan ka Wasela.",
+  description: "Kisan bhaiyon ke liye muft rehnumai — gandum ki bijai, DAP, doodh, aur bimari ki pehchan. Kisan Pakistan.",
   alternates: { canonical: "/faslon-ke-tips" },
   openGraph: {
     title: "Faslon ke tips | AgriBridge",
@@ -41,7 +41,7 @@ export default function FaslonKeTipsPage() {
   return (
     <div className="bg-[#f4f7f2]">
       <SiteContainer className="py-10 sm:py-14">
-        <p className="text-sm font-semibold text-emerald-800">AgriBridge · Kisan ka Wasela</p>
+        <p className="text-sm font-semibold text-emerald-800">Kisan Pakistan</p>
         <h1 className="mt-2 font-display text-3xl font-semibold text-[#123629] sm:text-4xl">Faslon ke tips</h1>
         <p className="mt-2 max-w-2xl text-sm text-surface-600">Kisan bhaiyon ke liye muft rehnumai — Urdu, Roman, English</p>
 
