@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
+import Link from "next/link";
 import { DispatchClient } from "./dispatch-client";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +39,15 @@ export default async function MilkDispatchPage() {
 
   return (
     <div>
-      <PageHeader title={t("mdp_title", lang)} description={t("md_subtitle", lang)} />
+      <PageHeader
+        title={t("mdp_title", lang)}
+        description={t("md_subtitle", lang)}
+        actions={
+          <Link href="/admin/milk-collection/handover" className="text-sm text-brand-700 underline">
+            {t("mh_title", lang)}
+          </Link>
+        }
+      />
       <DispatchClient
         lang={lang}
         branches={(branches ?? []).map((b) => ({ id: b.id, name: b.name }))}

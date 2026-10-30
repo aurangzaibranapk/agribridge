@@ -80,6 +80,7 @@ export const ERP_HIDDEN_ROUTES: string[] = [
   "/admin/machinery-rental/work",
   "/admin/machinery-rental/work-claims",
   "/admin/milk-collection/dispatch",
+  "/admin/milk-collection/handover/new",
   "/admin/milk-collection/fleet",
   "/admin/my-access",
   "/admin/my-attendance",

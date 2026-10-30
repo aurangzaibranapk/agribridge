@@ -1,0 +1,391 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { useFormStatus } from "react-dom";
+import { useFormState } from "@/lib/hooks/use-safe-form-state";
+import { saveMilkHandover, type HandoverState } from "@/actions/milk-handover";
+import { Button, Input, Label, Select } from "@/components/ui/form";
+import { t, type Lang } from "@/lib/i18n/translations";
+import {
+  adjustedTotal,
+  blankCertificateLines,
+  emptyLine,
+  formatQty,
+  grossTotal,
+  lineSpecFlags,
+  parseHandoverLines,
+  specFlagText,
+  suggestLab,
+  tsOf,
+  type HandoverLineInput,
+  type HandoverSpecs,
+  type LabFormula,
+} from "@/lib/milk-handover";
+
+const initial: HandoverState = {};
+
+export interface HandoverShop {
+  id: string;
+  name: string;
+  code: string | null;
+  branchId: string | null;
+}
+
+export interface HandoverFormProps {
+  lang: Lang;
+  branches: { id: string; name: string }[];
+  shops: HandoverShop[];
+  specs: HandoverSpecs;
+  formula: LabFormula | null;
+  myName: string;
+  locked: boolean;
+  priorGross: number | null;
+  hadLines: boolean;
+  dispatchId: string | null;
+  defaults: {
+    branchId: string;
+    shopId: string;
+    date: string;
+    shift: string;
+    time: string;
+    mccName: string;
+    vehicle: string;
+    driver: string;
+    notes: string;
+    accepted: "" | "yes" | "no";
+    rejectionReason: string;
+    licenseeRep: string;
+    licenseeSignature: string;
+    collectorSignature: string;
+    lines: HandoverLineInput[];
+  };
+}
+
+function numOrNull(raw: string): number | null {
+  const text = raw.trim();
+  if (!text || !/^-?\d+(\.\d+)?$/.test(text)) return null;
+  const n = Number(text);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function HandoverForm(props: HandoverFormProps) {
+  const { lang, specs, formula, locked } = props;
+  const [state, action] = useFormState(saveMilkHandover, initial);
+  const [branchId, setBranchId] = useState(props.defaults.branchId);
+  const [shopId, setShopId] = useState(props.defaults.shopId);
+  const [mccName, setMccName] = useState(props.defaults.mccName);
+  const [accepted, setAccepted] = useState(props.defaults.accepted);
+  const [licenseeSignature, setLicenseeSignature] = useState(props.defaults.licenseeSignature);
+  const [collectorSignature, setCollectorSignature] = useState(props.defaults.collectorSignature);
+  const [lines, setLines] = useState<HandoverLineInput[]>(
+    props.defaults.lines.length > 0 ? props.defaults.lines : blankCertificateLines()
+  );
+
+  const parsed = useMemo(() => parseHandoverLines(lines), [lines]);
+  const liveLines = "lines" in parsed ? parsed.lines : [];
+  const flags = liveLines.flatMap((line) => lineSpecFlags(line, specs));
+  const gross = liveLines.length ? grossTotal(liveLines) : null;
+  const adjusted = liveLines.length ? adjustedTotal(liveLines) : null;
+
+  function patchLine(index: number, patch: Partial<HandoverLineInput>) {
+    setLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
+  }
+
+  function onShop(id: string) {
+    setShopId(id);
+    const shop = props.shops.find((s) => s.id === id);
+    if (!shop) return;
+    if (shop.branchId) setBranchId(shop.branchId);
+    setMccName(shop.name);
+  }
+
+  const cell = "h-8 rounded-none px-1 text-xs";
+
+  return (
+    <form action={action} className="space-y-3 bg-white p-3 text-black dark:bg-white dark:text-black">
+      {props.dispatchId && <input type="hidden" name="dispatch_id" value={props.dispatchId} />}
+      {locked && (
+        <>
+          <input type="hidden" name="litres_locked" value="yes" />
+          <input type="hidden" name="branch_id" value={branchId} />
+          <input type="hidden" name="shop_id" value={shopId} />
+          <input type="hidden" name="dispatch_date" value={props.defaults.date} />
+          <input type="hidden" name="shift" value={props.defaults.shift || "morning"} />
+          <input type="hidden" name="collection_time" value={props.defaults.time} />
+          <input type="hidden" name="mcc_name" value={mccName} />
+          <input type="hidden" name="vehicle_name" value={props.defaults.vehicle} />
+          <input type="hidden" name="driver_name" value={props.defaults.driver} />
+        </>
+      )}
+      {!locked && <input type="hidden" name="lines_json" value={JSON.stringify(lines)} />}
+      <input type="hidden" name="licensee_signature" value={licenseeSignature} />
+      <input type="hidden" name="collector_signature" value={collectorSignature} />
+
+      {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
+      {locked && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">{t("mh_locked", lang)}</p>}
+      {!props.hadLines && props.priorGross != null && props.priorGross > 0 && (
+        <p className="rounded-lg bg-surface-50 px-3 py-2 text-sm text-surface-700">
+          {t("mh_no_lines", lang)} ({formatQty(props.priorGross)} L)
+        </p>
+      )}
+
+      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.1fr)_auto_minmax(0,0.8fr)]">
+        <table className="w-full border-collapse border border-black text-xs">
+          <tbody>
+            <tr>
+              <th className="w-36 border border-black px-1.5 py-1 text-left">Date:</th>
+              <td className="border border-black p-1">
+                <Input className={cell} type="date" name={locked ? undefined : "dispatch_date"} defaultValue={props.defaults.date} required disabled={locked} />
+              </td>
+            </tr>
+            <tr>
+              <th className="border border-black px-1.5 py-1 text-left">MCC Name:</th>
+              <td className="border border-black p-1">
+                <Input className={cell} name={locked ? undefined : "mcc_name"} value={mccName} onChange={(e) => setMccName(e.target.value)} disabled={locked} />
+              </td>
+            </tr>
+            <tr>
+              <th className="border border-black px-1.5 py-1 text-left">Time of Collection:</th>
+              <td className="border border-black p-1">
+                <Input className={cell} type="time" name={locked ? undefined : "collection_time"} defaultValue={props.defaults.time} disabled={locked} />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <h1 className="px-2 pt-4 text-center text-lg font-bold">Milk Handover Certificate</h1>
+        <div className="justify-self-end pt-2 text-right leading-none">
+          <div className="font-serif text-3xl font-bold text-[#e36f12]" dir="rtl">کسان</div>
+          <div className="mt-1 text-[11px] font-semibold text-[#e36f12]">Kisan Pakistan</div>
+        </div>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <Label>{t("mh_branch", lang)}</Label>
+          <Select name={locked ? undefined : "branch_id"} value={branchId} onChange={(e) => setBranchId(e.target.value)} disabled={locked} required>
+            <option value="">—</option>
+            {props.branches.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <Label>MCC</Label>
+          <Select name={locked ? undefined : "shop_id"} value={shopId} onChange={(e) => onShop(e.target.value)} disabled={locked}>
+            <option value="">—</option>
+            {props.shops.map((s) => (
+              <option key={s.id} value={s.id}>{s.code ? `${s.code} · ` : ""}{s.name}</option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <Label>{t("mh_shift", lang)}</Label>
+          <Select name={locked ? undefined : "shift"} defaultValue={props.defaults.shift || "morning"} disabled={locked}>
+            <option value="morning">{t("mh_morning", lang)}</option>
+            <option value="evening">{t("mh_evening", lang)}</option>
+          </Select>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Label>Vehicle</Label>
+            <Input name={locked ? undefined : "vehicle_name"} defaultValue={props.defaults.vehicle} disabled={locked} />
+          </div>
+          <div>
+            <Label>Driver</Label>
+            <Input name={locked ? undefined : "driver_name"} defaultValue={props.defaults.driver} disabled={locked} />
+          </div>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[920px] border-collapse border border-black text-center text-xs">
+          <thead>
+            <tr>
+              {["Chiller No.", "Milk Type", "Gross Vol (L)", "Fat %", "LR", "SNF", "TS (SNF+FAT%)", "Adjusted Volume (L)", "Temperature", "Organo", ""].map((h) => (
+                <th key={h || "x"} className="border border-black px-1 py-1 font-semibold">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((line, index) => {
+              const fat = numOrNull(line.fat);
+              const lr = numOrNull(line.lr);
+              const snf = numOrNull(line.snf);
+              const grossL = numOrNull(line.grossL);
+              const flagsFor = lineSpecFlags(
+                { chillerNo: line.chillerNo || String(index + 1), fat, lr, snf },
+                specs
+              );
+              const bad = new Set(flagsFor.map((f) => f.field));
+              const hint = suggestLab(grossL ?? 0, fat, lr, snf, formula);
+              const warn = (field: "fat" | "lr" | "snf") => (bad.has(field) ? "bg-amber-100" : "");
+              return (
+                <tr key={index}>
+                  <td className="border border-black p-0.5">
+                    <Input className={cell} value={line.chillerNo} disabled={locked} onChange={(e) => patchLine(index, { chillerNo: e.target.value })} aria-label={`Chiller ${index + 1}`} />
+                  </td>
+                  <td className="border border-black p-0.5">
+                    <Input className={cell} list="milk-types" value={line.milkType} disabled={locked} onChange={(e) => patchLine(index, { milkType: e.target.value })} aria-label={`Milk type ${index + 1}`} />
+                  </td>
+                  <td className="border border-black p-0.5">
+                    <Input className={cell} inputMode="decimal" value={line.grossL} disabled={locked} onChange={(e) => patchLine(index, { grossL: e.target.value })} aria-label={`Gross ${index + 1}`} />
+                  </td>
+                  <td className="border border-black p-0.5">
+                    <Input className={`${cell} ${warn("fat")}`} inputMode="decimal" value={line.fat} disabled={locked} onChange={(e) => patchLine(index, { fat: e.target.value })} aria-label={`FAT ${index + 1}`} />
+                  </td>
+                  <td className="border border-black p-0.5">
+                    <Input className={`${cell} ${warn("lr")}`} inputMode="decimal" value={line.lr} disabled={locked} onChange={(e) => patchLine(index, { lr: e.target.value })} aria-label={`LR ${index + 1}`} />
+                  </td>
+                  <td className="border border-black p-0.5">
+                    <Input className={`${cell} ${warn("snf")}`} inputMode="decimal" value={line.snf} disabled={locked} onChange={(e) => patchLine(index, { snf: e.target.value })} aria-label={`SNF ${index + 1}`} />
+                    {hint.snf != null && !line.snf.trim() && !locked && (
+                      <button type="button" className="mt-0.5 text-[10px] text-brand-700 underline" onClick={() => patchLine(index, { snf: String(hint.snf) })}>
+                        SNF {hint.snf} {t("mh_write", lang)}
+                      </button>
+                    )}
+                  </td>
+                  <td className="border border-black px-1 py-1">{formatQty(tsOf(fat, snf))}</td>
+                  <td className="border border-black p-0.5">
+                    <Input className={cell} inputMode="decimal" value={line.adjustedL} disabled={locked} placeholder={hint.adjusted != null ? String(hint.adjusted) : ""} onChange={(e) => patchLine(index, { adjustedL: e.target.value })} aria-label={`Adjusted ${index + 1}`} />
+                    {hint.adjusted != null && !line.adjustedL.trim() && !locked && (
+                      <button type="button" className="mt-0.5 text-[10px] text-brand-700 underline" onClick={() => patchLine(index, { adjustedL: String(hint.adjusted) })}>
+                        {hint.adjusted} {t("mh_write", lang)}
+                      </button>
+                    )}
+                  </td>
+                  <td className="border border-black p-0.5">
+                    <Input className={cell} inputMode="decimal" value={line.temperatureC} disabled={locked} onChange={(e) => patchLine(index, { temperatureC: e.target.value })} aria-label={`Temperature ${index + 1}`} />
+                  </td>
+                  <td className="border border-black p-0.5">
+                    <Input className={cell} value={line.organo} disabled={locked} onChange={(e) => patchLine(index, { organo: e.target.value })} aria-label={`Organo ${index + 1}`} />
+                  </td>
+                  <td className="border border-black p-0.5">
+                    {!locked && lines.length > 1 && (
+                      <button type="button" className="px-1 text-neutral-500" onClick={() => setLines((prev) => prev.filter((_, i) => i !== index))} aria-label="Hataen">
+                        ×
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            <tr className="bg-neutral-200 font-semibold">
+              <td className="border border-black px-1 py-1" colSpan={2}>Total</td>
+              <td className="border border-black px-1 py-1">{gross == null ? "—" : formatQty(gross)}</td>
+              <td className="border border-black px-1 py-1" colSpan={4} />
+              <td className="border border-black bg-neutral-300 px-1 py-1">{adjusted == null ? "—" : formatQty(adjusted)}</td>
+              <td className="border border-black px-1 py-1" colSpan={3} />
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <datalist id="milk-types">
+        <option value="Cow" />
+        <option value="Buffalo" />
+        <option value="Mixed" />
+      </datalist>
+
+      {!locked && (
+        <Button type="button" variant="secondary" size="sm" onClick={() => setLines((prev) => [...prev, emptyLine()])}>
+          {t("mh_add_row", lang)}
+        </Button>
+      )}
+
+      {formula && <p className="text-[11px] text-neutral-500">{t("mh_suggest", lang)}</p>}
+      {flags.length > 0 && (
+        <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+          <p className="font-semibold">{t("mh_spec_warn", lang)}</p>
+          <ul className="mt-1 list-disc pl-4">
+            {flags.map((flag) => (
+              <li key={`${flag.chillerNo}-${flag.field}`}>{specFlagText(flag)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {"error" in parsed && liveLines.length === 0 && lines.some((l) => l.chillerNo || l.grossL) && (
+        <p className="text-xs text-red-700">{parsed.error}</p>
+      )}
+
+      <div className="space-y-2 text-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="font-semibold">Accepted :</span>
+          <label className="inline-flex items-center gap-1">
+            <input type="radio" name="accepted" value="" checked={accepted === ""} onChange={() => setAccepted("")} />
+            {t("mh_pending", lang)}
+          </label>
+          <label className="inline-flex items-center gap-1">
+            <input type="radio" name="accepted" value="yes" checked={accepted === "yes"} onChange={() => setAccepted("yes")} />
+            YES
+          </label>
+          <label className="inline-flex items-center gap-1">
+            <input type="radio" name="accepted" value="no" checked={accepted === "no"} onChange={() => setAccepted("no")} />
+            NO
+          </label>
+        </div>
+        <div>
+          <Label>Rejected (Reasons)</Label>
+          <Input name="rejection_reason" defaultValue={props.defaults.rejectionReason} disabled={accepted === "yes"} />
+        </div>
+      </div>
+
+      <div className="grid items-end gap-4 lg:grid-cols-[1.1fr_1.4fr_0.7fr]">
+        <div className="border border-black p-2">
+          <Label>Licensee/Rep Name</Label>
+          <Input name="licensee_rep_name" defaultValue={props.defaults.licenseeRep} />
+        </div>
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs">Licensee Signature</p>
+            <Input value={licenseeSignature} onChange={(e) => setLicenseeSignature(e.target.value)} />
+          </div>
+          <div>
+            <p className="text-xs">Collector Signature</p>
+            <div className="flex gap-2">
+              <Input value={collectorSignature} onChange={(e) => setCollectorSignature(e.target.value)} />
+              {props.myName && (
+                <Button type="button" variant="secondary" size="sm" onClick={() => setCollectorSignature(props.myName)}>
+                  {t("mh_sign_me", lang)}
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="justify-self-end text-xs">
+          <p className="border-b border-black text-right italic">Min Specs</p>
+          <table className="border-collapse border border-black">
+            <tbody>
+              <tr>
+                <th className="border border-black px-2 py-0.5 text-left">FAT %</th>
+                <td className="border border-black px-2 py-0.5 text-right">{specs.minFat}</td>
+              </tr>
+              <tr>
+                <th className="border border-black px-2 py-0.5 text-left">LR</th>
+                <td className="border border-black px-2 py-0.5 text-right">{specs.minLr}</td>
+              </tr>
+              <tr>
+                <th className="border border-black px-2 py-0.5 text-left">SNF</th>
+                <td className="border border-black px-2 py-0.5 text-right">{specs.minSnf}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <Label>Notes</Label>
+        <Input name="notes" defaultValue={props.defaults.notes} />
+      </div>
+
+      <SubmitButton lang={lang} />
+    </form>
+  );
+}
+
+function SubmitButton({ lang }: { lang: Lang }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" disabled={pending}>
+      {pending ? t("mh_saving", lang) : t("mh_save", lang)}
+    </Button>
+  );
+}
