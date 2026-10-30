@@ -14,7 +14,7 @@ export function buildExpoConfig(env: NodeJS.ProcessEnv = process.env) {
   const testFlavor = env.EXPO_PUBLIC_APP_FLAVOR === "test";
   return {
     expo: {
-      name: testFlavor ? "AgriBridge TEST" : "AgriBridge",
+      name: testFlavor ? "Kisan Pakistan TEST" : "Kisan Pakistan",
       slug: testFlavor ? "agribridge-test" : "agribridge",
       scheme: testFlavor ? "agribridge-test" : "agribridge",
       version,

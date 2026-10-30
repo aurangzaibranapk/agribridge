@@ -150,7 +150,7 @@ export function BrandStack({ title, line, rtl, titleSize, lineSize }: { title: s
 
 export function BrandHeader({ role, name, onProfile }: { role: string; name: string; centre?: string; onProfile?: () => void; live?: LiveBag }) {
   const ctx = useContext(LangContext);
-  const mark = ctx.mark.trim() || "AgriBridge";
+  const mark = ctx.mark.trim() || "Kisan Pakistan";
   const line = ctx.line.trim();
   const initial = (name.trim().charAt(0) || role.charAt(0) || "A").toUpperCase();
   const roleTitle = /dashboard$/i.test(role) ? role : `${role} Dashboard`;

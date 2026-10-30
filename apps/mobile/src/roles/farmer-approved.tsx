@@ -92,7 +92,7 @@ function FarmerHeader({ data, onProfile }: { data: DigitalMunshiData; onProfile?
     <View style={styles.hero}>
       <View style={styles.brandRow}>
         <View style={styles.leaf}><Text style={styles.leafText}>◆</Text></View>
-        <View style={{ flex: 1 }}><Text style={styles.brand}>AgriBridge</Text><Text style={styles.tagline}>Kisan ka Wasela</Text></View>
+        <View style={{ flex: 1 }}><Text style={styles.brand}>Kisan Pakistan</Text><Text style={styles.tagline}>AgriBridge</Text></View>
         <Pressable onPress={onProfile} style={styles.bell}><Text style={styles.bellText}>♟</Text></Pressable>
       </View>
       <Pressable onPress={onProfile} style={styles.personRow}>

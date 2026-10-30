@@ -64,7 +64,7 @@ function Page({ children, p }: { children: React.ReactNode; p: Props }) {
 }
 
 function BrandHeader({ title, p }: { title: string; p: Props }) {
-  return <View style={styles.header}><View style={styles.brandMark}><Text style={styles.brandMarkText}>◆</Text></View><View style={{ flex: 1 }}><Text style={styles.brand}>AgriBridge</Text><Text style={styles.tagline}>Kisan ka Wasela</Text></View><View style={{ alignItems: "flex-end" }}><Text style={styles.role}>{title}</Text><Text style={styles.online}>● Online</Text></View></View>;
+  return <View style={styles.header}><View style={styles.brandMark}><Text style={styles.brandMarkText}>◆</Text></View><View style={{ flex: 1 }}><Text style={styles.brand}>Kisan Pakistan</Text><Text style={styles.tagline}>AgriBridge</Text></View><View style={{ alignItems: "flex-end" }}><Text style={styles.role}>{title}</Text><Text style={styles.online}>● Online</Text></View></View>;
 }
 
 function ScreenHead({ title, sub, p }: { title: string; sub?: string; p: Props }) { return <><BrandHeader title="MCA" p={p} /><View style={styles.screenHead}><View><Text style={styles.screenTitle}>{title}</Text>{sub ? <Text style={styles.screenSub}>{sub}</Text> : null}</View></View></>; }

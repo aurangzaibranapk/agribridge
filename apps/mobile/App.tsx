@@ -341,7 +341,7 @@ export default function App() {
     const now = Date.now();
     if (lockedUntil && now < lockedUntil) { setError("PIN thori der band hai."); return; }
     if (method === "biometric") {
-      const bio = await LocalAuthentication.authenticateAsync({ promptMessage: "AgriBridge kholen" });
+      const bio = await LocalAuthentication.authenticateAsync({ promptMessage: "Kisan Pakistan kholen" });
       if (bio.success) { await openApp(); return; }
       setError("Fingerprint nahi hui.");
       return;

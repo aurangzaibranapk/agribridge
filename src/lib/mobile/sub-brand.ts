@@ -1,7 +1,7 @@
-/** Phone par sirf AgriBridge aur tagline. Company naam screen par nahi, domain par rehta hai. */
+/** Phone par locked Kisan Pakistan + AgriBridge identity. */
 
 import type { FetchLike } from "./live-login";
-import { liveGet, type LiveAuth } from "./live-read";
+import type { LiveAuth } from "./live-read";
 
 export type SubBrand = { name: string; logoUrl: string | null };
 
@@ -13,8 +13,8 @@ export type BrandLockup = { title: string; line: string; rtl: boolean };
 
 export type AppMark = { brand: SubBrand | null; tagline: Tagline };
 
-export const DEFAULT_ROMAN_TAGLINE = "Kisan ka Wasela";
-export const DEFAULT_URDU_TAGLINE = "کسان کا وسیلہ";
+export const DEFAULT_ROMAN_TAGLINE = "AgriBridge";
+export const DEFAULT_URDU_TAGLINE = "AgriBridge";
 
 const FORBIDDEN_TAGLINE = /the farmer['’]s bridge/i;
 
@@ -69,10 +69,9 @@ export function taglineLines(tagline: Tagline): { text: string; urdu: boolean }[
 }
 
 /** English aur Roman ek lockup. Urdu doosra. Beech mein koi teesri line nahi. */
-export function brandLockup(lang: AppLang, tagline?: Tagline | null): BrandLockup {
-  const row = taglineWithDefault(tagline);
-  if (lang === "ur") return { title: "ایگری بریج", line: row.urdu || DEFAULT_URDU_TAGLINE, rtl: true };
-  return { title: "AgriBridge", line: row.roman || DEFAULT_ROMAN_TAGLINE, rtl: false };
+export function brandLockup(lang: AppLang, _tagline?: Tagline | null): BrandLockup {
+  if (lang === "ur") return { title: "کسان پاکستان", line: "AgriBridge", rtl: true };
+  return { title: "Kisan Pakistan", line: "AgriBridge", rtl: false };
 }
 
 function httpsLogo(value: unknown): string | null {
@@ -108,14 +107,7 @@ export function currentSubBrand(value: unknown): SubBrand | null {
   return null;
 }
 
-/** Tagline settings se, warna hardcoded default. Brand hamesha null. */
-export async function loadAppMark(auth: LiveAuth, fetchImpl: FetchLike): Promise<AppMark> {
-  const blank: AppMark = { brand: null, tagline: taglineWithDefault(null) };
-  const res = await liveGet<{ key?: string; value?: unknown }>(auth, "website_settings?select=key,value&key=in.(app_brands,app_tagline)&limit=2", fetchImpl);
-  if (!res.ok) return blank;
-  let tagline = taglineWithDefault(null);
-  for (const row of res.rows) {
-    if (row.key === "app_tagline") tagline = taglineWithDefault(taglineFrom(row.value));
-  }
-  return { brand: null, tagline };
+/** Branding database se badal nahi sakti; dono approved names har role par stable rehte hain. */
+export async function loadAppMark(_auth: LiveAuth, _fetchImpl: FetchLike): Promise<AppMark> {
+  return { brand: null, tagline: taglineWithDefault(null) };
 }
