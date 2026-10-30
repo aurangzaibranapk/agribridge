@@ -317,4 +317,22 @@ export const posDict = {
     ur: "واپسی بکری کے {n} دن کے اندر ہو سکتی ہے۔ اس سے پرانی واپس نہیں ہوتی۔",
   },
   ret_too_old: { en: "past the return window", rm: "wapsi ki miyaad guzar gayi", ur: "واپسی کی میعاد گزر گئی" },
+
+  pos_expired_title: { en: "Expired batch — set aside", rm: "Expire batch — side-line", ur: "ایکسپائر بیچ — سائیڈ لائن" },
+  pos_expired_code: { en: "Admin code", rm: "Admin ka code", ur: "ایڈمن کا کوڈ" },
+  pos_expired_code_hint: {
+    en: "Same code as a return. The right code sells this bill only. A wrong try is recorded.",
+    rm: "Wahi code jo wapsi par lagta hai. Sahi code sirf is bill ki bikri kholta hai. Ghalat koshish darj hoti hai.",
+    ur: "وہی کوڈ جو واپسی پر لگتا ہے۔ صحیح کوڈ صرف اس بل کی بکری کھولتا ہے۔ غلط کوشش درج ہوتی ہے۔",
+  },
+  pos_expired_offline: {
+    en: "An expired batch cannot be sold offline. Connect, then enter the admin code.",
+    rm: "Expire batch offline nahi bik sakti. Internet par aakar admin ka code lagayein.",
+    ur: "ایکسپائر بیچ آف لائن نہیں بک سکتی۔ انٹرنیٹ پر آ کر ایڈمن کا کوڈ لگائیں۔",
+  },
+  pos_expired_need_code: {
+    en: "Checkout stays closed until the admin code is entered.",
+    rm: "Admin ka code likhe baghair checkout band rehta hai.",
+    ur: "ایڈمن کا کوڈ لکھے بغیر چیک آؤٹ بند رہتا ہے۔",
+  },
 };

@@ -9,8 +9,10 @@ import { ACC, failed, glForFinanceAccount } from "@/lib/ledger/rules";
 import { postJournal, type JournalLine, type SourceClaim } from "@/lib/ledger/post";
 import type { Json } from "@/lib/types/database.types";
 import { loadPosPermissions } from "@/lib/pos/permissions";
+import { EXPIRED_SALE_WRONG_CODE } from "@/lib/pos/expired-sale";
 import { requireAction } from "@/lib/access/guard";
 import { notifyUser } from "@/lib/notifications";
+import { logAudit } from "@/lib/audit";
 
 export interface PosCheckoutState {
   error?: string;
@@ -87,6 +89,12 @@ export async function posCheckout(input: {
   creditOverrideReason?: string | null;
   /** Hadd se upar discount, ya bina ijazat discount: doosre manager ka code (631). */
   managerCode?: string | null;
+  /**
+   * Expire batch ki bikri. Wahi staff auth code jo POS wapsi par lagta hai.
+   * Khali ho to expire batch par checkout rukta hai. Sahi code sirf is bill
+   * ke liye hai — agla bill phir se code mangta hai.
+   */
+  expiredSaleCode?: string | null;
   /**
    * fix/pos-card-cash-dupes: staff ne "haan, ye naya bill hai" confirm kiya
    * (ya offline sync hai, jahan client_action_id hi kaafi hai).
@@ -186,6 +194,7 @@ export async function posCheckout(input: {
   }
   const discountReason = (input.discountReason ?? "").trim();
   const managerCode = (input.managerCode ?? "").trim();
+  const expiredSaleCode = (input.expiredSaleCode ?? "").trim();
   if (discount < 0) return { error: "Discount manfi nahi hota." };
   if (discount > 0) {
     const { canGiveDiscount } = await loadPosPermissions(user?.id ?? null);
@@ -242,12 +251,35 @@ export async function posCheckout(input: {
     p_discount_reason: discount > 0 ? discountReason : undefined,
     p_manager_code: managerCode || undefined,
     p_counter_id: input.counterId ?? undefined,
+    p_expired_sale_code: expiredSaleCode || undefined,
     ...(clientActionId ? { p_client_action_id: clientActionId } : {}),
   };
-  const { data: saleIdRaw, error } = await (supabase as any).rpc("create_pos_sale_with_credit_approval", rpcArgs);
+  const { data: saleIdRaw, error } = await (supabase as any).rpc("fn_pos_sale_with_expired_code", rpcArgs);
 
   const saleId = saleIdRaw as string | null;
+  // Khali jawab = code ghalat. Exception nahi, warna nakaam koshish bhi
+  // rollback ho jati. Function ne koshish pehle hi likh di hoti hai.
+  if (!error && !saleId && expiredSaleCode) return { error: EXPIRED_SALE_WRONG_CODE };
   if (error || !saleId) return { error: error?.message ?? "Bikri nahi ho saki." };
+
+  if (expiredSaleCode) {
+    const { data: ov } = await (supabase as any)
+      .from("pos_expired_sale_overrides")
+      .select("id, batch_numbers")
+      .eq("sale_id", saleId)
+      .limit(1)
+      .maybeSingle();
+    if (ov?.id) {
+      const batches = Array.isArray(ov.batch_numbers) ? ov.batch_numbers.filter(Boolean).join(", ") : "";
+      await logAudit({
+        actionType: "approve",
+        module: "pos_expired_sale",
+        recordId: saleId,
+        recordLabel: batches || undefined,
+        description: `Expire batch ki bikri admin code se hui${batches ? ` (batch ${batches})` : ""}. Kis ka code tha, wo pos_expired_sale_overrides mein hai.`,
+      });
+    }
+  }
 
   const receivedBy = (input.receivedBy ?? "").trim();
   if (receivedBy) {

@@ -1,3 +1,14 @@
+## Pending — 30 October 2026: POS expire-batch admin code (725)
+
+Branch `cursor/pos-expired-batch-override-2529`. Migration **725 file only**. Testing aur Live dono par **nahi** chali. **724 mat use karo** — wo Data Health dedupe hai. 725 `create_pos_sale_base_504` replace nahi karti, aur qty-exceeds-stock wali rok ko nahi cherti.
+
+Expire batch ab hamesha band nahi. Code ke baghair professional rok (stock show ho rahi hai, physically side-line, nuqsan). Sahi code wahi `staff_auth_codes` hai jo POS wapsi par lagta hai — sirf us bill ke liye. Ghalat koshish `pos_expired_sale_code_attempts`, sahi code `pos_expired_sale_overrides.authorized_by`.
+
+**Build se pehle** ye migration. Naya checkout `fn_pos_sale_with_expired_code` bulata hai. Function na ho to POS checkout fail hota hai.
+
+- `725_pos_expired_batch_sale_code.sql`. Rollback: `725_pos_expired_batch_sale_code.rollback.sql`.
+- Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`) — backup verify ke baad. Softaculous upload owner karega.
+
 ## Pending — 30 October 2026: POS shift close bill (code only)
 
 Branch `cursor/pos-close-slip-print-whatsapp-45d8`. **Koi migration nahi.** Testing/Live DB par kuch nahi chalana. Sirf naya build.

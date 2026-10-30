@@ -6,6 +6,7 @@ import { ExpiryBadge } from "@/components/stock/expiry-badge";
 import { GodamHint, GodamStrip } from "@/components/pos/godam-strip";
 import { formatGodamQty, shopQtyToneClass, type GodamLine } from "@/lib/pos/godam-on-card";
 import { canAddToCart, isOutOfStock, sortInStockFirst, POS_DEMAND_HREF, POS_ALLOW_NEGATIVE_STOCK, maxSelectableQty, stockLimitMessage, lineStockUnits } from "@/lib/pos/stock-availability";
+import { cartHasExpiredBatch, expiredBatchSaleBlockMessage, isExpiredBatchSaleBlock, pktDay } from "@/lib/pos/expired-sale";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { t, type Lang } from "@/lib/i18n/translations";
@@ -385,10 +386,24 @@ export function PosClient({
     () => cart.reduce((sum, line) => sum + line.quantity * line.unit_price, 0),
     [cart]
   );
+  const todayPkt = pktDay();
+  const expiredCart = useMemo(
+    () => cartHasExpiredBatch(cart, inventory, todayPkt),
+    [cart, inventory, todayPkt]
+  );
+  const expiredGate = expiredCart.blocked || isExpiredBatchSaleBlock(message?.text);
+  const cartIds = cart.map((line) => line.product_id).join(",");
+  const cartIdsRef = useRef(cartIds);
+  useEffect(() => {
+    if (cartIdsRef.current === cartIds) return;
+    cartIdsRef.current = cartIds;
+    setMessage((prev) => (prev && isExpiredBatchSaleBlock(prev.text) ? null : prev));
+  }, [cartIds]);
 
   const [discount, setDiscount] = useState("");
   const [discountReason, setDiscountReason] = useState("");
   const [managerCode, setManagerCode] = useState("");
+  const [expiredSaleCode, setExpiredSaleCode] = useState("");
   // Khata kis ka hai aur maal kaun le kar ja raha hai alag ho sakte hain
   // (malik, 15 September: "khata Aurangzaib ka hai, lay ke jaane wala
   // Mohsin hai") -- sirf record ke liye, `sales.notes` mein.
@@ -553,6 +568,8 @@ export function PosClient({
     setPaymentLines([{ id: "1", method: "cash", amount: "", reference: "", receiptFile: null, receiptUrl: null, uploading: false }]);
     setDiscount("");
     setDiscountReason("");
+    setManagerCode("");
+    setExpiredSaleCode("");
     setReceivedBy("");
     barcodeRef.current?.focus();
   }
@@ -662,6 +679,17 @@ export function PosClient({
       setMessage({ type: "error", text: "Zyada payment ko customer ke Jama/Advance mein dalne ke liye customer select karein." });
       return;
     }
+    if (expiredGate && expiredSaleCode.trim().length < 4) {
+      setMessage({
+        type: "error",
+        text: expiredBatchSaleBlockMessage(expiredCart.batchNumbers.join(", ")),
+      });
+      return;
+    }
+    if (expiredGate && typeof navigator !== "undefined" && navigator.onLine === false) {
+      setMessage({ type: "error", text: t("pos_expired_offline", lang) });
+      return;
+    }
 
     const cashCollected = paymentLines
       // Sab ghair-khata adaigi (cash + bank + wallet) -- server bhi yahi
@@ -712,7 +740,11 @@ export function PosClient({
     }
 
     setSubmitting(true);
-    const onlinePayload = { ...salePayload, clientActionId: checkoutKey.current() };
+    const onlinePayload = {
+      ...salePayload,
+      clientActionId: checkoutKey.current(),
+      expiredSaleCode: expiredGate ? expiredSaleCode.trim() : null,
+    };
     // Abhi abhi bilkul aisa hi bill bana -- staff se poochein (do-bara
     // click / dobara enter). "Haan" par hi naya bill banta hai.
     let dupDeclined = false;
@@ -1088,8 +1120,31 @@ export function PosClient({
         <div className="flex items-center justify-between"><span className="font-display text-base font-semibold text-surface-900 dark:text-white">{t("pos_grand_total", lang)}</span><span className="font-display text-xl font-bold tabular-nums text-brand-700 dark:text-brand-300">Rs {deyRaqam.toLocaleString()}</span></div>
         <div className={`flex items-center justify-between text-sm ${remaining > 0.5 ? "text-amber-600" : "text-green-600"}`}><span>{remaining > 0 ? "Baaqi Rakam" : "Poora Paid"}</span><span className="font-semibold tabular-nums">Rs {Math.abs(remaining).toLocaleString()}</span></div>
         {overpayment > 0 && <div className="flex items-center justify-between text-sm font-semibold text-emerald-700"><span>Customer Jama / Advance</span><span className="tabular-nums">Rs {overpayment.toLocaleString()}</span></div>}
-        {message && <div className={`rounded-lg px-3 py-2 text-sm ${message.type === "success" ? "bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-300" : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"}`}>{message.text}</div>}
-        <div className="flex gap-2"><button type="button" onClick={resetSale} disabled={submitting || cart.length === 0} className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-500 hover:bg-surface-50 disabled:opacity-40 dark:border-surface-700 dark:text-surface-400 dark:hover:bg-surface-800">{t("pos_clear_cart", lang)}</button><Button data-guide="pos-checkout" className="flex-1 py-3 text-base" onClick={handleCheckout} disabled={submitting || cart.length === 0}>{submitting ? "Processing..." : "Checkout"}</Button></div>
+        {message && !isExpiredBatchSaleBlock(message.text) && <div className={`rounded-lg px-3 py-2 text-sm ${message.type === "success" ? "bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-300" : "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300"}`}>{message.text}</div>}
+        {expiredGate && (
+          <div data-guide="pos-expired-batch" className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+            <p className="font-semibold">{t("pos_expired_title", lang)}</p>
+            <p className="mt-1 text-[13px] leading-5">
+              {message && isExpiredBatchSaleBlock(message.text)
+                ? message.text
+                : expiredBatchSaleBlockMessage(expiredCart.batchNumbers.join(", "))}
+            </p>
+            <label htmlFor="pos-expired-code" className="mt-2 block text-xs font-medium">{t("pos_expired_code", lang)}</label>
+            <input
+              id="pos-expired-code"
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              value={expiredSaleCode}
+              onChange={(e) => setExpiredSaleCode(e.target.value)}
+              placeholder="••••"
+              className="mt-1 h-9 w-full rounded-md border border-amber-300 bg-white px-2 text-sm tracking-widest dark:border-amber-800 dark:bg-surface-900"
+            />
+            <p className="mt-1 text-[11px] leading-4 text-amber-800 dark:text-amber-200">{t("pos_expired_code_hint", lang)}</p>
+            {expiredSaleCode.trim().length < 4 && <p className="mt-1 text-[11px] font-medium">{t("pos_expired_need_code", lang)}</p>}
+          </div>
+        )}
+        <div className="flex gap-2"><button type="button" onClick={resetSale} disabled={submitting || cart.length === 0} className="rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-500 hover:bg-surface-50 disabled:opacity-40 dark:border-surface-700 dark:text-surface-400 dark:hover:bg-surface-800">{t("pos_clear_cart", lang)}</button><Button data-guide="pos-checkout" className="flex-1 py-3 text-base" onClick={handleCheckout} disabled={submitting || cart.length === 0 || (expiredGate && expiredSaleCode.trim().length < 4)} title={expiredGate && expiredSaleCode.trim().length < 4 ? t("pos_expired_need_code", lang) : undefined}>{submitting ? "Processing..." : "Checkout"}</Button></div>
         </div>
       </Card>
       {saleAnim && <ReceiptPrint receipt={saleAnim} autoCloseMs={2600} onClose={() => setSaleAnim(null)} />}
