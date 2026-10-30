@@ -133,6 +133,19 @@ export default function App() {
     }));
   }
 
+  async function logout() {
+    sessionRef.current = null;
+    setToken(null);
+    setRole(null);
+    setAppRole(null);
+    setUserId(null);
+    setStage("login");
+    setRoute("/login");
+    setError("");
+    setProfileOpen(false);
+    await SecureStore.deleteItemAsync("agribridge.session");
+  }
+
   async function dropSession(message: string) {
     sessionRef.current = null;
     setToken(null);
@@ -477,7 +490,7 @@ export default function App() {
       ) : (
         <View style={{ flex: 1, backgroundColor: "#F7F8F3" }}>
           <View style={{ flex: 1, minHeight: 0 }}>
-            {isTest ? (
+            {isTest && appRole !== "admin" ? (
               <View style={styles.testBar}>
                 <Text style={styles.testBadge}>TEST</Text>
                 <Text style={styles.testRole}>{appRole ? switchRoleLabel(appRole) : ""}</Text>
@@ -503,9 +516,9 @@ export default function App() {
                 </Pressable>
               </View>
             ) : null}
-            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} onProfile={() => setProfileOpen(true)} onTab={(key: string) => { setTab(key); if (appRole) setRoute(`/${appRole}/${key}`); }} readOnly={previewing || (isTest && FLAVOR !== "test")} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, flavor: FLAVOR, testAccount: isTest, refreshSession }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
+            {Role ? <Role tab={tab} role={appRole} data={data} queueCount={queue.length} onEnqueue={onEnqueue} onSync={() => void sync()} onProfile={() => { if (appRole === "admin") { setTab("more"); setRoute("/admin/more"); return; } setProfileOpen(true); }} onTab={(key: string) => { setTab(key); if (appRole) setRoute(`/${appRole}/${key}`); }} onLogout={() => void logout()} onRoleSwitch={showRoleSwitch(CHANNEL, isTest) ? () => setSwitchOpen(true) : showRolePreview(CHANNEL, role, isTest) ? () => setPreviewOpen(true) : undefined} readOnly={previewing || (isTest && FLAVOR !== "test")} live={{ url: SUPABASE_URL, anonKey: SUPABASE_ANON, token, userId, channel: CHANNEL, flavor: FLAVOR, testAccount: isTest, refreshSession }} /> : <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />}
           </View>
-          {nav ? <Tabs tabs={nav.tabs} current={tab} onChange={(key) => { setTab(key); setRoute(`/${appRole}/${key}`); }} /> : null}
+          {nav ? <Tabs kind={appRole === "admin" ? "admin" : "pill"} tabs={nav.tabs} current={tab} onChange={(key) => { setTab(key); setRoute(`/${appRole}/${key}`); }} /> : null}
           {tab === "more" ? (
             <Text style={styles.perf}>Start {startup ?? "—"} ms · queue {queue.length} · {net}</Text>
           ) : null}

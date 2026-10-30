@@ -1,355 +1,494 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
-import { karachiDate, karachiDaySeries, livePatch, loadAdminHome, loadAttendance, loadMilkList, loadOrders, loadPurchases, milkByShift, milkInRange, milkLitres, pricedMilkTotal, rupees, salesByDay, searchParties, shiftLabel, stockAlerts, type AdminHome, type LiveAuth, type MilkRow, type OrderRow, type ProductRow, type InventoryRow } from "../../../../src/lib/mobile/live-read";
-import { liveGet } from "../../../../src/lib/mobile/live-read";
-import { fatActorError } from "../../../../src/lib/mobile/outbox";
-import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
-import { Empty, Kpi, SaleChart, Section, ShareBar, liveAuth, type LiveBag } from "../bits";
-import { AdminGlass } from "./glass-homes";
-import { Btn, colors } from "../kit";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, Text, View } from "react-native";
+import { cardRupees, filterInbox, litreLabel, roleTitle, type ApprovalFilter, type InboxItem } from "../../../../src/lib/mobile/admin-desk";
+import {
+  applyDeskDecision,
+  loadAdminIdentity,
+  loadAdminInbox,
+  loadApprovalRecord,
+  loadDeskCounts,
+  planForRecord,
+  type AdminIdentity,
+  type ApprovalRecord,
+  type DeskCounts,
+} from "../../../../src/lib/mobile/admin-load";
+import {
+  karachiDate,
+  liveGet,
+  liveGetScoped,
+  loadAttendance,
+  loadMilkList,
+  loadOrders,
+  loadAdminHome,
+  loadPurchases,
+  rupees,
+  searchParties,
+  type AdminHome,
+  type LiveAuth,
+} from "../../../../src/lib/mobile/live-read";
+import { liveAuth, type LiveBag } from "../bits";
+import { colors } from "../kit";
+import { AdminDetailView, AdminHomeView, AdminInboxView, AdminProfileView, AdminWorkView, RecordList, type HomeCard } from "./admin-ui";
 
-type Panel = "home" | "parties" | "stock" | "milk" | "purchases" | "attendance";
+type Panel = "sales" | "cash" | "stock" | "milk" | "farmers" | "purchases" | "attendance" | "support" | "orders" | "parties" | "users" | "branches" | "rules" | "notifications" | "settings" | "org" | "account";
 
-export function RoleScreen({ tab, live, readOnly = false, onProfile, onTab }: { tab: string; live?: LiveBag; readOnly?: boolean; onProfile?: () => void; onTab?: (key: string) => void }) {
+export function RoleScreen({
+  tab,
+  live,
+  readOnly = false,
+  onTab,
+  onRoleSwitch,
+  onLogout,
+}: {
+  tab: string;
+  live?: LiveBag;
+  readOnly?: boolean;
+  onProfile?: () => void;
+  onTab?: (key: string) => void;
+  onRoleSwitch?: () => void;
+  onLogout?: () => void;
+}) {
   const auth = liveAuth(live);
   const [home, setHome] = useState<AdminHome | null>(null);
-  const [milk, setMilk] = useState<MilkRow[]>([]);
-  const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [counts, setCounts] = useState<DeskCounts | null>(null);
+  const [inbox, setInbox] = useState<InboxItem[]>([]);
+  const [inboxNote, setInboxNote] = useState<string | null>(null);
+  const [identity, setIdentity] = useState<AdminIdentity | { ok: false; message: string } | null>(null);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [panel, setPanel] = useState<Panel>("home");
-  const [note, setNote] = useState("");
-  const [verifyBusy, setVerifyBusy] = useState("");
+  const [filter, setFilter] = useState<ApprovalFilter>("all");
+  const [mineOnly, setMineOnly] = useState(false);
+  const [panel, setPanel] = useState<Panel | null>(null);
+  const [picked, setPicked] = useState<InboxItem | null>(null);
+  const [record, setRecord] = useState<ApprovalRecord | null>(null);
+  const [decisionNote, setDecisionNote] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    if (!auth) { setError("Live Supabase is build mein set nahi. Login ke baad hisaab yahin aata hai."); return; }
-    setError("");
-    const [nextHome, nextMilk, nextOrders] = await Promise.all([
-      loadAdminHome(auth, fetch),
-      loadMilkList(auth, fetch, 120),
-      loadOrders(auth, fetch),
-    ]);
-    setHome(nextHome);
-    setMilk(nextMilk.ok ? nextMilk.rows : []);
-    setOrders(nextOrders.ok ? nextOrders.rows : []);
-    if (!nextMilk.ok) setNote(nextMilk.message);
-  }, [auth?.token, auth?.url, auth?.testAccount, auth?.flavor]);
-
-  useEffect(() => { void load(); }, [load]);
-
-  async function verifyHero(row: MilkRow) {
-    if (!auth || !row.id || readOnly) return;
-    const self = !auth.testAccount ? fatActorError(auth.userId || "", row) : null;
-    if (self) { setNote(self); return; }
-    setVerifyBusy(row.id);
-    const saved = await livePatch<MilkRow>(auth, "milk_entries", row.id, {
-      status: "verified",
-      verified_by_profile_id: auth.userId,
-      verified_comment: "TEST tasdeeq",
-      verified_at: new Date().toISOString(),
-    }, fetch);
-    setVerifyBusy("");
-    if (!saved.ok) {
-      const denied = saved.status === 401 || saved.status === 403 || /42501|row-level security/i.test(saved.detail || "");
-      setNote(denied ? "Tasdeeq nahi hui. Testing par 701_app_test_mco_admin.sql lagani hai." : saved.message);
+    if (!auth) {
+      setError("Live Supabase is build mein set nahi. Login ke baad hisaab yahin aata hai.");
       return;
     }
-    setNote("Tasdeeq ho gayi. Entry verified hai.");
-    await load();
-  }
-  useEffect(() => { if (tab === "approvals" || tab === "reports" || tab === "home") setPanel("home"); }, [tab]);
+    setError("");
+    const today = karachiDate();
+    const [nextHome, nextCounts, nextInbox, nextIdentity] = await Promise.all([
+      loadAdminHome(auth, fetch),
+      loadDeskCounts(auth, today, fetch),
+      loadAdminInbox(auth, fetch),
+      loadAdminIdentity(auth, fetch),
+    ]);
+    setHome(nextHome);
+    setCounts(nextCounts);
+    setIdentity(nextIdentity);
+    if (nextInbox.ok) {
+      setInbox(nextInbox.rows);
+      setInboxNote(nextInbox.note);
+    } else {
+      setInbox([]);
+      setInboxNote(nextInbox.message);
+    }
+  }, [auth?.token, auth?.url, auth?.userId, auth?.testAccount, auth?.flavor]);
 
-  if (!home && !error) return <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />;
-  if ((tab === "home" || tab === "approvals") && panel === "home") {
+  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { setPanel(null); setPicked(null); setRecord(null); }, [tab]);
+
+  async function openItem(item: InboxItem) {
+    if (!auth) return;
+    setPicked(item);
+    setRecord(null);
+    setDecisionNote("");
+    const next = await loadApprovalRecord(auth, item, fetch);
+    setRecord(next);
+  }
+
+  async function decide(decision: "approve" | "reject", comment: string) {
+    if (!auth || !record || !identity || !identity.ok) {
+      setDecisionNote(!identity || !identity.ok ? (identity && !identity.ok ? identity.message : "Profile nahi khuli.") : "Record nahi khula.");
+      return;
+    }
+    const plan = planForRecord({
+      readOnly,
+      actor: { id: auth.userId || "", role: identity.role },
+      record,
+      decision,
+      comment,
+      nowIso: new Date().toISOString(),
+    });
+    if (!plan.ok) {
+      setDecisionNote(plan.message);
+      return;
+    }
+    setBusy(true);
+    const saved = await applyDeskDecision(auth, plan, fetch, record.leave?.profileId);
+    setBusy(false);
+    if (!saved.ok) {
+      setDecisionNote(saved.message);
+      return;
+    }
+    const done = decision === "approve" ? "Manzoor ho gaya. Website par wahi record update hai." : "Rad ho gaya. Website par wahi record update hai.";
+    setPicked(null);
+    setRecord(null);
+    await load();
+    setInboxNote(done);
+  }
+
+  function openCard(key: string) {
+    if (key === "approvals") {
+      onTab?.("approvals");
+      return;
+    }
+    if (key === "hr") {
+      onTab?.("hr");
+      return;
+    }
+    setPanel(key as Panel);
+  }
+
+  if (!auth) return <View style={{ padding: 16 }}><Text style={{ color: colors.text }}>{error || "Login ke baad hisaab yahin aata hai."}</Text></View>;
+  if (!home || !counts || !identity) return <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />;
+
+  if (picked) {
+    const detail = record;
     return (
-      <AdminGlass
-        focus={tab === "approvals" ? "track" : "home"}
-        live={live}
-        home={home}
-        milk={milk}
-        orders={orders}
-        onProfile={onProfile}
-        onTab={onTab}
-        refreshing={refreshing}
-        onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
-        onVerify={hero => { if (!verifyBusy) void verifyHero(hero); }}
-        footer={tab === "approvals" && home ? <Approvals home={home} milk={milk} orders={orders} auth={auth} readOnly={readOnly} note={note} onReload={load} /> : null}
+      <AdminDetailView
+        heading={detail?.heading || "Approval"}
+        partyLabel={detail?.partyLabel || "Party name"}
+        party={detail?.party || picked.title || "—"}
+        quantityLabel={detail?.action === "leave" ? "Days" : detail?.action === "purchase" ? "Bill" : "Quantity"}
+        quantity={detail?.quantity || "—"}
+        amountLabel={detail?.action === "leave" ? "Type" : "Amount"}
+        amount={detail?.amount || "—"}
+        steps={detail?.steps || []}
+        note={[detail?.note, decisionNote].filter(Boolean).join(" ") || null}
+        readOnly={readOnly}
+        busy={busy || !detail}
+        onBack={() => { setPicked(null); setRecord(null); setDecisionNote(""); }}
+        onDecide={(decision, comment) => { void decide(decision, comment); }}
       />
     );
   }
 
-  return (
-    <ScrollView
-      style={{ padding: 16 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}
-    >
-      {panel !== "home" && auth ? <ListPanel panel={panel} auth={auth} day={home?.today ?? ""} onBack={() => setPanel("home")} /> : null}
-      {panel === "home" ? <Dashboard tab={tab} home={home} error={error} onOpen={setPanel} milk={milk} orders={orders} auth={auth} readOnly={readOnly} note={note} onReload={load} /> : null}
-      <View style={{ height: 24 }} />
-    </ScrollView>
-  );
-}
+  if (panel) return <PanelBody panel={panel} auth={auth} home={home} identity={identity.ok ? identity : null} inbox={inbox} onBack={() => setPanel(null)} />;
 
-function Dashboard({ tab, home, error, onOpen, milk, orders, auth, readOnly, note, onReload }: { tab: string; home: AdminHome | null; error: string; onOpen: (panel: Panel) => void; milk: MilkRow[]; orders: OrderRow[]; auth: LiveAuth | null; readOnly: boolean; note: string; onReload: () => Promise<void> }) {
-  if (error) return <Section title="Admin"><Empty title="Hisaab nahi khula" body={error} /></Section>;
-  if (!home) return null;
+  const face = identity.ok ? identity : null;
   if (tab === "approvals") {
-    return <Approvals home={home} milk={milk} orders={orders} auth={auth} readOnly={readOnly} note={note} onReload={onReload} />;
-  }
-  return (
-    <View>
-      {home.banner ? (
-        <View style={{ backgroundColor: "#F4E4C4", borderRadius: 12, padding: 10, marginBottom: 8 }}>
-          <Text style={{ fontWeight: "800", color: "#7A4E00" }}>TEST</Text>
-          <Text style={{ color: "#3d2e10", marginTop: 4 }}>{home.banner}</Text>
-        </View>
-      ) : null}
-      <Text style={{ color: colors.muted, marginBottom: 8 }}>Aaj · {home.today} · {auth?.testAccount ? "TEST" : "live hisaab"}</Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
-        <Kpi label="Aaj ki sale" value={home.sales.state === "ok" ? rupees(home.sales.total) : "—"} sub={home.sales.state === "ok" ? `${home.sales.bills} bill${home.sales.partial ? " · adhoori" : ""}` : "nahi khuli"} />
-        <Kpi label="Cash" value={home.cash.state === "ok" ? rupees(home.cash.cash) : "—"} sub={home.cash.state === "ok" ? `${home.cash.accounts} accounts` : home.cash.state === "empty" ? "koi account nahi" : "ijazat"} />
-        <Kpi label="Bank" value={home.cash.state === "ok" ? rupees(home.cash.bank) : "—"} sub={home.cash.state === "ok" ? `Wallet ${rupees(home.cash.wallet)}` : ""} />
-        <Kpi label="Doodh subah" value={home.milk.state === "ok" ? `${Math.round(home.milk.subah)} L` : "—"} sub={home.milk.state === "ok" ? `Shaam ${Math.round(home.milk.shaam)} L` : "nahi khula"} />
-      </View>
-      {home.sales.state === "error" ? <Section title="Sale"><Empty title="Aaj ki sale nahi dikhi" body={home.sales.message} /></Section> : null}
-      {home.sales.state === "ok" && home.sales.bills === 0 ? <Section title="Aaj ki sale"><Empty title="Aaj abhi koi bill nahi" body="Jab dukan par bill katega, raqam aur 7 din ka chart yahin barh jayega. Rs 0 is liye hai ke bills parh liye gaye aur koi nahi mila." /></Section> : null}
-      {home.cash.state === "error" ? <Section title="Cash / Bank"><Empty title="Balance nahi dikha" body={home.cash.message} /></Section> : null}
-      {home.cash.state === "empty" ? <Section title="Cash / Bank"><Empty title="Koi account nazar nahi aaya" body={home.banner ? "TEST cash/bank (is_test) is login ko nahi mila. Khali ko Rs 0 nahi likha." : "Cash ya bank ka balance tab dikhega jab finance accounts is login ko nazar aayen. Khali fehrist ko Rs 0 nahi likha."} /></Section> : null}
-      {home.milk.state === "error" ? <Section title="Doodh"><Empty title="Aaj ka doodh nahi dikha" body={home.milk.message} /></Section> : null}
-      {home.milk.state === "ok" && home.milk.subah === 0 && home.milk.shaam === 0 ? <Section title="Doodh"><Empty title="Aaj koi litre darj nahi" body="Entries parh li gayin. Subah ya shaam ka litre jab darj hoga, yahan aayega." /></Section> : null}
-      {tab === "reports" ? <MilkReports milk={milk} /> : null}
-      <Section title="7 din ki sale" sub="Har din ka bill, Karachi ki tareekh">
-        {home.days.length === 0 ? <Empty title="Chart nahi bana" body={home.sales.state === "error" ? home.sales.message : "Sale ki qatarein nahi milin."} /> : <SaleChart points={home.days} />}
-      </Section>
-      <Section title="Qism" sub={home.categoryScope === "today" ? "Aaj ki sale" : home.categoryScope === "week" ? "Aaj khaali hai, pichle 7 din" : "Category"}>
-        {home.categories.length === 0 ? <Empty title="Qism ka hisaab nahi" body="Jab sale ki lines nazar aayengi, fertilizer, feed, ya doosri qism yahan dikhegi." /> : <ShareBar parts={home.categories} />}
-      </Section>
-      <Section title="Stock alerts" sub="Hadd se kam maal">
-        {home.alertsNote ? <Empty title="Stock poora nahi dikha" body={home.alertsNote} /> : null}
-        {!home.alertsNote && home.alerts.length === 0 ? <Empty title="Koi stock alert nahi" body="Jis product ki kam se kam hadd lagi hai aur maal us se kam hai, wo yahan aayega." /> : null}
-        {home.alerts.map((row) => <Row key={row.name} title={row.name} value={`${row.qty} / ${row.min}`} />)}
-      </Section>
-      {tab === "approvals" ? null : (
-        <Section title="Pending approvals">
-          {home.pendingNote ? <Empty title="Approvals nahi khulin" body={home.pendingNote} /> : null}
-          {!home.pendingNote && home.pending.length === 0 ? <Empty title="Koi pending nahi" body="Manzoori ka intezar hone par ginati yahan aayegi." /> : null}
-          {home.pending.map((row) => <Row key={row.label} title={row.label} value={String(row.count)} />)}
-        </Section>
-      )}
-      <Section title="Haal ki activity">
-        {home.activityNote ? <Empty title="Activity nahi khuli" body={home.activityNote} /> : null}
-        {!home.activityNote && home.activity.length === 0 ? <Empty title="Activity nazar nahi aayi" body="Jab is login ko activity ki line nazar aayegi, wo yahan aayegi. Khali fehrist ko 'kuch hua hi nahi' nahi samjhein." /> : null}
-        {home.activity.map((row, index) => <Text key={`${row.at}-${index}`} style={{ color: colors.text, marginBottom: 6 }}>{row.action} · {row.at ? row.at.slice(0, 16).replace("T", " ") : ""}</Text>)}
-      </Section>
-      <Section title="Modules" sub="Sirf parhna">
-        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
-          <Link label="Parties / khata" onPress={() => onOpen("parties")} />
-          <Link label="Products / stock" onPress={() => onOpen("stock")} />
-          <Link label="Milk" onPress={() => onOpen("milk")} />
-          <Link label="Purchases" onPress={() => onOpen("purchases")} />
-          <Link label="Hazri" onPress={() => onOpen("attendance")} />
-        </View>
-      </Section>
-    </View>
-  );
-}
-
-function Approvals({ home, milk, orders, auth, readOnly, note, onReload }: { home: AdminHome; milk: MilkRow[]; orders: OrderRow[]; auth: LiveAuth | null; readOnly: boolean; note: string; onReload: () => Promise<void> }) {
-  const [local, setLocal] = useState(note);
-  const [busy, setBusy] = useState("");
-  const priced = milk.filter((row) => row.status === "priced" && row.id);
-  const waiting = milk.filter((row) => row.status === "pending_fat");
-  async function verify(row: MilkRow) {
-    if (!auth || !row.id || readOnly) return;
-    const self = !auth.testAccount ? fatActorError(auth.userId || "", row) : null;
-    if (self) { setLocal(self); return; }
-    setBusy(row.id);
-    const saved = await livePatch<MilkRow>(auth, "milk_entries", row.id, {
-      status: "verified",
-      verified_by_profile_id: auth.userId,
-      verified_comment: "TEST tasdeeq",
-      verified_at: new Date().toISOString(),
-    }, fetch);
-    setBusy("");
-    if (!saved.ok) {
-      const denied = saved.status === 401 || saved.status === 403 || /42501|row-level security/i.test(saved.detail || "");
-      setLocal(denied ? "Tasdeeq nahi hui. Testing par 701_app_test_mco_admin.sql lagani hai." : saved.message);
-      return;
-    }
-    setLocal("Tasdeeq ho gayi. Entry verified hai.");
-    await onReload();
-  }
-  return (
-    <View>
-      <Section title="Pending approvals" sub="Doodh ki tasdeeq. Manzoor asal row par likhta hai.">
-        {local ? <Text style={{ color: colors.greenDark, marginBottom: 6 }}>{local}</Text> : null}
-        {readOnly ? <Text style={{ color: colors.muted, marginBottom: 6 }}>Sirf dekhna. Manzoor band hai.</Text> : null}
-        {priced.length === 0 && waiting.length === 0 ? <Empty title="Koi doodh tasdeeq nahi" body="MCO jab fat laga dega, priced entry yahan Manzoor ke sath aayegi." /> : null}
-        {priced.map((row) => (
-          <View key={row.id} style={{ marginBottom: 8 }}>
-            <Text style={{ color: colors.text }}>{row.entry_date} · {shiftLabel(row.shift)} · {row.quantity_liters} L · {row.total_amount == null ? "—" : rupees(Number(row.total_amount))}</Text>
-            {readOnly ? null : <Btn label={busy === row.id ? "Ho raha hai" : "Manzoor"} onPress={() => void verify(row)} />}
-          </View>
-        ))}
-        {waiting.map((row) => (
-          <Text key={row.id} style={{ color: colors.muted, marginBottom: 4 }}>{row.entry_date} · {shiftLabel(row.shift)} · {row.quantity_liters} L · pehle MCO fat lagaye</Text>
-        ))}
-      </Section>
-      <Section title="Orders" sub="Khud ki darkhwast khud manzoor nahi hoti">
-        {orders.length === 0 ? <Empty title="Koi order nahi" body="TEST order jab nazar aayega, status yahan dikhega." /> : null}
-        {orders.map((row) => {
-          const own = Boolean(auth?.userId && row.requested_by && row.requested_by === auth.userId);
-          return (
-            <Text key={row.id || row.order_number} style={{ color: colors.text, marginBottom: 6 }}>
-              {row.order_number || "Order"} · {row.status} · {row.grand_total == null ? "—" : rupees(Number(row.grand_total))}
-              {own ? " · Order maangne wala khud approve nahi kar sakta." : ""}
-            </Text>
-          );
-        })}
-      </Section>
-      {!home.pendingNote && home.pending.length > 0 ? (
-        <Section title="Aur pending" sub="Ginati">
-          {home.pending.map((row) => <Row key={row.label} title={row.label} value={String(row.count)} />)}
-        </Section>
-      ) : null}
-    </View>
-  );
-}
-
-function MilkReports({ milk }: { milk: MilkRow[] }) {
-  const today = karachiDate();
-  const week = karachiWeek();
-  const monthFrom = `${today.slice(0, 8)}01`;
-  const todayRows = milk.filter((row) => row.entry_date === today);
-  const weekRows = milk.filter((row) => inWeek(row.entry_date ?? null, week));
-  const monthRows = milkInRange(milk, monthFrom, today);
-  const days = karachiDaySeries(7);
-  const byDay = new Map<string, number>();
-  for (const row of milk) {
-    const day = String(row.entry_date || "");
-    if (!day) continue;
-    byDay.set(day, (byDay.get(day) ?? 0) + Number(row.quantity_liters || 0));
-  }
-  const chart = salesByDay(days.map((day) => ({ created_at: day, total_amount: byDay.get(day) ?? 0, status: "ok" })), days);
-  const block = (title: string, rows: MilkRow[], sub: string) => {
-    const shifts = milkByShift(rows);
-    const amount = pricedMilkTotal(rows);
+    const mine = filterInbox(inbox, filter, mineOnly);
     return (
-      <Section key={title} title={title} sub={sub}>
-        <Text style={{ color: colors.text, fontWeight: "700" }}>{milkLitres(rows)} L · {amount == null ? "raqam —" : rupees(amount)}</Text>
-        <Text style={{ color: colors.muted, marginTop: 4 }}>Subah {Math.round(shifts.subah)} L · Shaam {Math.round(shifts.shaam)} L</Text>
-      </Section>
+      <AdminInboxView
+        items={mine}
+        filter={filter}
+        mineOnly={mineOnly}
+        note={inboxNote}
+        refreshing={refreshing}
+        onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
+        onFilter={setFilter}
+        onMine={() => setMineOnly((value) => !value)}
+        onOpen={(item) => { void openItem(item); }}
+        onMenu={() => onTab?.("work")}
+        onAlerts={() => setPanel("notifications")}
+      />
     );
+  }
+  if (tab === "work") return <AdminWorkView onOpen={openCard} />;
+  if (tab === "hr") {
+    return (
+      <AdminWorkView
+        title="HR"
+        sub="Hazri, chhutti aur staff. Har card asal record kholta hai."
+        tiles={[
+          { key: "attendance", title: "Staff present", sub: counts.staff == null ? "Hazri nahi khuli" : `${counts.staff} today`, icon: "people" },
+          { key: "approvals", title: "Leave", sub: "Pending chhutti", icon: "cal" },
+          { key: "users", title: "Users & roles", sub: "Staff list", icon: "people" },
+        ]}
+        onOpen={(key) => {
+          if (key === "approvals") { setFilter("leave"); onTab?.("approvals"); return; }
+          openCard(key);
+        }}
+      />
+    );
+  }
+  if (tab === "more") {
+    if (!identity.ok) return <View style={{ padding: 16 }}><Text style={{ color: colors.text }}>{identity.message}</Text></View>;
+    return (
+      <AdminProfileView
+        fullName={identity.fullName}
+        role={identity.role}
+        extraRoles={identity.extraRoles}
+        phone={identity.phone}
+        email={identity.email}
+        place={identity.place}
+        org={identity.org}
+        designation={identity.designation}
+        photoUrl={identity.photoUrl}
+        gaps={identity.gaps}
+        versionExtra={live?.testAccount || live?.flavor === "test" ? " TEST" : ""}
+        onOpen={(key) => setPanel(key as Panel)}
+        onRole={onRoleSwitch}
+        onLogout={onLogout}
+        onMenu={() => onTab?.("home")}
+      />
+    );
+  }
+
+  const stockCount = home.alertsNote ? null : home.alerts.length;
+  const milkTotal = home.milk.state === "ok" ? home.milk.subah + home.milk.shaam : null;
+  const cards: HomeCard[] = [
+    { key: "approvals", title: "Approvals", value: counts.pending == null ? "—" : String(counts.pending), sub: counts.pendingNote || "pending", icon: "clip" },
+    { key: "sales", title: "POS sales", value: home.sales.state === "ok" ? cardRupees(home.sales.total) : "—", sub: home.sales.state === "error" ? "nahi khuli" : "today", icon: "cart" },
+    { key: "cash", title: "Cash alerts", value: counts.cash == null ? "—" : String(counts.cash), sub: counts.cashNote || "high priority", alert: (counts.cash ?? 0) > 0, icon: "bell" },
+    { key: "stock", title: "Stock alerts", value: stockCount == null ? "—" : String(stockCount), sub: home.alertsNote || "low stock", alert: (stockCount ?? 0) > 0, icon: "alert" },
+    { key: "milk", title: "Doodh today", value: milkTotal == null ? "—" : litreLabel(milkTotal), sub: home.milk.state === "error" ? "nahi khula" : "today", icon: "milk" },
+    { key: "farmers", title: "Farmers", value: counts.farmers == null ? "—" : String(counts.farmers), sub: counts.farmersNote || "registered", icon: "farmer" },
+    { key: "attendance", title: "Staff present", value: counts.staff == null ? "—" : String(counts.staff), sub: counts.staffNote || "today", icon: "people" },
+    { key: "support", title: "Support", value: counts.support == null ? "—" : String(counts.support), sub: counts.supportNote || "unresolved", icon: "headset" },
+  ];
+  return (
+    <AdminHomeView
+      fullName={face?.fullName || ""}
+      role={face?.role || "admin"}
+      photoUrl={face?.photoUrl || null}
+      testBuild={Boolean(live?.testAccount || live?.flavor === "test")}
+      onRole={onRoleSwitch}
+      cards={cards}
+      banner={identity.ok ? null : identity.message}
+      refreshing={refreshing}
+      onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
+      onOpen={openCard}
+    />
+  );
+}
+
+function PanelBody({ panel, auth, home, identity, inbox, onBack }: { panel: Panel; auth: LiveAuth; home: AdminHome; identity: Extract<AdminIdentity, { ok: true }> | null; inbox: InboxItem[]; onBack: () => void }) {
+  const [rows, setRows] = useState<{ key: string; title: string; value: string }[] | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const day = home.today || karachiDate();
+
+  useEffect(() => {
+    let gone = false;
+    void (async () => {
+      const next = await loadPanel(panel, auth, day, home, identity, inbox);
+      if (gone) return;
+      setRows(next.rows);
+      setNote(next.note);
+    })();
+    return () => { gone = true; };
+  }, [panel, auth.token, auth.url, day]);
+
+  if (!rows) return <ActivityIndicator color={colors.green} style={{ marginTop: 24 }} />;
+  return <RecordList title={panelTitle(panel)} sub={note} onBack={onBack} rows={rows} empty={note ? "Fehrist nahi khuli." : "Koi record nahi."} />;
+}
+
+function panelTitle(panel: Panel): string {
+  const map: Record<Panel, string> = {
+    sales: "POS sales",
+    cash: "Cash alerts",
+    stock: "Stock alerts",
+    milk: "Doodh",
+    farmers: "Farmers",
+    purchases: "Purchases",
+    attendance: "Staff present",
+    support: "Support",
+    orders: "Orders",
+    parties: "Khata",
+    users: "Users & roles",
+    branches: "Branches",
+    rules: "Business rules",
+    notifications: "Notifications",
+    settings: "Settings",
+    org: "Organization",
+    account: "Account",
   };
-  return (
-    <View>
-      <Text style={{ color: colors.muted, marginBottom: 8 }}>Reports · doodh din, hafta, mahina</Text>
-      {block("Aaj", todayRows, today)}
-      {block("Hafta", weekRows, `${week.start} se ${week.end}`)}
-      {block("Mahina", monthRows, `${monthFrom} se ${today}`)}
-      <Section title="7 din ka doodh" sub="Litre">
-        {chart.every((point) => point.amount === 0) ? <Empty title="Chart khali hai" body="TEST ya live doodh jab hoga, chart yahan banega." /> : <SaleChart points={chart} />}
-      </Section>
-    </View>
-  );
+  return map[panel];
 }
 
-function Link({ label, onPress }: { label: string; onPress: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={{ width: "48%", backgroundColor: colors.green, borderRadius: 12, padding: 12, marginBottom: 8 }}>
-      <Text style={{ color: "#fff", fontWeight: "700" }}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function Row({ title, value }: { title: string; value: string }) {
-  return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.line }}>
-      <Text style={{ color: colors.text, flex: 1, paddingRight: 8 }}>{title}</Text>
-      <Text style={{ color: colors.greenDark, fontWeight: "700" }}>{value}</Text>
-    </View>
-  );
-}
-
-function ListPanel({ panel, auth, day, onBack }: { panel: Panel; auth: LiveAuth; day: string; onBack: () => void }) {
-  const [query, setQuery] = useState("");
-  const [body, setBody] = useState<ReactNode>(<ActivityIndicator color={colors.green} />);
-  const run = useCallback(async (term: string) => {
-    if (panel === "parties") {
-      const found = await searchParties(auth, term, fetch);
-      setBody(
-        <View>
-          <PartyBlock title="Kisaan" result={found.farmers} name={(row) => row.full_name || "Kisan"} extra={() => ""} />
-          <PartyBlock title="Customer" result={found.customers} name={(row) => row.name || "Customer"} extra={(row) => row.current_balance == null ? "" : rupees(Number(row.current_balance))} />
-        </View>
-      );
-      return;
-    }
-    if (panel === "stock") {
-      if (auth.testAccount) {
-        setBody(<Empty title="TEST stock nahi" body="Asal products aur quantity yahan nahi aate, taake dukan ki fehrist na badle." />);
-        return;
-      }
-      const [products, inventory] = await Promise.all([
-        liveGet<ProductRow>(auth, "products?select=id,name,min_stock_threshold,unit&is_deleted=eq.false&order=name.asc&limit=40", fetch),
-        liveGet<InventoryRow>(auth, "inventory?select=product_id,quantity_on_hand&limit=2000", fetch),
-      ]);
-      if (!products.ok) { setBody(<Empty title="Products nahi khule" body={products.message} />); return; }
-      const alerts = inventory.ok ? stockAlerts(products.rows, inventory.rows) : [];
-      setBody(
-        <View>
-          {!inventory.ok ? <Empty title="Stock qty nahi dikhi" body={inventory.message} /> : null}
-          {products.rows.length === 0 ? <Empty title="Koi product nahi" body="Jo product darj hoga aur is login ko nazar aayega, wo yahan aayega." /> : null}
-          {alerts.map((row) => <Row key={`a-${row.name}`} title={`${row.name} · alert`} value={`${row.qty}`} />)}
-          {products.rows.map((row) => <Row key={row.id} title={row.name || "Product"} value={row.unit || ""} />)}
-        </View>
-      );
-      return;
-    }
-    if (panel === "milk") {
-      const rows = await loadMilkList(auth, fetch);
-      setBody(!rows.ok ? <Empty title="Doodh ki fehrist nahi khuli" body={rows.message} /> : rows.rows.length === 0 ? <Empty title="Koi collection nahi" body="Farmer ki entry jab darj hogi, tareekh, shift, litre aur fat yahan aayenge." /> : (
-        <View>{rows.rows.map((row, index) => <Row key={`${row.entry_date}-${index}`} title={`${row.entry_date} · ${row.shift === "evening" ? "Shaam" : "Subah"} · ${row.route_name || ""}`} value={`${row.quantity_liters ?? "—"} L`} />)}</View>
-      ));
-      return;
-    }
-    if (panel === "purchases") {
-      if (auth.testAccount) {
-        setBody(<Empty title="TEST khareed nahi" body="Asal supplier bills is account ko nahi dikhti. Koi nayi khareed nahi banti." />);
-        return;
-      }
-      const rows = await loadPurchases(auth, fetch);
-      setBody(!rows.ok ? <Empty title="Purchases nahi khulin" body={rows.message} /> : rows.rows.length === 0 ? <Empty title="Koi khareed nahi" body="Supplier ki bill jab darj hogi, number, tareekh aur raqam yahan aayenge." /> : (
-        <View>{rows.rows.map((row, index) => <Row key={`${row.purchase_number}-${index}`} title={`${row.purchase_number || row.supplier_bill_no || "Bill"} · ${row.purchase_date || ""}`} value={row.total_amount == null ? "—" : rupees(Number(row.total_amount))} />)}</View>
-      ));
-      return;
-    }
+async function loadPanel(
+  panel: Panel,
+  auth: LiveAuth,
+  day: string,
+  home: AdminHome,
+  identity: Extract<AdminIdentity, { ok: true }> | null,
+  inbox: InboxItem[],
+): Promise<{ rows: { key: string; title: string; value: string }[]; note: string | null }> {
+  if (panel === "stock") {
+    if (home.alertsNote) return { rows: [], note: home.alertsNote };
+    return { rows: home.alerts.map((row) => ({ key: row.name, title: row.name, value: `${row.qty} / ${row.min}` })), note: null };
+  }
+  if (panel === "notifications") {
+    if (home.activityNote) return { rows: [], note: home.activityNote };
+    return {
+      rows: home.activity.map((row, index) => ({ key: `${row.at}-${index}`, title: row.action, value: row.at ? row.at.slice(0, 16).replace("T", " ") : "" })),
+      note: home.activity.length ? null : "Is login ko activity ki line nahi mili.",
+    };
+  }
+  if (panel === "rules") {
+    const groups = new Map<string, number>();
+    for (const item of inbox) groups.set(item.category, (groups.get(item.category) || 0) + 1);
+    return {
+      rows: [
+        { key: "milk", title: "Doodh", value: "Priced + 5 harf. Apni entry manager nahi." },
+        { key: "leave", title: "Leave", value: "Apni chhutti nahi. Reporting RPC." },
+        { key: "purchase", title: "Purchase", value: "Held payment website par." },
+        ...[...groups.entries()].map(([key, count]) => ({ key, title: key.replace(/_/g, " "), value: String(count) })),
+      ],
+      note: null,
+    };
+  }
+  if (panel === "account") {
+    if (!identity) return { rows: [], note: "Profile nahi khuli." };
+    return {
+      rows: [
+        { key: "name", title: "Name", value: identity.fullName },
+        { key: "role", title: "Role", value: roleTitle(identity.role) },
+        { key: "phone", title: "Phone", value: identity.phone || "darj nahi" },
+        { key: "email", title: "Email", value: identity.email || "darj nahi" },
+        { key: "place", title: "Branch / shop", value: identity.place || "darj nahi" },
+        { key: "job", title: "Designation", value: identity.designation || "darj nahi" },
+        { key: "org", title: "Organization", value: identity.org || "darj nahi" },
+      ],
+      note: null,
+    };
+  }
+  if (panel === "org") {
+    if (!identity) return { rows: [], note: "Profile nahi khuli." };
+    return {
+      rows: [
+        { key: "org", title: "Organization", value: identity.org || "darj nahi" },
+        { key: "place", title: "Branch / shop", value: identity.place || "darj nahi" },
+        { key: "role", title: "Role", value: roleTitle(identity.role) },
+      ],
+      note: null,
+    };
+  }
+  if (panel === "settings") {
+    return {
+      rows: [
+        { key: "db", title: "Database", value: auth.testAccount || auth.flavor === "test" ? "Testing" : "Live" },
+        { key: "channel", title: "Channel", value: auth.channel },
+        { key: "user", title: "User", value: auth.userId || "—" },
+      ],
+      note: null,
+    };
+  }
+  if (panel === "sales") {
+    const since = `${day}T00:00:00+05:00`;
+    const sales = await liveGet<{ total_amount?: number | string | null; created_at?: string | null; status?: string | null; payment_mode?: string | null }>(
+      auth,
+      `pos_sales?select=total_amount,created_at,status,payment_mode&created_at=gte.${encodeURIComponent(since)}&order=created_at.desc&limit=40`,
+      fetch,
+    );
+    if (!sales.ok) return { rows: [], note: sales.message };
+    return {
+      rows: sales.rows.map((row, index) => ({
+        key: `${row.created_at}-${index}`,
+        title: `${String(row.created_at || "").slice(11, 16)} · ${row.payment_mode || row.status || "bill"}`,
+        value: row.total_amount == null ? "—" : rupees(Number(row.total_amount)),
+      })),
+      note: null,
+    };
+  }
+  if (panel === "cash") {
+    const alerts = await liveGet<{ id?: string; entry_number?: string | null; alert_type?: string | null; amount?: number | string | null; party_label?: string | null }>(
+      auth,
+      "txn_whatsapp_alerts?select=id,entry_number,alert_type,amount,party_label&status=eq.pending&order=created_at.desc&limit=40",
+      fetch,
+    );
+    if (!alerts.ok) return { rows: [], note: alerts.message };
+    return {
+      rows: alerts.rows.map((row) => ({
+        key: row.id || row.entry_number || "alert",
+        title: row.party_label || row.entry_number || row.alert_type || "Alert",
+        value: row.amount == null ? row.alert_type || "—" : rupees(Number(row.amount)),
+      })),
+      note: null,
+    };
+  }
+  if (panel === "milk") {
+    const milk = await loadMilkList(auth, fetch, 40);
+    if (!milk.ok) return { rows: [], note: milk.message };
+    return {
+      rows: milk.rows.map((row, index) => ({
+        key: row.id || String(index),
+        title: `${row.entry_date || ""} · ${row.shift === "evening" ? "Shaam" : "Subah"}`,
+        value: `${row.quantity_liters ?? "—"} L`,
+      })),
+      note: null,
+    };
+  }
+  if (panel === "farmers") {
+    const farmers = await liveGetScoped<{ id?: string; full_name?: string | null; farmer_code?: string | null; village?: string | null }>(auth, "farmers?select=id,full_name,farmer_code,village&order=full_name.asc&limit=40", fetch);
+    if (!farmers.ok) return { rows: [], note: farmers.message };
+    return { rows: farmers.rows.map((row) => ({ key: row.id || row.full_name || "farmer", title: row.full_name || "Kisan", value: row.village || row.farmer_code || "" })), note: null };
+  }
+  if (panel === "purchases") {
+    const purchases = await loadPurchases(auth, fetch);
+    if (!purchases.ok) return { rows: [], note: purchases.message };
+    return {
+      rows: purchases.rows.map((row, index) => ({
+        key: `${row.purchase_number}-${index}`,
+        title: `${row.purchase_number || "Bill"} · ${row.purchase_date || ""}`,
+        value: row.total_amount == null ? "—" : rupees(Number(row.total_amount)),
+      })),
+      note: null,
+    };
+  }
+  if (panel === "attendance") {
     const attendance = await loadAttendance(auth, day, fetch);
-    setBody(!attendance.rows.ok ? <Empty title="Hazri nahi khuli" body={attendance.rows.message} /> : attendance.rows.rows.length === 0 ? <Empty title="Aaj koi hazri nahi" body="Staff ka check-in jab darj hoga, naam aur status yahan aayega." /> : (
-      <View>{attendance.rows.rows.map((row, index) => <Row key={`${row.profile_id}-${index}`} title={attendance.names.get(row.profile_id || "") || "Staff"} value={String(row.status || "—")} />)}</View>
-    ));
-  }, [panel, auth, day]);
-
-  useEffect(() => { void run(""); }, [run]);
-
-  return (
-    <Section title={panel} sub="Sirf parhna">
-      <Pressable onPress={onBack}><Text style={{ color: colors.green, fontWeight: "700", marginBottom: 8 }}>Wapas</Text></Pressable>
-      {panel === "parties" ? (
-        <TextInput value={query} onChangeText={setQuery} onSubmitEditing={() => void run(query)} placeholder="Naam likh kar enter" style={{ backgroundColor: "#F3F6F1", borderRadius: 10, padding: 10, marginBottom: 8 }} />
-      ) : null}
-      {body}
-    </Section>
-  );
-}
-
-function PartyBlock({ title, result, name, extra }: { title: string; result: { ok: true; rows: { id?: string; full_name?: string | null; name?: string | null; current_balance?: number | string | null }[] } | { ok: false; message: string }; name: (row: { full_name?: string | null; name?: string | null }) => string; extra: (row: { current_balance?: number | string | null }) => string }) {
-  if (!result.ok) return <Empty title={`${title} nahi khule`} body={result.message} />;
-  if (result.rows.length === 0) return <Empty title={`Koi ${title} nahi`} body="Naam likh kar talash karein, ya fehrist khali hai." />;
-  return (
-    <View style={{ marginBottom: 8 }}>
-      <Text style={{ fontWeight: "700", color: colors.text, marginBottom: 4 }}>{title}</Text>
-      {result.rows.map((row) => <Row key={row.id} title={name(row)} value={extra(row)} />)}
-    </View>
-  );
+    if (!attendance.rows.ok) return { rows: [], note: attendance.rows.message };
+    return {
+      rows: attendance.rows.rows.map((row, index) => ({
+        key: `${row.profile_id}-${index}`,
+        title: attendance.names.get(row.profile_id || "") || "Staff",
+        value: String(row.status || "—"),
+      })),
+      note: null,
+    };
+  }
+  if (panel === "support") {
+    const tickets = await liveGet<{ id?: string; ticket_no?: number | null; title?: string | null; status?: string | null; priority?: string | null }>(
+      auth,
+      "support_tickets?select=id,ticket_no,title,status,priority&status=in.(new,assigned,investigating,testing,resolved_pending_verify,reopened)&order=created_at.desc&limit=40",
+      fetch,
+    );
+    if (!tickets.ok) return { rows: [], note: tickets.message };
+    return {
+      rows: tickets.rows.map((row) => ({
+        key: row.id || String(row.ticket_no),
+        title: row.title || `Ticket ${row.ticket_no ?? ""}`,
+        value: row.status || "",
+      })),
+      note: null,
+    };
+  }
+  if (panel === "orders") {
+    const orders = await loadOrders(auth, fetch);
+    if (!orders.ok) return { rows: [], note: orders.message };
+    return {
+      rows: orders.rows.map((row) => ({
+        key: row.id || row.order_number || "order",
+        title: row.order_number || "Order",
+        value: row.grand_total == null ? String(row.status || "") : rupees(Number(row.grand_total)),
+      })),
+      note: null,
+    };
+  }
+  if (panel === "parties") {
+    const found = await searchParties(auth, "", fetch);
+    const rows = [
+      ...(found.farmers.ok ? found.farmers.rows.map((row) => ({ key: `f-${row.id}`, title: row.full_name || "Kisan", value: "Kisan" })) : []),
+      ...(found.customers.ok ? found.customers.rows.map((row) => ({ key: `c-${row.id}`, title: row.name || "Customer", value: row.current_balance == null ? "Customer" : rupees(Number(row.current_balance)) })) : []),
+    ];
+    const note = !found.farmers.ok ? found.farmers.message : !found.customers.ok ? found.customers.message : null;
+    return { rows, note };
+  }
+  if (panel === "users") {
+    const users = await liveGet<{ id?: string; full_name?: string | null; role?: string | null; is_active?: boolean | null }>(auth, "profiles?select=id,full_name,role,is_active&order=full_name.asc&limit=50", fetch);
+    if (!users.ok) return { rows: [], note: users.message };
+    return { rows: users.rows.map((row) => ({ key: row.id || row.full_name || "user", title: row.full_name || "User", value: roleTitle(row.role) })), note: null };
+  }
+  if (panel === "branches") {
+    const branches = await liveGet<{ id?: string; name?: string | null; district?: string | null; tehsil?: string | null }>(auth, "branches?select=id,name,district,tehsil&order=name.asc&limit=40", fetch);
+    if (!branches.ok) return { rows: [], note: branches.message };
+    return { rows: branches.rows.map((row) => ({ key: row.id || row.name || "branch", title: row.name || "Branch", value: [row.tehsil, row.district].filter(Boolean).join(", ") })), note: null };
+  }
+  return { rows: [], note: null };
 }
