@@ -22,14 +22,13 @@ const NAV = [
 
 export function SiteHeader() {
   const lang = getLanguageFromCookies("en");
-  const name = brandName(lang);
   const tagline = brandTagline(lang);
   return (
     <header className="sticky top-0 z-40 border-b border-emerald-100 bg-white/95 backdrop-blur dark:border-surface-800 dark:bg-surface-950/95">
       <div className="mx-auto flex min-h-[4.5rem] max-w-[1500px] items-center gap-3 px-3 py-1.5 sm:px-4 lg:px-7">
         <Link href="/" aria-label={tagline ? `${PUBLIC_BRAND}, ${tagline}` : PUBLIC_BRAND} className="flex min-w-0 shrink-0 items-center gap-2.5">
           <BrandMark className="h-10 w-10 sm:h-11 sm:w-11" />
-          <HeaderBrand name={name} tagline={tagline} urdu={lang === "ur"} />
+          <HeaderBrand tagline={tagline} urdu={lang === "ur"} />
         </Link>
 
         <nav className="hidden min-w-0 flex-1 items-center justify-center gap-3 xl:flex 2xl:gap-5">

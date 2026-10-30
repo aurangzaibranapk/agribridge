@@ -88,8 +88,8 @@ export async function SiteFooter() {
         </div>
 
         <div className="mt-6 flex flex-col gap-2 border-t border-emerald-200 pt-4 text-center text-[10px] leading-5 text-slate-500 sm:mt-8 sm:flex-row sm:items-center sm:justify-between sm:pt-5 sm:text-left sm:text-xs">
-          <p>© {new Date().getFullYear()} {name}. All rights reserved.</p>
-          <p>{rtl ? `${name} کے ساتھ` : `Zarurat se zindagi tak — ${name} ke saath.`}</p>
+          <p>© {new Date().getFullYear()} {PUBLIC_BRAND}. All rights reserved.</p>
+          <p>{rtl ? `${PUBLIC_BRAND} کے ساتھ` : `Zarurat se zindagi tak — ${PUBLIC_BRAND} ke saath.`}</p>
         </div>
       </div>
     </footer>

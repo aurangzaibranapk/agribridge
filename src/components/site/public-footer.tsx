@@ -137,7 +137,7 @@ export async function PublicFooter() {
       {/* BOTTOM */}
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-5 text-xs text-emerald-50/50 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
-          <p>© {new Date().getFullYear()} {BRAND_NAME}. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {PUBLIC_BRAND}. All rights reserved.</p>
           <p>Agriculture. Technology. One Bridge.</p>
         </div>
       </div>
