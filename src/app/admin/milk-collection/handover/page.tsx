@@ -56,7 +56,7 @@ export default async function MilkHandoverList({ searchParams }: { searchParams?
 
         {error && (
           <p className="text-sm text-surface-600">
-            Milk Handover Certificate ka table abhi nahi. Migration 725 pehle Testing par chalao — Live se pehle backup.
+            Milk Handover Certificate ka table abhi nahi. Migration 726 pehle Testing par chalao — Live se pehle backup.
           </p>
         )}
         {!error && (data ?? []).length === 0 && <p className="text-sm text-surface-500">{t("mh_none", lang)}</p>}

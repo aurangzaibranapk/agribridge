@@ -55,7 +55,7 @@ export async function loadHandoverOptions(): Promise<HandoverOptions> {
   const dairy = (shops ?? []).filter((s) => s.business_type === "dairy");
   const shopRows = dairy.length > 0 ? dairy : (shops ?? []);
   const settings = requireMilkSettings(settingsRes.data);
-  const migrationError = specsRes.error ? "Milk Handover Certificate ka table abhi nahi. Migration 725 pehle Testing par chalao — Live se pehle backup." : null;
+  const migrationError = specsRes.error ? "Milk Handover Certificate ka table abhi nahi. Migration 726 pehle Testing par chalao — Live se pehle backup." : null;
 
   return {
     branches: (branches ?? []).map((b) => ({ id: b.id, name: b.name })),
@@ -104,7 +104,7 @@ export async function loadCertificate(id: string): Promise<LoadedCertificate | {
     .eq("id", id)
     .maybeSingle();
   if (error) {
-    return { error: "Milk Handover Certificate ka table abhi nahi. Migration 725 pehle Testing par chalao — Live se pehle backup." };
+    return { error: "Milk Handover Certificate ka table abhi nahi. Migration 726 pehle Testing par chalao — Live se pehle backup." };
   }
   if (!data || !data.branch_id) return { missing: true };
 
@@ -114,7 +114,7 @@ export async function loadCertificate(id: string): Promise<LoadedCertificate | {
     .eq("dispatch_id", id)
     .order("line_no");
   if (lineError) {
-    return { error: "Chiller ki qatarein abhi nahi mili. Migration 725 pehle Testing par chalao." };
+    return { error: "Chiller ki qatarein abhi nahi mili. Migration 726 pehle Testing par chalao." };
   }
 
   const lines: HandoverLineInput[] = (lineRows ?? []).map((line) => ({

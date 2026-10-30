@@ -1,5 +1,5 @@
 -- =====================================================================
--- 725: Milk Handover Certificate
+-- 726: Milk Handover Certificate
 -- =====================================================================
 -- Kaghaz wala "Milk Handover Certificate" ab milk_dispatches ki
 -- tafseel hai. Naya silo nahi.
@@ -18,7 +18,7 @@
 -- fn_save_milk_handover se badal sakti hai — seedhi update se nahi.
 --
 -- Pehle Testing. Live par tab jab backup verify ho.
--- Rollback: 725_milk_handover_certificate.rollback.sql
+-- Rollback: 726_milk_handover_certificate.rollback.sql
 
 alter table public.milk_dispatches
   add column if not exists collection_time time,
@@ -41,7 +41,7 @@ alter table public.milk_dispatches add constraint milk_dispatch_reject_reason ch
 );
 
 comment on column public.milk_dispatches.accepted is
-  'Certificate par company ka faisla. NULL = abhi nahi. false par wajah lazmi (725).';
+  'Certificate par company ka faisla. NULL = abhi nahi. false par wajah lazmi (726).';
 comment on column public.milk_dispatches.mcc_name is
   'Certificate ke header ka MCC naam. Khali ho to save branch/dukaan ka naam likhta hai.';
 comment on column public.milk_dispatches.collection_time is
@@ -115,7 +115,7 @@ create index if not exists idx_milk_dispatch_lines_dispatch
   on public.milk_dispatch_lines (dispatch_id, line_no);
 
 comment on table public.milk_dispatch_lines is
-  'Certificate ki chiller qatarein. TS = SNF+FAT. Adjusted volume staff ka adad hai, generate nahi (725).';
+  'Certificate ki chiller qatarein. TS = SNF+FAT. Adjusted volume staff ka adad hai, generate nahi (726).';
 
 alter table public.milk_dispatch_lines enable row level security;
 drop policy if exists milk_dispatch_lines_select on public.milk_dispatch_lines;
@@ -150,7 +150,7 @@ revoke all on public.milk_handover_specs from public, anon, authenticated;
 grant select on public.milk_handover_specs to authenticated;
 
 comment on table public.milk_handover_specs is
-  'Certificate ke Min Specs. Default FAT 4.1, LR 27, SNF 8.4. Neeche hone par warn, save rukta nahi (725).';
+  'Certificate ke Min Specs. Default FAT 4.1, LR 27, SNF 8.4. Neeche hone par warn, save rukta nahi (726).';
 
 create or replace function public.fn_save_milk_handover(
   p_by uuid,
@@ -573,7 +573,7 @@ $g$;
 comment on function public.fn_save_milk_handover(
   uuid, uuid, uuid, uuid, date, text, time, text, text, text, text, boolean, text, text, text, text, jsonb
 ) is
-  'Milk Handover Certificate. Gross ka jama dispatched_liters. Adjusted khud nahi banta. Raseed ke baad sirf faisla aur dastakhat (725).';
+  'Milk Handover Certificate. Gross ka jama dispatched_liters. Adjusted khud nahi banta. Raseed ke baad sirf faisla aur dastakhat (726).';
 
 insert into public.features (
   key, label, label_en, label_ur, description, description_en, description_ur, route, icon, is_sensitive, is_active

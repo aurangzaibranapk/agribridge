@@ -1,10 +1,10 @@
-// 725 Milk Handover Certificate on PGlite. Remote database par nahi chalta.
+// 726 Milk Handover Certificate on PGlite. Remote database par nahi chalta.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 
-const sql = fs.readFileSync("supabase/migrations/725_milk_handover_certificate.sql", "utf8");
-const rollback = fs.readFileSync("supabase/migrations/725_milk_handover_certificate.rollback.sql", "utf8");
+const sql = fs.readFileSync("supabase/migrations/726_milk_handover_certificate.sql", "utf8");
+const rollback = fs.readFileSync("supabase/migrations/726_milk_handover_certificate.rollback.sql", "utf8");
 
 assert.doesNotMatch(sql, /hwaiuwxqldxsoukkfefn|ktskwawkslaznkjjacni|supabase\.co/i);
 assert.match(sql, /milk_dispatch_lines/);

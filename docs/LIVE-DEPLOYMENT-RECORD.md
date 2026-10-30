@@ -1,8 +1,8 @@
-## Pending — 30 October 2026: Milk Handover Certificate (725)
+## Pending — 30 October 2026: Milk Handover Certificate (726)
 
-Branch `cursor/milk-handover-certificate-1460`. Migration **725 file only**. Testing aur Live dono par **nahi** chali. **724 mat use karo** — wo Data Health hai. 725 `milk_dispatches` par certificate ke khane aur `milk_dispatch_lines` (chiller qatarein). Koi purana litre nahi bharta. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+Branch `cursor/milk-handover-certificate-1460`. Migration **726 file only**. Testing aur Live dono par **nahi** chali. **725 mat use karo** — wo POS expire-batch admin code hai (`725_pos_expired_batch_sale_code`). 726 `milk_dispatches` par certificate ke khane aur `milk_dispatch_lines` (chiller qatarein). Koi purana litre nahi bharta. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
 
-- `725_milk_handover_certificate.sql`. Rollback: `725_milk_handover_certificate.rollback.sql`.
+- `726_milk_handover_certificate.sql`. Rollback: `726_milk_handover_certificate.rollback.sql`.
 - Safha `/admin/milk-collection/handover`. Raseed ab bhi `/admin/milk-collection/dispatch` par.
 
 ## Pending — 30 October 2026: POS expire-batch admin code (725)
