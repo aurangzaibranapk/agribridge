@@ -1,3 +1,11 @@
+## Pending — 30 October 2026: POS shift close bill (code only)
+
+Branch `cursor/pos-close-slip-print-whatsapp-45d8`. **Koi migration nahi.** Testing/Live DB par kuch nahi chalana. Sirf naya build.
+
+- Shift band (raat wali, jisme ginti hui cash > 0) par Daily POS Cash Slip khud khulti hai. Print aur WhatsApp slip ke upar hain.
+- Cash bhejne ka form slip ke peeche rehta hai. "Cash bhejein" se form wapas. Cash bhejne par Cash Handover Slip bhi Print aur WhatsApp ke sath khulti hai.
+- 27 Oct wala gate (`counted cash > 0` par slip mat kholo) hata diya. Handover form ab bhi hai.
+
 ## Pending — 28 October 2026: Agri HQ→shop andaruni muntaqili (code only)
 
 Branch `cursor/agri-internal-transfer-1200-fab5`. **Koi migration nahi.** Testing/Live DB par kuch nahi chalana. Sirf naya build.

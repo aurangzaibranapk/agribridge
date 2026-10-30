@@ -64,13 +64,23 @@ export default async function ShiftSlipPage({ params, searchParams }: { params: 
     ["Farq", money(difference)],
   ];
   const handoverStatus = handover?.status === "received" ? "Office/Finance ne tasdeeq kar di" : handover ? "Bheja gaya — receiving tasdeeq baqi" : "Office receiving baqi";
+  const shareText = [
+    shop?.name ?? receiptBranch?.name ?? "Shop",
+    "POS Shift Close Report",
+    `Shift: ${shift.shift_number}`,
+    `Staff: ${staff?.full_name ?? "—"}`,
+    `Counter: ${counter?.name ?? "—"}`,
+    "",
+    ...rows.map(([label, value]) => `${label}: ${value}`),
+    `Cash handover: ${handoverStatus}`,
+  ].join("\n");
 
   return (
     <main id="shift-cash-receipt" className="mx-auto w-full max-w-sm bg-white p-3 font-mono text-black print:w-[74mm] print:max-w-[74mm] print:p-0">
       <style>{`@media print { @page { size: 80mm auto; margin: 3mm; } body * { visibility: hidden; } #shift-cash-receipt, #shift-cash-receipt * { visibility: visible; } #shift-cash-receipt { position: absolute; top: 0; left: 0; color: black; } } ${embedded ? 'body * { visibility: hidden; } #shift-cash-receipt, #shift-cash-receipt * { visibility: visible; } #shift-cash-receipt { position: absolute; top: 0; left: 0; right: 0; min-height: 100vh; z-index: 9999; }' : ''}`}</style>
       <div className="mb-4 flex items-center justify-between gap-3 print:hidden">
         {!embedded && <Link href="/admin/pos" className="text-xs font-medium text-brand-700">← POS par wapas</Link>}
-        <PrintShiftSlip autoPrint={!embedded} />
+        <PrintShiftSlip autoPrint={!embedded} shareText={shareText} />
       </div>
       <section className="border border-dashed border-surface-300 bg-white p-3 print:border-0 print:p-0 print:shadow-none">
         <p className="text-center text-lg font-bold uppercase tracking-wide">{shop?.name ?? receiptBranch?.name ?? "Shop not linked"}</p>
