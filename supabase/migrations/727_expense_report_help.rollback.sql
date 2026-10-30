@@ -1,4 +1,4 @@
--- 725 rollback: report ka feature aur madad. Koi kharcha, journal ya raqam nahi mitti.
+-- 727 rollback: report ka feature aur madad. Koi kharcha, journal ya raqam nahi mitti.
 
 delete from public.dashboard_features where feature_key = 'kharche.report';
 delete from public.role_feature_permissions where feature_key = 'kharche.report';

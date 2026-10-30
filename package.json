@@ -53,7 +53,7 @@
     "test:overdue-policy": "npx --yes tsx scripts/test-overdue-policy.ts",
     "test:revoke-anon-trigger-proposal": "bash tests/revoke-anon-trigger-proposal.sh",
     "test:erp-directory": "npx --yes tsx scripts/test-erp-directory.ts",
-    "test:expense-report": "npx --yes tsx scripts/test-expense-report.ts && node tests/expense-report-725-sql.mjs",
+    "test:expense-report": "npx --yes tsx scripts/test-expense-report.ts && node tests/expense-report-727-sql.mjs",
     "test:sales-shop-filter": "npx --yes tsx scripts/test-sales-shop-filter.ts",
     "test:lightbox": "node tests/support-screenshot-lightbox.cjs",
     "test:support-llm": "npx --yes tsx scripts/test-support-llm-agents.ts && npx --yes tsx scripts/test-support-builtin-agent.ts",

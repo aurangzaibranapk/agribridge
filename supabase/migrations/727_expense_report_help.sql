@@ -1,10 +1,10 @@
 -- =====================================================================
--- 725: Kharchon ki report — feature, ijazat, feature_help
+-- 727: Kharchon ki report — feature, ijazat, feature_help
 -- =====================================================================
 -- Koi naya table, koi naya column, koi journal nahi.
 -- Safha /admin/reports/expenses. Manzoori ab bhi /admin/kharche par.
 -- Pehle Testing. Live par tab jab backup verify ho.
--- Rollback: 725_expense_report_help.rollback.sql
+-- Rollback: 727_expense_report_help.rollback.sql
 
 insert into public.features (key, label, label_en, label_ur, description, description_en, description_ur, route, icon, is_sensitive, is_active)
 values (

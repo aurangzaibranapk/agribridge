@@ -1,10 +1,10 @@
-// 725: kharchon ki report — feature aur madad. Koi kharcha ya journal nahi.
+// 727: kharchon ki report — feature aur madad. Koi kharcha ya journal nahi.
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 
-const mig = fs.readFileSync("supabase/migrations/725_expense_report_help.sql", "utf8");
-const rb = fs.readFileSync("supabase/migrations/725_expense_report_help.rollback.sql", "utf8");
+const mig = fs.readFileSync("supabase/migrations/727_expense_report_help.sql", "utf8");
+const rb = fs.readFileSync("supabase/migrations/727_expense_report_help.rollback.sql", "utf8");
 const page = fs.readFileSync("src/app/admin/reports/expenses/page.tsx", "utf8");
 const route = fs.readFileSync("src/app/admin/reports/expenses/export/route.ts", "utf8");
 const code = mig.replace(/--.*$/gm, "");
@@ -90,4 +90,4 @@ await db.exec(rb);
 const gone = await db.query("select count(*)::int as n from public.features where key = 'kharche.report'");
 assert.equal(gone.rows[0].n, 0);
 
-console.log("expense-report-725-sql: ok");
+console.log("expense-report-727-sql: ok");

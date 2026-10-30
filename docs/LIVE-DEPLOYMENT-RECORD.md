@@ -1,8 +1,18 @@
-## Pending — 30 October 2026: Kharchon ki report (725)
+## Pending — 30 October 2026: Softaculous ke baad 725, phir 726, phir 727
 
-Branch `cursor/expense-report-78f4`. Migration **725 file only**. Testing aur Live dono par **nahi** chali. **724 mat use karo** — wo `724_data_health_dedupe` hai. 725 sirf feature `kharche.report`, ijazat aur `feature_help`. Koi table, koi column, koi journal, koi raqam nahi badalti. Safha `/admin/reports/expenses`. Manzoori ab bhi `/admin/kharche`. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+Is zip ke baad nayi migrations sirf ye teen hain. Pehle Testing (`hwaiuwxqldxsoukkfefn`). Wahan theek ho to Live (`ktskwawkslaznkjjacni`). Live par backup verify se pehle koi migration nahi. Tarteeb: **725, phir 726, phir 727.**
 
-- `725_expense_report_help.sql`. Rollback: `725_expense_report_help.rollback.sql`.
+1. `725_pos_expired_batch_sale_code.sql` — POS expire-batch admin code. Rollback: `725_pos_expired_batch_sale_code.rollback.sql`.
+2. `726_milk_handover_certificate.sql` — Milk Handover Certificate. Rollback: `726_milk_handover_certificate.rollback.sql`.
+3. `727_expense_report_help.sql` — Kharchon ki report (feature + help). Rollback: `727_expense_report_help.rollback.sql`. Koi kharcha, journal ya raqam nahi badalti.
+
+248, 249, 250 code only hain (phone home/version, POS close slip, POS stock cap). Un ke liye SQL nahi.
+
+## Pending — 30 October 2026: Kharchon ki report (727)
+
+Branch `cursor/expense-report-78f4`. Migration **727 file only**. Testing aur Live dono par **nahi** chali. **725 mat use karo** — wo POS expire-batch hai. **726 mat use karo** — wo Milk Handover Certificate hai. 727 sirf feature `kharche.report`, ijazat aur `feature_help`. Koi table, koi column, koi journal, koi raqam nahi badalti. Safha `/admin/reports/expenses`. Manzoori ab bhi `/admin/kharche`. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `727_expense_report_help.sql`. Rollback: `727_expense_report_help.rollback.sql`.
 - Owner/Admin/Finance poori company. Manager apni shaakh. Sales staff ko ye feature nahi.
 
 ## Pending — 30 October 2026: Milk Handover Certificate (726)
