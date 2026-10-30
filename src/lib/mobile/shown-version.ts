@@ -5,7 +5,7 @@
  * stayed on 625 after the APK moved to 626). A native APK embeds the
  * manifest at prebuild, and that embedded code is the installed build.
  */
-export const PHONE_VERSION_CODE = 647;
+export const PHONE_VERSION_CODE = 648;
 
 export function shownVersionCode(input: {
   platform: string;

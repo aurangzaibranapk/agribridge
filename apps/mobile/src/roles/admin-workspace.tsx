@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, T
 import {
   karachiDate,
   liveGet,
+  liveGetScoped,
   loadAttendance,
   loadMilkList,
   loadPurchases,
@@ -96,7 +97,7 @@ function PanelBody(props: Props) {
   if (props.panel === "parties") return <PartiesPanel auth={auth} />;
   if (props.panel === "stock") return <StockPanel auth={auth} />;
   if (props.panel === "purchases") return <PurchasesPanel auth={auth} />;
-  if (props.panel === "milk") return <MilkPanel rows={props.milk} />;
+  if (props.panel === "milk") return <MilkPanel rows={props.milk} auth={auth} />;
   if (props.panel === "farmers") return <FarmersPanel auth={auth} digital={props.digital} />;
   if (props.panel === "vet") return <VetPanel auth={auth} digital={props.digital} />;
   if (props.panel === "staff") return <StaffPanel auth={auth} />;
@@ -188,22 +189,77 @@ function PurchasesPanel({ auth }: { auth: LiveAuth }) {
   </View>;
 }
 
-function MilkPanel({ rows }: { rows: MilkRow[] }) {
+type MilkPeriod = "today" | "week" | "month";
+type DispatchRow = { id?: string; dispatch_date?: string | null; shift?: string | null; branch_id?: string | null; dispatched_liters?: number | string | null; received_liters?: number | string | null; shortage_liters?: number | string | null; shortage_percentage?: number | string | null; fat_percentage?: number | string | null; snf_percentage?: number | string | null; vehicle_name?: string | null; driver_name?: string | null };
+type ControlFarmer = { id?: string; full_name?: string | null; farmer_code?: string | null };
+type ControlSettings = { fat_min?: number | string | null; fat_max?: number | string | null; lr_min?: number | string | null; lr_max?: number | string | null; snf_alert_low?: number | string | null; snf_alert_high?: number | string | null; reference_ts?: number | string | null; standard_rate?: number | string | null; shortage_alert_threshold?: number | string | null };
+type BillingSettings = { company_name?: string | null; service_rate_per_liter?: number | string | null };
+type BranchRow = { id?: string; name?: string | null };
+type MilkControlData = { entries: MilkRow[]; dispatches: DispatchRow[]; farmers: Map<string, ControlFarmer>; branches: Map<string, string>; settings: ControlSettings | null; billing: BillingSettings | null };
+
+function dayOffset(day: string, offset: number): string { const date = new Date(`${day}T12:00:00Z`); date.setUTCDate(date.getUTCDate() + offset); return date.toISOString().slice(0, 10); }
+function monthStart(day: string): string { return `${day.slice(0, 7)}-01`; }
+function numberOf(value: unknown): number { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : 0; }
+function shown(value: number | null, suffix = ""): string { return value == null ? "—" : `${value.toFixed(2).replace(/\.00$/, "")}${suffix}`; }
+function weighted(rows: MilkRow[], key: "fat_percentage" | "lr" | "snf_percentage"): number | null {
+  let weight = 0; let total = 0;
+  for (const row of rows) { if (row[key] == null || row[key] === "") continue; const litres = numberOf(row.quantity_liters ?? row.field_collected_volume); const value = numberOf(row[key]); if (!(litres > 0) || !(value > 0)) continue; weight += litres; total += litres * value; }
+  return weight ? total / weight : null;
+}
+async function loadControlEntries(auth: LiveAuth, start: string, end: string): Promise<{ ok: true; rows: MilkRow[] } | { ok: false; message: string }> {
+  const rows: MilkRow[] = [];
+  const pageSize = 1000;
+  for (let offset = 0; offset < 10000; offset += pageSize) {
+    const page = await liveGetScoped<MilkRow>(auth, `milk_entries?select=id,entry_date,shift,quantity_liters,adjusted_volume,fat_percentage,snf_percentage,lr,rate_per_liter,total_amount,route_name,chiller_name,status,mca_profile_id,farmer_id,collection_source,collected_at&entry_date=gte.${start}&entry_date=lte.${end}&order=entry_date.desc,collected_at.desc&limit=${pageSize}&offset=${offset}`, fetch);
+    if (!page.ok) return page;
+    rows.push(...page.rows);
+    if (page.rows.length < pageSize) break;
+  }
+  return { ok: true, rows };
+}
+
+function MilkPanel({ rows, auth }: { rows: MilkRow[]; auth: LiveAuth }) {
+  const [period, setPeriod] = useState<MilkPeriod>("today");
   const today = karachiDate();
-  const todays = rows.filter((row) => row.entry_date === today);
-  const shifts = milkByShift(todays);
-  const pending = todays.filter((row) => row.status === "pending_fat");
-  const approval = todays.filter((row) => row.status === "priced");
+  const start = period === "today" ? today : period === "week" ? dayOffset(today, -6) : monthStart(today);
+  const read = useRead<MilkControlData>(async () => {
+    const [entries, dispatches, farmers, branches, settings, billing] = await Promise.all([
+      loadControlEntries(auth, start, today),
+      liveGetScoped<DispatchRow>(auth, `milk_dispatches?select=id,dispatch_date,shift,branch_id,dispatched_liters,received_liters,shortage_liters,shortage_percentage,fat_percentage,snf_percentage,vehicle_name,driver_name&dispatch_date=gte.${start}&dispatch_date=lte.${today}&order=dispatch_date.desc,created_at.desc&limit=500`, fetch),
+      liveGetScoped<ControlFarmer>(auth, "farmers?select=id,full_name,farmer_code&order=full_name.asc&limit=1000", fetch),
+      liveGet<BranchRow>(auth, "branches?select=id,name&order=name.asc&limit=200", fetch),
+      liveGet<ControlSettings>(auth, "milk_rate_settings?select=fat_min,fat_max,lr_min,lr_max,snf_alert_low,snf_alert_high,reference_ts,standard_rate,shortage_alert_threshold&limit=1", fetch),
+      liveGet<BillingSettings>(auth, "company_billing_settings?select=company_name,service_rate_per_liter&limit=1", fetch),
+    ]);
+    if (!entries.ok) return entries;
+    return { ok: true as const, rows: [{ entries: entries.rows, dispatches: dispatches.ok ? dispatches.rows : [], farmers: new Map((farmers.ok ? farmers.rows : []).filter((row) => row.id).map((row) => [String(row.id), row])), branches: new Map((branches.ok ? branches.rows : []).filter((row) => row.id).map((row) => [String(row.id), row.name || "Centre"])), settings: settings.ok ? settings.rows[0] ?? null : null, billing: billing.ok ? billing.rows[0] ?? null : null }] };
+  }, [auth.token, auth.testAccount, period]);
+  const data = read.rows?.[0];
+  if (read.busy) return <Loading />;
+  if (read.error || !data) return <Empty text={read.error || "Milk Control Room ka data nahi mila."} />;
+  const entries = data.entries.length ? data.entries : (period === "today" ? rows.filter((row) => row.entry_date === today) : []);
+  const litres = milkLitres(entries);
+  const pending = entries.filter((row) => row.status === "pending_fat");
+  const approval = entries.filter((row) => row.status === "priced");
+  const verified = entries.filter((row) => row.status === "verified");
+  const avgFat = weighted(entries, "fat_percentage"); const avgLr = weighted(entries, "lr"); const avgSnf = weighted(entries, "snf_percentage"); const avgTs = avgFat != null && avgSnf != null ? avgFat + avgSnf : null;
+  const payable = entries.reduce((sum, row) => sum + numberOf(row.total_amount), 0); const avgRate = litres > 0 ? payable / litres : null;
+  const dispatched = data.dispatches.reduce((sum, row) => sum + numberOf(row.dispatched_liters), 0); const accepted = data.dispatches.reduce((sum, row) => sum + numberOf(row.received_liters), 0); const shortage = data.dispatches.reduce((sum, row) => sum + Math.max(0, numberOf(row.shortage_liters)), 0);
+  const serviceRate = data.billing?.service_rate_per_liter == null ? null : numberOf(data.billing.service_rate_per_liter); const serviceIncome = serviceRate == null ? null : accepted * serviceRate;
+  const minFat = data.settings?.fat_min == null ? null : numberOf(data.settings.fat_min); const maxFat = data.settings?.fat_max == null ? null : numberOf(data.settings.fat_max); const minLr = data.settings?.lr_min == null ? null : numberOf(data.settings.lr_min); const maxLr = data.settings?.lr_max == null ? null : numberOf(data.settings.lr_max); const minSnf = data.settings?.snf_alert_low == null ? null : numberOf(data.settings.snf_alert_low); const maxSnf = data.settings?.snf_alert_high == null ? null : numberOf(data.settings.snf_alert_high); const targetTs = data.settings?.reference_ts == null ? null : numberOf(data.settings.reference_ts);
+  const rowAlerts = entries.filter((row) => { const fat = row.fat_percentage == null ? null : numberOf(row.fat_percentage); const lr = row.lr == null ? null : numberOf(row.lr); const snf = row.snf_percentage == null ? null : numberOf(row.snf_percentage); const ts = fat != null && snf != null ? fat + snf : null; return row.status === "pending_fat" || fat == null || lr == null || snf == null || (minFat != null && fat < minFat) || (maxFat != null && fat > maxFat) || (minLr != null && lr < minLr) || (maxLr != null && lr > maxLr) || (minSnf != null && snf < minSnf) || (maxSnf != null && snf > maxSnf) || (targetTs != null && ts != null && ts < targetTs); });
+  const centreMap = new Map<string, MilkRow[]>(); for (const row of entries) { const name = row.chiller_name || row.route_name || "Centre link missing"; centreMap.set(name, [...(centreMap.get(name) || []), row]); }
+  const shifts = milkByShift(entries);
   return <View>
-    <KpiGrid items={[["Subah", `${Math.round(shifts.subah)} L`], ["Shaam", `${Math.round(shifts.shaam)} L`], ["Pending MCO", String(pending.length)], ["Admin verify", String(approval.length)]]} />
-    <Card title="Live flow">
-      <FlowRow step="1" title="DCA / MCA pickup" sub="Farmer · shift · litres · optional LR" state="Field" />
-      <FlowRow step="2" title="MCO quality check" sub="Verified litres · Fat · LR · amount" state={pending.length ? "Pending" : "Checked"} />
-      <FlowRow step="3" title="Admin approval" sub="Farmer ledger + milk payable link" state={approval.length ? "Review" : "Final"} />
-    </Card>
-    <Card title={`Aaj ki entries · ${milkLitres(todays)} L`}>
-      {todays.length ? todays.map((row, index) => <DataRow key={row.id || String(index)} title={`${row.entry_date} · ${row.shift === "evening" ? "Shaam" : "Subah"}`} value={`${row.quantity_liters ?? row.field_collected_volume ?? "—"} L`} sub={`Fat ${row.fat_percentage ?? "—"} · LR ${row.lr ?? "—"} · ${row.status || "—"}`} />) : <Empty text="Aaj koi milk entry nazar nahi aayi." />}
-    </Card>
+    <View style={styles.periodRow}>{(["today", "week", "month"] as MilkPeriod[]).map((key) => <Pressable key={key} onPress={() => setPeriod(key)} style={[styles.periodBtn, period === key ? styles.periodOn : null]}><Text style={[styles.periodText, period === key ? styles.periodTextOn : null]}>{key === "today" ? "Aaj" : key === "week" ? "7 din" : "Mahina"}</Text></Pressable>)}</View>
+    <Notice title="Milk Control Room" body={`${start} se ${today} · ${entries.length} entries · har adad asal database record se`} />
+    <KpiGrid items={[["Total collection", `${shown(litres)} L`], ["Quality alerts", String(rowAlerts.length)], ["Pending MCO", String(pending.length)], ["Admin verify", String(approval.length)]]} />
+    <Card title="Quality Command"><View style={styles.metricGrid}><Metric label="Avg Fat" value={shown(avgFat, "%")} good={avgFat != null && (minFat == null || avgFat >= minFat) && (maxFat == null || avgFat <= maxFat)} /><Metric label="Avg LR" value={shown(avgLr)} good={avgLr != null && (minLr == null || avgLr >= minLr) && (maxLr == null || avgLr <= maxLr)} /><Metric label="Avg SNF" value={shown(avgSnf, "%")} good={avgSnf != null && (minSnf == null || avgSnf >= minSnf) && (maxSnf == null || avgSnf <= maxSnf)} /><Metric label="Avg TS" value={shown(avgTs, "%")} good={avgTs != null && (targetTs == null || avgTs >= targetTs)} /></View><DataRow title="Subah / Shaam" value={`${Math.round(shifts.subah)} / ${Math.round(shifts.shaam)} L`} /><DataRow title="Verified" value={`${verified.length} / ${entries.length}`} sub="Admin final records" /></Card>
+    <Card title="Farmer payment aur company receipt"><DataRow title="Farmer ko payable" value={rupees(payable)} sub={`Average ${avgRate == null ? "—" : rupees(avgRate)} / L`} /><DataRow title={`${data.billing?.company_name || "Company"} accepted`} value={`${shown(accepted)} L`} sub={`Chiller se dispatch ${shown(dispatched)} L`} /><DataRow title="Company tak shortage" value={`${shown(shortage)} L`} sub={dispatched > 0 ? `${shown((shortage / dispatched) * 100, "%")} dispatch ka` : "Dispatch receipt baqi"} /><DataRow title="Hamari service income" value={serviceIncome == null ? "—" : rupees(serviceIncome)} sub={serviceRate == null ? "Company service rate settings missing" : `${rupees(serviceRate)} / accepted litre`} /></Card>
+    <Card title="Centre / Route health">{[...centreMap.entries()].length ? [...centreMap.entries()].sort((a, b) => milkLitres(b[1]) - milkLitres(a[1])).map(([name, centreRows]) => { const fat = weighted(centreRows, "fat_percentage"); const lr = weighted(centreRows, "lr"); const snf = weighted(centreRows, "snf_percentage"); const ts = fat != null && snf != null ? fat + snf : null; const needsReview = centreRows.some((row) => rowAlerts.includes(row)); return <DataRow key={name} title={name} value={`${shown(milkLitres(centreRows))} L`} sub={`Fat ${shown(fat)} · LR ${shown(lr)} · SNF ${shown(snf)} · TS ${shown(ts)} · ${needsReview ? "Review" : "Theek"}`} />; }) : <Empty text="Is muddat mein centre activity nahi mili." />}</Card>
+    <Card title="Dispatch & company receipt">{data.dispatches.length ? data.dispatches.map((row, index) => <DataRow key={row.id || String(index)} title={`${data.branches.get(String(row.branch_id || "")) || "Centre"} · ${row.dispatch_date || "—"} · ${row.shift === "evening" ? "Shaam" : "Subah"}`} value={`${shown(numberOf(row.dispatched_liters))} → ${row.received_liters == null ? "Pending" : shown(numberOf(row.received_liters))} L`} sub={`Shortage ${row.shortage_liters == null ? "—" : shown(numberOf(row.shortage_liters), " L")} · ${row.vehicle_name || "Vehicle —"} · ${row.driver_name || "Driver —"}`} />) : <Empty text="Is muddat mein dispatch record nahi mila." />}</Card>
+    <Card title="Quality alerts · farmer wise">{rowAlerts.length ? rowAlerts.slice(0, 20).map((row, index) => { const farmer = data.farmers.get(String(row.farmer_id || "")); const fat = row.fat_percentage == null ? null : numberOf(row.fat_percentage); const snf = row.snf_percentage == null ? null : numberOf(row.snf_percentage); return <DataRow key={row.id || String(index)} title={farmer?.full_name || farmer?.farmer_code || "Farmer link missing"} value={`${shown(numberOf(row.quantity_liters ?? row.field_collected_volume))} L`} sub={`${row.chiller_name || row.route_name || "Centre —"} · Fat ${shown(fat)} · LR ${row.lr ?? "—"} · SNF ${shown(snf)} · TS ${fat != null && snf != null ? shown(fat + snf) : "—"} · ${row.status || "—"}`} />; }) : <Empty text="Is muddat mein koi quality alert nahi." />}</Card>
+    <Card title="Latest milk activity">{entries.length ? entries.slice(0, 20).map((row, index) => { const farmer = data.farmers.get(String(row.farmer_id || "")); return <DataRow key={row.id || String(index)} title={`${farmer?.full_name || "Farmer"} · ${row.entry_date || "—"} ${row.shift === "evening" ? "Shaam" : "Subah"}`} value={`${shown(numberOf(row.quantity_liters ?? row.field_collected_volume))} L`} sub={`${row.collection_source === "self_delivery" ? "MCC Drop-off" : "Field Collection"} · ${row.chiller_name || row.route_name || "Centre —"} · ${row.status || "—"}`} />; }) : <Empty text="Milk activity nahi mili." />}</Card>
   </View>;
 }
 
@@ -304,6 +360,7 @@ function Notice({ title, body }: { title: string; body: string }) { return <View
 function Card({ title, children }: { title: string; children: ReactNode }) { return <View style={styles.card}><Text style={styles.cardTitle}>{title}</Text>{children}</View>; }
 function DataRow({ title, value, sub }: { title: string; value: string; sub?: string }) { return <View style={styles.row}><View style={{ flex: 1, paddingRight: 10 }}><Text style={styles.rowTitle}>{title}</Text>{sub ? <Text style={styles.rowSub}>{sub}</Text> : null}</View><Text style={styles.rowValue}>{value}</Text></View>; }
 function KpiGrid({ items }: { items: [string, string][] }) { return <View style={styles.kpiGrid}>{items.map(([label, value]) => <View key={label} style={styles.kpi}><Text style={styles.kpiLabel}>{label}</Text><Text style={styles.kpiValue}>{value}</Text></View>)}</View>; }
+function Metric({ label, value, good }: { label: string; value: string; good: boolean }) { return <View style={[styles.metric, good ? styles.metricGood : styles.metricReview]}><Text style={styles.metricLabel}>{label}</Text><Text style={styles.metricValue}>{value}</Text><Text style={styles.metricState}>{value === "—" ? "Data baqi" : good ? "Theek" : "Review"}</Text></View>; }
 function MiniAction({ title, sub }: { title: string; sub?: string }) { return <View style={styles.action}><Text style={styles.actionMark}>+</Text><Text style={styles.actionTitle}>{title}</Text>{sub ? <Text style={styles.actionSub}>{sub}</Text> : null}</View>; }
 function Search({ value, onChange, onApply, placeholder }: { value: string; onChange: (value: string) => void; onApply: () => void; placeholder: string }) { return <View style={styles.search}><TextInput value={value} onChangeText={onChange} onSubmitEditing={onApply} placeholder={placeholder} style={styles.searchInput} /><Pressable onPress={onApply} style={styles.apply}><Text style={styles.applyText}>Apply</Text></Pressable></View>; }
 function FlowRow({ step, title, sub, state }: { step: string; title: string; sub: string; state: string }) { return <View style={styles.row}><View style={styles.step}><Text style={styles.stepText}>{step}</Text></View><View style={{ flex: 1, paddingHorizontal: 10 }}><Text style={styles.rowTitle}>{title}</Text><Text style={styles.rowSub}>{sub}</Text></View><Text style={styles.pill}>{state}</Text></View>; }
@@ -340,6 +397,18 @@ const styles = StyleSheet.create({
   kpi: { width: "48.5%", minHeight: 90, backgroundColor: "#fff", borderRadius: 18, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: colors.line },
   kpiLabel: { color: colors.muted, fontSize: 12, fontWeight: "700" },
   kpiValue: { color: colors.text, fontSize: 20, fontWeight: "900", marginTop: 8 },
+  periodRow: { flexDirection: "row", backgroundColor: "#E8EEE8", padding: 4, borderRadius: 14, marginBottom: 12 },
+  periodBtn: { flex: 1, minHeight: 40, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  periodOn: { backgroundColor: colors.green },
+  periodText: { color: colors.muted, fontWeight: "800" },
+  periodTextOn: { color: "#fff" },
+  metricGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
+  metric: { width: "48.5%", borderRadius: 14, padding: 11, marginBottom: 8, borderWidth: 1 },
+  metricGood: { backgroundColor: "#EAF5EA", borderColor: "#BFDDBF" },
+  metricReview: { backgroundColor: "#FFF3E4", borderColor: "#E8C68E" },
+  metricLabel: { color: colors.muted, fontSize: 11, fontWeight: "700" },
+  metricValue: { color: colors.text, fontSize: 20, fontWeight: "900", marginTop: 4 },
+  metricState: { color: colors.greenDark, fontSize: 10, fontWeight: "800", marginTop: 3 },
   actionGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 2 },
   action: { width: "32%", minHeight: 98, backgroundColor: "#EAF5EA", borderRadius: 16, padding: 10, marginBottom: 10 },
   actionMark: { color: colors.green, fontSize: 20, fontWeight: "900" },

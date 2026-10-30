@@ -300,6 +300,7 @@ export type MilkRow = {
   shift?: string | null;
   quantity_liters?: number | string | null;
   field_collected_volume?: number | string | null;
+  adjusted_volume?: number | string | null;
   entry_date?: string | null;
   collection_date?: string | null;
   fat_percentage?: number | string | null;
@@ -314,6 +315,7 @@ export type MilkRow = {
   farmer_id?: string | null;
   created_by?: string | null;
   collected_at?: string | null;
+  collection_source?: string | null;
   fat_at?: string | null;
   verified_at?: string | null;
 };

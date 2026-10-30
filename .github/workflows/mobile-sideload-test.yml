@@ -27,7 +27,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: https://hwaiuwxqldxsoukkfefn.supabase.co
       # Public testing anon key.
       EXPO_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh3YWl1d3hxbGR4c291a2tmZWZuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc5MjU1NjMsImV4cCI6MjEwMzUwMTU2M30.UwchGHJHRCdKHwpJRr-fdNTreeVNLlfbpo7nBqQv9l4"
-      AGRIBRIDGE_VERSION_CODE: "647"
+      AGRIBRIDGE_VERSION_CODE: "648"
       CI: "1"
     steps:
       - uses: actions/checkout@v4
@@ -131,7 +131,8 @@ jobs:
           notes=$(cat <<'EOF'
           AgriBridge TEST sideload builds. Not the live app and not a Play Store upload.
           App name AgriBridge TEST. Package pk.alranatraders.agribridge.test.
-          versionName v0.6.1 Beta, versionCode 647, APP_CHANNEL=internal.
+          versionName v0.6.1 Beta, versionCode 648, APP_CHANNEL=internal.
+          Build 648 adds the Admin Milk Control Room: paginated real milk activity, centre/route Fat-LR-SNF-TS health, farmer payable, company accepted litres, dispatch shortage, service income, quality alerts, and Today/7-day/Month filters.
           Build 647 keeps DCA/MCA collection strictly at farmer gate: Drop-off is removed from the MCA form and all MCA milk saves as field collection. Chiller self-delivery remains only in the MCO workspace.
           Build 646 clears the blocking TEST flows: valid Kisan/Customer FMCG order type and customer link, MCO self-delivery plus dispatch isolation, Admin TEST milk verification, Staff department and HR leave/advance access, Dealer/Supplier links with merchant-only khata, and working password recovery. The migration is additive and does not delete existing business records.
           Build 645 is the full-app integrity pass: required role files and image assets are Git-tracked, temporary exports cannot enter a release, dead approved-screen actions fail CI, Farmer Vet Request posts to the linked dairy record, filters apply to the selected period, and missing Admin/Vet/Merchant button wiring is restored.

@@ -57,7 +57,7 @@ assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.pa
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.appFlavor, "test");
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.android.versionCode, 606);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.version, AGRIBRIDGE_OS_VERSION);
-assert.equal(PHONE_VERSION_CODE, 647);
+assert.equal(PHONE_VERSION_CODE, 648);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.versionCode, PHONE_VERSION_CODE);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.versionCode, PHONE_VERSION_CODE);
 assert.equal(shownVersionCode({ platform: "web", embedded: 625, phone: PHONE_VERSION_CODE }), PHONE_VERSION_CODE);
@@ -460,6 +460,9 @@ assert.match(authScreens, /WebsiteReset/);
 assert.doesNotMatch(authScreens, /ScrollView/);
 const adminWorkspace = readFileSync("apps/mobile/src/roles/admin-workspace.tsx", "utf8");
 for (const title of ["POS & Sales", "Finance & Accounts", "Parties & Khata", "Products & Stock", "Purchases", "Milk Operations", "Digital Munshi", "Vet & Dairy", "Staff & Attendance", "Activity & Alerts", "Settings & Access"]) assert.match(adminWorkspace, new RegExp(title.replace(/[&]/g, "\\&")));
+for (const title of ["Milk Control Room", "Quality Command", "Farmer payment aur company receipt", "Centre / Route health", "Dispatch & company receipt", "Quality alerts · farmer wise", "Hamari service income"]) assert.match(adminWorkspace, new RegExp(title.replace(/[&]/g, "\\&")));
+assert.match(adminWorkspace, /offset=\$\{offset\}/);
+assert.match(adminWorkspace, /period === "week"/);
 assert.doesNotMatch(adminWorkspace, /onApply=\{\(\) => undefined\}/);
 const farmerApproved = readFileSync("apps/mobile/src/roles/farmer-approved.tsx", "utf8");
 assert.match(farmerApproved, /onRequestVet/);
