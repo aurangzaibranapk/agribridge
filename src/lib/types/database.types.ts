@@ -24488,7 +24488,12 @@ export type Database = {
       }
       milk_dispatches: {
         Row: {
+          accepted: boolean | null
           branch_id: string | null
+          collection_time: string | null
+          collector_signature: string | null
+          collector_signed_at: string | null
+          collector_signed_by: string | null
           created_at: string
           created_by: string | null
           dispatch_date: string
@@ -24496,18 +24501,30 @@ export type Database = {
           driver_name: string | null
           fat_percentage: number | null
           id: string
+          licensee_rep_name: string | null
+          licensee_signature: string | null
+          licensee_signed_at: string | null
+          licensee_signed_by: string | null
+          mcc_name: string | null
           notes: string | null
           received_at: string | null
           received_by: string | null
           received_liters: number | null
+          rejection_reason: string | null
           shift: string
+          shop_id: string | null
           shortage_liters: number | null
           shortage_percentage: number | null
           snf_percentage: number | null
           vehicle_name: string | null
         }
         Insert: {
+          accepted?: boolean | null
           branch_id?: string | null
+          collection_time?: string | null
+          collector_signature?: string | null
+          collector_signed_at?: string | null
+          collector_signed_by?: string | null
           created_at?: string
           created_by?: string | null
           dispatch_date?: string
@@ -24515,18 +24532,30 @@ export type Database = {
           driver_name?: string | null
           fat_percentage?: number | null
           id?: string
+          licensee_rep_name?: string | null
+          licensee_signature?: string | null
+          licensee_signed_at?: string | null
+          licensee_signed_by?: string | null
+          mcc_name?: string | null
           notes?: string | null
           received_at?: string | null
           received_by?: string | null
           received_liters?: number | null
+          rejection_reason?: string | null
           shift?: string
+          shop_id?: string | null
           shortage_liters?: number | null
           shortage_percentage?: number | null
           snf_percentage?: number | null
           vehicle_name?: string | null
         }
         Update: {
+          accepted?: boolean | null
           branch_id?: string | null
+          collection_time?: string | null
+          collector_signature?: string | null
+          collector_signed_at?: string | null
+          collector_signed_by?: string | null
           created_at?: string
           created_by?: string | null
           dispatch_date?: string
@@ -24534,11 +24563,18 @@ export type Database = {
           driver_name?: string | null
           fat_percentage?: number | null
           id?: string
+          licensee_rep_name?: string | null
+          licensee_signature?: string | null
+          licensee_signed_at?: string | null
+          licensee_signed_by?: string | null
+          mcc_name?: string | null
           notes?: string | null
           received_at?: string | null
           received_by?: string | null
           received_liters?: number | null
+          rejection_reason?: string | null
           shift?: string
+          shop_id?: string | null
           shortage_liters?: number | null
           shortage_percentage?: number | null
           snf_percentage?: number | null
@@ -24588,6 +24624,89 @@ export type Database = {
             referencedColumns: ["profile_id"]
           },
         ]
+      }
+      milk_dispatch_lines: {
+        Row: {
+          adjusted_volume_l: number | null
+          chiller_no: string
+          created_at: string
+          dispatch_id: string
+          fat_percentage: number | null
+          gross_volume_l: number
+          id: string
+          line_no: number
+          lr: number | null
+          milk_type: string
+          organo: string | null
+          snf_percentage: number | null
+          temperature_c: number | null
+          ts_percentage: number | null
+        }
+        Insert: {
+          adjusted_volume_l?: number | null
+          chiller_no: string
+          created_at?: string
+          dispatch_id: string
+          fat_percentage?: number | null
+          gross_volume_l: number
+          id?: string
+          line_no: number
+          lr?: number | null
+          milk_type: string
+          organo?: string | null
+          snf_percentage?: number | null
+          temperature_c?: number | null
+          ts_percentage?: number | null
+        }
+        Update: {
+          adjusted_volume_l?: number | null
+          chiller_no?: string
+          created_at?: string
+          dispatch_id?: string
+          fat_percentage?: number | null
+          gross_volume_l?: number
+          id?: string
+          line_no?: number
+          lr?: number | null
+          milk_type?: string
+          organo?: string | null
+          snf_percentage?: number | null
+          temperature_c?: number | null
+          ts_percentage?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milk_dispatch_lines_dispatch_id_fkey"
+            columns: ["dispatch_id"]
+            isOneToOne: false
+            referencedRelation: "milk_dispatches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      milk_handover_specs: {
+        Row: {
+          id: boolean
+          min_fat: number
+          min_lr: number
+          min_snf: number
+          updated_at: string
+        }
+        Insert: {
+          id?: boolean
+          min_fat?: number
+          min_lr?: number
+          min_snf?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: boolean
+          min_fat?: number
+          min_lr?: number
+          min_snf?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       milk_entries: {
         Row: {

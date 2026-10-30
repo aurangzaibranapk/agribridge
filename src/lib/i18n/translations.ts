@@ -17,6 +17,7 @@ import { myWorkDict } from "./dict/my-work";
 import { machineryQueueDict } from "./dict/machinery-queue";
 import { leaveDict } from "./dict/leave";
 import { milkDispatchDict } from "./dict/milk-dispatch";
+import { milkHandoverDict } from "./dict/milk-handover";
 import { milkDict, milkPageDict, milkFuelDict, milkOpsDict } from "./dict/milk";
 import { financeDict } from "./dict/finance";
 import { assetsDict } from "./dict/assets";
@@ -109,6 +110,7 @@ const dict = {
   ...machineryQueueDict,
   ...leaveDict,
   ...milkDispatchDict,
+  ...milkHandoverDict,
   ...milkDict,
   ...milkPageDict,
   ...financeDict,
