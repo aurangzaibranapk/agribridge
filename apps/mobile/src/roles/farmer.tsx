@@ -3,11 +3,50 @@ import { ActivityIndicator, RefreshControl, ScrollView, Text, TextInput, View } 
 import { settingsOrError } from "../../../../src/lib/mobile/pricing";
 import { priceFromSettings } from "../../../../src/lib/mobile/pricing";
 import type { MilkSettings } from "../../../../src/lib/dairy/rules";
-import { karachiDaySeries, liveGet, liveGetScoped, liveInsert, loadCatalog, loadHealth, loadKhata, loadMilkList, loadMilkSettings, loadMyFarmerId, loadProfileNames, loadRoleOrders, loadVaccines, pricedMilkTotal, rupees, salesByDay, shiftLabel, testOrdersFor, type CatalogRow, type HealthRow, type KhataView, type MilkRow, type OrderRow, type PartyRow, type ReadResult, type VaccineRow } from "../../../../src/lib/mobile/live-read";
+import { EMPTY_FACTS, type FarmFacts } from "../../../../src/lib/mobile/farmer-desk";
+import { karachiDaySeries, liveGet, liveGetScoped, liveInsert, loadCatalog, loadHealth, loadKhata, loadMilkList, loadMilkSettings, loadMyFarmerId, loadProfileNames, loadRoleOrders, loadVaccines, pricedMilkTotal, rupees, salesByDay, shiftLabel, testOrdersFor, type CatalogRow, type HealthRow, type KhataView, type LiveAuth, type MilkRow, type OrderRow, type PartyRow, type ReadResult, type VaccineRow } from "../../../../src/lib/mobile/live-read";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { Empty, SaleChart, Section, liveAuth, type LiveBag } from "../bits";
+import { FarmerShell } from "./farmer-shell";
 import { FarmerGlass } from "./glass-homes";
 import { Btn, colors } from "../kit";
+
+async function loadFacts(auth: LiveAuth): Promise<FarmFacts> {
+  const farmerId = await loadMyFarmerId(auth, fetch);
+  if (!farmerId) return EMPTY_FACTS;
+  const id = encodeURIComponent(farmerId);
+  const [farmer, farms, animals] = await Promise.all([
+    liveGetScoped<{ full_name?: string | null; village?: string | null; tehsil?: string | null; phone_number?: string | null; farmer_code?: string | null; total_farms_count?: number | null; cow_count?: number | null; buffalo_count?: number | null; calves_count?: number | null }>(auth, `farmers?select=full_name,village,tehsil,phone_number,farmer_code,total_farms_count,cow_count,buffalo_count,calves_count&id=eq.${id}&limit=1`, fetch),
+    liveGet<{ id?: string }>(auth, `farms?select=id&farmer_id=eq.${id}&limit=40`, fetch),
+    liveGet<{ id?: string; tag_no?: string | null; species?: string | null; status?: string | null }>(auth, `dairy_animals?select=id,tag_no,species,status&farmer_id=eq.${id}&limit=80`, fetch),
+  ]);
+  const row = farmer.ok ? farmer.rows[0] : undefined;
+  let phone = row?.phone_number || null;
+  if (!phone && auth.userId) {
+    const profile = await liveGet<{ phone_number?: string | null }>(auth, `profiles?select=phone_number&id=eq.${encodeURIComponent(auth.userId)}&limit=1`, fetch);
+    phone = profile.ok ? profile.rows[0]?.phone_number || null : null;
+  }
+  let crops: number | null = farms.ok ? 0 : null;
+  if (farms.ok && farms.rows.length) {
+    const ids = farms.rows.map((farm) => farm.id).filter((value): value is string => Boolean(value)).map((value) => encodeURIComponent(value)).join(",");
+    const cropRows = await liveGet<{ harvest_booked_at?: string | null }>(auth, `crop_history?select=id,harvest_booked_at&farm_id=in.(${ids})&limit=80`, fetch);
+    crops = cropRows.ok ? cropRows.rows.filter((crop) => !crop.harvest_booked_at).length : null;
+  }
+  const liveAnimals = animals.ok ? animals.rows.filter((animal) => animal.status !== "sold" && animal.status !== "dead") : [];
+  const fromCounts = row && [row.cow_count, row.buffalo_count, row.calves_count].some((value) => value != null)
+    ? num(row.cow_count) + num(row.buffalo_count) + num(row.calves_count)
+    : null;
+  return {
+    name: String(row?.full_name || "").trim(),
+    place: [row?.village, row?.tehsil].map((value) => String(value || "").trim()).filter(Boolean).join(", "),
+    phone,
+    code: row?.farmer_code || null,
+    farms: farms.ok ? farms.rows.length : row?.total_farms_count ?? null,
+    crops,
+    animals: animals.ok ? liveAnimals.length : fromCounts,
+    animalRows: liveAnimals,
+  };
+}
 
 function num(value: number | string | null | undefined): number {
   const n = typeof value === "number" ? value : Number(value);
@@ -41,7 +80,7 @@ function kindLabel(kind: string | null | undefined, vaccine?: string | null): st
   return "Vet visit";
 }
 
-export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?: LiveBag; onTab?: (key: string) => void; onProfile?: () => void }) {
+export function RoleScreen({ tab, live, onTab, onProfile, onLogout, onRoleSwitch, onSupport, onSettings }: { tab: string; live?: LiveBag; onTab?: (key: string) => void; onProfile?: () => void; onLogout?: () => void; onRoleSwitch?: () => void; onSupport?: () => void; onSettings?: () => void }) {
   const auth = liveAuth(live);
   const [khata, setKhata] = useState<KhataView | null>(null);
   const [milk, setMilk] = useState<ReadResult<MilkRow> | null>(null);
@@ -55,11 +94,12 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
   const [amount, setAmount] = useState("");
   const [orderNote, setOrderNote] = useState("");
   const [orderBusy, setOrderBusy] = useState(false);
+  const [facts, setFacts] = useState<FarmFacts | null>(null);
 
   const load = useCallback(async () => {
     if (!auth) return;
     const farmerId = auth.testAccount ? await loadMyFarmerId(auth, fetch) : undefined;
-    const [nextKhata, nextMilk, nextOrders, nextShop, nextHealth, nextVaccines, nextSettings] = await Promise.all([
+    const [nextKhata, nextMilk, nextOrders, nextShop, nextHealth, nextVaccines, nextSettings, nextFacts] = await Promise.all([
       loadKhata(auth, fetch),
       loadMilkList(auth, fetch, 80, auth.testAccount ? farmerId ?? null : undefined),
       loadRoleOrders(auth, "customer", fetch),
@@ -67,6 +107,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
       loadHealth(auth, fetch),
       loadVaccines(auth, fetch),
       loadMilkSettings(auth, fetch),
+      loadFacts(auth),
     ]);
     setKhata(nextKhata);
     setMilk(nextMilk);
@@ -76,6 +117,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
     setVaccines(nextVaccines);
     const resolved = nextSettings.ok ? settingsOrError(nextSettings.rows[0] ?? null) : null;
     setSettings(resolved && !("error" in resolved) ? resolved : null);
+    setFacts(nextFacts);
     if (nextMilk.ok) {
       setNames(await loadProfileNames(auth, nextMilk.rows.map((row) => row.mca_profile_id || ""), fetch));
     }
@@ -142,7 +184,8 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
     await load();
   }
 
-  if (tab === "home" || tab === "khata") {
+  const refresh = () => { setRefreshing(true); void load().finally(() => setRefreshing(false)); };
+  if (tab === "khata") {
     return (
       <FarmerGlass
         focus={tab === "khata" ? "track" : "home"}
@@ -153,13 +196,35 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
         milk={milk}
         names={names}
         refreshing={refreshing}
-        onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }}
+        onRefresh={refresh}
+      />
+    );
+  }
+  if (tab === "home" || tab === "munshi" || tab === "add" || tab === "services" || tab === "more") {
+    return (
+      <FarmerShell
+        tab={tab}
+        live={live}
+        khata={khata}
+        milk={milk}
+        orders={orders}
+        health={health}
+        names={names}
+        facts={facts}
+        refreshing={refreshing}
+        onRefresh={refresh}
+        onTab={onTab}
+        onRole={onRoleSwitch}
+        onSupport={onSupport}
+        onSettings={onSettings}
+        onLogout={onLogout}
       />
     );
   }
 
   return (
-    <ScrollView style={{ padding: 16, backgroundColor: "#F7F8F3" }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} tintColor={colors.green} />}>
+    <ScrollView style={{ padding: 16, backgroundColor: "#F7F8F3" }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.green} />}>
+      <Text onPress={() => onTab?.("home")} style={{ color: colors.greenDark, fontWeight: "800", marginBottom: 8 }}>‹ Home</Text>
       {tab === "farm" ? (
         <View>
           <Section title="Mera Farm" sub="Kisan aur Customer ka aik hi account">

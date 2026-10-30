@@ -184,6 +184,8 @@ export type WeatherView = {
   wind: string;
   when: string;
   note: string | null;
+  /** Aaj ki barish ka andaza, jaise "10%". Na mile to null. */
+  rain?: string | null;
 };
 
 const WMO: Record<number, string> = {
@@ -244,8 +246,8 @@ async function fetchWeather(place: string): Promise<WeatherView | null> {
   const geo = await geoRes.json() as { results?: { latitude: number; longitude: number; name: string; country_code?: string; country?: string }[] };
   const hit = pickPakistan(geo.results);
   if (!hit) return null;
-  const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${hit.latitude}&longitude=${hit.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&wind_speed_unit=kmh&timezone=Asia%2FKarachi`);
-  const data = await res.json() as { current?: { temperature_2m?: number; relative_humidity_2m?: number; wind_speed_10m?: number; weather_code?: number } };
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${hit.latitude}&longitude=${hit.longitude}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=precipitation_probability_max&forecast_days=1&wind_speed_unit=kmh&timezone=Asia%2FKarachi`);
+  const data = await res.json() as { current?: { temperature_2m?: number; relative_humidity_2m?: number; wind_speed_10m?: number; weather_code?: number }; daily?: { precipitation_probability_max?: number[] } };
   const current = data.current;
   if (!current || current.temperature_2m == null) return null;
   const when = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", weekday: "short", day: "numeric", month: "short" }).format(new Date());
@@ -257,6 +259,7 @@ async function fetchWeather(place: string): Promise<WeatherView | null> {
     wind: current.wind_speed_10m == null ? "—" : `${Math.round(current.wind_speed_10m)} km/h`,
     when,
     note: null,
+    rain: data.daily?.precipitation_probability_max?.[0] == null ? null : `${Math.round(data.daily.precipitation_probability_max[0])}%`,
   };
 }
 

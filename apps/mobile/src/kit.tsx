@@ -94,7 +94,39 @@ function AdminTabIcon({ label, color }: { label: string; color: string }) {
   return <Svg {...props}><Circle cx="12" cy="8" r="3" stroke={color} strokeWidth="1.7" /><Path d="M5.5 19c1.1-3 3.2-4.5 6.5-4.5s5.4 1.5 6.5 4.5" stroke={color} strokeWidth="1.7" strokeLinecap="round" /></Svg>;
 }
 
-export function Tabs({ tabs, current, onChange, kind = "pill" }: { tabs: { key: string; label: string }[]; current: string; onChange: (key: string) => void; kind?: "pill" | "admin" }) {
+function FarmerTabIcon({ label, color }: { label: string; color: string }) {
+  const props = { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none" as const };
+  if (label === "Munshi") return <Svg {...props}><Rect x="6" y="3.5" width="12" height="17" rx="1.6" stroke={color} strokeWidth="1.7" /><Path d="M9 8h6M9 12h6M9 16h4" stroke={color} strokeWidth="1.6" strokeLinecap="round" /></Svg>;
+  if (label === "Services") return <Svg {...props}><Rect x="4" y="4" width="7" height="7" rx="1.4" stroke={color} strokeWidth="1.7" /><Rect x="13" y="4" width="7" height="7" rx="1.4" stroke={color} strokeWidth="1.7" /><Rect x="4" y="13" width="7" height="7" rx="1.4" stroke={color} strokeWidth="1.7" /><Rect x="13" y="13" width="7" height="7" rx="1.4" stroke={color} strokeWidth="1.7" /></Svg>;
+  if (label === "Profile") return <Svg {...props}><Circle cx="12" cy="8" r="3" stroke={color} strokeWidth="1.7" /><Path d="M5.5 19c1.1-3 3.2-4.5 6.5-4.5s5.4 1.5 6.5 4.5" stroke={color} strokeWidth="1.7" strokeLinecap="round" /></Svg>;
+  return <Svg {...props}><Path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-5.2v-6.2H10.2V21H5a1 1 0 0 1-1-1v-8.5z" stroke={color} strokeWidth="1.7" strokeLinejoin="round" /></Svg>;
+}
+
+export function Tabs({ tabs, current, onChange, kind = "pill" }: { tabs: { key: string; label: string }[]; current: string; onChange: (key: string) => void; kind?: "pill" | "admin" | "farmer" }) {
+  if (kind === "farmer") {
+    return (
+      <View style={styles.farmerTabs}>
+        {tabs.map((tab) => {
+          const on = current === tab.key;
+          const color = on ? "#0E7A3C" : "#8A9690";
+          if (tab.label === "Add") {
+            return (
+              <Pressable key={tab.key} onPress={() => onChange(tab.key)} style={styles.farmerTab}>
+                <View style={styles.farmerAdd}><Text style={styles.farmerAddText}>+</Text></View>
+                <Text style={[styles.farmerLabel, { color }]}>Add</Text>
+              </Pressable>
+            );
+          }
+          return (
+            <Pressable key={tab.key} onPress={() => onChange(tab.key)} style={styles.farmerTab}>
+              <FarmerTabIcon label={tab.label} color={color} />
+              <Text style={[styles.farmerLabel, { color }]}>{tab.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  }
   if (kind === "admin") {
     return (
       <View style={styles.adminTabs}>
@@ -164,6 +196,11 @@ const styles = StyleSheet.create({
   adminTab: { flex: 1, alignItems: "center", paddingTop: 10, paddingBottom: 2 },
   adminTabMark: { position: "absolute", top: 0, width: 32, height: 3, borderRadius: 2, backgroundColor: "#0E7A3C" },
   adminTabText: { fontSize: 11, fontWeight: "700", marginTop: 3 },
+  farmerTabs: { flexDirection: "row", alignItems: "flex-end", backgroundColor: "#FFFFFF", borderTopWidth: 1, borderTopColor: "#E3EBE6", paddingBottom: 8, paddingTop: 8, overflow: "visible" },
+  farmerTab: { flex: 1, alignItems: "center", justifyContent: "flex-end", minHeight: 52 },
+  farmerLabel: { fontSize: 11, fontWeight: "700", marginTop: 4 },
+  farmerAdd: { width: 56, height: 56, borderRadius: 28, backgroundColor: "#0E7A3C", alignItems: "center", justifyContent: "center", marginTop: -26, borderWidth: 4, borderColor: "#F3F6F2" },
+  farmerAddText: { color: "#fff", fontSize: 32, fontWeight: "500", marginTop: -2 },
   laterTitle: { fontWeight: "700", color: colors.text, marginBottom: 6 },
   laterBody: { color: colors.muted, lineHeight: 20 },
 });

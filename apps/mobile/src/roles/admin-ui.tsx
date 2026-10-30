@@ -5,6 +5,7 @@ import { greetingName } from "../../../../src/lib/mobile/display-name";
 import { agoLabel, approvalHeadline, categoryLabel, roleTitle, rupeeLabel, type ApprovalFilter, type DeskStep, type InboxItem } from "../../../../src/lib/mobile/admin-desk";
 import { AGRIBRIDGE_OS_VERSION } from "../../../../src/lib/app-version";
 import { glass } from "../glass";
+import { VisionCard } from "./vision-card";
 
 const green = "#0E7A3C";
 const greenDeep = "#0C5C34";
@@ -165,6 +166,7 @@ export function AdminHomeView({
           </View>
         </View>
       </View>
+      <VisionCard role={role} />
       {banner ? <Text style={{ color: "#8A5A00", marginBottom: 8 }}>{banner}</Text> : null}
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 12 }}>
         <Text style={{ flex: 1, color: ink, fontSize: 20, fontWeight: "800" }}>Today overview</Text>
