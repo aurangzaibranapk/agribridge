@@ -1,7 +1,7 @@
 "use client";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
-import { CheckCircle2, AlertTriangle, Printer, Clock, ArrowLeft, Truck } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Printer, Clock, ArrowLeft, Truck, MessageCircle } from "lucide-react";
 import { receiveCash, carrierConfirm, type ActionState } from "@/actions/cash-handover";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -168,12 +168,35 @@ export function SlipClient({
         <Link href="/admin/cash-handover" className="flex items-center gap-1.5 text-xs text-surface-500 hover:text-surface-800">
           <ArrowLeft className="h-3.5 w-3.5" /> Cash Handover
         </Link>
-        <button
-          onClick={() => window.print()}
-          className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700"
-        >
-          <Printer className="h-3.5 w-3.5" /> Print
-        </button>
+        <span className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const text = [
+                shopTitle,
+                "Cash Handover Slip",
+                `Slip #${handover.id.slice(0, 8).toUpperCase()}`,
+                header && header.shiftNumbers.length > 0 ? `Shift: ${header.shiftNumbers.join(", ")}` : "",
+                `Bhejne wala: ${handover.senderName}`,
+                `Pane wala: ${handover.recipientName}`,
+                handover.carrierName ? `Carrier: ${handover.carrierName}` : "",
+                `Raqam: ${rs(handover.amountSent)}`,
+                statusText,
+              ].filter(Boolean).join("\n");
+              window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+            }}
+            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+          >
+            <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+          </button>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-700"
+          >
+            <Printer className="h-3.5 w-3.5" /> Print
+          </button>
+        </span>
       </div>
 
       {/* Slip -- POS sale receipt (receipt-modal.tsx) jaisi thermal slip */}

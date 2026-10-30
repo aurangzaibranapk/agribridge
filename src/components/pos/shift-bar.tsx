@@ -92,6 +92,16 @@ export function ShiftCashHandoverForm({
   const allIds = shiftIds ?? [shiftId];
   const handoverSlipId = handoverState.handoverId;
 
+  function shareHandoverWhatsApp() {
+    if (!handoverSlipId) return;
+    const text = [
+      "Cash Handover Slip",
+      `Slip #${handoverSlipId.slice(0, 8).toUpperCase()}`,
+      `Raqam: ${rs(enteredAmount)}`,
+    ].join("\n");
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+  }
+
   // Cash bhejne ke baad slip khud khule — chhota link modal ke neeche
   // chhup jata tha, is liye POS close par slip nazar hi nahi aati thi.
   useEffect(() => {
@@ -130,8 +140,13 @@ export function ShiftCashHandoverForm({
             <div className="flex h-[90vh] w-full max-w-sm flex-col overflow-hidden rounded-xl bg-white shadow-xl">
               <div className="flex items-center justify-between gap-2 border-b p-3 text-sm font-semibold text-black">
                 <span>Cash Handover Slip</span>
-                <span className="flex items-center gap-2">
-                  <a href={`/admin/cash-handover/slip/${handoverSlipId}?print=1`} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-brand-700 hover:underline">Poora safha</a>
+                <span className="flex flex-wrap items-center justify-end gap-2">
+                  <button type="button" onClick={shareHandoverWhatsApp} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-semibold text-white">
+                    <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                  </button>
+                  <a href={`/admin/cash-handover/slip/${handoverSlipId}?print=1`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-2 py-1 text-xs font-semibold text-white">
+                    <Printer className="h-3.5 w-3.5" /> Print
+                  </a>
                   <button type="button" onClick={() => setSlipOpen(false)} aria-label="Close Cash Handover Slip"><X className="h-5 w-5" /></button>
                 </span>
               </div>
@@ -383,25 +398,15 @@ function shiftReportText({
 
 function ShiftCloseActions({
   shiftNumber,
-  shopName,
-  counterName,
-  summary,
-  countedCash,
+  text,
   onPrint,
+  onWhatsApp,
 }: {
   shiftNumber: string;
-  shopName: string;
-  counterName: string;
-  summary: ShiftCashSummary;
-  countedCash: number;
+  text: string;
   onPrint: () => void;
+  onWhatsApp: () => void;
 }) {
-  const text = shiftReportText({ shiftNumber, shopName, counterName, summary, countedCash });
-
-  function shareWhatsApp() {
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
-  }
-
   function emailReport() {
     window.location.href = `mailto:?subject=${encodeURIComponent(`AgriBridge Shift Close — ${shiftNumber}`)}&body=${encodeURIComponent(text)}`;
   }
@@ -413,7 +418,7 @@ function ShiftCloseActions({
         <button type="button" onClick={onPrint} className="flex items-center justify-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-2 py-2 text-xs font-semibold text-brand-700 hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-950/30 dark:text-brand-300">
           <Printer className="h-3.5 w-3.5" /> Print
         </button>
-        <button type="button" onClick={shareWhatsApp} className="flex items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
+        <button type="button" onClick={onWhatsApp} className="flex items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">
           <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
         </button>
         <button type="button" onClick={emailReport} className="flex items-center justify-center gap-1.5 rounded-lg border border-surface-200 bg-surface-50 px-2 py-2 text-xs font-semibold text-surface-700 hover:bg-surface-100 dark:border-surface-700 dark:bg-surface-800 dark:text-surface-200">
@@ -521,12 +526,43 @@ export function ShiftBar({
 
   const router = useRouter();
   const [receiptOpen, setReceiptOpen] = useState(false);
-  // Counted cash > 0 ka matlab handover zaroori hai. Us waqt Daily Cash
-  // Slip upar se mat kholo — wo Cash Handover form aur slip dono dhak leti hai.
+  // Raat ki shift par golak mein cash hota hai. Pehle (27 Oct) counted
+  // cash > 0 par bill auto-open band kar diya gaya tha, taake handover
+  // form na dhake. Staff ko band karte hi slip, Print aur WhatsApp
+  // chahiye — form slip ke peeche rehta hai, "Cash bhejein" se wapas.
   const cashHandoverDue = !!(state.success && state.countedCash != null && state.countedCash > 0);
   useEffect(() => {
-    if (state.success && state.shiftId && !cashHandoverDue) setReceiptOpen(true);
-  }, [state.success, state.shiftId, cashHandoverDue]);
+    if (state.success && state.shiftId) setReceiptOpen(true);
+  }, [state.success, state.shiftId]);
+
+  function closeBillText() {
+    if (summary && state.countedCash != null) {
+      return shiftReportText({
+        shiftNumber,
+        shopName,
+        counterName,
+        summary,
+        countedCash: state.countedCash,
+      });
+    }
+    return [
+      shopName,
+      "POS Shift Close Report",
+      `Shift: ${shiftNumber}`,
+      `Shop: ${shopName}`,
+      `Counter: ${counterName}`,
+      state.countedCash != null ? `Counted Cash: ${rs(state.countedCash)}` : "",
+    ].filter(Boolean).join("\n");
+  }
+
+  function shareCloseWhatsApp() {
+    window.open(`https://wa.me/?text=${encodeURIComponent(closeBillText())}`, "_blank", "noopener,noreferrer");
+  }
+
+  function printCloseSlip() {
+    if (!state.shiftId) return;
+    window.open(`/admin/pos/shift/${state.shiftId}/slip`, "_blank", "noopener,noreferrer");
+  }
 
 
   const openedTime = new Date(openedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
@@ -659,6 +695,14 @@ export function ShiftBar({
                 </p>
               )}
               <a
+                href={`/admin/pos/shift/${pendingHandover.shiftId}/slip`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white"
+              >
+                <Printer className="h-3.5 w-3.5" /> Closing bill — Print / WhatsApp
+              </a>
+              <a
                 href={`/admin/cash-custody/shift/${pendingHandover.shiftId}/slip?copy=both&print=1`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -682,7 +726,23 @@ export function ShiftBar({
       {receiptOpen && state.shiftId && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-3" role="dialog" aria-modal="true" aria-label="Saved shift closing receipt">
           <div className="flex h-[90vh] w-full max-w-sm flex-col overflow-hidden rounded-xl bg-white shadow-xl">
-            <div className="flex justify-between border-b p-3 text-sm font-semibold text-black"><span>Shift Closing Slip</span><button type="button" onClick={() => setReceiptOpen(false)} aria-label="Close receipt"><X className="h-5 w-5" /></button></div>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b p-3 text-sm font-semibold text-black">
+              <span>Shift Closing Slip</span>
+              <span className="flex flex-wrap items-center justify-end gap-2">
+                <button type="button" onClick={printCloseSlip} className="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-2.5 py-1.5 text-xs font-semibold text-white">
+                  <Printer className="h-3.5 w-3.5" /> Print
+                </button>
+                <button type="button" onClick={shareCloseWhatsApp} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white">
+                  <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+                </button>
+                {cashHandoverDue && (
+                  <button type="button" onClick={() => setReceiptOpen(false)} className="text-xs font-medium text-brand-700">
+                    Cash bhejein
+                  </button>
+                )}
+                <button type="button" onClick={() => setReceiptOpen(false)} aria-label="Close receipt"><X className="h-5 w-5" /></button>
+              </span>
+            </div>
             <iframe title="Saved POS closing slip" src={`/admin/pos/shift/${state.shiftId}/slip?embed=1`} className="min-h-0 flex-1 border-0" />
           </div>
         </div>, document.body)}
@@ -714,13 +774,21 @@ export function ShiftBar({
                   </div>
                   <p className="text-sm font-medium text-surface-900 dark:text-white">{state.message}</p>
                 </div>
+                {state.shiftId && (
+                  <ShiftCloseActions
+                    shiftNumber={shiftNumber}
+                    text={closeBillText()}
+                    onPrint={printCloseSlip}
+                    onWhatsApp={shareCloseWhatsApp}
+                  />
+                )}
                 {state.custodyPacketId && (state.countedCash ?? 0) > 0 && (
                   <CustodySlipLinks packetId={state.custodyPacketId} />
                 )}
                 {cashHandoverDue && (
                   <div className="mt-3">
                     <p className="mb-2 text-xs text-surface-600 dark:text-surface-400">
-                      Cash bhejein — Cash Handover Slip isi screen par khul jayegi, print ke sath.
+                      Slip upar khul chuki hai — Print aur WhatsApp usi par hain. Cash bhejne par Cash Handover Slip bhi khulegi.
                     </p>
                     <ShiftCashHandoverForm shiftId={shiftId} branchId={branchId} shopId={shopId ?? null} countedCash={state.countedCash ?? 0} canSendCash={canSendCash} />
                   </div>
@@ -737,16 +805,6 @@ export function ShiftBar({
                   >
                     <Printer className="h-4 w-4" /> Daily Cash Slip kholen
                   </button>
-                )}
-                {summary && state.countedCash != null && (
-                  <ShiftCloseActions
-                    shiftNumber={shiftNumber}
-                    shopName={shopName}
-                    counterName={counterName}
-                    summary={summary}
-                    countedCash={state.countedCash}
-                    onPrint={() => setReceiptOpen(true)}
-                  />
                 )}
                 <p className="mt-3 text-center text-xs text-surface-400">Band karein — safha refresh ho jayega.</p>
               </div>

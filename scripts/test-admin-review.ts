@@ -35,9 +35,14 @@ test("cash handover slip formats in fixed zone/locale (no hydration mismatch)", 
   assert.ok(!src.includes("toLocaleString()"));
   assert.ok(src.includes("handover-slip-embed"));
 });
-test("POS close shows Cash Handover Slip instead of covering it with the daily slip", () => {
+test("POS close opens the shift bill immediately for print and WhatsApp, including when cash handover is due", () => {
   const bar = readFileSync("src/components/pos/shift-bar.tsx", "utf8");
   assert.ok(bar.includes("cashHandoverDue"));
+  assert.ok(!bar.includes("!cashHandoverDue"), "counted cash must not hide the closing bill");
+  assert.ok(bar.includes("if (state.success && state.shiftId) setReceiptOpen(true)"));
+  assert.ok(bar.includes("shareCloseWhatsApp"));
+  assert.ok(bar.includes("Cash bhejein"));
+  assert.ok(bar.includes("Closing bill — Print / WhatsApp"));
   assert.ok(bar.includes("?embed=1&print=1"));
   assert.ok(bar.includes('name="shift_id"'));
   const action = readFileSync("src/actions/cash-handover.ts", "utf8");
@@ -45,8 +50,13 @@ test("POS close shows Cash Handover Slip instead of covering it with the daily s
   assert.ok(action.includes("shiftIdsFieldPresent"));
   const slip = readFileSync("src/app/admin/cash-handover/slip/[id]/page.tsx", "utf8");
   assert.ok(slip.includes("h.shift_id"));
+  const handoverUi = readFileSync("src/app/admin/cash-handover/slip/[id]/slip-client.tsx", "utf8");
+  assert.ok(handoverUi.includes("https://wa.me/"));
   const daily = readFileSync("src/app/admin/pos/shift/[shiftId]/slip/page.tsx", "utf8");
   assert.ok(daily.includes("/admin/cash-handover/slip/"));
+  assert.ok(daily.includes("shareText"));
+  const printBtn = readFileSync("src/app/admin/pos/shift/[shiftId]/slip/print-button.tsx", "utf8");
+  assert.ok(printBtn.includes("https://wa.me/"));
   const mw = readFileSync("src/middleware.ts", "utf8");
   assert.ok(mw.includes('"/admin/cash-handover/slip"'));
   assert.equal(pathAllowed(["/admin/cash-handover/slip"], "/admin/cash-handover/slip/91ad8099"), true);
