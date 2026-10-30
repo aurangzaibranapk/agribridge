@@ -219,7 +219,20 @@ export default async function KharchePage({
             <Link href="/admin/my-work" className="mb-2 inline-flex items-center gap-1.5 text-sm text-surface-500 transition hover:text-brand-700">
               <ArrowLeft className="h-4 w-4" /> Back to My Work
             </Link>
-            <PageHeader title={t("kh_page_title", lang)} description={t("kh_page_desc", lang)} />
+            <PageHeader
+              title={t("kh_page_title", lang)}
+              description={t("kh_page_desc", lang)}
+              actions={
+                sabKuchWala || (await canDo("kharche.report", "view")) ? (
+                  <Link
+                    href="/admin/reports/expenses"
+                    className="inline-flex items-center rounded-lg border border-surface-200 px-3 py-2 text-sm font-medium text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
+                  >
+                    {t("khr_open", lang)}
+                  </Link>
+                ) : null
+              }
+            />
           </div>
           <LiveRefresh tables={["company_expense_requests", "labour_work_entries", "finance_transactions"]} />
         </div>

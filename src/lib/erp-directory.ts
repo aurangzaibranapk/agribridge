@@ -124,6 +124,7 @@ const CURATED_FEATURES: ErpFeature[] = [
   { section: "Finance", label: "Finance ki Qatar", href: "/admin/finance/queue", description: "Finance se awaiting actions — pending approvals, pending payments.", who: "Finance Head" },
   { section: "Finance", label: "Adaigi ka Tareeqa", href: "/admin/finance/payment-mapping", description: "Payment methods ka mapping — cash, bank, wallet kahan use hota hai.", who: "Finance / Admin" },
   { section: "Finance", label: "Paisa & Khata (Kharche)", href: "/admin/kharche", description: "Company expenses — kharche darj karo, approve karo, hisaab rakho.", who: "Finance / Admin" },
+  { section: "Finance", label: "Kharchon ki Report", href: "/admin/reports/expenses", description: "Admin/Owner ke liye kharcha: dukan, shaakh, qism, khata, halat aur tareekh. Pending bhi. CSV poori filtered fehrist.", who: "Owner / Admin / Finance", addedDate: "2026-10-30" },
   { section: "Finance", label: "Load & Bill", href: "/admin/load-bill", description: "Load (recharge) aur bill payments ka hisaab.", who: "Finance / Staff" },
   { section: "Finance", label: "Khaton ka Adjustment (Settlements)", href: "/admin/settlements", description: "Khaton ka aapas mein adjustment — udhaar settle karo.", who: "Finance / Admin" },
   { section: "Finance", label: "Cash Book", href: "/admin/finance", description: "GL accounts, journal entries, aur cashbook — poora finance ledger.", who: "Finance / Accounts" },

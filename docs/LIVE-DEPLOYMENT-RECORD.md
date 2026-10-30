@@ -1,3 +1,10 @@
+## Pending — 30 October 2026: Kharchon ki report (725)
+
+Branch `cursor/expense-report-78f4`. Migration **725 file only**. Testing aur Live dono par **nahi** chali. **724 mat use karo** — wo `724_data_health_dedupe` hai. 725 sirf feature `kharche.report`, ijazat aur `feature_help`. Koi table, koi column, koi journal, koi raqam nahi badalti. Safha `/admin/reports/expenses`. Manzoori ab bhi `/admin/kharche`. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `725_expense_report_help.sql`. Rollback: `725_expense_report_help.rollback.sql`.
+- Owner/Admin/Finance poori company. Manager apni shaakh. Sales staff ko ye feature nahi.
+
 ## Pending — 30 October 2026: Milk Handover Certificate (726)
 
 Branch `cursor/milk-handover-certificate-1460`. Migration **726 file only**. Testing aur Live dono par **nahi** chali. **725 mat use karo** — wo POS expire-batch admin code hai (`725_pos_expired_batch_sale_code`). 726 `milk_dispatches` par certificate ke khane aur `milk_dispatch_lines` (chiller qatarein). Koi purana litre nahi bharta. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).

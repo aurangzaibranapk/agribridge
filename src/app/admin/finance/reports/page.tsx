@@ -79,6 +79,12 @@ export default async function FinanceReportsPage({
 
       <Card className="space-y-3">
         <div className="flex flex-wrap gap-1.5">
+          <Link
+            href="/admin/reports/expenses"
+            className="rounded-lg border border-surface-200 px-3 py-1.5 text-sm text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
+          >
+            {t("khr_open", lang)}
+          </Link>
           {VIEWS.map((v) => (
             <Link
               key={v.key}

@@ -135,6 +135,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/finance/queue", label: "Finance ki Qatar", icon: CreditCard },
       { href: "/admin/finance/payment-mapping", label: "Adaigi ka Tareeqa", icon: CreditCard },
       { href: "/admin/kharche", label: "Paisa & Khata", icon: ReceiptText },
+      { href: "/admin/reports/expenses", label: "Kharchon ki Report", icon: FileBarChart },
       { href: "/admin/load-bill", label: "Load & Bill", icon: Smartphone },
       { href: "/admin/settlements", label: "Khaton ka Adjustment", icon: Scale },
       { href: "/admin/finance", label: "Cash Book", icon: Landmark },
@@ -160,6 +161,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Reports",
     items: [
       { href: "/admin/reports", label: "Reports", icon: BarChart3 },
+      { href: "/admin/reports/expenses", label: "Kharchon ki Report", icon: FileBarChart },
       { href: "/admin/reports/milk", label: "Doodh Report", icon: Droplet },
       { href: "/admin/reports/sales", label: "Sale Report", icon: ShoppingCart },
       { href: "/admin/reports/sales/analytics", label: "Aaj ka Sales Dashboard", icon: BarChart3 },
