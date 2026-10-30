@@ -5,7 +5,7 @@ import { animSearchEnabled } from "@/lib/ui/animated-search";
 import { ExpiryBadge } from "@/components/stock/expiry-badge";
 import { GodamHint, GodamStrip } from "@/components/pos/godam-strip";
 import { formatGodamQty, shopQtyToneClass, type GodamLine } from "@/lib/pos/godam-on-card";
-import { canAddToCart, isOutOfStock, sortInStockFirst, POS_DEMAND_HREF } from "@/lib/pos/stock-availability";
+import { canAddToCart, isOutOfStock, sortInStockFirst, POS_DEMAND_HREF, POS_ALLOW_NEGATIVE_STOCK, maxSelectableQty, stockLimitMessage, lineStockUnits } from "@/lib/pos/stock-availability";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { t, type Lang } from "@/lib/i18n/translations";
@@ -255,19 +255,65 @@ export function PosClient({
 
   const regularKhataOn = custMode === "regular" && paymentLines.some((l) => l.method === "khata");
 
+  function sellingCap(item: InventoryItem) {
+    const upp = Number(item.products?.units_per_pack ?? 0);
+    // Wholesale + PET rate: cart ki tadaad carton hai, stock bottle.
+    // Bina wholesale rate ke line bottle hi rehti hai (markSaleUnits).
+    const carton = wholesaleOn && upp > 1 && item.wholesale_price != null;
+    return {
+      carton,
+      upp,
+      max: maxSelectableQty(item.stock_quantity, { carton, unitsPerPack: upp, allowNegative: POS_ALLOW_NEGATIVE_STOCK }),
+    };
+  }
+
+  function limitText(item: InventoryItem) {
+    const cap = sellingCap(item);
+    return stockLimitMessage(item.products?.name ?? "Cheez", item.stock_quantity, { carton: cap.carton, unitsPerPack: cap.upp });
+  }
+
+  function warnStock(text: string) {
+    setBarcodeError(text);
+    setMessage({ type: "error", text });
+  }
+
+  function clearStockWarn() {
+    setBarcodeError((prev) => (prev && /select nahi|Out of stock|Not enough stock/i.test(prev) ? null : prev));
+    setMessage((prev) => (prev && /select nahi|Out of stock|Not enough stock/i.test(prev.text) ? null : prev));
+  }
+
   // Customer badalne (wholesale on/off) ya payment method Khata par
   // jane/hatne par -- dono soorat mein cart ke rate khud-ba-khud
   // update hote hain, taake counter wala khud har item dobara chunne
-  // par majboor na ho.
+  // par majboor na ho. PET mode par tadaad bhi stock ki hadd mein
+  // wapas aa jati hai (5 bottle, 12 ki PET = select nahi).
   useEffect(() => {
-    setCart((prev) =>
-      prev.map((line) => {
+    setCart((prev) => {
+      let changed = false;
+      const next: CartLine[] = [];
+      for (const line of prev) {
         const item = inventory.find((i) => i.product_id === line.product_id);
-        return item ? { ...line, unit_price: priceFor(item, wholesaleOn, regularKhataOn) } : line;
-      })
-    );
+        if (!item) {
+          next.push(line);
+          continue;
+        }
+        const upp = Number(item.products?.units_per_pack ?? 0);
+        const carton = wholesaleOn && upp > 1 && item.wholesale_price != null;
+        const max = maxSelectableQty(item.stock_quantity, { carton, unitsPerPack: upp, allowNegative: POS_ALLOW_NEGATIVE_STOCK });
+        const unit_price = priceFor(item, wholesaleOn, regularKhataOn);
+        let quantity = line.quantity;
+        if (!POS_ALLOW_NEGATIVE_STOCK) quantity = Math.min(quantity, max);
+        if (!(quantity > 0)) {
+          changed = true;
+          continue;
+        }
+        if (quantity !== line.quantity || unit_price !== line.unit_price) changed = true;
+        next.push({ ...line, quantity, unit_price });
+      }
+      return changed ? next : prev;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wholesaleOn, regularKhataOn]);
+  }, [wholesaleOn, regularKhataOn, inventory]);
 
   function switchCustomerMode(nextMode: CustomerMode) {
     setCustMode(nextMode);
@@ -381,13 +427,20 @@ export function PosClient({
 
   function addToCart(item: InventoryItem) {
     if (!item.products) return;
-    if (!canAddToCart(item)) {
-      setBarcodeError(`"${item.products.name}" ka stock khatam hai (Out of stock) -- Demand bana dein.`);
+    const cap = sellingCap(item);
+    const existing = cart.find((l) => l.product_id === item.product_id);
+    const current = existing?.quantity ?? 0;
+    if (!POS_ALLOW_NEGATIVE_STOCK && current + 1 > cap.max) {
+      warnStock(limitText(item));
+      if (existing && cap.max > 0 && existing.quantity > cap.max) {
+        setCart((prev) => prev.map((l) => (l.product_id === item.product_id ? { ...l, quantity: cap.max } : l)));
+      }
       return;
     }
+    clearStockWarn();
     setCart((prev) => {
-      const existing = prev.find((l) => l.product_id === item.product_id);
-      if (existing) {
+      const line = prev.find((l) => l.product_id === item.product_id);
+      if (line) {
         return prev.map((l) =>
           l.product_id === item.product_id ? { ...l, quantity: l.quantity + 1 } : l
         );
@@ -453,11 +506,28 @@ export function PosClient({
   }
 
   function updateQuantity(product_id: string, quantity: number) {
+    const item = inventory.find((i) => i.product_id === product_id);
+    if (!item) {
+      removeLine(product_id);
+      return;
+    }
     if (quantity <= 0) {
       removeLine(product_id);
       return;
     }
-    setCart((prev) => prev.map((l) => (l.product_id === product_id ? { ...l, quantity } : l)));
+    const cap = sellingCap(item);
+    let next = quantity;
+    if (!POS_ALLOW_NEGATIVE_STOCK && quantity > cap.max) {
+      warnStock(limitText(item));
+      if (!(cap.max > 0)) {
+        removeLine(product_id);
+        return;
+      }
+      next = cap.max;
+    } else {
+      clearStockWarn();
+    }
+    setCart((prev) => prev.map((l) => (l.product_id === product_id ? { ...l, quantity: next } : l)));
   }
 
   function updateRate(product_id: string, rate: number) {
@@ -559,6 +629,18 @@ export function PosClient({
     if (cart.length === 0) {
       setMessage({ type: "error", text: t("pos_cart_empty_error", lang) });
       return;
+    }
+    for (const line of cart) {
+      const item = inventory.find((i) => i.product_id === line.product_id);
+      if (!item) {
+        warnStock(`"${line.name}" ka stock khatam hai (Out of stock) -- Demand bana dein.`);
+        return;
+      }
+      const cap = sellingCap(item);
+      if (!POS_ALLOW_NEGATIVE_STOCK && line.quantity > cap.max) {
+        warnStock(limitText(item));
+        return;
+      }
     }
     if (khataTotal > 0 && !customerId) {
       setMessage({ type: "error", text: t("pos_credit_needs_customer", lang) });
@@ -691,11 +773,24 @@ export function PosClient({
     );
     // Godam se maal to seedha server par kat chuka hai -- yahan sirf
     // safhe ka badge usi hisaab se taaza karna hai.
-    const soldQty = new Map(cart.map((l) => [l.product_id, l.quantity]));
+    const soldUnits = new Map<string, number>();
+    for (const line of cart) {
+      const item = inventory.find((i) => i.product_id === line.product_id);
+      if (!item) continue;
+      const cap = sellingCap(item);
+      const units = lineStockUnits({
+        quantity: line.quantity,
+        unitPrice: line.unit_price,
+        saleUnit: cap.carton ? "carton" : "unit",
+        unitsPerPack: cap.upp,
+        sellingPrice: item.selling_price,
+      });
+      soldUnits.set(line.product_id, (soldUnits.get(line.product_id) ?? 0) + units);
+    }
     setInventory((prev) =>
       prev.map((item) =>
-        soldQty.has(item.product_id)
-          ? { ...item, stock_quantity: Math.max(0, item.stock_quantity - soldQty.get(item.product_id)!) }
+        soldUnits.has(item.product_id)
+          ? { ...item, stock_quantity: Math.max(0, item.stock_quantity - soldUnits.get(item.product_id)!) }
           : item
       )
     );
@@ -771,9 +866,11 @@ export function PosClient({
               const p = item.products;
               const upc = p?.units_per_pack ?? 0;
               const oos = isOutOfStock(item);
+              const cap = sellingCap(item);
+              const atCap = Number.isFinite(cap.max) && (cartLine?.quantity ?? 0) >= cap.max;
               return (
                 <div key={item.id} className="relative">
-                <button onClick={() => addToCart(item)} aria-disabled={oos && !canAddToCart(item)} title={oos ? "Out of stock / Stock khatam" : undefined} className={`w-full overflow-hidden rounded-card border bg-white text-left shadow-card transition hover:shadow-md dark:bg-surface-900 ${inCart ? "border-brand-500 ring-1 ring-brand-200 dark:ring-brand-900/50" : "border-surface-200 hover:border-brand-400 dark:border-surface-800"}`}>
+                <button onClick={() => addToCart(item)} aria-disabled={(oos && !canAddToCart(item)) || atCap} title={oos ? "Out of stock / Stock khatam" : atCap ? limitText(item) : undefined} className={`w-full overflow-hidden rounded-card border bg-white text-left shadow-card transition hover:shadow-md dark:bg-surface-900 ${inCart ? "border-brand-500 ring-1 ring-brand-200 dark:ring-brand-900/50" : "border-surface-200 hover:border-brand-400 dark:border-surface-800"}`}>
                   <div className="relative aspect-square bg-surface-50 dark:bg-surface-800">
                     <div className={oos ? "h-full opacity-60 grayscale" : "h-full"}>
                       {p?.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-2" loading="lazy" /> : <div className="flex h-full w-full items-center justify-center text-surface-300 dark:text-surface-600"><Package className="h-8 w-8" strokeWidth={1.25} /></div>}
@@ -819,7 +916,7 @@ export function PosClient({
           <div className="fixed inset-0 z-40 bg-black/30 print:hidden lg:hidden" onClick={() => setSelectedId(null)} aria-hidden />
           <aside className="fixed inset-y-0 right-0 z-50 w-full max-w-sm overflow-y-auto border-l border-surface-200 bg-white p-4 shadow-2xl print:hidden dark:border-surface-800 dark:bg-surface-900 lg:static lg:z-auto lg:h-fit lg:max-h-full lg:w-auto lg:max-w-none lg:overflow-y-auto lg:rounded-card lg:border lg:shadow-card">
             <div className="mb-3 flex items-center justify-between"><h2 className="font-display text-sm font-semibold text-surface-900 dark:text-surface-100">{t("pos_details", lang)}</h2><button type="button" onClick={() => setSelectedId(null)} className="rounded-md p-1 text-surface-400 hover:bg-surface-100 hover:text-surface-700 dark:hover:bg-surface-800" aria-label={t("sh_cancel", lang)}><X className="h-4 w-4" /></button></div>
-            <ItemDetails line={selectedLine} item={selectedItem} lang={lang} perms={perms} onQty={(q) => updateQuantity(selectedLine.product_id, q)} onRate={(r) => updateRate(selectedLine.product_id, r)} onRemove={() => removeLine(selectedLine.product_id)} onClose={() => setSelectedId(null)} />
+            <ItemDetails line={selectedLine} item={selectedItem} lang={lang} perms={perms} maxQty={sellingCap(selectedItem).max} onQty={(q) => updateQuantity(selectedLine.product_id, q)} onRate={(r) => updateRate(selectedLine.product_id, r)} onRemove={() => removeLine(selectedLine.product_id)} onClose={() => setSelectedId(null)} />
           </aside>
         </>
       )}
@@ -858,6 +955,7 @@ export function PosClient({
                   const item = inventory.find((i) => i.product_id === line.product_id);
                   const active = line.product_id === selectedId;
                   const lineTotal = line.quantity * line.unit_price;
+                  const atCap = item != null && Number.isFinite(sellingCap(item).max) && line.quantity >= sellingCap(item).max;
                   const rateWarning = wholesaleOn && item?.wholesale_price == null
                     ? t("pf_pos_no_wholesale_rate", lang)
                     : regularKhataOn && !(item?.products?.mrp_price != null && item.products.mrp_price > 0)
@@ -880,7 +978,7 @@ export function PosClient({
                             <Minus className="h-3 w-3" />
                           </button>
                           <span className="w-5 text-center text-sm font-medium tabular-nums text-surface-900 dark:text-surface-100">{line.quantity}</span>
-                          <button type="button" onClick={() => updateQuantity(line.product_id, line.quantity + 1)} className="flex h-6 w-6 items-center justify-center rounded-md border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800" aria-label="+">
+                          <button type="button" onClick={() => updateQuantity(line.product_id, line.quantity + 1)} aria-disabled={atCap} title={atCap && item ? limitText(item) : undefined} className={`flex h-6 w-6 items-center justify-center rounded-md border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800 ${atCap ? "cursor-not-allowed opacity-40" : ""}`} aria-label="+">
                             <Plus className="h-3 w-3" />
                           </button>
                         </div>
@@ -1003,7 +1101,7 @@ export function PosClient({
   );
 }
 
-function ItemDetails({ line, item, lang, perms, onQty, onRate, onRemove, onClose }: { line: CartLine; item: InventoryItem; lang: Lang; perms: PosPermissions; onQty: (q: number) => void; onRate: (r: number) => void; onRemove: () => void; onClose: () => void; }) {
+function ItemDetails({ line, item, lang, perms, maxQty, onQty, onRate, onRemove, onClose }: { line: CartLine; item: InventoryItem; lang: Lang; perms: PosPermissions; maxQty: number; onQty: (q: number) => void; onRate: (r: number) => void; onRemove: () => void; onClose: () => void; }) {
   const p = item.products;
   const expiry = shortDate(item.expiry_date);
   const barcode = p?.barcode || p?.internal_barcode || null;
@@ -1013,7 +1111,7 @@ function ItemDetails({ line, item, lang, perms, onQty, onRate, onRemove, onClose
   return (
     <div className="space-y-3">
       <div className="flex items-start gap-3"><div className="min-w-0 flex-1"><p className="font-display text-base font-bold leading-tight text-surface-900 dark:text-white">{line.name}</p><p className="mt-0.5 text-xs text-surface-500">{[p?.pack_size, p?.unit_code].filter(Boolean).join(" / ") || "—"}</p><p className="mt-1 font-display text-lg font-bold text-brand-700 dark:text-brand-300">Rs {line.unit_price.toLocaleString()}</p></div><div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-surface-50 dark:bg-surface-800">{p?.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-contain p-1" loading="lazy" /> : <Package className="h-7 w-7 text-surface-300 dark:text-surface-600" strokeWidth={1.25} />}</div></div>
-      <div><p className="mb-0.5 text-[11px] text-surface-500">{t("pos_qty", lang)}</p><div className="flex items-center gap-2"><button type="button" onClick={() => onQty(line.quantity - 1)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300" aria-label="-"><Minus className="h-4 w-4" /></button><Input type="number" min={1} value={line.quantity} onChange={(e) => onQty(parseInt(e.target.value) || 0)} className="h-9 flex-1 text-center" /><button type="button" onClick={() => onQty(line.quantity + 1)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300" aria-label="+"><Plus className="h-4 w-4" /></button></div></div>
+      <div><p className="mb-0.5 text-[11px] text-surface-500">{t("pos_qty", lang)}</p><div className="flex items-center gap-2"><button type="button" onClick={() => onQty(line.quantity - 1)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300" aria-label="-"><Minus className="h-4 w-4" /></button><Input type="number" min={1} max={Number.isFinite(maxQty) ? maxQty : undefined} value={line.quantity} onChange={(e) => onQty(parseInt(e.target.value, 10) || 0)} className="h-9 flex-1 text-center" /><button type="button" onClick={() => onQty(line.quantity + 1)} aria-disabled={Number.isFinite(maxQty) && line.quantity >= maxQty} className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-surface-200 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 ${Number.isFinite(maxQty) && line.quantity >= maxQty ? "cursor-not-allowed opacity-40" : ""}`} aria-label="+"><Plus className="h-4 w-4" /></button></div></div>
       <div className="grid grid-cols-2 gap-2">
         {perms.canEditRate ? <div><p className="mb-0.5 text-[11px] text-surface-500">{t("pos_sell_rate", lang)}</p><Input type="number" min={0} step="0.01" value={line.unit_price} onChange={(e) => onRate(parseFloat(e.target.value) || 0)} className="h-9" /></div> : <Field label={t("pos_sell_rate", lang)} strong value={<span className="flex items-center gap-1.5">Rs {line.unit_price.toLocaleString()}<Lock className="h-3 w-3 text-surface-400" /></span>} />}
         <Field label={t("pos_mrp", lang)} value={p?.mrp_price != null && p.mrp_price > 0 ? `Rs ${Number(p.mrp_price).toLocaleString()}` : nishaan} />
