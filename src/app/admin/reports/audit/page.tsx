@@ -283,7 +283,7 @@ export default async function AuditCenterPage() {
 
       <h3 className="mb-2 mt-6 flex items-center gap-1.5 text-sm font-semibold text-surface-900 dark:text-white">
         <Clock className="h-4 w-4 text-orange-500" />{t("ra_expiry_tracking", lang)}</h3>
-      <p className="mb-2 text-xs text-amber-800">Expire batch par stock bacha ho to us ki bikri band hai. Ye fehrist PKT tareekh se hai. Maal likhna / mitana yahan se nahi hota.</p>
+      <p className="mb-2 text-xs text-amber-800">Expire batch stock mein show ho sakti hai, lekin physically side-line hai — bikri se nuqsan ho sakta hai. POS par admin ka code (wahi jo wapsi par lagta hai) is bill ki bikri kholta hai. Ye fehrist PKT tareekh se hai. Maal likhna / mitana yahan se nahi hota.</p>
       <div className="overflow-hidden rounded-card border border-surface-200 bg-white shadow-card dark:border-surface-800 dark:bg-surface-900">
         <table className="w-full text-sm">
           <thead>
