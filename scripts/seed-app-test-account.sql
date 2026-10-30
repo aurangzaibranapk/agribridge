@@ -95,9 +95,11 @@ begin
   select s.id into v_staff from public.staff_details s where s.profile_id = v_uid limit 1;
   if v_staff is null then
     insert into public.staff_details (
-      profile_id, designation, employee_code, milk_route_name, milk_chiller_name, is_test
+      profile_id, designation, employee_code, department, hire_date,
+      milk_route_name, milk_chiller_name, is_test
     ) values (
-      v_uid, 'TEST Staff', 'TEST-604', 'TEST Route', 'TEST Chiller', true
+      v_uid, 'TEST Staff', 'TEST-604', 'Karyana / POS',
+      (current_date - interval '1 year')::date, 'TEST Route', 'TEST Chiller', true
     ) returning id into v_staff;
   else
     update public.staff_details
@@ -105,7 +107,8 @@ begin
            employee_code = 'TEST-604',
            milk_route_name = 'TEST Route',
            milk_chiller_name = 'TEST Chiller',
-           field_app_role = null,
+           department = coalesce(department, 'Karyana / POS'),
+           hire_date = coalesce(hire_date, (current_date - interval '1 year')::date),
            is_test = true
      where id = v_staff;
   end if;
@@ -214,7 +217,8 @@ begin
     v_note := sqlerrm;
   end;
 
-  delete from public.app_test_links where account_id = v_uid;
+  -- Dealer/supplier links later migration banati hai; seed dobara chale to unhein na mitaye.
+  delete from public.app_test_links where account_id = v_uid and role not in ('dealer', 'supplier');
   insert into public.app_test_links (account_id, role, record_table, record_id, label) values
     (v_uid, 'admin', 'app_test_accounts', v_uid, 'TEST admin read-only'),
     (v_uid, 'farmer', 'farmers', v_farmer, 'TEST Farmer'),
@@ -226,7 +230,7 @@ begin
 
   if v_order is not null then
     update public.app_test_links
-       set record_table = 'agri_orders', record_id = v_order, label = 'TEST Customer · TEST-ORD-604'
+       set record_table = 'customers', record_id = v_customer, label = 'TEST Customer · TEST-ORD-604 ready'
      where account_id = v_uid and role = 'customer';
   elsif v_note is not null then
     update public.app_test_links

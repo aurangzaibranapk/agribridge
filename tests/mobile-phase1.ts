@@ -17,7 +17,7 @@ import { pinLock, pinProblem, verifyPin } from "../src/lib/mobile/pin";
 import { supportChatPath, supportWhatsapp } from "../src/lib/mobile/support";
 import { reportContext, reportDescription } from "../src/lib/mobile/report";
 import { acceptedSupabaseUrl, dataFlavor, failureLine, LIVE_SUPABASE_URL, showsHttpDetail, signInMobile, TEST_SUPABASE_URL, type FetchLike } from "../src/lib/mobile/live-login";
-import { cashPosition, columnMissing, karachiDaySeries, liveGet, liveInsert, livePatch, milkByShift, milkInRange, milkLitres, pricedMilkTotal, readError, roleOrderPath, saleMonthKey, salesByDay, salesOnDay, salesTotal, shiftLabel, stockAlerts, testOrdersFor, withScope } from "../src/lib/mobile/live-read";
+import { cashPosition, columnMissing, karachiDaySeries, liveGet, liveInsert, livePatch, merchantKhataView, milkByShift, milkInRange, milkLitres, pricedMilkTotal, readError, roleOrderPath, saleMonthKey, salesByDay, salesOnDay, salesTotal, shiftLabel, stockAlerts, testOrdersFor, withScope } from "../src/lib/mobile/live-read";
 import { jwtExpired, refreshDue, refreshSupabaseSession, SESSION_EXPIRED, singleFlight } from "../src/lib/mobile/session-refresh";
 import { showRolePreview, showRoleSwitch, SWITCH_ROLES, TEST_LOGIN_EMAIL } from "../src/lib/mobile/test-account";
 import { approvalTimeline, compactRupee, countDelta, goalDeadline, goalRemaining, hazarFigure, milkTimeline, monthBuckets, monthEnd, monthShare, orderTimeline, pctChange, ringDashOffset, romanWeekday, timelineFinished, timelinePercent } from "../src/lib/mobile/glass-metrics";
@@ -57,7 +57,7 @@ assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.pa
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.appFlavor, "test");
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.android.versionCode, 606);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test", AGRIBRIDGE_VERSION_CODE: "606" }).expo.version, AGRIBRIDGE_OS_VERSION);
-assert.equal(PHONE_VERSION_CODE, 645);
+assert.equal(PHONE_VERSION_CODE, 646);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.android.versionCode, PHONE_VERSION_CODE);
 assert.equal(buildExpoConfig({ EXPO_PUBLIC_APP_FLAVOR: "test" }).expo.extra.versionCode, PHONE_VERSION_CODE);
 assert.equal(shownVersionCode({ platform: "web", embedded: 625, phone: PHONE_VERSION_CODE }), PHONE_VERSION_CODE);
@@ -452,6 +452,8 @@ assert.match(appSource, /sessionFromAccessToken/);
 const authScreens = readFileSync("apps/mobile/src/auth-screens.tsx", "utf8");
 assert.match(authScreens, /Google/);
 assert.match(authScreens, /Facebook/);
+assert.match(authScreens, /onPress=\{props\.onForgot\}/);
+assert.match(authScreens, /WebsiteReset/);
 assert.doesNotMatch(authScreens, /ScrollView/);
 const adminWorkspace = readFileSync("apps/mobile/src/roles/admin-workspace.tsx", "utf8");
 for (const title of ["POS & Sales", "Finance & Accounts", "Parties & Khata", "Products & Stock", "Purchases", "Milk Operations", "Digital Munshi", "Vet & Dairy", "Staff & Attendance", "Activity & Alerts", "Settings & Access"]) assert.match(adminWorkspace, new RegExp(title.replace(/[&]/g, "\\&")));
@@ -467,6 +469,8 @@ assert.doesNotMatch(merchantApprovedSource, /<Pressable style=\{s\.help\}>/);
 const internalHr = readFileSync("apps/mobile/src/roles/internal-hr.tsx", "utf8");
 assert.match(internalHr, /is_half_day: halfDay/);
 assert.match(internalHr, /setPage\("documents"\)/);
+assert.match(internalHr, /liveGet<LeaveRow>/);
+assert.doesNotMatch(internalHr, /liveGetScoped<LeaveRow>/);
 const anonJwt = testSideload.match(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/);
 assert.ok(anonJwt);
 const anonPayload = JSON.parse(Buffer.from(anonJwt[0].split(".")[1], "base64url").toString()) as { ref?: string; role?: string };
@@ -612,6 +616,17 @@ assert.match(rollback703, /drop policy if exists pos_sale_items_test_read/);
 assert.match(rollback703, /revoke select on table public\.staff_advances from authenticated/);
 assert.match(rollback703, /v_reasons := v_reasons \|\| 'Joining date system mein nahi/);
 assert.doesNotMatch(rollback703, /array_append/);
+const blockingMig = readFileSync("supabase/migrations/20261030020056_app_test_blocking_fixes.sql", "utf8");
+for (const required of [
+  "grant select, insert on table public.staff_advances",
+  "collection_source = 'self_delivery'",
+  "milk_dispatch_test_insert",
+  "role in ('admin','farmer','customer','mca','mco','vet','staff','dealer','supplier')",
+  "record_table='customers'",
+  "TEST-DEALER-646",
+  "test-supplier-646@alranatraders.pk",
+]) assert.match(blockingMig, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+assert.doesNotMatch(blockingMig, /delete\s+from|truncate\s+table/i);
 const mig704 = readFileSync("supabase/migrations/704_app_goal_targets.sql", "utf8");
 const rollback704 = readFileSync("supabase/migrations/704_app_goal_targets.rollback.sql", "utf8");
 assert.match(mig704, /create table if not exists public\.app_goal_targets/);
@@ -804,7 +819,8 @@ assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /loadMilkWindo
 assert.match(readFileSync("apps/mobile/src/roles/vet-approved.tsx", "utf8"), /Save Treatment/);
 assert.match(readFileSync("apps/mobile/src/roles/mco.tsx", "utf8"), /Field Collection/);
 assert.match(readFileSync("apps/mobile/src/roles/mco.tsx", "utf8"), /Drop-off save karein/);
-assert.match(readFileSync("apps/mobile/src/roles/mco.tsx", "utf8"), /collection_source: "mco_dropoff"/);
+assert.match(readFileSync("apps/mobile/src/roles/mco.tsx", "utf8"), /collection_source: "self_delivery"/);
+assert.match(readFileSync("apps/mobile/src/roles/mco.tsx", "utf8"), /received_by_profile_id: auth\.userId/);
 assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /loadGoalTargets/);
 assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /app_goal_targets\?select=/);
 assert.equal(salesTotal([{ total_amount: 80, status: "paid" }, { total_amount: 20, status: "void" }]), 80);
@@ -822,6 +838,7 @@ assert.deepEqual(testOrdersFor([{ order_to_type: "Farmer" }, { order_to_type: "K
 assert.match(readFileSync("apps/mobile/src/roles/farmer.tsx", "utf8"), /Order bhejein/);
 assert.match(readFileSync("apps/mobile/src/roles/farmer.tsx", "utf8"), /Karyana orders/);
 assert.match(readFileSync("apps/mobile/src/roles/farmer.tsx", "utf8"), /unlinked_unknown/);
+assert.match(readFileSync("apps/mobile/src/roles/farmer.tsx", "utf8"), /order_type: "FMCG \/ Other"/);
 assert.match(readFileSync("apps/mobile/src/roles/staff.tsx", "utf8"), /Check-in/);
 assert.match(readFileSync("apps/mobile/src/roles/staff.tsx", "utf8"), /Mere kaam/);
 assert.match(readFileSync("apps/mobile/src/roles/staff.tsx", "utf8"), /source: "app"/);
@@ -832,6 +849,14 @@ assert.match(readFileSync("apps/mobile/src/roles/dealer.tsx", "utf8"), /Merchant
 assert.match(readFileSync("apps/mobile/src/roles/supplier.tsx", "utf8"), /MerchantApproved/);
 assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /fn_my_merchant_settlements/);
 assert.match(readFileSync("src/lib/mobile/live-read.ts", "utf8"), /fn_my_merchant_orders/);
+assert.match(readFileSync("apps/mobile/src/roles/dealer.tsx", "utf8"), /merchantKhataView/);
+assert.doesNotMatch(readFileSync("apps/mobile/src/roles/dealer.tsx", "utf8"), /loadKhata/);
+const merchantOnly = merchantKhataView(
+  { ok: true, rows: [{ settlement_number: "TEST", net_amount: 700, status: "pending", due_date: "2026-10-30" }] },
+  { ok: true, rows: [{ current_payable: 700 }] },
+);
+assert.equal(merchantOnly.owed, 700);
+assert.equal(merchantOnly.lines.length, 1);
 assert.match(readFileSync("apps/mobile/src/roles/load.ts", "utf8"), /import \* as supplier from "\.\/supplier"/);
 assert.match(appSource, /User ID \(ikhtiyari\)/);
 assert.match(appSource, /onProfile=/);

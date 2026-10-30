@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
-import { liveGetScoped, type LiveAuth } from "../../../../src/lib/mobile/live-read";
+import { liveGet, liveGetScoped, type LiveAuth } from "../../../../src/lib/mobile/live-read";
 import { resolveWorkspaces, WORK_LABELS, type WorkKey } from "../../../../src/lib/mobile/work-access";
 import { colors } from "../kit";
 
@@ -83,8 +83,8 @@ export function StaffWorkspace({ auth, userId, portalUrl, appRole = "staff" }: {
     setBusy(true);
     const [staffRead, profileRead, permissionRead] = await Promise.all([
       loadStaffRow(auth, userId),
-      liveGetScoped<ProfileRow>(auth, `profiles?select=role,full_name,branch_id&id=eq.${encodeURIComponent(userId)}&limit=1`, fetch),
-      liveGetScoped<PermissionRow>(auth, `user_feature_permissions?select=feature_key,actions,expires_at&profile_id=eq.${encodeURIComponent(userId)}&limit=300`, fetch),
+      liveGet<ProfileRow>(auth, `profiles?select=role,full_name,branch_id&id=eq.${encodeURIComponent(userId)}&limit=1`, fetch),
+      liveGet<PermissionRow>(auth, `user_feature_permissions?select=feature_key,actions,expires_at&profile_id=eq.${encodeURIComponent(userId)}&limit=300`, fetch),
     ]);
     setStaff(staffRead.ok ? staffRead.rows[0] || null : null);
     setProfile(profileRead.ok ? profileRead.rows[0] || null : null);

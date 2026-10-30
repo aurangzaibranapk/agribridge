@@ -148,7 +148,7 @@ export function RoleScreen({ tab, live, onTab, onProfile }: { tab: string; live?
     setOrderBusy(true);
     const saved = await liveInsert<OrderRow>(auth, "agri_orders", {
       order_number: `APP-${Date.now()}`,
-      order_type: "Karyana",
+      order_type: "FMCG / Other",
       order_to_type: "Farmer",
       partner_name: customer?.name || "Kisan / Customer",
       customer_id: customer?.id ?? null,

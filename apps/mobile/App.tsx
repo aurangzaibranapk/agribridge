@@ -26,7 +26,7 @@ import { bootMark, marks } from "./src/boot";
 import { loadRoleModule } from "./src/roles/load";
 import { GlassPreview, glassPreviewOn } from "./src/roles/glass-preview";
 import { Btn, Header, Tabs, colors } from "./src/kit";
-import { AppLock, WebsiteLogin, WebsiteSignup, type SignUpForm } from "./src/auth-screens";
+import { AppLock, WebsiteLogin, WebsiteReset, WebsiteSignup, type SignUpForm } from "./src/auth-screens";
 
 const extra = (Constants.expoConfig?.extra ?? {}) as {
   productVersion?: string;
@@ -82,9 +82,11 @@ export default function App() {
   const [role, setRole] = useState<string | null>(null);
   const [appRole, setAppRole] = useState<AppRole | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [stage, setStage] = useState<"login" | "pin" | "unlock" | "app">("login");
+  const [stage, setStage] = useState<"login" | "reset" | "pin" | "unlock" | "app">("login");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [recoveryPassword, setRecoveryPassword] = useState("");
+  const [recoveryToken, setRecoveryToken] = useState("");
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [authBusy, setAuthBusy] = useState(false);
   const [signup, setSignup] = useState<SignUpForm>({ fullName: "", email: "", phone: "", cnic: "", password: "" });
@@ -293,6 +295,56 @@ export default function App() {
     setError(result.message);
   }
 
+  async function forgotPassword() {
+    setError("");
+    const email = identifier.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setError("Password reset ke liye apna registered email likhein.");
+      return;
+    }
+    if (!SUPABASE_URL || !SUPABASE_ANON) {
+      setError("Password reset configuration nahi mili.");
+      return;
+    }
+    setAuthBusy(true);
+    const redirect = FLAVOR === "test" ? "agribridge-test://auth/callback" : "agribridge://auth/callback";
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/recover?redirect_to=${encodeURIComponent(redirect)}`, {
+        method: "POST",
+        headers: { apikey: SUPABASE_ANON, "content-type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      setError(res.ok
+        ? "Agar ye email registered hai to password reset link bhej diya gaya hai."
+        : "Password reset abhi nahi bheja ja saka. Dobara koshish karein.");
+    } catch {
+      setError("Network nahi mila. Password reset dobara koshish karein.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
+  async function saveRecoveryPassword() {
+    if (recoveryPassword.length < 8) { setError("Naya password kam az kam 8 huroof ka ho."); return; }
+    if (!recoveryToken) { setError("Password reset session khatam ho gayi. Link dobara mangwayein."); return; }
+    setAuthBusy(true); setError("");
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+        method: "PUT",
+        headers: { apikey: SUPABASE_ANON, authorization: `Bearer ${recoveryToken}`, "content-type": "application/json" },
+        body: JSON.stringify({ password: recoveryPassword }),
+      });
+      if (!res.ok) { setError("Password update nahi hua. Reset link dobara mangwayein."); return; }
+      setRecoveryPassword(""); setRecoveryToken(""); setIdentifier(""); setPassword("");
+      setStage("login"); setAuthMode("login");
+      setError("Password update ho gaya. Ab naye password se login karein.");
+    } catch {
+      setError("Network nahi mila. Dobara koshish karein.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
   function oauth(provider: "google" | "facebook") {
     setError("");
     const redirect = FLAVOR === "test" ? "agribridge-test://auth/callback" : "agribridge://auth/callback";
@@ -308,6 +360,10 @@ export default function App() {
       const params = new URLSearchParams(raw);
       const accessToken = params.get("access_token") || "";
       if (!accessToken) { setError(params.get("error_description") || "Social login session nahi mili."); return; }
+      if (params.get("type") === "recovery") {
+        setRecoveryToken(accessToken); setRecoveryPassword(""); setError(""); setStage("reset");
+        return;
+      }
       setAuthBusy(true);
       const result = await sessionFromAccessToken({ accessToken, refreshToken: params.get("refresh_token") || "", expiresIn: Number(params.get("expires_in") || 0) || null, supabaseUrl: SUPABASE_URL, supabaseAnonKey: SUPABASE_ANON, channel: CHANNEL, flavor: FLAVOR, fetchImpl: (next, init) => fetch(next, init) });
       setAuthBusy(false);
@@ -410,8 +466,9 @@ export default function App() {
           rate_per_liter: item.kind === "drop" ? Number(body.rate_per_liter) : null,
           total_amount: item.kind === "drop" ? Number(body.total_amount) : null,
           entry_channel: "app",
-          collection_source: item.kind === "drop" ? "mco_dropoff" : "mca_field",
+          collection_source: item.kind === "drop" ? "self_delivery" : "mca_field",
           mca_profile_id: item.kind === "drop" ? null : userId,
+          received_by_profile_id: item.kind === "drop" ? userId : null,
           created_by: userId,
           client_uuid: item.clientUuid,
           route_name: body.route_name ?? null,
@@ -554,6 +611,7 @@ export default function App() {
             onIdentifier={setIdentifier}
             onPassword={setPassword}
             onLogin={() => void login()}
+            onForgot={() => void forgotPassword()}
             onSignup={() => { setError(""); setAuthMode("signup"); }}
             onSocial={oauth}
           />
@@ -569,7 +627,9 @@ export default function App() {
             onLogin={() => { setError(""); setAuthMode("login"); }}
             onSocial={oauth}
           />
-        )) : stage === "unlock" ? (
+        )) : stage === "reset" ? (
+          <WebsiteReset title={loginTitle} line={lock.line} password={recoveryPassword} error={error} busy={authBusy} onPassword={setRecoveryPassword} onSave={() => void saveRecoveryPassword()} onLogin={() => { setRecoveryToken(""); setRecoveryPassword(""); setError(""); setStage("login"); }} />
+        ) : stage === "unlock" ? (
           <AppLock title={loginTitle} line={lock.line} role={appRole || role || "User"} pin={pin} error={error} onDigit={(digit) => setPin((current) => current.length < 6 ? `${current}${digit}` : current)} onBackspace={() => setPin((current) => current.slice(0, -1))} onOpen={() => void unlock("pin")} onFingerprint={() => void unlock("biometric")} />
         ) : (
         <View style={{ flex: 1, padding: 20, justifyContent: "center" }}>

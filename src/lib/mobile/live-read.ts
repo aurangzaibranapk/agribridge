@@ -614,6 +614,34 @@ export type KhataLine = { entry_date?: string | null; tafseel?: string | null; u
 export type SalaryRow = { net_salary?: number | string | null; status?: string | null; pay_month?: number | null; pay_year?: number | null };
 export type AdvanceRow = { amount?: number | string | null; status?: string | null; created_at?: string | null };
 
+/** Merchant role ko Kisan/customer khata kabhi na dikhayein. Sirf us ke apne posted settlements. */
+export function merchantKhataView(
+  settlements: ReadResult<MerchantSettlementRow>,
+  profile: ReadResult<MerchantProfileRow>,
+): KhataView {
+  const business = profile.ok ? profile.rows[0] : null;
+  const payable = business?.current_payable == null || business.current_payable === ""
+    ? null
+    : num(business.current_payable);
+  const lines = settlements.ok
+    ? settlements.rows.map((row) => ({
+      entry_date: row.due_date || row.created_at?.slice(0, 10) || null,
+      tafseel: `${row.settlement_number || "Settlement"} · ${row.source_type || "posted"}`,
+      udhaar: row.net_amount,
+      adaigi: String(row.status || "").toLowerCase() === "paid" ? row.net_amount : null,
+      baqaya: row.net_amount,
+      is_opening: false,
+      category: "merchant_settlement",
+    }))
+    : [];
+  return {
+    owed: payable,
+    note: !profile.ok ? profile.message : business ? null : "Is login ka merchant profile link nahi mila.",
+    lines,
+    linesNote: settlements.ok ? null : settlements.message,
+  };
+}
+
 export async function searchParties(auth: LiveAuth, query: string, fetchImpl: FetchLike): Promise<{ farmers: ReadResult<PartyRow>; customers: ReadResult<PartyRow> }> {
   const q = encodeURIComponent(`*${query.trim()}*`);
   const farmerPath = query.trim()

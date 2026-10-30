@@ -26,6 +26,7 @@ type LoginProps = {
   onIdentifier: (value: string) => void;
   onPassword: (value: string) => void;
   onLogin: () => void;
+  onForgot: () => void;
   onSignup: () => void;
   onSocial: (provider: "google" | "facebook") => void;
 };
@@ -38,13 +39,25 @@ export function WebsiteLogin(props: LoginProps) {
       <Text style={styles.heading}>Welcome back</Text><Text style={styles.lead}>Apna AgriBridge account kholen</Text>
       <TextInput value={props.identifier} onChangeText={props.onIdentifier} placeholder="Mobile ya email" autoCapitalize="none" keyboardType="email-address" style={styles.input} />
       <TextInput value={props.password} onChangeText={props.onPassword} placeholder="Password" secureTextEntry style={styles.input} />
-      <Pressable><Text style={styles.forgot}>Password bhool gaye?</Text></Pressable>
+      <Pressable disabled={props.busy} onPress={props.onForgot}><Text style={styles.forgot}>Password bhool gaye?</Text></Pressable>
       <Pressable disabled={props.busy} onPress={props.onLogin} style={[styles.primary, props.busy && styles.disabled]}><Text style={styles.primaryText}>{props.busy ? "Login ho raha hai…" : "Login"}</Text></Pressable>
       <View style={styles.or}><View style={styles.line} /><Text style={styles.orText}>ya</Text><View style={styles.line} /></View>
       <View style={styles.socialRow}><Social label="G  Google" onPress={() => props.onSocial("google")} /><Social label="f  Facebook" onPress={() => props.onSocial("facebook")} /></View>
       {props.error ? <Text style={styles.error}>{props.error}</Text> : null}
     </View>
     <Text style={styles.version}>{props.version}</Text>
+  </KeyboardAvoidingView>;
+}
+
+export function WebsiteReset({ title, line, password, error, busy, onPassword, onSave, onLogin }: { title: string; line: string; password: string; error: string; busy: boolean; onPassword: (value: string) => void; onSave: () => void; onLogin: () => void }) {
+  return <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.root}>
+    <View style={styles.header}><View style={styles.logo}><Text style={styles.logoMark}>♧</Text></View><View style={{ flex: 1 }}><Text style={styles.brand}>{title}</Text><Text style={styles.tag}>{line}</Text></View><Pressable onPress={onLogin}><Text style={styles.loginLink}>Login</Text></Pressable></View>
+    <View style={styles.card}>
+      <Text style={styles.heading}>Naya password</Text><Text style={styles.lead}>Kam az kam 8 huroof ka naya password likhein</Text>
+      <TextInput value={password} onChangeText={onPassword} placeholder="Naya password" secureTextEntry style={styles.input} />
+      <Pressable disabled={busy} onPress={onSave} style={[styles.primary, busy && styles.disabled]}><Text style={styles.primaryText}>{busy ? "Save ho raha hai…" : "Password update karein"}</Text></Pressable>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+    </View>
   </KeyboardAvoidingView>;
 }
 

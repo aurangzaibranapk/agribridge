@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { karachiDate, liveGetScoped, liveInsert, loadStaffHome, rupees, type AdvanceRow, type AttendanceRow, type ReadResult, type SalaryRow } from "../../../../src/lib/mobile/live-read";
+import { karachiDate, liveGet, liveGetScoped, liveInsert, loadStaffHome, rupees, type AdvanceRow, type AttendanceRow, type ReadResult, type SalaryRow } from "../../../../src/lib/mobile/live-read";
 import type { LiveAuth } from "../../../../src/lib/mobile/live-read";
 import { colors } from "../kit";
 
@@ -28,7 +28,7 @@ export function InternalHr({ auth, userId, readOnly = false }: { auth: LiveAuth;
   const load = useCallback(async () => {
     const [home, leaveRead, documentRead] = await Promise.all([
       loadStaffHome(auth, userId, fetch),
-      liveGetScoped<LeaveRow>(auth, `leave_requests?select=id,from_date,to_date,leave_type,is_half_day,reason,status,created_at&profile_id=eq.${encodeURIComponent(userId)}&order=created_at.desc&limit=30`, fetch),
+      liveGet<LeaveRow>(auth, `leave_requests?select=id,from_date,to_date,leave_type,is_half_day,reason,status,created_at&profile_id=eq.${encodeURIComponent(userId)}&order=created_at.desc&limit=30`, fetch),
       liveGetScoped<StaffDocumentRow>(auth, `staff_details?select=employee_code,designation,department,cnic,phone,hire_date,employment_status,bank_name,bank_account,blood_group,emergency_contact_name,emergency_contact_phone&profile_id=eq.${encodeURIComponent(userId)}&limit=1`, fetch),
     ]);
     setAttendance(home.attendance); setSalary(home.salary); setAdvances(home.advances); setLeaves(leaveRead); setDocuments(documentRead);

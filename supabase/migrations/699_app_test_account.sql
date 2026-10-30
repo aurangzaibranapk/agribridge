@@ -34,7 +34,7 @@ create table if not exists public.app_test_accounts (
 create table if not exists public.app_test_links (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references public.app_test_accounts(profile_id) on delete cascade,
-  role text not null check (role in ('admin', 'farmer', 'customer', 'mca', 'mco', 'vet', 'staff')),
+  role text not null check (role in ('admin', 'farmer', 'customer', 'mca', 'mco', 'vet', 'staff', 'dealer', 'supplier')),
   record_table text not null,
   record_id uuid,
   label text not null,

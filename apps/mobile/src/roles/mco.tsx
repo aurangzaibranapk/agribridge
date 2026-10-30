@@ -3,7 +3,7 @@ import { ActivityIndicator, Image, Pressable, RefreshControl, ScrollView, Text, 
 import { fatRangeError, lrRangeError, type MilkSettings } from "../../../../src/lib/dairy/rules";
 import { fatActorError } from "../../../../src/lib/mobile/outbox";
 import { priceFromSettings, resolveThresholds, settingsOrError, milkAlerts, toMilkNotice } from "../../../../src/lib/mobile/pricing";
-import { karachiDate, karachiDaySeries, liveInsert, livePatch, loadMilkList, loadMilkSettings, milkByShift, milkInRange, milkLitres, pricedMilkTotal, rupees, salesByDay, shiftLabel, type MilkRow, type PartyRow } from "../../../../src/lib/mobile/live-read";
+import { karachiDate, karachiDaySeries, liveGet, liveInsert, livePatch, loadMilkList, loadMilkSettings, milkByShift, milkInRange, milkLitres, pricedMilkTotal, rupees, salesByDay, shiftLabel, type MilkRow, type PartyRow } from "../../../../src/lib/mobile/live-read";
 import { liveGetScoped } from "../../../../src/lib/mobile/live-read";
 import { inWeek, karachiWeek } from "../../../../src/lib/mobile/statement";
 import { Empty, SaleChart, Section, liveAuth, type LiveBag } from "../bits";
@@ -69,7 +69,7 @@ export function RoleScreen({ tab, queue = [], queueCount = 0, onEnqueue, onSync,
       loadMilkSettings(auth, fetch),
       liveGetScoped<McoFarmer>(auth, "farmers?select=id,full_name,farmer_code&order=full_name.asc&limit=80", fetch),
       liveGetScoped<{ milk_route_name?: string | null; milk_chiller_name?: string | null; branch_id?: string | null }>(auth, `staff_details?select=milk_route_name,milk_chiller_name,branch_id&profile_id=eq.${encodeURIComponent(String(auth.userId || ""))}&limit=1`, fetch),
-      liveGetScoped<{ branch_id?: string | null }>(auth, `profiles?select=branch_id&id=eq.${encodeURIComponent(String(auth.userId || ""))}&limit=1`, fetch),
+      liveGet<{ branch_id?: string | null }>(auth, `profiles?select=branch_id&id=eq.${encodeURIComponent(String(auth.userId || ""))}&limit=1`, fetch),
       liveGetScoped<McoDispatch>(auth, "milk_dispatches?select=id,dispatch_date,shift,vehicle_name,driver_name,dispatched_liters,received_liters,shortage_liters,created_at&order=dispatch_date.desc,created_at.desc&limit=80", fetch),
     ]);
     if (!milk.ok) {
@@ -212,7 +212,8 @@ export function RoleScreen({ tab, queue = [], queueCount = 0, onEnqueue, onSync,
       total_amount: calc.amount,
       status: "priced",
       entry_channel: "app",
-      collection_source: "mco_dropoff",
+      collection_source: "self_delivery",
+      received_by_profile_id: auth.userId,
       route_name: route || null,
       chiller_name: chiller || null,
       branch_id: branchId || null,
@@ -255,6 +256,7 @@ export function RoleScreen({ tab, queue = [], queueCount = 0, onEnqueue, onSync,
       driver_name: driver.trim() || null,
       notes: destination.trim() ? `Destination: ${destination.trim()}` : null,
       created_by: auth.userId,
+      is_test: auth.testAccount === true,
     }, fetch);
     setBusy("");
     if (!saved.ok) {
