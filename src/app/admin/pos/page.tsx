@@ -7,6 +7,7 @@ import { CounterShiftPicker } from "@/components/pos/counter-shift-picker";
 import { ShiftBar } from "@/components/pos/shift-bar";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { chunkIds, linkedGodamStock } from "@/lib/pos/godam-on-card";
+import { sellableFromLots, todayPkt, type StockLot } from "@/lib/pos/stock-availability";
 import { loadPosPermissions } from "@/lib/pos/permissions";
 import { t } from "@/lib/i18n/translations";
 import { UNRESTRICTED_ROLES } from "@/lib/access/permissions";
@@ -374,9 +375,12 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
         // Sifar ka matlab "thok par muft" hota (245).
         wholesale_price: product?.wholesale_price == null ? null : Number(product.wholesale_price),
         batch_ids: [] as string[],
+        lots: [] as StockLot[],
         products: product,
       };
-      cur.stock_quantity += Math.max(0, Number(row.quantity_on_hand ?? 0));
+      const onHand = Math.max(0, Number(row.quantity_on_hand ?? 0));
+      cur.stock_quantity += onHand;
+      cur.lots.push({ batch_id: row.batch_id ?? null, quantity_on_hand: onHand });
       if (row.batch_id) cur.batch_ids.push(row.batch_id);
       aggMap.set(row.product_id, cur);
     });
@@ -480,6 +484,7 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
     selling_price: item.selling_price,
     wholesale_price: item.wholesale_price ?? null,
     batch_ids: item.batch_ids ?? [],
+    lots: (item.lots ?? []) as StockLot[],
     products: Array.isArray(item.products) ? item.products[0] ?? null : item.products ?? null,
   }));
 
@@ -543,27 +548,40 @@ export default async function PosPage({ searchParams }: { searchParams: Promise<
   // likh dena us se bura hota.
   const batchIds = Array.from(new Set((inventory as any[]).flatMap((i) => i.batch_ids as string[])));
   if (batchIds.length) {
-    const { data: batches } = await supabase
+    const { data: batches, error: batchErr } = await supabase
       .from("stock_batches")
       .select("id, batch_number, expiry_date")
       .in("id", batchIds);
-    const byId = new Map((batches ?? []).map((b) => [b.id, b]));
-    for (const it of inventory as any[]) {
-      const rows = (it.batch_ids as string[]).map((id) => byId.get(id)).filter(Boolean) as any[];
-      if (rows.length === 0) continue;
-      // Ek hi batch ho to us ka number; kai hon to number likhna ghalat
-      // hoga -- gahak ke haath mein kaunsa jayega, ye counter par tay
-      // hi nahi hota.
-      it.batch_number = rows.length === 1 ? rows[0].batch_number ?? null : null;
-      it.batch_count = rows.length;
-      const dates = rows.map((r) => r.expiry_date).filter(Boolean).sort();
-      // Sab se pehle khatam hone wali miyaad -- counter par wohi maayne
-      // rakhti hai.
-      if (dates.length) it.expiry_date = dates[0];
+    // Miyaad na milay to stock chhupate nahi -- kul on-hand hi rehta hai.
+    // Galat sifar "bechne layak kuch nahi" kehna hota.
+    if (!batchErr) {
+      const byId = new Map((batches ?? []).map((b) => [b.id, b]));
+      const expiryByBatch = new Map<string, string | null>(
+        (batches ?? []).map((b) => [b.id, (b.expiry_date as string | null) ?? null])
+      );
+      const today = todayPkt();
+      for (const it of inventory as any[]) {
+        const rows = (it.batch_ids as string[]).map((id: string) => byId.get(id)).filter(Boolean) as any[];
+        if (rows.length > 0) {
+          // Ek hi batch ho to us ka number; kai hon to number likhna ghalat
+          // hoga -- gahak ke haath mein kaunsa jayega, ye counter par tay
+          // hi nahi hota.
+          it.batch_number = rows.length === 1 ? rows[0].batch_number ?? null : null;
+          it.batch_count = rows.length;
+        }
+        // Bechne layak = shop on-hand minus expire batch. Godam (doosra
+        // warehouse) yahan shamil nahi. Expire batch ki bikri pehle se
+        // band hai; us ki ginti cart ki hadd mein nahi aati.
+        const stock = sellableFromLots((it.lots ?? []) as StockLot[], expiryByBatch, today);
+        it.stock_quantity = stock.sellable;
+        if (stock.sellableExpiry) it.expiry_date = stock.sellableExpiry;
+        else if (stock.sellable <= 0 && stock.expiredExpiry) it.expiry_date = stock.expiredExpiry;
+      }
     }
   }
   for (const it of inventory as any[]) {
     if (!it.expiry_date && it.products?.expiry_date) it.expiry_date = it.products.expiry_date;
+    delete it.lots;
   }
 
   // ---- Godam mein aur kitna para hai ----

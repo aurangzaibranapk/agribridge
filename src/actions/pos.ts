@@ -1,5 +1,6 @@
 "use server";
 import { validateCheckoutTotals, findRecentDuplicate, DUPLICATE_SALE_MARKER, DUPLICATE_WINDOW_SECONDS } from "@/lib/pos/checkout-guards";
+import { lineStockUnits, sellableFromLots, stockLimitMessage, todayPkt, type StockLot } from "@/lib/pos/stock-availability";
 import { discountOverCap, POS_DISCOUNT_MAX_PCT, POS_DISCOUNT_MAX_RS } from "@/lib/money/review-guards";
 import { createClient } from "@/lib/supabase/server";
 import { checkOverdueCreditBlock, getCreditBlockInfo } from "@/lib/recovery/credit-block";
@@ -205,6 +206,15 @@ export async function posCheckout(input: {
   // 1 bottle ghatta tha -- stock zyada aur nafa phoola hua dikhta tha.
   const itemsWithUnit = await markSaleUnits(input.items);
 
+  // Stock ki hadd bhi YAHAN. Cart par rok hai, magar jo request seedha
+  // yahan aaye (ya offline sync purana cart le aaye) wo dukan ke bechne
+  // layak stock se zyada nahi bech sakta. Godam ka maal is hadd mein
+  // nahi. Expire batch shamil nahi.
+  if (user) {
+    const stockGhalat = await checkSellableStock(itemsWithUnit, input.counterId, user.id);
+    if (stockGhalat) return { error: stockGhalat };
+  }
+
   // Double-submit ki rok: isi staff ne pichhle 2 minute mein bilkul yehi
   // bill (customer + raqam + cheezein) banaya ho to pehle poocha jata hai.
   if (!input.allowDuplicate && user) {
@@ -342,6 +352,163 @@ async function resolveFarmerCustomerId(farmerId: string): Promise<string | null>
  * Har line par sale_unit lagao: units_per_pack > 1 aur rate wholesale
  * (carton) rate ke barabar ho to "carton", warna "unit".
  */
+/**
+ * Is bill ka godam -- wahi jo create_pos_sale kaat-ta hai.
+ * Counter diya ho to us ka warehouse. Warna staff ki dukan, phir
+ * branch ka MAIN. Na mile to null: sifar stock nahi, tasdeeq nahi.
+ */
+async function resolvePosWarehouse(
+  service: ReturnType<typeof createServiceClient>,
+  userId: string,
+  counterId: string | null | undefined
+): Promise<{ warehouseId: string } | { error: string }> {
+  if (counterId) {
+    const { data, error } = await service
+      .from("pos_counters")
+      .select("warehouse_id, is_active")
+      .eq("id", counterId)
+      .maybeSingle();
+    if (error) return { error: "Stock ki tasdeeq nahi ho saki, is liye bikri rok di gayi. Dobara koshish karein." };
+    if (!data?.is_active) return { error: "Ye POS counter nahi mila ya band hai." };
+    if (!data.warehouse_id) return { error: "Is counter ka stock source (warehouse) set nahi hai." };
+    return { warehouseId: data.warehouse_id };
+  }
+  const { data: profile, error: profileError } = await service
+    .from("profiles")
+    .select("shop_id, branch_id")
+    .eq("id", userId)
+    .maybeSingle();
+  if (profileError || !profile) {
+    return { error: "Stock ki tasdeeq nahi ho saki, is liye bikri rok di gayi. Dobara koshish karein." };
+  }
+  if (profile.shop_id) {
+    const { data: shopWarehouse, error: shopError } = await service
+      .from("warehouses")
+      .select("id")
+      .eq("shop_id", profile.shop_id)
+      .maybeSingle();
+    if (shopError) return { error: "Stock ki tasdeeq nahi ho saki, is liye bikri rok di gayi. Dobara koshish karein." };
+    if (shopWarehouse?.id) return { warehouseId: shopWarehouse.id };
+  }
+  if (profile.branch_id) {
+    const { data: mainWarehouse, error: mainError } = await service
+      .from("warehouses")
+      .select("id")
+      .eq("branch_id", profile.branch_id)
+      .eq("code", "MAIN")
+      .maybeSingle();
+    if (mainError) return { error: "Stock ki tasdeeq nahi ho saki, is liye bikri rok di gayi. Dobara koshish karein." };
+    if (mainWarehouse?.id) return { warehouseId: mainWarehouse.id };
+  }
+  return { error: "Stock ki tasdeeq nahi ho saki — dukaan ka godam nahi mila. Bikri rok di gayi." };
+}
+
+async function checkSellableStock(
+  items: PosCartItem[],
+  counterId: string | null | undefined,
+  userId: string
+): Promise<string | null> {
+  if (items.length === 0) return null;
+  for (const item of items) {
+    const qty = Number(item.quantity);
+    if (!Number.isFinite(qty) || qty <= 0) return "Miqdar ghalat hai — sifar se zyada honi chahiye.";
+  }
+
+  const service = createServiceClient();
+  const ids = Array.from(new Set(items.map((i) => i.product_id)));
+  const { data: products, error: productError } = await service
+    .from("products")
+    .select("id, name, units_per_pack, selling_price")
+    .in("id", ids);
+  if (productError || !products) {
+    return "Stock ki tasdeeq nahi ho saki, is liye bikri rok di gayi. Dobara koshish karein.";
+  }
+  const productById = new Map(products.map((p) => [p.id, p]));
+
+  const have = new Map<string, number>();
+  const { data: dealer, error: dealerError } = await service
+    .from("dealers")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .maybeSingle();
+  if (dealerError) return "Stock ki tasdeeq nahi ho saki, is liye bikri rok di gayi. Dobara koshish karein.";
+
+  if (dealer) {
+    const { data: rows, error } = await service
+      .from("dealer_inventory")
+      .select("product_id, stock_quantity")
+      .eq("dealer_id", dealer.id)
+      .in("product_id", ids);
+    if (error) return "Stock ki tasdeeq nahi ho saki, is liye bikri rok di gayi. Dobara koshish karein.";
+    for (const id of ids) have.set(id, 0);
+    for (const row of rows ?? []) {
+      const prev = have.get(row.product_id) ?? 0;
+      have.set(row.product_id, prev + Math.max(0, Number(row.stock_quantity ?? 0)));
+    }
+  } else {
+    const warehouse = await resolvePosWarehouse(service, userId, counterId);
+    if ("error" in warehouse) return warehouse.error;
+    const { data: rows, error } = await service
+      .from("inventory")
+      .select("product_id, quantity_on_hand, batch_id")
+      .eq("warehouse_id", warehouse.warehouseId)
+      .in("product_id", ids);
+    if (error) return "Stock ki tasdeeq nahi ho saki, is liye bikri rok di gayi. Dobara koshish karein.";
+    const batchIds = Array.from(new Set((rows ?? []).map((r) => r.batch_id).filter((id): id is string => !!id)));
+    const expiryByBatch = new Map<string, string | null>();
+    if (batchIds.length > 0) {
+      const { data: batches, error: batchError } = await service
+        .from("stock_batches")
+        .select("id, expiry_date")
+        .in("id", batchIds);
+      if (batchError) return "Stock ki tasdeeq nahi ho saki, is liye bikri rok di gayi. Dobara koshish karein.";
+      for (const batch of batches ?? []) expiryByBatch.set(batch.id, batch.expiry_date ?? null);
+    }
+    const lotsByProduct = new Map<string, StockLot[]>();
+    for (const id of ids) lotsByProduct.set(id, []);
+    for (const row of rows ?? []) {
+      const list = lotsByProduct.get(row.product_id) ?? [];
+      list.push({ batch_id: row.batch_id, quantity_on_hand: Number(row.quantity_on_hand ?? 0) });
+      lotsByProduct.set(row.product_id, list);
+    }
+    const today = todayPkt();
+    for (const id of ids) {
+      have.set(id, sellableFromLots(lotsByProduct.get(id) ?? [], expiryByBatch, today).sellable);
+    }
+  }
+
+  const needById = new Map<string, { bottles: number; carton: boolean; upp: number; name: string }>();
+  for (const item of items) {
+    const product = productById.get(item.product_id);
+    if (!product) return "Is cheez ka stock nahi mila, bikri rok di gayi.";
+    const upp = Number(product.units_per_pack ?? 1);
+    const bottles = lineStockUnits({
+      quantity: item.quantity,
+      unitPrice: item.unit_price,
+      saleUnit: item.sale_unit,
+      unitsPerPack: upp,
+      sellingPrice: product.selling_price,
+    });
+    const carton = bottles > Number(item.quantity) + 1e-6 && upp > 1;
+    const prev = needById.get(item.product_id);
+    if (!prev) {
+      needById.set(item.product_id, { bottles, carton, upp, name: product.name ?? "Cheez" });
+    } else {
+      prev.bottles += bottles;
+      prev.carton = prev.carton || carton;
+    }
+  }
+
+  for (const [id, need] of needById) {
+    const available = have.get(id) ?? 0;
+    if (need.bottles > available + 1e-6) {
+      return stockLimitMessage(need.name, available, { carton: need.carton, unitsPerPack: need.upp });
+    }
+  }
+  return null;
+}
+
 async function markSaleUnits(items: PosCartItem[]): Promise<PosCartItem[]> {
   if (items.length === 0) return items;
   const service = createServiceClient();
