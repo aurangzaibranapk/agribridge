@@ -7,6 +7,7 @@ import {
   cardRupees,
   countFromContentRange,
   filterInbox,
+  deskStamp,
   litreLabel,
   milkSteps,
   planLeaveDecision,
@@ -75,10 +76,14 @@ const priced = milkSteps({
 assert.deepEqual(priced.map((step) => step.state), ["done", "done", "current", "wait"]);
 assert.equal(priced[0].title, "Entry hui");
 assert.equal(priced[2].title, "Manzoor hui");
+assert.equal(deskStamp("2025-05-10T03:15:00Z"), "10 May 2025, 08:15 AM");
+assert.equal(deskStamp("2025-05-10T03:45:00Z"), "10 May 2025, 08:45 AM");
 assert.match(priced[0].detail, /Rajesh/);
+assert.match(priced[0].detail, /10 May 2025, 08:15 AM/);
 assert.match(priced[1].detail, /MCO/);
+assert.match(priced[1].detail, /10 May 2025, 08:45 AM/);
 assert.equal(priced[2].detail, "Pending approval");
-assert.match(priced[3].detail, /Next/);
+assert.equal(priced[3].detail, "Pending");
 
 const actor = { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", role: "admin" };
 const milkId = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
@@ -180,7 +185,27 @@ if (purchase.ok && purchase.kind === "purchase") {
 }
 
 const screen = readFileSync("apps/mobile/src/roles/admin-ui.tsx", "utf8");
-for (const line of ["Today overview", "Pending Approvals", "Check baqi", "Same record as ERP website", "Kisan Pakistan", "Approve", "Reject"]) {
+for (const line of [
+  "Today overview",
+  "Pending Approvals",
+  "Check baqi",
+  "Same record as ERP website",
+  "Kisan Pakistan",
+  "Approve",
+  "Reject",
+  "Kisan ka wasila",
+  "Role badlo",
+  "Switch between available roles",
+  "Manage notification preferences",
+  "System configuration & business controls",
+  "Manage branches and locations",
+  "Manage users, roles and permissions",
+  "Configure validations and workflows",
+  "Current app version",
+  "Sign out from this device",
+  "Review and manage pending requests",
+  "Secure · Audited · Trusted",
+]) {
   assert.ok(screen.includes(line), line);
 }
 const desk = readFileSync("src/lib/mobile/admin-desk.ts", "utf8");

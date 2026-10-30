@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import Svg, { Circle, Path, Rect } from "react-native-svg";
 
 export const colors = {
   bg: "#F3F6F1",
@@ -84,7 +85,33 @@ const TAB_MARK: Record<string, string> = {
   Khata: "₨",
 };
 
-export function Tabs({ tabs, current, onChange }: { tabs: { key: string; label: string }[]; current: string; onChange: (key: string) => void }) {
+function AdminTabIcon({ label, color }: { label: string; color: string }) {
+  const props = { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none" as const };
+  if (label === "Home") return <Svg {...props}><Path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-5.2v-6.2H10.2V21H5a1 1 0 0 1-1-1v-8.5z" stroke={color} strokeWidth="1.7" strokeLinejoin="round" /></Svg>;
+  if (label === "Work") return <Svg {...props}><Rect x="3" y="7" width="18" height="13" rx="2" stroke={color} strokeWidth="1.7" /><Path d="M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7M3 12h18" stroke={color} strokeWidth="1.7" /></Svg>;
+  if (label === "Approvals") return <Svg {...props}><Rect x="6" y="3.5" width="12" height="17" rx="2" stroke={color} strokeWidth="1.7" /><Path d="M9 3.5h6v2.2H9zM8.5 12.2l2.2 2.2 4.2-4.4" stroke={color} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></Svg>;
+  if (label === "HR") return <Svg {...props}><Circle cx="9" cy="9" r="2.3" stroke={color} strokeWidth="1.7" /><Circle cx="16" cy="10" r="1.8" stroke={color} strokeWidth="1.7" /><Path d="M4.5 18.5c.8-2.5 2.6-3.8 4.6-3.8s3.8 1.3 4.6 3.8M13.8 15c1.2-.3 2.5 0 3.6.9 1 1 1.5 2.2 1.8 3.6" stroke={color} strokeWidth="1.7" strokeLinecap="round" /></Svg>;
+  return <Svg {...props}><Circle cx="12" cy="8" r="3" stroke={color} strokeWidth="1.7" /><Path d="M5.5 19c1.1-3 3.2-4.5 6.5-4.5s5.4 1.5 6.5 4.5" stroke={color} strokeWidth="1.7" strokeLinecap="round" /></Svg>;
+}
+
+export function Tabs({ tabs, current, onChange, kind = "pill" }: { tabs: { key: string; label: string }[]; current: string; onChange: (key: string) => void; kind?: "pill" | "admin" }) {
+  if (kind === "admin") {
+    return (
+      <View style={styles.adminTabs}>
+        {tabs.map((tab) => {
+          const on = current === tab.key;
+          const color = on ? "#0E7A3C" : "#8A9690";
+          return (
+            <Pressable key={tab.key} onPress={() => onChange(tab.key)} style={styles.adminTab}>
+              {on ? <View style={styles.adminTabMark} /> : null}
+              <AdminTabIcon label={tab.label} color={color} />
+              <Text style={[styles.adminTabText, { color }]}>{tab.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  }
   return (
     <View style={styles.tabs}>
       {tabs.map((tab) => {
@@ -133,6 +160,10 @@ const styles = StyleSheet.create({
   tabMark: { color: "#87948D", fontSize: 15, marginBottom: 2 },
   tabText: { color: "#748179", fontSize: 11, fontWeight: "700" },
   tabOn: { color: "#12823D" },
+  adminTabs: { flexDirection: "row", backgroundColor: "#FFFFFF", borderTopWidth: 1, borderTopColor: "#E3EBE6", paddingBottom: 6 },
+  adminTab: { flex: 1, alignItems: "center", paddingTop: 10, paddingBottom: 2 },
+  adminTabMark: { position: "absolute", top: 0, width: 32, height: 3, borderRadius: 2, backgroundColor: "#0E7A3C" },
+  adminTabText: { fontSize: 11, fontWeight: "700", marginTop: 3 },
   laterTitle: { fontWeight: "700", color: colors.text, marginBottom: 6 },
   laterBody: { color: colors.muted, lineHeight: 20 },
 });

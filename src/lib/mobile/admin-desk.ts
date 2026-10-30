@@ -135,6 +135,18 @@ export function agoLabel(iso: string | null | undefined, now = Date.now()): stri
   return `${days}d ago`;
 }
 
+function karachiClock(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Karachi",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).formatToParts(date);
+  const pick = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${pick("hour")}:${pick("minute")} ${pick("dayPeriod").toUpperCase()}`;
+}
+
+/** Mockup line: `10 May 2025, 08:15 AM`. Date-only stays the day. */
 export function deskStamp(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(iso);
@@ -142,8 +154,7 @@ export function deskStamp(iso: string | null | undefined): string | null {
   if (Number.isNaN(date.getTime())) return null;
   const day = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Karachi", day: "numeric", month: "short", year: "numeric" }).format(date);
   if (dateOnly) return day;
-  const time = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Karachi", hour: "numeric", minute: "2-digit" }).format(date);
-  return `${day}, ${time}`;
+  return `${day}, ${karachiClock(date)}`;
 }
 
 export function roleTitle(role: string | null | undefined): string {
@@ -232,7 +243,7 @@ export function milkSteps(input: {
       { title: "Entry hui", detail: entry, state: "done" },
       { title: "Check hui", detail: check, state: "done" },
       { title: "Manzoor hui", detail: "Pending approval", state: "current" },
-      { title: "Khata mein post", detail: "Next · pending", state: "wait" },
+      { title: "Khata mein post", detail: "Pending", state: "wait" },
     ];
   }
   if (checked) {
@@ -240,14 +251,14 @@ export function milkSteps(input: {
       { title: "Entry hui", detail: entry, state: "done" },
       { title: "Check hui", detail: check, state: "done" },
       { title: "Manzoor hui", detail: "Rate ke baad", state: "current" },
-      { title: "Khata mein post", detail: "Next · pending", state: "wait" },
+      { title: "Khata mein post", detail: "Pending", state: "wait" },
     ];
   }
   return [
     { title: "Entry hui", detail: entry, state: "done" },
     { title: "Check hui", detail: "Pending check", state: "current" },
-    { title: "Manzoor hui", detail: "Next · pending approval", state: "wait" },
-    { title: "Khata mein post", detail: "Next · pending", state: "wait" },
+    { title: "Manzoor hui", detail: "Pending approval", state: "wait" },
+    { title: "Khata mein post", detail: "Pending", state: "wait" },
   ];
 }
 

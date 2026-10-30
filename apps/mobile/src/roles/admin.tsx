@@ -30,7 +30,7 @@ import { liveAuth, type LiveBag } from "../bits";
 import { colors } from "../kit";
 import { AdminDetailView, AdminHomeView, AdminInboxView, AdminProfileView, AdminWorkView, RecordList, type HomeCard } from "./admin-ui";
 
-type Panel = "sales" | "cash" | "stock" | "milk" | "farmers" | "purchases" | "attendance" | "support" | "orders" | "parties" | "users" | "branches" | "rules" | "notifications" | "settings" | "org";
+type Panel = "sales" | "cash" | "stock" | "milk" | "farmers" | "purchases" | "attendance" | "support" | "orders" | "parties" | "users" | "branches" | "rules" | "notifications" | "settings" | "org" | "account";
 
 export function RoleScreen({
   tab,
@@ -184,6 +184,8 @@ export function RoleScreen({
         onFilter={setFilter}
         onMine={() => setMineOnly((value) => !value)}
         onOpen={(item) => { void openItem(item); }}
+        onMenu={() => onTab?.("work")}
+        onAlerts={() => setPanel("notifications")}
       />
     );
   }
@@ -223,6 +225,7 @@ export function RoleScreen({
         onOpen={(key) => setPanel(key as Panel)}
         onRole={onRoleSwitch}
         onLogout={onLogout}
+        onMenu={() => onTab?.("home")}
       />
     );
   }
@@ -232,8 +235,8 @@ export function RoleScreen({
   const cards: HomeCard[] = [
     { key: "approvals", title: "Approvals", value: counts.pending == null ? "—" : String(counts.pending), sub: counts.pendingNote || "pending", icon: "clip" },
     { key: "sales", title: "POS sales", value: home.sales.state === "ok" ? cardRupees(home.sales.total) : "—", sub: home.sales.state === "error" ? "nahi khuli" : "today", icon: "cart" },
-    { key: "cash", title: "Cash alerts", value: counts.cash == null ? "—" : String(counts.cash), sub: counts.cashNote || ((counts.cash ?? 0) > 0 ? "high priority" : "clear"), alert: (counts.cash ?? 0) > 0, icon: "bell" },
-    { key: "stock", title: "Stock alerts", value: stockCount == null ? "—" : String(stockCount), sub: home.alertsNote || ((stockCount ?? 0) > 0 ? "low stock" : "clear"), alert: (stockCount ?? 0) > 0, icon: "alert" },
+    { key: "cash", title: "Cash alerts", value: counts.cash == null ? "—" : String(counts.cash), sub: counts.cashNote || "high priority", alert: (counts.cash ?? 0) > 0, icon: "bell" },
+    { key: "stock", title: "Stock alerts", value: stockCount == null ? "—" : String(stockCount), sub: home.alertsNote || "low stock", alert: (stockCount ?? 0) > 0, icon: "alert" },
     { key: "milk", title: "Doodh today", value: milkTotal == null ? "—" : litreLabel(milkTotal), sub: home.milk.state === "error" ? "nahi khula" : "today", icon: "milk" },
     { key: "farmers", title: "Farmers", value: counts.farmers == null ? "—" : String(counts.farmers), sub: counts.farmersNote || "registered", icon: "farmer" },
     { key: "attendance", title: "Staff present", value: counts.staff == null ? "—" : String(counts.staff), sub: counts.staffNote || "today", icon: "people" },
@@ -244,6 +247,8 @@ export function RoleScreen({
       fullName={face?.fullName || ""}
       role={face?.role || "admin"}
       photoUrl={face?.photoUrl || null}
+      testBuild={Boolean(live?.testAccount || live?.flavor === "test")}
+      onRole={onRoleSwitch}
       cards={cards}
       banner={identity.ok ? null : identity.message}
       refreshing={refreshing}
@@ -291,6 +296,7 @@ function panelTitle(panel: Panel): string {
     notifications: "Notifications",
     settings: "Settings",
     org: "Organization",
+    account: "Account",
   };
   return map[panel];
 }
@@ -323,6 +329,21 @@ async function loadPanel(
         { key: "leave", title: "Leave", value: "Apni chhutti nahi. Reporting RPC." },
         { key: "purchase", title: "Purchase", value: "Held payment website par." },
         ...[...groups.entries()].map(([key, count]) => ({ key, title: key.replace(/_/g, " "), value: String(count) })),
+      ],
+      note: null,
+    };
+  }
+  if (panel === "account") {
+    if (!identity) return { rows: [], note: "Profile nahi khuli." };
+    return {
+      rows: [
+        { key: "name", title: "Name", value: identity.fullName },
+        { key: "role", title: "Role", value: roleTitle(identity.role) },
+        { key: "phone", title: "Phone", value: identity.phone || "darj nahi" },
+        { key: "email", title: "Email", value: identity.email || "darj nahi" },
+        { key: "place", title: "Branch / shop", value: identity.place || "darj nahi" },
+        { key: "job", title: "Designation", value: identity.designation || "darj nahi" },
+        { key: "org", title: "Organization", value: identity.org || "darj nahi" },
       ],
       note: null,
     };
