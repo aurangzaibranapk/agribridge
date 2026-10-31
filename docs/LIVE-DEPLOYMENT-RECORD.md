@@ -1,3 +1,7 @@
+## Pending — 31 October 2026: Karyana ordering par Eggs (code only)
+
+Branch `cursor/karyana-eggs-ordering-f857`. Koi migration nahi. Live category data nahi chheri. `/admin/pos/ordering/new` ab "Eggs" jar ko karyana maanta hai, is liye "egg" search Egg dikhati hai. Urea aur poultry feed ab bhi karyana se bahar. Dairy (doodh) dukan par Eggs nahi. Merge ke baad sirf build — SQL nahi.
+
 ## Pending — 31 October 2026: Milk Handover teen manzilen (729)
 
 Branch `cursor/milk-handover-three-flows-a724`. Migration **729 file only**. Testing aur Live dono par **nahi** chali. **728 pehle** (`728_milk_handover_lr_recipe`). 729 `milk_dispatches.destination` (company / vendor / party), `milk_handover_parties` (naam, rabta, faal), aur party par optional wajah. Company LR hamesha **20**. Vendor hamesha **22**. Party par staff **20 ya 22** chunta hai — default **20**, kyunke achha doodh bhi teesri party ko ja sakta hai. Kharab lazmi nahi. Purani rawangi company ban jati hai. Koi purana litre nahi bharta. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).

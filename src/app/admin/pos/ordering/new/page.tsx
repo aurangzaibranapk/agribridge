@@ -5,7 +5,7 @@ import { BackLink } from "@/components/pos/back-link";
 import { SimpleOrderForm } from "./simple-order-form";
 import { t } from "@/lib/i18n/translations";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
-import { categoriesForShop, type CatNode } from "@/lib/products/shop-kinds";
+import { categoriesForShop, categoryChipsForShop, type CatNode } from "@/lib/products/shop-kinds";
 export const dynamic = "force-dynamic";
 // Kaunsi categories yahan dikhti hain, ye ab `shop-kinds` tay karta hai --
 // pehle ye fehrist sirf isi safhe ke andar likhi thi, aur isi wajah se
@@ -95,11 +95,14 @@ export default async function NewBranchOrderPage() {
       warehouse_stock: stockMap[p.id] ?? 0,
       units_per_carton: p.units_per_carton ? Number(p.units_per_carton) : null,
     }));
-  // Jar wali qismein (Grocery waghera) khane mein nahi aatin -- wo itni
-  // barhi hain ke un par daba kar kuch chhanta hi nahi.
-  const karyanaCategories = (allCategories ?? [])
-    .filter((c) => karyanaCategoryIds.has(c.id) && c.parent_category_id !== null)
-    .map((c) => ({ id: c.id, name: c.name }));
+  // Jar wali qismein (Grocery) khane mein nahi aatin -- wo itni barhi
+  // hain ke un par daba kar kuch chhanta hi nahi. Jis jar ki aulaad nahi
+  // aur us par maal hai (Eggs), wo khud chip hai.
+  const karyanaCategories = categoryChipsForShop(
+    karyanaCategoryIds,
+    (allCategories ?? []) as CatNode[],
+    productsFormatted.map((p) => p.category_id)
+  );
   // Doosri shops ki list, taake branch-to-branch order ho sake.
   const { data: branches } = await supabase.from("branches").select("id, name").eq("is_active", true).order("name");
 

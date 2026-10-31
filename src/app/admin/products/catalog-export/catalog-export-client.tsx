@@ -105,8 +105,8 @@ export function CatalogExportClient({ products: initialProducts, categories, com
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
-  // Karyana chunte hi uski saari categories (Grocery, Cold/Soft Drink,
-  // Dairy Products aur unki har aulaad) ek sath aati hain -- ek-ek
+  // Karyana chunte hi uski saari categories (Grocery, Eggs, Dairy
+  // Products aur unki har aulaad) ek sath aati hain -- ek-ek
   // category alag se chunne ki zaroorat nahi, aur pesticide/khad wali
   // categories khud-ba-khud bahar rehti hain.
   const [shopGroupFilter, setShopGroupFilter] = useState("");

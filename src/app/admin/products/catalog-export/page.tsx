@@ -8,10 +8,9 @@ import { categoriesForShop } from "@/lib/products/shop-kinds";
 
 export const dynamic = "force-dynamic";
 
-/** Har dukan-qism ke jaR (shop-kinds.ts): "Karyana" ka matlab sirf ye 3
- * root categories nahi -- unki har aulaad bhi (Grocery ke neeche 15+
- * upar-categories). Yehi hisaab POS/ordering filter mein bhi lagta hai
- * -- yahan dobara likhne ki zaroorat nahi. */
+/** Har dukan-qism ke jaR (shop-kinds.ts): "Karyana" = Grocery, Dairy
+ * Products, Eggs, aur unki har aulaad. Yehi hisaab POS/ordering filter
+ * mein bhi lagta hai -- yahan dobara likhne ki zaroorat nahi. */
 const SHOP_GROUPS: { key: string; label: string }[] = [
   { key: "karyana", label: "Karyana" },
   { key: "fertilizer", label: "Fertilizer" },
