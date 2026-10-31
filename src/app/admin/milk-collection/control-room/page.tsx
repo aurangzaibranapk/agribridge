@@ -85,9 +85,13 @@ export default async function MilkControlRoomPage({
     .order("name");
   const branches = branchRows ?? [];
   const requested = params.branch && /^[0-9a-f-]{36}$/i.test(params.branch) ? params.branch : null;
-  const branchId = canPick
-    ? requested ?? ownBranch ?? branches.find((b) => b.is_main_branch)?.id ?? branches[0]?.id ?? null
-    : ownBranch;
+  // "all" = sab branches (sirf Owner/Admin/Super Admin). null = koi branch filter nahi.
+  const allBranches = canPick && params.branch === "all";
+  const branchId = allBranches
+    ? null
+    : canPick
+      ? requested ?? ownBranch ?? branches.find((b) => b.is_main_branch)?.id ?? branches[0]?.id ?? null
+      : ownBranch;
   const branchName = branches.find((b) => b.id === branchId)?.name ?? "Sab branches";
 
   let chillerQ = supabase
@@ -179,7 +183,8 @@ export default async function MilkControlRoomPage({
         {canPick && (
           <label className="flex flex-col text-sm">
             Branch
-            <select name="branch" defaultValue={branchId ?? ""} className="rounded border px-2 py-1">
+            <select name="branch" defaultValue={allBranches ? "all" : branchId ?? ""} className="rounded border px-2 py-1">
+              <option value="all">Sab branches</option>
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>{b.name}</option>
               ))}
@@ -236,7 +241,9 @@ export default async function MilkControlRoomPage({
         <h2 className="mb-2 text-sm font-semibold text-surface-600">Farmer ka hisaab</h2>
         <div className="mb-4 rounded-lg border border-surface-200 bg-white p-4">
           <div className="mb-2 text-xs text-surface-500">Is din ka kul farmer ko dena: statement se khud likhein</div>
-          {branchId && !dayPayableMissing ? (
+          {!branchId ? (
+            <p className="text-sm text-surface-600">Farmer ka kul dena ek branch chun kar hi likha jata hai. Upar se branch chunein.</p>
+          ) : !dayPayableMissing ? (
             <DayPayableForm branchId={branchId} date={date} amount={dayPayable ? Number(dayPayable.amount) : null} note={dayPayable?.note ?? null} />
           ) : (
             <p className="text-sm text-amber-800">Ye box abhi kaam nahi karega: migration 733 is database par nahi lagi. Testing par chalne ke baad dobara kholen.</p>
