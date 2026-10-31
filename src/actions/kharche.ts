@@ -12,6 +12,7 @@ import { glForFinanceAccount, expenseAccountFor, ACC } from "@/lib/ledger/rules"
 import { cashBookLikhein } from "@/lib/ledger/cash-book";
 import { qismDhoondein, qismKaNaamSaaf, APNI_QISM } from "@/lib/kharche";
 import { kharchaApproveGate } from "@/lib/finance/money-guards";
+import { expenseVerificationReset, parseExpenseEdit } from "@/lib/pending/popup";
 
 /** Migration 347 ke baad ki qatar -- jab tak types dobara na banein. */
 interface KharchaQatar {
@@ -678,4 +679,96 @@ async function supplierBillManzoor(kharcha: any, qism: { label: string; asar: st
   revalidatePath("/admin/finance");
   revalidatePath(`/admin/suppliers/${kharcha.party_id}/statement`);
   return { success: true, message: `${kharcha.expense_number} manzoor. ${qism.asar}` };
+}
+
+/**
+ * Pending ya tasdeeq-shuda kharche ki tafseel theek karna.
+ * Manzoor shuda qatar nahi chhuti — kitab ka taala (347) waisa hi hai.
+ * Raqam ya khata badle aur status verified ho, to tasdeeq gir kar
+ * dubara pending ho jati hai. Ledger yahan nahi hilt.
+ */
+export async function kharchaTheek(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const who = await main();
+  if ("error" in who) return { error: who.error };
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) return { error: "Kharche ki qatar nahi mili." };
+  const parsed = parseExpenseEdit({
+    description: String(formData.get("description") ?? ""),
+    amount: String(formData.get("amount") ?? ""),
+    expenseDate: String(formData.get("expense_date") ?? ""),
+    partyName: String(formData.get("party_name") ?? ""),
+    category: String(formData.get("category") ?? ""),
+    accountId: String(formData.get("paid_from_account_id") ?? ""),
+  });
+  if (!parsed.ok) return { error: parsed.error };
+
+  const service = createServiceClient();
+  const { data: kharcha } = (await service
+    .from("company_expense_requests")
+    .select("expense_number, status, amount, description, category, party_name, expense_date, paid_from_account_id, requested_by")
+    .eq("id", id)
+    .maybeSingle()) as { data: (KharchaQatar & { status: string }) | null };
+  if (!kharcha) return { error: "Ye kharcha nahi mila." };
+  if (kharcha.status !== "pending" && kharcha.status !== "verified") {
+    return { error: "Sirf pending ya tasdeeq-shuda kharcha theek hota hai. Manzoor ho chuka kitab mein hai." };
+  }
+
+  const money = MANZOORI_WALE.includes(who.role);
+  const ownPending = kharcha.status === "pending" && kharcha.requested_by === who.userId;
+  if (!money && !ownPending) return { error: "Ye kharcha aap theek nahi kar sakte." };
+  if (!money) {
+    const guard = await requireAction("kharche", "create");
+    if ("error" in guard) return { error: guard.error };
+  }
+
+  const next = parsed.value;
+  const reset = expenseVerificationReset(
+    { status: kharcha.status, amount: Number(kharcha.amount), accountId: kharcha.paid_from_account_id },
+    { amount: next.amount, accountId: next.accountId }
+  );
+  const patch = {
+    description: next.description,
+    amount: next.amount,
+    category: next.category,
+    party_name: next.partyName,
+    expense_date: next.expenseDate,
+    paid_from_account_id: next.accountId,
+    ...(reset ? { status: "pending", verified_by: null, verified_at: null } : {}),
+  };
+
+  const { data: saved, error } = await service
+    .from("company_expense_requests")
+    .update(patch)
+    .eq("id", id)
+    .in("status", ["pending", "verified"])
+    .select("id")
+    .maybeSingle();
+  if (error) return { error: error.message };
+  if (!saved) return { error: "Ye qatar ab theek nahi ho sakti — halat badal chuki hai." };
+
+  await logAudit({
+    actionType: "update",
+    module: "kharche",
+    recordId: id,
+    recordLabel: kharcha.expense_number,
+    description: reset
+      ? "Pending approvals se theek — raqam ya khata badla, tasdeeq gir kar dubara pending."
+      : "Pending approvals se tafseel theek. Kitab nahi hili.",
+    changes: {
+      amount: { pehle: kharcha.amount, ab: next.amount },
+      description: { pehle: kharcha.description, ab: next.description },
+      category: { pehle: kharcha.category, ab: next.category },
+      paid_from_account_id: { pehle: kharcha.paid_from_account_id, ab: next.accountId },
+    },
+  });
+
+  revalidatePath("/admin/kharche");
+  revalidatePath("/admin/my-work/pending");
+  return {
+    success: true,
+    message: reset
+      ? `${kharcha.expense_number} theek ho gaya. Raqam ya khata badla hai — tasdeeq dubara chahiye.`
+      : `${kharcha.expense_number} theek ho gaya.`,
+  };
 }

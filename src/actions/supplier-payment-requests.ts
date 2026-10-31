@@ -1,5 +1,7 @@
 "use server";
 import { isSelfApproval, mayDecideEntry } from "@/lib/approval/guards";
+import { logAudit } from "@/lib/audit";
+import { parseSupplierEdit } from "@/lib/pending/popup";
 import { revalidatePath } from "next/cache";
 import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
@@ -158,5 +160,72 @@ export async function rejectSupplierPayment(_prev: ActionState, formData: FormDa
   if (error) return { error: error.message };
 
   revalidatePath("/admin/finance/queue");
+  return { success: true };
+}
+
+/**
+ * Pending supplier request ki raqam / tareeqa / khata theek karna.
+ * Approve nahi — wohi `approveSupplierPayment` rehta hai.
+ * Sirf pending. Finance ya HQ (RLS 356).
+ */
+export async function editSupplierPayment(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const supabase = createClient();
+  const requestId = String(formData.get("request_id") ?? "");
+  if (!requestId) return { error: "Missing request id." };
+  const parsed = parseSupplierEdit({
+    amount: String(formData.get("amount") ?? ""),
+    method: String(formData.get("payment_method") ?? ""),
+    notes: String(formData.get("notes") ?? ""),
+    accountId: String(formData.get("finance_account_id") ?? ""),
+    paymentDate: String(formData.get("payment_date") ?? ""),
+  });
+  if (!parsed.ok) return { error: parsed.error };
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Login zaroori hai." };
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
+  const role = profile?.role ?? null;
+  if (role !== "finance" && !HQ_APPROVER_ROLES.includes(role ?? "")) {
+    return { error: "Sirf Finance ya Admin/Owner is request ko theek kar sakte hain." };
+  }
+
+  const { data: current } = await supabase
+    .from("supplier_payment_requests")
+    .select("status, request_number, amount, payment_method")
+    .eq("id", requestId)
+    .maybeSingle();
+  if (!current) return { error: "Request nahi mili." };
+  if (current.status !== "pending") return { error: "Sirf pending request theek hoti hai." };
+
+  const next = parsed.value;
+  const { error } = await supabase
+    .from("supplier_payment_requests")
+    .update({
+      amount: next.amount,
+      payment_method: next.method,
+      notes: next.notes,
+      finance_account_id: next.accountId,
+      payment_date: next.paymentDate,
+    })
+    .eq("id", requestId)
+    .eq("status", "pending");
+  if (error) return { error: error.message };
+
+  await logAudit({
+    actionType: "update",
+    module: "supplier_payment_requests",
+    recordId: requestId,
+    recordLabel: current.request_number,
+    description: "Pending approvals se supplier request theek. Approve alag hai.",
+    changes: {
+      amount: { pehle: current.amount, ab: next.amount },
+      payment_method: { pehle: current.payment_method, ab: next.method },
+    },
+  });
+
+  revalidatePath("/admin/finance/queue");
+  revalidatePath("/admin/my-work/pending");
   return { success: true };
 }
