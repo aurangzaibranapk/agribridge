@@ -8,14 +8,18 @@ import { Button, Input, Label, Select } from "@/components/ui/form";
 import { t, type Lang } from "@/lib/i18n/translations";
 import {
   adjustedTotal,
+  applyAutoLab,
   blankCertificateLines,
   emptyLine,
   formatQty,
   grossTotal,
   lineSpecFlags,
+  lrCorrection,
+  lrCorrectionLabel,
   parseHandoverLines,
+  seedAutoLab,
+  type LrBaseline,
   specFlagText,
-  suggestLab,
   tsOf,
   type HandoverLineInput,
   type HandoverSpecs,
@@ -58,6 +62,7 @@ export interface HandoverFormProps {
     licenseeSignature: string;
     collectorSignature: string;
     lines: HandoverLineInput[];
+    lrBaseline?: LrBaseline;
   };
 }
 
@@ -77,9 +82,13 @@ export function HandoverForm(props: HandoverFormProps) {
   const [accepted, setAccepted] = useState(props.defaults.accepted);
   const [licenseeSignature, setLicenseeSignature] = useState(props.defaults.licenseeSignature);
   const [collectorSignature, setCollectorSignature] = useState(props.defaults.collectorSignature);
-  const [lines, setLines] = useState<HandoverLineInput[]>(
-    props.defaults.lines.length > 0 ? props.defaults.lines : blankCertificateLines()
-  );
+  const [baseline, setBaseline] = useState<LrBaseline>(props.defaults.lrBaseline ?? 20);
+  const [lines, setLines] = useState<HandoverLineInput[]>(() => {
+    const start = props.defaults.lines.length > 0 ? props.defaults.lines : blankCertificateLines();
+    const recipe = props.defaults.lrBaseline ?? 20;
+    if (props.locked) return start;
+    return start.map((line) => seedAutoLab(line, props.formula, recipe));
+  });
 
   const parsed = useMemo(() => parseHandoverLines(lines), [lines]);
   const liveLines = "lines" in parsed ? parsed.lines : [];
@@ -89,6 +98,19 @@ export function HandoverForm(props: HandoverFormProps) {
 
   function patchLine(index: number, patch: Partial<HandoverLineInput>) {
     setLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
+  }
+
+  function onLabSource(index: number, patch: Partial<HandoverLineInput>) {
+    setLines((prev) => prev.map((line, i) => (i === index ? applyAutoLab({ ...line, ...patch }, formula, "inputs", baseline) : line)));
+  }
+
+  function onSnf(index: number, value: string) {
+    setLines((prev) => prev.map((line, i) => (i === index ? applyAutoLab({ ...line, snf: value }, formula, "snf", baseline) : line)));
+  }
+
+  function onBaseline(next: LrBaseline) {
+    setBaseline(next);
+    setLines((prev) => prev.map((line) => applyAutoLab(line, formula, "inputs", next)));
   }
 
   function onShop(id: string) {
@@ -120,6 +142,7 @@ export function HandoverForm(props: HandoverFormProps) {
       {!locked && <input type="hidden" name="lines_json" value={JSON.stringify(lines)} />}
       <input type="hidden" name="licensee_signature" value={licenseeSignature} />
       <input type="hidden" name="collector_signature" value={collectorSignature} />
+      <input type="hidden" name="lr_baseline" value={String(baseline)} />
 
       {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
       {locked && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">{t("mh_locked", lang)}</p>}
@@ -197,6 +220,18 @@ export function HandoverForm(props: HandoverFormProps) {
         </div>
       </div>
 
+      <fieldset className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded border border-black px-3 py-2 text-sm">
+        <legend className="px-1 font-semibold">{t("mh_recipe", lang)}</legend>
+        <label className="inline-flex items-center gap-2">
+          <input type="radio" checked={baseline === 20} disabled={locked} onChange={() => onBaseline(20)} />
+          {t("mh_recipe_20", lang)}
+        </label>
+        <label className="inline-flex items-center gap-2">
+          <input type="radio" checked={baseline === 22} disabled={locked} onChange={() => onBaseline(22)} />
+          {t("mh_recipe_22", lang)}
+        </label>
+      </fieldset>
+
       <div className="overflow-x-auto">
         <table className="w-full min-w-[920px] border-collapse border border-black text-center text-xs">
           <thead>
@@ -209,15 +244,16 @@ export function HandoverForm(props: HandoverFormProps) {
           <tbody>
             {lines.map((line, index) => {
               const fat = numOrNull(line.fat);
-              const lr = numOrNull(line.lr);
+              const rawLr = numOrNull(line.lr);
+              const temp = numOrNull(line.temperatureC);
+              const corr = lrCorrection(rawLr, temp, baseline);
               const snf = numOrNull(line.snf);
-              const grossL = numOrNull(line.grossL);
+              const lrNote = lrCorrectionLabel(rawLr, temp, baseline);
               const flagsFor = lineSpecFlags(
-                { chillerNo: line.chillerNo || String(index + 1), fat, lr, snf },
+                { chillerNo: line.chillerNo || String(index + 1), fat, lr: corr?.corrected ?? rawLr, snf },
                 specs
               );
               const bad = new Set(flagsFor.map((f) => f.field));
-              const hint = suggestLab(grossL ?? 0, fat, lr, snf, formula);
               const warn = (field: "fat" | "lr" | "snf") => (bad.has(field) ? "bg-amber-100" : "");
               return (
                 <tr key={index}>
@@ -228,36 +264,28 @@ export function HandoverForm(props: HandoverFormProps) {
                     <Input className={cell} list="milk-types" value={line.milkType} disabled={locked} onChange={(e) => patchLine(index, { milkType: e.target.value })} aria-label={`Milk type ${index + 1}`} />
                   </td>
                   <td className="border border-black p-0.5">
-                    <Input className={cell} inputMode="decimal" value={line.grossL} disabled={locked} onChange={(e) => patchLine(index, { grossL: e.target.value })} aria-label={`Gross ${index + 1}`} />
+                    <Input className={cell} inputMode="decimal" value={line.grossL} disabled={locked} onChange={(e) => onLabSource(index, { grossL: e.target.value })} aria-label={`Gross ${index + 1}`} />
                   </td>
                   <td className="border border-black p-0.5">
-                    <Input className={`${cell} ${warn("fat")}`} inputMode="decimal" value={line.fat} disabled={locked} onChange={(e) => patchLine(index, { fat: e.target.value })} aria-label={`FAT ${index + 1}`} />
+                    <Input className={`${cell} ${warn("fat")}`} inputMode="decimal" value={line.fat} disabled={locked} onChange={(e) => onLabSource(index, { fat: e.target.value })} aria-label={`FAT ${index + 1}`} />
                   </td>
                   <td className="border border-black p-0.5">
-                    <Input className={`${cell} ${warn("lr")}`} inputMode="decimal" value={line.lr} disabled={locked} onChange={(e) => patchLine(index, { lr: e.target.value })} aria-label={`LR ${index + 1}`} />
+                    <Input className={`${cell} ${warn("lr")}`} inputMode="decimal" value={line.lr} disabled={locked} title="Lactometer reading (raw). 20°C correction shows under the box." onChange={(e) => onLabSource(index, { lr: e.target.value })} aria-label={`LR ${index + 1}`} />
+                    {lrNote && <p className="px-0.5 text-[10px] leading-tight text-neutral-700">{lrNote}</p>}
+                    {corr?.tempMissing && <p className="px-0.5 text-[10px] leading-tight text-neutral-500">{t("mh_lr_need_temp", lang)}</p>}
                   </td>
                   <td className="border border-black p-0.5">
-                    <Input className={`${cell} ${warn("snf")}`} inputMode="decimal" value={line.snf} disabled={locked} onChange={(e) => patchLine(index, { snf: e.target.value })} aria-label={`SNF ${index + 1}`} />
-                    {hint.snf != null && !line.snf.trim() && !locked && (
-                      <button type="button" className="mt-0.5 text-[10px] text-brand-700 underline" onClick={() => patchLine(index, { snf: String(hint.snf) })}>
-                        SNF {hint.snf} {t("mh_write", lang)}
-                      </button>
-                    )}
+                    <Input className={`${cell} ${warn("snf")}`} inputMode="decimal" value={line.snf} disabled={locked} onChange={(e) => onSnf(index, e.target.value)} aria-label={`SNF ${index + 1}`} />
                   </td>
                   <td className="border border-black px-1 py-1">{formatQty(tsOf(fat, snf))}</td>
                   <td className="border border-black p-0.5">
-                    <Input className={cell} inputMode="decimal" value={line.adjustedL} disabled={locked} placeholder={hint.adjusted != null ? String(hint.adjusted) : ""} onChange={(e) => patchLine(index, { adjustedL: e.target.value })} aria-label={`Adjusted ${index + 1}`} />
-                    {hint.adjusted != null && !line.adjustedL.trim() && !locked && (
-                      <button type="button" className="mt-0.5 text-[10px] text-brand-700 underline" onClick={() => patchLine(index, { adjustedL: String(hint.adjusted) })}>
-                        {hint.adjusted} {t("mh_write", lang)}
-                      </button>
-                    )}
+                    <Input className={cell} inputMode="decimal" value={line.adjustedL} disabled={locked} onChange={(e) => patchLine(index, { adjustedL: e.target.value })} aria-label={`Adjusted ${index + 1}`} />
                   </td>
                   <td className="border border-black p-0.5">
-                    <Input className={cell} inputMode="decimal" value={line.temperatureC} disabled={locked} onChange={(e) => patchLine(index, { temperatureC: e.target.value })} aria-label={`Temperature ${index + 1}`} />
+                    <Input className={cell} inputMode="decimal" value={line.temperatureC} disabled={locked} onChange={(e) => onLabSource(index, { temperatureC: e.target.value })} aria-label={`Temperature ${index + 1}`} />
                   </td>
                   <td className="border border-black p-0.5">
-                    <Input className={cell} value={line.organo} disabled={locked} onChange={(e) => patchLine(index, { organo: e.target.value })} aria-label={`Organo ${index + 1}`} />
+                    <Input className={cell} list="organo-values" placeholder="Pass / Fail" value={line.organo} disabled={locked} onChange={(e) => patchLine(index, { organo: e.target.value })} aria-label={`Organo ${index + 1}`} />
                   </td>
                   <td className="border border-black p-0.5">
                     {!locked && lines.length > 1 && (
@@ -284,6 +312,10 @@ export function HandoverForm(props: HandoverFormProps) {
         <option value="Buffalo" />
         <option value="Mixed" />
       </datalist>
+      <datalist id="organo-values">
+        <option value="Pass" />
+        <option value="Fail" />
+      </datalist>
 
       {!locked && (
         <Button type="button" variant="secondary" size="sm" onClick={() => setLines((prev) => [...prev, emptyLine()])}>
@@ -291,7 +323,7 @@ export function HandoverForm(props: HandoverFormProps) {
         </Button>
       )}
 
-      {formula && <p className="text-[11px] text-neutral-500">{t("mh_suggest", lang)}</p>}
+      <p className="text-[11px] text-neutral-500">{t("mh_suggest", lang)}</p>
       {flags.length > 0 && (
         <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950">
           <p className="font-semibold">{t("mh_spec_warn", lang)}</p>

@@ -3,7 +3,10 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
-import { HandoverForm } from "./handover-form";
+import { certificateShareFromInputs, varianceForCertificate } from "@/lib/milk-handover";
+import { HandoverForm, type HandoverFormProps } from "./handover-form";
+import { CertificatePrintBar } from "./print-bar";
+import { HandoverVarianceCard } from "./variance-card";
 import { handoverGate, loadCertificate, loadHandoverOptions, type LoadedCertificate } from "@/lib/milk-handover-page";
 
 export async function HandoverEditor({
@@ -45,7 +48,7 @@ export async function HandoverEditor({
   const branchList = branches.length > 0 ? branches : options.branches;
   const shops = scoped ? options.shops.filter((s) => !s.branchId || s.branchId === gate.branchId) : options.shops;
 
-  const defaults = loaded
+  const defaults: HandoverFormProps["defaults"] = loaded
     ? {
         branchId: loaded.branchId,
         shopId: loaded.shopId,
@@ -62,6 +65,7 @@ export async function HandoverEditor({
         licenseeSignature: loaded.licenseeSignature,
         collectorSignature: loaded.collectorSignature,
         lines: loaded.lines,
+        lrBaseline: loaded.lrBaseline,
       }
     : {
         branchId: gate.branchId && branchList.some((b) => b.id === gate.branchId) ? gate.branchId : "",
@@ -79,7 +83,34 @@ export async function HandoverEditor({
         licenseeSignature: "",
         collectorSignature: "",
         lines: [],
+        lrBaseline: 20,
       };
+
+  const share = loaded
+    ? certificateShareFromInputs({
+        mccName: loaded.mccName,
+        date: loaded.date,
+        time: loaded.time,
+        shiftLabel: loaded.shift === "evening" ? t("mh_evening", lang) : t("mh_morning", lang),
+        vehicle: loaded.vehicle,
+        driver: loaded.driver,
+        lines: loaded.lines,
+        accepted: loaded.accepted,
+        rejectionReason: loaded.rejectionReason,
+        grossFallback: loaded.priorGross,
+        lrBaseline: loaded.lrBaseline,
+      })
+    : null;
+  const variance = loaded
+    ? varianceForCertificate(
+        loaded.lines.map((line) => ({
+          grossL: Number(line.grossL) || 0,
+          adjustedL: line.adjustedL.trim() === "" ? null : Number(line.adjustedL),
+        })),
+        loaded.priorGross,
+        loaded.received
+      )
+    : null;
 
   return (
     <div>
@@ -89,15 +120,23 @@ export async function HandoverEditor({
         actions={
           <div className="flex gap-3 text-sm">
             <Link href="/admin/milk-collection/handover" className="text-brand-700 underline">{t("mh_list", lang)}</Link>
-            {id && (
-              <Link href={`/admin/milk-collection/handover/${id}/print`} className="text-brand-700 underline">{t("mh_print", lang)}</Link>
-            )}
             <Link href="/admin/milk-collection/dispatch" className="text-brand-700 underline">{t("mh_dispatch", lang)}</Link>
           </div>
         }
       />
       <p className="mb-3 text-sm text-surface-500">{t("mh_backfill", lang)}</p>
       {saved && <p className="mb-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">{t("mh_saved", lang)}</p>}
+      {loaded && variance && (
+        <HandoverVarianceCard lang={lang} title={t("mh_shift_title", lang)} variance={variance} />
+      )}
+      {loaded && share && (
+        <CertificatePrintBar
+          lang={lang}
+          printHref={`/admin/milk-collection/handover/${loaded.id}/print`}
+          shareText={share.text}
+          emailSubject={share.subject}
+        />
+      )}
       <HandoverForm
         lang={lang}
         branches={branchList}

@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
 import { CertificateSheet, type CertificateLineView } from "@/components/milk/certificate-sheet";
-import { adjustedTotal, grossTotal, lineSpecFlags, tsOf, type ParsedLine } from "@/lib/milk-handover";
+import { adjustedTotal, certificateShareFromInputs, grossTotal, lineSpecFlags, lrCorrection, tsOf, varianceForCertificate, type ParsedLine } from "@/lib/milk-handover";
+import { HandoverVarianceCard } from "../../variance-card";
 import { handoverGate, loadCertificate, loadHandoverOptions } from "@/lib/milk-handover-page";
 import { CertificatePrintBar } from "../../print-bar";
 
@@ -31,16 +32,43 @@ export default async function HandoverPrintPage({ params }: { params: { id: stri
     temperatureC: line.temperatureC === "" ? null : Number(line.temperatureC),
     organo: line.organo || null,
   }));
-  const lines: CertificateLineView[] = parsed.map((line) => ({
-    ...line,
-    ts: tsOf(line.fat, line.snf),
-    flags: lineSpecFlags(line, options.specs),
-  }));
+  const lines: CertificateLineView[] = parsed.map((line) => {
+    const corr = lrCorrection(line.lr, line.temperatureC, row.lrBaseline);
+    return {
+      ...line,
+      ts: tsOf(line.fat, line.snf),
+      flags: lineSpecFlags({ ...line, lr: corr?.corrected ?? line.lr }, options.specs),
+    };
+  });
   const flags = lines.flatMap((line) => line.flags);
+  const share = certificateShareFromInputs({
+    mccName: row.mccName,
+    date: row.date,
+    time: row.time,
+    shiftLabel: row.shift === "evening" ? t("mh_evening", lang) : t("mh_morning", lang),
+    vehicle: row.vehicle,
+    driver: row.driver,
+    lines: row.lines,
+    accepted: row.accepted,
+    rejectionReason: row.rejectionReason,
+    grossFallback: row.priorGross,
+    lrBaseline: row.lrBaseline,
+  });
+  const variance = varianceForCertificate(
+    parsed.map((line) => ({ grossL: line.grossL, adjustedL: line.adjustedL })),
+    row.priorGross,
+    row.received
+  );
 
   return (
     <div>
-      <CertificatePrintBar editHref={`/admin/milk-collection/handover/${row.id}`} />
+      <CertificatePrintBar
+        lang={lang}
+        editHref={`/admin/milk-collection/handover/${row.id}`}
+        shareText={share.text}
+        emailSubject={share.subject}
+      />
+      <HandoverVarianceCard lang={lang} title={t("mh_shift_title", lang)} variance={variance} />
       <CertificateSheet
         cert={{
           mccName: row.mccName,
@@ -59,6 +87,7 @@ export default async function HandoverPrintPage({ params }: { params: { id: stri
           driver: row.driver || null,
           specs: options.specs,
           flags,
+          lrBaseline: row.lrBaseline,
         }}
       />
     </div>

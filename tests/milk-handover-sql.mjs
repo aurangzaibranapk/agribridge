@@ -5,6 +5,10 @@ import { PGlite } from "@electric-sql/pglite";
 
 const sql = fs.readFileSync("supabase/migrations/726_milk_handover_certificate.sql", "utf8");
 const rollback = fs.readFileSync("supabase/migrations/726_milk_handover_certificate.rollback.sql", "utf8");
+const sql728 = fs.readFileSync("supabase/migrations/728_milk_handover_lr_recipe.sql", "utf8");
+assert.match(sql728, /lr_baseline smallint not null default 20/);
+assert.match(sql728, /vendor 24\+3=27/);
+assert.doesNotMatch(sql728, /کسان کا وسیلہ|Kisan ka Wasela/i);
 
 assert.doesNotMatch(sql, /hwaiuwxqldxsoukkfefn|ktskwawkslaznkjjacni|supabase\.co/i);
 assert.match(sql, /milk_dispatch_lines/);
@@ -137,6 +141,14 @@ const SHOP = "00000000-0000-0000-0000-0000000000c1";
 await run(stub);
 await run(sql);
 await run(sql);
+await run(sql728);
+await run(sql728);
+const baselineCol = await one(`select column_default from information_schema.columns where table_name = 'milk_dispatches' and column_name = 'lr_baseline'`);
+assert.match(String(baselineCol.column_default), /20/);
+const help = await one(`select array_to_string(how_steps, ' ') as steps from public.feature_help where feature_key = 'milk-collection.handover' and lang = 'rm'`);
+assert.match(help.steps, /20°C/);
+assert.match(help.steps, /22°C/);
+assert.match(help.steps, /24\+3=27/);
 const before = await one("select count(*)::int as n from public.milk_dispatches");
 assert.equal(before.n, 0, "migration ne litre nahi bharne");
 const specs = await one("select min_fat, min_lr, min_snf from public.milk_handover_specs");

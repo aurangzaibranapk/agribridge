@@ -1,9 +1,14 @@
 /**
  * Milk Handover Certificate — hisaab, nishan, aur form ki qatarein.
  *
- * Litre yahan nahi bante. Adjusted volume tabhi number hai jab staff
- * ne likha ho, ya "Likhein" se andaza apni marzi se copy kiya ho.
- * Min spec se neeche = nishan, rok nahi.
+ * Gross litre staff likhta hai. Lactometer LR raw rehta hai.
+ * Staff recipe chunte hain. Default company agreement 20°C.
+ * Vendor 22°C wahi 3°C bands hain, ek point kam (sakht).
+ * 32°C par company +4 (LR 28), vendor +3 (LR 27).
+ * 20 ya neeche (vendor par 23 ya neeche jab company sirf +1 ho): points 0,
+ * minus nahi. 40°C se upar company +7 par rukta hai.
+ * Settings na hon to SNF constant 0.805 aur reference TS 13.
+ * Min spec se neeche = nishan, rok nahi. LR ka nishan 20°C wale adad par.
  */
 
 export interface HandoverSpecs {
@@ -18,6 +23,46 @@ export const PAPER_SPECS: HandoverSpecs = { minFat: 4.1, minLr: 27, minSnf: 8.4 
 export interface LabFormula {
   snfConstant: number;
   referenceTs: number;
+}
+
+/**
+ * milk_rate_settings ke column default (migration 053): snf_constant 0.805,
+ * reference_ts 13. Kaghaz ke min spec (FAT 4.1, LR 27, SNF 8.4) nishan hain,
+ * formula nahi. Settings ki qatar na mile to certificate yahi 13-TS istemal
+ * karta hai, taake Live par khali settings bhi SNF aur adjusted bhar sakein.
+ */
+export const PAPER_FORMULA: LabFormula = { snfConstant: 0.805, referenceTs: 13 };
+
+export function resolveLabFormula(formula: LabFormula | null | undefined): LabFormula {
+  if (
+    formula &&
+    Number.isFinite(formula.snfConstant) &&
+    Number.isFinite(formula.referenceTs) &&
+    formula.referenceTs > 0
+  ) {
+    return formula;
+  }
+  return PAPER_FORMULA;
+}
+
+/** Rate settings se sirf SNF constant aur reference TS. Rate khali ho to bhi. */
+export function formulaFromRateRow(row: {
+  snf_constant?: number | string | null;
+  reference_ts?: number | string | null;
+} | null | undefined): LabFormula {
+  if (
+    row &&
+    row.snf_constant != null &&
+    String(row.snf_constant).trim() !== "" &&
+    row.reference_ts != null &&
+    String(row.reference_ts).trim() !== ""
+  ) {
+    return resolveLabFormula({
+      snfConstant: Number(row.snf_constant),
+      referenceTs: Number(row.reference_ts),
+    });
+  }
+  return PAPER_FORMULA;
 }
 
 export interface HandoverLineInput {
@@ -172,8 +217,79 @@ export function lineSpecFlags(line: Pick<ParsedLine, "chillerNo" | "fat" | "lr" 
 }
 
 export function specFlagText(flag: SpecFlag): string {
-  const name = flag.field === "fat" ? "FAT" : flag.field === "lr" ? "LR" : "SNF";
+  const name = flag.field === "fat" ? "FAT" : flag.field === "lr" ? "LR (corrected)" : "SNF";
   return `Chiller ${flag.chillerNo}: ${name} ${flag.value} — min ${flag.min}`;
+}
+
+/** 20 = company agreement. 22 = vendor, ek point sakht. Form ki default 20. */
+export type LrBaseline = 20 | 22;
+
+export const DEFAULT_LR_BASELINE: LrBaseline = 20;
+
+export function parseLrBaseline(value: unknown): LrBaseline {
+  return Number(value) === 22 ? 22 : 20;
+}
+
+export function lrRecipeLabel(baseline: LrBaseline): string {
+  return baseline === 22 ? "vendor 22°C" : "company agreement 20°C";
+}
+
+/**
+ * Company 20°C bands, 3°C wide, upper edge included:
+ * (20, 23] +1 … (29, 32] +4 … (38, 40] +7. Us se garam +7.
+ * 20 ya neeche: 0. Thanda doodh par minus nahi.
+ */
+function companyLrPoints(tempC: number): number {
+  if (!Number.isFinite(tempC) || !(tempC > 20)) return 0;
+  if (tempC <= 23) return 1;
+  if (tempC <= 26) return 2;
+  if (tempC <= 29) return 3;
+  if (tempC <= 32) return 4;
+  if (tempC <= 35) return 5;
+  if (tempC <= 38) return 6;
+  return 7;
+}
+
+/**
+ * Vendor 22°C: wahi bands, counting ek point baad se — company se 1 kam,
+ * sifar se neeche nahi. 32°C par +3 (company +4).
+ */
+export function lrCorrectionPoints(tempC: number, baseline: LrBaseline = DEFAULT_LR_BASELINE): number {
+  const company = companyLrPoints(tempC);
+  if (baseline === 22) return Math.max(0, company - 1);
+  return company;
+}
+
+export interface LrCorrection {
+  raw: number;
+  points: number;
+  corrected: number;
+  tempMissing: boolean;
+  /** Chart 40°C par khatam. Us se garam doodh +7 par rehta hai. */
+  capped: boolean;
+}
+
+export function lrCorrection(raw: number | null, tempC: number | null, baseline: LrBaseline = DEFAULT_LR_BASELINE): LrCorrection | null {
+  if (raw == null || !Number.isFinite(raw) || !(raw > 0)) return null;
+  const tempMissing = tempC == null || !Number.isFinite(tempC);
+  const points = tempMissing ? 0 : lrCorrectionPoints(tempC, baseline);
+  return {
+    raw,
+    points,
+    corrected: roundTo(raw + points, 2),
+    tempMissing,
+    capped: !tempMissing && (tempC as number) > 40,
+  };
+}
+
+/** Staff ke LR khane ke neeche. Temperature khali ho to null — alag jumla. */
+export function lrCorrectionLabel(raw: number | null, tempC: number | null, baseline: LrBaseline = DEFAULT_LR_BASELINE): string | null {
+  const view = lrCorrection(raw, tempC, baseline);
+  if (!view || view.tempMissing) return null;
+  const name = lrRecipeLabel(baseline);
+  if (view.points === 0) return `${name} +0`;
+  const text = `${name}: ${formatQty(view.raw)}+${view.points}=${formatQty(view.corrected)}`;
+  return view.capped ? `${text} (40°C tak)` : text;
 }
 
 export function grossTotal(lines: { grossL: number }[]): number {
@@ -192,9 +308,68 @@ export function adjustedTotal(lines: { grossL: number; adjustedL: number | null 
 }
 
 /**
- * Lab ka andaza. Formula settings ke baghair nahi — 0.805 khud se nahi.
- * SNF khali ho aur LR+FAT hon to SNF ka andaza. Adjusted hamesha andaza,
- * tabhi jab FAT aur (SNF ya LR) hon.
+ * Aaya (MCC gross) aur gaya (company raseed).
+ * Farq = aaya − gaya. Positive nuqsan, negative faida.
+ * Raseed na ho to farq null — sifar nahi. Wahi shortage_liters ka qanoon.
+ * Adjusted tabhi jab har miqdar wali qatar par adjusted ho.
+ */
+export interface MilkVariance {
+  grossL: number;
+  adjustedL: number | null;
+  receivedL: number | null;
+  grossGapL: number | null;
+  adjustedGapL: number | null;
+}
+
+export function milkVariance(grossL: number, adjustedL: number | null, receivedL: number | null): MilkVariance {
+  return {
+    grossL: roundTo(grossL, 3),
+    adjustedL: adjustedL == null ? null : roundTo(adjustedL, 3),
+    receivedL: receivedL == null ? null : roundTo(receivedL, 3),
+    grossGapL: receivedL == null ? null : roundTo(grossL - receivedL, 3),
+    adjustedGapL: receivedL == null || adjustedL == null ? null : roundTo(adjustedL - receivedL, 3),
+  };
+}
+
+export type GapKind = "pending" | "even" | "loss" | "gain";
+
+export function gapKind(gap: number | null): GapKind {
+  if (gap == null) return "pending";
+  const g = roundTo(gap, 3);
+  if (g === 0) return "even";
+  return g > 0 ? "loss" : "gain";
+}
+
+/** Din ka jama. Koi raseed khali ho to din ka gaya aur farq null. */
+export function dayMilkVariance(rows: { grossL: number; adjustedL: number | null; receivedL: number | null }[]): MilkVariance & {
+  receiptPending: number;
+  shifts: number;
+} {
+  const grossL = roundTo(rows.reduce((sum, row) => sum + row.grossL, 0), 3);
+  const receiptPending = rows.filter((row) => row.receivedL == null).length;
+  const adjustedL = rows.some((row) => row.adjustedL == null)
+    ? null
+    : roundTo(rows.reduce((sum, row) => sum + (row.adjustedL ?? 0), 0), 3);
+  const receivedL = receiptPending > 0 ? null : roundTo(rows.reduce((sum, row) => sum + (row.receivedL ?? 0), 0), 3);
+  return { ...milkVariance(grossL, adjustedL, receivedL), receiptPending, shifts: rows.length };
+}
+
+export function varianceForCertificate(
+  lines: { grossL: number; adjustedL: number | null }[],
+  priorGross: number | null,
+  receivedL: number | null
+): MilkVariance {
+  const withMilk = lines.filter((line) => line.grossL > 0);
+  const grossL = withMilk.length ? grossTotal(withMilk) : priorGross ?? 0;
+  const adjustedL = withMilk.length ? adjustedTotal(withMilk) : null;
+  return milkVariance(grossL, adjustedL, receivedL);
+}
+
+/**
+ * Lab ka andaza. Formula yahan khud nahi banta — certificate
+ * resolveLabFormula se 0.805 / 13 bhejta hai jab settings khali hon.
+ * LR yahan 20°C corrected hona chahiye (caller ye kare).
+ * SNF pehle se ho to sirf adjusted. Warna LR+FAT se SNF aur adjusted.
  */
 export function suggestLab(
   gross: number,
@@ -221,4 +396,218 @@ export function suggestLab(
 export function formatQty(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return "—";
   return Number(n).toLocaleString("en-PK", { maximumFractionDigits: 3 });
+}
+
+function looseNum(raw: string): number | null {
+  const text = raw.trim();
+  if (!text || !/^-?\d+(\.\d+)?$/.test(text)) return null;
+  const n = Number(text);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Gross, FAT, raw LR (aur temperature) badlein to SNF aur adjusted
+ * corrected LR se bhar jate hain. SNF khud badlein to adjusted usi se.
+ * Temperature aur organo nahi chhoote. Adjusted khud likha ho to
+ * tab tak rehta hai jab tak ye inputs na badlein.
+ */
+export function applyAutoLab(
+  line: HandoverLineInput,
+  formula: LabFormula | null,
+  touched: "inputs" | "snf",
+  baseline: LrBaseline = DEFAULT_LR_BASELINE
+): HandoverLineInput {
+  if (touched === "snf" && !line.snf.trim()) return applyAutoLab(line, formula, "inputs", baseline);
+  const resolved = resolveLabFormula(formula);
+  const gross = looseNum(line.grossL);
+  const fat = looseNum(line.fat);
+  const rawLr = looseNum(line.lr);
+  const temp = looseNum(line.temperatureC);
+  const lr = lrCorrection(rawLr, temp, baseline)?.corrected ?? null;
+
+  if (touched === "snf") {
+    const snfTyped = looseNum(line.snf);
+    if (gross != null && gross > 0 && fat != null && fat > 0 && snfTyped != null && snfTyped > 0) {
+      const hint = suggestLab(gross, fat, lr, snfTyped, resolved);
+      if (hint.adjusted != null) return { ...line, adjustedL: String(hint.adjusted) };
+    }
+    return line;
+  }
+
+  if (gross != null && gross > 0 && fat != null && fat > 0 && lr != null && lr > 0) {
+    const hint = suggestLab(gross, fat, lr, null, resolved);
+    if (hint.snf != null && hint.adjusted != null) {
+      return { ...line, snf: String(hint.snf), adjustedL: String(hint.adjusted) };
+    }
+  }
+  return line;
+}
+
+/** Khali SNF ya adjusted, jab gross+fat+LR hon, form khulte hi bhar dein. Dono bhari hon to na chheiren. */
+export function seedAutoLab(
+  line: HandoverLineInput,
+  formula: LabFormula | null,
+  baseline: LrBaseline = DEFAULT_LR_BASELINE
+): HandoverLineInput {
+  if (line.snf.trim() && line.adjustedL.trim()) return line;
+  if (!line.snf.trim()) return applyAutoLab(line, formula, "inputs", baseline);
+  return applyAutoLab(line, formula, "snf", baseline);
+}
+
+export interface CertificateShareLine {
+  chillerNo: string;
+  milkType: string;
+  grossL: number | null;
+  fat: number | null;
+  lr: number | null;
+  temperatureC: number | null;
+  snf: number | null;
+  ts: number | null;
+  adjustedL: number | null;
+  organo: string | null;
+}
+
+export interface CertificateShareInput {
+  mccName: string;
+  date: string;
+  time: string;
+  shiftLabel: string;
+  vehicle: string | null;
+  driver: string | null;
+  lines: CertificateShareLine[];
+  grossTotal: number | null;
+  adjustedTotal: number | null;
+  accepted: boolean | null;
+  rejectionReason: string | null;
+  lrBaseline: LrBaseline;
+}
+
+function lrShareBit(raw: number | null, temp: number | null, baseline: LrBaseline): string {
+  const view = lrCorrection(raw, temp, baseline);
+  const name = lrRecipeLabel(baseline);
+  if (!view) return "LR —";
+  if (view.tempMissing) return `LR ${formatQty(view.raw)} raw (temp khali, ${name})`;
+  if (view.points === 0) return `LR ${formatQty(view.raw)} (${name} +0)`;
+  const cap = view.capped ? ", 40°C tak" : "";
+  return `LR ${formatQty(view.raw)} raw → ${formatQty(view.corrected)} (${name} +${view.points}${cap})`;
+}
+
+/** Slip ka text. Public naam Kisan Pakistan. Jo recipe chuni ho wahi. */
+export function certificateShareText(input: CertificateShareInput): string {
+  const accepted = input.accepted == null ? "Abhi nahi" : input.accepted ? "YES" : "NO";
+  const lines = input.lines.map((line) =>
+    [
+      `Chiller ${line.chillerNo.trim() || "—"}`,
+      line.milkType.trim() || "—",
+      `Gross ${formatQty(line.grossL)} L`,
+      `FAT ${formatQty(line.fat)}`,
+      lrShareBit(line.lr, line.temperatureC, input.lrBaseline),
+      `Temp ${formatQty(line.temperatureC)}`,
+      `SNF ${formatQty(line.snf)}`,
+      `TS ${formatQty(line.ts)}`,
+      `Adjusted ${formatQty(line.adjustedL)} L`,
+      `Organo ${line.organo?.trim() || "—"}`,
+    ].join(" · ")
+  );
+  const parts = [
+    "Kisan Pakistan",
+    "Milk Handover Certificate",
+    `MCC: ${input.mccName.trim() || "—"}`,
+    `Date: ${input.date} · ${input.shiftLabel}`,
+  ];
+  if (input.time.trim()) parts.push(`Time: ${input.time.trim()}`);
+  if (input.vehicle?.trim() || input.driver?.trim()) {
+    parts.push(`Vehicle: ${input.vehicle?.trim() || "—"} · Driver: ${input.driver?.trim() || "—"}`);
+  }
+  parts.push("");
+  parts.push(...(lines.length ? lines : ["Koi chiller nahi."]));
+  parts.push("");
+  parts.push(`Gross total: ${formatQty(input.grossTotal)} L`);
+  parts.push(`Adjusted total: ${input.adjustedTotal == null ? "—" : `${formatQty(input.adjustedTotal)} L`}`);
+  parts.push(`Accepted: ${accepted}`);
+  if (input.accepted === false && input.rejectionReason?.trim()) {
+    parts.push(`Rejected: ${input.rejectionReason.trim()}`);
+  }
+  parts.push(`LR recipe: ${lrRecipeLabel(input.lrBaseline)}`);
+  return parts.join("\n");
+}
+
+export function certificateEmailSubject(input: { mccName: string; date: string }): string {
+  const mcc = input.mccName.trim() || "MCC";
+  return `Kisan Pakistan — Milk Handover Certificate — ${mcc} ${input.date}`;
+}
+
+export function certificateShareMessage(text: string, printUrl: string): string {
+  return `${text}\n\nPrint: ${printUrl}`;
+}
+
+/** POS closing slip jaisa: staff ke WhatsApp mein slip ka text. */
+export function whatsAppShareHref(text: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+export function emailShareHref(subject: string, body: string): string {
+  return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function viewNum(raw: string): number | null {
+  const text = raw.trim();
+  if (!text) return null;
+  const n = Number(text);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Saved certificate se slip. Khali pad qatarein bahar. */
+export function certificateShareFromInputs(input: {
+  mccName: string;
+  date: string;
+  time: string;
+  shiftLabel: string;
+  vehicle: string;
+  driver: string;
+  lines: HandoverLineInput[];
+  accepted: "" | "yes" | "no";
+  rejectionReason: string;
+  grossFallback?: number | null;
+  lrBaseline?: LrBaseline;
+}): { text: string; subject: string } {
+  const lrBaseline = input.lrBaseline ?? DEFAULT_LR_BASELINE;
+  const lines = input.lines
+    .map((line) => ({
+      chillerNo: line.chillerNo,
+      milkType: line.milkType,
+      grossL: viewNum(line.grossL),
+      fat: viewNum(line.fat),
+      lr: viewNum(line.lr),
+      temperatureC: viewNum(line.temperatureC),
+      snf: viewNum(line.snf),
+      adjustedL: viewNum(line.adjustedL),
+      organo: line.organo,
+    }))
+    .filter((line) => line.grossL != null || line.chillerNo.trim() || line.lr != null)
+    .map((line) => ({ ...line, ts: tsOf(line.fat, line.snf) }));
+  const withGross = lines.filter((line) => line.grossL != null);
+  const gross = withGross.length
+    ? grossTotal(withGross.map((line) => ({ grossL: line.grossL as number })))
+    : input.grossFallback ?? null;
+  const adjusted = lines.length
+    ? adjustedTotal(lines.map((line) => ({ grossL: line.grossL ?? 0, adjustedL: line.adjustedL })))
+    : null;
+  return {
+    text: certificateShareText({
+      mccName: input.mccName,
+      date: input.date,
+      time: input.time,
+      shiftLabel: input.shiftLabel,
+      vehicle: input.vehicle || null,
+      driver: input.driver || null,
+      lines,
+      grossTotal: gross,
+      adjustedTotal: adjusted,
+      accepted: input.accepted === "" ? null : input.accepted === "yes",
+      rejectionReason: input.rejectionReason || null,
+      lrBaseline,
+    }),
+    subject: certificateEmailSubject({ mccName: input.mccName, date: input.date }),
+  };
 }

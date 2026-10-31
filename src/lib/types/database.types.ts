@@ -24505,6 +24505,7 @@ export type Database = {
           licensee_signature: string | null
           licensee_signed_at: string | null
           licensee_signed_by: string | null
+          lr_baseline: number
           mcc_name: string | null
           notes: string | null
           received_at: string | null
@@ -24536,6 +24537,7 @@ export type Database = {
           licensee_signature?: string | null
           licensee_signed_at?: string | null
           licensee_signed_by?: string | null
+          lr_baseline?: number
           mcc_name?: string | null
           notes?: string | null
           received_at?: string | null
@@ -24567,6 +24569,7 @@ export type Database = {
           licensee_signature?: string | null
           licensee_signed_at?: string | null
           licensee_signed_by?: string | null
+          lr_baseline?: number
           mcc_name?: string | null
           notes?: string | null
           received_at?: string | null

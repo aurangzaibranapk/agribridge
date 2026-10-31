@@ -117,6 +117,7 @@ export async function recordReceipt(_prev: DispatchState, formData: FormData): P
   if (error) return { error: error.message };
 
   revalidatePath("/admin/milk-collection/dispatch");
+  revalidatePath("/admin/milk-collection/handover");
   return { success: true };
 }
 
@@ -152,5 +153,6 @@ export async function correctMilkReceipt(_prev: DispatchState, formData: FormDat
   if (posted.error) return { error: rpcError(posted.error.message) };
 
   revalidatePath("/admin/milk-collection/dispatch");
+  revalidatePath("/admin/milk-collection/handover");
   return { success: true, notice: "Raseed theek ho gayi." };
 }
