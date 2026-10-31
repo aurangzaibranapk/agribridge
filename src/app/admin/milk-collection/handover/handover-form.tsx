@@ -1,24 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
-import { saveMilkHandover, type HandoverState } from "@/actions/milk-handover";
+import { lookupChillerStock, saveMilkHandover, type HandoverState } from "@/actions/milk-handover";
 import { Button, Input, Label, Select } from "@/components/ui/form";
 import { t, type Lang } from "@/lib/i18n/translations";
 import {
+  absorbChillerStock,
   adjustedTotal,
   applyAutoLab,
   blankCertificateLines,
   emptyLine,
+  formatLab,
   formatQty,
   grossTotal,
+  handoverAmount,
   lineSpecFlags,
   lrCorrection,
   lrCorrectionLabel,
   parseHandoverLines,
   destinationShareLine,
   initialBaseline,
+  milkDensity,
   seedAutoLab,
   type HandoverDestination,
   type HandoverReason,
@@ -48,6 +52,7 @@ export interface HandoverPartyOption {
 
 export interface HandoverFormProps {
   lang: Lang;
+  canSeeRate?: boolean;
   destination: HandoverDestination;
   parties?: HandoverPartyOption[];
   partyError?: string | null;
@@ -79,6 +84,7 @@ export interface HandoverFormProps {
     lrBaseline?: LrBaseline;
     partyId?: string;
     handoverReason?: "" | HandoverReason;
+    rate?: string;
   };
 }
 
@@ -100,6 +106,11 @@ export function HandoverForm(props: HandoverFormProps) {
   const [collectorSignature, setCollectorSignature] = useState(props.defaults.collectorSignature);
   const [partyId, setPartyId] = useState(props.defaults.partyId ?? "");
   const [reason, setReason] = useState<"" | HandoverReason>(props.defaults.handoverReason ?? "");
+  const [date, setDate] = useState(props.defaults.date);
+  const [shift, setShift] = useState(props.defaults.shift || "morning");
+  const [rate, setRate] = useState(props.defaults.rate ?? "");
+  const [chillerOpen, setChillerOpen] = useState<Record<number, boolean>>({});
+  const skipStock = useRef(true);
   const destination = props.destination;
   const opening = initialBaseline(destination, props.defaults.lrBaseline, props.locked);
   const [baseline, setBaseline] = useState<LrBaseline>(opening);
@@ -113,6 +124,23 @@ export function HandoverForm(props: HandoverFormProps) {
     }
     return start.map((line) => seedAutoLab(line, props.formula, recipe));
   });
+
+  useEffect(() => {
+    if (props.dispatchId || locked) return;
+    if (skipStock.current) {
+      skipStock.current = false;
+      return;
+    }
+    if (!branchId) return;
+    let cancel = false;
+    void lookupChillerStock(branchId, date, shift).then((stock) => {
+      if (cancel) return;
+      setLines((prev) => absorbChillerStock(prev, stock));
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [branchId, date, shift, locked, props.dispatchId]);
   const parties = (props.parties ?? []).filter((party) => party.active || party.id === partyId);
 
   const parsed = useMemo(() => parseHandoverLines(lines), [lines]);
@@ -120,6 +148,7 @@ export function HandoverForm(props: HandoverFormProps) {
   const flags = liveLines.flatMap((line) => lineSpecFlags(line, specs));
   const gross = liveLines.length ? grossTotal(liveLines) : null;
   const adjusted = liveLines.length ? adjustedTotal(liveLines) : null;
+  const amount = props.canSeeRate ? handoverAmount(adjusted, numOrNull(rate)) : null;
 
   function patchLine(index: number, patch: Partial<HandoverLineInput>) {
     setLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
@@ -156,8 +185,8 @@ export function HandoverForm(props: HandoverFormProps) {
           <input type="hidden" name="litres_locked" value="yes" />
           <input type="hidden" name="branch_id" value={branchId} />
           <input type="hidden" name="shop_id" value={shopId} />
-          <input type="hidden" name="dispatch_date" value={props.defaults.date} />
-          <input type="hidden" name="shift" value={props.defaults.shift || "morning"} />
+          <input type="hidden" name="dispatch_date" value={date} />
+          <input type="hidden" name="shift" value={shift} />
           <input type="hidden" name="collection_time" value={props.defaults.time} />
           <input type="hidden" name="mcc_name" value={mccName} />
           <input type="hidden" name="vehicle_name" value={props.defaults.vehicle} />
@@ -190,7 +219,7 @@ export function HandoverForm(props: HandoverFormProps) {
             <tr>
               <th className="w-36 border border-black px-1.5 py-1 text-left">Date:</th>
               <td className="border border-black p-1">
-                <Input className={cell} type="date" name={locked ? undefined : "dispatch_date"} defaultValue={props.defaults.date} required disabled={locked} />
+                <Input className={cell} type="date" name={locked ? undefined : "dispatch_date"} value={date} required disabled={locked} onChange={(e) => setDate(e.target.value)} />
               </td>
             </tr>
             <tr>
@@ -238,7 +267,7 @@ export function HandoverForm(props: HandoverFormProps) {
         </div>
         <div>
           <Label>{t("mh_shift", lang)}</Label>
-          <Select name={locked ? undefined : "shift"} defaultValue={props.defaults.shift || "morning"} disabled={locked}>
+          <Select name={locked ? undefined : "shift"} value={shift} disabled={locked} onChange={(e) => setShift(e.target.value)}>
             <option value="morning">{t("mh_morning", lang)}</option>
             <option value="evening">{t("mh_evening", lang)}</option>
           </Select>
@@ -326,7 +355,7 @@ export function HandoverForm(props: HandoverFormProps) {
         <table className="w-full min-w-[920px] border-collapse border border-black text-center text-xs">
           <thead>
             <tr>
-              {["Chiller No.", "Milk Type", "Gross Vol (L)", "Fat %", "LR", "SNF", "TS (SNF+FAT%)", "Adjusted Volume (L)", "Temperature", "Organo", ""].map((h) => (
+              {["Chiller No.", "Milk Type", "Gross Vol (L)", "Fat %", "LR", "SNF", "TS (SNF+FAT%)", "Sp. Gravity", "Milk (kg)", "Adjusted Volume (L)", "Temperature", "Organo", ""].map((h) => (
                 <th key={h || "x"} className="border border-black px-1 py-1 font-semibold">{h}</th>
               ))}
             </tr>
@@ -345,10 +374,35 @@ export function HandoverForm(props: HandoverFormProps) {
               );
               const bad = new Set(flagsFor.map((f) => f.field));
               const warn = (field: "fat" | "lr" | "snf") => (bad.has(field) ? "bg-amber-100" : "");
+              const labLr = corr?.corrected ?? null;
+              const density = labLr != null && labLr > 0 ? milkDensity(labLr, numOrNull(line.grossL)) : null;
+              const chillerLocked = line.chillerNo.trim() !== "" && !chillerOpen[index];
               return (
                 <tr key={index}>
                   <td className="border border-black p-0.5">
-                    <Input className={cell} value={line.chillerNo} disabled={locked} onChange={(e) => patchLine(index, { chillerNo: e.target.value })} aria-label={`Chiller ${index + 1}`} />
+                    <div className="flex items-center gap-0.5">
+                      <Input
+                        className={cell}
+                        value={line.chillerNo}
+                        readOnly={chillerLocked || locked}
+                        disabled={locked}
+                        onChange={(e) => patchLine(index, { chillerNo: e.target.value })}
+                        onBlur={() => {
+                          if (line.chillerNo.trim()) setChillerOpen((prev) => ({ ...prev, [index]: false }));
+                        }}
+                        aria-label={`Chiller ${index + 1}`}
+                      />
+                      {chillerLocked && !locked && (
+                        <button
+                          type="button"
+                          className="shrink-0 px-1 text-[10px] font-semibold text-brand-700 underline"
+                          data-testid="chiller-edit"
+                          onClick={() => setChillerOpen((prev) => ({ ...prev, [index]: true }))}
+                        >
+                          {t("mh_chiller_edit", lang)}
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td className="border border-black p-0.5">
                     <Input className={cell} list="milk-types" value={line.milkType} disabled={locked} onChange={(e) => patchLine(index, { milkType: e.target.value })} aria-label={`Milk type ${index + 1}`} />
@@ -367,7 +421,9 @@ export function HandoverForm(props: HandoverFormProps) {
                   <td className="border border-black p-0.5">
                     <Input className={`${cell} ${warn("snf")}`} inputMode="decimal" value={line.snf} disabled={locked} onChange={(e) => onSnf(index, e.target.value)} aria-label={`SNF ${index + 1}`} />
                   </td>
-                  <td className="border border-black px-1 py-1">{formatQty(tsOf(fat, snf))}</td>
+                  <td className="border border-black px-1 py-1">{formatLab(tsOf(fat, snf))}</td>
+                  <td className="border border-black px-1 py-1">{density ? formatLab(density.specificGravity) : "—"}</td>
+                  <td className="border border-black px-1 py-1">{density ? formatLab(density.milkKg) : "—"}</td>
                   <td className="border border-black p-0.5">
                     <Input className={cell} inputMode="decimal" value={line.adjustedL} disabled={locked} onChange={(e) => patchLine(index, { adjustedL: e.target.value })} aria-label={`Adjusted ${index + 1}`} />
                   </td>
@@ -379,7 +435,23 @@ export function HandoverForm(props: HandoverFormProps) {
                   </td>
                   <td className="border border-black p-0.5">
                     {!locked && lines.length > 1 && (
-                      <button type="button" className="px-1 text-neutral-500" onClick={() => setLines((prev) => prev.filter((_, i) => i !== index))} aria-label="Hataen">
+                      <button
+                        type="button"
+                        className="px-1 text-neutral-500"
+                        onClick={() => {
+                          setLines((prev) => prev.filter((_, i) => i !== index));
+                          setChillerOpen((prev) => {
+                            const next: Record<number, boolean> = {};
+                            for (const [key, open] of Object.entries(prev)) {
+                              const at = Number(key);
+                              if (at === index) continue;
+                              next[at > index ? at - 1 : at] = open;
+                            }
+                            return next;
+                          });
+                        }}
+                        aria-label="Hataen"
+                      >
                         ×
                       </button>
                     )}
@@ -390,8 +462,8 @@ export function HandoverForm(props: HandoverFormProps) {
             <tr className="bg-neutral-200 font-semibold">
               <td className="border border-black px-1 py-1" colSpan={2}>Total</td>
               <td className="border border-black px-1 py-1">{gross == null ? "—" : formatQty(gross)}</td>
-              <td className="border border-black px-1 py-1" colSpan={4} />
-              <td className="border border-black bg-neutral-300 px-1 py-1">{adjusted == null ? "—" : formatQty(adjusted)}</td>
+              <td className="border border-black px-1 py-1" colSpan={6} />
+              <td className="border border-black bg-neutral-300 px-1 py-1">{adjusted == null ? "—" : formatLab(adjusted)}</td>
               <td className="border border-black px-1 py-1" colSpan={3} />
             </tr>
           </tbody>
@@ -413,7 +485,20 @@ export function HandoverForm(props: HandoverFormProps) {
         </Button>
       )}
 
-      <p className="text-[11px] text-neutral-500">{t("mh_suggest", lang)}</p>
+      <p className="text-[11px] text-neutral-500">{t("mh_chiller_lock", lang)} {t("mh_suggest", lang)}</p>
+      {props.canSeeRate && (
+        <div className="grid max-w-md gap-2 rounded border border-amber-300 bg-amber-50 p-3 text-sm" data-testid="handover-internal-rate">
+          <div>
+            <Label>{t("mh_rate", lang)}</Label>
+            <Input name="internal_rate" inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value)} />
+          </div>
+          <p>
+            <span className="font-semibold">{t("mh_amount", lang)}: </span>
+            {amount == null ? t("mh_amount_pending", lang) : `Rs ${amount.toFixed(2)}`}
+          </p>
+          <p className="text-xs text-neutral-600">{t("mh_rate_private", lang)}</p>
+        </div>
+      )}
       {flags.length > 0 && (
         <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950">
           <p className="font-semibold">{t("mh_spec_warn", lang)}</p>
