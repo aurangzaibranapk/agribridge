@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { chillerStockRows, type ChillerIdentity, type HandoverLineInput } from "@/lib/milk-handover";
+import { chillerStockRows, emptyLine, type ChillerIdentity, type HandoverLineInput } from "@/lib/milk-handover";
 
 /**
  * Is shift ke chiller naam (milk_entries) aur isi branch ki pichli
@@ -11,6 +11,15 @@ export async function loadChillerStock(branchId: string, date: string, shift: st
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return [];
   if (shift !== "morning" && shift !== "evening") return [];
   const supabase = createClient();
+  // Chiller ke naam master list se. Admin hi badalta hai, staff nahi.
+  // Types mein 737 abhi nahi (types regenerate hone par cast hata dein).
+  const master = await (supabase as any)
+    .from("milk_chiller_master")
+    .select("name")
+    .eq("branch_id", branchId)
+    .eq("is_active", true)
+    .order("sort_no");
+  const masterNames: string[] = master.error ? [] : ((master.data ?? []) as { name: string }[]).map((row) => row.name);
   const entries = await supabase
     .from("milk_entries")
     .select("chiller_name")
@@ -37,6 +46,12 @@ export async function loadChillerStock(branchId: string, date: string, shift: st
     previous = (lines.data ?? [])
       .filter((line) => line.dispatch_id === firstId)
       .map((line) => ({ chillerNo: line.chiller_no, milkType: line.milk_type }));
+  }
+  if (masterNames.length > 0) {
+    return masterNames.map((name: string) => {
+      const known = previous.find((row) => row.chillerNo.trim() === name.trim());
+      return { ...emptyLine(), chillerNo: name, milkType: known?.milkType ?? "" };
+    });
   }
   return chillerStockRows(previous, shiftNames);
 }

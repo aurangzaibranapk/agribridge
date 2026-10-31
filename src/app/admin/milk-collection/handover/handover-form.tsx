@@ -406,7 +406,7 @@ export function HandoverForm(props: HandoverFormProps) {
               const warn = (field: "fat" | "lr" | "snf") => (bad.has(field) ? "bg-amber-100" : "");
               const labLr = corr?.corrected ?? null;
               const density = labLr != null && labLr > 0 ? milkDensity(labLr, numOrNull(line.grossL)) : null;
-              const chillerLocked = line.chillerNo.trim() !== "" && !chillerOpen[index];
+              const chillerLocked = true; // naam sirf master list se (admin badalta hai)
               return (
                 <tr key={index}>
                   <td className="border border-black p-0.5">
@@ -422,16 +422,6 @@ export function HandoverForm(props: HandoverFormProps) {
                         }}
                         aria-label={`Chiller ${index + 1}`}
                       />
-                      {chillerLocked && !locked && (
-                        <button
-                          type="button"
-                          className="shrink-0 px-1 text-[10px] font-semibold text-brand-700 underline"
-                          data-testid="chiller-edit"
-                          onClick={() => setChillerOpen((prev) => ({ ...prev, [index]: true }))}
-                        >
-                          {t("mh_chiller_edit", lang)}
-                        </button>
-                      )}
                     </div>
                   </td>
                   <td className="border border-black p-0.5">
@@ -509,11 +499,7 @@ export function HandoverForm(props: HandoverFormProps) {
         <option value="Fail" />
       </datalist>
 
-      {!locked && (
-        <Button type="button" variant="secondary" size="sm" onClick={() => setLines((prev) => [...prev, emptyLine()])}>
-          {t("mh_add_row", lang)}
-        </Button>
-      )}
+      {/* Chiller ki qatarein master list se hain. Naya chiller sirf master list mein admin jorta hai. */}
 
       <p className="text-[11px] text-neutral-500">{t("mh_chiller_lock", lang)} {t("mh_suggest", lang)}</p>
       {props.canSeeRate && (
