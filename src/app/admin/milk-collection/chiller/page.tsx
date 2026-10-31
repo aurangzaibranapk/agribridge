@@ -10,7 +10,7 @@ import { loadHandoverDay } from "@/lib/milk-handover-page";
 import { phoneReferenceTs, phoneSnfConstant } from "@/lib/milk-phone-lab";
 import { HandoverDaySummary } from "../handover/day-summary";
 import { ChillerClient, type RouteGroup, type PendingEntry } from "./chiller-client";
-import { ChillerTotalForm } from "./total-form";
+import { ChillerGrid, type GridChiller } from "./chiller-grid";
 
 export const dynamic = "force-dynamic";
 
@@ -61,28 +61,32 @@ export default async function ChillerPage({
   const referenceTs = phoneReferenceTs(rate?.reference_ts == null ? null : Number(rate.reference_ts));
 
   let totalsReady = true;
-  let saved: {
-    chiller_no: string;
-    gross_liters: number;
-    fat_percentage: number;
-    lr: number;
-  } | null = null;
+  const gridRows: GridChiller[] = [];
   if (branchId) {
-    const tot = await supabase
-      .from("milk_chiller_totals")
-      .select("chiller_no, gross_liters, fat_percentage, lr")
-      .eq("branch_id", branchId)
-      .eq("entry_date", date)
-      .eq("shift", shift)
-      .maybeSingle();
+    const [{ data: masterRows, error: masterErr }, tot] = await Promise.all([
+      (supabase as any).from("milk_chiller_master").select("name, sort_no").eq("branch_id", branchId).eq("is_active", true).order("sort_no"),
+      supabase
+        .from("milk_chiller_totals")
+        .select("chiller_no, gross_liters, fat_percentage, lr")
+        .eq("branch_id", branchId)
+        .eq("entry_date", date)
+        .eq("shift", shift),
+    ]);
     if (tot.error && missingTotals(tot.error.message)) totalsReady = false;
-    else if (tot.data) {
-      saved = {
-        chiller_no: tot.data.chiller_no,
-        gross_liters: Number(tot.data.gross_liters),
-        fat_percentage: Number(tot.data.fat_percentage),
-        lr: Number(tot.data.lr),
-      };
+    const savedBy = new Map<string, { gross: number; fat: number; lr: number }>();
+    for (const row of tot.data ?? []) {
+      savedBy.set(row.chiller_no, { gross: Number(row.gross_liters), fat: Number(row.fat_percentage), lr: Number(row.lr) });
+    }
+    if (!masterErr) {
+      for (const m of (masterRows ?? []) as { name: string }[]) {
+        const got = savedBy.get(m.name);
+        gridRows.push({
+          name: m.name,
+          gross: got ? String(got.gross) : "",
+          fat: got ? String(got.fat) : "",
+          lr: got ? String(got.lr) : "",
+        });
+      }
     }
   }
 
@@ -201,19 +205,18 @@ export default async function ChillerPage({
             <Link href={`/admin/milk-collection/handover/party/new?${q}`} className="rounded-lg border border-surface-300 px-3 py-2">{t("ct_link_party", lang)}</Link>
           </div>
           <Card className="p-4">
-            <ChillerTotalForm
-              lang={lang}
-              branchId={branch.id}
-              date={date}
-              shift={shift}
-              chillerNo={(saved?.chiller_no || branch.name).slice(0, 40)}
-              grossL={saved ? String(saved.gross_liters) : ""}
-              fat={saved ? String(saved.fat_percentage) : ""}
-              lr={saved ? String(saved.lr) : ""}
-              snfConstant={snfConstant}
-              referenceTs={referenceTs}
-              ready={totalsReady}
-            />
+            {totalsReady ? (
+              <ChillerGrid
+                branchId={branch.id}
+                date={date}
+                shift={shift}
+                rows={gridRows}
+                snfConstant={snfConstant}
+                referenceTs={referenceTs}
+              />
+            ) : (
+              <p className="text-sm text-amber-800">Chiller total ka table abhi nahi. Migration 732 pehle Testing par chalao.</p>
+            )}
           </Card>
         </>
       )}

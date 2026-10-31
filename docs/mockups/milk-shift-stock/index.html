@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shift Stock — Mockup</title>
+<style>
+  :root {
+    --bg:#f3f6f2; --card:#ffffff; --line:#e3e9e3; --text:#14241a; --muted:#6b776f;
+    --brand:#1f6b3a; --brand-d:#174d2b; --brand-l:#eaf5ec;
+    --sona:#d9a62e; --sona-l:#fff4d6; --sona-d:#8a5f12;
+    --khatra:#c03636; --khatra-l:#fdecec; --khatra-d:#9c2b2b;
+    --info:#2b5f8a; --info-l:#e8f1f9;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,"Noto Nastaliq Urdu","Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
+  .top { background:linear-gradient(135deg,var(--brand-d),var(--brand)); color:#fff; padding:22px 28px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+  .top h1 { margin:0; font-size:22px; font-weight:700; }
+  .top .sub { opacity:.85; font-size:13px; margin-top:4px; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; }
+  .pillw { background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.28); padding:6px 12px; border-radius:999px; font-size:12px; }
+  main { padding:22px 28px; display:grid; gap:18px; grid-template-columns:repeat(12,1fr); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; box-shadow:0 1px 2px rgba(20,36,26,.04), 0 6px 18px rgba(20,36,26,.05); }
+  .c3{grid-column:span 3} .c4{grid-column:span 4} .c5{grid-column:span 5} .c6{grid-column:span 6} .c7{grid-column:span 7} .c8{grid-column:span 8} .c12{grid-column:span 12}
+  @media (max-width:1000px){ [class*="c"]{grid-column:span 12} }
+  .kpi-top { display:flex; justify-content:space-between; align-items:center; }
+  .kpi-ic { width:38px; height:38px; border-radius:11px; display:grid; place-items:center; font-size:18px; }
+  .kpi-label { font-size:12px; color:var(--muted); margin-top:10px; text-transform:uppercase; letter-spacing:.04em; }
+  .kpi-val { font-size:26px; font-weight:700; margin-top:4px; }
+  .kpi-sub { font-size:12px; color:var(--muted); margin-top:4px; }
+  h2 { font-size:15px; margin:0 0 4px; font-weight:700; }
+  .hint { font-size:12px; color:var(--muted); margin:0 0 14px; }
+  .shift-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:10px; }
+  .shift { border:1.5px solid var(--line); border-radius:12px; padding:12px; background:#fff; position:relative; }
+  .shift.on { border-color:var(--brand); background:var(--brand-l); }
+  .shift .d { font-size:12px; color:var(--muted); }
+  .shift .t { font-weight:700; font-size:15px; margin-top:2px; }
+  .shift .chk { position:absolute; top:10px; right:10px; width:18px; height:18px; border-radius:6px; border:1.5px solid var(--line); background:#fff; font-size:12px; line-height:15px; text-align:center; color:#fff; }
+  .shift.on .chk { background:var(--brand); border-color:var(--brand); }
+  .meta { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px; }
+  .field { border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:13px; background:#fafcfa; }
+  .field .k { font-size:11px; color:var(--muted); }
+  table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; }
+  th { text-align:left; color:var(--muted); font-weight:600; font-size:12px; padding:10px 8px; background:#f7faf7; border-bottom:1px solid var(--line); }
+  th:first-child { border-radius:10px 0 0 0; } th:last-child { border-radius:0 10px 0 0; }
+  td { padding:10px 8px; border-bottom:1px solid #eef2ee; vertical-align:middle; }
+  td.r, th.r { text-align:right; }
+  .num { font-variant-numeric:tabular-nums; }
+  .bar { height:8px; background:#edf2ed; border-radius:99px; overflow:hidden; min-width:90px; }
+  .bar > i { display:block; height:100%; border-radius:99px; }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700; white-space:nowrap; }
+  .p-ok{background:var(--brand-l);color:var(--brand-d)} .p-warn{background:var(--sona-l);color:var(--sona-d)} .p-bad{background:var(--khatra-l);color:var(--khatra-d)} .p-info{background:var(--info-l);color:var(--info)}
+  .alert { display:flex; gap:12px; padding:12px 14px; border-radius:12px; margin-bottom:10px; border:1px solid; }
+  .alert .ic { width:28px; height:28px; border-radius:9px; display:grid; place-items:center; font-weight:700; flex:none; }
+  .alert .tt { font-weight:700; font-size:13px; }
+  .alert .ds { font-size:12px; color:var(--muted); margin-top:3px; }
+  .a-warn{background:var(--sona-l);border-color:#ecd28a} .a-warn .ic{background:var(--sona);color:#fff}
+  .a-bad{background:var(--khatra-l);border-color:#f1c3c3} .a-bad .ic{background:var(--khatra);color:#fff}
+  .a-info{background:var(--info-l);border-color:#bcd5ea} .a-info .ic{background:var(--info);color:#fff}
+  .sum { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .sum .box { border-radius:12px; padding:14px; background:#f7faf7; border:1px solid var(--line); }
+  .sum .box .k { font-size:12px; color:var(--muted); }
+  .sum .box .v { font-size:22px; font-weight:700; margin-top:4px; }
+  .legend { display:flex; gap:8px; flex-wrap:wrap; }
+  .btn { display:inline-block; padding:10px 16px; border-radius:10px; font-size:13px; font-weight:700; }
+  .btn-p { background:var(--brand); color:#fff; } .btn-s { background:#fff; color:var(--brand-d); border:1px solid var(--line); }
+  .foot { display:flex; justify-content:flex-end; gap:10px; margin-top:14px; }
+  .note { font-size:12px; color:var(--muted); margin-top:12px; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div>
+    <h1>Shift Stock &amp; Slip</h1>
+    <div class="sub">Kisan Pakistan · AgriBridge · Main Branch Mahabali · namoona data (mockup)</div>
+  </div>
+  <div class="chips">
+    <span class="pillw">📅 31 Oct 2026</span>
+    <span class="pillw">🏭 Main Branch Mahabali</span>
+    <span class="pillw">🔒 Owner / Admin</span>
+  </div>
+</div>
+
+<main>
+
+  <!-- KPI cards -->
+  <section class="card c3">
+    <div class="kpi-top"><div class="kpi-ic" style="background:var(--brand-l)">🥛</div><span class="pill p-ok">aaya</span></div>
+    <div class="kpi-label">Aaya (gross)</div>
+    <div class="kpi-val num">3,482 L</div>
+    <div class="kpi-sub">4 shifts ka stock</div>
+  </section>
+  <section class="card c3">
+    <div class="kpi-top"><div class="kpi-ic" style="background:var(--info-l)">🚚</div><span class="pill p-info">gaya</span></div>
+    <div class="kpi-label">Gaya (gross)</div>
+    <div class="kpi-val num">2,200 L</div>
+    <div class="kpi-sub">3 slips, 6 shift lines</div>
+  </section>
+  <section class="card c3">
+    <div class="kpi-top"><div class="kpi-ic" style="background:var(--sona-l)">📦</div><span class="pill p-warn">baqi</span></div>
+    <div class="kpi-label">Baqi stock (gross)</div>
+    <div class="kpi-val num">1,282 L</div>
+    <div class="kpi-sub">agli slip mein le sakte hain</div>
+  </section>
+  <section class="card c3">
+    <div class="kpi-top"><div class="kpi-ic" style="background:var(--khatra-l)">⚠️</div><span class="pill p-bad">dhyan</span></div>
+    <div class="kpi-label">Alerts</div>
+    <div class="kpi-val num">2</div>
+    <div class="kpi-sub">1 zyada bheja · 1 chiller total nahi</div>
+  </section>
+
+  <!-- Shift picker -->
+  <section class="card c12">
+    <h2>1. Slip mein shifts chunein</h2>
+    <p class="hint">Ek slip mein kai shifts ho sakti hain. Jo shift chuni, us ka baqi stock neeche dikhega.</p>
+    <div class="shift-grid">
+      <div class="shift on"><span class="chk">✓</span><div class="d">30 Oct</div><div class="t">Subah</div></div>
+      <div class="shift on"><span class="chk">✓</span><div class="d">30 Oct</div><div class="t">Shaam</div></div>
+      <div class="shift on"><span class="chk">✓</span><div class="d">31 Oct</div><div class="t">Subah</div></div>
+      <div class="shift"><span class="chk"></span><div class="d">31 Oct</div><div class="t">Shaam</div></div>
+      <div class="shift"><span class="chk"></span><div class="d">29 Oct</div><div class="t">Shaam</div></div>
+    </div>
+    <div class="meta">
+      <div class="field"><div class="k">Kis ne uthaya</div>Wasela Pakistan ▾</div>
+      <div class="field"><div class="k">Gaadi</div>LEB-1234</div>
+      <div class="field"><div class="k">Driver</div>Ali</div>
+    </div>
+  </section>
+
+  <!-- Stock table with bars -->
+  <section class="card c8">
+    <h2>2. Har shift se kitna gaya (gross)</h2>
+    <p class="hint">Jo litre nahi likha, wo chiller par baqi rahega.</p>
+    <table>
+      <thead>
+        <tr><th>Shift</th><th>Chiller</th><th class="r">Stock</th><th>Bheja</th><th class="r">Baqi</th><th>Haal</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>30 Oct · Subah</b></td><td>HM-1</td><td class="r num">1,240 L</td>
+          <td><div class="bar"><i style="width:100%;background:var(--brand)"></i></div><div class="num" style="font-size:12px;margin-top:4px">1,240 L</div></td>
+          <td class="r num">0</td><td><span class="pill p-ok">khatam</span></td>
+        </tr>
+        <tr>
+          <td><b>30 Oct · Shaam</b></td><td>HM-2</td><td class="r num">1,577 L</td>
+          <td><div class="bar"><i style="width:95%;background:var(--sona)"></i></div><div class="num" style="font-size:12px;margin-top:4px">1,500 L</div></td>
+          <td class="r num">77</td><td><span class="pill p-warn">baqi stock</span></td>
+        </tr>
+        <tr>
+          <td><b>31 Oct · Subah</b></td><td>HM-2</td><td class="r num">665 L</td>
+          <td><div class="bar"><i style="width:100%;background:var(--khatra)"></i></div><div class="num" style="font-size:12px;margin-top:4px">700 L</div></td>
+          <td class="r num">−35</td><td><span class="pill p-bad">zyada bheja</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="foot">
+      <span class="btn btn-s">Drafts</span>
+      <span class="btn btn-p">Slip mehfooz karein</span>
+    </div>
+  </section>
+
+  <!-- Alerts -->
+  <section class="card c4">
+    <h2>3. Save se pehle alert</h2>
+    <p class="hint">Save rukta nahi. Sirf dikhata hai.</p>
+    <div class="alert a-bad"><div class="ic">!</div><div><div class="tt">HM-2 · 31 Oct Subah: 35 L zyada</div><div class="ds">Stock 665 L, bheja 700 L. Wajah likhna zaroori hai.</div></div></div>
+    <div class="alert a-warn"><div class="ic">i</div><div><div class="tt">HM-2 · 30 Oct Shaam: 77 L baqi</div><div class="ds">Agli slip mein le sakte hain.</div></div></div>
+    <div class="alert a-info"><div class="ic">≈</div><div><div class="tt">Adjusted alag hai</div><div class="ds">Adjusted paise ke liye hai. FAT aur LR se badalta hai.</div></div></div>
+  </section>
+
+  <!-- Control room summary -->
+  <section class="card c12">
+    <h2>4. Control room: har shift ka stock</h2>
+    <p class="hint">Gross bunyad hai. Adjusted ka baqi paise ke liye alag dikhta hai.</p>
+    <table>
+      <thead>
+        <tr><th>Tareekh · Shift</th><th>Chiller</th><th class="r">Aaya (gross)</th><th class="r">Gaya (gross)</th><th class="r">Baqi (gross)</th><th class="r">Aaya (adj)</th><th class="r">Gaya (adj)</th><th class="r">Baqi (adj)</th><th>Haal</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><b>30 Oct · Subah</b></td><td>HM-1</td><td class="r num">1,240</td><td class="r num">1,240</td><td class="r num">0</td><td class="r num">1,213.0</td><td class="r num">1,213.0</td><td class="r num">0</td><td><span class="pill p-ok">khatam</span></td></tr>
+        <tr><td><b>30 Oct · Shaam</b></td><td>HM-2</td><td class="r num">1,577</td><td class="r num">1,500</td><td class="r num">77</td><td class="r num">1,525.6</td><td class="r num">1,451.0</td><td class="r num">74.6</td><td><span class="pill p-warn">baqi stock</span></td></tr>
+        <tr><td><b>31 Oct · Subah</b></td><td>HM-2</td><td class="r num">665</td><td class="r num">700</td><td class="r num" style="color:var(--khatra-d)">−35</td><td class="r num">625.4</td><td class="r num">658.9</td><td class="r num" style="color:var(--khatra-d)">−33.5</td><td><span class="pill p-bad">zyada bheja</span></td></tr>
+        <tr><td><b>31 Oct · Shaam</b></td><td>HM-4</td><td class="r num">—</td><td class="r num">0</td><td class="r num">—</td><td class="r num">—</td><td class="r num">0</td><td class="r num">—</td><td><span class="pill p-bad">chiller total nahi</span></td></tr>
+      </tbody>
+    </table>
+    <div class="note">"—" ka matlab data nahi, sifar nahi. Chiller total na ho to shift ka baqi nahi nikal sakta.</div>
+  </section>
+
+  <!-- Day summary -->
+  <section class="card c12">
+    <h2>5. Din ka kul</h2>
+    <div class="sum">
+      <div class="box"><div class="k">Aaya (gross)</div><div class="v num">3,482 L</div></div>
+      <div class="box"><div class="k">Gaya (gross)</div><div class="v num">2,200 L</div></div>
+      <div class="box"><div class="k">Baqi (gross)</div><div class="v num">1,282 L</div></div>
+    </div>
+    <div class="legend" style="margin-top:14px">
+      <span class="pill p-ok">khatam: sab bheja</span>
+      <span class="pill p-warn">baqi stock: agli slip</span>
+      <span class="pill p-bad">zyada bheja / chiller total nahi</span>
+      <span class="pill p-info">adjusted: sirf paise ke liye</span>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

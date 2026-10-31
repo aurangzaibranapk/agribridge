@@ -134,7 +134,8 @@ export function emptyLine(): HandoverLineInput {
   };
 }
 
-export function blankCertificateLines(count = 6): HandoverLineInput[] {
+/** Khali slip par 5 qatarein. Naam chiller master list se aata hai (stock lookup). */
+export function blankCertificateLines(count = 5): HandoverLineInput[] {
   return Array.from({ length: count }, () => emptyLine());
 }
 

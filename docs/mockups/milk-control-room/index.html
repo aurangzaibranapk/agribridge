@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Doodh Control Room — Mockup</title>
+<style>
+  /* App ke rang: tailwind.config.ts se (brand, sona, khatra, surface) */
+  :root { --bg:#f7f8f5; --panel:#ffffff; --inner:#f3f9f4; --line:#e2e8e3; --text:#17221a; --muted:#68736b;
+    --green:#1f6b3a; --amber:#b88722; --red:#c03636; --blue:#4c554e; --violet:#4c554e; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, "Noto Nastaliq Urdu", sans-serif; background:var(--bg); color:var(--text); }
+  header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--line); }
+  h1 { font-size:20px; margin:0; } .sub { color:var(--muted); font-size:13px; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; }
+  .chip { background:var(--panel); border:1px solid var(--line); padding:6px 10px; border-radius:8px; font-size:13px; }
+  .owner { color:var(--green); }
+  main { padding:20px 24px; display:grid; gap:16px; grid-template-columns:repeat(12,1fr); }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .s3{grid-column:span 3}.s4{grid-column:span 4}.s5{grid-column:span 5}.s6{grid-column:span 6}.s7{grid-column:span 7}.s8{grid-column:span 8}.s12{grid-column:span 12}
+  @media (max-width:900px){ [class*="s"]{grid-column:span 12} }
+  .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  .big { font-size:26px; font-weight:700; margin-top:6px; }
+  .sm { font-size:12px; color:var(--muted); margin-top:4px; }
+  .warn { color:var(--amber); } .bad { color:var(--red); } .ok { color:var(--green); }
+  h2 { font-size:14px; margin:0 0 12px; color:var(--muted); font-weight:600; }
+  .flow { display:grid; grid-template-columns:1fr auto 1fr auto 1fr; gap:8px; align-items:center; }
+  .node { background:var(--inner); border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .arrow { color:var(--muted); font-size:22px; text-align:center; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; color:var(--muted); font-weight:500; padding:8px; border-bottom:1px solid var(--line); }
+  td { padding:8px; border-bottom:1px solid #263349; }
+  td.r, th.r { text-align:right; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; }
+  .p-ok{background:#eaf5ec;color:#174d2b;border:1px solid #b3d9bb} .p-warn{background:#fff4d6;color:#8a5f12;border:1px solid #e5bb54} .p-bad{background:#fdecec;color:#9c2b2b;border:1px solid #fad7d7} .p-info{background:#eff1ec;color:#333b35;border:1px solid #cbd4cc}
+  .task { display:flex; gap:10px; align-items:flex-start; padding:10px; border-radius:8px; background:var(--inner); border:1px solid var(--line); margin-bottom:8px; font-size:13px; }
+  .dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex:none; }
+  .note { color:var(--muted); font-size:12px; margin-top:10px; }
+  .lock { font-size:11px; color:var(--violet); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Doodh Control Room</h1>
+    <div class="sub">Kisan Pakistan · Main Branch Mahabali · Namoona data (mockup)</div>
+  </div>
+  <div class="chips">
+    <span class="chip">Tareekh: 31 Oct 2026</span>
+    <span class="chip">Branch: Main Branch Mahabali ▾</span>
+    <span class="chip owner">Owner/Admin: rupay dikh rahe hain</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- 1. AAYA -->
+  <section class="card s12">
+    <h2>1. Aaya: chiller par kitna doodh aaya (hamari zimmedari)</h2>
+    <div class="flow">
+      <div class="node"><div class="label">Gross litre</div><div class="big">3,482 L</div><div class="sm">Subah 1,905 · Shaam 1,577</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="label">Adjusted litre (TS 13)</div><div class="big">3,364.0 L</div><div class="sm">litre × TS ÷ 13</div></div>
+      <div class="arrow">·</div>
+      <div class="node"><div class="label">SNF / FAT (wazan se)</div><div class="big">8.16 / 4.40</div><div class="sm">gross ke hisaab se ausat</div></div>
+    </div>
+    <table style="margin-top:14px">
+      <thead><tr><th>Chiller</th><th>Shift</th><th class="r">Gross</th><th class="r">FAT</th><th class="r">LR</th><th class="r">SNF</th><th class="r">TS</th><th class="r">Adjusted</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>HM-1</td><td>Subah</td><td class="r">1,240 L</td><td class="r">4.30</td><td class="r">27</td><td class="r">8.416</td><td class="r">12.717</td><td class="r">1,213.0 L</td><td><span class="pill p-ok">darj</span></td></tr>
+        <tr><td>HM-2</td><td>Subah</td><td class="r">665 L</td><td class="r">4.10</td><td class="r">26</td><td class="r">8.126</td><td class="r">12.226</td><td class="r">625.4 L</td><td><span class="pill p-ok">darj</span></td></tr>
+        <tr><td>HM-2</td><td>Shaam</td><td class="r">1,577 L</td><td class="r">4.60</td><td class="r">25</td><td class="r">7.976</td><td class="r">12.576</td><td class="r">1,525.6 L</td><td><span class="pill p-ok">darj</span></td></tr>
+        <tr><td>HM-4</td><td>Shaam</td><td class="r">—</td><td class="r">—</td><td class="r">—</td><td class="r">—</td><td class="r">—</td><td class="r">—</td><td><span class="pill p-bad">total darj karein</span></td></tr>
+      </tbody>
+    </table>
+    <div class="note">"—" ka matlab darj nahi hai, sifar nahi. HM-4 ka total aaye bina din band nahi hoga.</div>
+  </section>
+
+  <!-- 2. GAYA -->
+  <section class="card s12">
+    <h2>2. Gaya: hamare chiller se kahan gaya (hamari zimmedari yahan tak)</h2>
+    <table>
+      <thead><tr><th>Manzil</th><th class="r">Slips</th><th class="r">Gross litre</th><th class="r">Adjusted litre</th><th class="r">Rate (Rs / adj. L)</th><th class="r">Rupay (Rs)</th><th>Rate ki shart</th></tr></thead>
+      <tbody>
+        <tr><td><b>Company</b></td><td class="r">3</td><td class="r">2,180 L</td><td class="r">2,160.0 L</td><td class="r">154 (TS 13, 20°C–40°C)</td><td class="r">332,640</td><td><span class="pill p-ok">sab slips par rate</span></td></tr>
+        <tr><td><b>Vendor</b></td><td class="r">2</td><td class="r">960 L</td><td class="r">950.0 L</td><td class="r">— (22°C–40°C)</td><td class="r">—</td><td><span class="pill p-warn">1 slip par rate nahi</span></td></tr>
+        <tr><td><b>Party</b></td><td class="r">1</td><td class="r">270 L</td><td class="r">268.0 L</td><td class="r">—</td><td class="r">—</td><td><span class="pill p-info">party ka rate</span></td></tr>
+        <tr><td><b>Kul</b></td><td class="r">6</td><td class="r"><b>3,410 L</b></td><td class="r">3,378.0 L</td><td></td><td class="r"><b>—</b></td><td></td></tr>
+      </tbody>
+    </table>
+    <div class="note">Rupay (Rs) sirf Owner/Admin ko dikhte hain. Company ka rate har handover par aap khud likhte hain (aaj 154). Rupay = adjusted litre × rate.</div>
+  </section>
+
+  <!-- 3. FARQ -->
+  <section class="card s6">
+    <h2>3. Hamara farq (Aaya − Gaya)</h2>
+    <div class="label">Chiller par aaya − hamare chiller se gaya</div>
+    <div class="big warn">72 L</div>
+    <div class="sm">Ye hamare andar ka farq hai. Ise band karne se pehle wajah likhni zaroori hai (spoil, galti, ya bacha stock).</div>
+    <div class="task" style="margin-top:12px"><span class="dot" style="background:var(--amber)"></span><div>Wajah abhi nahi likhi gayi: <b>72 L</b> ka farq</div></div>
+  </section>
+
+  <!-- 4. RASEED ALAG -->
+  <section class="card s6">
+    <h2>4. Raseed: manzil par kya pahuncha (receiver/raaste ka)</h2>
+    <div class="label">Ye hamara farq nahi badalta</div>
+    <table style="margin-top:8px">
+      <thead><tr><th>Manzil</th><th class="r">Gaya</th><th class="r">Pahuncha</th><th class="r">Farq</th></tr></thead>
+      <tbody>
+        <tr><td>Company</td><td class="r">2,180 L</td><td class="r">2,180 L</td><td class="r">0</td></tr>
+        <tr><td>Vendor</td><td class="r">960 L</td><td class="r">942.7 L</td><td class="r">17.3 L</td></tr>
+        <tr><td>Party</td><td class="r">270 L</td><td class="r">—</td><td class="r"><span class="warn">raseed baqi</span></td></tr>
+      </tbody>
+    </table>
+    <div class="note">Ye farq vendor/receiver ka hisaab hai, hamari zimmedari nahi.</div>
+  </section>
+
+  <!-- 5. FARMER -->
+  <section class="card s12">
+    <h2>5. Farmer ka hisaab (is din ki entries)</h2>
+    <div class="flow" style="grid-template-columns:repeat(4,1fr)">
+      <div class="node"><div class="label">Farmer entries (litre)</div><div class="big">3,190.0 L</div><div class="sm">sample · qatarein aur farmers ki ginti</div></div>
+      <div class="node"><div class="label">Farmer ko dena (Rs)</div><div class="big">Rs 456,170</div><div class="sm">har farmer ka apna rate</div></div>
+      <div class="node"><div class="label">Chiller − Farmer entries</div><div class="big warn">292.0 L</div><div class="sm">farmer entries kam hain, pehle yeh bharein</div></div>
+      <div class="node"><div class="label">Kul baqaya (sab, aaj tak)</div><div class="big">Rs —</div><div class="sm">adaigi din se nahi jodi jati</div></div>
+    </div>
+    <div class="note">Farmer ka rate har farmer ka apna hai. Ye system mein abhi nahi hai, is ke baghair Rs ki raqam sirf global rate par hai.</div>
+  </section>
+
+  <!-- 6. KAAM JO BAAQI -->
+  <section class="card s12">
+    <h2>6. Din band karne se pehle kya baaqi hai</h2>
+    <div class="task"><span class="dot" style="background:var(--red)"></span><div><b>HM-4 ka chiller total nahi</b> — gross, FAT, LR darj karein</div></div>
+    <div class="task"><span class="dot" style="background:var(--red)"></span><div><b>Farmer entries mein 292.0 L kam</b> — chiller aur farmer ka farq wajah ke saath</div></div>
+    <div class="task"><span class="dot" style="background:var(--amber)"></span><div><b>Vendor slip par rate nahi</b> — 22°C wali slip par rate likhein</div></div>
+    <div class="task"><span class="dot" style="background:var(--amber)"></span><div><b>72 L hamare andar ka farq</b> — wajah likhein</div></div>
+    <div class="task"><span class="dot" style="background:var(--violet)"></span><div><b>Possible duplicate: 6 entries</b> — ek farmer, ek din, ek shift</div></div>
+    <div class="note">Din tab hi band hoga jab chiller ke sab totals darj hon aur farq ki wajah likhi ho. Band hone ke baad sirf reversal se tabdeeli hogi.</div>
+  </section>
+
+</main>
+</body>
+</html>
