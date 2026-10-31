@@ -24,6 +24,7 @@ async function main() {
 const html = renderToStaticMarkup(
   React.createElement(HandoverForm, {
     lang: "rm",
+    destination: "company",
     branches: [{ id: "b1", name: "Main Branch Mahabali" }],
     shops: [{ id: "s1", name: "Kisaan Milk Center", code: "02", branchId: "b1" }],
     specs: { minFat: 4.1, minLr: 27, minSnf: 8.4 },
@@ -75,8 +76,10 @@ assert.match(html, /FAT 3\.8 — min 4\.1/);
 assert.match(html, /value="3\.8"/);
 assert.match(html, /value="91\.54"/);
 assert.match(html, /company agreement 20°C/);
-assert.match(html, /22°C — vendor/);
+assert.match(html, /name="destination" value="company"/);
 assert.match(html, /name="lr_baseline" value="20"/);
+assert.doesNotMatch(html, /22°C — vendor/);
+assert.doesNotMatch(html, /data-testid="handover-party"/);
 assert.doesNotMatch(html, /Likhein/);
 assert.doesNotMatch(html, /Kisan ka Wasela|کسان کا وسیلہ/);
 assert.equal(html.includes('name="lines_json"'), true);
@@ -84,6 +87,7 @@ assert.equal(html.includes('name="lines_json"'), true);
 const vendorHtml = renderToStaticMarkup(
   React.createElement(HandoverForm, {
     lang: "rm",
+    destination: "vendor",
     branches: [{ id: "b1", name: "Main Branch Mahabali" }],
     shops: [],
     specs: { minFat: 4.1, minLr: 27, minSnf: 8.4 },
@@ -127,6 +131,96 @@ assert.match(vendorHtml, /value="8\.36"/);
 assert.match(vendorHtml, /value="95\.08"/);
 assert.match(vendorHtml, /vendor 22°C: 24\+3=27/);
 assert.match(vendorHtml, /name="lr_baseline" value="22"/);
+assert.match(vendorHtml, /name="destination" value="vendor"/);
+assert.doesNotMatch(vendorHtml, /name="lr_baseline" value="20"/);
+assert.doesNotMatch(vendorHtml, /data-testid="handover-party"/);
+
+const partyHtml = renderToStaticMarkup(
+  React.createElement(HandoverForm, {
+    lang: "rm",
+    destination: "party",
+    parties: [{ id: "p1", name: "Ali Dairy", contact: "03001234567", active: true }],
+    branches: [{ id: "b1", name: "Main Branch Mahabali" }],
+    shops: [],
+    specs: { minFat: 4.1, minLr: 27, minSnf: 8.4 },
+    formula: null,
+    myName: "",
+    locked: false,
+    priorGross: null,
+    hadLines: true,
+    dispatchId: null,
+    defaults: {
+      branchId: "b1",
+      shopId: "",
+      date: "2026-10-31",
+      shift: "morning",
+      time: "",
+      mccName: "",
+      vehicle: "",
+      driver: "",
+      notes: "",
+      accepted: "",
+      rejectionReason: "",
+      licenseeRep: "",
+      licenseeSignature: "",
+      collectorSignature: "",
+      lines: [{
+        chillerNo: "1",
+        milkType: "Cow",
+        grossL: "100",
+        fat: "4",
+        lr: "24",
+        snf: "",
+        adjustedL: "",
+        temperatureC: "32",
+        organo: "",
+      }],
+    },
+  })
+);
+assert.match(partyHtml, /data-testid="handover-party"/);
+assert.match(partyHtml, /Ali Dairy/);
+assert.match(partyHtml, /20°C — company agreement/);
+assert.match(partyHtml, /22°C — vendor/);
+assert.match(partyHtml, /name="lr_baseline" value="20"/);
+assert.match(partyHtml, /value="8\.61"/);
+assert.match(partyHtml, /Kharab sirf ek wajah hai/);
+assert.match(partyHtml, /lock nahi/);
+assert.doesNotMatch(partyHtml, /Kisan ka Wasela|کسان کا وسیلہ/);
+
+const { HandoverDaySummary } = await import("../src/app/admin/milk-collection/handover/day-summary");
+const summaryHtml = renderToStaticMarkup(
+  React.createElement(HandoverDaySummary, {
+    lang: "rm",
+    date: "2026-10-31",
+    summary: {
+      inL: 1000,
+      intakeIncomplete: false,
+      company: { slipCount: 1, grossL: 600, adjustedL: 590, receivedL: 580, receiptPending: 0 },
+      vendor: { slipCount: 1, grossL: 300, adjustedL: null, receivedL: null, receiptPending: 1 },
+      party: { slipCount: 0, grossL: null, adjustedL: null, receivedL: null, receiptPending: 0 },
+      varianceL: 100,
+    },
+  })
+);
+assert.match(summaryHtml, /data-testid="out-company"/);
+assert.match(summaryHtml, /data-testid="out-vendor"/);
+assert.match(summaryHtml, /data-testid="out-party"/);
+assert.match(summaryHtml, /Koi slip nahi/);
+assert.match(summaryHtml, /Nuqsan 100 L/);
+assert.match(summaryHtml, /Raseed abhi nahi/);
+
+const { PartyMaster } = await import("../src/app/admin/milk-collection/handover/parties/party-form");
+const partyMaster = renderToStaticMarkup(
+  React.createElement(PartyMaster, {
+    lang: "rm",
+    parties: [{ id: "p1", name: "Ali Dairy", contact: "0300", active: true }],
+  })
+);
+assert.match(partyMaster, /data-testid="party-master"/);
+assert.match(partyMaster, /Ali Dairy/);
+assert.match(partyMaster, /name="contact"/);
+assert.match(partyMaster, /name="active"/);
 
 const sheet = renderToStaticMarkup(
   React.createElement(CertificateSheet, {

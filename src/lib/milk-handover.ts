@@ -2,7 +2,11 @@
  * Milk Handover Certificate — hisaab, nishan, aur form ki qatarein.
  *
  * Gross litre staff likhta hai. Lactometer LR raw rehta hai.
- * Staff recipe chunte hain. Default company agreement 20°C.
+ * Company form ki recipe 20°C hai. Vendor form ki recipe 22°C hai.
+ * Party form par staff 20 ya 22 chunte hain — lock nahi.
+ * Party ka default 20°C hai: teesri party ko achha doodh bhi ja sakta hai,
+ * is liye vendor wali sakht chart khud nahi lagti. Slip par wahi recipe
+ * likhi hoti hai jo us delivery par chuni gayi.
  * Vendor 22°C wahi 3°C bands hain, ek point kam (sakht).
  * 32°C par company +4 (LR 28), vendor +3 (LR 27).
  * 20 ya neeche (vendor par 23 ya neeche jab company sirf +1 ho): points 0,
@@ -234,6 +238,70 @@ export function lrRecipeLabel(baseline: LrBaseline): string {
   return baseline === 22 ? "vendor 22°C" : "company agreement 20°C";
 }
 
+/** Teen alag handover. Ek mixed form nahi. */
+export type HandoverDestination = "company" | "vendor" | "party";
+
+/**
+ * Party default 20°C (company agreement).
+ * Teesri party ko becha ya diya hua achha doodh bhi hota hai — spoil sirf
+ * optional wajah hai. Vendor ki 22°C chart us par khud nahi chadhni chahiye.
+ * Staff usi slip par 22 chun sakte hain. Slip `lr_baseline` sambhalti hai.
+ * Company hamesha 20. Vendor hamesha 22.
+ */
+export const PARTY_LR_DEFAULT: LrBaseline = 20;
+
+export function parseDestination(value: unknown): HandoverDestination | null {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (raw === "company" || raw === "vendor" || raw === "party") return raw;
+  return null;
+}
+
+export function baselineForDestination(destination: HandoverDestination, chosen?: LrBaseline | null): LrBaseline {
+  if (destination === "vendor") return 22;
+  if (destination === "company") return 20;
+  return chosen === 22 ? 22 : PARTY_LR_DEFAULT;
+}
+
+/** Raseed lag chuki ho to jo recipe mehfooz hai wahi dikhao. Warna form ki recipe. */
+export function initialBaseline(destination: HandoverDestination, saved: LrBaseline | null | undefined, locked: boolean): LrBaseline {
+  if (locked) return saved === 22 ? 22 : baselineForDestination(destination, saved);
+  return baselineForDestination(destination, destination === "party" ? saved : null);
+}
+
+export type HandoverReason = "sale" | "given" | "spoil" | "other";
+
+export function parseHandoverReason(value: unknown): HandoverReason | null | "invalid" {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === "sale" || raw === "given" || raw === "spoil" || raw === "other") return raw;
+  return "invalid";
+}
+
+export function handoverReasonLabel(reason: HandoverReason): string {
+  if (reason === "sale") return "Bechna (sale)";
+  if (reason === "given") return "De diya (given)";
+  if (reason === "spoil") return "Kharab (spoil)";
+  return "Aur wajah (other)";
+}
+
+export function destinationShareLine(destination: HandoverDestination, partyName?: string | null): string {
+  if (destination === "vendor") return "Manzil: Vendor";
+  if (destination === "party") {
+    const name = partyName?.trim();
+    return name ? `Manzil: Party — ${name}` : "Manzil: Party";
+  }
+  return "Manzil: Company";
+}
+
+export function handoverSlipTitle(destination: HandoverDestination, partyName?: string | null): string {
+  if (destination === "vendor") return "Milk Handover — Vendor";
+  if (destination === "party") {
+    const name = partyName?.trim();
+    return name ? `Milk Handover — Party: ${name}` : "Milk Handover — Party";
+  }
+  return "Milk Handover — Company";
+}
+
 /**
  * Company 20°C bands, 3°C wide, upper edge included:
  * (20, 23] +1 … (29, 32] +4 … (38, 40] +7. Us se garam +7.
@@ -352,6 +420,118 @@ export function dayMilkVariance(rows: { grossL: number; adjustedL: number | null
     : roundTo(rows.reduce((sum, row) => sum + (row.adjustedL ?? 0), 0), 3);
   const receivedL = receiptPending > 0 ? null : roundTo(rows.reduce((sum, row) => sum + (row.receivedL ?? 0), 0), 3);
   return { ...milkVariance(grossL, adjustedL, receivedL), receiptPending, shifts: rows.length };
+}
+
+export interface RouteIntake {
+  routeName: string;
+  receivedL: number | null;
+}
+
+export interface IntakeEntry {
+  source: string;
+  routeName: string | null;
+  liters: number;
+}
+
+export interface ChillerIntake {
+  /** null = chiller intake darj nahi, ya adhuri hai. Sifar nahi. */
+  inL: number | null;
+  incomplete: boolean;
+  status: "none" | "partial" | "ok";
+}
+
+/**
+ * MCC chiller ka aana: route ki chiller raseed + khud laya hua doodh.
+ * Maidan ka litre chiller ka litre nahi. Koi route ki raseed khali ho
+ * to jama null — adhura jama sifar ki tarah nahi.
+ */
+export function chillerIntake(routes: RouteIntake[], entries: IntakeEntry[]): ChillerIntake {
+  const self = roundTo(
+    entries.filter((entry) => entry.source === "self_delivery").reduce((sum, entry) => sum + entry.liters, 0),
+    3
+  );
+  const fieldRoutes = new Set(
+    entries
+      .filter((entry) => entry.source !== "self_delivery" && entry.routeName && entry.routeName.trim())
+      .map((entry) => entry.routeName as string)
+  );
+  const byRoute = new Map<string, RouteIntake[]>();
+  for (const route of routes) {
+    const rows = byRoute.get(route.routeName) ?? [];
+    rows.push(route);
+    byRoute.set(route.routeName, rows);
+  }
+  if (routes.length === 0 && fieldRoutes.size === 0 && self === 0) {
+    return { inL: null, incomplete: false, status: "none" };
+  }
+  if (routes.some((route) => route.receivedL == null)) {
+    return { inL: null, incomplete: true, status: "partial" };
+  }
+  for (const name of fieldRoutes) {
+    const rows = byRoute.get(name) ?? [];
+    if (rows.length === 0) return { inL: null, incomplete: true, status: "partial" };
+  }
+  const received = routes.reduce((sum, route) => sum + (route.receivedL ?? 0), 0);
+  return { inL: roundTo(received + self, 3), incomplete: false, status: "ok" };
+}
+
+export interface SlipBucketInput {
+  destination: HandoverDestination;
+  grossL: number;
+  adjustedL: number | null;
+  receivedL: number | null;
+}
+
+export interface DestinationBucket {
+  slipCount: number;
+  /** null jab koi slip nahi — fehrist par "koi slip nahi". Farq mein ye 0 litre out hai. */
+  grossL: number | null;
+  adjustedL: number | null;
+  receivedL: number | null;
+  receiptPending: number;
+}
+
+export interface DayDestinationSummary {
+  inL: number | null;
+  intakeIncomplete: boolean;
+  company: DestinationBucket;
+  vendor: DestinationBucket;
+  party: DestinationBucket;
+  /**
+   * Chiller in − (company + vendor + party gross).
+   * Jis manzil par slip nahi, us ka out 0. Intake darj na ho to farq null, sifar nahi.
+   * Raseed is farq mein shamil nahi — har manzil ki raseed alag rehti hai.
+   */
+  varianceL: number | null;
+}
+
+function destinationBucket(rows: SlipBucketInput[]): DestinationBucket {
+  if (rows.length === 0) {
+    return { slipCount: 0, grossL: null, adjustedL: null, receivedL: null, receiptPending: 0 };
+  }
+  const grossL = roundTo(rows.reduce((sum, row) => sum + row.grossL, 0), 3);
+  const adjustedL = rows.some((row) => row.adjustedL == null)
+    ? null
+    : roundTo(rows.reduce((sum, row) => sum + (row.adjustedL ?? 0), 0), 3);
+  const receiptPending = rows.filter((row) => row.receivedL == null).length;
+  const receivedL = receiptPending > 0 ? null : roundTo(rows.reduce((sum, row) => sum + (row.receivedL ?? 0), 0), 3);
+  return { slipCount: rows.length, grossL, adjustedL, receivedL, receiptPending };
+}
+
+export function dayDestinationSummary(input: { intake: ChillerIntake; slips: SlipBucketInput[] }): DayDestinationSummary {
+  const company = destinationBucket(input.slips.filter((slip) => slip.destination === "company"));
+  const vendor = destinationBucket(input.slips.filter((slip) => slip.destination === "vendor"));
+  const party = destinationBucket(input.slips.filter((slip) => slip.destination === "party"));
+  const out = (company.grossL ?? 0) + (vendor.grossL ?? 0) + (party.grossL ?? 0);
+  const varianceL = input.intake.status !== "ok" || input.intake.inL == null ? null : roundTo(input.intake.inL - out, 3);
+  return {
+    inL: input.intake.inL,
+    intakeIncomplete: input.intake.incomplete,
+    company,
+    vendor,
+    party,
+    varianceL,
+  };
 }
 
 export function varianceForCertificate(
@@ -480,6 +660,9 @@ export interface CertificateShareInput {
   accepted: boolean | null;
   rejectionReason: string | null;
   lrBaseline: LrBaseline;
+  destination?: HandoverDestination;
+  partyName?: string | null;
+  handoverReason?: HandoverReason | null;
 }
 
 function lrShareBit(raw: number | null, temp: number | null, baseline: LrBaseline): string {
@@ -512,9 +695,17 @@ export function certificateShareText(input: CertificateShareInput): string {
   const parts = [
     "Kisan Pakistan",
     "Milk Handover Certificate",
+  ];
+  if (input.destination) {
+    parts.push(destinationShareLine(input.destination, input.partyName));
+    if (input.destination === "party" && input.handoverReason) {
+      parts.push(`Wajah: ${handoverReasonLabel(input.handoverReason)}`);
+    }
+  }
+  parts.push(
     `MCC: ${input.mccName.trim() || "—"}`,
     `Date: ${input.date} · ${input.shiftLabel}`,
-  ];
+  );
   if (input.time.trim()) parts.push(`Time: ${input.time.trim()}`);
   if (input.vehicle?.trim() || input.driver?.trim()) {
     parts.push(`Vehicle: ${input.vehicle?.trim() || "—"} · Driver: ${input.driver?.trim() || "—"}`);
@@ -532,9 +723,10 @@ export function certificateShareText(input: CertificateShareInput): string {
   return parts.join("\n");
 }
 
-export function certificateEmailSubject(input: { mccName: string; date: string }): string {
+export function certificateEmailSubject(input: { mccName: string; date: string; title?: string }): string {
   const mcc = input.mccName.trim() || "MCC";
-  return `Kisan Pakistan — Milk Handover Certificate — ${mcc} ${input.date}`;
+  const title = input.title?.trim() || "Milk Handover Certificate";
+  return `Kisan Pakistan — ${title} — ${mcc} ${input.date}`;
 }
 
 export function certificateShareMessage(text: string, printUrl: string): string {
@@ -570,6 +762,9 @@ export function certificateShareFromInputs(input: {
   rejectionReason: string;
   grossFallback?: number | null;
   lrBaseline?: LrBaseline;
+  destination?: HandoverDestination;
+  partyName?: string | null;
+  handoverReason?: HandoverReason | null;
 }): { text: string; subject: string } {
   const lrBaseline = input.lrBaseline ?? DEFAULT_LR_BASELINE;
   const lines = input.lines
@@ -607,7 +802,14 @@ export function certificateShareFromInputs(input: {
       accepted: input.accepted === "" ? null : input.accepted === "yes",
       rejectionReason: input.rejectionReason || null,
       lrBaseline,
+      destination: input.destination,
+      partyName: input.partyName,
+      handoverReason: input.handoverReason ?? null,
     }),
-    subject: certificateEmailSubject({ mccName: input.mccName, date: input.date }),
+    subject: certificateEmailSubject({
+      mccName: input.mccName,
+      date: input.date,
+      title: input.destination ? handoverSlipTitle(input.destination, input.partyName) : undefined,
+    }),
   };
 }

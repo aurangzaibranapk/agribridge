@@ -24,6 +24,7 @@ interface Row {
   shortagePct: number | null;
   createdBy: string | null;
   receivedBy: string | null;
+  destinationLabel?: string;
 }
 
 export function DispatchClient({
@@ -141,6 +142,7 @@ export function DispatchClient({
                   {r.chiller} — {r.date} · {t(r.shift === "morning" ? "md_morning" : "md_evening", lang)}
                 </p>
                 <p className="text-xs text-surface-500">
+                  {r.destinationLabel ? `${r.destinationLabel} · ` : ""}
                   {t("md_sent", lang)}: {r.sent.toLocaleString()} L
                   {r.vehicle ? ` · ${r.vehicle}` : ""}
                   {r.driver ? ` · ${r.driver}` : ""}
@@ -188,7 +190,7 @@ export function DispatchClient({
                     <td className="py-2 pr-3 text-surface-500">
                       {r.date} · {t(r.shift === "morning" ? "md_morning" : "md_evening", lang)}
                     </td>
-                    <td className="py-2 pr-3">{r.chiller}</td>
+                    <td className="py-2 pr-3">{r.chiller}{r.destinationLabel ? ` · ${r.destinationLabel}` : ""}</td>
                     <td className="py-2 pr-3">{r.sent.toLocaleString()}</td>
                     <td className="py-2 pr-3">
                       {r.received === null ? (

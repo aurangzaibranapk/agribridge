@@ -24496,10 +24496,12 @@ export type Database = {
           collector_signed_by: string | null
           created_at: string
           created_by: string | null
+          destination: string
           dispatch_date: string
           dispatched_liters: number
           driver_name: string | null
           fat_percentage: number | null
+          handover_reason: string | null
           id: string
           licensee_rep_name: string | null
           licensee_signature: string | null
@@ -24508,6 +24510,7 @@ export type Database = {
           lr_baseline: number
           mcc_name: string | null
           notes: string | null
+          party_id: string | null
           received_at: string | null
           received_by: string | null
           received_liters: number | null
@@ -24528,10 +24531,12 @@ export type Database = {
           collector_signed_by?: string | null
           created_at?: string
           created_by?: string | null
+          destination?: string
           dispatch_date?: string
           dispatched_liters: number
           driver_name?: string | null
           fat_percentage?: number | null
+          handover_reason?: string | null
           id?: string
           licensee_rep_name?: string | null
           licensee_signature?: string | null
@@ -24540,6 +24545,7 @@ export type Database = {
           lr_baseline?: number
           mcc_name?: string | null
           notes?: string | null
+          party_id?: string | null
           received_at?: string | null
           received_by?: string | null
           received_liters?: number | null
@@ -24560,10 +24566,12 @@ export type Database = {
           collector_signed_by?: string | null
           created_at?: string
           created_by?: string | null
+          destination?: string
           dispatch_date?: string
           dispatched_liters?: number
           driver_name?: string | null
           fat_percentage?: number | null
+          handover_reason?: string | null
           id?: string
           licensee_rep_name?: string | null
           licensee_signature?: string | null
@@ -24572,6 +24580,7 @@ export type Database = {
           lr_baseline?: number
           mcc_name?: string | null
           notes?: string | null
+          party_id?: string | null
           received_at?: string | null
           received_by?: string | null
           received_liters?: number | null
@@ -24686,6 +24695,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      milk_handover_parties: {
+        Row: {
+          contact: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       milk_handover_specs: {
         Row: {

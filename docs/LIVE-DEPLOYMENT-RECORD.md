@@ -1,3 +1,11 @@
+## Pending — 31 October 2026: Milk Handover teen manzilen (729)
+
+Branch `cursor/milk-handover-three-flows-a724`. Migration **729 file only**. Testing aur Live dono par **nahi** chali. **728 pehle** (`728_milk_handover_lr_recipe`). 729 `milk_dispatches.destination` (company / vendor / party), `milk_handover_parties` (naam, rabta, faal), aur party par optional wajah. Company LR hamesha **20**. Vendor hamesha **22**. Party par staff **20 ya 22** chunta hai — default **20**, kyunke achha doodh bhi teesri party ko ja sakta hai. Kharab lazmi nahi. Purani rawangi company ban jati hai. Koi purana litre nahi bharta. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `729_milk_handover_destinations.sql`. Rollback: `729_milk_handover_destinations.rollback.sql`.
+- Safhe: `/admin/milk-collection/handover` (roz ka khulasa), `/company`, `/vendor`, `/party`, `/parties`.
+- Rollback tab rukta hai jab ek shift par ek se zyada rawangi ho.
+
 ## Pending — 31 October 2026: Milk Handover LR recipe (728)
 
 Branch `cursor/milk-handover-autofill-share-c375`. Migration **728 file only**. Testing aur Live dono par **nahi** chali. 725, 726, 727 pehle. 728 sirf `milk_dispatches.lr_baseline` (default **20** = company agreement; **22** = vendor, ek point kam) aur `feature_help`. Koi purana litre nahi bharta. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).

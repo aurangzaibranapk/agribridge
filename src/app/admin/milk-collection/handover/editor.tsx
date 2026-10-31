@@ -3,20 +3,22 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
-import { certificateShareFromInputs, varianceForCertificate } from "@/lib/milk-handover";
+import { certificateShareFromInputs, handoverSlipTitle, type HandoverDestination, varianceForCertificate } from "@/lib/milk-handover";
 import { HandoverForm, type HandoverFormProps } from "./handover-form";
 import { CertificatePrintBar } from "./print-bar";
 import { HandoverVarianceCard } from "./variance-card";
-import { handoverGate, loadCertificate, loadHandoverOptions, type LoadedCertificate } from "@/lib/milk-handover-page";
+import { handoverGate, loadCertificate, loadHandoverOptions, loadHandoverParties, type LoadedCertificate } from "@/lib/milk-handover-page";
 
 export async function HandoverEditor({
   id,
   saved,
   dateHint,
+  destination: requested = "company",
 }: {
   id?: string;
   saved?: boolean;
   dateHint?: string;
+  destination?: HandoverDestination;
 }) {
   const lang = getLanguageFromCookies("rm");
   const gate = await handoverGate(id ? "edit" : "create");
@@ -43,6 +45,11 @@ export async function HandoverEditor({
     loaded = row;
   }
 
+  const destination = loaded?.destination ?? requested;
+  const parties = destination === "party" ? await loadHandoverParties() : { parties: [], error: null };
+  const titleKey = destination === "vendor" ? "mh_flow_vendor" : destination === "party" ? "mh_flow_party" : "mh_flow_company";
+  const subKey = destination === "vendor" ? "mh_sub_vendor" : destination === "party" ? "mh_sub_party" : "mh_sub_company";
+
   const scoped = gate.branchId && (gate.role === "manager" || gate.role === "milk_collection");
   const branches = scoped ? options.branches.filter((b) => b.id === gate.branchId) : options.branches;
   const branchList = branches.length > 0 ? branches : options.branches;
@@ -66,6 +73,8 @@ export async function HandoverEditor({
         collectorSignature: loaded.collectorSignature,
         lines: loaded.lines,
         lrBaseline: loaded.lrBaseline,
+        partyId: loaded.partyId,
+        handoverReason: loaded.handoverReason,
       }
     : {
         branchId: gate.branchId && branchList.some((b) => b.id === gate.branchId) ? gate.branchId : "",
@@ -83,7 +92,9 @@ export async function HandoverEditor({
         licenseeSignature: "",
         collectorSignature: "",
         lines: [],
-        lrBaseline: 20,
+        lrBaseline: destination === "vendor" ? 22 : 20,
+        partyId: "",
+        handoverReason: "",
       };
 
   const share = loaded
@@ -99,6 +110,9 @@ export async function HandoverEditor({
         rejectionReason: loaded.rejectionReason,
         grossFallback: loaded.priorGross,
         lrBaseline: loaded.lrBaseline,
+        destination: loaded.destination,
+        partyName: loaded.partyName,
+        handoverReason: loaded.handoverReason || null,
       })
     : null;
   const variance = loaded
@@ -115,11 +129,11 @@ export async function HandoverEditor({
   return (
     <div>
       <PageHeader
-        title={t("mh_title", lang)}
-        description={t("mh_subtitle", lang)}
+        title={loaded ? handoverSlipTitle(destination, loaded.partyName) : t(titleKey, lang)}
+        description={t(subKey, lang)}
         actions={
           <div className="flex gap-3 text-sm">
-            <Link href="/admin/milk-collection/handover" className="text-brand-700 underline">{t("mh_list", lang)}</Link>
+            <Link href={`/admin/milk-collection/handover/${destination}`} className="text-brand-700 underline">{t("mh_list", lang)}</Link>
             <Link href="/admin/milk-collection/dispatch" className="text-brand-700 underline">{t("mh_dispatch", lang)}</Link>
           </div>
         }
@@ -127,7 +141,14 @@ export async function HandoverEditor({
       <p className="mb-3 text-sm text-surface-500">{t("mh_backfill", lang)}</p>
       {saved && <p className="mb-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">{t("mh_saved", lang)}</p>}
       {loaded && variance && (
-        <HandoverVarianceCard lang={lang} title={t("mh_shift_title", lang)} variance={variance} />
+        <HandoverVarianceCard
+          lang={lang}
+          title={t("mh_shift_title", lang)}
+          variance={variance}
+          grossLabel={t("mh_slip_gross", lang)}
+          receivedLabel={t("mh_slip_receipt", lang)}
+          gapLabel={t("mh_slip_gap", lang)}
+        />
       )}
       {loaded && share && (
         <CertificatePrintBar
@@ -148,6 +169,9 @@ export async function HandoverEditor({
         priorGross={loaded?.priorGross ?? null}
         hadLines={loaded?.hadLines ?? true}
         dispatchId={loaded?.id ?? null}
+        destination={destination}
+        parties={parties.parties}
+        partyError={parties.error}
         defaults={defaults}
       />
     </div>
