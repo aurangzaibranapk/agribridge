@@ -58,3 +58,47 @@ import { dispatchAlerts, summarizeEntries } from "../src/lib/milk-control-room";
 }
 
 console.log("milk-control-room: all assertions passed");
+
+import { buildDayReport } from "../src/lib/milk-control-room";
+
+// Din ki report: chiller totals, farmer ka dena, aur farq.
+{
+  const r = buildDayReport({
+    chillers: [
+      { chiller_no: "HM-2", shift: "evening", gross_liters: 980, fat_percentage: 4.1, lr: 26, snf_percentage: 8.2, ts_percentage: 12.5, adjusted_liters: 940 },
+      { chiller_no: "HM-1", shift: "morning", gross_liters: 1000, fat_percentage: 4.3, lr: 27, snf_percentage: 8.4, ts_percentage: 12.7, adjusted_liters: 980 },
+    ],
+    entries: [
+      { shift: "morning", quantity_liters: 600, status: "verified", total_amount: 30000 },
+      { shift: "morning", quantity_liters: 300, status: "priced", total_amount: 15000 },
+      { shift: "evening", quantity_liters: 100, status: "pending_fat", total_amount: null },
+      { shift: "evening", quantity_liters: 50, status: "rejected", total_amount: null },
+    ],
+  });
+  // Chiller sorted: morning (HM-1) pehle, phir evening (HM-2)
+  assert.deepEqual(r.chillers.map((c) => c.chillerNo), ["HM-1", "HM-2"]);
+  assert.equal(r.chillerTotal.grossL, 1980);
+  assert.equal(r.chillerTotal.adjustedL, 1920);
+  assert.equal(r.chillerTotal.count, 2);
+  // SNF wazan-wala: (8.4*1000 + 8.2*980)/1980
+  assert.equal(r.chillerTotal.snfAvg, 8.301);
+  assert.equal(r.farmer.entries, 4);
+  assert.equal(r.farmer.litersAll, 1050);
+  assert.equal(r.farmer.payableRs, 45000);
+  assert.equal(r.farmer.litersPayable, 900);
+  assert.equal(r.farmer.avgRatePerL, 50);
+  assert.equal(r.farmer.pendingFat, 1);
+  assert.equal(r.farmer.rejected, 1);
+  // Chiller gross 1980 − farmer 1050 = 930
+  assert.equal(r.farmerVsChillerL, 930);
+}
+
+// Chiller total nahi: farq null, sifar nahi. Farmer average bhi null.
+{
+  const r = buildDayReport({ chillers: [], entries: [] });
+  assert.equal(r.farmerVsChillerL, null);
+  assert.equal(r.farmer.avgRatePerL, null);
+  assert.equal(r.chillerTotal.snfAvg, null);
+}
+
+console.log("milk-control-room day report: all assertions passed");

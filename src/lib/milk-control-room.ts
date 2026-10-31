@@ -134,3 +134,148 @@ export function dispatchAlerts(rows: ControlDispatchRow[]): DispatchAlert[] {
   }
   return alerts;
 }
+
+// ---------------------------------------------------------------------------
+// Din ki poori tasveer: chiller totals, farmer ka hisaab, company ka hisaab.
+// Farmer ki entries (milk_entries) aur chiller ke totals (milk_chiller_totals)
+// alag sources hain. Farq wahin dikhta hai jahan dono ka jama mel nahi khata.
+// ---------------------------------------------------------------------------
+
+export interface ChillerTotalInput {
+  chiller_no: string | null;
+  shift: string | null;
+  gross_liters: number | string | null;
+  fat_percentage: number | string | null;
+  lr: number | string | null;
+  snf_percentage: number | string | null;
+  ts_percentage: number | string | null;
+  adjusted_liters: number | string | null;
+}
+
+export interface FarmerEntryInput extends ControlEntryRow {
+  total_amount: number | string | null;
+}
+
+export interface ChillerLine {
+  chillerNo: string;
+  shift: ControlShift | null;
+  grossL: number;
+  fat: number | null;
+  lr: number | null;
+  snf: number | null;
+  ts: number | null;
+  adjustedL: number | null;
+}
+
+export interface DayReport {
+  chillers: ChillerLine[];
+  chillerTotal: { grossL: number; adjustedL: number; snfAvg: number | null; fatAvg: number | null; count: number };
+  farmer: {
+    entries: number;
+    litersAll: number;
+    litersPayable: number;
+    payableRs: number;
+    pendingFat: number;
+    priced: number;
+    verified: number;
+    rejected: number;
+    avgRatePerL: number | null;
+  };
+  /** Chiller gross − farmer ki entries ke litre (sirf jab dono mojood hon). */
+  farmerVsChillerL: number | null;
+}
+
+function weightedAvg(rows: { value: number | null; weight: number }[]): number | null {
+  const usable = rows.filter((r) => r.value != null && r.weight > 0);
+  const w = usable.reduce((s, r) => s + r.weight, 0);
+  if (w === 0) return null;
+  return round3(usable.reduce((s, r) => s + (r.value as number) * r.weight, 0) / w);
+}
+
+/** Subah pehle, shaam baad mein; shift na ho to sab se aakhir mein. */
+function shiftOrder(shift: ControlShift | null): number {
+  if (shift === "morning") return 0;
+  if (shift === "evening") return 1;
+  return 2;
+}
+
+function nOrNull(value: number | string | null | undefined): number | null {
+  if (value == null || value === "") return null;
+  const n = typeof value === "string" ? Number(value) : value;
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Chiller ki har line ko shift ke hisaab se tarteeb deta hai aur
+ * kul gross, adjusted aur SNF/FAT ka wazan-wala ausat nikalta hai.
+ * Koi chiller ka total na ho to wo qatar NULL ki tarah rahti hai, sifar nahi.
+ */
+export function buildChillerLines(rows: ChillerTotalInput[]): ChillerLine[] {
+  return rows
+    .map((r) => ({
+      chillerNo: r.chiller_no ?? "—",
+      shift: SHIFTS.includes(r.shift as ControlShift) ? (r.shift as ControlShift) : null,
+      grossL: round3(num(r.gross_liters)),
+      fat: nOrNull(r.fat_percentage),
+      lr: nOrNull(r.lr),
+      snf: nOrNull(r.snf_percentage),
+      ts: nOrNull(r.ts_percentage),
+      adjustedL: nOrNull(r.adjusted_liters) == null ? null : round3(num(r.adjusted_liters)),
+    }))
+    .sort((a, b) => shiftOrder(a.shift) - shiftOrder(b.shift) || a.chillerNo.localeCompare(b.chillerNo));
+}
+
+export function buildDayReport(input: {
+  chillers: ChillerTotalInput[];
+  entries: FarmerEntryInput[];
+}): DayReport {
+  const chillers = buildChillerLines(input.chillers);
+  const grossSum = round3(chillers.reduce((s, c) => s + c.grossL, 0));
+  const adjustedSum = round3(chillers.reduce((s, c) => s + (c.adjustedL ?? 0), 0));
+
+  let payableRs = 0;
+  let litersPayable = 0;
+  let litersAll = 0;
+  let pendingFat = 0;
+  let priced = 0;
+  let verified = 0;
+  let rejected = 0;
+  for (const e of input.entries) {
+    const l = num(e.quantity_liters);
+    litersAll += l;
+    if (e.status === "pending_fat") pendingFat += 1;
+    else if (e.status === "priced") priced += 1;
+    else if (e.status === "verified") verified += 1;
+    else if (e.status === "rejected") rejected += 1;
+    if (e.status === "priced" || e.status === "verified") {
+      payableRs += num(e.total_amount);
+      litersPayable += l;
+    }
+  }
+  payableRs = Math.round(payableRs * 100) / 100;
+  litersAll = round3(litersAll);
+  litersPayable = round3(litersPayable);
+
+  return {
+    chillers,
+    chillerTotal: {
+      grossL: grossSum,
+      adjustedL: adjustedSum,
+      snfAvg: weightedAvg(chillers.map((c) => ({ value: c.snf, weight: c.grossL }))),
+      fatAvg: weightedAvg(chillers.map((c) => ({ value: c.fat, weight: c.grossL }))),
+      count: chillers.length,
+    },
+    farmer: {
+      entries: input.entries.length,
+      litersAll,
+      litersPayable,
+      payableRs,
+      pendingFat,
+      priced,
+      verified,
+      rejected,
+      avgRatePerL: litersPayable > 0 ? Math.round((payableRs / litersPayable) * 100) / 100 : null,
+    },
+    farmerVsChillerL: chillers.length === 0 ? null : round3(grossSum - litersAll),
+  };
+}
