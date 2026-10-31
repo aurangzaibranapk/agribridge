@@ -1,4 +1,4 @@
-import { destinationShareLine, formatQty, handoverReasonLabel, lrCorrection, lrRecipeLabel, specFlagText, type HandoverDestination, type HandoverReason, type HandoverSpecs, type LrBaseline, type SpecFlag } from "@/lib/milk-handover";
+import { destinationShareLine, formatLab, formatQty, handoverReasonLabel, lrCorrection, lrRecipeLabel, milkDensity, specFlagText, type HandoverDestination, type HandoverReason, type HandoverSpecs, type LrBaseline, type SpecFlag } from "@/lib/milk-handover";
 
 export interface CertificateLineView {
   chillerNo: string;
@@ -98,6 +98,8 @@ export function CertificateSheet({ cert }: { cert: CertificateView }) {
               "LR",
               "SNF",
               "TS (SNF+FAT%)",
+              "Sp. Gravity",
+              "Milk (kg)",
               "Adjusted Volume (L)",
               "Temperature",
               "Organo",
@@ -113,6 +115,8 @@ export function CertificateSheet({ cert }: { cert: CertificateView }) {
             const bad = new Set(line.flags.map((f) => f.field));
             const corr = lrCorrection(line.lr, line.temperatureC, cert.lrBaseline);
             const lrShown = corr && corr.points > 0 ? corr.corrected : line.lr;
+            const labLr = corr?.corrected ?? null;
+            const density = labLr != null && labLr > 0 ? milkDensity(labLr, line.grossL) : null;
             const mark = (field: SpecFlag["field"], text: string) => (
               <span className={bad.has(field) ? "bg-amber-200 px-0.5 font-semibold" : undefined}>{text}</span>
             );
@@ -128,9 +132,11 @@ export function CertificateSheet({ cert }: { cert: CertificateView }) {
                     <div className="text-[9px] font-normal">raw {formatQty(corr.raw)} +{corr.points}</div>
                   )}
                 </td>
-                <td className="border border-black px-1 py-1">{mark("snf", line.snf == null ? "\u00a0" : formatQty(line.snf))}</td>
-                <td className="border border-black px-1 py-1">{line.ts == null ? "\u00a0" : formatQty(line.ts)}</td>
-                <td className="border border-black px-1 py-1">{line.adjustedL == null ? "\u00a0" : formatQty(line.adjustedL)}</td>
+                <td className="border border-black px-1 py-1">{mark("snf", line.snf == null ? "\u00a0" : formatLab(line.snf))}</td>
+                <td className="border border-black px-1 py-1">{line.ts == null ? "\u00a0" : formatLab(line.ts)}</td>
+                <td className="border border-black px-1 py-1">{density ? formatLab(density.specificGravity) : "\u00a0"}</td>
+                <td className="border border-black px-1 py-1">{density ? formatLab(density.milkKg) : "\u00a0"}</td>
+                <td className="border border-black px-1 py-1">{line.adjustedL == null ? "\u00a0" : formatLab(line.adjustedL)}</td>
                 <td className="border border-black px-1 py-1">{line.temperatureC == null ? "\u00a0" : formatQty(line.temperatureC)}</td>
                 <td className="border border-black px-1 py-1">{cell(line.organo ?? "")}</td>
               </tr>
@@ -138,7 +144,7 @@ export function CertificateSheet({ cert }: { cert: CertificateView }) {
           })}
           {Array.from({ length: pad }, (_, i) => (
             <tr key={`pad-${i}`}>
-              {Array.from({ length: 10 }, (__, c) => (
+              {Array.from({ length: 12 }, (__, c) => (
                 <td key={c} className="border border-black px-1 py-2">
                   {"\u00a0"}
                 </td>
@@ -150,9 +156,9 @@ export function CertificateSheet({ cert }: { cert: CertificateView }) {
               Total
             </td>
             <td className="border border-black px-1 py-1">{cert.grossTotal == null ? "\u00a0" : formatQty(cert.grossTotal)}</td>
-            <td className="border border-black px-1 py-1" colSpan={4} />
+            <td className="border border-black px-1 py-1" colSpan={6} />
             <td className="border border-black bg-neutral-300 px-1 py-1">
-              {cert.adjustedTotal == null ? "\u00a0" : formatQty(cert.adjustedTotal)}
+              {cert.adjustedTotal == null ? "\u00a0" : formatLab(cert.adjustedTotal)}
             </td>
             <td className="border border-black px-1 py-1" colSpan={2} />
           </tr>

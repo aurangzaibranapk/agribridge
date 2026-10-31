@@ -3,11 +3,12 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
-import { certificateShareFromInputs, handoverSlipTitle, type HandoverDestination, varianceForCertificate } from "@/lib/milk-handover";
+import { canSeeHandoverRate, certificateShareFromInputs, handoverSlipTitle, type HandoverDestination, varianceForCertificate } from "@/lib/milk-handover";
+import { loadChillerStock } from "@/lib/milk-handover-stock";
 import { HandoverForm, type HandoverFormProps } from "./handover-form";
 import { CertificatePrintBar } from "./print-bar";
 import { HandoverVarianceCard } from "./variance-card";
-import { handoverGate, loadCertificate, loadHandoverOptions, loadHandoverParties, type LoadedCertificate } from "@/lib/milk-handover-page";
+import { handoverGate, loadCertificate, loadHandoverOptions, loadHandoverParties, loadInternalRate, type LoadedCertificate } from "@/lib/milk-handover-page";
 
 export async function HandoverEditor({
   id,
@@ -55,6 +56,12 @@ export async function HandoverEditor({
   const branchList = branches.length > 0 ? branches : options.branches;
   const shops = scoped ? options.shops.filter((s) => !s.branchId || s.branchId === gate.branchId) : options.shops;
 
+  const seeRate = canSeeHandoverRate(gate.role);
+  const draftDate = dateHint && /^\d{4}-\d{2}-\d{2}$/.test(dateHint) ? dateHint : aajKaKhana();
+  const draftBranch = gate.branchId && branchList.some((b) => b.id === gate.branchId) ? gate.branchId : "";
+  const stockLines = !loaded && draftBranch ? await loadChillerStock(draftBranch, draftDate, "morning") : [];
+  const savedRate = loaded && seeRate ? await loadInternalRate(loaded.id) : "";
+
   const defaults: HandoverFormProps["defaults"] = loaded
     ? {
         branchId: loaded.branchId,
@@ -75,11 +82,12 @@ export async function HandoverEditor({
         lrBaseline: loaded.lrBaseline,
         partyId: loaded.partyId,
         handoverReason: loaded.handoverReason,
+        rate: savedRate,
       }
     : {
-        branchId: gate.branchId && branchList.some((b) => b.id === gate.branchId) ? gate.branchId : "",
+        branchId: draftBranch,
         shopId: "",
-        date: dateHint && /^\d{4}-\d{2}-\d{2}$/.test(dateHint) ? dateHint : aajKaKhana(),
+        date: draftDate,
         shift: "morning",
         time: "",
         mccName: "",
@@ -91,7 +99,7 @@ export async function HandoverEditor({
         licenseeRep: "",
         licenseeSignature: "",
         collectorSignature: "",
-        lines: [],
+        lines: stockLines,
         lrBaseline: destination === "vendor" ? 22 : 20,
         partyId: "",
         handoverReason: "",
@@ -172,6 +180,7 @@ export async function HandoverEditor({
         destination={destination}
         parties={parties.parties}
         partyError={parties.error}
+        canSeeRate={seeRate}
         defaults={defaults}
       />
     </div>

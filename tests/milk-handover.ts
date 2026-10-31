@@ -7,7 +7,13 @@ import {
   blankCertificateLines,
   certificateShareText,
   dayMilkVariance,
+  absorbChillerStock,
+  canSeeHandoverRate,
+  chillerStockRows,
   formulaFromRateRow,
+  handoverAmount,
+  internalAmountTotal,
+  milkDensity,
   baselineForDestination,
   chillerIntake,
   dayDestinationSummary,
@@ -115,8 +121,9 @@ const company = applyAutoLab(
   "inputs",
   20
 );
-assert.equal(company.snf, "8.61");
-assert.equal(company.adjustedL, "97");
+assert.equal(company.snf, "8.606");
+assert.equal(company.adjustedL, "96.970");
+assert.equal(company.chillerNo, "1");
 assert.equal(company.temperatureC, "32");
 assert.equal(company.organo, "");
 assert.deepEqual(formulaFromRateRow(null), PAPER_FORMULA);
@@ -127,11 +134,11 @@ const vendor = applyAutoLab(
   "inputs",
   22
 );
-assert.equal(vendor.snf, "8.36");
-assert.equal(vendor.adjustedL, "95.08");
+assert.equal(vendor.snf, "8.356");
+assert.equal(vendor.adjustedL, "95.047");
 const custom = applyAutoLab({ ...company, snf: "8.6" }, PAPER_FORMULA, "snf", 20);
 assert.equal(custom.snf, "8.6");
-assert.equal(custom.adjustedL, "96.92");
+assert.equal(custom.adjustedL, "96.924");
 assert.equal(applyAutoLab({ ...company, fat: "" }, null, "inputs", 20).snf, company.snf);
 
 const open = milkVariance(1000, 980, null);
@@ -183,6 +190,8 @@ assert.match(slip, /Kisan Pakistan/);
 assert.match(slip, /vendor 22°C \+3/);
 assert.match(slip, /LR recipe: vendor 22°C/);
 assert.doesNotMatch(slip, /Kisan ka Wasela|کسان کا وسیلہ/);
+assert.doesNotMatch(slip, /Rate|Amount/);
+assert.match(slip, /Sp\. Gravity/);
 
 assert.equal(baselineForDestination("company", 22), 20);
 assert.equal(baselineForDestination("vendor", 20), 22);
@@ -272,5 +281,72 @@ const partySpoil = certificateShareText({
 assert.match(partySpoil, /LR recipe: company agreement 20°C/);
 assert.match(partySpoil, /Wajah: Kharab \(spoil\)/);
 assert.doesNotMatch(partySlip, /Kisan ka Wasela|کسان کا وسیلہ/);
+
+const phoneLine = applyAutoLab(
+  line({ chillerNo: "HM", milkType: "Cow", grossL: "1", fat: "4.3", lr: "27" }),
+  null,
+  "inputs",
+  20
+);
+assert.equal(phoneLine.chillerNo, "HM");
+assert.equal(phoneLine.snf, "8.416");
+assert.equal(phoneLine.adjustedL, "0.979");
+assert.equal(tsOf(4.3, 8.416), 12.717);
+assert.equal(milkDensity(27, 1).specificGravity, 1.027);
+assert.equal(milkDensity(27, 1).milkKg, 1.027);
+assert.deepEqual(formulaFromRateRow({ snf_constant: 0.805, reference_ts: 13 }), PAPER_FORMULA);
+assert.equal(formulaFromRateRow({ snf_constant: 0.72, reference_ts: 13 }).snfConstant, 0.72);
+assert.equal(PAPER_FORMULA.snfConstant, 0.806);
+assert.equal(canSeeHandoverRate("owner"), true);
+assert.equal(canSeeHandoverRate("admin"), true);
+assert.equal(canSeeHandoverRate("super_admin"), true);
+assert.equal(canSeeHandoverRate("manager"), false);
+assert.equal(canSeeHandoverRate("milk_collection"), false);
+assert.equal(handoverAmount(0.979, 200), 195.8);
+assert.equal(handoverAmount(null, 200), null);
+assert.equal(internalAmountTotal([195.8, null]), null);
+assert.equal(internalAmountTotal([10, 20.5]), 30.5);
+
+const kept = absorbChillerStock(
+  [line({ chillerNo: "HM", milkType: "Cow", grossL: "1", fat: "4.3", lr: "27", snf: "8.416", adjustedL: "0.979" })],
+  chillerStockRows([{ chillerNo: "ZZ", milkType: "Buffalo" }], ["HM"])
+);
+assert.equal(kept[0].chillerNo, "HM");
+assert.equal(kept[0].fat, "4.3");
+assert.equal(kept.some((row) => row.chillerNo === "ZZ"), true);
+
+const phoneSlip = certificateShareText({
+  mccName: "Kisaan",
+  date: "2026-10-31",
+  time: "",
+  shiftLabel: "Subah",
+  vehicle: null,
+  driver: null,
+  lines: [{
+    chillerNo: "HM",
+    milkType: "Cow",
+    grossL: 1,
+    fat: 4.3,
+    lr: 27,
+    temperatureC: null,
+    snf: 8.416,
+    ts: 12.717,
+    adjustedL: 0.979,
+    organo: null,
+  }],
+  grossTotal: 1,
+  adjustedTotal: 0.979,
+  accepted: null,
+  rejectionReason: null,
+  lrBaseline: 20,
+  destination: "company",
+});
+assert.match(phoneSlip, /Chiller HM/);
+assert.match(phoneSlip, /SNF 8\.416/);
+assert.match(phoneSlip, /TS 12\.717/);
+assert.match(phoneSlip, /Adjusted 0\.979/);
+assert.match(phoneSlip, /Sp\. Gravity 1\.027/);
+assert.match(phoneSlip, /Milk kg 1\.027/);
+assert.doesNotMatch(phoneSlip, /Rate|Amount|Rs/);
 
 console.log("milk-handover lib: ok");

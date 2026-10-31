@@ -11,9 +11,13 @@
  * 32°C par company +4 (LR 28), vendor +3 (LR 27).
  * 20 ya neeche (vendor par 23 ya neeche jab company sirf +1 ho): points 0,
  * minus nahi. 40°C se upar company +7 par rukta hai.
- * Settings na hon to SNF constant 0.805 aur reference TS 13.
+ * Settings na hon, ya purana default 0.805 ho, to handover SNF constant
+ * 0.806 aur reference TS 13 — phone "Milk TS% Volume" ke teen hisse.
+ * Kisan ki adaigi alag rehti hai (calculateMilkValue, 2 hisse).
  * Min spec se neeche = nishan, rok nahi. LR ka nishan 20°C wale adad par.
  */
+
+import { calculatePhoneMilkLab, roundLab3 } from "@/lib/utils/milk-formula";
 
 export interface HandoverSpecs {
   minFat: number;
@@ -30,12 +34,26 @@ export interface LabFormula {
 }
 
 /**
- * milk_rate_settings ke column default (migration 053): snf_constant 0.805,
- * reference_ts 13. Kaghaz ke min spec (FAT 4.1, LR 27, SNF 8.4) nishan hain,
- * formula nahi. Settings ki qatar na mile to certificate yahi 13-TS istemal
- * karta hai, taake Live par khali settings bhi SNF aur adjusted bhar sakein.
+ * Phone paper: snf constant 0.806, reference TS 13.
+ * Migration 053 ka column default 0.805 tha. 729 naya default 0.806 karti hai
+ * magar maujooda Live qatar (0.805) UPDATE nahi karti — kisan ki adaigi
+ * fn_apply_milk_fat usi qatar par rehti hai. Handover 0.805 ko purana
+ * paper default maanta hai aur phone wala 0.806 lagata hai. Koi aur
+ * constant (maslan 0.72) Owner ka irada hai, wahi chalta hai.
  */
-export const PAPER_FORMULA: LabFormula = { snfConstant: 0.805, referenceTs: 13 };
+export const LEGACY_SNF_CONSTANT = 0.805;
+export const PHONE_SNF_CONSTANT = 0.806;
+export const PAPER_FORMULA: LabFormula = { snfConstant: PHONE_SNF_CONSTANT, referenceTs: 13 };
+
+export function isLegacyPaperSnf(stored: number): boolean {
+  return Number.isFinite(stored) && Math.abs(stored - LEGACY_SNF_CONSTANT) < 1e-9;
+}
+
+/** Handover ka constant. 0.805 purana default hai, phone override nahi. */
+export function handoverSnfConstant(stored: number): number {
+  if (isLegacyPaperSnf(stored)) return PHONE_SNF_CONSTANT;
+  return stored;
+}
 
 export function resolveLabFormula(formula: LabFormula | null | undefined): LabFormula {
   if (
@@ -62,7 +80,7 @@ export function formulaFromRateRow(row: {
     String(row.reference_ts).trim() !== ""
   ) {
     return resolveLabFormula({
-      snfConstant: Number(row.snf_constant),
+      snfConstant: handoverSnfConstant(Number(row.snf_constant)),
       referenceTs: Number(row.reference_ts),
     });
   }
@@ -179,7 +197,7 @@ export function parseHandoverLines(lines: HandoverLineInput[]): { lines: ParsedL
       grossL: roundTo(gross, 3),
       fat: fat == null ? null : roundTo(fat, 2),
       lr: lr == null ? null : roundTo(lr, 2),
-      snf: snf == null ? null : roundTo(snf, 2),
+      snf: snf == null ? null : roundTo(snf, 3),
       adjustedL: adjusted == null ? null : roundTo(adjusted, 3),
       temperatureC: temperature == null ? null : roundTo(temperature, 2),
       organo: organo || null,
@@ -208,7 +226,7 @@ export function lineToSql(line: ParsedLine) {
 
 export function tsOf(fat: number | null, snf: number | null): number | null {
   if (fat == null || snf == null) return null;
-  return roundTo(fat + snf, 2);
+  return roundLab3(fat + snf);
 }
 
 /** Neeche min spec. Barabar theek hai. Khali par koi nishan nahi. */
@@ -547,9 +565,11 @@ export function varianceForCertificate(
 
 /**
  * Lab ka andaza. Formula yahan khud nahi banta — certificate
- * resolveLabFormula se 0.805 / 13 bhejta hai jab settings khali hon.
- * LR yahan 20°C corrected hona chahiye (caller ye kare).
- * SNF pehle se ho to sirf adjusted. Warna LR+FAT se SNF aur adjusted.
+ * resolveLabFormula se 0.806 / 13 bhejta hai jab settings khali hon
+ * ya purana 0.805 ho. LR yahan corrected hona chahiye (caller ye kare).
+ * Temperature khali ho to raw LR. SNF pehle se ho to sirf adjusted.
+ * Teen hisse phone jaisa (ceiling), SNF ko 2 hisse par round karke
+ * TS se pehle nahi kaatta.
  */
 export function suggestLab(
   gross: number,
@@ -562,20 +582,38 @@ export function suggestLab(
     return { snf: null, adjusted: null };
   }
   if (snf != null && snf > 0) {
-    const ts = roundTo(fat + snf, 2);
-    return { snf: null, adjusted: roundTo(gross * (ts / formula.referenceTs), 2) };
+    const tsRaw = fat + snf;
+    return { snf: null, adjusted: roundLab3(gross * (tsRaw / formula.referenceTs)) };
   }
   if (lr != null && lr > 0) {
-    const snfGuess = roundTo(lr / 4 + fat * 0.2 + formula.snfConstant, 2);
-    const ts = roundTo(fat + snfGuess, 2);
-    return { snf: snfGuess, adjusted: roundTo(gross * (ts / formula.referenceTs), 2) };
+    const phone = calculatePhoneMilkLab(gross, fat, lr, formula.snfConstant, formula.referenceTs);
+    return { snf: phone.snf, adjusted: phone.adjustedVolume };
   }
   return { snf: null, adjusted: null };
+}
+
+/** Sp. gravity = 1 + LR/1000. Milk kg = gross × wahi ratio. Teen hisse. */
+export function milkDensity(lr: number, grossL: number | null): { specificGravity: number; milkKg: number | null } {
+  const ratio = 1 + lr / 1000;
+  return {
+    specificGravity: roundLab3(ratio),
+    milkKg: grossL == null ? null : roundLab3(grossL * ratio),
+  };
 }
 
 export function formatQty(n: number | null | undefined): string {
   if (n == null || Number.isNaN(n)) return "—";
   return Number(n).toLocaleString("en-PK", { maximumFractionDigits: 3 });
+}
+
+/** SNF, TS, adjusted, SG, kg — hamesha teen hisse, jaise phone. */
+export function formatLab(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(Number(n))) return "—";
+  return Number(n).toFixed(3);
+}
+
+export function labText(n: number): string {
+  return roundLab3(n).toFixed(3);
 }
 
 function looseNum(raw: string): number | null {
@@ -609,7 +647,7 @@ export function applyAutoLab(
     const snfTyped = looseNum(line.snf);
     if (gross != null && gross > 0 && fat != null && fat > 0 && snfTyped != null && snfTyped > 0) {
       const hint = suggestLab(gross, fat, lr, snfTyped, resolved);
-      if (hint.adjusted != null) return { ...line, adjustedL: String(hint.adjusted) };
+      if (hint.adjusted != null) return { ...line, adjustedL: labText(hint.adjusted) };
     }
     return line;
   }
@@ -617,7 +655,7 @@ export function applyAutoLab(
   if (gross != null && gross > 0 && fat != null && fat > 0 && lr != null && lr > 0) {
     const hint = suggestLab(gross, fat, lr, null, resolved);
     if (hint.snf != null && hint.adjusted != null) {
-      return { ...line, snf: String(hint.snf), adjustedL: String(hint.adjusted) };
+      return { ...line, snf: labText(hint.snf), adjustedL: labText(hint.adjusted) };
     }
   }
   return line;
@@ -675,7 +713,19 @@ function lrShareBit(raw: number | null, temp: number | null, baseline: LrBaselin
   return `LR ${formatQty(view.raw)} raw → ${formatQty(view.corrected)} (${name} +${view.points}${cap})`;
 }
 
-/** Slip ka text. Public naam Kisan Pakistan. Jo recipe chuni ho wahi. */
+function densityShareBit(
+  gross: number | null,
+  rawLr: number | null,
+  temp: number | null,
+  baseline: LrBaseline
+): string {
+  const view = lrCorrection(rawLr, temp, baseline);
+  if (!view) return "Sp. Gravity — · Milk kg —";
+  const density = milkDensity(view.corrected, gross);
+  return `Sp. Gravity ${formatLab(density.specificGravity)} · Milk kg ${formatLab(density.milkKg)}`;
+}
+
+/** Slip ka text. Public naam Kisan Pakistan. Jo recipe chuni ho wahi. Rate aur amount is slip par nahi. */
 export function certificateShareText(input: CertificateShareInput): string {
   const accepted = input.accepted == null ? "Abhi nahi" : input.accepted ? "YES" : "NO";
   const lines = input.lines.map((line) =>
@@ -686,9 +736,10 @@ export function certificateShareText(input: CertificateShareInput): string {
       `FAT ${formatQty(line.fat)}`,
       lrShareBit(line.lr, line.temperatureC, input.lrBaseline),
       `Temp ${formatQty(line.temperatureC)}`,
-      `SNF ${formatQty(line.snf)}`,
-      `TS ${formatQty(line.ts)}`,
-      `Adjusted ${formatQty(line.adjustedL)} L`,
+      `SNF ${formatLab(line.snf)}`,
+      `TS ${formatLab(line.ts)}`,
+      densityShareBit(line.grossL, line.lr, line.temperatureC, input.lrBaseline),
+      `Adjusted ${formatLab(line.adjustedL)} L`,
       `Organo ${line.organo?.trim() || "—"}`,
     ].join(" · ")
   );
@@ -731,6 +782,81 @@ export function certificateEmailSubject(input: { mccName: string; date: string; 
 
 export function certificateShareMessage(text: string, printUrl: string): string {
   return `${text}\n\nPrint: ${printUrl}`;
+}
+
+/** Admin, Owner, Super Admin. Manager aur milk staff rate nahi dekhte. */
+export const HANDOVER_RATE_ROLES = ["owner", "super_admin", "admin"] as const;
+
+export function canSeeHandoverRate(role: string | null | undefined): boolean {
+  return (HANDOVER_RATE_ROLES as readonly string[]).includes(role ?? "");
+}
+
+/** Amount = adjusted litre × rate. Adjusted ya rate khali ho to null, sifar nahi. */
+export function handoverAmount(adjustedL: number | null, ratePerAdjustedL: number | null): number | null {
+  if (adjustedL == null || ratePerAdjustedL == null) return null;
+  if (!Number.isFinite(adjustedL) || !Number.isFinite(ratePerAdjustedL) || ratePerAdjustedL < 0) return null;
+  return Math.round(adjustedL * ratePerAdjustedL * 100) / 100;
+}
+
+/**
+ * Din ka amount tabhi jab har certificate par rate ho.
+ * Jis par rate nahi, us ko sifar parhna jhoot hai — total null.
+ */
+export function internalAmountTotal(amounts: (number | null)[]): number | null {
+  if (amounts.length === 0) return null;
+  let sum = 0;
+  for (const amount of amounts) {
+    if (amount == null) return null;
+    sum += amount;
+  }
+  return Math.round(sum * 100) / 100;
+}
+
+export interface ChillerIdentity {
+  chillerNo: string;
+  milkType: string;
+}
+
+function chillerKey(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/** Shift ke naam aur pichli certificate ki identity. Duplicates nahi. Lab khali. */
+export function chillerStockRows(previous: ChillerIdentity[], shiftNames: string[]): HandoverLineInput[] {
+  const rows: HandoverLineInput[] = [];
+  const seen = new Set<string>();
+  const push = (chillerNo: string, milkType: string) => {
+    const key = chillerKey(chillerNo);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    rows.push({ ...emptyLine(), chillerNo: chillerNo.trim(), milkType: milkType.trim() });
+  };
+  for (const row of previous) push(row.chillerNo, row.milkType);
+  for (const name of shiftNames) push(name, "");
+  return rows;
+}
+
+function lineHasWork(line: HandoverLineInput): boolean {
+  return [line.milkType, line.grossL, line.fat, line.lr, line.snf, line.adjustedL, line.temperatureC, line.organo].some(
+    (value) => value.trim()
+  );
+}
+
+/**
+ * Nayi certificate par stock ke chiller jor dein.
+ * Jo chiller pehle se ho us ki lab qatarein na mitao.
+ * Khali form par stock puri jagah le.
+ */
+export function absorbChillerStock(current: HandoverLineInput[], stock: HandoverLineInput[]): HandoverLineInput[] {
+  const named = current.filter((line) => line.chillerNo.trim());
+  const untouched = current.every((line) => !line.chillerNo.trim() && !lineHasWork(line));
+  if (untouched) return stock.length > 0 ? stock : current;
+  const have = new Set(named.map((line) => chillerKey(line.chillerNo)));
+  const extra = stock.filter((line) => !have.has(chillerKey(line.chillerNo)));
+  if (extra.length === 0) return current;
+  const blanks = current.filter((line) => !line.chillerNo.trim() && !lineHasWork(line));
+  const kept = current.filter((line) => line.chillerNo.trim() || lineHasWork(line));
+  return [...kept, ...extra, ...blanks];
 }
 
 /** POS closing slip jaisa: staff ke WhatsApp mein slip ka text. */
