@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Slip — Shuru aur Akhir — Mockup</title>
+<style>
+  :root { --bg:#f3f6f2; --card:#fff; --line:#e3e9e3; --text:#14241a; --muted:#6b776f;
+    --brand:#1f6b3a; --brand-d:#174d2b; --brand-l:#eaf5ec; --sona:#d9a62e; --sona-l:#fff4d6; --sona-d:#8a5f12;
+    --khatra:#c03636; --khatra-l:#fdecec; --khatra-d:#9c2b2b; --info:#2b5f8a; --info-l:#e8f1f9; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,"Noto Nastaliq Urdu","Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
+  .top { background:linear-gradient(135deg,var(--brand-d),var(--brand)); color:#fff; padding:20px 28px; }
+  .top h1 { margin:0; font-size:21px; } .top .sub { opacity:.85; font-size:13px; margin-top:4px; }
+  main { padding:20px 28px; display:grid; gap:18px; grid-template-columns:repeat(12,1fr); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; box-shadow:0 6px 18px rgba(20,36,26,.05); }
+  .c12{grid-column:span 12} .c6{grid-column:span 6} .c5{grid-column:span 5} .c7{grid-column:span 7}
+  @media (max-width:1000px){ [class*="c"]{grid-column:span 12} }
+  h2 { font-size:15px; margin:0 0 4px; } .hint { font-size:12px; color:var(--muted); margin:0 0 14px; }
+  .range { display:grid; grid-template-columns:1fr 60px 1fr; gap:10px; align-items:center; }
+  .box { border:1px solid var(--line); border-radius:12px; padding:12px; background:#fafcfa; }
+  .box .k { font-size:12px; color:var(--muted); margin-bottom:6px; }
+  .box .v { font-size:17px; font-weight:700; }
+  .arrow { text-align:center; font-size:22px; color:var(--brand); }
+  .seg { display:flex; gap:6px; margin-top:8px; }
+  .seg span { padding:6px 10px; border-radius:8px; border:1px solid var(--line); font-size:12px; background:#fff; }
+  .seg span.on { background:var(--brand); color:#fff; border-color:var(--brand); font-weight:700; }
+  .presets { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .pre { padding:8px 12px; border-radius:999px; border:1px solid var(--line); font-size:12px; background:#fff; }
+  .pre.on { background:var(--brand-l); border-color:var(--brand); color:var(--brand-d); font-weight:700; }
+  .inc { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .tag { padding:6px 10px; border-radius:8px; background:var(--info-l); color:var(--info); font-size:12px; font-weight:600; }
+  table { width:100%; border-collapse:separate; border-spacing:0; font-size:13px; }
+  th { text-align:left; color:var(--muted); font-weight:600; font-size:12px; padding:9px 8px; background:#f7faf7; border-bottom:1px solid var(--line); }
+  td { padding:9px 8px; border-bottom:1px solid #eef2ee; }
+  td.r, th.r { text-align:right; }
+  .num { font-variant-numeric:tabular-nums; }
+  .shiftcell { font-weight:700; }
+  .pill { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700; }
+  .p-ok{background:var(--brand-l);color:var(--brand-d)} .p-warn{background:var(--sona-l);color:var(--sona-d)} .p-bad{background:var(--khatra-l);color:var(--khatra-d)}
+  .note { font-size:12px; color:var(--muted); margin-top:10px; }
+  .sumrow { display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
+  .sumrow div { background:#f7faf7; border:1px solid var(--line); border-radius:12px; padding:10px 14px; }
+  .sumrow .k { font-size:12px; color:var(--muted); } .sumrow .v { font-size:18px; font-weight:700; }
+</style>
+</head>
+<body>
+<div class="top">
+  <h1>Milk Handover Slip — Shuru aur Akhir</h1>
+  <div class="sub">Company slip · Main Branch Mahabali · namoona data (mockup)</div>
+</div>
+<main>
+
+  <!-- Range -->
+  <section class="card c12">
+    <h2>1. Slip ka daura (range)</h2>
+    <p class="hint">Shuru aur akhir ki tareekh aur shift chunein. Dono ke beech ki saari shifts is slip mein aayengi.</p>
+    <div class="range">
+      <div class="box">
+        <div class="k">Shuru (kab se)</div>
+        <div class="v num">30 Oct 2026</div>
+        <div class="seg"><span>Subah</span><span class="on">Shaam</span></div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="box">
+        <div class="k">Akhir (kab tak)</div>
+        <div class="v num">31 Oct 2026</div>
+        <div class="seg"><span class="on">Subah</span><span>Shaam</span></div>
+      </div>
+    </div>
+    <div class="presets">
+      <span class="pre">Sirf aaj ki subah</span>
+      <span class="pre">Sirf aaj ki shaam</span>
+      <span class="pre">Subah se shaam (aaj)</span>
+      <span class="pre on">Shaam → agli subah</span>
+      <span class="pre">Pichli slip ke baad se aaj tak</span>
+    </div>
+    <div class="inc">
+      <span class="tag">30 Oct · Shaam</span>
+      <span class="tag">31 Oct · Subah</span>
+      <span class="note" style="margin:0 0 0 6px;align-self:center">= 2 shifts, slip mein aayengi</span>
+    </div>
+  </section>
+
+  <!-- Grid -->
+  <section class="card c12">
+    <h2>2. Chiller qatarein (har shift alag)</h2>
+    <p class="hint">Range ki har shift ka stock apni qatar mein aata hai. Jo litre nahi likha, wo baqi rahega.</p>
+    <table>
+      <thead><tr><th>Tareekh</th><th>Shift</th><th>Chiller</th><th class="r">Stock (gross)</th><th class="r">Bheja (gross)</th><th class="r">FAT</th><th class="r">LR</th><th>Haal</th></tr></thead>
+      <tbody>
+        <tr><td class="num">30 Oct</td><td class="shiftcell">Shaam</td><td>HM-2</td><td class="r num">1,577</td><td class="r num">1,500</td><td class="r num">4.60</td><td class="r num">25</td><td><span class="pill p-warn">baqi 77</span></td></tr>
+        <tr><td class="num">31 Oct</td><td class="shiftcell">Subah</td><td>HM-1</td><td class="r num">1,240</td><td class="r num">1,240</td><td class="r num">4.30</td><td class="r num">27</td><td><span class="pill p-ok">khatam</span></td></tr>
+        <tr><td class="num">31 Oct</td><td class="shiftcell">Subah</td><td>HM-2</td><td class="r num">665</td><td class="r num">700</td><td class="r num">4.10</td><td class="r num">26</td><td><span class="pill p-bad">zyada 35</span></td></tr>
+      </tbody>
+    </table>
+    <div class="sumrow">
+      <div><div class="k">Kul stock (gross)</div><div class="v num">3,482 L</div></div>
+      <div><div class="k">Kul bheja (gross)</div><div class="v num">3,440 L</div></div>
+      <div><div class="k">Baqi (gross)</div><div class="v num">42 L</div></div>
+    </div>
+    <div class="note">Shift se pehle ya baad ki shifts is range mein nahi aayengi. Agar range mein koi shift ka chiller total nahi, to us qatar par "—" dikhega.</div>
+  </section>
+
+  <!-- Examples -->
+  <section class="card c6">
+    <h2>3. Mumkin daure</h2>
+    <table>
+      <thead><tr><th>Shuru</th><th>Akhir</th><th>Kya aayega</th></tr></thead>
+      <tbody>
+        <tr><td>Subah (31)</td><td>Subah (31)</td><td>sirf 1 shift</td></tr>
+        <tr><td>Subah (31)</td><td>Shaam (31)</td><td>2 shifts, same din</td></tr>
+        <tr><td>Shaam (30)</td><td>Subah (31)</td><td>2 shifts, do din</td></tr>
+        <tr><td>Subah (28)</td><td>Shaam (31)</td><td>8 shifts, 4 din</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Default -->
+  <section class="card c6">
+    <h2>4. Default kya hoga</h2>
+    <p class="hint">Jab slip khule to pehle se bhara hua daura:</p>
+    <table>
+      <tbody>
+        <tr><td>Pichli slip ke baad ka pehla stock</td><td class="r"><span class="pill p-ok">default</span></td></tr>
+        <tr><td>Agar koi baqi nahi to aaj ki shift</td><td class="r"><span class="pill p-info">fallback</span></td></tr>
+        <tr><td>Akhir: aaj ki aakhri shift</td><td class="r"><span class="pill p-ok">default</span></td></tr>
+      </tbody>
+    </table>
+    <div class="note">Aap daura khud badal sakte hain. Badalne par qatarein dobara banengi.</div>
+  </section>
+
+</main>
+</body>
+</html>
