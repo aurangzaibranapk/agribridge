@@ -33,9 +33,32 @@ function fmtN(value: number | null, digits = 3): string {
   return value == null ? "—" : value.toFixed(digits);
 }
 
-function Kpi({ label, value, sub, href, tone }: { label: string; value: string; sub?: string; href?: string; tone?: "warn" | "normal" }) {
+type KpiTone = "warn" | "normal" | "good" | "bad";
+
+const KPI_TONE_CLASS: Record<KpiTone, string> = {
+  warn: "border-amber-300 bg-amber-50",
+  normal: "border-surface-200 bg-white",
+  good: "border-green-400 bg-green-50",
+  bad: "border-red-400 bg-red-50",
+};
+
+/** Farq ka rang: plus (zyada aaya / faida) hara, minus (kam aaya / nuqsan) laal. */
+function varianceTone(v: number | null): KpiTone {
+  if (v == null) return "normal";
+  if (v > 0) return "good";
+  if (v < 0) return "bad";
+  return "normal";
+}
+
+/** Plus ke saath "+" likhta hai, minus ke saath "-". */
+function fmtSignedL(value: number | null): string {
+  if (value == null) return "—";
+  return `${value > 0 ? "+" : ""}${value.toFixed(3)} L`;
+}
+
+function Kpi({ label, value, sub, href, tone }: { label: string; value: string; sub?: string; href?: string; tone?: KpiTone }) {
   const body = (
-    <div className={`h-full rounded-lg border p-4 ${tone === "warn" ? "border-amber-300 bg-amber-50" : "border-surface-200 bg-white"}`}>
+    <div className={`h-full rounded-lg border p-4 ${KPI_TONE_CLASS[tone ?? "normal"]}`}>
       <div className="text-xs text-surface-500">{label}</div>
       <div className="mt-1 text-2xl font-semibold text-surface-900">{value}</div>
       {sub ? <div className="mt-1 text-xs text-surface-500">{sub}</div> : null}
@@ -311,15 +334,15 @@ export default async function MilkControlRoomPage({
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Kpi
             label="Chiller − Company/Vendor/Party (gaya)"
-            value={fmtL(chillerVsOut)}
-            sub={chillerVsOut == null ? "Total ya dispatch nahi, farq nahi nikal sakte" : "Musbat = chiller par zyada aaya"}
-            tone={chillerVsOut != null && Math.abs(chillerVsOut) > 0 ? "warn" : "normal"}
+            value={fmtSignedL(chillerVsOut)}
+            sub={chillerVsOut == null ? "Total ya dispatch nahi, farq nahi nikal sakte" : "+ = zyada aaya (faida). − = kam aaya (nuqsan)"}
+            tone={varianceTone(chillerVsOut)}
           />
           <Kpi
             label="Chiller − Farmer entries (litre)"
-            value={fmtL(report ? report.farmerVsChillerL : null)}
-            sub="Musbat = chiller par doodh zyada, farmer entries kam"
-            tone={report && report.farmerVsChillerL != null && report.farmerVsChillerL !== 0 ? "warn" : "normal"}
+            value={fmtSignedL(report ? report.farmerVsChillerL : null)}
+            sub="+ = chiller par doodh zyada (farmer entries kam). − = farmer entries zyada"
+            tone={varianceTone(report ? report.farmerVsChillerL : null)}
           />
         </div>
       </section>
