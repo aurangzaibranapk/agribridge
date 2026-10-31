@@ -96,6 +96,7 @@ const CURATED_FEATURES: ErpFeature[] = [
   // ── DAIRY ───────────────────────────────────────────────────────────────────
   { section: "Dairy", label: "Doodh Jama Karein", href: "/admin/milk-collection/collect", description: "Roz subah doodh jama karo — kisan, litre, FAT, SNF darj karo.", who: "Milk Collection Staff" },
   { section: "Dairy", label: "Khud Laaya Hua Doodh", href: "/admin/milk-collection/walk-in", description: "Jo kisan khud doodh le kar aaya — walk-in entry.", who: "Milk Collection Staff" },
+  { section: "Dairy", label: "Doodh Control Room", href: "/admin/milk-collection/control-room", description: "Din ka poora hisaab ek jagah: chiller ka aaya, company/vendor/party ka gaya, hamara farq, raseed alag, farmer ka hisaab.", who: "Dairy Admin / Manager", addedDate: "2026-10-31" },
   { section: "Dairy", label: "Chiller — din ka doodh", href: "/admin/milk-collection/chiller", description: "Chiller par din/shift ka kul doodh: gross, FAT, LR. Aaya, gaya aur farq.", who: "Dairy Staff" },
   { section: "Dairy", label: "Doodh ki Tasdeeq", href: "/admin/milk-collection/verify", description: "Collected doodh ki tasdeeq karein — quality aur quantity confirm.", who: "Dairy Supervisor" },
   { section: "Dairy", label: "Doodh Collection", href: "/admin/milk-collection", description: "Tamam doodh collection ka record — routes, kisaan, date.", who: "Dairy Admin" },
