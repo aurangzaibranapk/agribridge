@@ -53,6 +53,7 @@ export async function saveChillerTotal(_prev: ChillerTotalState, formData: FormD
     .eq("branch_id", branchId)
     .eq("entry_date", date)
     .eq("shift", shift)
+    .eq("chiller_no", parsed.chillerNo)
     .maybeSingle();
   if (priorError) {
     if (missingTable(priorError.message)) {
@@ -99,6 +100,7 @@ export async function saveChillerTotal(_prev: ChillerTotalState, formData: FormD
           .eq("branch_id", branchId)
           .eq("entry_date", date)
           .eq("shift", shift)
+          .eq("chiller_no", parsed.chillerNo)
           .select("id")
           .single();
         if (again) return { error: "Total mahfooz nahi hua. Dobara koshish karein." };
