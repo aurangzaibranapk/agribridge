@@ -8280,6 +8280,7 @@ export type Database = {
           amount: number
           approved_at: string | null
           approved_by: string | null
+          backdate_reason: string | null
           branch_id: string | null
           category: string
           created_at: string
@@ -8307,6 +8308,7 @@ export type Database = {
           amount: number
           approved_at?: string | null
           approved_by?: string | null
+          backdate_reason?: string | null
           branch_id?: string | null
           category: string
           created_at?: string
@@ -8334,6 +8336,7 @@ export type Database = {
           amount?: number
           approved_at?: string | null
           approved_by?: string | null
+          backdate_reason?: string | null
           branch_id?: string | null
           category?: string
           created_at?: string

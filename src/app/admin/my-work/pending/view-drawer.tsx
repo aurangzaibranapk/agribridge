@@ -7,6 +7,7 @@ import { ProductPendingSummary } from "@/components/pending/product-diff-ui";
 import { t, type TranslationKey } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 import { catLabelKey, type PendingItem } from "@/lib/pending/categories";
+import { approvalUiAfterResult, EXPENSE_BACKDATE_MIN } from "@/lib/expense-backdate";
 import type { PendingPopupData, PopupField } from "@/lib/pending/popup";
 import { commitPendingPopup, loadPendingPopup } from "./popup-server";
 import { statusOf, usePendingLive } from "./live-state";
@@ -143,6 +144,7 @@ function PendingViewDrawer({
   const [ask, setAsk] = useState<null | "approve" | "reject" | "verify">(null);
   const [editing, setEditing] = useState(false);
   const [note, setNote] = useState("");
+  const [backdateReason, setBackdateReason] = useState("");
   const [accountId, setAccountId] = useState("");
   const [edit, setEdit] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -189,32 +191,43 @@ function PendingViewDrawer({
   async function commit(decision: "approve" | "reject" | "verify" | "edit") {
     if (!data || busy) return;
     if ((decision === "reject" || (decision === "approve" && data.caps.needsComment)) && note.trim().length < 1) {
-      setError(t("apb_comment", lang));
+      const blocked = approvalUiAfterResult({ ok: false, error: t("apb_comment", lang) });
+      setInfo(blocked.info);
+      setError(blocked.error);
       return;
     }
     if (decision === "approve" && data.caps.needsAccount && !accountId) {
-      setError(t("apb_need_account", lang));
+      const blocked = approvalUiAfterResult({ ok: false, error: t("apb_need_account", lang) });
+      setInfo(blocked.info);
+      setError(blocked.error);
+      return;
+    }
+    if (decision === "approve" && data.needsBackdate && backdateReason.trim().length < EXPENSE_BACKDATE_MIN) {
+      const blocked = approvalUiAfterResult({ ok: false, error: t("apb_backdate_required", lang) });
+      setInfo(blocked.info);
+      setError(blocked.error);
       return;
     }
     setBusy(true);
     setError(null);
+    setInfo(null);
     const fd = new FormData();
     fd.set("category", data.actionCategory);
     fd.set("id", data.actionId);
     fd.set("decision", decision);
     if (note.trim()) fd.set("note", note.trim());
+    if (decision === "approve" && data.needsBackdate) fd.set("backdate_reason", backdateReason.trim());
     if (accountId) fd.set("finance_account_id", accountId);
     if (decision === "edit") {
       for (const [k, v] of Object.entries(edit)) fd.set(k, v);
     }
     const res = await commitPendingPopup(fd);
     setBusy(false);
-    if (!res.ok) {
-      setError(res.error);
-      live.notifyError(res.error);
-      return;
-    }
-    setInfo(res.message);
+    const notice = approvalUiAfterResult(res.ok ? { ok: true, message: res.message } : { ok: false, error: res.error });
+    setInfo(notice.info);
+    setError(notice.error);
+    if (!res.ok) return;
+    setBackdateReason("");
     setAsk(null);
     setEditing(false);
     setNote("");
@@ -356,6 +369,21 @@ function PendingViewDrawer({
                   placeholder={t(caps?.needsComment && ask === "approve" ? "apb_comment" : "apb_reason", lang)}
                   className={inputClass()}
                 />
+              )}
+              {ask === "approve" && data?.needsBackdate && (
+                <label className="block text-xs font-bold text-surface-700 dark:text-surface-200">
+                  {t("apb_backdate_reason", lang)}
+                  <textarea
+                    value={backdateReason}
+                    autoFocus
+                    rows={2}
+                    maxLength={300}
+                    data-popup-backdate="required"
+                    onChange={(e) => setBackdateReason(e.target.value)}
+                    placeholder={t("apb_backdate_hint", lang)}
+                    className={inputClass()}
+                  />
+                </label>
               )}
               {ask === "approve" && caps?.needsAccount && (
                 <label className="block text-xs font-bold">

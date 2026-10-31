@@ -5,7 +5,9 @@ import { kharchaManzoor, kharchaRadd, kharchaTheek, kharchaVerify } from "@/acti
 import { mazdooriManzoor, mazdooriRadd } from "@/actions/mazdoori";
 import { approveSupplierPayment, editSupplierPayment, rejectSupplierPayment } from "@/actions/supplier-payment-requests";
 import { mayDecideEntry } from "@/lib/approval/guards";
+import { expenseDateIsBackdated } from "@/lib/expense-backdate";
 import { billQismKaLabel, qismDhoondein } from "@/lib/kharche";
+import { aajKaKhana } from "@/lib/utils/format";
 import {
   handoffActionCategory,
   popupCaps,
@@ -92,6 +94,7 @@ function pack(
     edit,
     accounts,
     hint,
+    needsBackdate: false,
   };
 }
 
@@ -127,9 +130,10 @@ async function loadExpense(sb: Sb, role: string | null, userId: string, id: stri
     category: data.category ?? "",
     paid_from_account_id: data.paid_from_account_id ?? "",
   };
+  const packed = pack("expenses", id, "expenses", id, showText(data.expense_number), data.status, fields, role, data.requested_by === userId, !!data.paid_from_account_id, "expense", edit, accounts);
   return {
     ok: true,
-    data: pack("expenses", id, "expenses", id, showText(data.expense_number), data.status, fields, role, data.requested_by === userId, !!data.paid_from_account_id, "expense", edit, accounts),
+    data: { ...packed, needsBackdate: expenseDateIsBackdated(data.expense_date, aajKaKhana()) },
   };
 }
 
@@ -326,7 +330,11 @@ export async function commitPendingPopup(fd: FormData): Promise<PopupCommit> {
     const f = new FormData();
     f.set("id", id);
     if (decision === "verify") result = fromAction(await kharchaVerify({}, f), "stay");
-    else if (decision === "approve") result = fromAction(await kharchaManzoor({}, f), "done", "approve");
+    else if (decision === "approve") {
+      const reason = String(fd.get("backdate_reason") ?? "").trim();
+      if (reason) f.set("backdate_reason", reason);
+      result = fromAction(await kharchaManzoor({}, f), "done", "approve");
+    }
     else if (decision === "reject") {
       f.set("rejection_reason", String(fd.get("note") ?? "").trim());
       result = fromAction(await kharchaRadd({}, f), "done", "reject");

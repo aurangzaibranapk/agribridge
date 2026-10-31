@@ -15,6 +15,8 @@ import {
   HALAT_LABEL,
   qismDhoondein,
 } from "@/lib/kharche";
+import { expenseDateIsBackdated, EXPENSE_BACKDATE_MIN, hideStaleVerifySuccess } from "@/lib/expense-backdate";
+import { aajKaKhana } from "@/lib/utils/format";
 import { t } from "@/lib/i18n/translations";
 import { useLang } from "@/lib/i18n/lang-context";
 
@@ -324,10 +326,11 @@ export function KharcheClient({
   const chaliQism = bandhiQism ?? bandeKiQism;
   const fehrist = bande[chaliQism] ?? [];
 
+  const aaj = aajKaKhana();
   const paighaam =
     darjState.message ??
     manzoorState.message ??
-    taseeqState.message ??
+    hideStaleVerifySuccess(taseeqState.message, manzoorState.error) ??
     raddState.message ??
     mazdoorDarjState.message ??
     mazdoorManzoorState.message ??
@@ -1064,8 +1067,19 @@ export function KharcheClient({
                         <td className="py-2 pr-3">
                           {manzoorKarSakta && (r.status === "pending" || r.status === "verified") ? (
                             <div className="flex flex-col gap-1">
-                              <form action={manzoorAction}>
+                              <form action={manzoorAction} className="flex flex-col gap-1">
                                 <input type="hidden" name="id" value={r.id} />
+                                {r.status === "verified" && expenseDateIsBackdated(r.expense_date, aaj) && (
+                                  <input
+                                    name="backdate_reason"
+                                    required
+                                    minLength={EXPENSE_BACKDATE_MIN}
+                                    maxLength={300}
+                                    placeholder={t("kh_backdate_reason", lang)}
+                                    data-expense-backdate={r.expense_number}
+                                    className="w-40 rounded-lg border border-amber-300 px-2 py-1 text-xs dark:border-amber-700 dark:bg-surface-900"
+                                  />
+                                )}
                                 <Dabao tone="hara">
                                   <span className="inline-flex items-center gap-1">
                                     <Check className="h-3 w-3" /> {t("kh_manzoor", lang)}
