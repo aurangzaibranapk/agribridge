@@ -1,3 +1,10 @@
+## Pending — 31 October 2026: Chiller din ka total (732)
+
+Branch `cursor/chiller-daily-total-4178`. Migration **732 file only**. Testing aur Live dono par **nahi** chali. **730** (`730_pending_popup_help`) main par hai. **731** Milk Handover phone rate ki khuli PR hai (`731_milk_handover_phone_rate`) — ye us number ko nahi leti. 732 `milk_chiller_totals`: ek chiller (branch), ek tareekh, ek shift = gross litre + FAT + LR. SNF / TS / Adjusted phone Milk TS% Volume (1 L, 4.3, 27, 13 → 8.416 / 12.717 / 0.979). Kisan ki alag qatarein zaroori nahi. Roz ke hisaab ka aaya in totals se. Gaya Company / Vendor / Party handover. Farq = aaya − gaya. Total na ho to farq null. Kisan ki adaigi (0.805) nahi badli. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `732_milk_chiller_day_total.sql`. Rollback: `732_milk_chiller_day_total.rollback.sql`.
+- Safha `/admin/milk-collection/chiller`. Roz ka hisaab `/admin/milk-collection/handover`.
+
 ## Pending — 31 October 2026: Pending Approvals Dekhein popup (730)
 
 Branch `cursor/my-work-pending-popup-acab`. Migration **730 file only**. Testing aur Live dono par **nahi** chali. **729 pehle** (`729_milk_handover_destinations`). 730 sirf `feature_help` ka pending-approvals matn. Koi table, koi column, koi journal, koi raqam nahi. Safha `/admin/my-work/pending`. Faisla wahi purane actions: kharcha, mazdoori, supplier request. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).

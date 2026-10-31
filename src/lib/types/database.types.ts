@@ -24486,6 +24486,74 @@ export type Database = {
         }
         Relationships: []
       }
+      milk_chiller_totals: {
+        Row: {
+          adjusted_liters: number
+          branch_id: string
+          chiller_no: string
+          created_at: string
+          created_by: string | null
+          entry_date: string
+          fat_percentage: number
+          gross_liters: number
+          id: string
+          lr: number
+          reference_ts: number
+          shift: string
+          snf_constant: number
+          snf_percentage: number
+          ts_percentage: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          adjusted_liters: number
+          branch_id: string
+          chiller_no: string
+          created_at?: string
+          created_by?: string | null
+          entry_date: string
+          fat_percentage: number
+          gross_liters: number
+          id?: string
+          lr: number
+          reference_ts: number
+          shift: string
+          snf_constant: number
+          snf_percentage: number
+          ts_percentage: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          adjusted_liters?: number
+          branch_id?: string
+          chiller_no?: string
+          created_at?: string
+          created_by?: string | null
+          entry_date?: string
+          fat_percentage?: number
+          gross_liters?: number
+          id?: string
+          lr?: number
+          reference_ts?: number
+          shift?: string
+          snf_constant?: number
+          snf_percentage?: number
+          ts_percentage?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milk_chiller_totals_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       milk_dispatches: {
         Row: {
           accepted: boolean | null
