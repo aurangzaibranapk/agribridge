@@ -56,6 +56,8 @@ export interface HandoverFormProps {
   destination: HandoverDestination;
   parties?: HandoverPartyOption[];
   partyError?: string | null;
+  carriers?: { id: string; name: string }[];
+  carrierError?: string | null;
   branches: { id: string; name: string }[];
   shops: HandoverShop[];
   specs: HandoverSpecs;
@@ -105,6 +107,7 @@ export function HandoverForm(props: HandoverFormProps) {
   const [licenseeSignature, setLicenseeSignature] = useState(props.defaults.licenseeSignature);
   const [collectorSignature, setCollectorSignature] = useState(props.defaults.collectorSignature);
   const [partyId, setPartyId] = useState(props.defaults.partyId ?? "");
+  const [carrierChoice, setCarrierChoice] = useState("");
   const [reason, setReason] = useState<"" | HandoverReason>(props.defaults.handoverReason ?? "");
   const [date, setDate] = useState(props.defaults.date);
   const [shift, setShift] = useState(props.defaults.shift || "morning");
@@ -283,6 +286,33 @@ export function HandoverForm(props: HandoverFormProps) {
           </div>
         </div>
       </div>
+
+      {!locked && (
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Label>Kis ne uthaya (carrier)</Label>
+            <select
+              name="carrier_id"
+              value={carrierChoice === "__new__" ? "" : carrierChoice}
+              onChange={(e) => setCarrierChoice(e.target.value)}
+              className="w-full rounded border px-2 py-2 text-sm"
+            >
+              <option value="">— chunein —</option>
+              {(props.carriers ?? []).map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+              <option value="__new__">+ Naya vendor / transporter</option>
+            </select>
+            {props.carrierError && <p className="mt-1 text-xs text-amber-700">{props.carrierError}</p>}
+          </div>
+          {carrierChoice === "__new__" && (
+            <div>
+              <Label>Naya naam</Label>
+              <Input name="new_carrier_name" maxLength={120} placeholder="Vendor ka naam" />
+            </div>
+          )}
+        </div>
+      )}
 
       <fieldset className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded border border-black px-3 py-2 text-sm" data-testid="handover-recipe">
         <legend className="px-1 font-semibold">{t("mh_recipe", lang)}</legend>

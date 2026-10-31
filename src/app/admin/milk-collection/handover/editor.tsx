@@ -8,6 +8,7 @@ import { loadChillerStock } from "@/lib/milk-handover-stock";
 import { HandoverForm, type HandoverFormProps } from "./handover-form";
 import { CertificatePrintBar } from "./print-bar";
 import { HandoverVarianceCard } from "./variance-card";
+import { loadCarrierOptions } from "@/lib/milk-carrier-save";
 import { handoverGate, loadCertificate, loadHandoverOptions, loadHandoverParties, loadInternalRate, type LoadedCertificate } from "@/lib/milk-handover-page";
 
 export async function HandoverEditor({
@@ -48,6 +49,7 @@ export async function HandoverEditor({
 
   const destination = loaded?.destination ?? requested;
   const parties = destination === "party" ? await loadHandoverParties() : { parties: [], error: null };
+  const carrierOptions = await loadCarrierOptions();
   const titleKey = destination === "vendor" ? "mh_flow_vendor" : destination === "party" ? "mh_flow_party" : "mh_flow_company";
   const subKey = destination === "vendor" ? "mh_sub_vendor" : destination === "party" ? "mh_sub_party" : "mh_sub_company";
 
@@ -180,6 +182,8 @@ export async function HandoverEditor({
         destination={destination}
         parties={parties.parties}
         partyError={parties.error}
+        carriers={carrierOptions.carriers}
+        carrierError={carrierOptions.error}
         canSeeRate={seeRate}
         defaults={defaults}
       />

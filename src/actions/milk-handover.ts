@@ -10,6 +10,7 @@ import { rpcError } from "@/lib/dairy/rules";
 import { adjustedTotal, canSeeHandoverRate, grossTotal, handoverAmount, lineToSql, lrRecipeLabel, parseDestination, parseHandoverLines, parseHandoverReason, parseLrBaseline, baselineForDestination, type HandoverLineInput, type ParsedLine } from "@/lib/milk-handover";
 import { loadChillerStock } from "@/lib/milk-handover-stock";
 import { createHandoverPartyRecord } from "@/actions/milk-handover-party";
+import { attachCarrierToDispatch } from "@/lib/milk-carrier-save";
 
 export interface HandoverState {
   error?: string;
@@ -196,6 +197,15 @@ export async function saveMilkHandover(_prev: HandoverState, formData: FormData)
   }
   const id = posted.data;
   if (!id) return { error: "Certificate mehfooz nahi hua." };
+
+  const carrierError = await attachCarrierToDispatch(
+    createServiceClient(),
+    id,
+    String(formData.get("carrier_id") ?? "").trim(),
+    String(formData.get("new_carrier_name") ?? "").trim(),
+    caller.userId
+  );
+  if (carrierError) return { error: carrierError };
 
   if (canSeeHandoverRate(caller.role)) {
     const service = createServiceClient();
