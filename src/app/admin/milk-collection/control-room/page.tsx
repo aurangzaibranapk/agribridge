@@ -3,6 +3,7 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { createClient } from "@/lib/supabase/server";
 import { requireAction } from "@/lib/access/guard";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
+import { DayPayableForm } from "./day-payable-form";
 import { buildDayReport, dispatchAlerts, type ChillerLine } from "@/lib/milk-control-room";
 import { canSeeHandoverRate } from "@/lib/milk-handover";
 import { loadInternalRates } from "@/lib/milk-handover-page";
@@ -157,6 +158,12 @@ export default async function MilkControlRoomPage({
 
   const chillerGross = report?.chillerTotal.grossL ?? null;
   const farmerOn = report != null && report.farmer.entries > 0;
+  // Farmer ka din ka kul dena (hath se likha). Table 733 se hai; wo na ho to error dikhayenge.
+  const dayPayableRes = branchId
+    ? await (supabase as any).from("milk_day_farmer_payables").select("amount, note").eq("branch_id", branchId).eq("entry_date", date).maybeSingle()
+    : null;
+  const dayPayable = dayPayableRes?.data ?? null;
+  const dayPayableMissing = dayPayableRes?.error != null;
   const chillerVsOut = chillerGross == null || totalOut == null ? null : Math.round((chillerGross - totalOut) * 1000) / 1000;
   const anyError = chillerErr || entryErr || dispatchErr || balanceErr;
 
@@ -227,6 +234,14 @@ export default async function MilkControlRoomPage({
 
       <section>
         <h2 className="mb-2 text-sm font-semibold text-surface-600">Farmer ka hisaab</h2>
+        <div className="mb-4 rounded-lg border border-surface-200 bg-white p-4">
+          <div className="mb-2 text-xs text-surface-500">Is din ka kul farmer ko dena: statement se khud likhein</div>
+          {branchId && !dayPayableMissing ? (
+            <DayPayableForm branchId={branchId} date={date} amount={dayPayable ? Number(dayPayable.amount) : null} note={dayPayable?.note ?? null} />
+          ) : (
+            <p className="text-sm text-amber-800">Ye box abhi kaam nahi karega: migration 733 is database par nahi lagi. Testing par chalne ke baad dobara kholen.</p>
+          )}
+        </div>
         {report && report.farmer.entries === 0 && (
           <p className="mb-3 text-xs text-surface-500">Is din farmer ki entry nahi hai. Farmer ka hisaab statement se aayega, is liye yahan "—" hai, sifar nahi.</p>
         )}
