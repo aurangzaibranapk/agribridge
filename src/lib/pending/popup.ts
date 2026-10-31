@@ -52,6 +52,8 @@ export interface PendingPopupData {
   edit: Record<string, string> | null;
   accounts: { id: string; name: string }[];
   hint: PopupHint;
+  /** Kharcha ki tareekh aaj se pehle hai — manzoori se pehle wajah. */
+  needsBackdate: boolean;
 }
 
 export type PopupOk = { ok: true; effect: "done"; decision: "approve" | "reject"; message: string } | { ok: true; effect: "stay"; message: string };

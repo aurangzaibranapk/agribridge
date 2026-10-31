@@ -125,6 +125,7 @@ export const kharcheDict = {
   kh_liya_colon: { en: "received by:", rm: "liya:", ur: "لیا:" },
   kh_ph_aap_ki_raye: { en: "Your comment (required)", rm: "Aap ki raye (lazmi)", ur: "آپ کی رائے (لازمی)" },
   kh_manzoor: { en: "Approve", rm: "Manzoor", ur: "منظور" },
+  kh_backdate_reason: { en: "Backdate reason (10+ letters) — required before approval", rm: "Purani tareekh ki wajah (10 harf) — manzoori se pehle", ur: "پرانی تاریخ کی وجہ (۱۰ حروف) — منظوری سے پہلے" },
   kh_wajah: { en: "Reason", rm: "Wajah", ur: "وجہ" },
   kh_wapas_radd: { en: "Return / Reject", rm: "Wapas / Radd", ur: "واپس / رد" },
   kh_wapas_bhejein: { en: "Send back", rm: "Wapas bhejein", ur: "واپس بھیجیں" },

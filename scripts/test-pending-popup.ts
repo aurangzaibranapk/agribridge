@@ -1,6 +1,13 @@
 /** Pending Approvals popup: kaun se button, edit ki rok, purane actions. npm run test:pending-popup */
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import {
+  approvalUiAfterResult,
+  expenseDateIsBackdated,
+  EXPENSE_BACKDATE_MIN,
+  hideStaleVerifySuccess,
+  parseExpenseBackdateReason,
+} from "../src/lib/expense-backdate";
 import { adminPendingDict } from "../src/lib/i18n/dict/admin-pending";
 import {
   expenseVerificationReset,
@@ -23,7 +30,7 @@ test("labels: Dekhein / View / دیکھیں and the quiet hints exist in EN RM U
   assert.equal(dict.apb_view.en, "View");
   assert.equal(dict.apb_view.rm, "Dekhein");
   assert.equal(dict.apb_view.ur, "دیکھیں");
-  for (const k of ["apb_edit", "apb_verify", "apb_hint_txn", "apb_hint_handoff", "apb_hint_linked", "apb_edit_reset_hint", "apb_need_account"]) {
+  for (const k of ["apb_edit", "apb_verify", "apb_hint_txn", "apb_hint_handoff", "apb_hint_linked", "apb_edit_reset_hint", "apb_need_account", "apb_backdate_reason", "apb_backdate_hint", "apb_backdate_required"]) {
     assert.ok(dict[k].en && dict[k].rm && dict[k].ur, k);
   }
   assert.match(dict.apb_hint_txn.rm, /approve ya reject nahi/);
@@ -120,11 +127,41 @@ test("handoff and txn alert have no approve; a linked expense handoff maps to ex
   assert.equal(popupCaps({ category: "pos_returns", status: "pending", role: "admin", isOwn: false }).hint, "summary");
 });
 
+test("backdated expense: reason before posting, and a failed post is only an error", () => {
+  assert.equal(expenseDateIsBackdated("2026-10-26", "2026-10-31"), true);
+  assert.equal(expenseDateIsBackdated("2026-10-31", "2026-10-31"), false);
+  assert.equal(expenseDateIsBackdated("2026-11-01", "2026-10-31"), false);
+  assert.equal(expenseDateIsBackdated(null, "2026-10-31"), false);
+  assert.equal(parseExpenseBackdateReason("  ", "2026-10-26", "2026-10-31").ok, false);
+  assert.equal(parseExpenseBackdateReason("late", "2026-10-26", "2026-10-31").ok, false);
+  const ok = parseExpenseBackdateReason("  MCC setup us din hua, aaj kitab mein aa raha hai  ", "2026-10-26", "2026-10-31");
+  assert.equal(ok.ok, true);
+  if (ok.ok) {
+    assert.ok(ok.reason && ok.reason.length >= EXPENSE_BACKDATE_MIN);
+    assert.equal(ok.reason.startsWith(" "), false);
+  }
+  const today = parseExpenseBackdateReason("", "2026-10-31", "2026-10-31");
+  assert.equal(today.ok, true);
+  if (today.ok) assert.equal(today.reason, null);
+
+  const failUi = approvalUiAfterResult({ ok: false, error: "Kitab mein qatar nahi bani" });
+  assert.equal(failUi.info, null);
+  assert.equal(failUi.toastError, null);
+  assert.equal(failUi.error, "Kitab mein qatar nahi bani");
+  const okUi = approvalUiAfterResult({ ok: true, message: "EXP-26-00001 manzoor." });
+  assert.equal(okUi.error, null);
+  assert.equal(okUi.info, "EXP-26-00001 manzoor.");
+  assert.equal(okUi.toastError, null);
+  assert.equal(hideStaleVerifySuccess("EXP-26-00001 tasdeeq ho gaya", "Backdate reason required"), undefined);
+  assert.equal(hideStaleVerifySuccess("EXP-26-00001 tasdeeq ho gaya", undefined), "EXP-26-00001 tasdeeq ho gaya");
+});
+
 test("UI wiring: Dekhein on the row, popup calls the old actions, no second ledger", () => {
   const btn = readFileSync("src/app/admin/my-work/pending/decide-buttons.tsx", "utf8");
   const drawer = readFileSync("src/app/admin/my-work/pending/view-drawer.tsx", "utf8");
   const server = readFileSync("src/app/admin/my-work/pending/popup-server.ts", "utf8");
   const kharcha = readFileSync("src/actions/kharche.ts", "utf8");
+  const kharchaPage = readFileSync("src/app/admin/kharche/kharche-client.tsx", "utf8");
   assert.match(btn, /data-pending-view|PendingViewButton/);
   assert.match(btn, /hideView/);
   assert.match(drawer, /role="dialog"/);
@@ -132,6 +169,8 @@ test("UI wiring: Dekhein on the row, popup calls the old actions, no second ledg
   assert.match(drawer, /data-popup-approve/);
   assert.match(drawer, /data-popup-reject/);
   assert.match(drawer, /data-popup-edit/);
+  assert.match(drawer, /data-popup-backdate/);
+  assert.ok(!drawer.includes("notifyError"));
   assert.ok(!/window\.confirm|window\.prompt|window\.alert/.test(drawer + btn));
   for (const name of [
     "kharchaVerify",
@@ -147,6 +186,16 @@ test("UI wiring: Dekhein on the row, popup calls the old actions, no second ledg
     assert.ok(server.includes(name), name);
   }
   assert.ok(!server.includes("postJournal"));
+  assert.match(server, /backdate_reason/);
+  assert.match(server, /needsBackdate/);
+  const manzoor = kharcha.slice(kharcha.indexOf("export async function kharchaManzoor"));
+  const parsedAt = manzoor.indexOf("parseExpenseBackdateReason");
+  const claimAt = manzoor.indexOf('status: "approving"');
+  assert.ok(parsedAt >= 0 && claimAt > parsedAt);
+  assert.ok(manzoor.includes("backdateReason: backdate.reason"));
+  assert.match(kharchaPage, /data-expense-backdate/);
+  assert.match(kharchaPage, /hideStaleVerifySuccess/);
+  assert.ok(manzoor.indexOf("parseExpenseBackdateReason") < manzoor.indexOf("postJournal"));
   assert.ok(kharcha.includes("export async function kharchaTheek"));
   assert.ok(!/status:\s*"approved"/.test(kharcha.slice(kharcha.indexOf("export async function kharchaTheek"))));
 });

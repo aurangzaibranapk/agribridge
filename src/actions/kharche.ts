@@ -11,8 +11,10 @@ import { supplierBillLines } from "@/lib/party-links/core";
 import { glForFinanceAccount, expenseAccountFor, ACC } from "@/lib/ledger/rules";
 import { cashBookLikhein } from "@/lib/ledger/cash-book";
 import { qismDhoondein, qismKaNaamSaaf, APNI_QISM } from "@/lib/kharche";
+import { parseExpenseBackdateReason } from "@/lib/expense-backdate";
 import { kharchaApproveGate } from "@/lib/finance/money-guards";
 import { expenseVerificationReset, parseExpenseEdit } from "@/lib/pending/popup";
+import { aajKaKhana } from "@/lib/utils/format";
 
 /** Migration 347 ke baad ki qatar -- jab tak types dobara na banein. */
 interface KharchaQatar {
@@ -68,6 +70,41 @@ async function revertKharchaClaim(service: ReturnType<typeof createServiceClient
     .update({ status: "verified" })
     .eq("id", id)
     .eq("status", "approving");
+}
+
+/**
+ * Manzoor tab, jab kitab ban chuki ho.
+ * Wajah ho to kharche ki qatar par bhi likho. Column abhi na ho
+ * (migration 733 se pehle) to halat phir bhi manzoor ho — kitab par
+ * wajah pehle se `backdateReason` se ja chuki hoti hai.
+ */
+async function markKharchaApproved(
+  service: ReturnType<typeof createServiceClient>,
+  id: string,
+  userId: string,
+  backdateReason: string | null
+) {
+  const base = {
+    status: "approved" as const,
+    approved_by: userId,
+    approved_at: new Date().toISOString(),
+  };
+  const patch = backdateReason ? { ...base, backdate_reason: backdateReason } : base;
+  const first = await service
+    .from("company_expense_requests")
+    .update(patch)
+    .eq("id", id)
+    .eq("status", "approving")
+    .select("id")
+    .maybeSingle();
+  if (!first.error || !backdateReason || !/backdate_reason/i.test(first.error.message ?? "")) return first;
+  return service
+    .from("company_expense_requests")
+    .update(base)
+    .eq("id", id)
+    .eq("status", "approving")
+    .select("id")
+    .maybeSingle();
 }
 
 /**
@@ -387,6 +424,13 @@ export async function kharchaManzoor(_prev: ActionState, formData: FormData): Pr
   );
   if (!approveGate.ok) return { error: approveGate.error };
 
+  const backdate = parseExpenseBackdateReason(
+    String(formData.get("backdate_reason") ?? ""),
+    (kharcha.expense_date as string | null) ?? null,
+    aajKaKhana()
+  );
+  if (!backdate.ok) return { error: backdate.error };
+
   const { data: claimed, error: claimError } = await service
     .from("company_expense_requests")
     .update({ status: "approving" })
@@ -410,7 +454,7 @@ export async function kharchaManzoor(_prev: ActionState, formData: FormData): Pr
   }
 
   if (qism.udhaarPar) {
-    const billed = await supplierBillManzoor(kharcha, qism, id, who);
+    const billed = await supplierBillManzoor(kharcha, qism, id, who, backdate.reason);
     if (billed.error) await revertKharchaClaim(service, id);
     return billed;
   }
@@ -522,6 +566,7 @@ export async function kharchaManzoor(_prev: ActionState, formData: FormData): Pr
     branchId: (kharcha.branch_id as string | null) ?? who.branchId,
     entryDate: (kharcha.expense_date as string | null) ?? undefined,
     createdBy: who.userId,
+    backdateReason: backdate.reason,
     claims: [{ table: "company_expense_requests", rowId: id }],
     lines,
   });
@@ -531,13 +576,7 @@ export async function kharchaManzoor(_prev: ActionState, formData: FormData): Pr
     return { error: `Kitab mein qatar nahi bani, is liye manzoori bhi nahi di gayi: ${posted.error}` };
   }
 
-  const { data: approvedRow, error: halatError } = await service
-    .from("company_expense_requests")
-    .update({ status: "approved", approved_by: who.userId, approved_at: new Date().toISOString() })
-    .eq("id", id)
-    .eq("status", "approving")
-    .select("id")
-    .maybeSingle();
+  const { data: approvedRow, error: halatError } = await markKharchaApproved(service, id, who.userId, backdate.reason);
 
   if (halatError || !approvedRow) {
     return {
@@ -565,7 +604,7 @@ export async function kharchaManzoor(_prev: ActionState, formData: FormData): Pr
     module: "kharche",
     recordId: id,
     recordLabel: kharcha.expense_number,
-    description: `${qism.label} — Rs ${amount.toLocaleString()} manzoor. ${qism.asar}`,
+    description: `${qism.label} — Rs ${amount.toLocaleString()} manzoor. ${qism.asar}${backdate.reason ? ` Purani tareekh: ${backdate.reason}` : ""}`,
   });
 
   revalidatePath("/admin/kharche");
@@ -632,7 +671,7 @@ export async function kharchaRadd(_prev: ActionState, formData: FormData): Promi
  * mein KUCH nahi -- paisa abhi gaya hi nahi. Adaigi baad mein "Payment Send
  * Karein" (2000) ya "Supplier ko adaigi" se.
  */
-async function supplierBillManzoor(kharcha: any, qism: { label: string; asar: string; bandaKahanSe: string | null }, id: string, who: { userId: string; branchId: string | null }): Promise<ActionState> {
+async function supplierBillManzoor(kharcha: any, qism: { label: string; asar: string; bandaKahanSe: string | null }, id: string, who: { userId: string; branchId: string | null }, backdateReason: string | null): Promise<ActionState> {
   if (kharcha.requested_by && kharcha.requested_by === who.userId) {
     return { error: "Apni banayi hui request khud manzoor nahi kar sakte — doosra authorized banda kare." };
   }
@@ -652,18 +691,14 @@ async function supplierBillManzoor(kharcha: any, qism: { label: string; asar: st
     branchId: (kharcha.branch_id as string | null) ?? who.branchId,
     entryDate: (kharcha.expense_date as string | null) ?? undefined,
     createdBy: who.userId,
+    backdateReason,
     claims: [{ table: "company_expense_requests", rowId: id }],
     lines,
   });
   if ("error" in posted) return { error: `Kitab mein qatar nahi bani, is liye manzoori bhi nahi di gayi: ${posted.error}` };
 
   const service = createServiceClient();
-  const { data: approvedRow, error: halatError } = await service.from("company_expense_requests")
-    .update({ status: "approved", approved_by: who.userId, approved_at: new Date().toISOString() })
-    .eq("id", id)
-    .eq("status", "approving")
-    .select("id")
-    .maybeSingle();
+  const { data: approvedRow, error: halatError } = await markKharchaApproved(service, id, who.userId, backdateReason);
   if (halatError || !approvedRow) {
     return { error: `Kitab mein qatar to ban gayi magar halat "manzoor" nahi ho saki: ${halatError?.message ?? "claim nahi mili"}. Kisi ko batayein — dobara manzoori se dohri qatar ban jayegi.` };
   }
@@ -674,7 +709,7 @@ async function supplierBillManzoor(kharcha: any, qism: { label: string; asar: st
   await (service.from("suppliers") as any).update({ current_payable: payable }).eq("id", kharcha.party_id);
 
   await logAudit({ actionType: "approve", module: "kharche", recordId: id, recordLabel: kharcha.expense_number,
-    description: `${qism.label} — Rs ${amount.toLocaleString()} manzoor (udhaar). ${qism.asar}` });
+    description: `${qism.label} — Rs ${amount.toLocaleString()} manzoor (udhaar). ${qism.asar}${backdateReason ? ` Purani tareekh: ${backdateReason}` : ""}` });
   revalidatePath("/admin/kharche");
   revalidatePath("/admin/finance");
   revalidatePath(`/admin/suppliers/${kharcha.party_id}/statement`);

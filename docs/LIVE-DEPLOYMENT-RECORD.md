@@ -1,3 +1,10 @@
+## Pending — 31 October 2026: Kharcha ki purani tareekh — wajah (733)
+
+Branch `cursor/expense-approval-backdate-94f2`. Migration **733 file only**. Testing aur Live dono par **nahi** chali. **732** chiller totals (`732_milk_chiller_day_total`) is se alag hai. 733 sirf `company_expense_requests.backdate_reason` aur help ki ek lakeer. Koi purani qatar, koi raqam, koi journal nahi badalti. EXP-26-00001 jaisi verified kharcha: popup par wajah (kam az kam 10 harf) likhe baghair kitab nahi hilti, hara paigham nahi, halat verified rehti hai. Wajah ke sath wahi purani manzoori post karti hai. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`). Build migration ke baad.
+
+- `733_expense_backdate_reason.sql`. Rollback: `733_expense_backdate_reason.rollback.sql`.
+- Safhe: `/admin/my-work/pending` (Dekhein popup) aur `/admin/kharche`.
+
 ## Pending — 31 October 2026: Chiller din ka total (732)
 
 Branch `cursor/chiller-daily-total-4178`. Migration **732 file only**. Testing aur Live dono par **nahi** chali. **730** (`730_pending_popup_help`) main par hai. **731** Milk Handover phone rate ki khuli PR hai (`731_milk_handover_phone_rate`) — ye us number ko nahi leti. 732 `milk_chiller_totals`: ek chiller (branch), ek tareekh, ek shift = gross litre + FAT + LR. SNF / TS / Adjusted phone Milk TS% Volume (1 L, 4.3, 27, 13 → 8.416 / 12.717 / 0.979). Kisan ki alag qatarein zaroori nahi. Roz ke hisaab ka aaya in totals se. Gaya Company / Vendor / Party handover. Farq = aaya − gaya. Total na ho to farq null. Kisan ki adaigi (0.805) nahi badli. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
