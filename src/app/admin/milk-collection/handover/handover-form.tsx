@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useFormState } from "@/lib/hooks/use-safe-form-state";
 import { lookupChillerStock, saveMilkHandover, type HandoverState } from "@/actions/milk-handover";
+import { lookupRangeStock } from "@/actions/milk-handover-range";
+import { SHIFT_PRESETS, presetRange, type ShiftPreset } from "@/lib/milk-shift-range";
 import { Button, Input, Label, Select } from "@/components/ui/form";
 import { t, type Lang } from "@/lib/i18n/translations";
 import {
@@ -111,6 +113,10 @@ export function HandoverForm(props: HandoverFormProps) {
   const [reason, setReason] = useState<"" | HandoverReason>(props.defaults.handoverReason ?? "");
   const [date, setDate] = useState(props.defaults.date);
   const [shift, setShift] = useState(props.defaults.shift || "morning");
+  const [rangeEndDate, setRangeEndDate] = useState(props.defaults.date);
+  const [rangeEndShift, setRangeEndShift] = useState(props.defaults.shift || "morning");
+  const [preset, setPreset] = useState<ShiftPreset | "">("");
+  const [rangeError, setRangeError] = useState<string | null>(null);
   const [rate, setRate] = useState(props.defaults.rate ?? "");
   const [chillerOpen, setChillerOpen] = useState<Record<number, boolean>>({});
   const skipStock = useRef(true);
@@ -136,14 +142,27 @@ export function HandoverForm(props: HandoverFormProps) {
     }
     if (!branchId) return;
     let cancel = false;
-    void lookupChillerStock(branchId, date, shift).then((stock) => {
-      if (cancel) return;
-      setLines((prev) => absorbChillerStock(prev, stock));
-    });
+    const isRange = rangeEndDate !== date || rangeEndShift !== shift;
+    if (isRange) {
+      void lookupRangeStock(branchId, date, shift, rangeEndDate, rangeEndShift).then((res) => {
+        if (cancel) return;
+        if (res.error) {
+          setRangeError(res.error);
+          return;
+        }
+        setRangeError(null);
+        setLines(res.rows.map((row) => applyAutoLab({ ...emptyLine(), chillerNo: row.chillerNo, milkType: "Cow", grossL: row.shifts > 0 ? String(row.grossL) : "", fat: row.fat == null ? "" : String(row.fat), lr: row.lr == null ? "" : String(row.lr) }, formula, "inputs", baseline)));
+      });
+    } else {
+      void lookupChillerStock(branchId, date, shift).then((stock) => {
+        if (cancel) return;
+        setLines((prev) => absorbChillerStock(prev, stock));
+      });
+    }
     return () => {
       cancel = true;
     };
-  }, [branchId, date, shift, locked, props.dispatchId]);
+  }, [branchId, date, shift, rangeEndDate, rangeEndShift, locked, props.dispatchId]);
   const parties = (props.parties ?? []).filter((party) => party.active || party.id === partyId);
 
   const parsed = useMemo(() => parseHandoverLines(lines), [lines]);
@@ -275,6 +294,47 @@ export function HandoverForm(props: HandoverFormProps) {
             <option value="evening">{t("mh_evening", lang)}</option>
           </Select>
         </div>
+        {!locked && (
+          <div className="sm:col-span-2">
+            <Label>Shift daura (kin shifts ka doodh)</Label>
+            <select
+              className="w-full rounded border px-2 py-2 text-sm"
+              value={preset}
+              onChange={(e) => {
+                const key = e.target.value as ShiftPreset | "";
+                setPreset(key);
+                if (!key) return;
+                const today = date;
+                const r = presetRange(key, today);
+                setDate(r.from.date);
+                setShift(r.from.shift);
+                setRangeEndDate(r.to.date);
+                setRangeEndShift(r.to.shift);
+              }}
+            >
+              <option value="">— daura chunein (ya neeche tareekh aur shift khud likhein) —</option>
+              {SHIFT_PRESETS.map((p) => (
+                <option key={p.key} value={p.key}>{p.label}</option>
+              ))}
+            </select>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div>
+                <Label>Akhir tareekh</Label>
+                <Input type="date" value={rangeEndDate} onChange={(e) => { setRangeEndDate(e.target.value); setPreset(""); }} />
+              </div>
+              <div>
+                <Label>Akhir shift</Label>
+                <Select value={rangeEndShift} onChange={(e) => { setRangeEndShift(e.target.value); setPreset(""); }}>
+                  <option value="morning">{t("mh_morning", lang)}</option>
+                  <option value="evening">{t("mh_evening", lang)}</option>
+                </Select>
+              </div>
+            </div>
+            {rangeError && <p className="mt-1 text-xs text-red-700">{rangeError}</p>}
+          </div>
+        )}
+        {!locked && <input type="hidden" name="range_end_date" value={rangeEndDate} />}
+        {!locked && <input type="hidden" name="range_end_shift" value={rangeEndShift} />}
         <div className="grid grid-cols-2 gap-2">
           <div>
             <Label>Vehicle</Label>

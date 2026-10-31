@@ -207,6 +207,17 @@ export async function saveMilkHandover(_prev: HandoverState, formData: FormData)
   );
   if (carrierError) return { error: carrierError };
 
+  // Daure ki akhir tareekh aur shift (742). Ek shift ki slip mein kuch nahi likha jata.
+  const endDate = String(formData.get("range_end_date") ?? "").trim();
+  const endShift = String(formData.get("range_end_shift") ?? "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(endDate) && (endShift === "morning" || endShift === "evening") && (endDate !== date || endShift !== shift)) {
+    const { error: endErr } = await (createServiceClient() as any)
+      .from("milk_dispatches")
+      .update({ range_end_date: endDate, range_end_shift: endShift })
+      .eq("id", id);
+    if (endErr) return { error: `Daura save nahi hua: ${endErr.message}` };
+  }
+
   if (canSeeHandoverRate(caller.role)) {
     const service = createServiceClient();
     if (rateValue == null) {
