@@ -160,6 +160,26 @@ export default async function MilkControlRoomPage({
   const partyOut = destOut("party");
   const totalOut = dispatchList == null ? null : (companyOut ?? 0) + (vendorOut ?? 0) + (partyOut ?? 0);
 
+  // Adjusted litre har dispatch ki chiller lines (milk_dispatch_lines) se.
+  const dispatchIds = (dispatchList ?? []).map((d) => d.id);
+  const lineRes = dispatchIds.length > 0
+    ? await (supabase as any).from("milk_dispatch_lines").select("dispatch_id, adjusted_volume_l").in("dispatch_id", dispatchIds).limit(5000)
+    : null;
+  const destById = new Map((dispatchList ?? []).map((d) => [d.id, d.destination as string]));
+  const adjOutFor = (dest: string): number | null => {
+    if (dispatchList == null || lineRes == null) return dispatchList == null ? null : 0;
+    if (lineRes.error) return null;
+    return Math.round(
+      ((lineRes.data ?? []) as { dispatch_id: string; adjusted_volume_l: number | string | null }[])
+        .filter((l) => destById.get(l.dispatch_id) === dest)
+        .reduce((sum, l) => sum + Number(l.adjusted_volume_l ?? 0), 0) * 1000
+    ) / 1000;
+  };
+  const adjCompany = adjOutFor("company");
+  const adjVendor = adjOutFor("vendor");
+  const adjParty = adjOutFor("party");
+  const adjTotalOut = adjCompany == null || adjVendor == null || adjParty == null ? null : adjCompany + adjVendor + adjParty;
+
   // Rupay: adjusted litre × rate. Ye sirf Owner/Admin ko dikhta hai (handover ka usool).
   // Jis slip par rate nahi lagi, us ki raqam nahi jodi jati, aur wo alag ginti mein dikhti hai.
   const canRate = canSeeHandoverRate(role);
@@ -306,6 +326,49 @@ export default async function MilkControlRoomPage({
             Average rate: {report.farmer.avgRatePerL == null ? "—" : `Rs ${report.farmer.avgRatePerL} / L`} · Rad: {report.farmer.rejected} · Tasdeeq baqi: {report.farmer.priced}
           </p>
         )}
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-sm font-semibold text-surface-600">Aaya aur gaya: gross aur adjusted</h2>
+        <Card className="p-4">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-surface-500">
+                <th className="px-3 py-2">Kahan se / kahan ko</th>
+                <th className="px-3 py-2 text-right">Gross</th>
+                <th className="px-3 py-2 text-right">Adjusted</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t border-surface-100">
+                <td className="px-3 py-2 font-medium">Aaya (chiller)</td>
+                <td className="px-3 py-2 text-right">{fmtL(chillerGross)}</td>
+                <td className="px-3 py-2 text-right">{fmtL(report ? report.chillerTotal.adjustedL : null)}</td>
+              </tr>
+              <tr className="border-t border-surface-100">
+                <td className="px-3 py-2">Company ko gaya</td>
+                <td className="px-3 py-2 text-right">{fmtL(companyOut)}</td>
+                <td className="px-3 py-2 text-right">{fmtL(adjCompany)}</td>
+              </tr>
+              <tr className="border-t border-surface-100">
+                <td className="px-3 py-2">Vendor ko gaya</td>
+                <td className="px-3 py-2 text-right">{fmtL(vendorOut)}</td>
+                <td className="px-3 py-2 text-right">{fmtL(adjVendor)}</td>
+              </tr>
+              <tr className="border-t border-surface-100">
+                <td className="px-3 py-2">Party ko gaya</td>
+                <td className="px-3 py-2 text-right">{fmtL(partyOut)}</td>
+                <td className="px-3 py-2 text-right">{fmtL(adjParty)}</td>
+              </tr>
+              <tr className="border-t border-surface-100 font-semibold">
+                <td className="px-3 py-2">Kul gaya</td>
+                <td className="px-3 py-2 text-right">{fmtL(totalOut)}</td>
+                <td className="px-3 py-2 text-right">{fmtL(adjTotalOut)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="mt-2 text-xs text-surface-500">Adjusted gaye slip ki chiller lines se hai. Jis slip par lines nahi, us ka adjusted "—" ya kam dikhega.</p>
+        </Card>
       </section>
 
       <section>
