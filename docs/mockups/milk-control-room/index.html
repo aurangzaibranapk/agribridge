@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Doodh Control Room — Mockup</title>
+<style>
+  :root {
+    --bg: #0f172a; --panel: #1e293b; --line: #334155; --text: #e2e8f0; --muted: #94a3b8;
+    --green: #22c55e; --amber: #f59e0b; --red: #ef4444; --blue: #38bdf8; --violet: #a78bfa;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, "Noto Nastaliq Urdu", sans-serif; background: var(--bg); color: var(--text); }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 20px; margin: 0; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .controls { display: flex; gap: 8px; }
+  .controls span { background: var(--panel); border: 1px solid var(--line); padding: 6px 10px; border-radius: 8px; font-size: 13px; }
+  .live { color: var(--green); }
+  main { padding: 20px 24px; display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr); }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .span-3 { grid-column: span 3; } .span-4 { grid-column: span 4; } .span-5 { grid-column: span 5; }
+  .span-6 { grid-column: span 6; } .span-7 { grid-column: span 7; } .span-8 { grid-column: span 8; } .span-12 { grid-column: span 12; }
+  @media (max-width: 900px) { [class*="span-"] { grid-column: span 12; } }
+  .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .big { font-size: 30px; font-weight: 700; margin-top: 6px; }
+  .delta { font-size: 12px; margin-top: 4px; }
+  .up { color: var(--green); } .down { color: var(--red); } .warn { color: var(--amber); }
+  h2 { font-size: 14px; margin: 0 0 12px; color: var(--muted); font-weight: 600; }
+  .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .node { flex: 1; min-width: 120px; background: #0b1224; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .arrow { color: var(--muted); font-size: 20px; }
+  .bar-row { display: grid; grid-template-columns: 90px 1fr 70px; gap: 10px; align-items: center; margin: 8px 0; font-size: 13px; }
+  .bar { height: 12px; background: #0b1224; border-radius: 6px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-weight: 500; padding: 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 8px; border-bottom: 1px solid #263349; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; }
+  .p-ok { background: #14532d; color: #bbf7d0; } .p-warn { background: #78350f; color: #fde68a; } .p-bad { background: #7f1d1d; color: #fecaca; }
+  .alert { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border-radius: 8px; background: #0b1224; border: 1px solid var(--line); margin-bottom: 8px; font-size: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex: none; }
+  .chillers { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .chiller { background: #0b1224; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .chiller .name { font-weight: 600; }
+  .chiller .val { font-size: 20px; margin-top: 4px; }
+  .note { color: var(--muted); font-size: 12px; margin-top: 12px; }
+  .spark { display: flex; align-items: flex-end; gap: 4px; height: 90px; }
+  .spark div { flex: 1; background: var(--blue); border-radius: 3px 3px 0 0; opacity: .85; }
+  .spark div.today { background: var(--green); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Doodh Control Room</h1>
+    <div class="sub">Kisan Pakistan · Branch: Main MCC · Namoona data (mockup)</div>
+  </div>
+  <div class="controls">
+    <span>Tareekh: 31 Oct 2026</span>
+    <span>Branch: Main MCC ▾</span>
+    <span>Shift: Dono ▾</span>
+    <span class="live">● Live</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- KPI row -->
+  <section class="card span-3">
+    <div class="label">Aaj ka doodh (aaya)</div>
+    <div class="big">3,482 L</div>
+    <div class="delta up">▲ 6.2% kal ke muqable</div>
+  </section>
+  <section class="card span-3">
+    <div class="label">Gaya (Company + Vendor + Party)</div>
+    <div class="big">3,410 L</div>
+    <div class="delta">Company 2,180 · Vendor 960 · Party 270</div>
+  </section>
+  <section class="card span-3">
+    <div class="label">Farq (aaya − gaya)</div>
+    <div class="big warn">72 L</div>
+    <div class="delta warn">2.07% · Dhyan do: 1 chiller ka total abhi nahi</div>
+  </section>
+  <section class="card span-3">
+    <div class="label">Kisan (aaj)</div>
+    <div class="big">412</div>
+    <div class="delta">Route 9 · Khud laaye 38</div>
+  </section>
+
+  <!-- Action queue -->
+  <section class="card span-5">
+    <h2>Aaj ke kaam (faislay jo baaqi hain)</h2>
+    <div class="alert"><span class="dot" style="background:var(--red)"></span>
+      <div><b>FAT ka intezar: 14 entries</b> — Chiller 2 · Shaam shift<br><span class="sub">Route 4 aur Route 7 par rate nahi laga</span></div>
+    </div>
+    <div class="alert"><span class="dot" style="background:var(--amber)"></span>
+      <div><b>Tasdeeq baqi: 6 entries</b> — rate lag gaya, manager ki manzoori chahiye<br><span class="sub">Ek entry 3 ghante se purani</span></div>
+    </div>
+    <div class="alert"><span class="dot" style="background:var(--amber)"></span>
+      <div><b>Raseed baqi: Party — Shaam ki slip</b> — 210 L bheje, raseed nahi likhi<br><span class="sub">Kal ki bhi 1 raseed pending</span></div>
+    </div>
+    <div class="alert"><span class="dot" style="background:var(--red)"></span>
+      <div><b>Kami: Vendor — 1.8%</b> — 960 L bheje, 942.7 L pahunche<br><span class="sub">Route 9 ki kami se ulajhi hui</span></div>
+    </div>
+    <div class="alert"><span class="dot" style="background:var(--violet)"></span>
+      <div><b>Possible duplicate: 2 entries</b> — ek kisan, ek hi din, ek hi shift<br><span class="sub">Manager faisla karega</span></div>
+    </div>
+  </section>
+
+  <!-- Flow -->
+  <section class="card span-7">
+    <h2>Doodh ka safar: Chiller → Handover → Farq</h2>
+    <div class="flow">
+      <div class="node"><div class="label">Aaya (Chiller)</div><div class="big" style="font-size:22px">3,482 L</div><div class="sub">Subah 1,905 · Shaam 1,577</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="label">Company</div><div class="big" style="font-size:22px">2,180 L</div><div class="sub">3 slips · raseed 2,180 ✓</div></div>
+      <div class="node"><div class="label">Vendor</div><div class="big" style="font-size:22px">960 L</div><div class="sub">2 slips · raseed 942.7 ⚠</div></div>
+      <div class="node"><div class="label">Party</div><div class="big" style="font-size:22px">270 L</div><div class="sub">1 slip · raseed baqi ⏳</div></div>
+    </div>
+    <div class="note">Farq = Aaya − (Company + Vendor + Party). Jis manzil par slip nahi, us ka out 0.</div>
+  </section>
+
+  <!-- Chillers -->
+  <section class="card span-12">
+    <h2>Chiller ka haal (is shift)</h2>
+    <div class="chillers">
+      <div class="chiller"><div class="name">HM-1</div><div class="val">1,240 L</div><div class="sub">FAT 4.3 · LR 27 · <span class="pill p-ok">total darj</span></div></div>
+      <div class="chiller"><div class="name">HM-2</div><div class="val">980 L</div><div class="sub">FAT 4.1 · LR 26 · <span class="pill p-warn">FAT baqi 14</span></div></div>
+      <div class="chiller"><div class="name">HM-3</div><div class="val">1,262 L</div><div class="sub">FAT 4.5 · LR 28 · <span class="pill p-ok">total darj</span></div></div>
+      <div class="chiller"><div class="name">HM-4</div><div class="val">—</div><div class="sub">Total abhi nahi likha · <span class="pill p-bad">darj karein</span></div></div>
+    </div>
+    <div class="note">Chiller ka nam branch se lagta hai. "—" ka matlab data nahi, sifar nahi.</div>
+  </section>
+
+  <!-- Route bars -->
+  <section class="card span-6">
+    <h2>Route wise doodh (aaj)</h2>
+    <div class="bar-row"><span>Route 1</span><div class="bar"><i style="width:82%;background:var(--green)"></i></div><span>612 L</span></div>
+    <div class="bar-row"><span>Route 4</span><div class="bar"><i style="width:64%;background:var(--amber)"></i></div><span>478 L</span></div>
+    <div class="bar-row"><span>Route 7</span><div class="bar"><i style="width:58%;background:var(--amber)"></i></div><span>433 L</span></div>
+    <div class="bar-row"><span>Route 9</span><div class="bar"><i style="width:71%;background:var(--red)"></i></div><span>529 L · kami 1.8%</span></div>
+    <div class="bar-row"><span>Khud laaye</span><div class="bar"><i style="width:44%;background:var(--blue)"></i></div><span>328 L</span></div>
+    <div class="note">Rang: hara = theek, peela = FAT ya tasdeeq baqi, laal = kami.</div>
+  </section>
+
+  <!-- 7-day trend -->
+  <section class="card span-6">
+    <h2>Pichle 7 din (aaya, litre)</h2>
+    <div class="spark">
+      <div style="height:62%" title="25 Oct"></div>
+      <div style="height:70%" title="26 Oct"></div>
+      <div style="height:66%" title="27 Oct"></div>
+      <div style="height:74%" title="28 Oct"></div>
+      <div style="height:71%" title="29 Oct"></div>
+      <div style="height:78%" title="30 Oct"></div>
+      <div class="today" style="height:85%" title="31 Oct"></div>
+    </div>
+    <div class="note">Aaj ka aaya 3,482 L. Pichle 7 din ka ausat 3,150 L (namoona).</div>
+  </section>
+
+  <!-- Shift table -->
+  <section class="card span-8">
+    <h2>Shift wise</h2>
+    <table>
+      <thead><tr><th>Shift</th><th>Entries</th><th>Litre</th><th>FAT baqi</th><th>Tasdeeq baqi</th><th>Tasdeeq shuda</th><th>Rad</th></tr></thead>
+      <tbody>
+        <tr><td>Subah</td><td>212</td><td>1,905 L</td><td>0</td><td>2</td><td>205</td><td>5</td></tr>
+        <tr><td>Shaam</td><td>199</td><td>1,577 L</td><td><span class="warn">14</span></td><td>4</td><td>176</td><td>5</td></tr>
+        <tr><td><b>Kul</b></td><td><b>411</b></td><td><b>3,482 L</b></td><td><b>14</b></td><td><b>6</b></td><td><b>381</b></td><td><b>10</b></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Handover status -->
+  <section class="card span-4">
+    <h2>Handover slips</h2>
+    <table>
+      <thead><tr><th>Manzil</th><th>Slip</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Company</td><td>3</td><td><span class="pill p-ok">raseed mukammal</span></td></tr>
+        <tr><td>Vendor</td><td>2</td><td><span class="pill p-bad">kami 1.8%</span></td></tr>
+        <tr><td>Party</td><td>1</td><td><span class="pill p-warn">raseed baqi</span></td></tr>
+      </tbody>
+    </table>
+    <div class="note">Slip banane ke liye: Handover — Company / Vendor / Party.</div>
+  </section>
+
+  <!-- Quick actions -->
+  <section class="card span-12">
+    <h2>Fori kaam</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:8px">
+      <span class="pill p-ok" style="padding:8px 14px;font-size:13px">Chiller ka total darj karein</span>
+      <span class="pill p-ok" style="padding:8px 14px;font-size:13px">FAT ka intezar dekhein</span>
+      <span class="pill p-ok" style="padding:8px 14px;font-size:13px">Tasdeeq karein</span>
+      <span class="pill p-ok" style="padding:8px 14px;font-size:13px">Handover slip banayein</span>
+      <span class="pill p-ok" style="padding:8px 14px;font-size:13px">Raseed darj karein</span>
+      <span class="pill p-ok" style="padding:8px 14px;font-size:13px">Route aur kami</span>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>
