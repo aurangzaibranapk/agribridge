@@ -7,7 +7,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { requireAction } from "@/lib/access/guard";
 import { diffFields, logAudit } from "@/lib/audit";
 import { rpcError } from "@/lib/dairy/rules";
-import { grossTotal, lineToSql, lrRecipeLabel, parseDestination, parseHandoverLines, parseHandoverReason, parseLrBaseline, baselineForDestination, type HandoverLineInput, type ParsedLine } from "@/lib/milk-handover";
+import { adjustedTotal, canSeeHandoverRate, grossTotal, handoverAmount, lineToSql, lrRecipeLabel, parseDestination, parseHandoverLines, parseHandoverReason, parseLrBaseline, baselineForDestination, type HandoverLineInput, type ParsedLine } from "@/lib/milk-handover";
+import { loadChillerStock } from "@/lib/milk-handover-stock";
 import { createHandoverPartyRecord } from "@/actions/milk-handover-party";
 
 export interface HandoverState {
@@ -30,6 +31,12 @@ function acceptedOf(value: FormDataEntryValue | null): boolean | null | { error:
   if (raw === "yes") return true;
   if (raw === "no") return false;
   return { error: "Qubool ya radd saaf chunein." };
+}
+
+export async function lookupChillerStock(branchId: string, date: string, shift: string): Promise<HandoverLineInput[]> {
+  const allowed = await requireAction("milk-collection.handover", "view");
+  if ("error" in allowed) return [];
+  return loadChillerStock(branchId, date, shift);
 }
 
 export async function saveMilkHandover(_prev: HandoverState, formData: FormData): Promise<HandoverState> {
@@ -104,6 +111,15 @@ export async function saveMilkHandover(_prev: HandoverState, formData: FormData)
     }
   }
   const baseline = baselineForDestination(destination, parseLrBaseline(formData.get("lr_baseline")));
+
+  const rateRaw = String(formData.get("internal_rate") ?? "").trim();
+  let rateValue: number | null = null;
+  if (canSeeHandoverRate(caller.role) && rateRaw) {
+    if (!/^\d+(\.\d{1,2})?$/.test(rateRaw) || Number(rateRaw) > 1000000) {
+      return { error: "Rate sahi rupayon mein likhein (0 se 1000000)." };
+    }
+    rateValue = Number(rateRaw);
+  }
 
   const locked = String(formData.get("litres_locked") ?? "") === "yes";
   let linesJson: unknown = null;
@@ -180,6 +196,43 @@ export async function saveMilkHandover(_prev: HandoverState, formData: FormData)
   }
   const id = posted.data;
   if (!id) return { error: "Certificate mehfooz nahi hua." };
+
+  if (canSeeHandoverRate(caller.role)) {
+    const service = createServiceClient();
+    if (rateValue == null) {
+      const removed = await service.from("milk_dispatch_rates").delete().eq("dispatch_id", id);
+      if (removed.error && !/schema cache|does not exist|milk_dispatch_rates/i.test(removed.error.message)) {
+        return { error: removed.error.message };
+      }
+    } else {
+      const { data: stored } = await service
+        .from("milk_dispatch_lines")
+        .select("gross_volume_l, adjusted_volume_l")
+        .eq("dispatch_id", id);
+      const adjusted = adjustedTotal(
+        (stored ?? []).map((line) => ({
+          grossL: Number(line.gross_volume_l),
+          adjustedL: line.adjusted_volume_l == null ? null : Number(line.adjusted_volume_l),
+        }))
+      );
+      const amount = handoverAmount(adjusted, rateValue);
+      if (amount == null) {
+        return { error: "Slip mehfooz ho chuki hai. Amount tab banta hai jab har chiller ka adjusted litre ho." };
+      }
+      const wrote = await service.from("milk_dispatch_rates").upsert({
+        dispatch_id: id,
+        rate_per_adjusted_l: rateValue,
+        amount,
+        updated_by: caller.userId,
+      });
+      if (wrote.error) {
+        if (/schema cache|does not exist|milk_dispatch_rates/i.test(wrote.error.message)) {
+          return { error: "Slip mehfooz ho chuki hai. Andaruni rate ka table abhi nahi. Migration 731 pehle Testing par chalao — Live se pehle backup." };
+        }
+        return { error: wrote.error.message };
+      }
+    }
+  }
 
   const decision = accepted == null ? "faisla baqi" : accepted ? "qubool" : "radd";
   const gross = parsedLines ? grossTotal(parsedLines) : before ? Number(before.dispatched_liters) : null;

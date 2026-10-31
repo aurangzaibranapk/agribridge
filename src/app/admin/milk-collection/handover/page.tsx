@@ -3,8 +3,9 @@ import { aajKaKhana } from "@/lib/utils/format";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
-import { handoverGate, loadHandoverDay } from "@/lib/milk-handover-page";
-import { HandoverDaySummary } from "./day-summary";
+import { canSeeHandoverRate } from "@/lib/milk-handover";
+import { handoverGate, loadHandoverDay, loadInternalRates } from "@/lib/milk-handover-page";
+import { HandoverDaySummary, HandoverInternalHisaab } from "./day-summary";
 import { HandoverTabs } from "./tabs";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,8 @@ export default async function MilkHandoverSummary({ searchParams }: { searchPara
   const date = searchParams?.date && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.date) ? searchParams.date : aajKaKhana();
   const branchId = gate.branchId && (gate.role === "manager" || gate.role === "milk_collection") ? gate.branchId : null;
   const day = await loadHandoverDay({ date, branchId });
+  const seeRate = canSeeHandoverRate(gate.role);
+  const rates = seeRate ? await loadInternalRates(day.slips.map((slip) => slip.id)) : new Map();
 
   return (
     <div>
@@ -44,6 +47,23 @@ export default async function MilkHandoverSummary({ searchParams }: { searchPara
       <p className="mb-3 text-sm">
         <Link href={`/admin/milk-collection/chiller?date=${date}${branchId ? `&branch=${branchId}` : ""}`} className="text-brand-700 underline">{t("ct_write_total", lang)}</Link>
       </p>
+      {seeRate && (
+        <HandoverInternalHisaab
+          lang={lang}
+          rows={day.slips.map((slip) => {
+            const rate = rates.get(slip.id);
+            return {
+              id: slip.id,
+              mccName: slip.mccName,
+              destination: slip.destination,
+              shift: slip.shift,
+              adjustedL: slip.adjustedL,
+              rate: rate?.rate ?? null,
+              amount: rate && slip.adjustedL != null ? rate.amount : null,
+            };
+          })}
+        />
+      )}
       {gate.canWrite && (
         <div className="flex flex-wrap gap-2 text-sm">
           <Link href={`/admin/milk-collection/handover/company/new?date=${date}`} className="rounded-lg bg-brand-600 px-3 py-2 font-medium text-white">{t("mh_new_company", lang)}</Link>

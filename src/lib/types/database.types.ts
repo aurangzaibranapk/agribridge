@@ -24764,6 +24764,38 @@ export type Database = {
           },
         ]
       }
+      milk_dispatch_rates: {
+        Row: {
+          amount: number
+          dispatch_id: string
+          rate_per_adjusted_l: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount: number
+          dispatch_id: string
+          rate_per_adjusted_l: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          dispatch_id?: string
+          rate_per_adjusted_l?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milk_dispatch_rates_dispatch_id_fkey"
+            columns: ["dispatch_id"]
+            isOneToOne: true
+            referencedRelation: "milk_dispatches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       milk_handover_parties: {
         Row: {
           contact: string | null

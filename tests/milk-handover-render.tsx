@@ -74,7 +74,9 @@ assert.match(html, /Min Specs/);
 assert.match(html, /Kisan Pakistan/);
 assert.match(html, /FAT 3\.8 — min 4\.1/);
 assert.match(html, /value="3\.8"/);
-assert.match(html, /value="91\.54"/);
+assert.match(html, /value="91\.539"/);
+assert.match(html, /data-testid="chiller-edit"/);
+assert.doesNotMatch(html, /data-testid="handover-internal-rate"/);
 assert.match(html, /company agreement 20°C/);
 assert.match(html, /name="destination" value="company"/);
 assert.match(html, /name="lr_baseline" value="20"/);
@@ -127,8 +129,8 @@ const vendorHtml = renderToStaticMarkup(
     },
   })
 );
-assert.match(vendorHtml, /value="8\.36"/);
-assert.match(vendorHtml, /value="95\.08"/);
+assert.match(vendorHtml, /value="8\.356"/);
+assert.match(vendorHtml, /value="95\.047"/);
 assert.match(vendorHtml, /vendor 22°C: 24\+3=27/);
 assert.match(vendorHtml, /name="lr_baseline" value="22"/);
 assert.match(vendorHtml, /name="destination" value="vendor"/);
@@ -183,7 +185,7 @@ assert.match(partyHtml, /Ali Dairy/);
 assert.match(partyHtml, /20°C — company agreement/);
 assert.match(partyHtml, /22°C — vendor/);
 assert.match(partyHtml, /name="lr_baseline" value="20"/);
-assert.match(partyHtml, /value="8\.61"/);
+assert.match(partyHtml, /value="8\.606"/);
 assert.match(partyHtml, /Kharab sirf ek wajah hai/);
 assert.match(partyHtml, /lock nahi/);
 assert.doesNotMatch(partyHtml, /Kisan ka Wasela|کسان کا وسیلہ/);

@@ -207,6 +207,28 @@ export async function loadCertificate(id: string): Promise<LoadedCertificate | {
   };
 }
 
+export async function loadInternalRate(id: string): Promise<string> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("milk_dispatch_rates").select("rate_per_adjusted_l").eq("dispatch_id", id).maybeSingle();
+  if (error || !data) return "";
+  return String(data.rate_per_adjusted_l);
+}
+
+export async function loadInternalRates(ids: string[]): Promise<Map<string, { rate: number; amount: number }>> {
+  const out = new Map<string, { rate: number; amount: number }>();
+  if (ids.length === 0) return out;
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("milk_dispatch_rates")
+    .select("dispatch_id, rate_per_adjusted_l, amount")
+    .in("dispatch_id", ids);
+  if (error) return out;
+  for (const row of data ?? []) {
+    out.set(row.dispatch_id, { rate: Number(row.rate_per_adjusted_l), amount: Number(row.amount) });
+  }
+  return out;
+}
+
 export async function loadHandoverParties(): Promise<{ parties: HandoverPartyOption[]; error: string | null }> {
   const supabase = createClient();
   const { data, error } = await supabase.from("milk_handover_parties").select("id, name, contact, is_active").order("name");
