@@ -46,6 +46,19 @@
   .tab { padding:6px 12px; border-radius:999px; font-size:12px; border:1px solid var(--line); background:#fff; }
   .tab.on { background:var(--brand); color:#fff; border-color:var(--brand); font-weight:700; }
   .note { font-size:12px; color:var(--muted); margin-top:10px; }
+
+  .drill { cursor:pointer; transition:box-shadow .15s, transform .15s; }
+  .drill:hover { box-shadow:0 10px 26px rgba(20,36,26,.10); transform:translateY(-1px); }
+  .go { font-size:12px; color:var(--brand); font-weight:700; margin-top:8px; display:inline-block; }
+  .crumbs { font-size:12px; color:var(--muted); margin-bottom:10px; }
+  .crumbs b { color:var(--brand-d); }
+  .trail { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:8px; }
+  .step { border:1px solid var(--line); border-radius:12px; padding:12px; background:#fafcfa; }
+  .step .k { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .step .v { font-weight:700; margin-top:4px; font-size:14px; }
+  .step .l { font-size:12px; color:var(--brand); margin-top:6px; font-weight:700; }
+  .arrowrow { text-align:center; color:var(--muted); font-size:18px; align-self:center; }
+  .detail { border-left:4px solid var(--khatra); }
 </style>
 </head>
 <body>
@@ -65,29 +78,29 @@
 <main>
 
   <!-- KPIs -->
-  <section class="card c3">
+  <section class="card c3 drill">
     <div class="kpi-top"><div class="kpi-ic" style="background:var(--brand-l)">🥛</div><span class="delta up">▲ 6.2%</span></div>
     <div class="kpi-label">Aaj ka aaya (gross)</div>
     <div class="kpi-val num">3,482 L</div>
-    <div class="kpi-sub">pichle 7 din ka ausat 3,150 L</div>
+    <div class="kpi-sub">pichle 7 din ka ausat 3,150 L</div><span class="go">Report kholen →</span>
   </section>
-  <section class="card c3">
+  <section class="card c3 drill">
     <div class="kpi-top"><div class="kpi-ic" style="background:var(--info-l)">🚚</div><span class="delta up">▲ 2.1%</span></div>
     <div class="kpi-label">Aaj ka gaya (gross)</div>
     <div class="kpi-val num">3,410 L</div>
-    <div class="kpi-sub">3 slips · 6 shift lines</div>
+    <div class="kpi-sub">3 slips · 6 shift lines</div><span class="go">Slips dekhein →</span>
   </section>
-  <section class="card c3">
+  <section class="card c3 drill">
     <div class="kpi-top"><div class="kpi-ic" style="background:var(--sona-l)">📦</div><span class="pill p-warn">baqi</span></div>
     <div class="kpi-label">Baqi stock (gross)</div>
     <div class="kpi-val num">72 L</div>
-    <div class="kpi-sub">agli slip mein le sakte hain</div>
+    <div class="kpi-sub">agli slip mein le sakte hain</div><span class="go">Kis shift mein kitna baqi →</span>
   </section>
-  <section class="card c3">
+  <section class="card c3 drill">
     <div class="kpi-top"><div class="kpi-ic" style="background:var(--khatra-l)">⚖️</div><span class="delta down">▼ 1.8%</span></div>
     <div class="kpi-label">Farq (aaya − gaya)</div>
     <div class="kpi-val num">+72 L</div>
-    <div class="kpi-sub">gross ke hisaab se</div>
+    <div class="kpi-sub">gross ke hisaab se</div><span class="go">Farq ki wajah →</span>
   </section>
 
   <!-- Trend chart -->
@@ -183,9 +196,25 @@
   <section class="card c6">
     <h2>Dhyan dein</h2>
     <p class="hint">Admin ke liye faisle wali baatein.</p>
-    <div class="alert a-bad"><div class="ic">!</div><div><div class="tt">Chiller 3: total nahi</div><div class="ds">Aaj ka total darj nahi, is liye farq nahi nikal sakta.</div></div></div>
-    <div class="alert a-warn"><div class="ic">i</div><div><div class="tt">Baqi 335 L (chiller 2)</div><div class="ds">Agli slip mein le sakte hain ya wajah likhein.</div></div></div>
+    <div class="alert a-bad drill"><div class="ic">!</div><div><div class="tt">Chiller 3: total nahi <span class="go" style="margin:0 0 0 8px">Detail →</span></div><div class="ds">Aaj ka total darj nahi, is liye farq nahi nikal sakta.</div></div></div>
+    <div class="alert a-warn drill"><div class="ic">i</div><div><div class="tt">Baqi 335 L (chiller 2) <span class="go" style="margin:0 0 0 8px">Detail →</span></div><div class="ds">Agli slip mein le sakte hain ya wajah likhein.</div></div></div>
     <div class="alert a-info"><div class="ic">≈</div><div><div class="tt">Adjusted alag hai</div><div class="ds">Paise ke liye hai. FAT aur LR se badalta hai.</div></div></div>
+  </section>
+
+
+  <!-- Drill-down: issue par click karne ke baad -->
+  <section class="card c12 detail">
+    <div class="crumbs">Dashboard › <b>Dhyan dein</b> › <b>Chiller 3: total nahi</b></div>
+    <h2>Issue ki detail: Chiller 3 (31 Oct, Shaam)</h2>
+    <p class="hint">Ye issue kahan se aaya aur kahan theek hoga. Har qadam par link hai.</p>
+    <div class="trail">
+      <div class="step"><div class="k">1. Chiller total</div><div class="v">Nahi darj</div><div class="l">Chiller page kholen →</div></div>
+      <div class="step"><div class="k">2. Din ka hisaab</div><div class="v">Aaya: 3,482 L (2 chiller)</div><div class="l">Control room kholen →</div></div>
+      <div class="step"><div class="k">3. Slip</div><div class="v">Shaam ki slip mein HM-4 nahi</div><div class="l">Slip kholen →</div></div>
+      <div class="step"><div class="k">4. Farmer entries</div><div class="v">HM-4 par 0 entries</div><div class="l">Entries dekhein →</div></div>
+    </div>
+    <div class="note" style="margin-top:14px">Action: chiller ka total darj karein. Admin ya manager. Ho jaye to ye issue khud band ho jayega.</div>
+    <div class="note">Audit: 31 Oct 16:10 par chiller page par koi entry nahi. <span class="go" style="margin:0">Audit log kholen →</span></div>
   </section>
 
   <!-- Branch table -->
@@ -195,9 +224,9 @@
     <table>
       <thead><tr><th>Branch</th><th class="r">Aaya</th><th class="r">Gaya</th><th class="r">Farq</th><th>Haal</th><th style="width:220px">Hissa</th></tr></thead>
       <tbody>
-        <tr><td><b>Main Branch Mahabali</b></td><td class="r num">3,482</td><td class="r num">3,410</td><td class="r num">+72</td><td><span class="pill p-warn">baqi stock</span></td><td><div class="bar"><i style="width:82%;background:var(--brand)"></i></div></td></tr>
-        <tr><td><b>Kisan Karyana Mahabali</b></td><td class="r num">1,180</td><td class="r num">1,180</td><td class="r num">0</td><td><span class="pill p-ok">khatam</span></td><td><div class="bar"><i style="width:30%;background:var(--info)"></i></div></td></tr>
-        <tr><td><b>Kisan Karyana 157</b></td><td class="r num">—</td><td class="r num">—</td><td class="r num">—</td><td><span class="pill p-bad">chiller total nahi</span></td><td><div class="bar"><i style="width:0%"></i></div></td></tr>
+        <tr class="drill"><td><b>Main Branch Mahabali</b> <span class="go" style="margin:0 0 0 6px">Report →</span></td><td class="r num">3,482</td><td class="r num">3,410</td><td class="r num">+72</td><td><span class="pill p-warn">baqi stock</span></td><td><div class="bar"><i style="width:82%;background:var(--brand)"></i></div></td></tr>
+        <tr class="drill"><td><b>Kisan Karyana Mahabali</b> <span class="go" style="margin:0 0 0 6px">Report →</span></td><td class="r num">1,180</td><td class="r num">1,180</td><td class="r num">0</td><td><span class="pill p-ok">khatam</span></td><td><div class="bar"><i style="width:30%;background:var(--info)"></i></div></td></tr>
+        <tr class="drill"><td><b>Kisan Karyana 157</b> <span class="go" style="margin:0 0 0 6px">Report →</span></td><td class="r num">—</td><td class="r num">—</td><td class="r num">—</td><td><span class="pill p-bad">chiller total nahi</span></td><td><div class="bar"><i style="width:0%"></i></div></td></tr>
       </tbody>
     </table>
     <div class="note">Farq gross ke hisaab se. Adjusted sirf paise ke liye, alag column mein.</div>
