@@ -58,3 +58,39 @@ export function presetRange(preset: ShiftPreset, today: string): { from: ShiftSl
       return { from: { date: today, shift: "evening" }, to: { date: today, shift: "evening" } };
   }
 }
+
+export interface RangeTotalInput {
+  entryDate: string;
+  shift: RangeShift;
+  chillerNo: string;
+  grossL: number;
+  fat: number | null;
+  lr: number | null;
+}
+
+export interface ChillerRangeRow {
+  chillerNo: string;
+  grossL: number;
+  fat: number | null;
+  lr: number | null;
+  shifts: number;
+}
+
+/**
+ * Range ki shifts ka jama: har chiller ka gross jama, aur FAT, LR gross ke wazan se.
+ * Jis chiller ka koi total range mein nahi, uski qatar shifts 0 aur gross 0 hogi.
+ */
+export function aggregateRange(rows: RangeTotalInput[], slots: ShiftSlot[], chillerNames: string[]): ChillerRangeRow[] {
+  const inRange = new Set(slots.map((s) => `${s.date}|${s.shift}`));
+  return chillerNames.map((name) => {
+    const hits = rows.filter((r) => r.chillerNo === name && inRange.has(`${r.entryDate}|${r.shift}`));
+    const grossL = Math.round(hits.reduce((s, r) => s + r.grossL, 0) * 1000) / 1000;
+    const weigh = (pick: (r: RangeTotalInput) => number | null) => {
+      const usable = hits.filter((r) => pick(r) != null && r.grossL > 0);
+      const w = usable.reduce((s, r) => s + r.grossL, 0);
+      if (w === 0) return null;
+      return Math.round((usable.reduce((s, r) => s + (pick(r) as number) * r.grossL, 0) / w) * 100) / 100;
+    };
+    return { chillerNo: name, grossL, fat: weigh((r) => r.fat), lr: weigh((r) => r.lr), shifts: hits.length };
+  });
+}

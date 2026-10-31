@@ -36,3 +36,27 @@ import { presetRange, slotsBetween } from "../src/lib/milk-shift-range";
 }
 
 console.log("milk-shift-range: all assertions passed");
+
+import { aggregateRange } from "../src/lib/milk-shift-range";
+
+// Teen shifts, do chiller: gross jama, FAT aur LR gross ke wazan se.
+{
+  const slots = [
+    { date: "2026-10-30", shift: "evening" as const },
+    { date: "2026-10-31", shift: "morning" as const },
+  ];
+  const rows = [
+    { entryDate: "2026-10-30", shift: "evening" as const, chillerNo: "1", grossL: 100, fat: 4.0, lr: 26 },
+    { entryDate: "2026-10-31", shift: "morning" as const, chillerNo: "1", grossL: 300, fat: 4.4, lr: 28 },
+    { entryDate: "2026-10-31", shift: "evening" as const, chillerNo: "1", grossL: 999, fat: 9, lr: 9 },
+    { entryDate: "2026-10-31", shift: "morning" as const, chillerNo: "2", grossL: 50, fat: 5.0, lr: 24 },
+  ];
+  const out = aggregateRange(rows, slots, ["1", "2", "3"]);
+  assert.equal(out[0].grossL, 400);
+  assert.equal(out[0].fat, 4.3);
+  assert.equal(out[0].shifts, 2);
+  assert.equal(out[1].grossL, 50);
+  assert.equal(out[2].grossL, 0);
+  assert.equal(out[2].fat, null);
+}
+console.log("milk-shift-range aggregate: all assertions passed");
