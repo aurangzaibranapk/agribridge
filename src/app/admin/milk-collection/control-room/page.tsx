@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAction } from "@/lib/access/guard";
 import { PageHeader, Card, EmptyState } from "@/components/ui/layout-primitives";
 import { buildDayReport, dispatchAlerts, type ChillerLine } from "@/lib/milk-control-room";
+import { canSeeHandoverRate } from "@/lib/milk-handover";
+import { loadInternalRates } from "@/lib/milk-handover-page";
 
 export const dynamic = "force-dynamic";
 
@@ -129,6 +131,26 @@ export default async function MilkControlRoomPage({
   const vendorOut = destOut("vendor");
   const partyOut = destOut("party");
   const totalOut = dispatchList == null ? null : (companyOut ?? 0) + (vendorOut ?? 0) + (partyOut ?? 0);
+
+  // Rupay: adjusted litre × rate. Ye sirf Owner/Admin ko dikhta hai (handover ka usool).
+  // Jis slip par rate nahi lagi, us ki raqam nahi jodi jati, aur wo alag ginti mein dikhti hai.
+  const canRate = canSeeHandoverRate(role);
+  const rateMap = canRate && dispatchList ? await loadInternalRates(dispatchList.map((d) => d.id)) : null;
+  const rupeesFor = (dest: string): { total: number; missing: number } | null => {
+    if (!rateMap || !dispatchList) return null;
+    const rows = dispatchList.filter((d) => d.destination === dest);
+    let total = 0;
+    let missing = 0;
+    for (const d of rows) {
+      const r = rateMap.get(d.id);
+      if (r) total += r.amount;
+      else missing += 1;
+    }
+    return { total: Math.round(total * 100) / 100, missing };
+  };
+  const companyRs = rupeesFor("company");
+  const vendorRs = rupeesFor("vendor");
+  const partyRs = rupeesFor("party");
   const baqaya = balanceErr || !balanceRows
     ? null
     : balanceRows.reduce((s: number, r: { balance_due: number | string | null }) => s + Number(r.balance_due ?? 0), 0);
@@ -243,8 +265,19 @@ export default async function MilkControlRoomPage({
           <Kpi label="Company ko gaya" value={fmtL(companyOut)} href="/admin/milk-collection/handover/company" />
           <Kpi label="Vendor ko gaya" value={fmtL(vendorOut)} href="/admin/milk-collection/handover/vendor" />
           <Kpi label="Party ko gaya" value={fmtL(partyOut)} href="/admin/milk-collection/handover/party" />
-          <Kpi label="Kul gaya (chiller se)" value={fmtL(totalOut)} sub="Hamari zimmedari yahan tak. Rupay handover slip par" href="/admin/milk-collection/handover" />
+          <Kpi label="Kul gaya (chiller se)" value={fmtL(totalOut)} sub="Hamari zimmedari yahan tak" href="/admin/milk-collection/handover" />
         </div>
+        <h3 className="mb-2 mt-4 text-xs font-semibold text-surface-500">Paise jo lene hain (gaye adjusted litre × rate)</h3>
+        {canRate ? (
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Kpi label="Company se lena" value={fmtRs(companyRs?.total ?? null)} sub={companyRs && companyRs.missing > 0 ? `${companyRs.missing} slip par rate nahi` : undefined} href="/admin/milk-collection/handover/company" tone={companyRs && companyRs.missing > 0 ? "warn" : "normal"} />
+            <Kpi label="Vendor se lena" value={fmtRs(vendorRs?.total ?? null)} sub={vendorRs && vendorRs.missing > 0 ? `${vendorRs.missing} slip par rate nahi` : undefined} href="/admin/milk-collection/handover/vendor" tone={vendorRs && vendorRs.missing > 0 ? "warn" : "normal"} />
+            <Kpi label="Party se lena" value={fmtRs(partyRs?.total ?? null)} sub={partyRs && partyRs.missing > 0 ? `${partyRs.missing} slip par rate nahi` : undefined} href="/admin/milk-collection/handover/party" tone={partyRs && partyRs.missing > 0 ? "warn" : "normal"} />
+            <Kpi label="Kul lena" value={fmtRs(companyRs && vendorRs && partyRs ? companyRs.total + vendorRs.total + partyRs.total : null)} sub="Sirf rate wali slips ka jama. Raseed ka farq shamil nahi" />
+          </div>
+        ) : (
+          <p className="text-xs text-surface-500">Rupay ka hisaab sirf Owner/Admin ko dikhta hai.</p>
+        )}
       </section>
 
       <section>
