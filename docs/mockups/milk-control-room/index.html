@@ -5,49 +5,38 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Doodh Control Room — Mockup</title>
 <style>
-  :root {
-    --bg: #0f172a; --panel: #1e293b; --line: #334155; --text: #e2e8f0; --muted: #94a3b8;
-    --green: #22c55e; --amber: #f59e0b; --red: #ef4444; --blue: #38bdf8; --violet: #a78bfa;
-  }
+  /* App ke rang: tailwind.config.ts se (brand, sona, khatra, surface) */
+  :root { --bg:#f7f8f5; --panel:#ffffff; --inner:#f3f9f4; --line:#e2e8e3; --text:#17221a; --muted:#68736b;
+    --green:#1f6b3a; --amber:#b88722; --red:#c03636; --blue:#4c554e; --violet:#4c554e; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: system-ui, "Noto Nastaliq Urdu", sans-serif; background: var(--bg); color: var(--text); }
-  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--line); }
-  h1 { font-size: 20px; margin: 0; }
-  .sub { color: var(--muted); font-size: 13px; }
-  .controls { display: flex; gap: 8px; }
-  .controls span { background: var(--panel); border: 1px solid var(--line); padding: 6px 10px; border-radius: 8px; font-size: 13px; }
-  .live { color: var(--green); }
-  main { padding: 20px 24px; display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr); }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
-  .span-3 { grid-column: span 3; } .span-4 { grid-column: span 4; } .span-5 { grid-column: span 5; }
-  .span-6 { grid-column: span 6; } .span-7 { grid-column: span 7; } .span-8 { grid-column: span 8; } .span-12 { grid-column: span 12; }
-  @media (max-width: 900px) { [class*="span-"] { grid-column: span 12; } }
-  .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
-  .big { font-size: 30px; font-weight: 700; margin-top: 6px; }
-  .delta { font-size: 12px; margin-top: 4px; }
-  .up { color: var(--green); } .down { color: var(--red); } .warn { color: var(--amber); }
-  h2 { font-size: 14px; margin: 0 0 12px; color: var(--muted); font-weight: 600; }
-  .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .node { flex: 1; min-width: 120px; background: #0b1224; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
-  .arrow { color: var(--muted); font-size: 20px; }
-  .bar-row { display: grid; grid-template-columns: 90px 1fr 70px; gap: 10px; align-items: center; margin: 8px 0; font-size: 13px; }
-  .bar { height: 12px; background: #0b1224; border-radius: 6px; overflow: hidden; }
-  .bar > i { display: block; height: 100%; border-radius: 6px; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; color: var(--muted); font-weight: 500; padding: 8px; border-bottom: 1px solid var(--line); }
-  td { padding: 8px; border-bottom: 1px solid #263349; }
-  .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; }
-  .p-ok { background: #14532d; color: #bbf7d0; } .p-warn { background: #78350f; color: #fde68a; } .p-bad { background: #7f1d1d; color: #fecaca; }
-  .alert { display: flex; gap: 10px; align-items: flex-start; padding: 10px; border-radius: 8px; background: #0b1224; border: 1px solid var(--line); margin-bottom: 8px; font-size: 13px; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex: none; }
-  .chillers { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-  .chiller { background: #0b1224; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
-  .chiller .name { font-weight: 600; }
-  .chiller .val { font-size: 20px; margin-top: 4px; }
-  .note { color: var(--muted); font-size: 12px; margin-top: 12px; }
-  .spark { display: flex; align-items: flex-end; gap: 4px; height: 90px; }
-  .spark div { flex: 1; background: var(--blue); border-radius: 3px 3px 0 0; opacity: .85; }
-  .spark div.today { background: var(--green); }
+  body { margin:0; font-family: system-ui, "Noto Nastaliq Urdu", sans-serif; background:var(--bg); color:var(--text); }
+  header { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--line); }
+  h1 { font-size:20px; margin:0; } .sub { color:var(--muted); font-size:13px; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; }
+  .chip { background:var(--panel); border:1px solid var(--line); padding:6px 10px; border-radius:8px; font-size:13px; }
+  .owner { color:var(--green); }
+  main { padding:20px 24px; display:grid; gap:16px; grid-template-columns:repeat(12,1fr); }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px; }
+  .s3{grid-column:span 3}.s4{grid-column:span 4}.s5{grid-column:span 5}.s6{grid-column:span 6}.s7{grid-column:span 7}.s8{grid-column:span 8}.s12{grid-column:span 12}
+  @media (max-width:900px){ [class*="s"]{grid-column:span 12} }
+  .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  .big { font-size:26px; font-weight:700; margin-top:6px; }
+  .sm { font-size:12px; color:var(--muted); margin-top:4px; }
+  .warn { color:var(--amber); } .bad { color:var(--red); } .ok { color:var(--green); }
+  h2 { font-size:14px; margin:0 0 12px; color:var(--muted); font-weight:600; }
+  .flow { display:grid; grid-template-columns:1fr auto 1fr auto 1fr; gap:8px; align-items:center; }
+  .node { background:var(--inner); border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .arrow { color:var(--muted); font-size:22px; text-align:center; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; color:var(--muted); font-weight:500; padding:8px; border-bottom:1px solid var(--line); }
+  td { padding:8px; border-bottom:1px solid #263349; }
+  td.r, th.r { text-align:right; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; }
+  .p-ok{background:#eaf5ec;color:#174d2b;border:1px solid #b3d9bb} .p-warn{background:#fff4d6;color:#8a5f12;border:1px solid #e5bb54} .p-bad{background:#fdecec;color:#9c2b2b;border:1px solid #fad7d7} .p-info{background:#eff1ec;color:#333b35;border:1px solid #cbd4cc}
+  .task { display:flex; gap:10px; align-items:flex-start; padding:10px; border-radius:8px; background:var(--inner); border:1px solid var(--line); margin-bottom:8px; font-size:13px; }
+  .dot { width:8px; height:8px; border-radius:50%; margin-top:5px; flex:none; }
+  .note { color:var(--muted); font-size:12px; margin-top:10px; }
+  .lock { font-size:11px; color:var(--violet); }
 </style>
 </head>
 <body>
@@ -55,149 +44,99 @@
 <header>
   <div>
     <h1>Doodh Control Room</h1>
-    <div class="sub">Kisan Pakistan · Branch: Main MCC · Namoona data (mockup)</div>
+    <div class="sub">Kisan Pakistan · Main Branch Mahabali · Namoona data (mockup)</div>
   </div>
-  <div class="controls">
-    <span>Tareekh: 31 Oct 2026</span>
-    <span>Branch: Main MCC ▾</span>
-    <span>Shift: Dono ▾</span>
-    <span class="live">● Live</span>
+  <div class="chips">
+    <span class="chip">Tareekh: 31 Oct 2026</span>
+    <span class="chip">Branch: Main Branch Mahabali ▾</span>
+    <span class="chip owner">Owner/Admin: rupay dikh rahe hain</span>
   </div>
 </header>
 
 <main>
 
-  <!-- KPI row -->
-  <section class="card span-3">
-    <div class="label">Aaj ka doodh (aaya)</div>
-    <div class="big">3,482 L</div>
-    <div class="delta up">▲ 6.2% kal ke muqable</div>
-  </section>
-  <section class="card span-3">
-    <div class="label">Gaya (Company + Vendor + Party)</div>
-    <div class="big">3,410 L</div>
-    <div class="delta">Company 2,180 · Vendor 960 · Party 270</div>
-  </section>
-  <section class="card span-3">
-    <div class="label">Farq (aaya − gaya)</div>
-    <div class="big warn">72 L</div>
-    <div class="delta warn">2.07% · Dhyan do: 1 chiller ka total abhi nahi</div>
-  </section>
-  <section class="card span-3">
-    <div class="label">Kisan (aaj)</div>
-    <div class="big">412</div>
-    <div class="delta">Route 9 · Khud laaye 38</div>
-  </section>
-
-  <!-- Action queue -->
-  <section class="card span-5">
-    <h2>Aaj ke kaam (faislay jo baaqi hain)</h2>
-    <div class="alert"><span class="dot" style="background:var(--red)"></span>
-      <div><b>FAT ka intezar: 14 entries</b> — Chiller 2 · Shaam shift<br><span class="sub">Route 4 aur Route 7 par rate nahi laga</span></div>
-    </div>
-    <div class="alert"><span class="dot" style="background:var(--amber)"></span>
-      <div><b>Tasdeeq baqi: 6 entries</b> — rate lag gaya, manager ki manzoori chahiye<br><span class="sub">Ek entry 3 ghante se purani</span></div>
-    </div>
-    <div class="alert"><span class="dot" style="background:var(--amber)"></span>
-      <div><b>Raseed baqi: Party — Shaam ki slip</b> — 210 L bheje, raseed nahi likhi<br><span class="sub">Kal ki bhi 1 raseed pending</span></div>
-    </div>
-    <div class="alert"><span class="dot" style="background:var(--red)"></span>
-      <div><b>Kami: Vendor — 1.8%</b> — 960 L bheje, 942.7 L pahunche<br><span class="sub">Route 9 ki kami se ulajhi hui</span></div>
-    </div>
-    <div class="alert"><span class="dot" style="background:var(--violet)"></span>
-      <div><b>Possible duplicate: 2 entries</b> — ek kisan, ek hi din, ek hi shift<br><span class="sub">Manager faisla karega</span></div>
-    </div>
-  </section>
-
-  <!-- Flow -->
-  <section class="card span-7">
-    <h2>Doodh ka safar: Chiller → Handover → Farq</h2>
+  <!-- 1. AAYA -->
+  <section class="card s12">
+    <h2>1. Aaya: chiller par kitna doodh aaya (hamari zimmedari)</h2>
     <div class="flow">
-      <div class="node"><div class="label">Aaya (Chiller)</div><div class="big" style="font-size:22px">3,482 L</div><div class="sub">Subah 1,905 · Shaam 1,577</div></div>
+      <div class="node"><div class="label">Gross litre</div><div class="big">3,482 L</div><div class="sm">Subah 1,905 · Shaam 1,577</div></div>
       <div class="arrow">→</div>
-      <div class="node"><div class="label">Company</div><div class="big" style="font-size:22px">2,180 L</div><div class="sub">3 slips · raseed 2,180 ✓</div></div>
-      <div class="node"><div class="label">Vendor</div><div class="big" style="font-size:22px">960 L</div><div class="sub">2 slips · raseed 942.7 ⚠</div></div>
-      <div class="node"><div class="label">Party</div><div class="big" style="font-size:22px">270 L</div><div class="sub">1 slip · raseed baqi ⏳</div></div>
+      <div class="node"><div class="label">Adjusted litre (TS 13)</div><div class="big">3,364.0 L</div><div class="sm">litre × TS ÷ 13</div></div>
+      <div class="arrow">·</div>
+      <div class="node"><div class="label">SNF / FAT (wazan se)</div><div class="big">8.16 / 4.40</div><div class="sm">gross ke hisaab se ausat</div></div>
     </div>
-    <div class="note">Farq = Aaya − (Company + Vendor + Party). Jis manzil par slip nahi, us ka out 0.</div>
-  </section>
-
-  <!-- Chillers -->
-  <section class="card span-12">
-    <h2>Chiller ka haal (is shift)</h2>
-    <div class="chillers">
-      <div class="chiller"><div class="name">HM-1</div><div class="val">1,240 L</div><div class="sub">FAT 4.3 · LR 27 · <span class="pill p-ok">total darj</span></div></div>
-      <div class="chiller"><div class="name">HM-2</div><div class="val">980 L</div><div class="sub">FAT 4.1 · LR 26 · <span class="pill p-warn">FAT baqi 14</span></div></div>
-      <div class="chiller"><div class="name">HM-3</div><div class="val">1,262 L</div><div class="sub">FAT 4.5 · LR 28 · <span class="pill p-ok">total darj</span></div></div>
-      <div class="chiller"><div class="name">HM-4</div><div class="val">—</div><div class="sub">Total abhi nahi likha · <span class="pill p-bad">darj karein</span></div></div>
-    </div>
-    <div class="note">Chiller ka nam branch se lagta hai. "—" ka matlab data nahi, sifar nahi.</div>
-  </section>
-
-  <!-- Route bars -->
-  <section class="card span-6">
-    <h2>Route wise doodh (aaj)</h2>
-    <div class="bar-row"><span>Route 1</span><div class="bar"><i style="width:82%;background:var(--green)"></i></div><span>612 L</span></div>
-    <div class="bar-row"><span>Route 4</span><div class="bar"><i style="width:64%;background:var(--amber)"></i></div><span>478 L</span></div>
-    <div class="bar-row"><span>Route 7</span><div class="bar"><i style="width:58%;background:var(--amber)"></i></div><span>433 L</span></div>
-    <div class="bar-row"><span>Route 9</span><div class="bar"><i style="width:71%;background:var(--red)"></i></div><span>529 L · kami 1.8%</span></div>
-    <div class="bar-row"><span>Khud laaye</span><div class="bar"><i style="width:44%;background:var(--blue)"></i></div><span>328 L</span></div>
-    <div class="note">Rang: hara = theek, peela = FAT ya tasdeeq baqi, laal = kami.</div>
-  </section>
-
-  <!-- 7-day trend -->
-  <section class="card span-6">
-    <h2>Pichle 7 din (aaya, litre)</h2>
-    <div class="spark">
-      <div style="height:62%" title="25 Oct"></div>
-      <div style="height:70%" title="26 Oct"></div>
-      <div style="height:66%" title="27 Oct"></div>
-      <div style="height:74%" title="28 Oct"></div>
-      <div style="height:71%" title="29 Oct"></div>
-      <div style="height:78%" title="30 Oct"></div>
-      <div class="today" style="height:85%" title="31 Oct"></div>
-    </div>
-    <div class="note">Aaj ka aaya 3,482 L. Pichle 7 din ka ausat 3,150 L (namoona).</div>
-  </section>
-
-  <!-- Shift table -->
-  <section class="card span-8">
-    <h2>Shift wise</h2>
-    <table>
-      <thead><tr><th>Shift</th><th>Entries</th><th>Litre</th><th>FAT baqi</th><th>Tasdeeq baqi</th><th>Tasdeeq shuda</th><th>Rad</th></tr></thead>
+    <table style="margin-top:14px">
+      <thead><tr><th>Chiller</th><th>Shift</th><th class="r">Gross</th><th class="r">FAT</th><th class="r">LR</th><th class="r">SNF</th><th class="r">TS</th><th class="r">Adjusted</th><th>Status</th></tr></thead>
       <tbody>
-        <tr><td>Subah</td><td>212</td><td>1,905 L</td><td>0</td><td>2</td><td>205</td><td>5</td></tr>
-        <tr><td>Shaam</td><td>199</td><td>1,577 L</td><td><span class="warn">14</span></td><td>4</td><td>176</td><td>5</td></tr>
-        <tr><td><b>Kul</b></td><td><b>411</b></td><td><b>3,482 L</b></td><td><b>14</b></td><td><b>6</b></td><td><b>381</b></td><td><b>10</b></td></tr>
+        <tr><td>HM-1</td><td>Subah</td><td class="r">1,240 L</td><td class="r">4.30</td><td class="r">27</td><td class="r">8.416</td><td class="r">12.717</td><td class="r">1,213.0 L</td><td><span class="pill p-ok">darj</span></td></tr>
+        <tr><td>HM-2</td><td>Subah</td><td class="r">665 L</td><td class="r">4.10</td><td class="r">26</td><td class="r">8.126</td><td class="r">12.226</td><td class="r">625.4 L</td><td><span class="pill p-ok">darj</span></td></tr>
+        <tr><td>HM-2</td><td>Shaam</td><td class="r">1,577 L</td><td class="r">4.60</td><td class="r">25</td><td class="r">7.976</td><td class="r">12.576</td><td class="r">1,525.6 L</td><td><span class="pill p-ok">darj</span></td></tr>
+        <tr><td>HM-4</td><td>Shaam</td><td class="r">—</td><td class="r">—</td><td class="r">—</td><td class="r">—</td><td class="r">—</td><td class="r">—</td><td><span class="pill p-bad">total darj karein</span></td></tr>
       </tbody>
     </table>
+    <div class="note">"—" ka matlab darj nahi hai, sifar nahi. HM-4 ka total aaye bina din band nahi hoga.</div>
   </section>
 
-  <!-- Handover status -->
-  <section class="card span-4">
-    <h2>Handover slips</h2>
+  <!-- 2. GAYA -->
+  <section class="card s12">
+    <h2>2. Gaya: hamare chiller se kahan gaya (hamari zimmedari yahan tak)</h2>
     <table>
-      <thead><tr><th>Manzil</th><th>Slip</th><th>Status</th></tr></thead>
+      <thead><tr><th>Manzil</th><th class="r">Slips</th><th class="r">Gross litre</th><th class="r">Adjusted litre</th><th class="r">Rate (Rs / adj. L)</th><th class="r">Rupay (Rs)</th><th>Rate ki shart</th></tr></thead>
       <tbody>
-        <tr><td>Company</td><td>3</td><td><span class="pill p-ok">raseed mukammal</span></td></tr>
-        <tr><td>Vendor</td><td>2</td><td><span class="pill p-bad">kami 1.8%</span></td></tr>
-        <tr><td>Party</td><td>1</td><td><span class="pill p-warn">raseed baqi</span></td></tr>
+        <tr><td><b>Company</b></td><td class="r">3</td><td class="r">2,180 L</td><td class="r">2,160.0 L</td><td class="r">154 (TS 13, 20°C–40°C)</td><td class="r">332,640</td><td><span class="pill p-ok">sab slips par rate</span></td></tr>
+        <tr><td><b>Vendor</b></td><td class="r">2</td><td class="r">960 L</td><td class="r">950.0 L</td><td class="r">— (22°C–40°C)</td><td class="r">—</td><td><span class="pill p-warn">1 slip par rate nahi</span></td></tr>
+        <tr><td><b>Party</b></td><td class="r">1</td><td class="r">270 L</td><td class="r">268.0 L</td><td class="r">—</td><td class="r">—</td><td><span class="pill p-info">party ka rate</span></td></tr>
+        <tr><td><b>Kul</b></td><td class="r">6</td><td class="r"><b>3,410 L</b></td><td class="r">3,378.0 L</td><td></td><td class="r"><b>—</b></td><td></td></tr>
       </tbody>
     </table>
-    <div class="note">Slip banane ke liye: Handover — Company / Vendor / Party.</div>
+    <div class="note">Rupay (Rs) sirf Owner/Admin ko dikhte hain. Company ka rate har handover par aap khud likhte hain (aaj 154). Rupay = adjusted litre × rate.</div>
   </section>
 
-  <!-- Quick actions -->
-  <section class="card span-12">
-    <h2>Fori kaam</h2>
-    <div style="display:flex;flex-wrap:wrap;gap:8px">
-      <span class="pill p-ok" style="padding:8px 14px;font-size:13px">Chiller ka total darj karein</span>
-      <span class="pill p-ok" style="padding:8px 14px;font-size:13px">FAT ka intezar dekhein</span>
-      <span class="pill p-ok" style="padding:8px 14px;font-size:13px">Tasdeeq karein</span>
-      <span class="pill p-ok" style="padding:8px 14px;font-size:13px">Handover slip banayein</span>
-      <span class="pill p-ok" style="padding:8px 14px;font-size:13px">Raseed darj karein</span>
-      <span class="pill p-ok" style="padding:8px 14px;font-size:13px">Route aur kami</span>
+  <!-- 3. FARQ -->
+  <section class="card s6">
+    <h2>3. Hamara farq (Aaya − Gaya)</h2>
+    <div class="label">Chiller par aaya − hamare chiller se gaya</div>
+    <div class="big warn">72 L</div>
+    <div class="sm">Ye hamare andar ka farq hai. Ise band karne se pehle wajah likhni zaroori hai (spoil, galti, ya bacha stock).</div>
+    <div class="task" style="margin-top:12px"><span class="dot" style="background:var(--amber)"></span><div>Wajah abhi nahi likhi gayi: <b>72 L</b> ka farq</div></div>
+  </section>
+
+  <!-- 4. RASEED ALAG -->
+  <section class="card s6">
+    <h2>4. Raseed: manzil par kya pahuncha (receiver/raaste ka)</h2>
+    <div class="label">Ye hamara farq nahi badalta</div>
+    <table style="margin-top:8px">
+      <thead><tr><th>Manzil</th><th class="r">Gaya</th><th class="r">Pahuncha</th><th class="r">Farq</th></tr></thead>
+      <tbody>
+        <tr><td>Company</td><td class="r">2,180 L</td><td class="r">2,180 L</td><td class="r">0</td></tr>
+        <tr><td>Vendor</td><td class="r">960 L</td><td class="r">942.7 L</td><td class="r">17.3 L</td></tr>
+        <tr><td>Party</td><td class="r">270 L</td><td class="r">—</td><td class="r"><span class="warn">raseed baqi</span></td></tr>
+      </tbody>
+    </table>
+    <div class="note">Ye farq vendor/receiver ka hisaab hai, hamari zimmedari nahi.</div>
+  </section>
+
+  <!-- 5. FARMER -->
+  <section class="card s12">
+    <h2>5. Farmer ka hisaab (is din ki entries)</h2>
+    <div class="flow" style="grid-template-columns:repeat(4,1fr)">
+      <div class="node"><div class="label">Farmer entries (litre)</div><div class="big">3,190.0 L</div><div class="sm">sample · qatarein aur farmers ki ginti</div></div>
+      <div class="node"><div class="label">Farmer ko dena (Rs)</div><div class="big">Rs 456,170</div><div class="sm">har farmer ka apna rate</div></div>
+      <div class="node"><div class="label">Chiller − Farmer entries</div><div class="big warn">292.0 L</div><div class="sm">farmer entries kam hain, pehle yeh bharein</div></div>
+      <div class="node"><div class="label">Kul baqaya (sab, aaj tak)</div><div class="big">Rs —</div><div class="sm">adaigi din se nahi jodi jati</div></div>
     </div>
+    <div class="note">Farmer ka rate har farmer ka apna hai. Ye system mein abhi nahi hai, is ke baghair Rs ki raqam sirf global rate par hai.</div>
+  </section>
+
+  <!-- 6. KAAM JO BAAQI -->
+  <section class="card s12">
+    <h2>6. Din band karne se pehle kya baaqi hai</h2>
+    <div class="task"><span class="dot" style="background:var(--red)"></span><div><b>HM-4 ka chiller total nahi</b> — gross, FAT, LR darj karein</div></div>
+    <div class="task"><span class="dot" style="background:var(--red)"></span><div><b>Farmer entries mein 292.0 L kam</b> — chiller aur farmer ka farq wajah ke saath</div></div>
+    <div class="task"><span class="dot" style="background:var(--amber)"></span><div><b>Vendor slip par rate nahi</b> — 22°C wali slip par rate likhein</div></div>
+    <div class="task"><span class="dot" style="background:var(--amber)"></span><div><b>72 L hamare andar ka farq</b> — wajah likhein</div></div>
+    <div class="task"><span class="dot" style="background:var(--violet)"></span><div><b>Possible duplicate: 6 entries</b> — ek farmer, ek din, ek shift</div></div>
+    <div class="note">Din tab hi band hoga jab chiller ke sab totals darj hon aur farq ki wajah likhi ho. Band hone ke baad sirf reversal se tabdeeli hogi.</div>
   </section>
 
 </main>
