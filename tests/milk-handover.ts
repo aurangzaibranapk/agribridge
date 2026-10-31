@@ -8,13 +8,18 @@ import {
   certificateShareText,
   dayMilkVariance,
   formulaFromRateRow,
+  baselineForDestination,
+  chillerIntake,
+  dayDestinationSummary,
   gapKind,
   grossTotal,
+  initialBaseline,
   lineSpecFlags,
   lrCorrectionLabel,
   lrCorrectionPoints,
   milkVariance,
   parseHandoverLines,
+  parseHandoverReason,
   specFlagText,
   suggestLab,
   tsOf,
@@ -178,5 +183,94 @@ assert.match(slip, /Kisan Pakistan/);
 assert.match(slip, /vendor 22°C \+3/);
 assert.match(slip, /LR recipe: vendor 22°C/);
 assert.doesNotMatch(slip, /Kisan ka Wasela|کسان کا وسیلہ/);
+
+assert.equal(baselineForDestination("company", 22), 20);
+assert.equal(baselineForDestination("vendor", 20), 22);
+assert.equal(baselineForDestination("party", null), 20);
+assert.equal(baselineForDestination("party", 22), 22);
+assert.equal(initialBaseline("party", 22, false), 22);
+assert.equal(initialBaseline("party", 22, true), 22);
+assert.equal(initialBaseline("company", 22, false), 20);
+assert.equal(initialBaseline("company", 22, true), 22);
+assert.equal(parseHandoverReason(""), null);
+assert.equal(parseHandoverReason("spoil"), "spoil");
+assert.equal(parseHandoverReason("nope"), "invalid");
+
+const none = chillerIntake([], []);
+assert.equal(none.inL, null);
+assert.equal(none.status, "none");
+const intakePartial = chillerIntake([{ routeName: "A", receivedL: null }], [{ source: "mca_field", routeName: "A", liters: 10 }]);
+assert.equal(intakePartial.status, "partial");
+assert.equal(intakePartial.inL, null);
+const full = chillerIntake(
+  [{ routeName: "A", receivedL: 900 }],
+  [{ source: "mca_field", routeName: "A", liters: 920 }, { source: "self_delivery", routeName: null, liters: 100 }]
+);
+assert.equal(full.inL, 1000);
+const dayOut = dayDestinationSummary({
+  intake: full,
+  slips: [
+    { destination: "company", grossL: 600, adjustedL: 590, receivedL: 580 },
+    { destination: "vendor", grossL: 300, adjustedL: 290, receivedL: null },
+    { destination: "party", grossL: 80, adjustedL: 80, receivedL: 80 },
+  ],
+});
+assert.equal(dayOut.varianceL, 20);
+assert.equal(dayOut.company.receivedL, 580);
+assert.equal(dayOut.vendor.receivedL, null);
+assert.equal(dayOut.vendor.receiptPending, 1);
+const noVendor = dayDestinationSummary({
+  intake: full,
+  slips: [{ destination: "company", grossL: 600, adjustedL: 590, receivedL: 600 }],
+});
+assert.equal(noVendor.vendor.grossL, null);
+assert.equal(noVendor.varianceL, 400);
+const untracked = dayDestinationSummary({
+  intake: none,
+  slips: [{ destination: "company", grossL: 10, adjustedL: 10, receivedL: 10 }],
+});
+assert.equal(untracked.varianceL, null);
+assert.equal(untracked.inL, null);
+
+const partySlip = certificateShareText({
+  mccName: "Kisaan",
+  date: "2026-10-31",
+  time: "",
+  shiftLabel: "Subah",
+  vehicle: null,
+  driver: null,
+  lines: [],
+  grossTotal: 40,
+  adjustedTotal: null,
+  accepted: true,
+  rejectionReason: null,
+  lrBaseline: 22,
+  destination: "party",
+  partyName: "Ali Dairy",
+  handoverReason: null,
+});
+assert.match(partySlip, /Manzil: Party — Ali Dairy/);
+assert.match(partySlip, /LR recipe: vendor 22°C/);
+assert.doesNotMatch(partySlip, /Wajah:/);
+const partySpoil = certificateShareText({
+  mccName: "Kisaan",
+  date: "2026-10-31",
+  time: "",
+  shiftLabel: "Subah",
+  vehicle: null,
+  driver: null,
+  lines: [],
+  grossTotal: 40,
+  adjustedTotal: null,
+  accepted: true,
+  rejectionReason: null,
+  lrBaseline: 20,
+  destination: "party",
+  partyName: "Ali Dairy",
+  handoverReason: "spoil",
+});
+assert.match(partySpoil, /LR recipe: company agreement 20°C/);
+assert.match(partySpoil, /Wajah: Kharab \(spoil\)/);
+assert.doesNotMatch(partySlip, /Kisan ka Wasela|کسان کا وسیلہ/);
 
 console.log("milk-handover lib: ok");

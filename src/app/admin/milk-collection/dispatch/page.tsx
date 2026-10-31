@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/ui/layout-primitives";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
+import { parseDestination } from "@/lib/milk-handover";
 import Link from "next/link";
 import { DispatchClient } from "./dispatch-client";
 
@@ -22,16 +23,33 @@ export default async function MilkDispatchPage() {
   const supabase = createClient();
   const lang = getLanguageFromCookies("rm");
 
-  const [{ data: branches }, { data: rows }, { data: auth }] = await Promise.all([
+  const [{ data: branches }, dispatchRes, { data: auth }] = await Promise.all([
     supabase.from("branches").select("id, name").eq("is_active", true).order("name"),
     supabase
       .from("milk_dispatches")
-      .select("id, dispatch_date, shift, branch_id, vehicle_name, driver_name, dispatched_liters, received_liters, shortage_liters, shortage_percentage, notes, created_by, received_by, branches(name)")
+      .select("id, dispatch_date, shift, branch_id, vehicle_name, driver_name, dispatched_liters, received_liters, shortage_liters, shortage_percentage, notes, created_by, received_by, destination, party_id, branches(name)")
       .order("dispatch_date", { ascending: false })
       .order("shift")
       .limit(60),
     supabase.auth.getUser(),
   ]);
+  let rows = dispatchRes.data;
+  let destReady = !dispatchRes.error;
+  if (dispatchRes.error && /destination|party_id/i.test(dispatchRes.error.message)) {
+    destReady = false;
+    const again = await supabase
+      .from("milk_dispatches")
+      .select("id, dispatch_date, shift, branch_id, vehicle_name, driver_name, dispatched_liters, received_liters, shortage_liters, shortage_percentage, notes, created_by, received_by, branches(name)")
+      .order("dispatch_date", { ascending: false })
+      .order("shift")
+      .limit(60);
+    rows = again.data as typeof rows;
+  }
+  const partyIds = destReady ? [...new Set((rows ?? []).map((row) => row.party_id).filter((id): id is string => !!id))] : [];
+  const { data: partyRows } = partyIds.length
+    ? await supabase.from("milk_handover_parties").select("id, name").in("id", partyIds)
+    : { data: [] as { id: string; name: string }[] };
+  const partyNames = new Map((partyRows ?? []).map((party) => [party.id, party.name]));
   const { data: me } = auth.user
     ? await supabase.from("profiles").select("role").eq("id", auth.user.id).maybeSingle()
     : { data: null };
@@ -66,6 +84,11 @@ export default async function MilkDispatchPage() {
           shortagePct: r.shortage_percentage === null ? null : Number(r.shortage_percentage),
           createdBy: r.created_by ?? null,
           receivedBy: r.received_by ?? null,
+          destinationLabel: !destReady ? "" : r.destination === "party"
+            ? `${t("mh_flow_party", lang)}${r.party_id && partyNames.get(r.party_id) ? `: ${partyNames.get(r.party_id)}` : ""}`
+            : parseDestination(r.destination) === "vendor"
+              ? t("mh_flow_vendor", lang)
+              : t("mh_flow_company", lang),
         }))}
       />
     </div>

@@ -7,7 +7,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { requireAction } from "@/lib/access/guard";
 import { diffFields, logAudit } from "@/lib/audit";
 import { rpcError } from "@/lib/dairy/rules";
-import { grossTotal, lineToSql, lrRecipeLabel, parseHandoverLines, parseLrBaseline, type HandoverLineInput, type ParsedLine } from "@/lib/milk-handover";
+import { grossTotal, lineToSql, lrRecipeLabel, parseDestination, parseHandoverLines, parseHandoverReason, parseLrBaseline, baselineForDestination, type HandoverLineInput, type ParsedLine } from "@/lib/milk-handover";
+import { createHandoverPartyRecord } from "@/actions/milk-handover-party";
 
 export interface HandoverState {
   error?: string;
@@ -77,6 +78,33 @@ export async function saveMilkHandover(_prev: HandoverState, formData: FormData)
     return { error: "Radd ki wajah kam az kam 3 haroof ki likhein." };
   }
 
+  const destination = parseDestination(formData.get("destination"));
+  if (!destination) return { error: "Manzil company, vendor ya party honi chahiye." };
+  const reasonParsed = parseHandoverReason(formData.get("handover_reason"));
+  if (destination === "party" && reasonParsed === "invalid") {
+    return { error: "Wajah sale, given, spoil ya other ho — ya khali chhor dein. Kharab lazmi nahi." };
+  }
+  const handoverReason = destination === "party" && reasonParsed !== "invalid" ? reasonParsed : null;
+  let partyId: string | null = null;
+  if (destination === "party") {
+    const rawParty = String(formData.get("party_id") ?? "").trim();
+    if (rawParty === "new") {
+      const created = await createHandoverPartyRecord({
+        userId: caller.userId,
+        name: String(formData.get("party_name") ?? ""),
+        contact: String(formData.get("party_contact") ?? "").trim() || null,
+        active: true,
+      });
+      if ("error" in created) return created;
+      partyId = created.id;
+    } else if (!/^[0-9a-f-]{36}$/i.test(rawParty)) {
+      return { error: "Party chunein, ya naya naam likhein." };
+    } else {
+      partyId = rawParty;
+    }
+  }
+  const baseline = baselineForDestination(destination, parseLrBaseline(formData.get("lr_baseline")));
+
   const locked = String(formData.get("litres_locked") ?? "") === "yes";
   let linesJson: unknown = null;
   let parsedLines: ParsedLine[] | null = null;
@@ -137,26 +165,21 @@ export async function saveMilkHandover(_prev: HandoverState, formData: FormData)
     p_licensee_signature: lic,
     p_collector_signature: col,
     p_lines: linesJson,
+    p_destination: destination,
+    p_party_id: partyId,
+    p_handover_reason: handoverReason,
+    p_lr_baseline: baseline,
   });
 
-  if (posted.error) return { error: rpcError(posted.error.message) };
+  if (posted.error) {
+    const message = rpcError(posted.error.message);
+    if (/p_destination|destination|fn_save_milk_handover/i.test(message) && /schema cache|could not find|does not exist/i.test(message)) {
+      return { error: "Teen manzilen abhi database mein nahi. Migration 729 pehle Testing par chalao — Live se pehle backup. 728 pehle honi chahiye." };
+    }
+    return { error: message };
+  }
   const id = posted.data;
   if (!id) return { error: "Certificate mehfooz nahi hua." };
-
-  const baseline = parseLrBaseline(formData.get("lr_baseline"));
-  if (!locked) {
-    const { error: baselineError } = await createServiceClient()
-      .from("milk_dispatches")
-      .update({ lr_baseline: baseline })
-      .eq("id", id);
-    if (baselineError) {
-      return {
-        error: baselineError.message.includes("lr_baseline")
-          ? "Chiller mehfooz ho gaye, lekin LR recipe ka khana nahi mila. Migration 728 pehle Testing par chalao — phir certificate khol kar recipe dobara mehfooz karein."
-          : baselineError.message,
-      };
-    }
-  }
 
   const decision = accepted == null ? "faisla baqi" : accepted ? "qubool" : "radd";
   const gross = parsedLines ? grossTotal(parsedLines) : before ? Number(before.dispatched_liters) : null;
@@ -165,7 +188,7 @@ export async function saveMilkHandover(_prev: HandoverState, formData: FormData)
     module: "milk_dispatches",
     recordId: id,
     recordLabel: `${mcc || "MCC"} ${date} ${shift}`,
-    description: `Milk Handover Certificate — ${gross ?? "—"} L, ${decision}, ${lrRecipeLabel(baseline)}`,
+    description: `Milk Handover ${destination} — ${gross ?? "—"} L, ${decision}, ${lrRecipeLabel(baseline)}${handoverReason ? `, ${handoverReason}` : ""}`,
     changes: before
       ? diffFields(
           {
@@ -185,6 +208,10 @@ export async function saveMilkHandover(_prev: HandoverState, formData: FormData)
   });
 
   revalidatePath("/admin/milk-collection/handover");
+  revalidatePath("/admin/milk-collection/handover/company");
+  revalidatePath("/admin/milk-collection/handover/vendor");
+  revalidatePath("/admin/milk-collection/handover/party");
+  revalidatePath("/admin/milk-collection/handover/parties");
   revalidatePath(`/admin/milk-collection/handover/${id}`);
   revalidatePath("/admin/milk-collection/dispatch");
   redirect(`/admin/milk-collection/handover/${id}?saved=1`);

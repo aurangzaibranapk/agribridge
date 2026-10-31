@@ -54,8 +54,8 @@ export async function recordDispatch(_prev: DispatchState, formData: FormData): 
   });
 
   if (error) {
-    if (error.message.includes("milk_dispatch_one_per_shift")) {
-      return { error: "Is chiller ki is shift ki rawangi pehle se darj hai." };
+    if (/milk_dispatch_one_/.test(error.message)) {
+      return { error: "Is chiller ki is shift ki company rawangi pehle se darj hai. Vendor aur party ka slip Handover par alag hai." };
     }
     return { error: error.message };
   }

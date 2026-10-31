@@ -53,6 +53,9 @@ export default async function HandoverPrintPage({ params }: { params: { id: stri
     rejectionReason: row.rejectionReason,
     grossFallback: row.priorGross,
     lrBaseline: row.lrBaseline,
+    destination: row.destination,
+    partyName: row.partyName,
+    handoverReason: row.handoverReason || null,
   });
   const variance = varianceForCertificate(
     parsed.map((line) => ({ grossL: line.grossL, adjustedL: line.adjustedL })),
@@ -68,7 +71,14 @@ export default async function HandoverPrintPage({ params }: { params: { id: stri
         shareText={share.text}
         emailSubject={share.subject}
       />
-      <HandoverVarianceCard lang={lang} title={t("mh_shift_title", lang)} variance={variance} />
+      <HandoverVarianceCard
+        lang={lang}
+        title={t("mh_shift_title", lang)}
+        variance={variance}
+        grossLabel={t("mh_slip_gross", lang)}
+        receivedLabel={t("mh_slip_receipt", lang)}
+        gapLabel={t("mh_slip_gap", lang)}
+      />
       <CertificateSheet
         cert={{
           mccName: row.mccName,
@@ -88,6 +98,9 @@ export default async function HandoverPrintPage({ params }: { params: { id: stri
           specs: options.specs,
           flags,
           lrBaseline: row.lrBaseline,
+          destination: row.destination,
+          partyName: row.partyName,
+          handoverReason: row.handoverReason || null,
         }}
       />
     </div>

@@ -15,25 +15,31 @@ export function HandoverVarianceCard({
   title,
   variance,
   pendingCount = 0,
+  grossLabel,
+  receivedLabel,
+  gapLabel,
 }: {
   lang: Lang;
   title: string;
   variance: MilkVariance;
   pendingCount?: number;
+  grossLabel?: string;
+  receivedLabel?: string;
+  gapLabel?: string;
 }) {
   const grossGap = pendingCount > 0 ? `${pendingCount} raseed baqi — is din ka farq nahi` : gapText(lang, variance.grossGapL);
   return (
     <div className="mb-3 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm print:hidden">
       <p className="font-semibold text-surface-900">{title}</p>
       <p className="mt-1 text-surface-700">
-        {t("mh_aaya", lang)}: {formatQty(variance.grossL)} L
+        {grossLabel ?? t("mh_aaya", lang)}: {formatQty(variance.grossL)} L
         {" · "}
         {t("mh_adjusted_short", lang)}: {variance.adjustedL == null ? t("mh_adjusted_incomplete", lang) : `${formatQty(variance.adjustedL)} L`}
         {" · "}
-        {t("mh_gaya", lang)}: {variance.receivedL == null ? t("mh_receipt_pending", lang) : `${formatQty(variance.receivedL)} L`}
+        {receivedLabel ?? t("mh_gaya", lang)}: {variance.receivedL == null ? t("mh_receipt_pending", lang) : `${formatQty(variance.receivedL)} L`}
       </p>
       <p className="mt-1 text-surface-900">
-        {t("mh_gap_gross", lang)}: {grossGap}
+        {gapLabel ?? t("mh_gap_gross", lang)}: {grossGap}
         {variance.adjustedGapL != null && pendingCount === 0 && (
           <> · {t("mh_gap_adjusted", lang)}: {gapText(lang, variance.adjustedGapL)}</>
         )}

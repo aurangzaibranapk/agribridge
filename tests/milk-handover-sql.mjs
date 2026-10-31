@@ -6,6 +6,14 @@ import { PGlite } from "@electric-sql/pglite";
 const sql = fs.readFileSync("supabase/migrations/726_milk_handover_certificate.sql", "utf8");
 const rollback = fs.readFileSync("supabase/migrations/726_milk_handover_certificate.rollback.sql", "utf8");
 const sql728 = fs.readFileSync("supabase/migrations/728_milk_handover_lr_recipe.sql", "utf8");
+const sql729 = fs.readFileSync("supabase/migrations/729_milk_handover_destinations.sql", "utf8");
+const rollback729 = fs.readFileSync("supabase/migrations/729_milk_handover_destinations.rollback.sql", "utf8");
+assert.match(sql729, /destination text not null default 'company'/);
+assert.match(sql729, /milk_handover_parties/);
+assert.match(sql729, /v_base := 20/);
+assert.match(sql729, /v_base := 22/);
+assert.match(sql729, /kharab lazmi nahi/);
+assert.doesNotMatch(sql729, /کسان کا وسیلہ|Kisan ka Wasela/i);
 assert.match(sql728, /lr_baseline smallint not null default 20/);
 assert.match(sql728, /vendor 24\+3=27/);
 assert.doesNotMatch(sql728, /کسان کا وسیلہ|Kisan ka Wasela/i);
@@ -149,6 +157,13 @@ const help = await one(`select array_to_string(how_steps, ' ') as steps from pub
 assert.match(help.steps, /20°C/);
 assert.match(help.steps, /22°C/);
 assert.match(help.steps, /24\+3=27/);
+await run(sql729);
+await run(sql729);
+const help729 = await one(`select array_to_string(how_steps, ' ') as steps from public.feature_help where feature_key = 'milk-collection.handover' and lang = 'rm'`);
+assert.match(help729.steps, /Party/);
+assert.match(help729.steps, /20/);
+assert.match(help729.steps, /22/);
+assert.match(help729.steps, /lazmi nahi/);
 const before = await one("select count(*)::int as n from public.milk_dispatches");
 assert.equal(before.n, 0, "migration ne litre nahi bharne");
 const specs = await one("select min_fat, min_lr, min_snf from public.milk_handover_specs");
@@ -279,6 +294,83 @@ try {
   err = e;
 }
 assert.match(String(err.message), /pehle se darj hai/);
+
+const PARTY = "00000000-0000-0000-0000-0000000000d1";
+const PARTY2 = "00000000-0000-0000-0000-0000000000d2";
+const partyId = await one(`select public.fn_save_milk_handover_party('${BY}'::uuid, null, 'Ali Dairy', '03001234567', true)::text as id`);
+const party2 = await one(`select public.fn_save_milk_handover_party('${BY}'::uuid, null, 'Basit Milk', null, true)::text as id`);
+assert.ok(partyId.id);
+const saveAs = (shift, dest, party, reason, baseline) => `
+select public.fn_save_milk_handover(
+  '${BY}'::uuid, null, '${BRANCH}'::uuid, '${SHOP}'::uuid,
+  '2026-10-30'::date, '${shift}', null, 'Kisaan Milk Center',
+  null, null, null, null, null, null, null, null,
+  ${lines(below)},
+  '${dest}',
+  ${party ? `'${party}'::uuid` : "null"},
+  ${reason ? `'${reason}'` : "null"},
+  ${baseline == null ? "null" : baseline}
+)::text as id
+`;
+const vendorRow = await one(saveAs("morning", "vendor", null, null, 20));
+const vendorBase = await one(`select destination, lr_baseline::int as base, party_id from public.milk_dispatches where id = '${vendorRow.id}'`);
+assert.equal(vendorBase.destination, "vendor");
+assert.equal(Number(vendorBase.base), 22, "vendor form 20 bheje to bhi 22");
+assert.equal(vendorBase.party_id, null);
+
+const partyRow = await one(saveAs("morning", "party", partyId.id, null, null));
+const partyBase = await one(`select destination, lr_baseline::int as base, handover_reason, party_id from public.milk_dispatches where id = '${partyRow.id}'`);
+assert.equal(partyBase.destination, "party");
+assert.equal(Number(partyBase.base), 20, "party default 20");
+assert.equal(partyBase.handover_reason, null, "spoil lazmi nahi");
+assert.equal(partyBase.party_id, partyId.id);
+
+const party22 = await one(saveAs("evening", "party", partyId.id, "spoil", 22));
+const party22Base = await one(`select lr_baseline::int as base, handover_reason from public.milk_dispatches where id = '${party22.id}'`);
+assert.equal(Number(party22Base.base), 22, "party 22 chun sakta hai");
+assert.equal(party22Base.handover_reason, "spoil");
+
+err = null;
+try {
+  await run(saveAs("evening", "party", partyId.id, "nope", 20));
+} catch (e) {
+  err = e;
+}
+assert.match(String(err && err.message), /kharab lazmi nahi/);
+
+const otherParty = await one(saveAs("evening", "party", party2.id, null, 20));
+assert.ok(otherParty.id);
+
+err = null;
+try {
+  await run(saveAs("morning", "company", null, null, 22));
+} catch (e) {
+  err = e;
+}
+assert.match(String(err && err.message), /pehle se darj hai/);
+
+const eveningCompany = await one(saveAs("evening", "company", null, null, 22));
+const forced = await one(`select lr_baseline::int as base, destination from public.milk_dispatches where id = '${eveningCompany.id}'`);
+assert.equal(forced.destination, "company");
+assert.equal(Number(forced.base), 20, "company hamesha 20");
+
+err = null;
+try {
+  await run(`select public.fn_save_milk_handover_party('${BY}'::uuid, null, 'Ali Dairy', null, true)`);
+} catch (e) {
+  err = e;
+}
+assert.match(String(err && err.message), /pehle se hai/);
+
+await run(`
+delete from public.milk_dispatch_lines where dispatch_id <> '${id}';
+delete from public.milk_dispatches where id <> '${id}';
+`);
+await run(rollback729);
+const destGone = await one(`select column_name from information_schema.columns where table_name = 'milk_dispatches' and column_name = 'destination'`);
+assert.equal(destGone, undefined);
+const keptBaseline = await one(`select lr_baseline::int as base from public.milk_dispatches where id = '${id}'`);
+assert.equal(Number(keptBaseline.base), 20, "rollback 728 ka recipe khana nahi mitata");
 
 await run(rollback);
 const gone = await one(`select to_regclass('public.milk_dispatch_lines') as t`);

@@ -1,4 +1,4 @@
-import { formatQty, lrCorrection, lrRecipeLabel, specFlagText, type HandoverSpecs, type LrBaseline, type SpecFlag } from "@/lib/milk-handover";
+import { destinationShareLine, formatQty, handoverReasonLabel, lrCorrection, lrRecipeLabel, specFlagText, type HandoverDestination, type HandoverReason, type HandoverSpecs, type LrBaseline, type SpecFlag } from "@/lib/milk-handover";
 
 export interface CertificateLineView {
   chillerNo: string;
@@ -32,6 +32,9 @@ export interface CertificateView {
   specs: HandoverSpecs;
   flags: SpecFlag[];
   lrBaseline: LrBaseline;
+  destination?: HandoverDestination;
+  partyName?: string | null;
+  handoverReason?: HandoverReason | null;
 }
 
 function cell(value: string) {
@@ -67,7 +70,15 @@ export function CertificateSheet({ cert }: { cert: CertificateView }) {
             </tr>
           </tbody>
         </table>
-        <h1 className="pt-6 text-center text-lg font-bold tracking-tight">Milk Handover Certificate</h1>
+        <div className="pt-6 text-center">
+          <h1 className="text-lg font-bold tracking-tight">Milk Handover Certificate</h1>
+          {cert.destination && (
+            <p className="mt-1 text-[11px] font-semibold">
+              {destinationShareLine(cert.destination, cert.partyName)}
+              {cert.handoverReason ? ` · Wajah: ${handoverReasonLabel(cert.handoverReason)}` : ""}
+            </p>
+          )}
+        </div>
         <div className="justify-self-end pt-4 text-right leading-none">
           <div className="font-serif text-3xl font-bold text-[#e36f12]" dir="rtl">
             کسان

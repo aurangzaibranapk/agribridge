@@ -2,14 +2,24 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAction } from "@/lib/access/guard";
 import {
   PAPER_SPECS,
+  adjustedTotal,
+  baselineForDestination,
+  chillerIntake,
+  dayDestinationSummary,
   formulaFromRateRow,
+  parseDestination,
+  parseHandoverReason,
   parseLrBaseline,
+  type DayDestinationSummary,
+  type HandoverDestination,
   type HandoverLineInput,
+  type HandoverReason,
   type HandoverSpecs,
   type LabFormula,
   type LrBaseline,
+  type SlipBucketInput,
 } from "@/lib/milk-handover";
-import type { HandoverShop } from "@/app/admin/milk-collection/handover/handover-form";
+import type { HandoverPartyOption, HandoverShop } from "@/app/admin/milk-collection/handover/handover-form";
 
 const ROLES = ["owner", "super_admin", "admin", "manager", "milk_collection"];
 
@@ -91,6 +101,10 @@ export interface LoadedCertificate {
   hadLines: boolean;
   received: number | null;
   lrBaseline: LrBaseline;
+  destination: HandoverDestination;
+  partyId: string;
+  partyName: string;
+  handoverReason: "" | HandoverReason;
 }
 
 function numStr(value: number | null | undefined): string {
@@ -103,16 +117,31 @@ export async function loadCertificate(id: string): Promise<LoadedCertificate | {
   const columns = "id, branch_id, shop_id, dispatch_date, shift, collection_time, mcc_name, vehicle_name, driver_name, notes, accepted, rejection_reason, licensee_rep_name, licensee_signature, collector_signature, dispatched_liters, received_liters";
   let { data, error } = await supabase
     .from("milk_dispatches")
-    .select(`${columns}, lr_baseline`)
+    .select(`${columns}, lr_baseline, destination, party_id, handover_reason`)
     .eq("id", id)
     .maybeSingle();
   let lrBaseline: LrBaseline = 20;
-  if (error && /lr_baseline/i.test(error.message)) {
-    const again = await supabase.from("milk_dispatches").select(columns).eq("id", id).maybeSingle();
-    data = again.data as typeof data;
-    error = again.error;
-  } else if (data && "lr_baseline" in data) {
-    lrBaseline = parseLrBaseline((data as { lr_baseline?: number | null }).lr_baseline);
+  let destination: HandoverDestination = "company";
+  let partyId = "";
+  let handoverReason: "" | HandoverReason = "";
+  if (error && /destination|party_id|handover_reason|lr_baseline/i.test(error.message)) {
+    const again = await supabase.from("milk_dispatches").select(`${columns}, lr_baseline`).eq("id", id).maybeSingle();
+    if (again.error && /lr_baseline/i.test(again.error.message)) {
+      const third = await supabase.from("milk_dispatches").select(columns).eq("id", id).maybeSingle();
+      data = third.data as typeof data;
+      error = third.error;
+    } else {
+      data = again.data as typeof data;
+      error = again.error;
+      if (data && "lr_baseline" in data) lrBaseline = parseLrBaseline((data as { lr_baseline?: number | null }).lr_baseline);
+    }
+  } else if (data) {
+    const row = data as { lr_baseline?: number | null; destination?: string | null; party_id?: string | null; handover_reason?: string | null };
+    lrBaseline = parseLrBaseline(row.lr_baseline);
+    destination = parseDestination(row.destination) ?? "company";
+    partyId = row.party_id ?? "";
+    const reason = parseHandoverReason(row.handover_reason);
+    handoverReason = reason === "invalid" || reason == null ? "" : reason;
   }
   if (error) {
     return { error: "Milk Handover Certificate ka table abhi nahi. Migration 726 pehle Testing par chalao — Live se pehle backup." };
@@ -140,6 +169,12 @@ export async function loadCertificate(id: string): Promise<LoadedCertificate | {
     organo: line.organo ?? "",
   }));
 
+  let partyName = "";
+  if (partyId) {
+    const { data: party } = await supabase.from("milk_handover_parties").select("name").eq("id", partyId).maybeSingle();
+    partyName = party?.name ?? "";
+  }
+
   const time = (data.collection_time ?? "").slice(0, 5);
   return {
     id: data.id,
@@ -163,5 +198,211 @@ export async function loadCertificate(id: string): Promise<LoadedCertificate | {
     hadLines: lines.length > 0,
     received: data.received_liters == null ? null : Number(data.received_liters),
     lrBaseline,
+    destination,
+    partyId,
+    partyName,
+    handoverReason,
   };
+}
+
+export async function loadHandoverParties(): Promise<{ parties: HandoverPartyOption[]; error: string | null }> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("milk_handover_parties").select("id, name, contact, is_active").order("name");
+  if (error) {
+    return { parties: [], error: "Party master abhi nahi. Migration 729 pehle Testing par chalao — Live se pehle backup." };
+  }
+  return {
+    parties: (data ?? []).map((party) => ({
+      id: party.id,
+      name: party.name,
+      contact: party.contact,
+      active: party.is_active,
+    })),
+    error: null,
+  };
+}
+
+export interface FlowSlip {
+  id: string;
+  date: string;
+  shift: string;
+  mccName: string;
+  grossL: number;
+  adjustedL: number | null;
+  accepted: boolean | null;
+  receivedL: number | null;
+  destination: HandoverDestination;
+  partyName: string | null;
+  lrBaseline: LrBaseline;
+}
+
+const MIGRATION_729 = "Company, Vendor aur Party ke liye migration 729 pehle Testing par chalao — Live se pehle backup. 728 pehle honi chahiye.";
+
+type DispatchLoose = {
+  id: string;
+  dispatch_date: string;
+  shift: string;
+  mcc_name: string | null;
+  dispatched_liters: number;
+  accepted: boolean | null;
+  received_liters: number | null;
+  branch_id: string | null;
+  destination?: string | null;
+  party_id?: string | null;
+  handover_reason?: string | null;
+  lr_baseline?: number | null;
+  branches: { name?: string } | { name?: string }[] | null;
+};
+
+function branchNameOf(branches: DispatchLoose["branches"]): string {
+  if (!branches) return "";
+  if (Array.isArray(branches)) return branches[0]?.name ?? "";
+  return branches.name ?? "";
+}
+
+export async function loadFlowSlips(input: {
+  destination: HandoverDestination;
+  date: string;
+  branchId: string | null;
+}): Promise<{ rows: FlowSlip[]; ready: boolean; error: string | null }> {
+  const supabase = createClient();
+  const full = "id, dispatch_date, shift, mcc_name, dispatched_liters, accepted, received_liters, branch_id, destination, party_id, lr_baseline, branches(name)";
+  let query = supabase.from("milk_dispatches").select(full).order("dispatch_date", { ascending: false }).order("shift").limit(40);
+  if (input.date) query = query.eq("dispatch_date", input.date);
+  if (input.branchId) query = query.eq("branch_id", input.branchId);
+  query = query.eq("destination", input.destination);
+  let { data, error } = await query;
+  let ready = true;
+  if (error && /destination|party_id|lr_baseline/i.test(error.message)) {
+    ready = false;
+    if (input.destination !== "company") return { rows: [], ready: false, error: MIGRATION_729 };
+    let again = supabase
+      .from("milk_dispatches")
+      .select("id, dispatch_date, shift, mcc_name, dispatched_liters, accepted, received_liters, branch_id, branches(name)")
+      .order("dispatch_date", { ascending: false })
+      .order("shift")
+      .limit(40);
+    if (input.date) again = again.eq("dispatch_date", input.date);
+    if (input.branchId) again = again.eq("branch_id", input.branchId);
+    const fallback = await again;
+    data = fallback.data as typeof data;
+    error = fallback.error;
+  }
+  if (error) return { rows: [], ready, error: "Milk Handover ki fehrist nahi mili. Migration 726 pehle Testing par chalao." };
+  const rows = await withAdjusted((data ?? []) as unknown as DispatchLoose[], ready);
+  return { rows, ready, error: null };
+}
+
+export async function loadHandoverDay(input: {
+  date: string;
+  branchId: string | null;
+}): Promise<{ summary: DayDestinationSummary; slips: FlowSlip[]; ready: boolean; error: string | null }> {
+  const supabase = createClient();
+  let query = supabase
+    .from("milk_dispatches")
+    .select("id, dispatch_date, shift, mcc_name, dispatched_liters, accepted, received_liters, branch_id, destination, party_id, lr_baseline, branches(name)")
+    .eq("dispatch_date", input.date)
+    .limit(200);
+  if (input.branchId) query = query.eq("branch_id", input.branchId);
+  let { data, error } = await query;
+  let ready = true;
+  if (error && /destination|party_id|lr_baseline/i.test(error.message)) {
+    ready = false;
+    let again = supabase
+      .from("milk_dispatches")
+      .select("id, dispatch_date, shift, mcc_name, dispatched_liters, accepted, received_liters, branch_id, branches(name)")
+      .eq("dispatch_date", input.date)
+      .limit(200);
+    if (input.branchId) again = again.eq("branch_id", input.branchId);
+    const fallback = await again;
+    data = fallback.data as typeof data;
+    error = fallback.error;
+  }
+  if (error) {
+    return {
+      summary: dayDestinationSummary({ intake: { inL: null, incomplete: false, status: "none" }, slips: [] }),
+      slips: [],
+      ready,
+      error: "Milk Handover ki fehrist nahi mili. Migration 726 pehle Testing par chalao.",
+    };
+  }
+  const slips = await withAdjusted((data ?? []) as unknown as DispatchLoose[], ready);
+  const intake = await loadIntake(input.date, input.branchId);
+  const buckets: SlipBucketInput[] = slips.map((slip) => ({
+    destination: slip.destination,
+    grossL: slip.grossL,
+    adjustedL: slip.adjustedL,
+    receivedL: slip.receivedL,
+  }));
+  return { summary: dayDestinationSummary({ intake, slips: buckets }), slips, ready, error: null };
+}
+
+async function loadIntake(date: string, branchId: string | null) {
+  const supabase = createClient();
+  let routes = supabase
+    .from("milk_route_collections")
+    .select("route_name, chiller_received_volume")
+    .eq("collection_date", date);
+  let entries = supabase
+    .from("milk_entries")
+    .select("quantity_liters, collection_source, route_name, status")
+    .eq("entry_date", date)
+    .neq("status", "rejected");
+  if (branchId) {
+    routes = routes.eq("branch_id", branchId);
+    entries = entries.eq("branch_id", branchId);
+  }
+  const [routeRes, entryRes] = await Promise.all([routes, entries]);
+  if (routeRes.error || entryRes.error) return { inL: null, incomplete: false, status: "none" as const };
+  return chillerIntake(
+    (routeRes.data ?? []).map((row) => ({
+      routeName: row.route_name,
+      receivedL: row.chiller_received_volume == null ? null : Number(row.chiller_received_volume),
+    })),
+    (entryRes.data ?? []).map((row) => ({
+      source: row.collection_source,
+      routeName: row.route_name,
+      liters: Number(row.quantity_liters),
+    }))
+  );
+}
+
+async function withAdjusted(rows: DispatchLoose[], ready = true): Promise<FlowSlip[]> {
+  const supabase = createClient();
+  const ids = rows.map((row) => row.id);
+  const lineQuery = ids.length
+    ? await supabase.from("milk_dispatch_lines").select("dispatch_id, gross_volume_l, adjusted_volume_l").in("dispatch_id", ids)
+    : { data: [] as { dispatch_id: string; gross_volume_l: number; adjusted_volume_l: number | null }[] };
+  const grouped = new Map<string, { grossL: number; adjustedL: number | null }[]>();
+  for (const line of lineQuery.data ?? []) {
+    const bucket = grouped.get(line.dispatch_id) ?? [];
+    bucket.push({
+      grossL: Number(line.gross_volume_l),
+      adjustedL: line.adjusted_volume_l == null ? null : Number(line.adjusted_volume_l),
+    });
+    grouped.set(line.dispatch_id, bucket);
+  }
+  const partyIds = [...new Set(rows.map((row) => row.party_id).filter((id): id is string => !!id))];
+  const names = new Map<string, string>();
+  if (partyIds.length) {
+    const { data: parties } = await supabase.from("milk_handover_parties").select("id, name").in("id", partyIds);
+    for (const party of parties ?? []) names.set(party.id, party.name);
+  }
+  return rows.map((row) => {
+    const destination = ready ? (parseDestination(row.destination) ?? "company") : "company";
+    const lines = grouped.get(row.id);
+    return {
+      id: row.id,
+      date: row.dispatch_date,
+      shift: row.shift,
+      mccName: row.mcc_name || branchNameOf(row.branches) || "—",
+      grossL: Number(row.dispatched_liters),
+      adjustedL: lines ? adjustedTotal(lines) : null,
+      accepted: row.accepted,
+      receivedL: row.received_liters == null ? null : Number(row.received_liters),
+      destination,
+      partyName: row.party_id ? names.get(row.party_id) ?? null : null,
+      lrBaseline: ready ? parseLrBaseline(row.lr_baseline) : baselineForDestination(destination),
+    };
+  });
 }

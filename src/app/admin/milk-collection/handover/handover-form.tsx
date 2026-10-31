@@ -17,7 +17,11 @@ import {
   lrCorrection,
   lrCorrectionLabel,
   parseHandoverLines,
+  destinationShareLine,
+  initialBaseline,
   seedAutoLab,
+  type HandoverDestination,
+  type HandoverReason,
   type LrBaseline,
   specFlagText,
   tsOf,
@@ -35,8 +39,18 @@ export interface HandoverShop {
   branchId: string | null;
 }
 
+export interface HandoverPartyOption {
+  id: string;
+  name: string;
+  contact: string | null;
+  active: boolean;
+}
+
 export interface HandoverFormProps {
   lang: Lang;
+  destination: HandoverDestination;
+  parties?: HandoverPartyOption[];
+  partyError?: string | null;
   branches: { id: string; name: string }[];
   shops: HandoverShop[];
   specs: HandoverSpecs;
@@ -63,6 +77,8 @@ export interface HandoverFormProps {
     collectorSignature: string;
     lines: HandoverLineInput[];
     lrBaseline?: LrBaseline;
+    partyId?: string;
+    handoverReason?: "" | HandoverReason;
   };
 }
 
@@ -82,13 +98,22 @@ export function HandoverForm(props: HandoverFormProps) {
   const [accepted, setAccepted] = useState(props.defaults.accepted);
   const [licenseeSignature, setLicenseeSignature] = useState(props.defaults.licenseeSignature);
   const [collectorSignature, setCollectorSignature] = useState(props.defaults.collectorSignature);
-  const [baseline, setBaseline] = useState<LrBaseline>(props.defaults.lrBaseline ?? 20);
+  const [partyId, setPartyId] = useState(props.defaults.partyId ?? "");
+  const [reason, setReason] = useState<"" | HandoverReason>(props.defaults.handoverReason ?? "");
+  const destination = props.destination;
+  const opening = initialBaseline(destination, props.defaults.lrBaseline, props.locked);
+  const [baseline, setBaseline] = useState<LrBaseline>(opening);
   const [lines, setLines] = useState<HandoverLineInput[]>(() => {
     const start = props.defaults.lines.length > 0 ? props.defaults.lines : blankCertificateLines();
-    const recipe = props.defaults.lrBaseline ?? 20;
+    const recipe = initialBaseline(destination, props.defaults.lrBaseline, props.locked);
     if (props.locked) return start;
+    const saved = props.defaults.lrBaseline;
+    if (destination !== "party" && saved && saved !== recipe) {
+      return start.map((line) => applyAutoLab(line, props.formula, "inputs", recipe));
+    }
     return start.map((line) => seedAutoLab(line, props.formula, recipe));
   });
+  const parties = (props.parties ?? []).filter((party) => party.active || party.id === partyId);
 
   const parsed = useMemo(() => parseHandoverLines(lines), [lines]);
   const liveLines = "lines" in parsed ? parsed.lines : [];
@@ -142,7 +167,14 @@ export function HandoverForm(props: HandoverFormProps) {
       {!locked && <input type="hidden" name="lines_json" value={JSON.stringify(lines)} />}
       <input type="hidden" name="licensee_signature" value={licenseeSignature} />
       <input type="hidden" name="collector_signature" value={collectorSignature} />
+      <input type="hidden" name="destination" value={destination} />
       <input type="hidden" name="lr_baseline" value={String(baseline)} />
+      {destination === "party" && locked && (
+        <>
+          <input type="hidden" name="party_id" value={partyId} />
+          <input type="hidden" name="handover_reason" value={reason} />
+        </>
+      )}
 
       {state.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
       {locked && <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">{t("mh_locked", lang)}</p>}
@@ -175,7 +207,10 @@ export function HandoverForm(props: HandoverFormProps) {
             </tr>
           </tbody>
         </table>
-        <h1 className="px-2 pt-4 text-center text-lg font-bold">Milk Handover Certificate</h1>
+        <div className="px-2 pt-4 text-center">
+          <h1 className="text-lg font-bold">Milk Handover Certificate</h1>
+          <p className="text-sm font-semibold" data-testid="handover-destination">{destinationShareLine(destination)}</p>
+        </div>
         <div className="justify-self-end pt-2 text-right leading-none">
           <div className="font-serif text-3xl font-bold text-[#e36f12]" dir="rtl">کسان</div>
           <div className="mt-1 text-[11px] font-semibold text-[#e36f12]">Kisan Pakistan</div>
@@ -220,17 +255,72 @@ export function HandoverForm(props: HandoverFormProps) {
         </div>
       </div>
 
-      <fieldset className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded border border-black px-3 py-2 text-sm">
+      <fieldset className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded border border-black px-3 py-2 text-sm" data-testid="handover-recipe">
         <legend className="px-1 font-semibold">{t("mh_recipe", lang)}</legend>
-        <label className="inline-flex items-center gap-2">
-          <input type="radio" checked={baseline === 20} disabled={locked} onChange={() => onBaseline(20)} />
-          {t("mh_recipe_20", lang)}
-        </label>
-        <label className="inline-flex items-center gap-2">
-          <input type="radio" checked={baseline === 22} disabled={locked} onChange={() => onBaseline(22)} />
-          {t("mh_recipe_22", lang)}
-        </label>
+        {destination === "party" ? (
+          <>
+            <p className="w-full text-xs text-neutral-700">{t("mh_recipe_party_note", lang)}</p>
+            <label className="inline-flex items-center gap-2">
+              <input type="radio" name="party_lr_choice" checked={baseline === 20} disabled={locked} onChange={() => onBaseline(20)} />
+              {t("mh_recipe_20", lang)}
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input type="radio" name="party_lr_choice" checked={baseline === 22} disabled={locked} onChange={() => onBaseline(22)} />
+              {t("mh_recipe_22", lang)}
+            </label>
+          </>
+        ) : (
+          <p data-testid="handover-recipe-fixed">
+            {destination === "vendor" ? t("mh_recipe_22", lang) : t("mh_recipe_20", lang)}
+            {" — "}
+            {destination === "vendor" ? t("mh_recipe_fixed_22", lang) : t("mh_recipe_fixed_20", lang)}
+          </p>
+        )}
       </fieldset>
+      {!locked && destination === "company" && props.defaults.lrBaseline === 22 && (
+        <p className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950">{t("mh_was_22", lang)}</p>
+      )}
+
+      {destination === "party" && (
+        <div className="grid gap-2 rounded border border-black p-2 sm:grid-cols-2" data-testid="handover-party">
+          {props.partyError && <p className="sm:col-span-2 text-sm text-red-700">{props.partyError}</p>}
+          <div>
+            <Label>{t("mh_party_pick", lang)}</Label>
+            <Select name={locked ? undefined : "party_id"} value={partyId} onChange={(e) => setPartyId(e.target.value)} disabled={locked}>
+              <option value="">—</option>
+              {parties.map((party) => (
+                <option key={party.id} value={party.id}>
+                  {party.name}{party.contact ? ` · ${party.contact}` : ""}{party.active ? "" : " (band)"}
+                </option>
+              ))}
+              {!locked && <option value="new">{t("mh_party_new", lang)}</option>}
+            </Select>
+          </div>
+          <div>
+            <Label>{t("mh_reason", lang)}</Label>
+            <Select name={locked ? undefined : "handover_reason"} value={reason} onChange={(e) => setReason(e.target.value as "" | HandoverReason)} disabled={locked}>
+              <option value="">{t("mh_reason_none", lang)}</option>
+              <option value="sale">{t("mh_reason_sale", lang)}</option>
+              <option value="given">{t("mh_reason_given", lang)}</option>
+              <option value="spoil">{t("mh_reason_spoil", lang)}</option>
+              <option value="other">{t("mh_reason_other", lang)}</option>
+            </Select>
+          </div>
+          {partyId === "new" && !locked && (
+            <>
+              <div>
+                <Label>{t("mh_party_name", lang)}</Label>
+                <Input name="party_name" />
+              </div>
+              <div>
+                <Label>{t("mh_party_contact", lang)}</Label>
+                <Input name="party_contact" />
+              </div>
+            </>
+          )}
+          <p className="sm:col-span-2 text-xs text-neutral-600">{t("mh_reason_hint", lang)}</p>
+        </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[920px] border-collapse border border-black text-center text-xs">
