@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ur">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Milk Management — Admin Dashboard — Mockup</title>
+<style>
+  :root { --bg:#f3f6f2; --card:#fff; --line:#e3e9e3; --text:#14241a; --muted:#6b776f;
+    --brand:#1f6b3a; --brand-d:#174d2b; --brand-l:#eaf5ec; --sona:#d9a62e; --sona-l:#fff4d6; --sona-d:#8a5f12;
+    --khatra:#c03636; --khatra-l:#fdecec; --khatra-d:#9c2b2b; --info:#2b5f8a; --info-l:#e8f1f9; --teal:#1a8a80; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,"Noto Nastaliq Urdu","Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
+  .top { background:linear-gradient(135deg,var(--brand-d),var(--brand)); color:#fff; padding:20px 28px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
+  .top h1 { margin:0; font-size:22px; } .top .sub { opacity:.85; font-size:13px; margin-top:4px; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; }
+  .pillw { background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.28); padding:6px 12px; border-radius:999px; font-size:12px; }
+  main { padding:22px 28px; display:grid; gap:18px; grid-template-columns:repeat(12,1fr); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; box-shadow:0 6px 18px rgba(20,36,26,.05); }
+  .c3{grid-column:span 3} .c4{grid-column:span 4} .c5{grid-column:span 5} .c6{grid-column:span 6} .c7{grid-column:span 7} .c8{grid-column:span 8} .c12{grid-column:span 12}
+  @media (max-width:1000px){ [class*="c"]{grid-column:span 12} }
+  .kpi-top { display:flex; justify-content:space-between; align-items:center; }
+  .kpi-ic { width:40px; height:40px; border-radius:12px; display:grid; place-items:center; font-size:18px; }
+  .kpi-label { font-size:12px; color:var(--muted); margin-top:10px; text-transform:uppercase; letter-spacing:.04em; }
+  .kpi-val { font-size:26px; font-weight:700; margin-top:4px; }
+  .kpi-sub { font-size:12px; color:var(--muted); margin-top:4px; }
+  .delta { font-size:12px; font-weight:700; }
+  .up{color:var(--brand)} .down{color:var(--khatra)}
+  h2 { font-size:15px; margin:0 0 4px; } .hint { font-size:12px; color:var(--muted); margin:0 0 12px; }
+  .pill { display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700; }
+  .p-ok{background:var(--brand-l);color:var(--brand-d)} .p-warn{background:var(--sona-l);color:var(--sona-d)} .p-bad{background:var(--khatra-l);color:var(--khatra-d)} .p-info{background:var(--info-l);color:var(--info)}
+  .legend { display:flex; gap:14px; font-size:12px; color:var(--muted); flex-wrap:wrap; margin-bottom:6px; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:6px; vertical-align:middle; }
+  .alert { display:flex; gap:12px; padding:12px 14px; border-radius:12px; margin-bottom:10px; border:1px solid; }
+  .alert .ic { width:28px; height:28px; border-radius:9px; display:grid; place-items:center; font-weight:700; flex:none; color:#fff; }
+  .alert .tt { font-weight:700; font-size:13px; } .alert .ds { font-size:12px; color:var(--muted); margin-top:3px; }
+  .a-warn{background:var(--sona-l);border-color:#ecd28a} .a-warn .ic{background:var(--sona)}
+  .a-bad{background:var(--khatra-l);border-color:#f1c3c3} .a-bad .ic{background:var(--khatra)}
+  .a-info{background:var(--info-l);border-color:#bcd5ea} .a-info .ic{background:var(--info)}
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; color:var(--muted); font-weight:600; font-size:12px; padding:9px 8px; background:#f7faf7; border-bottom:1px solid var(--line); }
+  td { padding:9px 8px; border-bottom:1px solid #eef2ee; }
+  td.r, th.r { text-align:right; } .num { font-variant-numeric:tabular-nums; }
+  .bar { height:8px; background:#edf2ed; border-radius:99px; overflow:hidden; }
+  .bar > i { display:block; height:100%; border-radius:99px; }
+  .tabs { display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
+  .tab { padding:6px 12px; border-radius:999px; font-size:12px; border:1px solid var(--line); background:#fff; }
+  .tab.on { background:var(--brand); color:#fff; border-color:var(--brand); font-weight:700; }
+  .note { font-size:12px; color:var(--muted); margin-top:10px; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div>
+    <h1>Milk Management · Admin Dashboard</h1>
+    <div class="sub">Kisan Pakistan · AgriBridge · namoona data (mockup)</div>
+  </div>
+  <div class="chips">
+    <span class="pillw">📅 Pichle 7 din</span>
+    <span class="pillw">🏭 Sab branches</span>
+    <span class="pillw">🔒 Admin</span>
+  </div>
+</div>
+
+<main>
+
+  <!-- KPIs -->
+  <section class="card c3">
+    <div class="kpi-top"><div class="kpi-ic" style="background:var(--brand-l)">🥛</div><span class="delta up">▲ 6.2%</span></div>
+    <div class="kpi-label">Aaj ka aaya (gross)</div>
+    <div class="kpi-val num">3,482 L</div>
+    <div class="kpi-sub">pichle 7 din ka ausat 3,150 L</div>
+  </section>
+  <section class="card c3">
+    <div class="kpi-top"><div class="kpi-ic" style="background:var(--info-l)">🚚</div><span class="delta up">▲ 2.1%</span></div>
+    <div class="kpi-label">Aaj ka gaya (gross)</div>
+    <div class="kpi-val num">3,410 L</div>
+    <div class="kpi-sub">3 slips · 6 shift lines</div>
+  </section>
+  <section class="card c3">
+    <div class="kpi-top"><div class="kpi-ic" style="background:var(--sona-l)">📦</div><span class="pill p-warn">baqi</span></div>
+    <div class="kpi-label">Baqi stock (gross)</div>
+    <div class="kpi-val num">72 L</div>
+    <div class="kpi-sub">agli slip mein le sakte hain</div>
+  </section>
+  <section class="card c3">
+    <div class="kpi-top"><div class="kpi-ic" style="background:var(--khatra-l)">⚖️</div><span class="delta down">▼ 1.8%</span></div>
+    <div class="kpi-label">Farq (aaya − gaya)</div>
+    <div class="kpi-val num">+72 L</div>
+    <div class="kpi-sub">gross ke hisaab se</div>
+  </section>
+
+  <!-- Trend chart -->
+  <section class="card c8">
+    <h2>Aaya aur gaya: pichle 7 din</h2>
+    <p class="hint">Gross litre. Dono lines ke beech ka khala farq hai.</p>
+    <div class="legend"><span><i style="background:var(--brand)"></i>Aaya (chiller)</span><span><i style="background:var(--info)"></i>Gaya (dispatch)</span><span><i style="background:var(--sona)"></i>Baqi</span></div>
+    <svg viewBox="0 0 720 260" width="100%" role="img" aria-label="trend chart">
+      <defs>
+        <linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#1f6b3a" stop-opacity=".30"/><stop offset="100%" stop-color="#1f6b3a" stop-opacity="0"/></linearGradient>
+        <linearGradient id="g2" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#2b5f8a" stop-opacity=".22"/><stop offset="100%" stop-color="#2b5f8a" stop-opacity="0"/></linearGradient>
+      </defs>
+      <g stroke="#e3e9e3" stroke-width="1">
+        <line x1="40" y1="20" x2="700" y2="20"/><line x1="40" y1="80" x2="700" y2="80"/><line x1="40" y1="140" x2="700" y2="140"/><line x1="40" y1="200" x2="700" y2="200"/>
+      </g>
+      <g fill="#6b776f" font-size="11">
+        <text x="6" y="24">4000</text><text x="6" y="84">3000</text><text x="6" y="144">2000</text><text x="6" y="204">1000</text>
+      </g>
+      <!-- Aaya area + line -->
+      <path d="M40,95 L140,80 L240,88 L340,70 L440,62 L540,74 L640,38 L700,46 L700,200 L40,200 Z" fill="url(#g1)"/>
+      <polyline points="40,95 140,80 240,88 340,70 440,62 540,74 640,38 700,46" fill="none" stroke="#1f6b3a" stroke-width="3" stroke-linejoin="round"/>
+      <!-- Gaya area + line -->
+      <path d="M40,110 L140,102 L240,112 L340,96 L440,100 L540,110 L640,80 L700,88 L700,200 L40,200 Z" fill="url(#g2)"/>
+      <polyline points="40,110 140,102 240,112 340,96 440,100 540,110 640,80 700,88" fill="none" stroke="#2b5f8a" stroke-width="3" stroke-linejoin="round"/>
+      <g fill="#1f6b3a"><circle cx="700" cy="46" r="5"/></g>
+      <g fill="#2b5f8a"><circle cx="700" cy="88" r="5"/></g>
+      <g fill="#6b776f" font-size="11" text-anchor="middle">
+        <text x="40" y="222">25 Oct</text><text x="140" y="222">26</text><text x="240" y="222">27</text><text x="340" y="222">28</text><text x="440" y="222">29</text><text x="540" y="222">30</text><text x="640" y="222">31</text>
+      </g>
+      <text x="700" y="34" font-size="12" text-anchor="end" fill="#1f6b3a" font-weight="700">3,482</text>
+      <text x="700" y="76" font-size="12" text-anchor="end" fill="#2b5f8a" font-weight="700">3,410</text>
+    </svg>
+  </section>
+
+  <!-- Donut: carrier share -->
+  <section class="card c4">
+    <h2>Kis ne uthaya (carrier)</h2>
+    <p class="hint">Gross litre ka hissa</p>
+    <svg viewBox="0 0 220 220" width="100%" style="max-height:220px">
+      <g transform="translate(110,110)">
+        <circle r="80" fill="none" stroke="#eaf5ec" stroke-width="28"/>
+        <circle r="80" fill="none" stroke="#1f6b3a" stroke-width="28" stroke-dasharray="301.6 502.6" transform="rotate(-90)"/>
+        <circle r="80" fill="none" stroke="#2b5f8a" stroke-width="28" stroke-dasharray="125.7 502.6" stroke-dashoffset="-301.6" transform="rotate(-90)"/>
+        <circle r="80" fill="none" stroke="#d9a62e" stroke-width="28" stroke-dasharray="75.4 502.6" stroke-dashoffset="-427.3" transform="rotate(-90)"/>
+        <text y="-4" text-anchor="middle" font-size="20" font-weight="700" fill="#14241a">3,410 L</text>
+        <text y="16" text-anchor="middle" font-size="11" fill="#6b776f">kul gaya</text>
+      </g>
+    </svg>
+    <div class="legend" style="flex-direction:column;gap:6px;margin-top:8px">
+      <span><i style="background:#1f6b3a"></i>Wasela Pakistan · 60% · 2,046 L</span>
+      <span><i style="background:#2b5f8a"></i>Vendor (wander) · 25% · 852 L</span>
+      <span><i style="background:#d9a62e"></i>Hum khud · 15% · 512 L</span>
+    </div>
+  </section>
+
+  <!-- Chiller wise bars -->
+  <section class="card c6">
+    <h2>Chiller wise (aaj)</h2>
+    <p class="hint">Aaya aur gaya, gross. Naam master list se.</p>
+    <table>
+      <thead><tr><th>Chiller</th><th>Aaya</th><th class="r">Gaya</th><th class="r">Baqi</th></tr></thead>
+      <tbody>
+        <tr><td><b>1</b></td><td><div class="bar"><i style="width:100%;background:var(--brand)"></i></div></td><td class="r num">1,240</td><td class="r num">0</td></tr>
+        <tr><td><b>2</b></td><td><div class="bar"><i style="width:87%;background:var(--brand)"></i></div></td><td class="r num">1,242</td><td class="r num">335</td></tr>
+        <tr><td><b>3</b></td><td><div class="bar"><i style="width:23%;background:var(--sona)"></i></div></td><td class="r num">—</td><td class="r num">—</td></tr>
+      </tbody>
+    </table>
+    <div class="note">"—" ka matlab data nahi. Chiller total na ho to sifar nahi dikhaya jayega.</div>
+  </section>
+
+  <!-- Shift split -->
+  <section class="card c6">
+    <h2>Shift ka hisaab</h2>
+    <p class="hint">Subah aur shaam ka aaya, pichle 7 din.</p>
+    <svg viewBox="0 0 560 200" width="100%">
+      <g fill="#6b776f" font-size="11" text-anchor="middle">
+        <text x="60" y="190">25</text><text x="140" y="190">26</text><text x="220" y="190">27</text><text x="300" y="190">28</text><text x="380" y="190">29</text><text x="460" y="190">30</text><text x="540" y="190">31</text>
+      </g>
+      <g>
+        <rect x="40" y="90" width="26" height="90" rx="5" fill="#1f6b3a"/><rect x="70" y="110" width="26" height="70" rx="5" fill="#d9a62e"/>
+        <rect x="120" y="80" width="26" height="100" rx="5" fill="#1f6b3a"/><rect x="150" y="100" width="26" height="80" rx="5" fill="#d9a62e"/>
+        <rect x="200" y="86" width="26" height="94" rx="5" fill="#1f6b3a"/><rect x="230" y="108" width="26" height="72" rx="5" fill="#d9a62e"/>
+        <rect x="280" y="70" width="26" height="110" rx="5" fill="#1f6b3a"/><rect x="310" y="96" width="26" height="84" rx="5" fill="#d9a62e"/>
+        <rect x="360" y="76" width="26" height="104" rx="5" fill="#1f6b3a"/><rect x="390" y="100" width="26" height="80" rx="5" fill="#d9a62e"/>
+        <rect x="440" y="62" width="26" height="118" rx="5" fill="#1f6b3a"/><rect x="470" y="92" width="26" height="88" rx="5" fill="#d9a62e"/>
+        <rect x="520" y="30" width="26" height="150" rx="5" fill="#1f6b3a"/><rect x="550" y="50" width="6" height="130" rx="3" fill="#d9a62e"/>
+      </g>
+    </svg>
+    <div class="legend"><span><i style="background:#1f6b3a"></i>Subah</span><span><i style="background:#d9a62e"></i>Shaam</span></div>
+  </section>
+
+  <!-- Alerts -->
+  <section class="card c6">
+    <h2>Dhyan dein</h2>
+    <p class="hint">Admin ke liye faisle wali baatein.</p>
+    <div class="alert a-bad"><div class="ic">!</div><div><div class="tt">Chiller 3: total nahi</div><div class="ds">Aaj ka total darj nahi, is liye farq nahi nikal sakta.</div></div></div>
+    <div class="alert a-warn"><div class="ic">i</div><div><div class="tt">Baqi 335 L (chiller 2)</div><div class="ds">Agli slip mein le sakte hain ya wajah likhein.</div></div></div>
+    <div class="alert a-info"><div class="ic">≈</div><div><div class="tt">Adjusted alag hai</div><div class="ds">Paise ke liye hai. FAT aur LR se badalta hai.</div></div></div>
+  </section>
+
+  <!-- Branch table -->
+  <section class="card c12">
+    <h2>Branches ka haal</h2>
+    <div class="tabs"><span class="tab on">Aaj</span><span class="tab">Hafta</span><span class="tab">Mahina</span></div>
+    <table>
+      <thead><tr><th>Branch</th><th class="r">Aaya</th><th class="r">Gaya</th><th class="r">Farq</th><th>Haal</th><th style="width:220px">Hissa</th></tr></thead>
+      <tbody>
+        <tr><td><b>Main Branch Mahabali</b></td><td class="r num">3,482</td><td class="r num">3,410</td><td class="r num">+72</td><td><span class="pill p-warn">baqi stock</span></td><td><div class="bar"><i style="width:82%;background:var(--brand)"></i></div></td></tr>
+        <tr><td><b>Kisan Karyana Mahabali</b></td><td class="r num">1,180</td><td class="r num">1,180</td><td class="r num">0</td><td><span class="pill p-ok">khatam</span></td><td><div class="bar"><i style="width:30%;background:var(--info)"></i></div></td></tr>
+        <tr><td><b>Kisan Karyana 157</b></td><td class="r num">—</td><td class="r num">—</td><td class="r num">—</td><td><span class="pill p-bad">chiller total nahi</span></td><td><div class="bar"><i style="width:0%"></i></div></td></tr>
+      </tbody>
+    </table>
+    <div class="note">Farq gross ke hisaab se. Adjusted sirf paise ke liye, alag column mein.</div>
+  </section>
+
+</main>
+</body>
+</html>
