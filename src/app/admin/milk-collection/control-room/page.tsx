@@ -243,7 +243,7 @@ export default async function MilkControlRoomPage({
           <Kpi label="Company ko gaya" value={fmtL(companyOut)} href="/admin/milk-collection/handover/company" />
           <Kpi label="Vendor ko gaya" value={fmtL(vendorOut)} href="/admin/milk-collection/handover/vendor" />
           <Kpi label="Party ko gaya" value={fmtL(partyOut)} href="/admin/milk-collection/handover/party" />
-          <Kpi label="Kul gaya" value={fmtL(totalOut)} sub="Rupay ka hisaab handover slip par" href="/admin/milk-collection/handover" />
+          <Kpi label="Kul gaya (chiller se)" value={fmtL(totalOut)} sub="Hamari zimmedari yahan tak. Rupay handover slip par" href="/admin/milk-collection/handover" />
         </div>
       </section>
 
@@ -266,7 +266,8 @@ export default async function MilkControlRoomPage({
       </section>
 
       <Card className="p-4">
-        <h2 className="mb-3 text-sm font-semibold text-surface-600">Dispatch: raseed aur kami</h2>
+        <h2 className="mb-1 text-sm font-semibold text-surface-600">Raseed: manzil par kya pahuncha</h2>
+        <p className="mb-3 text-xs text-surface-500">Chiller se nikalne ke baad ka farq hamari zimmedari nahi. Ye sirf dikhane ke liye hai, is se hamara farq nahi badalta.</p>
         {alerts && alerts.length > 0 ? (
           <ul className="space-y-2 text-sm">
             {alerts.map((a) => (
@@ -277,7 +278,7 @@ export default async function MilkControlRoomPage({
                 {a.kind === "raseed_baqi" ? (
                   <span className="text-amber-700">raseed baqi</span>
                 ) : (
-                  <span className="text-red-700">kami {a.shortagePercentage}%</span>
+                  <span className="text-surface-600">raseed mein farq {a.shortagePercentage}% (receiver/raaste ka)</span>
                 )}
               </li>
             ))}
