@@ -1,3 +1,9 @@
+## Pending — 31 October 2026: Pending Approvals Dekhein popup (730)
+
+Branch `cursor/my-work-pending-popup-acab`. Migration **730 file only**. Testing aur Live dono par **nahi** chali. **729 pehle** (`729_milk_handover_destinations`). 730 sirf `feature_help` ka pending-approvals matn. Koi table, koi column, koi journal, koi raqam nahi. Safha `/admin/my-work/pending`. Faisla wahi purane actions: kharcha, mazdoori, supplier request. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `730_pending_popup_help.sql`. Rollback: `730_pending_popup_help.rollback.sql`.
+
 ## Pending — 31 October 2026: Karyana ordering par Eggs (code only)
 
 Branch `cursor/karyana-eggs-ordering-f857`. Koi migration nahi. Live category data nahi chheri. `/admin/pos/ordering/new` ab "Eggs" jar ko karyana maanta hai, is liye "egg" search Egg dikhati hai. Urea aur poultry feed ab bhi karyana se bahar. Dairy (doodh) dukan par Eggs nahi. Merge ke baad sirf build — SQL nahi.

@@ -94,9 +94,11 @@ export function groupLabelKey(group: string): TranslationKey {
 }
 
 /**
- * Jin ka faisla "Mere Kaam" se seedha ho sakta hai -- PURANE server action
- * se (koi nayi manzoori ki logic nahi). Baqi sab apne safhe par khulte hain,
- * kyunke un ke faisle ko comment / account / raqam chahiye.
+ * Jin ka faisla qataar par seedha ho sakta hai -- PURANE server action
+ * se (koi nayi manzoori ki logic nahi).
+ * Kharcha, mazdoori aur supplier payment ka faisla popup se hai
+ * (`popup.ts`) — wahi purane actions, alag manzoori nahi.
+ * Baqi qismen Dekhein se khulasa, Kholein se asal safha.
  */
 export const INLINE_DECISIONS: Readonly<Record<string, { approve: boolean; reject: boolean; rejectNeedsReason: boolean }>> = {
   pos_returns: { approve: true, reject: true, rejectNeedsReason: true },

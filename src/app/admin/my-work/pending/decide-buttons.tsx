@@ -8,6 +8,7 @@ import { approveState, INLINE_DECISIONS, type PendingItem } from "@/lib/pending/
 import { decideMessage, normalizeDecideResult, type DecideResult } from "@/lib/pending/decide";
 import { decidePending } from "./actions";
 import { statusOf, usePendingLive } from "./live-state";
+import { PendingViewButton } from "./view-drawer";
 
 /**
  * Approve / Reject / Kholein. Browser confirm nahi -- app ka modal.
@@ -21,12 +22,15 @@ export function DecideButtons({
   run,
   approveLabel,
   hideOpen = false,
+  hideView = false,
 }: {
   item: PendingItem;
   href: string;
   /** Detail safhe par "Approve — naam badal do" jaisa label. */
   approveLabel?: string;
   hideOpen?: boolean;
+  /** Popup ke andar doosra Dekhein nahi. */
+  hideView?: boolean;
   /** Preview / test. Asal safha is ko nahi bhejta -- decidePending chalti hai. */
   run?: (fd: FormData) => Promise<DecideResult | undefined>;
 }) {
@@ -131,6 +135,13 @@ export function DecideButtons({
               {t("apb_reject", lang)}
             </button>
           </>
+        )}
+        {!hideView && (
+          <PendingViewButton
+            item={item}
+            href={href}
+            dialogExtra={rule ? <DecideButtons item={item} href={href} run={run} hideOpen hideView approveLabel={approveLabel} /> : undefined}
+          />
         )}
         {!hideOpen && <MarkReadLink href={href} className="inline-flex items-center gap-1 rounded-lg border border-surface-200 bg-white px-2.5 py-1.5 text-[11.5px] font-bold text-surface-800 dark:border-white/10 dark:bg-white/5 dark:text-surface-100">
           {t("apb_open", lang)}
