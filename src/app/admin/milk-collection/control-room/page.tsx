@@ -156,6 +156,7 @@ export default async function MilkControlRoomPage({
     : balanceRows.reduce((s: number, r: { balance_due: number | string | null }) => s + Number(r.balance_due ?? 0), 0);
 
   const chillerGross = report?.chillerTotal.grossL ?? null;
+  const farmerOn = report != null && report.farmer.entries > 0;
   const chillerVsOut = chillerGross == null || totalOut == null ? null : Math.round((chillerGross - totalOut) * 1000) / 1000;
   const anyError = chillerErr || entryErr || dispatchErr || balanceErr;
 
@@ -226,22 +227,25 @@ export default async function MilkControlRoomPage({
 
       <section>
         <h2 className="mb-2 text-sm font-semibold text-surface-600">Farmer ka hisaab</h2>
+        {report && report.farmer.entries === 0 && (
+          <p className="mb-3 text-xs text-surface-500">Is din farmer ki entry nahi hai. Farmer ka hisaab statement se aayega, is liye yahan "—" hai, sifar nahi.</p>
+        )}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Kpi
             label="Farmer ko dena hai (is din)"
-            value={fmtRs(report ? report.farmer.payableRs : null)}
-            sub={report ? `${fmtL(report.farmer.litersPayable)} · tasdeeq/rate shuda entries` : undefined}
+            value={fmtRs(farmerOn ? report!.farmer.payableRs : null)}
+            sub={farmerOn ? `${fmtL(report!.farmer.litersPayable)} · tasdeeq/rate shuda entries` : undefined}
             href="/admin/milk-collection/verify"
           />
           <Kpi
             label="Farmer entries (litre, is din)"
-            value={fmtL(report ? report.farmer.litersAll : null)}
-            sub={report ? `${report.farmer.entries} entries` : undefined}
+            value={fmtL(farmerOn ? report!.farmer.litersAll : null)}
+            sub={farmerOn ? `${report!.farmer.entries} entries` : undefined}
             href="/admin/milk-collection"
           />
           <Kpi
             label="FAT ka intezar"
-            value={report ? String(report.farmer.pendingFat) : "—"}
+            value={farmerOn ? String(report!.farmer.pendingFat) : "—"}
             href="/admin/milk-collection/chiller"
             tone={report && report.farmer.pendingFat > 0 ? "warn" : "normal"}
           />
@@ -252,7 +256,7 @@ export default async function MilkControlRoomPage({
             href="/admin/milk-collection/billing"
           />
         </div>
-        {report && (
+        {farmerOn && report && (
           <p className="mt-2 text-xs text-surface-500">
             Average rate: {report.farmer.avgRatePerL == null ? "—" : `Rs ${report.farmer.avgRatePerL} / L`} · Rad: {report.farmer.rejected} · Tasdeeq baqi: {report.farmer.priced}
           </p>

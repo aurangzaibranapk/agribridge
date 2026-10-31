@@ -93,6 +93,17 @@ import { buildDayReport } from "../src/lib/milk-control-room";
   assert.equal(r.farmerVsChillerL, 930);
 }
 
+// Chiller total hai, farmer entry nahi (abhi ka tareeqa): farmer ka farq null, poora chiller gross nahi.
+{
+  const r = buildDayReport({
+    chillers: [{ chiller_no: "HM-1", shift: "morning", gross_liters: 1240, fat_percentage: 4.3, lr: 27, snf_percentage: 8.416, ts_percentage: 12.717, adjusted_liters: 1213 }],
+    entries: [],
+  });
+  assert.equal(r.farmer.entries, 0);
+  assert.equal(r.farmerVsChillerL, null);
+  assert.equal(r.chillerTotal.grossL, 1240);
+}
+
 // Chiller total nahi: farq null, sifar nahi. Farmer average bhi null.
 {
   const r = buildDayReport({ chillers: [], entries: [] });

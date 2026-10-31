@@ -276,6 +276,7 @@ export function buildDayReport(input: {
       rejected,
       avgRatePerL: litersPayable > 0 ? Math.round((payableRs / litersPayable) * 100) / 100 : null,
     },
-    farmerVsChillerL: chillers.length === 0 ? null : round3(grossSum - litersAll),
+    // Farmer ki entry abhi nahi hoti (statement se aati hai), to farq nahi nikalta.
+    farmerVsChillerL: chillers.length === 0 || input.entries.length === 0 ? null : round3(grossSum - litersAll),
   };
 }
