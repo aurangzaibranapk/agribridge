@@ -32,7 +32,13 @@
 const JAREIN: Record<string, string[]> = {
   // "Cold/Soft Drink" category "Beverages & Cold Drinks" (Grocery ki aulad)
   // mein merge ho gayi -- Grocery se hi aa jati hai, alag naam ki zaroorat nahi.
-  karyana: ["Grocery", "Dairy Products"],
+  //
+  // Eggs ek alag JAR hai (parent nahi), Grocery ke neeche nahi. 31 Oct
+  // ISS-2026-00087: karyana ordering par "egg" likhne se "No products
+  // found" aata tha, halanke product maujood hai. Dairy dukan (doodh)
+  // par Eggs nahi — wahan sirf Dairy Products. Urea aur poultry feed
+  // agri_inputs par rehte hain.
+  karyana: ["Grocery", "Dairy Products", "Eggs"],
   agri_inputs: [
     "Fertilizer",
     "Pesticide",
@@ -89,6 +95,39 @@ export function categoriesForShop(businessType: string | null | undefined, all: 
   if (rootIds.length === 0) return null;
 
   return aulaadSameit(rootIds, all);
+}
+
+/**
+ * Ordering ke qism-khane (chips).
+ *
+ * Jis jar ki aulaad hai (Grocery) wo khud chip nahi — us par dabane se
+ * kuch chhanta nahi. Us ki aulaad chips hain.
+ *
+ * Jis jar ki koi aulaad nahi aur us par maal hai (Eggs), wo khud chip
+ * hai. Warna us qism ka koi khana nahi banta aur staff sirf "All" se
+ * dhoondh sakta hai. Khali jar (jaise Dairy Products jab us par koi
+ * product na ho) chip nahi banti.
+ */
+export function categoryChipsForShop(
+  allowed: Set<string>,
+  all: CatNode[],
+  productCategoryIds: Iterable<string | null | undefined>
+): { id: string; name: string }[] {
+  const onProduct = new Set<string>();
+  for (const id of productCategoryIds) {
+    if (id) onProduct.add(id);
+  }
+  const hasChild = new Set<string>();
+  for (const c of all) {
+    if (c.parent_category_id) hasChild.add(c.parent_category_id);
+  }
+  return all
+    .filter((c) => {
+      if (!allowed.has(c.id)) return false;
+      if (c.parent_category_id) return true;
+      return !hasChild.has(c.id) && onProduct.has(c.id);
+    })
+    .map((c) => ({ id: c.id, name: c.name }));
 }
 
 /**
