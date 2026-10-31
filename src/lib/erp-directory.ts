@@ -96,7 +96,7 @@ const CURATED_FEATURES: ErpFeature[] = [
   // ── DAIRY ───────────────────────────────────────────────────────────────────
   { section: "Dairy", label: "Doodh Jama Karein", href: "/admin/milk-collection/collect", description: "Roz subah doodh jama karo — kisan, litre, FAT, SNF darj karo.", who: "Milk Collection Staff" },
   { section: "Dairy", label: "Khud Laaya Hua Doodh", href: "/admin/milk-collection/walk-in", description: "Jo kisan khud doodh le kar aaya — walk-in entry.", who: "Milk Collection Staff" },
-  { section: "Dairy", label: "Chiller — FAT", href: "/admin/milk-collection/chiller", description: "Chiller mein rakha doodh aur uski FAT reading.", who: "Dairy Staff" },
+  { section: "Dairy", label: "Chiller — din ka doodh", href: "/admin/milk-collection/chiller", description: "Chiller par din/shift ka kul doodh: gross, FAT, LR. Aaya, gaya aur farq.", who: "Dairy Staff" },
   { section: "Dairy", label: "Doodh ki Tasdeeq", href: "/admin/milk-collection/verify", description: "Collected doodh ki tasdeeq karein — quality aur quantity confirm.", who: "Dairy Supervisor" },
   { section: "Dairy", label: "Doodh Collection", href: "/admin/milk-collection", description: "Tamam doodh collection ka record — routes, kisaan, date.", who: "Dairy Admin" },
   { section: "Dairy", label: "Route aur Kami", href: "/admin/milk-collection/routes", description: "Doodh collection routes — kaunse route par kitni kami aayi.", who: "Dairy Supervisor" },

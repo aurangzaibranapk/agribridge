@@ -475,6 +475,23 @@ export function chillerIntake(routes: RouteIntake[], entries: IntakeEntry[]): Ch
   return { inL: roundTo(received + self, 3), incomplete: false, status: "ok" };
 }
 
+/**
+ * Din ka aaya: chiller ke shift totals ka jama.
+ * Koi total darj na ho to null — sifar nahi. Kisan ki alag qatarein yahan nahi.
+ * Koi litre kharab (manfi ya adad nahi) ho to jama null, adhura sifar nahi.
+ */
+export function chillerDayIntake(rows: { grossL: number }[]): ChillerIntake {
+  if (rows.length === 0) return { inL: null, incomplete: false, status: "none" };
+  if (rows.some((row) => !Number.isFinite(row.grossL) || row.grossL < 0)) {
+    return { inL: null, incomplete: true, status: "partial" };
+  }
+  return {
+    inL: roundTo(rows.reduce((sum, row) => sum + row.grossL, 0), 3),
+    incomplete: false,
+    status: "ok",
+  };
+}
+
 export interface SlipBucketInput {
   destination: HandoverDestination;
   grossL: number;

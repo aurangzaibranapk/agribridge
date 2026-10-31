@@ -4,12 +4,14 @@ import {
   PAPER_SPECS,
   adjustedTotal,
   baselineForDestination,
+  chillerDayIntake,
   chillerIntake,
   dayDestinationSummary,
   formulaFromRateRow,
   parseDestination,
   parseHandoverReason,
   parseLrBaseline,
+  type ChillerIntake,
   type DayDestinationSummary,
   type HandoverDestination,
   type HandoverLineInput,
@@ -296,7 +298,14 @@ export async function loadFlowSlips(input: {
 export async function loadHandoverDay(input: {
   date: string;
   branchId: string | null;
-}): Promise<{ summary: DayDestinationSummary; slips: FlowSlip[]; ready: boolean; error: string | null }> {
+}): Promise<{
+  summary: DayDestinationSummary;
+  slips: FlowSlip[];
+  ready: boolean;
+  error: string | null;
+  /** chiller = milk_chiller_totals. legacy = route raseed, jab 732 na ho. */
+  intakeSource: "chiller" | "legacy";
+}> {
   const supabase = createClient();
   let query = supabase
     .from("milk_dispatches")
@@ -324,20 +333,49 @@ export async function loadHandoverDay(input: {
       slips: [],
       ready,
       error: "Milk Handover ki fehrist nahi mili. Migration 726 pehle Testing par chalao.",
+      intakeSource: "chiller",
     };
   }
   const slips = await withAdjusted((data ?? []) as unknown as DispatchLoose[], ready);
-  const intake = await loadIntake(input.date, input.branchId);
+  const loaded = await loadIntake(input.date, input.branchId);
   const buckets: SlipBucketInput[] = slips.map((slip) => ({
     destination: slip.destination,
     grossL: slip.grossL,
     adjustedL: slip.adjustedL,
     receivedL: slip.receivedL,
   }));
-  return { summary: dayDestinationSummary({ intake, slips: buckets }), slips, ready, error: null };
+  return {
+    summary: dayDestinationSummary({ intake: loaded.intake, slips: buckets }),
+    slips,
+    ready,
+    error: null,
+    intakeSource: loaded.source,
+  };
 }
 
-async function loadIntake(date: string, branchId: string | null) {
+function missingChillerTotals(message: string): boolean {
+  return /milk_chiller_totals|schema cache|does not exist/i.test(message);
+}
+
+async function loadIntake(date: string, branchId: string | null): Promise<{ intake: ChillerIntake; source: "chiller" | "legacy" }> {
+  const supabase = createClient();
+  let totals = supabase.from("milk_chiller_totals").select("gross_liters").eq("entry_date", date);
+  if (branchId) totals = totals.eq("branch_id", branchId);
+  const res = await totals;
+  if (res.error) {
+    if (missingChillerTotals(res.error.message)) {
+      return { intake: await loadLegacyIntake(date, branchId), source: "legacy" };
+    }
+    return { intake: { inL: null, incomplete: false, status: "none" }, source: "chiller" };
+  }
+  return {
+    intake: chillerDayIntake((res.data ?? []).map((row) => ({ grossL: Number(row.gross_liters) }))),
+    source: "chiller",
+  };
+}
+
+/** 732 se pehle: route ki chiller raseed + khud laya hua doodh. */
+async function loadLegacyIntake(date: string, branchId: string | null): Promise<ChillerIntake> {
   const supabase = createClient();
   let routes = supabase
     .from("milk_route_collections")
@@ -353,7 +391,7 @@ async function loadIntake(date: string, branchId: string | null) {
     entries = entries.eq("branch_id", branchId);
   }
   const [routeRes, entryRes] = await Promise.all([routes, entries]);
-  if (routeRes.error || entryRes.error) return { inL: null, incomplete: false, status: "none" as const };
+  if (routeRes.error || entryRes.error) return { inL: null, incomplete: false, status: "none" };
   return chillerIntake(
     (routeRes.data ?? []).map((row) => ({
       routeName: row.route_name,

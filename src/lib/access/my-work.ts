@@ -98,7 +98,7 @@ export const QUICK_BY_ROLE: Record<string, string[]> = {
   warehouse: ["inventory", "stock-count", "stock-ledger", "agri-returns", "purchases"],
   procurement: ["purchases", "suppliers", "products.setup", "rate-master", "grain-procurement"],
   hr: ["hr", "hr.attendance-log", "staff-khata", "hr.whatsapp"],
-  milk_collection: ["milk-collection.handover", "milk-collection.collect", "milk-collection.verify", "milk-collection.routes", "milk-collection.cost-per-liter"],
+  milk_collection: ["milk-collection.chiller", "milk-collection.handover", "milk-collection.collect", "milk-collection.verify", "milk-collection.routes", "milk-collection.cost-per-liter"],
   machinery: ["machinery-rental", "machinery-rental.dashboard", "machinery-rental.calendar"],
   admin_assistant: ["submissions", "messages", "contact-messages", "notifications"],
   call_center_agent: ["call-center", "call-center/complaints"],

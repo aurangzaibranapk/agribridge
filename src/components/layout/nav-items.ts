@@ -103,7 +103,7 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/milk-collection/collect", label: "Doodh Jama Karein", icon: Droplet },
       { href: "/admin/milk-collection/walk-in", label: "Khud Laaya Hua Doodh", icon: Store },
-      { href: "/admin/milk-collection/chiller", label: "Chiller — FAT", icon: Droplet },
+      { href: "/admin/milk-collection/chiller", label: "Chiller — din ka doodh", icon: Droplet },
       { href: "/admin/milk-collection/verify", label: "Doodh ki Tasdeeq", icon: ClipboardCheck },
       { href: "/admin/milk-collection", label: "Doodh Collection", icon: Droplet },
       { href: "/admin/milk-collection/routes", label: "Route aur Kami", icon: AlertTriangle },

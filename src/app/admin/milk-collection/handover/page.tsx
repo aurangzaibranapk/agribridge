@@ -39,7 +39,11 @@ export default async function MilkHandoverSummary({ searchParams }: { searchPara
         </form>
       </Card>
       {day.error && <p className="mb-3 text-sm text-surface-600">{day.error}</p>}
+      {day.intakeSource === "legacy" && <p className="mb-3 text-sm text-amber-800">{t("ct_migration", lang)}</p>}
       <HandoverDaySummary lang={lang} date={date} summary={day.summary} />
+      <p className="mb-3 text-sm">
+        <Link href={`/admin/milk-collection/chiller?date=${date}${branchId ? `&branch=${branchId}` : ""}`} className="text-brand-700 underline">{t("ct_write_total", lang)}</Link>
+      </p>
       {gate.canWrite && (
         <div className="flex flex-wrap gap-2 text-sm">
           <Link href={`/admin/milk-collection/handover/company/new?date=${date}`} className="rounded-lg bg-brand-600 px-3 py-2 font-medium text-white">{t("mh_new_company", lang)}</Link>
