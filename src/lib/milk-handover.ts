@@ -134,8 +134,9 @@ export function emptyLine(): HandoverLineInput {
   };
 }
 
-export function blankCertificateLines(count = 6): HandoverLineInput[] {
-  return Array.from({ length: count }, () => emptyLine());
+/** Khali slip par 5 chiller qatarein, naam 1 se 5 tak. Naam edit ho sakta hai. */
+export function blankCertificateLines(count = 5): HandoverLineInput[] {
+  return Array.from({ length: count }, (_, index) => ({ ...emptyLine(), chillerNo: String(index + 1) }));
 }
 
 function roundTo(n: number, places: number): number {
