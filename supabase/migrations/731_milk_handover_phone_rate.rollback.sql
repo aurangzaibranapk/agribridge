@@ -1,41 +1,23 @@
--- =====================================================================
--- 730: Handover phone digits, chiller SNF 3 hisse, andaruni rate
--- =====================================================================
--- Phone "Milk TS% Volume" (1 L, fat 4.3, LR 27, TS 13, temp khali):
---   SNF 8.416, TS 12.717, adjusted 0.979, SG 1.027, kg 1.027.
--- SNF constant ka naya DEFAULT 0.806. Maujooda 0.805 ki qatar UPDATE
--- nahi — kisan ki adaigi fn_apply_milk_fat usi par rehti hai.
--- Handover code 0.805 ko purana paper default maanta hai aur 0.806
--- lagata hai, jab tak Owner koi aur constant na likhe.
---
--- milk_dispatch_lines.snf ab 3 hisse. Save round(..., 3).
--- ts_percentage generated half-up hai; form phone ceiling khud dikhata hai
--- (12.716 stored vs 12.717 screen ho sakta hai). App ye column nahi parhta.
---
--- milk_dispatch_rates sirf Owner/Admin/Super Admin. Print, WhatsApp,
--- Email is table ko nahi chhute. Staff select RLS se khali.
---
--- Pehle Testing. Live par tab jab backup verify ho.
--- Rollback: 730_milk_handover_phone_rate.rollback.sql
+-- 731 rollback. Rate table hatao. SNF wapas 2 hisse. Function 729 wala.
+-- 0.805 ki purani qatarein yahan bhi UPDATE nahi hoti.
 
-alter table public.milk_rate_settings
-  alter column snf_constant set default 0.806;
-
-comment on column public.milk_rate_settings.snf_constant is
-  'Naya default 0.806 (phone handover). Maujooda 0.805 UPDATE nahi — kisan ki adaigi fn_apply_milk_fat usi qatar par. Handover 0.805 ko purana paper default samajh kar 0.806 lagata hai jab tak Owner koi aur constant na likhe (730).';
+drop policy if exists milk_dispatch_rates_admin on public.milk_dispatch_rates;
+drop table if exists public.milk_dispatch_rates;
 
 alter table public.milk_dispatch_lines drop column if exists ts_percentage;
-
 alter table public.milk_dispatch_lines
-  alter column snf_percentage type numeric(6,3);
-
+  alter column snf_percentage type numeric(5,2)
+  using round(snf_percentage, 2);
 alter table public.milk_dispatch_lines
-  add column ts_percentage numeric(7,3) generated always as (
+  add column ts_percentage numeric(6,2) generated always as (
     case
       when fat_percentage is null or snf_percentage is null then null
-      else round(fat_percentage + snf_percentage, 3)
+      else round(fat_percentage + snf_percentage, 2)
     end
   ) stored;
+
+alter table public.milk_rate_settings
+  alter column snf_constant set default 0.805;
 
 create or replace function public.fn_save_milk_handover(
   p_by uuid,
@@ -307,7 +289,7 @@ begin
     v_gross := round(r.gross_volume_l, 3);
     v_fat := case when r.fat_percentage is null then null else round(r.fat_percentage, 2) end;
     v_lr := case when r.lr is null then null else round(r.lr, 2) end;
-    v_snf := case when r.snf_percentage is null then null else round(r.snf_percentage, 3) end;
+    v_snf := case when r.snf_percentage is null then null else round(r.snf_percentage, 2) end;
     v_adj := case when r.adjusted_volume_l is null then null else round(r.adjusted_volume_l, 3) end;
     v_temp := case when r.temperature_c is null then null else round(r.temperature_c, 2) end;
 
@@ -506,83 +488,3 @@ end $$;
 revoke all on function public.fn_save_milk_handover(
   uuid, uuid, uuid, uuid, date, text, time, text, text, text, text, boolean, text, text, text, text, jsonb, text, uuid, text, integer
 ) from public, anon, authenticated;
-
-
-create table if not exists public.milk_dispatch_rates (
-  dispatch_id uuid primary key references public.milk_dispatches(id) on delete cascade,
-  rate_per_adjusted_l numeric(12,2) not null check (rate_per_adjusted_l >= 0),
-  amount numeric(14,2) not null check (amount >= 0),
-  updated_at timestamptz not null default now(),
-  updated_by uuid references public.profiles(id)
-);
-
-comment on table public.milk_dispatch_rates is
-  'Handover ka andaruni rate (Rs per adjusted L) aur amount. Sirf Owner/Admin. Slip par nahi (730).';
-
-alter table public.milk_dispatch_rates enable row level security;
-
-drop policy if exists milk_dispatch_rates_admin on public.milk_dispatch_rates;
-create policy milk_dispatch_rates_admin on public.milk_dispatch_rates
-  for all to authenticated
-  using (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid()
-        and p.is_active = true
-        and p.role in ('owner', 'super_admin', 'admin')
-    )
-  )
-  with check (
-    exists (
-      select 1 from public.profiles p
-      where p.id = auth.uid()
-        and p.is_active = true
-        and p.role in ('owner', 'super_admin', 'admin')
-    )
-  );
-
-revoke all on public.milk_dispatch_rates from public, anon, authenticated;
-grant select, insert, update, delete on public.milk_dispatch_rates to authenticated;
-
-do $g$
-begin
-  if exists (select 1 from pg_roles where rolname = 'service_role') then
-    grant select, insert, update, delete on public.milk_dispatch_rates to service_role;
-  end if;
-end
-$g$;
-
-update public.feature_help set
-  how_steps = how_steps || array[
-    'Chiller number (jaise HM) qatar par mehfooz rehta hai. Staff Fat, LR, gross usi qatar par likhte hain. Number badalne ke liye Edit — har keystroke se number nahi mit-ta.',
-    'SNF, TS aur adjusted teen hisse, phone jaisa. Misal 1 L, fat 4.3, LR 27, TS 13: SNF 8.416, TS 12.717, adjusted 0.979. Sp. Gravity aur Milk kg bhi. Ye print aur slip par hain.',
-    'Rate (Rs per adjusted L) aur amount sirf Admin/Owner. Company, Vendor aur Party teeno form par. Print, WhatsApp aur Email par rate ya amount nahi.'
-  ],
-  mistakes = mistakes || array[
-    'Chiller number mitana jab sirf lab likhna ho. Edit ke baghair number band rehta hai.',
-    'Rate ya amount ko print, WhatsApp ya email par bhej dena. Wo sirf andaruni hisaab hai.'
-  ]
-where feature_key = 'milk-collection.handover' and lang = 'rm';
-
-update public.feature_help set
-  how_steps = how_steps || array[
-    'The chiller number (for example HM) stays on the row. Staff type fat, LR and gross on that row. Use Edit to change the number — typing in other boxes does not clear it.',
-    'SNF, TS and adjusted use three decimals, the same as the phone. Example 1 L, fat 4.3, LR 27, TS 13: SNF 8.416, TS 12.717, adjusted 0.979. Specific gravity and milk kg are on the slip too.',
-    'Rate (Rs per adjusted litre) and amount are Admin/Owner only, on Company, Vendor and Party forms. Print, WhatsApp and Email do not include them.'
-  ],
-  mistakes = mistakes || array[
-    'Clearing the chiller number while only the lab should change. Without Edit the number stays locked.',
-    'Putting rate or amount on the print, WhatsApp or email slip. That figure is internal.'
-  ]
-where feature_key = 'milk-collection.handover' and lang = 'en';
-
-update public.feature_help set
-  how_steps = how_steps || array[
-    'چلر نمبر (جیسے HM) قطار پر رہتا ہے۔ ایڈٹ سے ہی بدلیں۔',
-    'SNF، TS، ایڈجسٹڈ تین ہندسے، فون جیسا۔ ریٹ اور رقم صرف ایڈمن، سلپ پر نہیں۔'
-  ],
-  mistakes = mistakes || array[
-    'چلر نمبر مٹا دینا۔',
-    'ریٹ سلپ پر بھیج دینا۔'
-  ]
-where feature_key = 'milk-collection.handover' and lang = 'ur';

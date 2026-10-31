@@ -227,7 +227,7 @@ export async function saveMilkHandover(_prev: HandoverState, formData: FormData)
       });
       if (wrote.error) {
         if (/schema cache|does not exist|milk_dispatch_rates/i.test(wrote.error.message)) {
-          return { error: "Slip mehfooz ho chuki hai. Andaruni rate ka table abhi nahi. Migration 730 pehle Testing par chalao — Live se pehle backup." };
+          return { error: "Slip mehfooz ho chuki hai. Andaruni rate ka table abhi nahi. Migration 731 pehle Testing par chalao — Live se pehle backup." };
         }
         return { error: wrote.error.message };
       }

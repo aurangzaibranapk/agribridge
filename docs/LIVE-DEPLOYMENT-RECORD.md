@@ -16,11 +16,11 @@ Branch `cursor/milk-handover-three-flows-a724`. Migration **729 file only**. Tes
 - Safhe: `/admin/milk-collection/handover` (roz ka khulasa), `/company`, `/vendor`, `/party`, `/parties`.
 - Rollback tab rukta hai jab ek shift par ek se zyada rawangi ho.
 
-## Pending — 31 October 2026: Handover phone digits + andaruni rate (730)
+## Pending — 31 October 2026: Handover phone digits + andaruni rate (731)
 
-Branch `cursor/milk-handover-phone-digits-a155`. Migration **730 file only**. Testing aur Live dono par **nahi** chali. 729 (Company/Vendor/Party) pehle. 730 `snf_percentage` ko 3 hisse karti hai, save `round(..., 3)`, `milk_rate_settings.snf_constant` ka **default** 0.806. Maujooda 0.805 ki qatar **UPDATE nahi** — kisan ki adaigi usi par. Handover code 0.805 ko purana paper default samajh kar phone wala 0.806 lagata hai, jab tak Owner koi aur constant na likhe. `milk_dispatch_rates` sirf Owner/Admin/Super Admin (RLS). Print/WhatsApp/Email par rate nahi. Koi purana litre nahi bharta. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+Branch `cursor/milk-handover-phone-digits-a155`. Migration **731 file only**. Testing aur Live dono par **nahi** chali. **730 pehle** (`730_pending_popup_help`, Live par lag chuki). 731 `snf_percentage` ko 3 hisse karti hai, save `round(..., 3)`, `milk_rate_settings.snf_constant` ka **default** 0.806. Maujooda 0.805 ki qatar **UPDATE nahi** — kisan ki adaigi usi par. Handover code 0.805 ko purana paper default samajh kar phone wala 0.806 lagata hai, jab tak Owner koi aur constant na likhe. `milk_dispatch_rates` sirf Owner/Admin/Super Admin (RLS). Print/WhatsApp/Email par rate nahi. Koi purana litre nahi bharta. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
 
-- `730_milk_handover_phone_rate.sql`. Rollback: `730_milk_handover_phone_rate.rollback.sql`.
+- `731_milk_handover_phone_rate.sql`. Rollback: `731_milk_handover_phone_rate.rollback.sql`.
 - Phone misal: 1 L, fat 4.3, LR 27, TS 13 → SNF 8.416, TS 12.717, adjusted 0.979, SG 1.027, kg 1.027.
 
 ## Pending — 31 October 2026: Milk Handover LR recipe (728)
