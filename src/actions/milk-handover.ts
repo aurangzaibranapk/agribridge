@@ -7,7 +7,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { requireAction } from "@/lib/access/guard";
 import { diffFields, logAudit } from "@/lib/audit";
 import { rpcError } from "@/lib/dairy/rules";
-import { grossTotal, lineToSql, parseHandoverLines, type HandoverLineInput, type ParsedLine } from "@/lib/milk-handover";
+import { grossTotal, lineToSql, lrRecipeLabel, parseHandoverLines, parseLrBaseline, type HandoverLineInput, type ParsedLine } from "@/lib/milk-handover";
 
 export interface HandoverState {
   error?: string;
@@ -143,6 +143,21 @@ export async function saveMilkHandover(_prev: HandoverState, formData: FormData)
   const id = posted.data;
   if (!id) return { error: "Certificate mehfooz nahi hua." };
 
+  const baseline = parseLrBaseline(formData.get("lr_baseline"));
+  if (!locked) {
+    const { error: baselineError } = await createServiceClient()
+      .from("milk_dispatches")
+      .update({ lr_baseline: baseline })
+      .eq("id", id);
+    if (baselineError) {
+      return {
+        error: baselineError.message.includes("lr_baseline")
+          ? "Chiller mehfooz ho gaye, lekin LR recipe ka khana nahi mila. Migration 728 pehle Testing par chalao — phir certificate khol kar recipe dobara mehfooz karein."
+          : baselineError.message,
+      };
+    }
+  }
+
   const decision = accepted == null ? "faisla baqi" : accepted ? "qubool" : "radd";
   const gross = parsedLines ? grossTotal(parsedLines) : before ? Number(before.dispatched_liters) : null;
   await logAudit({
@@ -150,7 +165,7 @@ export async function saveMilkHandover(_prev: HandoverState, formData: FormData)
     module: "milk_dispatches",
     recordId: id,
     recordLabel: `${mcc || "MCC"} ${date} ${shift}`,
-    description: `Milk Handover Certificate — ${gross ?? "—"} L, ${decision}`,
+    description: `Milk Handover Certificate — ${gross ?? "—"} L, ${decision}, ${lrRecipeLabel(baseline)}`,
     changes: before
       ? diffFields(
           {

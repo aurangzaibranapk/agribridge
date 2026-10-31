@@ -1,4 +1,4 @@
-import { formatQty, specFlagText, type HandoverSpecs, type SpecFlag } from "@/lib/milk-handover";
+import { formatQty, lrCorrection, lrRecipeLabel, specFlagText, type HandoverSpecs, type LrBaseline, type SpecFlag } from "@/lib/milk-handover";
 
 export interface CertificateLineView {
   chillerNo: string;
@@ -31,6 +31,7 @@ export interface CertificateView {
   driver: string | null;
   specs: HandoverSpecs;
   flags: SpecFlag[];
+  lrBaseline: LrBaseline;
 }
 
 function cell(value: string) {
@@ -99,6 +100,8 @@ export function CertificateSheet({ cert }: { cert: CertificateView }) {
         <tbody>
           {rows.map((line, i) => {
             const bad = new Set(line.flags.map((f) => f.field));
+            const corr = lrCorrection(line.lr, line.temperatureC, cert.lrBaseline);
+            const lrShown = corr && corr.points > 0 ? corr.corrected : line.lr;
             const mark = (field: SpecFlag["field"], text: string) => (
               <span className={bad.has(field) ? "bg-amber-200 px-0.5 font-semibold" : undefined}>{text}</span>
             );
@@ -108,7 +111,12 @@ export function CertificateSheet({ cert }: { cert: CertificateView }) {
                 <td className="border border-black px-1 py-1">{cell(line.milkType)}</td>
                 <td className="border border-black px-1 py-1">{line.grossL == null ? "\u00a0" : formatQty(line.grossL)}</td>
                 <td className="border border-black px-1 py-1">{mark("fat", line.fat == null ? "\u00a0" : formatQty(line.fat))}</td>
-                <td className="border border-black px-1 py-1">{mark("lr", line.lr == null ? "\u00a0" : formatQty(line.lr))}</td>
+                <td className="border border-black px-1 py-1">
+                  {mark("lr", lrShown == null ? "\u00a0" : formatQty(lrShown))}
+                  {corr && corr.points > 0 && (
+                    <div className="text-[9px] font-normal">raw {formatQty(corr.raw)} +{corr.points}</div>
+                  )}
+                </td>
                 <td className="border border-black px-1 py-1">{mark("snf", line.snf == null ? "\u00a0" : formatQty(line.snf))}</td>
                 <td className="border border-black px-1 py-1">{line.ts == null ? "\u00a0" : formatQty(line.ts)}</td>
                 <td className="border border-black px-1 py-1">{line.adjustedL == null ? "\u00a0" : formatQty(line.adjustedL)}</td>
@@ -140,6 +148,7 @@ export function CertificateSheet({ cert }: { cert: CertificateView }) {
         </tbody>
       </table>
 
+      <p className="mt-1 text-[10px] font-semibold text-neutral-800">LR recipe: {lrRecipeLabel(cert.lrBaseline)}</p>
       {cert.flags.length > 0 && (
         <p className="mt-1 text-[10px] text-amber-800">
           Min spec se neeche: {cert.flags.map(specFlagText).join(" · ")}

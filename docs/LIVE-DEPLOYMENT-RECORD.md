@@ -1,10 +1,18 @@
-## Pending — 30 October 2026: Softaculous ke baad 725, phir 726, phir 727
+## Pending — 31 October 2026: Milk Handover LR recipe (728)
 
-Is zip ke baad nayi migrations sirf ye teen hain. Pehle Testing (`hwaiuwxqldxsoukkfefn`). Wahan theek ho to Live (`ktskwawkslaznkjjacni`). Live par backup verify se pehle koi migration nahi. Tarteeb: **725, phir 726, phir 727.**
+Branch `cursor/milk-handover-autofill-share-c375`. Migration **728 file only**. Testing aur Live dono par **nahi** chali. 725, 726, 727 pehle. 728 sirf `milk_dispatches.lr_baseline` (default **20** = company agreement; **22** = vendor, ek point kam) aur `feature_help`. Koi purana litre nahi bharta. Live par mat chalayein jab tak backup verify na ho. Pehle Testing (`hwaiuwxqldxsoukkfefn`), phir Live (`ktskwawkslaznkjjacni`).
+
+- `728_milk_handover_lr_recipe.sql`. Rollback: `728_milk_handover_lr_recipe.rollback.sql`.
+- 32°C aur raw LR 24: company 24+4=28, vendor 24+3=27.
+
+## Pending — 30 October 2026: Softaculous ke baad 725, phir 726, phir 727, phir 728
+
+Is zip ke baad nayi migrations ye hain. Pehle Testing (`hwaiuwxqldxsoukkfefn`). Wahan theek ho to Live (`ktskwawkslaznkjjacni`). Live par backup verify se pehle koi migration nahi. Tarteeb: **725, phir 726, phir 727, phir 728.**
 
 1. `725_pos_expired_batch_sale_code.sql` — POS expire-batch admin code. Rollback: `725_pos_expired_batch_sale_code.rollback.sql`.
 2. `726_milk_handover_certificate.sql` — Milk Handover Certificate. Rollback: `726_milk_handover_certificate.rollback.sql`.
 3. `727_expense_report_help.sql` — Kharchon ki report (feature + help). Rollback: `727_expense_report_help.rollback.sql`. Koi kharcha, journal ya raqam nahi badalti.
+4. `728_milk_handover_lr_recipe.sql` — LR recipe 20 company / 22 vendor. Rollback: `728_milk_handover_lr_recipe.rollback.sql`. Koi purana litre nahi bharta.
 
 248, 249, 250 code only hain (phone home/version, POS close slip, POS stock cap). Un ke liye SQL nahi.
 

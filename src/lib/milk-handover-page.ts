@@ -1,11 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAction } from "@/lib/access/guard";
-import { requireMilkSettings } from "@/lib/dairy/rules";
 import {
   PAPER_SPECS,
+  formulaFromRateRow,
+  parseLrBaseline,
   type HandoverLineInput,
   type HandoverSpecs,
   type LabFormula,
+  type LrBaseline,
 } from "@/lib/milk-handover";
 import type { HandoverShop } from "@/app/admin/milk-collection/handover/handover-form";
 
@@ -39,7 +41,7 @@ export interface HandoverOptions {
   branches: { id: string; name: string }[];
   shops: HandoverShop[];
   specs: HandoverSpecs;
-  formula: LabFormula | null;
+  formula: LabFormula;
   migrationError: string | null;
 }
 
@@ -54,7 +56,6 @@ export async function loadHandoverOptions(): Promise<HandoverOptions> {
 
   const dairy = (shops ?? []).filter((s) => s.business_type === "dairy");
   const shopRows = dairy.length > 0 ? dairy : (shops ?? []);
-  const settings = requireMilkSettings(settingsRes.data);
   const migrationError = specsRes.error ? "Milk Handover Certificate ka table abhi nahi. Migration 726 pehle Testing par chalao — Live se pehle backup." : null;
 
   return {
@@ -63,7 +64,7 @@ export async function loadHandoverOptions(): Promise<HandoverOptions> {
     specs: specsRes.data
       ? { minFat: Number(specsRes.data.min_fat), minLr: Number(specsRes.data.min_lr), minSnf: Number(specsRes.data.min_snf) }
       : PAPER_SPECS,
-    formula: "error" in settings ? null : { snfConstant: settings.snfConstant, referenceTs: settings.referenceTs },
+    formula: formulaFromRateRow(settingsRes.data),
     migrationError,
   };
 }
@@ -89,6 +90,7 @@ export interface LoadedCertificate {
   priorGross: number;
   hadLines: boolean;
   received: number | null;
+  lrBaseline: LrBaseline;
 }
 
 function numStr(value: number | null | undefined): string {
@@ -98,11 +100,20 @@ function numStr(value: number | null | undefined): string {
 
 export async function loadCertificate(id: string): Promise<LoadedCertificate | { error: string } | { missing: true }> {
   const supabase = createClient();
-  const { data, error } = await supabase
+  const columns = "id, branch_id, shop_id, dispatch_date, shift, collection_time, mcc_name, vehicle_name, driver_name, notes, accepted, rejection_reason, licensee_rep_name, licensee_signature, collector_signature, dispatched_liters, received_liters";
+  let { data, error } = await supabase
     .from("milk_dispatches")
-    .select("id, branch_id, shop_id, dispatch_date, shift, collection_time, mcc_name, vehicle_name, driver_name, notes, accepted, rejection_reason, licensee_rep_name, licensee_signature, collector_signature, dispatched_liters, received_liters")
+    .select(`${columns}, lr_baseline`)
     .eq("id", id)
     .maybeSingle();
+  let lrBaseline: LrBaseline = 20;
+  if (error && /lr_baseline/i.test(error.message)) {
+    const again = await supabase.from("milk_dispatches").select(columns).eq("id", id).maybeSingle();
+    data = again.data as typeof data;
+    error = again.error;
+  } else if (data && "lr_baseline" in data) {
+    lrBaseline = parseLrBaseline((data as { lr_baseline?: number | null }).lr_baseline);
+  }
   if (error) {
     return { error: "Milk Handover Certificate ka table abhi nahi. Migration 726 pehle Testing par chalao — Live se pehle backup." };
   }
@@ -151,5 +162,6 @@ export async function loadCertificate(id: string): Promise<LoadedCertificate | {
     priorGross: Number(data.dispatched_liters),
     hadLines: lines.length > 0,
     received: data.received_liters == null ? null : Number(data.received_liters),
+    lrBaseline,
   };
 }

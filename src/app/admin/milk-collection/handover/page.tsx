@@ -3,8 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui/layout-primitives";
 import { getLanguageFromCookies } from "@/lib/i18n/get-language";
 import { t } from "@/lib/i18n/translations";
-import { formatQty } from "@/lib/milk-handover";
+import { adjustedTotal, dayMilkVariance, formatQty, gapKind, milkVariance } from "@/lib/milk-handover";
 import { handoverGate } from "@/lib/milk-handover-page";
+import { HandoverVarianceCard } from "./variance-card";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,27 @@ export default async function MilkHandoverList({ searchParams }: { searchParams?
     query = query.eq("branch_id", gate.branchId);
   }
   const { data, error } = await query;
+  const ids = (data ?? []).map((row) => row.id);
+  const lineQuery = !error && ids.length
+    ? await supabase.from("milk_dispatch_lines").select("dispatch_id, gross_volume_l, adjusted_volume_l").in("dispatch_id", ids)
+    : { data: [], error: null };
+  const adjustedById = new Map<string, number | null>();
+  const grouped = new Map<string, { grossL: number; adjustedL: number | null }[]>();
+  for (const line of lineQuery.data ?? []) {
+    const rows = grouped.get(line.dispatch_id) ?? [];
+    rows.push({
+      grossL: Number(line.gross_volume_l),
+      adjustedL: line.adjusted_volume_l == null ? null : Number(line.adjusted_volume_l),
+    });
+    grouped.set(line.dispatch_id, rows);
+  }
+  for (const [id, rows] of grouped) adjustedById.set(id, adjustedTotal(rows));
+  const variances = (data ?? []).map((row) => milkVariance(
+    Number(row.dispatched_liters),
+    adjustedById.has(row.id) ? adjustedById.get(row.id) ?? null : null,
+    row.received_liters == null ? null : Number(row.received_liters)
+  ));
+  const day = date && variances.length ? dayMilkVariance(variances) : null;
 
   return (
     <div>
@@ -44,6 +66,14 @@ export default async function MilkHandoverList({ searchParams }: { searchParams?
         }
       />
       <p className="mb-3 text-sm text-surface-500">{t("mh_backfill", lang)}</p>
+      {day && (
+        <HandoverVarianceCard
+          lang={lang}
+          title={t("mh_day_title", lang)}
+          variance={day}
+          pendingCount={day.receiptPending}
+        />
+      )}
       <Card className="space-y-3">
         <form className="flex flex-wrap items-end gap-2" method="get">
           <label className="text-sm">
@@ -67,26 +97,37 @@ export default async function MilkHandoverList({ searchParams }: { searchParams?
                 <tr className="border-b border-surface-100 text-left text-xs text-surface-500">
                   <th className="py-2 pr-3">Date</th>
                   <th className="py-2 pr-3">MCC</th>
-                  <th className="py-2 pr-3">Gross (L)</th>
+                  <th className="py-2 pr-3">{t("mh_aaya", lang)}</th>
+                  <th className="py-2 pr-3">{t("mh_adjusted_short", lang)}</th>
                   <th className="py-2 pr-3">Accepted</th>
-                  <th className="py-2 pr-3">Raseed</th>
+                  <th className="py-2 pr-3">{t("mh_gaya", lang)}</th>
+                  <th className="py-2 pr-3">{t("mh_gap_gross", lang)}</th>
                   <th className="py-2" />
                 </tr>
               </thead>
               <tbody>
-                {(data ?? []).map((row) => {
+                {(data ?? []).map((row, index) => {
                   const branchName = (row.branches as { name?: string } | null)?.name;
+                  const variance = variances[index];
+                  const kind = gapKind(variance.grossGapL);
+                  const gapLabel = kind === "pending"
+                    ? t("mh_receipt_pending", lang)
+                    : kind === "even"
+                      ? t("mh_even", lang)
+                      : `${t(kind === "loss" ? "mh_loss" : "mh_gain", lang)} ${formatQty(Math.abs(variance.grossGapL ?? 0))} L`;
                   return (
                     <tr key={row.id} className="border-b border-surface-50">
                       <td className="py-2 pr-3 text-surface-500">
                         {row.dispatch_date} · {row.shift === "evening" ? t("mh_evening", lang) : t("mh_morning", lang)}
                       </td>
                       <td className="py-2 pr-3">{row.mcc_name || branchName || "—"}</td>
-                      <td className="py-2 pr-3">{formatQty(Number(row.dispatched_liters))}</td>
+                      <td className="py-2 pr-3">{formatQty(variance.grossL)}</td>
+                      <td className="py-2 pr-3">{variance.adjustedL == null ? "—" : formatQty(variance.adjustedL)}</td>
                       <td className="py-2 pr-3">
                         {row.accepted == null ? t("mh_pending", lang) : row.accepted ? "YES" : "NO"}
                       </td>
-                      <td className="py-2 pr-3">{row.received_liters == null ? "—" : formatQty(Number(row.received_liters))}</td>
+                      <td className="py-2 pr-3">{variance.receivedL == null ? t("mh_receipt_pending", lang) : formatQty(variance.receivedL)}</td>
+                      <td className="py-2 pr-3">{gapLabel}</td>
                       <td className="py-2 text-right">
                         <Link href={`/admin/milk-collection/handover/${row.id}`} className="text-brand-700 underline">{t("mh_open", lang)}</Link>
                         {" · "}
